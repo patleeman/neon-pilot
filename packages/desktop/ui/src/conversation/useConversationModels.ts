@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../client/api';
 import type { ModelInfo } from '../shared/types';
+import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 
 export function useConversationModels(enabled: boolean) {
   const [models, setModels] = useState<ModelInfo[]>([]);
@@ -10,12 +11,12 @@ export function useConversationModels(enabled: boolean) {
   const [defaultThinkingLevel, setDefaultThinkingLevel] = useState<string>('');
   const [defaultServiceTier, setDefaultServiceTier] = useState<string>('');
 
-  useEffect(() => {
+  const refreshModels = useCallback(() => {
     if (!enabled) {
-      return;
+      return Promise.resolve();
     }
 
-    api
+    return api
       .models()
       .then((data) => {
         setModels(data.models);
@@ -26,6 +27,12 @@ export function useConversationModels(enabled: boolean) {
       })
       .catch(() => {});
   }, [enabled]);
+
+  useInvalidateOnTopics(['models'], () => refreshModels());
+
+  useEffect(() => {
+    void refreshModels();
+  }, [enabled, refreshModels]);
 
   return {
     models,

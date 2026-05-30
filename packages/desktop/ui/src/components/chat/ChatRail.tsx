@@ -11,7 +11,7 @@ import {
   resolveSessionEntryIdFromBlockId,
 } from '../../conversation/forking.js';
 import { useDesktopConversationState } from '../../hooks/useDesktopConversationState.js';
-import type { MessageBlock, ModelInfo } from '../../shared/types.js';
+import type { MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../../shared/types.js';
 import { ChatRailComposer } from './ChatRailComposer.js';
 import { ChatView } from './ChatView.js';
 
@@ -69,15 +69,15 @@ export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conv
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = useCallback(
-    async (text: string) => {
-      if (!text.trim() || isStreaming) return;
+    async (text: string, behavior?: 'steer' | 'followUp', images?: PromptImageInput[], attachmentRefs?: PromptAttachmentRefInput[]) => {
+      if (!text.trim() && !images?.length && !attachmentRefs?.length) return;
       try {
-        await desktopState.send(text);
+        await desktopState.send(text, behavior, images, attachmentRefs);
       } catch {
         // Composer stays usable on error.
       }
     },
-    [desktopState, isStreaming],
+    [desktopState],
   );
 
   const handleAbort = useCallback(async () => {

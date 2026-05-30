@@ -1,3 +1,5 @@
+import { forwardRef, type ReactNode } from 'react';
+
 import { cx } from '../ui';
 
 export function FolderIcon({ className }: { className?: string }) {
@@ -126,19 +128,21 @@ export function ComposerActionIcon({ label, className }: { label: 'Steer' | 'Fol
   );
 }
 
+export interface ConversationComposerShellState {
+  dragOver: boolean;
+  hasInteractiveOverlay: boolean;
+  streamIsStreaming?: boolean;
+  autoModeEnabled?: boolean;
+  runMode?: 'mission' | 'loop' | 'nudge' | 'manual';
+}
+
 export function resolveConversationComposerShellStateClassName({
   dragOver,
   hasInteractiveOverlay,
   streamIsStreaming,
   autoModeEnabled,
   runMode,
-}: {
-  dragOver: boolean;
-  hasInteractiveOverlay: boolean;
-  streamIsStreaming?: boolean;
-  autoModeEnabled?: boolean;
-  runMode?: 'mission' | 'loop' | 'nudge' | 'manual';
-}): string {
+}: ConversationComposerShellState): string {
   if (dragOver) {
     return 'border-accent/50 ring-2 ring-accent/20 bg-accent/5';
   }
@@ -161,3 +165,17 @@ export function resolveConversationComposerShellStateClassName({
 
   return 'border-border-subtle';
 }
+
+export const ConversationComposerShell = forwardRef<
+  HTMLDivElement,
+  ConversationComposerShellState & {
+    children: ReactNode;
+    className?: string;
+  }
+>(function ConversationComposerShell({ children, className, ...state }, ref) {
+  return (
+    <div ref={ref} className={cx('ui-input-shell', resolveConversationComposerShellStateClassName(state), className)}>
+      {children}
+    </div>
+  );
+});

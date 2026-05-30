@@ -10,9 +10,9 @@ import {
   measureClientPerfTiming,
   recordClientPerfTiming,
 } from '../client/perfDiagnostics';
-import { buildSlashMenuItems, parseSlashInput } from '../commands/slashMenu';
+import { buildSlashMenuItems, parseSlashInput, type SlashMenuItem } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
-import { resolveConversationComposerShellStateClassName } from '../components/conversation/ConversationComposerChrome';
+import { ConversationComposer } from '../components/conversation/ConversationComposer';
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../components/conversation/ConversationComposerMenus';
 import { ConversationComposerMeta } from '../components/conversation/ConversationComposerMeta';
@@ -22,7 +22,7 @@ import {
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
 import { addNotification } from '../components/notifications/notificationStore';
-import { AppPageEmptyState, cx, EmptyState, LoadingState, PageHeader, Pill } from '../components/ui';
+import { AppPageEmptyState, EmptyState, LoadingState, PageHeader } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
 import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
 import {
@@ -51,7 +51,6 @@ import {
   resolveComposerClearShortcut,
   resolveComposerHistoryNavigation,
 } from '../conversation/conversationComposerEditing';
-import { resolveConversationComposerMenuState } from '../conversation/conversationComposerMenuState';
 import { shouldShowConversationComposerMeta } from '../conversation/conversationComposerMetaVisibility';
 import {
   appendMentionedConversationContextDocs,
@@ -101,13 +100,7 @@ import {
   filterConversationLifecycleElements,
   resolveConversationLifecycleEvent,
 } from '../conversation/conversationLifecyclePresentation';
-import {
-  buildMentionItems,
-  filterMentionItems,
-  MAX_MENTION_MENU_ITEMS,
-  type MentionItem,
-  resolveMentionItems,
-} from '../conversation/conversationMentions';
+import { buildMentionItems, type MentionItem, resolveMentionItems } from '../conversation/conversationMentions';
 import { shouldEnableMessageForkControls } from '../conversation/conversationMessageControls';
 import {
   pruneComputedMessages,
@@ -249,6 +242,7 @@ import {
 import { collectCompletedToolAutoOpenBlockKeys, findRequestedToolPresentationToOpen } from '../conversation/toolAutoOpen';
 import { useComposerController } from '../conversation/useComposerController';
 import { useConversationActiveExecutions } from '../conversation/useConversationActiveExecutions';
+import { useConversationComposerMenus, type UseConversationComposerMenusState } from '../conversation/useConversationComposerMenus';
 import { useComposerModifierKeys, useVisualViewportKeyboardInset } from '../conversation/useConversationKeyboardState';
 import { useConversationModels } from '../conversation/useConversationModels';
 import { useDesktopConversationShortcuts } from '../conversation/useDesktopConversationShortcuts';
@@ -277,7 +271,6 @@ import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import { primeSessionDetailCache, useSessionDetail } from '../hooks/useSessions';
 import { useReloadState } from '../local/reloadState';
 import { normalizeWorkspacePaths, readStoredWorkspacePaths, writeStoredWorkspacePaths } from '../local/savedWorkspacePaths';
-import { filterModelPickerItems } from '../model/modelPicker';
 import { hasSelectableModelId, resolveSelectableModelId } from '../model/modelPreferences';
 import {
   clearPendingConversationPrompt,
@@ -1592,7 +1585,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   const [notice, setNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null);
   const [savingPreference, setSavingPreference] = useState<'model' | 'thinking' | 'serviceTier' | null>(null);
-  const [modelIdx, setModelIdx] = useState(0);
   const noticeTimeoutRef = useRef<number | null>(null);
   const showNotice = useCallback((tone: 'accent' | 'danger', text: string, durationMs = 2500) => {
     setNotice({ tone, text });
@@ -1654,8 +1646,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     visibleResults: RelatedConversationSearchResult[];
     searchResults: RelatedConversationSearchResult[];
   }>({ visibleResults: [], searchResults: [] });
-  const [slashIdx, setSlashIdx] = useState(0);
-  const [mentionIdx, setMentionIdx] = useState(0);
   const keyboardInset = useVisualViewportKeyboardInset();
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
   const showTextOnlyImageHint =
@@ -1726,8 +1716,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     setAttachedContextDocs(draft ? readDraftConversationContextDocs() : []);
     setDrawingsError(null);
     setDragOver(false);
-    setSlashIdx(0);
-    setMentionIdx(0);
     composerAttachmentsHydratedRef.current = true;
   }, [draft, id]);
 
@@ -2013,6 +2001,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const composerShellRef = useRef<HTMLDivElement | null>(null);
   const [composerShellWidth, setComposerShellWidth] = useState<number | null>(null);
   const composerSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+  const composerMenuStateRef = useRef<Pick<UseConversationComposerMenusState, 'resetMenus'> | null>(null);
   const composerResizeFrameRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -2020,11 +2009,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const lastHistoricalPrefetchRequestedAtRef = useRef(0);
   const pendingJumpMessageIndexRef = useRef<number | null>(null);
   const [requestedFocusMessageIndex, setRequestedFocusMessageIndex] = useState<number | null>(null);
-
-  const resetComposerMenus = useCallback(() => {
-    setSlashIdx(0);
-    setMentionIdx(0);
-  }, []);
 
   useEffect(() => {
     setComposerQuestionIndex(0);
@@ -2184,17 +2168,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     [capturePrependRestore, historicalTotalBlocks, id, sessionLoading],
   );
 
-  // Derive menu states
-  const { showModelPicker, showSlash, showMention, slashQuery, modelQuery, mentionQuery } = useMemo(
-    () => resolveConversationComposerMenuState(input),
-    [input],
-  );
-  const slashItems = useMemo(
-    () => buildSlashMenuItems(input, memoryData?.skills ?? [], extensionSlashCommands),
-    [extensionSlashCommands, input, memoryData],
-  );
-  const modelItems = useMemo(() => filterModelPickerItems(models, modelQuery), [models, modelQuery]);
-
   useEffect(() => {
     let cancelled = false;
     void buildExtensionMentionItems(extensionMentionRegistrations, {
@@ -2218,6 +2191,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         extensionItems: extensionMentionItems,
       }),
     [tasks, extensionMentionItems],
+  );
+  const slashItems = useMemo(
+    () => buildSlashMenuItems(input, memoryData?.skills ?? [], extensionSlashCommands),
+    [extensionSlashCommands, input, memoryData],
   );
   const currentSessionMeta = useMemo(
     () => mergeConversationSessionMeta(visibleSessionDetail?.meta, sessionSnapshot),
@@ -2931,7 +2908,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     selectionRef: composerSelectionRef,
     setInput,
     scheduleResize: scheduleComposerResize,
-    onTextInserted: resetComposerMenus,
+    onTextInserted: () => {
+      composerMenuStateRef.current?.resetMenus();
+    },
   });
   const {
     rememberSelection: rememberComposerSelection,
@@ -2939,6 +2918,70 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     insertText: insertTextIntoComposer,
     appendText: appendTextToComposer,
   } = composerController;
+
+  const handleComposerSlashMenuCommand = useCallback(
+    async (slashInput: string): Promise<boolean> => {
+      const parsed = parseConversationSlashCommand(slashInput);
+      if (!parsed) {
+        return false;
+      }
+
+      await submitComposer();
+      return true;
+    },
+    [submitComposer],
+  );
+
+  const handleComposerSlashMenuSelect = useCallback(
+    async (item: SlashMenuItem) => {
+      const parsedConversationSlash = parseConversationSlashCommand(item.displayCmd.trim());
+      if (parsedConversationSlash?.kind === 'command') {
+        await executeConversationSlashCommand(parsedConversationSlash.command);
+        return;
+      }
+
+      composerController.setText(item.insertText);
+    },
+    [composerController, executeConversationSlashCommand],
+  );
+
+  const handleComposerMentionSelect = useCallback(
+    async (id: string, currentInput: string) => {
+      composerController.setText(currentInput.replace(/@[-\w./-]*$/, `${id} `));
+    },
+    [composerController],
+  );
+
+  const composerMenus = useConversationComposerMenus({
+    input,
+    slashItems,
+    mentionItems,
+    models,
+    onSlashCommandCommit: handleComposerSlashMenuCommand,
+    onSlashMenuSelect: handleComposerSlashMenuSelect,
+    onMentionSelect: handleComposerMentionSelect,
+    onModelSelect: async (selectedModelId) => {
+      await selectModel(selectedModelId);
+    },
+    onClearComposer: composerController.clear,
+  });
+
+  const {
+    showModelPicker,
+    showSlash,
+    showMention,
+    slashIdx,
+    mentionIdx,
+    modelIdx,
+    modelItems,
+    modelQuery,
+    mentionQuery,
+    handleMenuKeyDown: handleComposerMenuKeyDown,
+    resetMenus: resetComposerMenus,
+    setModelIdx,
+  } = composerMenus;
+
+  composerMenuStateRef.current = composerMenus;
 
   useWorkspaceComposerEvents({
     input,
@@ -3136,13 +3179,6 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     },
     [],
   );
-
-  useEffect(() => {
-    setSlashIdx(0);
-  }, [slashQuery]);
-  useEffect(() => {
-    setModelIdx(0);
-  }, [modelQuery]);
 
   useEffect(() => {
     return () => {
@@ -5325,79 +5361,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    if (showModelPicker) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        composerController.clear();
-        return;
-      }
-      if (modelItems.length === 0) {
-        return;
-      }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setModelIdx((i) => (i + 1) % modelItems.length);
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setModelIdx((i) => (i - 1 + modelItems.length) % modelItems.length);
-        return;
-      }
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const sel = modelItems[modelIdx % modelItems.length];
-        if (sel) selectModel(sel.id);
-        return;
-      }
-    }
-    if (showSlash || showMention) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        showSlash ? setSlashIdx((i) => i + 1) : setMentionIdx((i) => i + 1);
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        showSlash ? setSlashIdx((i) => Math.max(0, i - 1)) : setMentionIdx((i) => Math.max(0, i - 1));
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        composerController.clear();
-        return;
-      }
-      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
-        if (showSlash && e.key === 'Enter') {
-          const exactConversationSlash = parseConversationSlashCommand(e.currentTarget.value.trim());
-          if (exactConversationSlash) {
-            e.preventDefault();
-            await submitComposer();
-            return;
-          }
-        }
-
-        e.preventDefault();
-        if (showSlash) {
-          const sel = slashItems[slashIdx % (slashItems.length || 1)];
-          if (sel) {
-            const parsedSelectedSlash = parseConversationSlashCommand(sel.displayCmd.trim());
-            if (parsedSelectedSlash?.kind === 'command') {
-              setSlashIdx(0);
-              await executeConversationSlashCommand(parsedSelectedSlash.command);
-            } else {
-              composerController.setText(sel.insertText);
-            }
-          }
-        } else {
-          const filtered = filterMentionItems(mentionItems, mentionQuery, { limit: MAX_MENTION_MENU_ITEMS });
-          const sel = filtered[mentionIdx % (filtered.length || 1)];
-          if (sel) {
-            composerController.setText(input.replace(/@[\w./-]*$/, sel.id + ' '));
-          }
-        }
-        return;
-      }
+    if (await handleComposerMenuKeyDown(e)) {
+      return;
     }
 
     const canUseComposerQuestionHotkeys =
@@ -6274,118 +6239,103 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {transcriptPane}
-
       {/* Input area */}
       {!keyboardOpen && (
-        <div
+        <ConversationComposer
           className={`bg-gradient-to-t from-base via-base to-transparent px-8 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors sm:px-10 ${dragOver ? 'bg-accent/5' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-        >
-          {notice && (
-            <div className="mb-2 text-center">
-              <Pill tone={notice.tone}>{notice.text}</Pill>
-            </div>
-          )}
-
-          <div className="relative mx-auto w-full max-w-6xl">
-            {showSlash && (
-              <SlashMenu
-                items={slashItems}
-                idx={slashIdx}
-                onSelect={(item) => {
-                  const c = item.displayCmd.trim();
-                  const parsedConversationSlash = parseConversationSlashCommand(c);
-                  if (parsedConversationSlash?.kind === 'command') {
-                    setSlashIdx(0);
-                    void executeConversationSlashCommand(parsedConversationSlash.command);
-                    return;
-                  }
-                  composerController.setText(item.insertText);
-                }}
-              />
-            )}
-            {showMention && (
-              <MentionMenu
-                items={mentionItems}
-                query={mentionQuery}
-                idx={mentionIdx}
-                onSelect={(id) => {
-                  composerController.setText(input.replace(/@[\w./-]*$/, id + ' '));
-                }}
-              />
-            )}
-            {showModelPicker && (
-              <ModelPicker
-                models={modelItems}
-                currentModel={currentModel}
-                query={modelQuery}
-                idx={modelIdx}
-                onSelect={selectModel}
-                onClose={() => {
-                  composerController.clear();
-                  moveComposerCaretToEnd();
-                }}
-              />
-            )}
-
-            {hasComposerAttachmentShelfContent && (
-              <div className="mb-2 max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
-                {composerAttachmentProviders.length > 0 ? (
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {composerAttachmentProviders.map((provider) => (
-                      <button
-                        key={`${provider.extensionId}:${provider.id}`}
-                        type="button"
-                        className="ui-toolbar-button px-2 py-1 text-[11px]"
-                        onClick={() => {
-                          void invokeComposerAttachmentProvider(provider);
-                        }}
-                      >
-                        {provider.icon ? <span aria-hidden="true">{provider.icon}</span> : null}
-                        <span>{provider.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-                <ComposerAttachmentShelf
-                  attachments={attachments}
-                  drawingAttachments={drawingAttachments}
-                  drawingsBusy={drawingsBusy}
-                  drawingsError={drawingsError}
-                  onRemoveAttachment={removeAttachment}
-                  onEditDrawing={editDrawing}
-                  onRemoveDrawingAttachment={removeDrawingAttachment}
+          dragOver={dragOver}
+          hasInteractiveOverlay={showModelPicker || showSlash || showMention}
+          streamIsStreaming={composerRunState.streamControlsActive}
+          shellRef={composerShellRef}
+          shellClassName={undefined}
+          notice={notice}
+          childrenClassName="relative mx-auto w-full max-w-6xl"
+          dragOverlay={
+            dragOver ? (
+              <div className="px-4 py-3 text-center text-[12px] text-accent border-b border-accent/20">📎 Drop files to attach</div>
+            ) : null
+          }
+          menus={
+            <>
+              {showSlash && (
+                <SlashMenu
+                  items={slashItems}
+                  idx={slashIdx}
+                  onSelect={(item) => {
+                    void handleComposerSlashMenuSelect(item);
+                  }}
                 />
-              </div>
-            )}
-
-            {showTextOnlyImageHint ? (
-              <p className="mb-2 text-[12px] text-secondary">Set a vision model in Settings to inspect attached images.</p>
-            ) : null}
-
-            <div
-              className={cx(
-                'ui-input-shell',
-                resolveConversationComposerShellStateClassName({
-                  dragOver,
-                  hasInteractiveOverlay: showModelPicker || showSlash || showMention,
-                  streamIsStreaming: composerRunState.streamControlsActive,
-                }),
               )}
-              ref={composerShellRef}
-            >
-              {/* Drag overlay hint */}
-              {dragOver && (
-                <div className="px-4 py-3 text-center text-[12px] text-accent border-b border-accent/20">📎 Drop files to attach</div>
+              {showMention && (
+                <MentionMenu
+                  items={mentionItems}
+                  query={mentionQuery}
+                  idx={mentionIdx}
+                  onSelect={(id) => {
+                    void handleComposerMentionSelect(id, input);
+                  }}
+                />
               )}
+              {showModelPicker && (
+                <ModelPicker
+                  models={modelItems}
+                  currentModel={currentModel}
+                  query={modelQuery}
+                  idx={modelIdx}
+                  onSelect={selectModel}
+                  onClose={() => {
+                    composerController.clear();
+                    moveComposerCaretToEnd();
+                  }}
+                />
+              )}
+            </>
+          }
+          shelves={
+            <>
+              {hasComposerAttachmentShelfContent && (
+                <div className="mb-2 max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
+                  {composerAttachmentProviders.length > 0 ? (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {composerAttachmentProviders.map((provider) => (
+                        <button
+                          key={`${provider.extensionId}:${provider.id}`}
+                          type="button"
+                          className="ui-toolbar-button px-2 py-1 text-[11px]"
+                          onClick={() => {
+                            void invokeComposerAttachmentProvider(provider);
+                          }}
+                        >
+                          {provider.icon ? <span aria-hidden="true">{provider.icon}</span> : null}
+                          <span>{provider.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <ComposerAttachmentShelf
+                    attachments={attachments}
+                    drawingAttachments={drawingAttachments}
+                    drawingsBusy={drawingsBusy}
+                    drawingsError={drawingsError}
+                    onRemoveAttachment={removeAttachment}
+                    onEditDrawing={editDrawing}
+                    onRemoveDrawingAttachment={removeDrawingAttachment}
+                  />
+                </div>
+              )}
+
+              {showTextOnlyImageHint ? (
+                <p className="mb-2 text-[12px] text-secondary">Set a vision model in Settings to inspect attached images.</p>
+              ) : null}
 
               {composerChromeReady ? (
                 <ConversationGoalPanel goal={stream.goalState} onCancel={() => void streamSend('/goal clear')} />
               ) : null}
 
-              {hasComposerShelfContent && (
+              {hasComposerShelfContent ? (
                 <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
                   {composerShelvesTop.map((shelf) => (
                     <ComposerShelfHost key={`${shelf.extensionId}:${shelf.id}`} registration={shelf} shelfContext={composerShelfContext} />
@@ -6449,7 +6399,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     />
                   </Suspense>
                 </div>
-              )}
+              ) : null}
 
               {!draft && (
                 <Suspense fallback={null}>
@@ -6511,65 +6461,68 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   />
                 </Suspense>
               )}
+
               {composerShelvesBottom.map((shelf) => (
                 <ComposerShelfHost key={`${shelf.extensionId}:${shelf.id}`} registration={shelf} shelfContext={composerShelfContext} />
               ))}
-
-              <ConversationComposerInputControls
-                conversationId={id}
-                fileInputRef={fileInputRef}
-                textareaRef={textareaRef}
-                input={input}
-                pendingAskUserQuestion={Boolean(pendingAskUserQuestion)}
-                composerDisabled={composerDisabled}
-                composerShellWidth={composerShellWidth}
-                streamIsStreaming={composerRunState.streamControlsActive}
-                models={models}
-                currentModel={currentModel || model || defaultModel}
-                currentThinkingLevel={currentThinkingLevel}
-                savingPreference={savingPreference}
-                conversationNeedsTakeover={conversationNeedsTakeover}
-                composerHasContent={composerHasContent}
-                composerShowsQuestionSubmit={composerShowsQuestionSubmit}
-                composerQuestionCanSubmit={composerQuestionCanSubmit}
-                composerQuestionRemainingCount={composerQuestionRemainingCount}
-                composerQuestionSubmitting={composerQuestionSubmitting}
-                composerSubmitLabel={composerSubmit.label}
-                composerAltHeld={composerAltHeld}
-                onFilesSelected={(files) => {
-                  void addComposerFiles(files);
-                }}
-                onInputChange={(value, textarea) => {
-                  setInput(value);
-                  resetComposerMenus();
-                  rememberComposerSelection(textarea);
-                }}
-                onRememberComposerSelection={rememberComposerSelection}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                onOpenFilePicker={openFilePicker}
-                onUpsertDrawingAttachment={(payload) => {
-                  upsertDrawingAttachment(payload as ExcalidrawEditorSavePayload);
-                }}
-                onSelectModel={selectModel}
-                onSelectThinkingLevel={(thinkingLevel) => {
-                  void saveThinkingLevelPreference(thinkingLevel);
-                }}
-                onInsertComposerText={insertTextIntoComposer}
-                onAppendComposerText={appendTextToComposer}
-                onSubmitComposerQuestion={() => {
-                  void submitComposerQuestionIfReady();
-                }}
-                onSubmitComposerActionForModifiers={(altKeyHeld) => {
-                  void submitComposerActionForModifiers(altKeyHeld);
-                }}
-                onAbortStream={() => {
-                  void stopStreamAndRestoreQueuedPrompts();
-                }}
-              />
-            </div>
-
-            {showComposerMeta ? (
+            </>
+          }
+          inputControls={
+            <ConversationComposerInputControls
+              conversationId={id}
+              fileInputRef={fileInputRef}
+              textareaRef={textareaRef}
+              input={input}
+              pendingAskUserQuestion={Boolean(pendingAskUserQuestion)}
+              composerDisabled={composerDisabled}
+              composerShellWidth={composerShellWidth}
+              streamIsStreaming={composerRunState.streamControlsActive}
+              models={models}
+              currentModel={currentModel || model || defaultModel}
+              currentThinkingLevel={currentThinkingLevel}
+              savingPreference={savingPreference}
+              conversationNeedsTakeover={conversationNeedsTakeover}
+              composerHasContent={composerHasContent}
+              composerShowsQuestionSubmit={composerShowsQuestionSubmit}
+              composerQuestionCanSubmit={composerQuestionCanSubmit}
+              composerQuestionRemainingCount={composerQuestionRemainingCount}
+              composerQuestionSubmitting={composerQuestionSubmitting}
+              composerSubmitLabel={composerSubmit.label}
+              composerAltHeld={composerAltHeld}
+              onFilesSelected={(files) => {
+                void addComposerFiles(files);
+              }}
+              onInputChange={(value, textarea) => {
+                setInput(value);
+                resetComposerMenus();
+                rememberComposerSelection(textarea);
+              }}
+              onRememberComposerSelection={rememberComposerSelection}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onOpenFilePicker={openFilePicker}
+              onUpsertDrawingAttachment={(payload) => {
+                upsertDrawingAttachment(payload as ExcalidrawEditorSavePayload);
+              }}
+              onSelectModel={selectModel}
+              onSelectThinkingLevel={(thinkingLevel) => {
+                void saveThinkingLevelPreference(thinkingLevel);
+              }}
+              onInsertComposerText={insertTextIntoComposer}
+              onAppendComposerText={appendTextToComposer}
+              onSubmitComposerQuestion={() => {
+                void submitComposerQuestionIfReady();
+              }}
+              onSubmitComposerActionForModifiers={(altKeyHeld) => {
+                void submitComposerActionForModifiers(altKeyHeld);
+              }}
+              onAbortStream={() => {
+                void stopStreamAndRestoreQueuedPrompts();
+              }}
+            />
+          }
+          composerMeta={
+            showComposerMeta ? (
               <ConversationComposerMeta
                 draft={draft}
                 hasDraftCwd={hasDraftCwd}
@@ -6607,9 +6560,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 gitSummaryPresentation={gitSummaryPresentation}
                 sessionTokens={sessionTokens}
               />
-            ) : null}
-          </div>
-        </div>
+            ) : null
+          }
+        />
       )}
 
       {selectedArtifactId && id && !artifactOpensInWorkbenchPane && (

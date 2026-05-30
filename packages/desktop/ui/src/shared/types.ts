@@ -753,6 +753,7 @@ export type AppEventTopic =
   | 'attachments'
   | 'extensions'
   | 'tasks'
+  | 'models'
   | 'runs'
   | 'executions'
   | 'automation'

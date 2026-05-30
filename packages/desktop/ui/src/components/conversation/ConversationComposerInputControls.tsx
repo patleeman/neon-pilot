@@ -148,6 +148,20 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     setLocalInputState(nextInput);
   };
 
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const previousScrollTop = textarea.scrollTop;
+    const selectionEnd = textarea.selectionEnd ?? textarea.value.length;
+    const shouldKeepCaretVisible = document.activeElement === textarea && selectionEnd >= textarea.value.length;
+
+    textarea.style.height = 'auto';
+    const nextHeight = Math.min(textarea.scrollHeight, 160);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > nextHeight ? 'auto' : 'hidden';
+    textarea.scrollTop = shouldKeepCaretVisible ? textarea.scrollHeight : previousScrollTop;
+  }, [localInput, textareaRef]);
+
   // Sync from parent input prop — the parent can push external updates
   // (e.g., pasting text from a command) when the textarea is not focused.
   useEffect(() => {
@@ -242,6 +256,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               const nextValue = event.target.value;
               const target = event.target;
               setLocalInput(nextValue);
+              requestAnimationFrame(() => onRememberComposerSelection(target));
               onInputChange(nextValue, target);
             }}
             onSelect={(event) => {
