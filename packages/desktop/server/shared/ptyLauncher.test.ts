@@ -54,6 +54,7 @@ describe('createPtyProcess', () => {
         name: 'xterm-256color',
         cols: 80,
         rows: 24,
+        cwd: process.cwd(),
       }),
     );
     expect(result.pty.pid).toBe(456);
@@ -81,6 +82,24 @@ describe('createPtyProcess', () => {
         rows: 40,
         cwd: '/workspace',
         env: expect.objectContaining({ TERM: 'xterm-256color', PATH: '/usr/bin' }),
+      }),
+    );
+  });
+
+  it('removes undefined env values before spawning node-pty', () => {
+    const mockPty = createMockPty();
+    spawn.mockReturnValue(mockPty);
+
+    createPtyProcess({
+      command: '/bin/zsh',
+      env: { PATH: '/usr/bin', BROKEN: undefined },
+    });
+
+    expect(spawn).toHaveBeenCalledWith(
+      '/bin/zsh',
+      [],
+      expect.objectContaining({
+        env: expect.not.objectContaining({ BROKEN: expect.anything() }),
       }),
     );
   });

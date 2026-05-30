@@ -180,6 +180,50 @@ describe('extensionShell', () => {
     expect(createPtyProcess).toHaveBeenCalledWith(expect.objectContaining({ cols: 80, rows: 24 }));
   });
 
+  it('falls back to a pipe-backed process when PTY spawn fails', async () => {
+    const child = createChild();
+    Object.assign(child, { stdin: { writable: true, write: vi.fn() } });
+    createPtyProcess.mockImplementation(() => {
+      throw new Error('posix_spawnp failed.');
+    });
+    spawnProcess.mockReturnValue({ child, launch: { wrappers: [{ id: 'pipe-fallback' }] } });
+
+    const onStdout = vi.fn();
+    const onStderr = vi.fn();
+    const onExit = vi.fn();
+
+    const handle = await createExtensionShellCapability().spawn({
+      command: '/bin/zsh',
+      pty: { cols: 120, rows: 30 },
+      cwd: '/workspace',
+      onStdout,
+      onStderr,
+      onExit,
+    });
+
+    expect(spawnProcess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: '/bin/zsh',
+        cwd: '/workspace',
+        options: { detached: true, stdio: ['pipe', 'pipe', 'pipe'] },
+      }),
+    );
+
+    child.stdout?.emit('data', Buffer.from('pipe stdout'));
+    child.stderr?.emit('data', Buffer.from('pipe stderr'));
+    child.emit('exit', 0, null);
+    handle.write('echo fallback\n');
+    handle.resize(100, 40);
+    handle.kill();
+
+    expect(handle).toMatchObject({ pid: 123, executionWrappers: [{ id: 'pipe-fallback' }] });
+    expect(onStdout).toHaveBeenCalledWith('pipe stdout');
+    expect(onStderr).toHaveBeenCalledWith('pipe stderr');
+    expect(onExit).toHaveBeenCalledWith({ code: 0, signal: null });
+    expect(child.stdin.write).toHaveBeenCalledWith('echo fallback\n');
+    expect(terminateProcessGroup).toHaveBeenCalledWith(child);
+  });
+
   it('implements git helpers with focused git commands', async () => {
     const git = createExtensionGitCapability();
 

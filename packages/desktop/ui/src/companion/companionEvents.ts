@@ -1,15 +1,15 @@
 /**
  * Custom DOM events for cross-component communication between the main
- * conversation page and the right-panel companion tab system.
+ * conversation page and workbench chat tabs.
  *
  * Because ConversationPage renders inside <Outlet /> (a child of Layout)
- * and the companion tab strip lives in Layout, React prop-drilling is
+ * and the workbench tab strip lives in Layout, React prop-drilling is
  * impractical.  We use window custom events, following the existing
  * pattern in the codebase (WORKBENCH_OPEN_TOOL_TAB_EVENT etc.).
  */
 
 /**
- * Open (or focus) a companion conversation in a right-panel tab.
+ * Open (or focus) a companion conversation in a workbench chat tab.
  * Dispatched by ConversationPage after a fork, or by TopologyBlock
  * when a user clicks a "Forked to" tombstone.
  */

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isArtifactsRailMode,
   isNewWorkbenchTabMode,
+  isSinglePaneWorkbenchMode,
   resolveActiveExtensionWorkbenchSurface,
   resolveWorkbenchRailMode,
 } from './workbenchRailModel';
@@ -36,6 +37,7 @@ describe('workbench rail model', () => {
     expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-files', toolSlot: 'files' }))).toBe('files');
     expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-artifacts', toolSlot: 'artifacts' }))).toBe('artifacts');
     expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-browser', toolSlot: 'browser' }))).toBe('browser');
+    expect(resolveWorkbenchRailMode('files', surface({ extensionId: 'system-terminal', toolSlot: 'terminal' }))).toBe('terminal');
   });
 
   it('prefers explicit tool slots over inferred extension slots', () => {
@@ -79,5 +81,12 @@ describe('workbench rail model', () => {
   it('detects the workbench new-tab mode', () => {
     expect(isNewWorkbenchTabMode('new')).toBe(true);
     expect(isNewWorkbenchTabMode('files')).toBe(false);
+  });
+
+  it('keeps chat and terminal as single-pane workbench tabs', () => {
+    expect(isSinglePaneWorkbenchMode('chat')).toBe(true);
+    expect(isSinglePaneWorkbenchMode('terminal')).toBe(true);
+    expect(isSinglePaneWorkbenchMode('files')).toBe(false);
+    expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'terminal' }))).toBe(true);
   });
 });

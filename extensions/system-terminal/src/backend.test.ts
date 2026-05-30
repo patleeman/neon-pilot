@@ -73,7 +73,7 @@ describe('terminal backend', () => {
       );
     });
 
-    it('uses SHELL from env or defaults to /bin/bash', async () => {
+    it('uses an executable shell from env or known system fallbacks', async () => {
       const originalShell = process.env.SHELL;
       delete process.env.SHELL;
       const handlePty = createMockSpawnHandle();
@@ -82,7 +82,21 @@ describe('terminal backend', () => {
       await mod.createTerminal({}, createBackendContext());
 
       const callArgs = shellSpawn.mock.calls[0][0];
-      expect(callArgs.command).toBe('/bin/bash');
+      expect(['/bin/zsh', '/bin/bash', '/bin/sh']).toContain(callArgs.command);
+
+      process.env.SHELL = originalShell;
+    });
+
+    it('ignores non-executable SHELL values', async () => {
+      const originalShell = process.env.SHELL;
+      process.env.SHELL = '/definitely/not/a/shell';
+      const handlePty = createMockSpawnHandle();
+      shellSpawn.mockResolvedValue(handlePty);
+
+      await mod.createTerminal({}, createBackendContext());
+
+      const callArgs = shellSpawn.mock.calls[0][0];
+      expect(callArgs.command).not.toBe('/definitely/not/a/shell');
 
       process.env.SHELL = originalShell;
     });

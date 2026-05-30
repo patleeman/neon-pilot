@@ -5,6 +5,7 @@ import { assertCanSetExtensionEnabled, buildExtensionEnabledConfigPatch, LOCKED_
 describe('extensionEnabledConfig', () => {
   it('prevents disabling locked extensions', () => {
     expect(LOCKED_EXTENSION_IDS).toContain('system-settings');
+    expect(LOCKED_EXTENSION_IDS).toContain('system-terminal');
     expect(() => assertCanSetExtensionEnabled({ extensionId: 'system-settings', enabled: false })).toThrow(
       'Cannot disable system-settings: this extension is required by the application.',
     );

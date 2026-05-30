@@ -483,6 +483,25 @@ describe('extension registry', () => {
     expect(isExtensionEnabled('slack-mcp-gateway', stateRoot)).toBe(true);
   });
 
+  it('keeps locked system extensions enabled even when stale config disables them', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'system-terminal');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-terminal',
+        name: 'Terminal',
+        packageType: 'system',
+      }),
+    );
+    writeFileSync(join(stateRoot, 'extensions', 'registry.json'), JSON.stringify({ disabledIds: ['system-terminal'] }));
+
+    expect(isExtensionEnabled('system-terminal', stateRoot)).toBe(true);
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'system-terminal')?.enabled).toBe(true);
+  });
+
   it('indexes enabled extension skills and tools', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');

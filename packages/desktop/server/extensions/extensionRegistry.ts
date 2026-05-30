@@ -655,6 +655,7 @@ export function isExtensionEnabled(extensionId: string, stateRoot: string = getS
 
 function isExtensionEntryEnabled(entry: ExtensionRegistryEntry | undefined, config: ExtensionRegistryConfig): boolean {
   if (!entry) return true;
+  if (LOCKED_EXTENSION_IDS.includes(entry.manifest.id)) return true;
   if ((config.disabledIds ?? []).includes(entry.manifest.id)) return false;
   if (entry.manifest.defaultEnabled === false) {
     return (config.enabledIds ?? []).includes(entry.manifest.id);

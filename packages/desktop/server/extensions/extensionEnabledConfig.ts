@@ -1,4 +1,10 @@
-export const LOCKED_EXTENSION_IDS = ['system-extension-manager', 'system-prompt-assembly', 'system-runs', 'system-settings'];
+export const LOCKED_EXTENSION_IDS = [
+  'system-extension-manager',
+  'system-prompt-assembly',
+  'system-runs',
+  'system-settings',
+  'system-terminal',
+];
 
 export function assertCanSetExtensionEnabled(input: {
   extensionId: string;

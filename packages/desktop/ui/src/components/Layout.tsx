@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-r
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
+import { COMPANION_CHAT_CLOSE_EVENT, COMPANION_CHAT_OPEN_EVENT, type CompanionChatOpenDetail } from '../companion/companionEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
 import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { startNewConversation } from '../conversation/newConversationNavigation';
@@ -29,7 +30,7 @@ import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
-import { routeIsKnowledge, routeMatchesPrefix, routeSupportsContextRail, routeSupportsWorkbench } from '../navigation/routeRegistry';
+import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
 import { readConversationLayout } from '../session/sessionTabs';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useSession } from '../store';
@@ -44,6 +45,7 @@ import {
   inferSurfaceToolSlot,
   isArtifactsRailMode,
   isNewWorkbenchTabMode,
+  isSinglePaneWorkbenchMode,
   parseExtensionToolPanelMode,
   resolveActiveExtensionWorkbenchSurface,
   type WorkbenchRailMode,
@@ -70,9 +72,10 @@ const ConversationArtifactWorkbenchPane = lazyRouteWithRecovery('layout-artifact
   import('./ConversationArtifactWorkbench').then((module) => ({ default: module.ConversationArtifactWorkbenchPane })),
 );
 const Sidebar = lazyRouteWithRecovery('layout-sidebar', () => import('./Sidebar').then((module) => ({ default: module.Sidebar })));
-const RightPanelTabs = lazyRouteWithRecovery('layout-right-panel-tabs', () =>
-  import('./RightPanelTabs.js').then((module) => ({ default: module.RightPanelTabs })),
+const ChatRail = lazyRouteWithRecovery('layout-chat-rail', () =>
+  import('./chat/ChatRail').then((module) => ({ default: module.ChatRail })),
 );
+
 const ExtensionModalHost = lazyRouteWithRecovery('layout-extension-modal-host', () =>
   import('../extensions/ExtensionModalHost').then((module) => ({ default: module.ExtensionModalHost })),
 );
@@ -109,15 +112,6 @@ function createWorkbenchTabInstance(mode: WorkbenchRailMode, options?: { id?: st
 
 function isBrowserWorkbenchMode(mode: WorkbenchRailMode): boolean {
   return mode === 'browser';
-}
-
-function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { extensionId?: string } | null): boolean {
-  return (
-    mode === 'browser' ||
-    mode === 'artifacts' ||
-    surface?.extensionId === 'system-artifacts' ||
-    surface?.extensionId === 'system-excalidraw-input'
-  );
 }
 
 type DesktopLayoutShortcutAction =
@@ -504,7 +498,7 @@ function WorkbenchDocumentPane({
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onCheckpointSelect: (checkpointId: string | null) => void;
   onWorkspaceFileClear: () => void;
-  onStartSideChat?: () => void;
+  onStartSideChat?: () => Promise<string | void>;
 }) {
   const location = useLocation();
   const activeExtensionToolPanel = useMemo(() => {
@@ -530,11 +524,30 @@ function WorkbenchDocumentPane({
         onStartSideChat={onStartSideChat}
       />
     );
+  } else if (activeTool === 'chat' && activeTabId) {
+    mainContent = (
+      <Suspense fallback={<div className="px-4 py-3 text-[12px] text-dim">Loading chat…</div>}>
+        <ChatRail conversationId={activeTabId} workspaceCwd={workspaceCwd ?? null} />
+      </Suspense>
+    );
   } else if (extensionWorkbenchSurface) {
     mainContent = (
       <NativeExtensionSurfaceHost
         key={activeTabId ?? `${extensionWorkbenchSurface.extensionId}:${extensionWorkbenchSurface.id}`}
         surface={extensionWorkbenchSurface}
+        pathname={location.pathname}
+        search={extensionSearch}
+        hash={location.hash}
+        conversationId={conversationId}
+        cwd={workspaceCwd}
+        instanceId={activeTabId}
+      />
+    );
+  } else if (activeExtensionToolPanel && activeToolSlot === 'terminal') {
+    mainContent = (
+      <NativeExtensionSurfaceHost
+        key={activeTabId ?? `${activeExtensionToolPanel.extensionId}:${activeExtensionToolPanel.id}`}
+        surface={activeExtensionToolPanel}
         pathname={location.pathname}
         search={extensionSearch}
         hash={location.hash}
@@ -606,6 +619,112 @@ function WorkbenchDocumentPane({
   );
 }
 
+function WorkbenchPanel({
+  width,
+  conversationId,
+  artifactId,
+  knowledgeFileId,
+  workspaceFileId,
+  activeTool,
+  activeTabId,
+  workspaceCwd,
+  extensionWorkbenchSurface,
+  extensionRailSurface,
+  extensionToolPanels,
+  browserTabsState,
+  openTabs,
+  railOpen,
+  railWidth,
+  onRailResizeMouseDown,
+  onRailResizeReset,
+  onActiveTabChange,
+  onCloseTab,
+  onOpenNewTab,
+  onActiveToolChange,
+  onWorkspaceFileClear,
+  onStartSideChat,
+}: {
+  width: number;
+  conversationId: string | null;
+  artifactId: string | null;
+  knowledgeFileId: string | null;
+  workspaceFileId: string | null;
+  activeTool: WorkbenchRailMode;
+  activeTabId: string | null;
+  workspaceCwd: string | null;
+  extensionWorkbenchSurface: NativeExtensionViewSummary | null;
+  extensionRailSurface: ((ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) | null;
+  extensionToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
+  browserTabsState: BrowserTabsState;
+  openTabs: WorkbenchTabInstance[];
+  railOpen: boolean;
+  railWidth: number;
+  onRailResizeMouseDown: (event: React.MouseEvent) => void;
+  onRailResizeReset: () => void;
+  onActiveTabChange: (tabId: string) => void;
+  onCloseTab: (tabId: string) => void;
+  onOpenNewTab: () => void;
+  onActiveToolChange: (mode: WorkbenchRailMode, options?: { artifactId?: string | null; id?: string }) => void;
+  onWorkspaceFileClear: () => void;
+  onStartSideChat?: () => Promise<string | void>;
+}) {
+  return (
+    <section
+      style={{ width }}
+      className="flex flex-shrink-0 flex-col overflow-hidden border-l border-r border-border-subtle bg-base select-text"
+      aria-label="Workbench note"
+      data-workbench-document-pane="true"
+      data-has-open-file={
+        knowledgeFileId ||
+        workspaceFileId ||
+        artifactId ||
+        activeTool === 'browser' ||
+        activeTool === 'chat' ||
+        activeTool === 'terminal' ||
+        isNewWorkbenchTabMode(activeTool) ||
+        extensionWorkbenchSurface
+          ? 'true'
+          : 'false'
+      }
+    >
+      <WorkbenchTabStrip
+        activeTabId={activeTabId}
+        activeTool={activeTool}
+        openTabs={openTabs}
+        extensionToolPanels={extensionToolPanels}
+        browserTabsState={browserTabsState}
+        onActiveTabChange={onActiveTabChange}
+        onCloseTab={onCloseTab}
+        onOpenNewTab={onOpenNewTab}
+        onCheckpointSelect={() => undefined}
+        onWorkspaceFileClear={onWorkspaceFileClear}
+      />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <WorkbenchDocumentPane
+          conversationId={conversationId}
+          artifactId={artifactId}
+          knowledgeFileId={knowledgeFileId}
+          workspaceFileId={workspaceFileId}
+          activeTool={activeTool}
+          activeTabId={activeTabId}
+          workspaceCwd={workspaceCwd}
+          extensionWorkbenchSurface={extensionWorkbenchSurface}
+          extensionRailSurface={extensionRailSurface}
+          extensionToolPanels={extensionToolPanels}
+          railOpen={railOpen}
+          railWidth={railWidth}
+          onRailResizeMouseDown={onRailResizeMouseDown}
+          onRailResizeReset={onRailResizeReset}
+          onActiveToolChange={onActiveToolChange}
+          onCheckpointSelect={() => undefined}
+          onWorkspaceFileClear={onWorkspaceFileClear}
+          onStartSideChat={onStartSideChat}
+        />
+      </div>
+    </section>
+  );
+}
+
 function WorkbenchNewTabPage({
   extensionToolPanels,
   conversationId,
@@ -617,12 +736,14 @@ function WorkbenchNewTabPage({
   conversationId: string | null;
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onWorkspaceFileClear: () => void;
-  onStartSideChat?: () => void;
+  onStartSideChat?: () => Promise<string | void>;
 }) {
-  const availableTools = extensionToolPanels.filter(
-    (surface) => shouldRenderWorkbenchToolInNav(surface) && inferSurfaceToolSlot(surface) !== 'artifacts',
-  );
+  const availableTools = extensionToolPanels.filter((surface) => {
+    const slot = inferSurfaceToolSlot(surface);
+    return shouldRenderWorkbenchToolInNav(surface) && slot !== 'artifacts' && slot !== 'terminal';
+  });
   const systemFilesExtensionSurface = findExtensionToolPanelBySlot(extensionToolPanels, 'files');
+  const systemTerminalExtensionSurface = findExtensionToolPanelBySlot(extensionToolPanels, 'terminal');
   const [sideChatStarting, setSideChatStarting] = useState(false);
 
   function openTool(surface: (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) {
@@ -662,6 +783,37 @@ function WorkbenchNewTabPage({
               <span className="mt-1 block text-[12px] leading-5 text-secondary">Browse workspace files.</span>
             </span>
           </button>
+          {onStartSideChat && conversationId ? (
+            <button
+              type="button"
+              disabled={sideChatStarting}
+              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2 disabled:opacity-40"
+              onClick={handleStartSideChat}
+            >
+              <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
+                ◌
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-primary">{sideChatStarting ? 'Opening…' : 'Chat'}</span>
+                <span className="mt-1 block text-[12px] leading-5 text-secondary">Open a new chat tab.</span>
+              </span>
+            </button>
+          ) : null}
+          {systemTerminalExtensionSurface ? (
+            <button
+              type="button"
+              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"
+              onClick={() => openTool(systemTerminalExtensionSurface)}
+            >
+              <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
+                ▸
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-primary">Terminal</span>
+                <span className="mt-1 block text-[12px] leading-5 text-secondary">Open a terminal tab.</span>
+              </span>
+            </button>
+          ) : null}
           {availableTools.map((surface) => (
             <button
               key={`${surface.extensionId}:${surface.id}`}
@@ -678,24 +830,6 @@ function WorkbenchNewTabPage({
               </span>
             </button>
           ))}
-          {onStartSideChat && conversationId ? (
-            <button
-              type="button"
-              disabled={sideChatStarting}
-              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-dashed border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2 disabled:opacity-40"
-              onClick={handleStartSideChat}
-            >
-              <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
-                💬
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[13px] font-medium text-primary">{sideChatStarting ? 'Opening…' : '+ Side Chat'}</span>
-                <span className="mt-1 block text-[12px] leading-5 text-secondary">
-                  Open a companion chat alongside the current conversation.
-                </span>
-              </span>
-            </button>
-          ) : null}
         </div>
       </div>
     </div>
@@ -758,6 +892,8 @@ function WorkbenchTabStrip({
     if (mode === 'files') return 'File Explorer';
     if (mode === 'artifacts') return 'Artifacts';
     if (mode === 'browser') return 'Browser';
+    if (mode === 'chat') return 'Chat';
+    if (mode === 'terminal') return 'Terminal';
     return 'Workbench';
   }
 
@@ -770,6 +906,8 @@ function WorkbenchTabStrip({
     if (surface) return iconGlyphForExtensionSurface(surface.icon);
     if (mode === 'files') return '□';
     if (mode === 'artifacts') return '□';
+    if (mode === 'chat') return '◌';
+    if (mode === 'terminal') return '▸';
     return '✦';
   }
 
@@ -1050,8 +1188,6 @@ export function Layout() {
   const extensionRegistry = useExtensionRegistry();
   const [extensionKeybindings, setExtensionKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
   const [extensionCommands, setExtensionCommands] = useState<ExtensionCommandRegistration[]>([]);
-  const canShowContextRail = !routeSupportsContextRail(location.pathname, extensionRegistry.surfaces);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -1100,7 +1236,6 @@ export function Layout() {
   }, []);
 
   const effectiveSidebarOpen = sidebarOpen;
-  const showContextRail = canShowContextRail && railOpen;
   const showWorkbench = appLayoutMode === 'workbench' && routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const canToggleWorkbench = routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const activeWorkbenchKnowledgeFileId = showWorkbench
@@ -1658,13 +1793,12 @@ export function Layout() {
           railOpen: showRoutePrimaryRail || showKnowledgeRouteRail,
           toggleRail: () => setRailOpen((current) => !current),
         }
-      : (registeredRightRailControl ??
-        (canShowContextRail
-          ? {
-              railOpen: showContextRail,
-              toggleRail: () => setRailOpen((current) => !current),
-            }
-          : null));
+      : registeredRightRailControl;
+  const showCompactWorkbenchPanel =
+    !showWorkbench &&
+    canToggleWorkbench &&
+    railOpen &&
+    !((showRoutePrimaryRail && routePrimaryRailSurface) || (showKnowledgeRouteRail && systemKnowledgeExtensionSurface));
 
   const handleAppLayoutModeChange = useCallback(
     (mode: AppLayoutMode) => {
@@ -1734,25 +1868,34 @@ export function Layout() {
       const result = await api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
         workspaceCwd: activeWorkspaceCwd ?? undefined,
       });
-
-      // Save companion association to localStorage so RightPanelTabs picks it up.
-      const STORAGE_PREFIX = 'np:companions:';
-      const storageKey = `${STORAGE_PREFIX}${activeConversationId}`;
-      const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      if (!existing.includes(result.id)) {
-        existing.push(result.id);
-        localStorage.setItem(storageKey, JSON.stringify(existing));
-      }
-
-      // Signal RightPanelTabs to auto-select this companion on mount.
-      sessionStorage.setItem('np:preferred-companion', result.id);
-
-      // Switch to compact mode — RightPanelTabs mounts and loads companions.
-      handleAppLayoutModeChange('compact');
+      openWorkbenchToolTab('chat', { id: result.id });
+      return result.id;
     } catch {
-      // Side chat creation failed silently.
+      // Chat tab creation failed silently.
     }
-  }, [activeConversationId, activeWorkspaceCwd, handleAppLayoutModeChange]);
+  }, [activeConversationId, activeWorkspaceCwd, openWorkbenchToolTab]);
+
+  useEffect(() => {
+    function handleCompanionChatOpen(event: Event) {
+      const detail = (event as CustomEvent<CompanionChatOpenDetail>).detail;
+      if (!detail?.conversationId) return;
+      handleAppLayoutModeChange('workbench');
+      openWorkbenchToolTab('chat', { id: detail.conversationId });
+    }
+
+    function handleCompanionChatClose(event: Event) {
+      const detail = (event as CustomEvent<{ conversationId?: string }>).detail;
+      if (!detail?.conversationId) return;
+      closeWorkbenchTab(detail.conversationId);
+    }
+
+    window.addEventListener(COMPANION_CHAT_OPEN_EVENT, handleCompanionChatOpen);
+    window.addEventListener(COMPANION_CHAT_CLOSE_EVENT, handleCompanionChatClose);
+    return () => {
+      window.removeEventListener(COMPANION_CHAT_OPEN_EVENT, handleCompanionChatOpen);
+      window.removeEventListener(COMPANION_CHAT_CLOSE_EVENT, handleCompanionChatClose);
+    };
+  }, [closeWorkbenchTab, handleAppLayoutModeChange, openWorkbenchToolTab]);
 
   useEffect(() => {
     function handleDesktopShortcut(event: Event) {
@@ -1865,7 +2008,7 @@ export function Layout() {
             sidebarOpen={effectiveSidebarOpen}
             onToggleSidebar={handlePrimarySidebarToggle}
             showRailToggle={canToggleWorkbench || activeRightRailControl !== null}
-            railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
+            railOpen={canToggleWorkbench ? showWorkbench || showCompactWorkbenchPanel : (activeRightRailControl?.railOpen ?? false)}
             onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
             trailingExtra={
               <NotificationBell
@@ -1904,59 +2047,31 @@ export function Layout() {
                 {showWorkbench ? (
                   <>
                     <ResizeHandle onMouseDown={workbenchDocument.onMouseDown} onDoubleClick={workbenchDocument.reset} />
-                    <section
-                      style={{
-                        width: workbenchDocument.width + workbenchExplorer.width,
-                      }}
-                      className="flex flex-shrink-0 flex-col overflow-hidden border-l border-r border-border-subtle bg-base select-text"
-                      aria-label="Workbench note"
-                      data-workbench-document-pane="true"
-                      data-has-open-file={
-                        activeWorkbenchKnowledgeFileId ||
-                        activeWorkbenchWorkspaceFileId ||
-                        activeWorkbenchArtifactId ||
-                        activeWorkbenchTool === 'browser' ||
-                        isNewWorkbenchTabMode(activeWorkbenchTool) ||
-                        activeExtensionWorkbenchSurface
-                          ? 'true'
-                          : 'false'
-                      }
-                    >
-                      <WorkbenchTabStrip
-                        activeTabId={activeWorkbenchTabId}
-                        activeTool={activeWorkbenchTool}
-                        openTabs={openWorkbenchTabs}
-                        extensionToolPanels={extensionRightToolPanels}
-                        browserTabsState={browserTabsState}
-                        onActiveTabChange={setActiveWorkbenchTabId}
-                        onCloseTab={closeWorkbenchTab}
-                        onOpenNewTab={openWorkbenchNewTab}
-                        onCheckpointSelect={() => undefined}
-                        onWorkspaceFileClear={clearActiveWorkspaceFile}
-                      />
-                      <div className="min-h-0 flex-1 overflow-hidden">
-                        <WorkbenchDocumentPane
-                          conversationId={activeConversationId}
-                          artifactId={activeWorkbenchArtifactId}
-                          knowledgeFileId={activeWorkbenchKnowledgeFileId}
-                          workspaceFileId={activeWorkbenchWorkspaceFileId}
-                          activeTool={activeWorkbenchTool}
-                          activeTabId={activeWorkbenchTabId}
-                          workspaceCwd={activeWorkspaceCwd}
-                          extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
-                          extensionRailSurface={activeWorkbenchRailSurface}
-                          extensionToolPanels={extensionRightToolPanels}
-                          railOpen={workbenchExplorerOpen}
-                          railWidth={workbenchExplorer.width}
-                          onRailResizeMouseDown={workbenchExplorer.onMouseDown}
-                          onRailResizeReset={workbenchExplorer.reset}
-                          onActiveToolChange={openWorkbenchToolTab}
-                          onCheckpointSelect={() => undefined}
-                          onWorkspaceFileClear={clearActiveWorkspaceFile}
-                          onStartSideChat={handleStartSideChat}
-                        />
-                      </div>
-                    </section>
+                    <WorkbenchPanel
+                      width={workbenchDocument.width + workbenchExplorer.width}
+                      conversationId={activeConversationId}
+                      artifactId={activeWorkbenchArtifactId}
+                      knowledgeFileId={activeWorkbenchKnowledgeFileId}
+                      workspaceFileId={activeWorkbenchWorkspaceFileId}
+                      activeTool={activeWorkbenchTool}
+                      activeTabId={activeWorkbenchTabId}
+                      workspaceCwd={activeWorkspaceCwd}
+                      extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
+                      extensionRailSurface={activeWorkbenchRailSurface}
+                      extensionToolPanels={extensionRightToolPanels}
+                      browserTabsState={browserTabsState}
+                      openTabs={openWorkbenchTabs}
+                      railOpen={workbenchExplorerOpen}
+                      railWidth={workbenchExplorer.width}
+                      onRailResizeMouseDown={workbenchExplorer.onMouseDown}
+                      onRailResizeReset={workbenchExplorer.reset}
+                      onActiveTabChange={setActiveWorkbenchTabId}
+                      onCloseTab={closeWorkbenchTab}
+                      onOpenNewTab={openWorkbenchNewTab}
+                      onActiveToolChange={openWorkbenchToolTab}
+                      onWorkspaceFileClear={clearActiveWorkspaceFile}
+                      onStartSideChat={handleStartSideChat}
+                    />
                   </>
                 ) : null}
 
@@ -1978,25 +2093,36 @@ export function Layout() {
                       />
                     </aside>
                   </>
-                ) : !showWorkbench && showContextRail ? (
+                ) : null}
+
+                {showCompactWorkbenchPanel ? (
                   <>
                     <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
-                    <Suspense
-                      fallback={
-                        <div
-                          style={{ width: railWidth }}
-                          className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel"
-                        />
-                      }
-                    >
-                      <RightPanelTabs
-                        width={railWidth}
-                        conversationId={activeConversationId}
-                        workspaceCwd={activeWorkspaceCwd}
-                        onMouseDown={rail.onMouseDown}
-                        onDoubleClick={rail.reset}
-                      />
-                    </Suspense>
+                    <WorkbenchPanel
+                      width={railWidth}
+                      conversationId={activeConversationId}
+                      artifactId={activeWorkbenchArtifactId}
+                      knowledgeFileId={activeWorkbenchKnowledgeFileId}
+                      workspaceFileId={activeWorkbenchWorkspaceFileId}
+                      activeTool={activeWorkbenchTool}
+                      activeTabId={activeWorkbenchTabId}
+                      workspaceCwd={activeWorkspaceCwd}
+                      extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
+                      extensionRailSurface={activeWorkbenchRailSurface}
+                      extensionToolPanels={extensionRightToolPanels}
+                      browserTabsState={browserTabsState}
+                      openTabs={openWorkbenchTabs}
+                      railOpen={workbenchExplorerOpen}
+                      railWidth={workbenchExplorer.width}
+                      onRailResizeMouseDown={workbenchExplorer.onMouseDown}
+                      onRailResizeReset={workbenchExplorer.reset}
+                      onActiveTabChange={setActiveWorkbenchTabId}
+                      onCloseTab={closeWorkbenchTab}
+                      onOpenNewTab={openWorkbenchNewTab}
+                      onActiveToolChange={openWorkbenchToolTab}
+                      onWorkspaceFileClear={clearActiveWorkspaceFile}
+                      onStartSideChat={handleStartSideChat}
+                    />
                   </>
                 ) : null}
               </RouteContentBoundary>

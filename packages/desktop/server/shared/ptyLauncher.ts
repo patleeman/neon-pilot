@@ -1,6 +1,6 @@
-import { spawn as spawnPty, type IPty } from 'node-pty';
+import { type IPty, spawn as spawnPty } from 'node-pty';
 
-import { resolveProcessLaunch, type ProcessLaunchResult } from './processLauncher.js';
+import { type ProcessLaunchResult, resolveProcessLaunch } from './processLauncher.js';
 
 export interface PtySpawnOptions {
   command: string;
@@ -14,6 +14,10 @@ export interface PtySpawnOptions {
 export interface PtySpawnResult {
   pty: IPty;
   launch: ProcessLaunchResult;
+}
+
+function sanitizePtyEnv(env: NodeJS.ProcessEnv): Record<string, string> {
+  return Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
 }
 
 /**
@@ -42,8 +46,8 @@ export function createPtyProcess(input: PtySpawnOptions): PtySpawnResult {
     name: 'xterm-256color',
     cols: input.cols ?? 80,
     rows: input.rows ?? 24,
-    cwd: launch.cwd,
-    env: launch.env as Record<string, string>,
+    cwd: launch.cwd ?? process.cwd(),
+    env: sanitizePtyEnv(launch.env),
   });
 
   return { pty, launch };

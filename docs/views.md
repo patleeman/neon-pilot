@@ -21,6 +21,8 @@ The new tab page includes:
 | File Explorer | Always — working directory file tree |
 | Artifacts     | Conversation has rendered artifacts  |
 | Browser       | Opened by user                       |
+| Chat          | Opened by user                       |
+| Terminal      | Opened by user                       |
 | Knowledge     | Opened by user                       |
 
 Knowledge also appears as a left-sidebar route. Extension-contributed workbench tools can appear on the new tab page.

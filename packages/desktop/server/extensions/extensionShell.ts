@@ -18,6 +18,50 @@ function installShutdownHooks(): void {
   process.once('exit', terminateSpawnedExtensionProcesses);
 }
 
+function createPipeBackedSpawnHandle(
+  input: {
+    command: string;
+    args?: string[];
+    cwd?: string;
+    env?: NodeJS.ProcessEnv;
+    onStdout?: (chunk: string) => void;
+    onStderr?: (chunk: string) => void;
+    onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
+  },
+  resolvedEnv: NodeJS.ProcessEnv,
+) {
+  const { child, launch } = spawnProcess({
+    command: input.command,
+    args: input.args ?? [],
+    cwd: input.cwd,
+    env: resolvedEnv,
+    options: { detached: true, stdio: ['pipe', 'pipe', 'pipe'] },
+  });
+  spawnedExtensionProcesses.add(child);
+  child.stdout?.on('data', (chunk: Buffer) => input.onStdout?.(chunk.toString('utf8')));
+  child.stderr?.on('data', (chunk: Buffer) => input.onStderr?.(chunk.toString('utf8')));
+  child.on('exit', (code, signal) => {
+    spawnedExtensionProcesses.delete(child);
+    input.onExit?.({ code, signal });
+  });
+  return {
+    pid: child.pid ?? null,
+    executionWrappers: launch.wrappers,
+    kill: () => {
+      spawnedExtensionProcesses.delete(child);
+      terminateProcessGroup(child);
+    },
+    write: (data: string) => {
+      if (child.stdin?.writable) {
+        child.stdin.write(data);
+      }
+    },
+    resize: (_cols: number, _rows: number) => {
+      // No-op for pipe-backed processes; resize is only meaningful with PTY.
+    },
+  };
+}
+
 export function createExtensionShellCapability() {
   return {
     async exec(input: {
@@ -85,7 +129,13 @@ export function createExtensionShellCapability() {
           cols: typeof input.pty === 'object' ? input.pty.cols : 80,
           rows: typeof input.pty === 'object' ? input.pty.rows : 24,
         };
-        const { pty, launch } = createPtyProcess(ptyOptions);
+        let ptyResult: ReturnType<typeof createPtyProcess>;
+        try {
+          ptyResult = createPtyProcess(ptyOptions);
+        } catch {
+          return createPipeBackedSpawnHandle(input, resolvedEnv);
+        }
+        const { pty, launch } = ptyResult;
         spawnedExtensionProcesses.add(pty as unknown as ChildProcess);
         pty.onData((chunk: string) => input.onStdout?.(chunk));
         pty.onExit((event: { exitCode: number; signal?: number }) => {
@@ -105,36 +155,7 @@ export function createExtensionShellCapability() {
       }
 
       // Non-PTY spawn with stdin pipe for write support
-      const { child, launch } = spawnProcess({
-        command: input.command,
-        args: input.args ?? [],
-        cwd: input.cwd,
-        env: resolvedEnv,
-        options: { detached: true, stdio: ['pipe', 'pipe', 'pipe'] },
-      });
-      spawnedExtensionProcesses.add(child);
-      child.stdout?.on('data', (chunk: Buffer) => input.onStdout?.(chunk.toString('utf8')));
-      child.stderr?.on('data', (chunk: Buffer) => input.onStderr?.(chunk.toString('utf8')));
-      child.on('exit', (code, signal) => {
-        spawnedExtensionProcesses.delete(child);
-        input.onExit?.({ code, signal });
-      });
-      return {
-        pid: child.pid ?? null,
-        executionWrappers: launch.wrappers,
-        kill: () => {
-          spawnedExtensionProcesses.delete(child);
-          terminateProcessGroup(child);
-        },
-        write: (data: string) => {
-          if (child.stdin?.writable) {
-            child.stdin.write(data);
-          }
-        },
-        resize: (_cols: number, _rows: number) => {
-          // No-op for non-PTY processes; resize is only meaningful with PTY.
-        },
-      };
+      return createPipeBackedSpawnHandle(input, resolvedEnv);
     },
   };
 }

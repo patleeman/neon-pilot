@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { accessSync, constants } from 'node:fs';
 
 import type {
   ExtensionBackendContext,
@@ -24,6 +25,19 @@ const sessions = new Map<string, TerminalSession>();
 
 function generateId(): string {
   return randomUUID();
+}
+
+function resolveLoginShell(): string {
+  const candidates = [process.env.SHELL, '/bin/zsh', '/bin/bash'].filter((value): value is string => Boolean(value));
+  for (const candidate of candidates) {
+    try {
+      accessSync(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      // Try the next known shell.
+    }
+  }
+  return '/bin/sh';
 }
 
 function broadcastOutput(session: TerminalSession, data: string): void {
@@ -84,7 +98,7 @@ function removeSession(id: string): void {
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 export async function createTerminal(input: { cwd?: string }, ctx: ExtensionBackendContext): Promise<{ id: string; pid: number | null }> {
-  const shell = process.env.SHELL || '/bin/bash';
+  const shell = resolveLoginShell();
   const id = generateId();
 
   const child = await ctx.shell.spawn({
@@ -92,6 +106,10 @@ export async function createTerminal(input: { cwd?: string }, ctx: ExtensionBack
     pty: { cols: 80, rows: 24 },
     cwd: input.cwd,
     onStdout: (chunk: string) => {
+      const session = sessions.get(id);
+      if (session) broadcastOutput(session, chunk);
+    },
+    onStderr: (chunk: string) => {
       const session = sessions.get(id);
       if (session) broadcastOutput(session, chunk);
     },

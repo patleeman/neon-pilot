@@ -1,6 +1,6 @@
 import type { ExtensionRightToolPanelSurface, ExtensionSurfaceSummary, NativeExtensionViewSummary } from '../../extensions/types';
 
-export type BuiltInWorkbenchRailMode = 'new' | 'files' | 'artifacts' | 'browser';
+export type BuiltInWorkbenchRailMode = 'new' | 'files' | 'artifacts' | 'browser' | 'chat' | 'terminal';
 type ExtensionWorkbenchRailMode = `extension:${string}:${string}`;
 export type WorkbenchRailMode = BuiltInWorkbenchRailMode | ExtensionWorkbenchRailMode;
 
@@ -36,6 +36,19 @@ export function parseExtensionToolPanelMode(mode: WorkbenchRailMode): { extensio
 
 export function findExtensionToolPanelBySlot(panels: WorkbenchToolPanelSurface[], slot: string): WorkbenchToolPanelSurface | null {
   return panels.find((p) => inferSurfaceToolSlot(p) === slot) ?? null;
+}
+
+export function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { extensionId?: string } | null): boolean {
+  const surfaceToolSlot = surface ? inferSurfaceToolSlot(surface as WorkbenchToolPanelSurface) : undefined;
+  return (
+    mode === 'browser' ||
+    mode === 'chat' ||
+    mode === 'terminal' ||
+    mode === 'artifacts' ||
+    surface?.extensionId === 'system-artifacts' ||
+    surface?.extensionId === 'system-excalidraw-input' ||
+    surfaceToolSlot === 'terminal'
+  );
 }
 
 export function resolveActiveExtensionWorkbenchSurface({

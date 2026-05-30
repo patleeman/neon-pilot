@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppEvents } from '../../app/contexts.js';
 import { api } from '../../client/api.js';
+import {
+  persistForkPromptDraft,
+  resolveBranchEntryIdFromSessionDetailResult,
+  resolveRewindTargetForMessage,
+  resolveRewindTargetFromResolvedEntry,
+  resolveSessionEntryIdFromBlockId,
+} from '../../conversation/forking.js';
 import { useDesktopConversationState } from '../../hooks/useDesktopConversationState.js';
 import type { MessageBlock, ModelInfo } from '../../shared/types.js';
 import { ChatRailComposer } from './ChatRailComposer.js';
@@ -13,7 +20,7 @@ import { ChatView } from './ChatView.js';
  * Manages its own live session via useDesktopConversationState and
  * renders ChatView + a full composer.
  */
-export function ChatRail({ conversationId, workspaceCwd }: { conversationId: string; workspaceCwd: string | null }) {
+export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conversationId: string; workspaceCwd: string | null }) {
   const desktopState = useDesktopConversationState(conversationId, {
     tailBlocks: 400,
   });
@@ -23,8 +30,6 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
   const messages: MessageBlock[] = stream?.blocks ?? [];
   const isStreaming = stream?.isStreaming ?? false;
   const isCompacting = stream?.isCompacting ?? false;
-  const title = desktopState.state?.sessionDetail?.meta?.title ?? 'Side Chat';
-  const cwd = desktopState.state?.sessionDetail?.meta?.cwd ?? workspaceCwd ?? '';
 
   // ── Models ────────────────────────────────────────────────────────────
   const [models, setModels] = useState<ModelInfo[]>([]);
@@ -57,7 +62,7 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
   // Refresh when conversation metadata version bumps.
   useEffect(() => {
     desktopState.reconnect();
-  }, [conversationVersions[conversationId], desktopState]);
+  }, [conversationVersions[conversationId], desktopState.reconnect]);
 
   // ── Composer state ────────────────────────────────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,21 +71,131 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
     async (text: string) => {
       if (!text.trim() || isStreaming) return;
       try {
-        await stream?.send(text);
+        await desktopState.send(text);
       } catch {
         // Composer stays usable on error.
       }
     },
-    [isStreaming, stream],
+    [desktopState, isStreaming],
   );
 
   const handleAbort = useCallback(async () => {
     try {
-      await stream?.abort();
+      await desktopState.abort();
     } catch {
       // Ignore abort errors.
     }
-  }, [stream]);
+  }, [desktopState]);
+
+  const handleRewindMessage = useCallback(
+    async (messageIndex: number) => {
+      const localMessageIndex = messageIndex - (stream?.blockOffset ?? 0);
+      if (localMessageIndex < 0 || localMessageIndex >= messages.length) {
+        return;
+      }
+
+      try {
+        const clickedBlock = messages[localMessageIndex];
+        let target: { entryId: string; beforeEntry: boolean; promptDraft: string | null } | null = null;
+
+        if (clickedBlock?.type === 'text' || clickedBlock?.type === 'user') {
+          let entryId = resolveSessionEntryIdFromBlockId(clickedBlock.id);
+          if (!entryId) {
+            const detail = await api.sessionDetail(conversationId, {
+              tailBlocks: Math.max(messages.length, 1),
+            });
+            entryId = resolveBranchEntryIdFromSessionDetailResult(clickedBlock, messageIndex, detail);
+          }
+          if (entryId) {
+            target = resolveRewindTargetFromResolvedEntry(messages, localMessageIndex, entryId);
+          }
+        }
+
+        if (!target) {
+          const entries = await api.forkEntries(conversationId);
+          target = resolveRewindTargetForMessage(messages, localMessageIndex, entries);
+        }
+        if (!target) {
+          return;
+        }
+
+        const forked = await api.forkSession(
+          conversationId,
+          target.entryId,
+          {
+            preserveSource: true,
+            beforeEntry: target.beforeEntry,
+            branchKind: 'rewind',
+          },
+          desktopState.surfaceId,
+        );
+        if (target.promptDraft) {
+          persistForkPromptDraft(forked.newSessionId, target.promptDraft);
+        }
+        window.dispatchEvent(new CustomEvent('pa:companion-chat-open', { detail: { conversationId: forked.newSessionId } }));
+      } catch (error) {
+        console.error('Side chat rewind failed:', error);
+      }
+    },
+    [conversationId, desktopState.surfaceId, messages, stream?.blockOffset],
+  );
+
+  const handleForkMessage = useCallback(
+    async (messageIndex: number) => {
+      const localMessageIndex = messageIndex - (stream?.blockOffset ?? 0);
+      if (localMessageIndex < 0 || localMessageIndex >= messages.length) {
+        return;
+      }
+
+      const clickedBlock = messages[localMessageIndex];
+      if (clickedBlock?.type !== 'text' && clickedBlock?.type !== 'user') {
+        await handleRewindMessage(messageIndex);
+        return;
+      }
+
+      try {
+        let entryId = resolveSessionEntryIdFromBlockId(clickedBlock.id);
+        if (!entryId) {
+          const detail = await api.sessionDetail(conversationId, {
+            tailBlocks: Math.max(messages.length, 1),
+          });
+          entryId = resolveBranchEntryIdFromSessionDetailResult(clickedBlock, messageIndex, detail);
+        }
+        if (!entryId) {
+          return;
+        }
+
+        const forked =
+          clickedBlock.type === 'user'
+            ? await api.forkSession(
+                conversationId,
+                entryId,
+                {
+                  preserveSource: true,
+                  beforeEntry: true,
+                  branchKind: 'fork',
+                },
+                desktopState.surfaceId,
+              )
+            : await api.branchSession(conversationId, entryId, desktopState.surfaceId);
+
+        if (clickedBlock.type === 'user') {
+          persistForkPromptDraft(forked.newSessionId, clickedBlock.text);
+        }
+        window.dispatchEvent(
+          new CustomEvent('pa:companion-chat-open', {
+            detail: {
+              conversationId: forked.newSessionId,
+              title: clickedBlock.type === 'user' ? `Fork: ${clickedBlock.text.slice(0, 40)}` : undefined,
+            },
+          }),
+        );
+      } catch (error) {
+        console.error('Side chat fork failed:', error);
+      }
+    },
+    [conversationId, desktopState.surfaceId, handleRewindMessage, messages, stream?.blockOffset],
+  );
 
   const handleModelSelect = useCallback(
     async (modelId: string) => {
@@ -94,38 +209,8 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
     [conversationId],
   );
 
-  const handleDuplicate = useCallback(async () => {
-    try {
-      const { newSessionId } = await api.duplicateConversation(conversationId);
-      window.dispatchEvent(
-        new CustomEvent('pa:companion-chat-open', {
-          detail: { conversationId: newSessionId, title: `Duplicate of ${title}` },
-        }),
-      );
-    } catch {
-      // Ignore duplicate errors.
-    }
-  }, [conversationId, title]);
-
   return (
     <div className="flex h-full min-h-0 flex-col bg-base select-text">
-      {/* Header */}
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
-        <h2 className="min-w-0 truncate text-[13px] font-medium text-primary">{title}</h2>
-        <button
-          type="button"
-          onClick={handleDuplicate}
-          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-dim transition hover:bg-surface hover:text-secondary"
-          title="Duplicate this companion conversation"
-          aria-label="Duplicate conversation"
-        >
-          ⧉
-        </button>
-        <span className="shrink-0 text-[10px] text-dim font-mono truncate max-w-[120px]" title={cwd}>
-          {cwd ? cwd.split('/').pop() : ''}
-        </span>
-      </div>
-
       {/* Messages */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <ChatView
@@ -134,7 +219,9 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
           isStreaming={isStreaming}
           isCompacting={isCompacting}
           scrollContainerRef={scrollRef}
-          performanceMode="balanced"
+          performanceMode="default"
+          onForkMessage={handleForkMessage}
+          onRewindMessage={handleRewindMessage}
         />
       </div>
 

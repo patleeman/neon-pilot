@@ -1,11 +1,11 @@
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
-import { useEffect, useRef } from 'react';
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
+import { FitAddon } from '@xterm/addon-fit';
+import { Terminal } from '@xterm/xterm';
+import { useEffect, useRef } from 'react';
 
-const TERMINAL_ROUTE_PREFIX = '/api/extensions/system-terminal/routes/terminals';
+const TERMINAL_ROUTE_PREFIX = '/api/extensions/system-terminal/routes';
 
 interface TerminalState {
   id: string | null;
