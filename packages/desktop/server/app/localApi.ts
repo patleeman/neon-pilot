@@ -134,27 +134,18 @@ import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../e
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
 
-// ── Parallel lazy loader for model/provider modules ──────────────────────
-// AI SDKs (openai, anthropic, etc.) are loaded via Promise.all() so they
-// are fetched/parsed concurrently rather than depth-first sequentially.
-let _modelsMod: Record<string, unknown> | null = null;
-let _modelsPromise = Promise.all([
-  import('../models/modelPreferences.js'),
-  import('../models/modelState.js'),
-  import('../models/providerAuth.js'),
-  import('../models/providerDesktopCapability.js'),
-]).then(([prefs, state, auth, caps]) => {
-  _modelsMod = { ...prefs, ...state, ...auth, ...caps };
-}).catch((err) => {
-  console.error('[local-api] failed to load model modules:', err.message);
-});
+// ── Model/provider modules ─────────────────────────────────────────────
+// Statically imported so the full 8.7MB bundle is parsed ONCE before the
+// server starts. No lazy loading, no background promises, no race conditions.
+import * as _prefs from '../models/modelPreferences.js';
+import * as _state from '../models/modelState.js';
+import * as _auth from '../models/providerAuth.js';
+import * as _caps from '../models/providerDesktopCapability.js';
 
-// Block module execution until model chunks are loaded so the first
-// API call that touches models doesn't pay the cold parse penalty.
-await _modelsPromise;
+const _modelsMod = { ..._prefs, ..._state, ..._auth, ..._caps };
 
-async function models(): Promise<any> {
-  return _modelsMod!;
+function models() {
+  return _modelsMod;
 }
 import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
@@ -229,7 +220,11 @@ import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
-void models().then(m => m.prewarmModelDefinitions?.());
+// Fire-and-forget prewarm model definitions (reads settings files, no blocking).
+{
+  const m = models();
+  if (m.prewarmModelDefinitions) void m.prewarmModelDefinitions();
+}
 
 type RouteHandler = (req: LocalApiRequest, res: LocalApiResponse) => unknown;
 
@@ -370,6 +365,7 @@ class LocalApiResponse {
 
 let localRoutesPromise: Promise<RegisteredRoute[]> | null = null;
 let localContextsPromise: Promise<{ context: ServerRouteContext; perf: Record<string, number> }> | null = null;
+let localContextBuildPerf: Record<string, number> | null = null;
 let localServerRouteContext: ServerRouteContext | null = null;
 let localLiveSessionCapabilityContext: LiveSessionCapabilityContext | null = null;
 let localProviderDesktopCapabilityContext: ProviderDesktopCapabilityContext | null = null;
@@ -565,18 +561,22 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     listMemoryDocs: context.listMemoryDocs,
   };
   localLiveSessionCapabilityContext = liveSessionCapabilityContext;
-  const prewarmStartedAtMs = performance.now();
-  try {
-    await prewarmLiveSessionCapability({}, localLiveSessionCapabilityContext);
-  } catch (error) {
+
+  // Warm the resource options cache synchronously (fast — ~100ms, reads
+  // SKILL.md/template files from disk) so the first createLiveSession
+  // doesn't pay that cost even if the extension factory load is deferred.
+  context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope()).catch(() => {});
+
+  // Extension factory loading is slow (~9s, dynamic imports of extension
+  // backend modules). Don't block startup — run in background so the
+  // first API calls are fast. If the user creates a chat before this
+  // finishes, only the first one pays the cold-build penalty.
+  void prewarmLiveSessionCapability({}, localLiveSessionCapabilityContext).catch((error) => {
     logWarn('default live session prewarm failed', {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
-  }
-  const prewarmAtMs = performance.now();
-  process.stderr.write(`[perf] buildLocalContexts: prewarm ${Math.round(prewarmAtMs - prewarmStartedAtMs)}ms\n`);
-  process.stderr.write(`[perf] buildLocalContexts: TOTAL ${Math.round(prewarmAtMs - startedAtMs)}ms\n`);
+  });
 
   localProviderDesktopCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,

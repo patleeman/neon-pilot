@@ -91,13 +91,15 @@ const backendApiLazyModuleEntries = [
 ];
 
 await Promise.all([
-  // Main API handler module — built directly from localApi.ts.
-  // No bootstrap wrapper. The child process waits for this to finish
-  // parsing before starting the HTTP server and opening the window.
+  // Main API handler module — code-split into entry point + lazy chunks.
+  // esbuild automatically extracts shared dependencies into separate
+  // chunk files loaded on demand by Node.js.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/app/localApi.ts')],
-    outfile: bundleOutputs[0],
+    outdir: resolve(outdir, 'app'),
+    splitting: true,
+    chunkNames: 'chunks/[hash]',
     banner: {
       js: createRequireBanner,
     },
@@ -174,6 +176,15 @@ const chunkFiles = existsSync(chunkDir)
       .map((f) => resolve(chunkDir, f))
   : [];
 bundleOutputs.push(...chunkFiles);
+
+// Discover code-split chunks from the app/ directory.
+const appChunkDir = resolve(outdir, 'app', 'chunks');
+if (existsSync(appChunkDir)) {
+  const appChunkFiles = readdirSync(appChunkDir)
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => resolve(appChunkDir, f));
+  bundleOutputs.push(...appChunkFiles);
+}
 
 // jiti's bundled Babel copy contains a duplicate TypeScript heritage switch case. When
 // another esbuild pass parses our server bundle, it reports a noisy duplicate-case warning.
