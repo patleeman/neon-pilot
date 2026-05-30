@@ -39,9 +39,47 @@ export function buildConversationServiceTierPreferenceInput(
   return state.currentServiceTier || null;
 }
 
+function isOpencodeGoKimiThinkingModel(model: Model<Api>): boolean {
+  return model.provider === 'opencode-go' && model.id === 'kimi-k2.6';
+}
+
+function removeDuplicateReasoningPayloadFields(payload: unknown, model: Model<Api>): unknown {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!('reasoning_effort' in payload)) {
+    return payload;
+  }
+
+  const payloadRecord = payload as Record<string, unknown>;
+  if (isOpencodeGoKimiThinkingModel(model)) {
+    const { reasoning_effort: reasoningEffort, ...safePayload } = payloadRecord;
+    if (!('thinking' in safePayload)) {
+      return { ...safePayload, thinking: { type: reasoningEffort ? 'enabled' : 'disabled' } };
+    }
+    return safePayload;
+  }
+
+  if (!('thinking' in payloadRecord)) {
+    return payload;
+  }
+
+  const { thinking: _thinking, ...safePayload } = payloadRecord;
+  return safePayload;
+}
+
+function buildSafeProviderPayloadHook(onPayload: ProviderStreamOptions['onPayload'] | undefined): ProviderStreamOptions['onPayload'] {
+  return async (payload, model) => {
+    const nextPayload = onPayload ? await onPayload(payload, model) : undefined;
+    return removeDuplicateReasoningPayloadFields(nextPayload === undefined ? payload : nextPayload, model);
+  };
+}
+
 function buildServiceTierAwareStreamFn(modelRegistry: ModelRegistry, serviceTier: string) {
   return async (model: Model<Api>, context: Context, options?: SimpleStreamOptions) => {
-    const auth = await modelRegistry.getApiKeyAndHeaders(model);
+    const canonicalModel = modelRegistry.find(model.provider, model.id) ?? model;
+    const auth = await modelRegistry.getApiKeyAndHeaders(canonicalModel);
     if (!auth.ok) {
       throw new Error(auth.error);
     }
@@ -50,10 +88,11 @@ function buildServiceTierAwareStreamFn(modelRegistry: ModelRegistry, serviceTier
       ...options,
       apiKey: auth.apiKey,
       headers: auth.headers || options?.headers ? { ...auth.headers, ...options?.headers } : undefined,
+      onPayload: buildSafeProviderPayloadHook(options?.onPayload),
     };
 
-    if (!serviceTier || !modelSupportsServiceTier(model, serviceTier)) {
-      return streamSimple(model, context, mergedOptions);
+    if (!serviceTier || !modelSupportsServiceTier(canonicalModel, serviceTier)) {
+      return streamSimple(canonicalModel, context, mergedOptions);
     }
 
     const reasoningEffort =
@@ -63,7 +102,7 @@ function buildServiceTierAwareStreamFn(modelRegistry: ModelRegistry, serviceTier
     const streamOptions = { ...mergedOptions } as ProviderStreamOptions & { reasoning?: unknown };
     delete streamOptions.reasoning;
 
-    return stream(model, context, {
+    return stream(canonicalModel, context, {
       ...streamOptions,
       reasoningEffort,
       serviceTier,
@@ -72,6 +111,7 @@ function buildServiceTierAwareStreamFn(modelRegistry: ModelRegistry, serviceTier
 }
 
 export function applyLiveSessionServiceTier(session: AgentSession, serviceTier: string): void {
+  session.agent.onPayload = buildSafeProviderPayloadHook(session.agent.onPayload);
   session.agent.streamFn = buildServiceTierAwareStreamFn(session.modelRegistry, serviceTier);
 }
 

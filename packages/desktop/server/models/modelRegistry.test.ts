@@ -139,6 +139,31 @@ describe('model registry helpers', () => {
     });
   });
 
+  it('hides opencode-go Kimi K2.6 while its reasoning payload contract is incompatible', () => {
+    const authStorage = { kind: 'auth-storage' };
+    const kimiModel = {
+      id: 'kimi-k2.6',
+      provider: 'opencode-go',
+      compat: { thinkingFormat: 'string-thinking' },
+      thinkingLevelMap: { off: 'none' },
+      contextWindow: 262_144,
+    };
+    const registry = {
+      getAll: vi.fn(() => [kimiModel]),
+      getAvailable: vi.fn(() => [kimiModel]),
+      find: vi.fn(() => kimiModel),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
+    };
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
+    modelRegistryCreateMock.mockReturnValue(registry);
+
+    const created = createRuntimeModelRegistry(authStorage as never);
+
+    expect(created.getAvailable()).toEqual([]);
+    expect(created.getAll()).toEqual([]);
+    expect(created.find('opencode-go', 'kimi-k2.6')).toBeUndefined();
+  });
+
   it('prefers secure provider secrets when resolving model auth', async () => {
     const authStorage = { kind: 'auth-storage' };
     const registry = {
