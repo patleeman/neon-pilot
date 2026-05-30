@@ -132,24 +132,26 @@ import {
 } from '../extensions/extensionRegistry.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
-import { readSavedModelPreferences, writeSavedModelPreferences } from '../models/modelPreferences.js';
-import { invalidateModelDefinitionsCache, prewarmModelDefinitions, readModelState } from '../models/modelState.js';
-import { getProviderOAuthLoginState, subscribeProviderOAuthLogin } from '../models/providerAuth.js';
-import {
-  cancelProviderOAuthLoginCapability,
-  deleteModelProviderCapability,
-  deleteModelProviderModelCapability,
-  type ProviderDesktopCapabilityContext,
-  readModelProvidersCapability,
-  readProviderAuthCapability,
-  readProviderOAuthLoginCapability,
-  removeProviderCredentialCapability,
-  saveModelProviderCapability,
-  saveModelProviderModelCapability,
-  setProviderApiKeyCapability,
-  startProviderOAuthLoginCapability,
-  submitProviderOAuthLoginInputCapability,
-} from '../models/providerDesktopCapability.js';
+import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
+
+// ── Parallel lazy loader for model/provider modules ──────────────────────
+// AI SDKs (openai, anthropic, etc.) are loaded via Promise.all() so they
+// are fetched/parsed concurrently rather than depth-first sequentially.
+let _modelsMod = null;
+const _modelsPromise = Promise.all([
+  import('../models/modelPreferences.js'),
+  import('../models/modelState.js'),
+  import('../models/providerAuth.js'),
+  import('../models/providerDesktopCapability.js'),
+]).then(([prefs, state, auth, caps]) => {
+  _modelsMod = { ...prefs, ...state, ...auth, ...caps };
+});
+
+async function models() {
+  if (_modelsMod) return _modelsMod;
+  await _modelsPromise;
+  return _modelsMod;
+}
 import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
@@ -223,7 +225,7 @@ import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
 
-prewarmModelDefinitions();
+void models().then(m => m.prewarmModelDefinitions?.());
 
 type RouteHandler = (req: LocalApiRequest, res: LocalApiResponse) => unknown;
 
@@ -1513,7 +1515,8 @@ export async function readDesktopSessionSearchIndex(sessionIds: string[]) {
 }
 
 export async function readDesktopModels() {
-  return await readModelState(DEFAULT_RUNTIME_SETTINGS_FILE);
+  const m = await models();
+  return await m.readModelState(DEFAULT_RUNTIME_SETTINGS_FILE);
 }
 
 export async function updateDesktopModelPreferences(input: {
@@ -1524,10 +1527,11 @@ export async function updateDesktopModelPreferences(input: {
 }) {
   validateDesktopModelPreferenceUpdate(input);
 
-  const models = (await readModelState(DEFAULT_RUNTIME_SETTINGS_FILE)).models;
+  const m = await models();
+  const modelData = (await m.readModelState(DEFAULT_RUNTIME_SETTINGS_FILE)).models;
   persistSettingsWrite(
     (settingsFile) => {
-      writeSavedModelPreferences(buildSavedModelPreferencePatch(input), settingsFile, models);
+      m.writeSavedModelPreferences(buildSavedModelPreferencePatch(input), settingsFile, modelData);
     },
     {
       runtimeSettingsFile: DEFAULT_RUNTIME_SETTINGS_FILE,
@@ -1604,11 +1608,11 @@ export async function updateDesktopOpenConversationTabs(input: {
 }
 
 export async function readDesktopModelProviders() {
-  return readModelProvidersCapability(await getLocalProviderDesktopCapabilityContext());
+  return (await models()).readModelProvidersCapability(await getLocalProviderDesktopCapabilityContext());
 }
 
 export async function readDesktopProviderAuth() {
-  return readProviderAuthCapability(await getLocalProviderDesktopCapabilityContext());
+  return (await models()).readProviderAuthCapability(await getLocalProviderDesktopCapabilityContext());
 }
 
 export async function saveDesktopModelProvider(input: {
@@ -1621,15 +1625,15 @@ export async function saveDesktopModelProvider(input: {
   compat?: Record<string, unknown>;
   modelOverrides?: Record<string, unknown>;
 }) {
-  const result = saveModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), input);
-  invalidateModelDefinitionsCache();
+  const result = (await models()).saveModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), input);
+  (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
 }
 
 export async function deleteDesktopModelProvider(provider: string) {
-  const result = deleteModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), provider);
-  invalidateModelDefinitionsCache();
+  const result = (await models()).deleteModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
 }
@@ -1653,51 +1657,51 @@ export async function saveDesktopModelProviderModel(input: {
   };
   compat?: Record<string, unknown>;
 }) {
-  const result = saveModelProviderModelCapability(await getLocalProviderDesktopCapabilityContext(), input);
-  invalidateModelDefinitionsCache();
+  const result = (await models()).saveModelProviderModelCapability(await getLocalProviderDesktopCapabilityContext(), input);
+  (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
 }
 
 export async function deleteDesktopModelProviderModel(input: { provider: string; modelId: string }) {
-  const result = deleteModelProviderModelCapability(
+  const result = (await models()).deleteModelProviderModelCapability(
     await getLocalProviderDesktopCapabilityContext(),
     input.provider,
     input.modelId,
   );
-  invalidateModelDefinitionsCache();
+  (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
 }
 
 export async function setDesktopProviderApiKey(input: { provider: string; apiKey: string }) {
-  const result = setProviderApiKeyCapability(await getLocalProviderDesktopCapabilityContext(), input.provider, input.apiKey);
-  invalidateModelDefinitionsCache();
+  const result = (await models()).setProviderApiKeyCapability(await getLocalProviderDesktopCapabilityContext(), input.provider, input.apiKey);
+  (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
 }
 
 export async function removeDesktopProviderCredential(provider: string) {
-  const result = removeProviderCredentialCapability(await getLocalProviderDesktopCapabilityContext(), provider);
-  invalidateModelDefinitionsCache();
+  const result = (await models()).removeProviderCredentialCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
 }
 
 export async function startDesktopProviderOAuthLogin(provider: string) {
-  return startProviderOAuthLoginCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  return (await models()).startProviderOAuthLoginCapability(await getLocalProviderDesktopCapabilityContext(), provider);
 }
 
 export async function readDesktopProviderOAuthLogin(loginId: string) {
-  return readProviderOAuthLoginCapability(loginId);
+  return (await models()).readProviderOAuthLoginCapability(loginId);
 }
 
 export async function submitDesktopProviderOAuthLoginInput(input: { loginId: string; value: string }) {
-  return submitProviderOAuthLoginInputCapability(input.loginId, input.value);
+  return (await models()).submitProviderOAuthLoginInputCapability(input.loginId, input.value);
 }
 
 export async function cancelDesktopProviderOAuthLogin(loginId: string) {
-  return cancelProviderOAuthLoginCapability(loginId);
+  return (await models()).cancelProviderOAuthLoginCapability(loginId);
 }
 
 export async function subscribeDesktopProviderOAuthLogin(loginId: string, onState: (state: unknown) => void): Promise<() => void> {
@@ -1718,8 +1722,8 @@ export async function subscribeDesktopProviderOAuthLogin(loginId: string, onStat
     }
   };
 
-  unsubscribe = subscribeProviderOAuthLogin(normalizedLoginId, handleState);
-  const current = getProviderOAuthLoginState(normalizedLoginId);
+  unsubscribe = (await models()).subscribeProviderOAuthLogin(normalizedLoginId, handleState);
+  const current = (await models()).getProviderOAuthLoginState(normalizedLoginId);
   if (current) {
     handleState(current);
   }
@@ -2190,7 +2194,7 @@ export async function updateDesktopConversationModelPreferences(input: {
   const state = applyConversationModelPreferencesToSessionManager(
     sessionManager,
     nextInput,
-    readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE, availableModels),
+    (await models()).readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE, availableModels),
     availableModels,
   );
 
