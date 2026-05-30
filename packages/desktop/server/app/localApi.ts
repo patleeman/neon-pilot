@@ -69,6 +69,7 @@ import {
   appendConversationOffshootDetachedMetadata,
   appendConversationWorkspaceMetadata,
   publishConversationSessionMetaChanged,
+  setConversationServiceContext,
   readConversationModelPreferenceStateById,
   readConversationSessionMeta,
   renameStoredConversation,
@@ -132,7 +133,7 @@ import {
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import { readSavedModelPreferences, writeSavedModelPreferences } from '../models/modelPreferences.js';
-import { readModelState } from '../models/modelState.js';
+import { invalidateModelDefinitionsCache, prewarmModelDefinitions, readModelState } from '../models/modelState.js';
 import { getProviderOAuthLoginState, subscribeProviderOAuthLogin } from '../models/providerAuth.js';
 import {
   cancelProviderOAuthLoginCapability,
@@ -153,7 +154,7 @@ import type { ServerRouteContext } from '../routes/context.js';
 import { registerServerRoutes } from '../routes/registerAll.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import { invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
-import { logError } from '../shared/logging.js';
+import { logError, logWarn } from '../shared/logging.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE, persistSettingsWrite } from '../ui/settingsPersistence.js';
@@ -221,6 +222,8 @@ import { readSessionDetailRouteResponse } from './localApiSessionDetailResponse.
 import { buildDesktopCloseEvent, markSubscriptionClosed, shouldCloseSubscription } from './localApiSubscriptionClose.js';
 import { createServerRouteContext } from './routeContext.js';
 import { createRuntimeState } from './runtimeState.js';
+
+prewarmModelDefinitions();
 
 type RouteHandler = (req: LocalApiRequest, res: LocalApiResponse) => unknown;
 
@@ -536,7 +539,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
 
   localServerRouteContext = context;
 
-  localLiveSessionCapabilityContext = {
+  const liveSessionCapabilityContext: LiveSessionCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
     getDefaultWebCwd: context.getDefaultWebCwd,
@@ -547,6 +550,13 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     listTasksForRuntimeScope: context.listTasksForRuntimeScope,
     listMemoryDocs: context.listMemoryDocs,
   };
+  localLiveSessionCapabilityContext = liveSessionCapabilityContext;
+  void prewarmLiveSessionCapability({}, localLiveSessionCapabilityContext).catch((error) => {
+    logWarn('default live session prewarm failed', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+  });
 
   localProviderDesktopCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,
@@ -554,6 +564,11 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     getAuthFile: context.getAuthFile,
     getStateRoot: context.getStateRoot,
   };
+  setConversationServiceContext({
+    getRuntimeScope: context.getRuntimeScope,
+    getRepoRoot: context.getRepoRoot,
+    getSavedUiPreferences: context.getSavedUiPreferences,
+  });
   const capabilityContextAtMs = performance.now();
 
   if (isMainThread) {
@@ -1425,10 +1440,12 @@ export async function readDesktopDaemonState() {
 }
 
 export async function readDesktopSessions(input: { limit?: number } = {}) {
+  await getLocalServerRouteContext();
   return readConversationSessionsCapability(input);
 }
 
 export async function readDesktopSessionMeta(sessionId: string) {
+  await getLocalServerRouteContext();
   const session = readConversationSessionMetaCapability(sessionId);
   assertSessionFound(Boolean(session));
 
@@ -1548,11 +1565,17 @@ export async function saveDesktopModelProvider(input: {
   compat?: Record<string, unknown>;
   modelOverrides?: Record<string, unknown>;
 }) {
-  return saveModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), input);
+  const result = saveModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), input);
+  invalidateModelDefinitionsCache();
+  invalidateAppTopics('models');
+  return result;
 }
 
 export async function deleteDesktopModelProvider(provider: string) {
-  return deleteModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  const result = deleteModelProviderCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  invalidateModelDefinitionsCache();
+  invalidateAppTopics('models');
+  return result;
 }
 
 export async function saveDesktopModelProviderModel(input: {
@@ -1574,19 +1597,35 @@ export async function saveDesktopModelProviderModel(input: {
   };
   compat?: Record<string, unknown>;
 }) {
-  return saveModelProviderModelCapability(await getLocalProviderDesktopCapabilityContext(), input);
+  const result = saveModelProviderModelCapability(await getLocalProviderDesktopCapabilityContext(), input);
+  invalidateModelDefinitionsCache();
+  invalidateAppTopics('models');
+  return result;
 }
 
 export async function deleteDesktopModelProviderModel(input: { provider: string; modelId: string }) {
-  return deleteModelProviderModelCapability(await getLocalProviderDesktopCapabilityContext(), input.provider, input.modelId);
+  const result = deleteModelProviderModelCapability(
+    await getLocalProviderDesktopCapabilityContext(),
+    input.provider,
+    input.modelId,
+  );
+  invalidateModelDefinitionsCache();
+  invalidateAppTopics('models');
+  return result;
 }
 
 export async function setDesktopProviderApiKey(input: { provider: string; apiKey: string }) {
-  return setProviderApiKeyCapability(await getLocalProviderDesktopCapabilityContext(), input.provider, input.apiKey);
+  const result = setProviderApiKeyCapability(await getLocalProviderDesktopCapabilityContext(), input.provider, input.apiKey);
+  invalidateModelDefinitionsCache();
+  invalidateAppTopics('models');
+  return result;
 }
 
 export async function removeDesktopProviderCredential(provider: string) {
-  return removeProviderCredentialCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  const result = removeProviderCredentialCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  invalidateModelDefinitionsCache();
+  invalidateAppTopics('models');
+  return result;
 }
 
 export async function startDesktopProviderOAuthLogin(provider: string) {

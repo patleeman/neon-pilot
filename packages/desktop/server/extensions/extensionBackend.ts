@@ -692,7 +692,7 @@ export async function invokeExtensionRoute(
       ),
     ),
   );
-  if (result && typeof result === 'object' && ('body' in result || 'status' in result || 'headers' in result)) {
+  if (result && typeof result === 'object' && ('body' in result || 'status' in result || 'headers' in result || 'stream' in result || 'events' in result)) {
     return result as ExtensionRouteResponse;
   }
   return { status: 200, body: result };
