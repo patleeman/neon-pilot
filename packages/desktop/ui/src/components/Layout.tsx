@@ -1552,9 +1552,9 @@ export function Layout() {
         const surface = extensionRightToolPanels.find((candidate) => `${candidate.extensionId}/${candidate.id}` === target);
         if (!surface) return false;
         const mode = extensionToolPanelMode(surface);
+        setAppLayoutMode('workbench');
+        writeAppLayoutMode('workbench');
         if (isSinglePaneWorkbenchMode(mode, surface)) {
-          setAppLayoutMode('workbench');
-          writeAppLayoutMode('workbench');
           openWorkbenchToolTab(mode);
           return true;
         }
@@ -1897,12 +1897,6 @@ export function Layout() {
           toggleRail: () => setRailOpen((current) => !current),
         }
       : registeredRightRailControl;
-  const showCompactWorkbenchPanel =
-    !showWorkbench &&
-    canToggleWorkbench &&
-    railOpen &&
-    !((showRoutePrimaryRail && routePrimaryRailSurface) || (showKnowledgeRouteRail && systemKnowledgeExtensionSurface));
-
   const handleAppLayoutModeChange = useCallback(
     (mode: AppLayoutMode) => {
       const previousMode = appLayoutMode;
@@ -2036,6 +2030,11 @@ export function Layout() {
         return;
       }
 
+      if (canToggleWorkbench) {
+        handleWorkbenchToggle();
+        return;
+      }
+
       activeRightRailControl?.toggleRail();
     }
 
@@ -2095,8 +2094,10 @@ export function Layout() {
   }, [
     activeRightRailControl,
     appLayoutMode,
+    canToggleWorkbench,
     handleAppLayoutModeChange,
     handlePrimarySidebarToggle,
+    handleWorkbenchToggle,
     location.hash,
     extensionRegistry.surfaces,
     location.pathname,
@@ -2116,7 +2117,7 @@ export function Layout() {
             sidebarOpen={effectiveSidebarOpen}
             onToggleSidebar={handlePrimarySidebarToggle}
             showRailToggle={canToggleWorkbench || activeRightRailControl !== null}
-            railOpen={canToggleWorkbench ? showWorkbench || showCompactWorkbenchPanel : (activeRightRailControl?.railOpen ?? false)}
+            railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
             onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
             trailingExtra={
               <NotificationBell
@@ -2206,39 +2207,6 @@ export function Layout() {
                   </>
                 ) : null}
 
-                {showCompactWorkbenchPanel ? (
-                  <>
-                    <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
-                    <WorkbenchPanel
-                      width={railWidth}
-                      conversationId={activeConversationId}
-                      artifactId={activeWorkbenchArtifactId}
-                      knowledgeFileId={activeWorkbenchKnowledgeFileId}
-                      workspaceFileId={activeWorkbenchWorkspaceFileId}
-                      activeTool={activeWorkbenchTool}
-                      activeTabId={activeWorkbenchTabId}
-                      activeWorkspaceFileId={activeWorkbenchWorkspaceFileId}
-                      activeKnowledgeFileId={activeWorkbenchKnowledgeFileId}
-                      activeChatConversationId={activeWorkbenchChatConversationId}
-                      workspaceCwd={activeWorkspaceCwd}
-                      extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
-                      extensionRailSurface={activeWorkbenchRailSurface}
-                      extensionToolPanels={extensionRightToolPanels}
-                      browserTabsState={browserTabsState}
-                      openTabs={openWorkbenchTabs}
-                      railOpen={workbenchExplorerOpen}
-                      railWidth={workbenchExplorer.width}
-                      onRailResizeMouseDown={workbenchExplorer.onMouseDown}
-                      onRailResizeReset={workbenchExplorer.reset}
-                      onActiveTabChange={setActiveWorkbenchTabId}
-                      onCloseTab={closeWorkbenchTab}
-                      onOpenNewTab={openWorkbenchNewTab}
-                      onActiveToolChange={openWorkbenchToolTab}
-                      onWorkspaceFileClear={clearActiveWorkbenchFileSelection}
-                      onStartSideChat={handleStartSideChat}
-                    />
-                  </>
-                ) : null}
               </RouteContentBoundary>
             </div>
           </div>
