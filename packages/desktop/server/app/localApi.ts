@@ -2324,7 +2324,7 @@ export async function createDesktopLiveSession(input: {
       createSessionMs,
       totalMs: Math.round(createdAtMs - startedAtMs),
       capabilityPerf: created.perf,
-      contextSetupPerf: perf.contextSetupPerf,
+      contextSetupPerf: contextSetupPerf,
     };
     process.stderr.write(`[perf] ${JSON.stringify(perfLog)}\n`);
   }
