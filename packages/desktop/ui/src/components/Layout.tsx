@@ -32,6 +32,7 @@ import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchB
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
 import { readConversationLayout } from '../session/sessionTabs';
+import { primeDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
@@ -118,6 +119,16 @@ function createWorkbenchTabInstance(
 
 function isBrowserWorkbenchMode(mode: WorkbenchRailMode): boolean {
   return mode === 'browser';
+}
+
+function getDisplayFileName(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return '';
+  }
+  const normalized = trimmed.replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+  return parts.at(-1) ?? trimmed;
 }
 
 type DesktopLayoutShortcutAction =
@@ -636,6 +647,8 @@ function WorkbenchPanel({
   activeTool,
   activeTabId,
   activeChatConversationId,
+  activeWorkspaceFileId,
+  activeKnowledgeFileId,
   workspaceCwd,
   extensionWorkbenchSurface,
   extensionRailSurface,
@@ -661,6 +674,8 @@ function WorkbenchPanel({
   activeTool: WorkbenchRailMode;
   activeTabId: string | null;
   activeChatConversationId: string | null;
+  activeWorkspaceFileId: string | null;
+  activeKnowledgeFileId: string | null;
   workspaceCwd: string | null;
   extensionWorkbenchSurface: NativeExtensionViewSummary | null;
   extensionRailSurface: ((ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) | null;
@@ -706,6 +721,8 @@ function WorkbenchPanel({
         openTabs={openTabs}
         extensionToolPanels={extensionToolPanels}
         browserTabsState={browserTabsState}
+        activeWorkspaceFileId={activeWorkspaceFileId}
+        activeKnowledgeFileId={activeKnowledgeFileId}
         onActiveTabChange={onActiveTabChange}
         onCloseTab={onCloseTab}
         onOpenNewTab={onOpenNewTab}
@@ -856,6 +873,8 @@ function WorkbenchTabStrip({
   openTabs,
   extensionToolPanels,
   browserTabsState,
+  activeWorkspaceFileId,
+  activeKnowledgeFileId,
   onActiveTabChange,
   onCloseTab,
   onOpenNewTab,
@@ -867,6 +886,8 @@ function WorkbenchTabStrip({
   openTabs: WorkbenchTabInstance[];
   extensionToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
   browserTabsState: BrowserTabsState;
+  activeWorkspaceFileId: string | null;
+  activeKnowledgeFileId: string | null;
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onOpenNewTab: () => void;
@@ -893,6 +914,9 @@ function WorkbenchTabStrip({
     if ((isArtifactsRailMode(tab.mode) || tab.mode.startsWith('extension:system-artifacts:')) && tab.artifactId) {
       return `Artifact ${tab.artifactId.slice(0, 8)}`;
     }
+    if (tab.mode === 'chat' && tab.conversationId) {
+      return `Chat ${tab.conversationId.slice(0, 8)}`;
+    }
     return labelForMode(tab.mode);
   }
 
@@ -903,7 +927,10 @@ function WorkbenchTabStrip({
       ? extensionToolPanels.find((candidate) => candidate.extensionId === parsed.extensionId && candidate.id === parsed.surfaceId)
       : findExtensionToolPanelBySlot(extensionToolPanels, mode);
     if (surface) return labelForExtensionToolPanel(surface);
-    if (mode === 'files') return 'File Explorer';
+    if (mode === 'files') {
+      const fileName = getDisplayFileName(activeWorkspaceFileId || activeKnowledgeFileId || '');
+      return `File Explorer${fileName ? `: ${fileName}` : ''}`;
+    }
     if (mode === 'artifacts') return 'Artifacts';
     if (mode === 'browser') return 'Browser';
     if (mode === 'chat') return 'Chat';
@@ -1145,6 +1172,8 @@ export function Layout() {
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const [activeWorkbenchTabId, setActiveWorkbenchTabId] = useState<string | null>(null);
   const [openWorkbenchTabs, setOpenWorkbenchTabs] = useState<WorkbenchTabInstance[]>([]);
+  const openWorkbenchTabsRef = useRef(openWorkbenchTabs);
+  openWorkbenchTabsRef.current = openWorkbenchTabs;
   const [browserTabsState, setBrowserTabsState] = useState<BrowserTabsState>(() => readBrowserTabsState());
   const activeWorkbenchTab = openWorkbenchTabs.find((tab) => tab.id === activeWorkbenchTabId) ?? null;
   const activeWorkbenchTool = activeWorkbenchTab?.mode ?? 'new';
@@ -1270,8 +1299,40 @@ export function Layout() {
         null)
       : null;
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
+  const prewarmedLiveSessionWorkspaceCwdsRef = useRef(new Map<string, number>());
   const activeWorkspaceCwd = activeSessionCwd;
-  const clearActiveWorkspaceFile = useCallback(() => undefined, []);
+  useEffect(() => {
+    if (!activeWorkspaceCwd) {
+      return;
+    }
+
+    const workspaceCwd = activeWorkspaceCwd.trim();
+    if (!workspaceCwd) {
+      return;
+    }
+
+    const lastRequestedAt = prewarmedLiveSessionWorkspaceCwdsRef.current.get(workspaceCwd);
+    if (lastRequestedAt !== undefined && performance.now() - lastRequestedAt < 9 * 60_000) {
+      return;
+    }
+
+    prewarmedLiveSessionWorkspaceCwdsRef.current.set(workspaceCwd, performance.now());
+    void api.prewarmLiveSession(workspaceCwd).catch(() => {
+      prewarmedLiveSessionWorkspaceCwdsRef.current.delete(workspaceCwd);
+    });
+  }, [activeWorkspaceCwd]);
+  const clearActiveWorkbenchFileSelection = useCallback(() => {
+    if (activeConversationId) {
+      setSelectedFileByConversation((current) => ({ ...current, [activeConversationId]: null }));
+      setSelectedWorkspaceFileByConversation((current) => ({ ...current, [activeConversationId]: null }));
+    }
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('file');
+      next.delete('workspaceFile');
+      return next;
+    });
+  }, [activeConversationId, setSearchParams]);
 
   const extensionRightToolPanels = useMemo(
     () =>
@@ -1346,23 +1407,25 @@ export function Layout() {
         setActiveWorkbenchTabId(null);
         return;
       }
-      setOpenWorkbenchTabs((current) => {
-        if (!options?.forceNewTab) {
-          const existing =
-            tool === 'chat' && options?.conversationId
-              ? current.find((tab) => tab.mode === 'chat' && tab.conversationId === options.conversationId)
-              : options?.id
-                ? current.find((tab) => tab.id === options.id)
-                : null;
-          if (existing) {
-            setActiveWorkbenchTabId(existing.id);
-            return current;
-          }
+
+      // Compute next tabs state and derive next active tab ID from current state.
+      const current = openWorkbenchTabsRef.current;
+      if (!options?.forceNewTab) {
+        const existing =
+          tool === 'chat' && options?.conversationId
+            ? current.find((tab) => tab.mode === 'chat' && tab.conversationId === options.conversationId)
+            : options?.id
+              ? current.find((tab) => tab.id === options.id)
+              : null;
+        if (existing) {
+          setActiveWorkbenchTabId(existing.id);
+          return;
         }
-        const tab = createWorkbenchTabInstance(tool, options);
-        setActiveWorkbenchTabId(tab.id);
-        return [...current, tab];
-      });
+      }
+      const tab = createWorkbenchTabInstance(tool, options);
+      setOpenWorkbenchTabs([...current, tab]);
+      setActiveWorkbenchTabId(tab.id);
+
       if (activeConversationId && tool !== 'browser') {
         setSelectedToolByConversation((current) => ({
           ...current,
@@ -1379,7 +1442,7 @@ export function Layout() {
         setActiveWorkbenchTabId(null);
         return;
       }
-      const existing = openWorkbenchTabs.find((tab) => tab.mode === tool);
+      const existing = openWorkbenchTabsRef.current.find((tab) => tab.mode === tool);
       if (existing) {
         setActiveWorkbenchTabId(existing.id);
       } else {
@@ -1392,7 +1455,7 @@ export function Layout() {
         }));
       }
     },
-    [activeConversationId, openWorkbenchTabs, openWorkbenchToolTab],
+    [activeConversationId, openWorkbenchToolTab],
   );
 
   const openWorkbenchNewTab = useCallback(() => {
@@ -1401,18 +1464,33 @@ export function Layout() {
 
   const closeWorkbenchTab = useCallback(
     (tabId: string) => {
-      setOpenWorkbenchTabs((current) => {
-        const closingIndex = current.findIndex((tab) => tab.id === tabId);
-        if (closingIndex === -1) return current;
-        const next = current.filter((tab) => tab.id !== tabId);
-        if (activeWorkbenchTabId === tabId) {
-          const replacement = next[Math.max(0, closingIndex - 1)] ?? next[closingIndex] ?? null;
-          setActiveWorkbenchTabId(replacement?.id ?? null);
+      const current = openWorkbenchTabsRef.current;
+      const closingIndex = current.findIndex((tab) => tab.id === tabId);
+      if (closingIndex === -1) return;
+
+      const next = current.filter((tab) => tab.id !== tabId);
+      const closingTab = current.find((tab) => tab.id === tabId);
+      const nextWouldHaveNoTabs = next.length === 0;
+
+      // Derive the next active tab ID.
+      let nextActiveTabId: string | null = activeWorkbenchTabId;
+      if (activeWorkbenchTabId === tabId) {
+        if (next.length === 0) {
+          nextActiveTabId = null;
+        } else {
+          const replacementIndex = Math.min(closingIndex, next.length - 1);
+          nextActiveTabId = next[replacementIndex]?.id ?? null;
         }
-        return next;
-      });
+      }
+
+      setOpenWorkbenchTabs(next);
+      setActiveWorkbenchTabId(nextActiveTabId);
+
+      if (nextWouldHaveNoTabs && closingTab?.mode === 'files') {
+        clearActiveWorkbenchFileSelection();
+      }
     },
-    [activeWorkbenchTabId],
+    [activeWorkbenchTabId, clearActiveWorkbenchFileSelection],
   );
 
   useEffect(() => {
@@ -1893,6 +1971,11 @@ export function Layout() {
       const result = await api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
         workspaceCwd: activeWorkspaceCwd ?? undefined,
       });
+      // Prime the desktop conversation state cache so ChatRail loads instantly
+      // instead of waiting for a REST round-trip.
+      if (result.bootstrap) {
+        primeDesktopConversationStateCache(result.id, result.bootstrap, { tailBlocks: 400 });
+      }
       openWorkbenchToolTab('chat', { conversationId: result.id, forceNewTab: true });
       return result.id;
     } catch {
@@ -2080,6 +2163,8 @@ export function Layout() {
                       workspaceFileId={activeWorkbenchWorkspaceFileId}
                       activeTool={activeWorkbenchTool}
                       activeTabId={activeWorkbenchTabId}
+                      activeWorkspaceFileId={activeWorkbenchWorkspaceFileId}
+                      activeKnowledgeFileId={activeWorkbenchKnowledgeFileId}
                       activeChatConversationId={activeWorkbenchChatConversationId}
                       workspaceCwd={activeWorkspaceCwd}
                       extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
@@ -2095,7 +2180,7 @@ export function Layout() {
                       onCloseTab={closeWorkbenchTab}
                       onOpenNewTab={openWorkbenchNewTab}
                       onActiveToolChange={openWorkbenchToolTab}
-                      onWorkspaceFileClear={clearActiveWorkspaceFile}
+                      onWorkspaceFileClear={clearActiveWorkbenchFileSelection}
                       onStartSideChat={handleStartSideChat}
                     />
                   </>
@@ -2132,6 +2217,8 @@ export function Layout() {
                       workspaceFileId={activeWorkbenchWorkspaceFileId}
                       activeTool={activeWorkbenchTool}
                       activeTabId={activeWorkbenchTabId}
+                      activeWorkspaceFileId={activeWorkbenchWorkspaceFileId}
+                      activeKnowledgeFileId={activeWorkbenchKnowledgeFileId}
                       activeChatConversationId={activeWorkbenchChatConversationId}
                       workspaceCwd={activeWorkspaceCwd}
                       extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
@@ -2147,7 +2234,7 @@ export function Layout() {
                       onCloseTab={closeWorkbenchTab}
                       onOpenNewTab={openWorkbenchNewTab}
                       onActiveToolChange={openWorkbenchToolTab}
-                      onWorkspaceFileClear={clearActiveWorkspaceFile}
+                      onWorkspaceFileClear={clearActiveWorkbenchFileSelection}
                       onStartSideChat={handleStartSideChat}
                     />
                   </>

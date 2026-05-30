@@ -21,7 +21,7 @@ import { ChatView } from './ChatView.js';
  * Manages its own live session via useDesktopConversationState and
  * renders ChatView + a full composer.
  */
-export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conversationId: string; workspaceCwd: string | null }) {
+export function ChatRail({ conversationId, workspaceCwd }: { conversationId: string; workspaceCwd: string | null }) {
   const desktopState = useDesktopConversationState(conversationId, {
     tailBlocks: 400,
   });
@@ -67,6 +67,14 @@ export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conv
 
   // ── Composer state ────────────────────────────────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  /** Focus the composer textarea when a user clicks the transcript area. */
+  const handleFocusComposerRequest = useCallback(() => {
+    const textarea = scrollRef.current?.closest('[data-chat-rail]')?.querySelector('textarea');
+    if (textarea instanceof HTMLTextAreaElement && textarea !== document.activeElement) {
+      textarea.focus();
+    }
+  }, []);
 
   const handleSubmit = useCallback(
     async (text: string, behavior?: 'steer' | 'followUp', images?: PromptImageInput[], attachmentRefs?: PromptAttachmentRefInput[]) => {
@@ -207,8 +215,10 @@ export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conv
     [conversationId],
   );
 
+  const composerWorkspaceCwd = desktopState.state?.sessionDetail?.meta?.cwd ?? workspaceCwd;
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-base select-text">
+    <div className="flex h-full min-h-0 flex-col bg-base select-text" data-chat-rail="1">
       {/* Messages */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <ChatView
@@ -220,13 +230,15 @@ export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conv
           performanceMode="default"
           onForkMessage={handleForkMessage}
           onRewindMessage={handleRewindMessage}
+          onFocusComposerRequest={handleFocusComposerRequest}
         />
       </div>
 
       {/* Composer */}
-      <div className="shrink-0 border-t border-border-subtle bg-panel">
+      <div className="shrink-0" aria-label="Side chat composer">
         <ChatRailComposer
           conversationId={conversationId}
+          workspaceCwd={composerWorkspaceCwd}
           isStreaming={isStreaming}
           models={models}
           currentModel={currentModel}
