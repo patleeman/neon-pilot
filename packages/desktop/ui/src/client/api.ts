@@ -91,43 +91,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Tracks whether the backend has reported apiReady: true via /health. */
-let backendHealthChecked = false;
-let backendReady = false;
-let healthCheckPromise: Promise<void> | null = null;
-
-async function ensureBackendReady(): Promise<void> {
-  if (backendReady) return;
-  if (!healthCheckPromise) {
-    healthCheckPromise = (async () => {
-      for (;;) {
-        try {
-          const res = await fetch(buildApiPath('/health'), { cache: 'no-store' });
-          if (res.ok) {
-            const body = (await res.json()) as { apiReady?: boolean };
-            if (body.apiReady) {
-              backendReady = true;
-              return;
-            }
-          }
-        } catch {
-          // Backend not reachable yet — keep polling.
-        }
-        await sleep(200);
-      }
-    })();
-  }
-  await healthCheckPromise;
-}
-
 async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  // Gate on backend readiness before the first request.
-  // Subsequent requests skip the check once backendReady is true.
-  if (!backendHealthChecked) {
-    backendHealthChecked = true;
-    await ensureBackendReady();
-  }
-
   let lastError: unknown;
   let attempt = 0;
 

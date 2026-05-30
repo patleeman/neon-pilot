@@ -243,27 +243,16 @@ async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
   await startDaemon();
 
-  // ── Load the API module (bootstrap + full module) ──────────────────
-  // Load the bootstrap (9KB, ~5ms), install the bridge, then wait for
-  // the eagerly-imported localApiFull.js (8.7MB, ~9s cold) to finish
-  // parsing. Only then start the HTTP server and signal ready, so the
-  // parent process opens the browser window to an already-ready backend.
+  // ── Load the API module ────────────────────────────────────────────
+  // loadRawLocalApiModule() imports localApi.js which is the full server
+  // handler module (~8.7MB). The await blocks until parsing completes
+  // (~9s cold). Only then do we start the HTTP server and signal ready,
+  // so the window opens to an already-warm backend.
   let localApiReady = false;
   let localApi: LocalApiModule | null = null;
   try {
     localApi = await loadRawLocalApiModule();
     installNativeWorkbenchBrowserBridge(localApi);
-
-    // Wait for the full module to finish loading by polling the
-    // bootstrap's _isFullModuleReady() getter. The eager import is
-    // started at module level by the bootstrap itself.
-    for (let i = 0; i < 600; i++) {
-      if (typeof (localApi as any)._isFullModuleReady === 'function' &&
-          (localApi as any)._isFullModuleReady()) {
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 100));
-    }
     localApiReady = true;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -276,14 +265,11 @@ async function main(): Promise<void> {
         assertAuthorized(request, token);
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
 
-        // Respond to health checks — localApiReady is now correct
-        // (it's only set to true after the full module finishes parsing).
         if (request.method === 'GET' && url.pathname === '/health') {
           writeJson(response, 200, { ok: true, daemonHealthy: daemon?.isRunning() === true, apiReady: localApiReady });
           return;
         }
 
-        // Return 503 (Service Unavailable) until the API module is fully loaded.
         if (!localApiReady) {
           writeJson(response, 503, { error: 'Backend initializing', retryAfter: 1 });
           return;
@@ -350,8 +336,6 @@ async function main(): Promise<void> {
     throw new Error('Backend child did not bind a TCP port.');
   }
 
-  // Signal ready immediately — the server is already accepting connections.
-  // The API module loads in the background; early requests get 503.
   sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {

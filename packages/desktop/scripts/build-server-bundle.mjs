@@ -45,8 +45,7 @@ const sharedEsbuildOptions = {
 };
 
 const bundleOutputs = [
-  resolve(outdir, 'app/localApi.js'),      // Thin bootstrap (fast load)
-  resolve(outdir, 'app/localApiFull.js'),  // Full handler module (lazy-loaded)
+  resolve(outdir, 'app/localApi.js'),      // Full API handler module
   resolve(outdir, 'conversations/conversationInspectWorker.js'),
   resolve(outdir, 'traces/traceWorker.js'),
   resolve(outdir, 'daemon/index.js'),
@@ -92,20 +91,13 @@ const backendApiLazyModuleEntries = [
 ];
 
 await Promise.all([
-  // Thin bootstrap — copied directly without bundling (~9KB, loads in ~5ms).
-  // Lazy-imports localApiFull.js on first handler call.
-  (() => {
-    mkdirSync(resolve(outdir, 'app'), { recursive: true });
-    copyFileSync(resolve(packageRoot, 'server/app/localApiBoot.js'), bundleOutputs[0]);
-  })(),
-  // Full handler module — loaded eagerly by bootstrap in the background.
-  // Static imports within localApi.ts mean all code loads together; the
-  // 6.2MB file is parsed in a single shot. This is fine because loading
-  // starts immediately (~5ms after bootstrap) in parallel with server setup.
+  // Main API handler module — built directly from localApi.ts.
+  // No bootstrap wrapper. The child process waits for this to finish
+  // parsing before starting the HTTP server and opening the window.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/app/localApi.ts')],
-    outfile: bundleOutputs[1],
+    outfile: bundleOutputs[0],
     banner: {
       js: createRequireBanner,
     },
@@ -114,7 +106,7 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/conversations/conversationInspectWorker.ts')],
-    outfile: bundleOutputs[2],
+    outfile: bundleOutputs[1],
     banner: {
       js: createRequireBanner,
     },
@@ -123,13 +115,13 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/traces/traceWorker.ts')],
-    outfile: bundleOutputs[3],
+    outfile: bundleOutputs[2],
   }),
   // Daemon barrel used by @neon-pilot/daemon.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/daemon/index.ts')],
-    outfile: bundleOutputs[4],
+    outfile: bundleOutputs[3],
     banner: {
       js: createRequireBanner,
     },
@@ -138,7 +130,7 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/daemon/background-agent-runner.ts')],
-    outfile: bundleOutputs[5],
+    outfile: bundleOutputs[4],
     banner: {
       js: createRequireBanner,
     },
@@ -149,7 +141,7 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, '..', 'core/src/index.ts')],
-    outfile: bundleOutputs[6],
+    outfile: bundleOutputs[5],
     banner: {
       js: createRequireBanner,
     },
