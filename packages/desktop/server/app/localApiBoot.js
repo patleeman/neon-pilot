@@ -39,7 +39,23 @@ function lazy(name) {
 
 // ── Named exports (each lazily delegates to the full module) ────────────────
 
-export const dispatchDesktopLocalApiRequest = lazy('dispatchDesktopLocalApiRequest');
+// Dispatch handles routing for all /api/ endpoints. We intercept /api/health
+// here to respond immediately without loading the full module.
+export async function dispatchDesktopLocalApiRequest(input) {
+  if (input.path === '/api/health') {
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: new TextEncoder().encode(JSON.stringify({
+        ok: true,
+        daemonHealthy: true,
+        apiReady: fullModule !== null,
+      })),
+    };
+  }
+  const mod = await ensureModule();
+  return mod.dispatchDesktopLocalApiRequest(input);
+}
 export const subscribeDesktopLocalApiStream = lazy('subscribeDesktopLocalApiStream');
 export const subscribeDesktopAppEvents = lazy('subscribeDesktopAppEvents');
 
