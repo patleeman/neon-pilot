@@ -420,14 +420,18 @@ async function bootstrapDesktopApp(): Promise<void> {
 
   logStartupMilestone('environment-ready');
   hostManager = new HostManager();
-  void ensureDesktopBackendAvailable()
-    .then((ready) => {
-      logStartupMilestone(ready ? 'backend-warmed' : 'backend-warmup-unavailable');
-      if (ready) {
-        installWorkbenchBrowserToolHost();
-      }
-    })
-    .catch((error) => logBootstrapError(error));
+
+  // Start the backend child process and wait for FULL readiness.
+  // The child process now delays its 'ready' signal until both the
+  // bootstrap (9KB) AND the full module (8.7MB) have finished loading.
+  // This ensures the renderer's first API call never blocks on module
+  // parse — the window opens to an already-warm backend.
+  const backendReady = await ensureDesktopBackendAvailable();
+  logStartupMilestone(backendReady ? 'backend-warmed' : 'backend-warmup-unavailable');
+  if (backendReady) {
+    installWorkbenchBrowserToolHost();
+  }
+
   void import('../server/daemon/companion/runtime.js')
     .then((module) => {
       module.setCompanionRuntimeProvider(() => createDesktopCompanionRuntime(hostManager as HostManager));

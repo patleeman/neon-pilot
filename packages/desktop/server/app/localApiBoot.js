@@ -45,6 +45,12 @@ function lazy(name) {
 
 // ── Named exports (each lazily delegates to the full module) ────────────────
 
+// Expose full module readiness for the child process's /health endpoint.
+// This tells the main process when it's safe to create the browser window.
+export function _isFullModuleReady() {
+  return fullModule !== null;
+}
+
 // Dispatch handles routing for all /api/ endpoints. We intercept /api/health
 // here to respond immediately without loading the full module.
 export async function dispatchDesktopLocalApiRequest(input) {

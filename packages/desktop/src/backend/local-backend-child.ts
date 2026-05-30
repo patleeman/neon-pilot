@@ -243,22 +243,32 @@ async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
   await startDaemon();
 
-  /** Resolves once the local API module is loaded and ready to serve. */
+  // ── Load the API module (bootstrap + full module) ──────────────────
+  // Load the bootstrap (9KB, ~5ms), install the bridge, then wait for
+  // the eagerly-imported localApiFull.js (8.7MB, ~9s cold) to finish
+  // parsing. Only then start the HTTP server and signal ready, so the
+  // parent process opens the browser window to an already-ready backend.
   let localApiReady = false;
   let localApi: LocalApiModule | null = null;
-  let localApiPromise = loadRawLocalApiModule()
-    .then((module) => {
-      localApi = module;
-      installNativeWorkbenchBrowserBridge(module);
-      localApiReady = true;
-      return module;
-    })
-    .catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      process.stderr.write(`[desktop-backend] failed to load local API module: ${message}\n`);
-      // Server stays running — requests will get 503 responses.
-      return null;
-    });
+  try {
+    localApi = await loadRawLocalApiModule();
+    installNativeWorkbenchBrowserBridge(localApi);
+
+    // Wait for the full module to finish loading by polling the
+    // bootstrap's _isFullModuleReady() getter. The eager import is
+    // started at module level by the bootstrap itself.
+    for (let i = 0; i < 600; i++) {
+      if (typeof (localApi as any)._isFullModuleReady === 'function' &&
+          (localApi as any)._isFullModuleReady()) {
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    localApiReady = true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`[desktop-backend] failed to load local API module: ${message}\n`);
+  }
 
   const server = createServer((request, response) => {
     void (async () => {
@@ -266,7 +276,8 @@ async function main(): Promise<void> {
         assertAuthorized(request, token);
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
 
-        // Always respond to health checks regardless of readiness.
+        // Respond to health checks — localApiReady is now correct
+        // (it's only set to true after the full module finishes parsing).
         if (request.method === 'GET' && url.pathname === '/health') {
           writeJson(response, 200, { ok: true, daemonHealthy: daemon?.isRunning() === true, apiReady: localApiReady });
           return;
@@ -352,7 +363,7 @@ async function main(): Promise<void> {
     }
 
     if (isLocalApiRpcRequest(message)) {
-      void handleLocalApiRpcRequest(localApi, message);
+      if (localApi) void handleLocalApiRpcRequest(localApi, message);
       return;
     }
 
