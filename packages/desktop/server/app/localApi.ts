@@ -627,7 +627,8 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
 async function getLocalContexts(): Promise<{ context: ServerRouteContext; perf: Record<string, number> }> {
   if (!localContextsPromise) {
     localContextsPromise = buildLocalContexts().catch((error) => {
-      localContextsPromise = null;
+      // Keep the rejected promise cached so subsequent callers fail fast
+      // instead of each triggering a fresh rebuild that times out.
       localServerRouteContext = null;
       localLiveSessionCapabilityContext = null;
       localProviderDesktopCapabilityContext = null;
@@ -653,7 +654,8 @@ async function buildLocalRoutes(): Promise<RegisteredRoute[]> {
 async function getLocalRoutes(): Promise<RegisteredRoute[]> {
   if (!localRoutesPromise) {
     localRoutesPromise = buildLocalRoutes().catch((error) => {
-      localRoutesPromise = null;
+      // Keep the rejected promise cached so subsequent callers fail fast
+      // instead of each triggering a fresh rebuild that times out.
       localServerRouteContext = null;
       localLiveSessionCapabilityContext = null;
       localProviderDesktopCapabilityContext = null;
