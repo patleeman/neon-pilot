@@ -31,6 +31,8 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
   const messages: MessageBlock[] = stream?.blocks ?? [];
   const isStreaming = stream?.isStreaming ?? false;
   const isCompacting = stream?.isCompacting ?? false;
+  const contextUsage = stream?.contextUsage ?? null;
+  const tokens = stream?.tokens ?? null;
 
   // ── Models ────────────────────────────────────────────────────────────
   const [models, setModels] = useState<ModelInfo[]>([]);
@@ -242,6 +244,8 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
           isStreaming={isStreaming}
           models={models}
           currentModel={currentModel}
+          tokens={tokens}
+          contextUsage={contextUsage}
           onSubmit={handleSubmit}
           onAbortStream={handleAbort}
           onSelectModel={handleModelSelect}

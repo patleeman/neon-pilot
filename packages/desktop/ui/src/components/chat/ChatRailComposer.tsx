@@ -1,7 +1,6 @@
 import { type ClipboardEventHandler, type KeyboardEventHandler, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { buildSlashMenuItems, type SlashMenuItem } from '../../commands/slashMenu';
-import { formatConversationCwdLabel } from '../../conversation/conversationCwdPresentation.js';
 import { type MentionItem } from '../../conversation/conversationMentions';
 import { parseConversationSlashCommand } from '../../conversation/conversationSlashCommand';
 import {
@@ -18,9 +17,9 @@ import {
 import { useComposerController } from '../../conversation/useComposerController';
 import { useConversationComposerMenus, type UseConversationComposerMenusState } from '../../conversation/useConversationComposerMenus';
 import { useComposerModifierKeys } from '../../conversation/useConversationKeyboardState';
-import type { ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../../shared/types';
+import type { ModelInfo, PromptAttachmentRefInput, PromptImageInput, SessionContextUsage } from '../../shared/types';
 import { ConversationComposer } from '../conversation/ConversationComposer';
-import { ChatBubbleIcon, FolderIcon } from '../conversation/ConversationComposerChrome';
+import { ChatBubbleIcon } from '../conversation/ConversationComposerChrome';
 import { ConversationComposerInputControls } from '../conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../conversation/ConversationComposerMenus';
 import { addNotification } from '../notifications/notificationStore';
@@ -47,10 +46,12 @@ function clearForkPromptDraft(conversationId: string): void {
 
 export function ChatRailComposer({
   conversationId,
-  workspaceCwd,
+  workspaceCwd: _workspaceCwd,
   isStreaming,
   models,
   currentModel,
+  tokens,
+  contextUsage,
   onSubmit,
   onAbortStream,
   onSelectModel,
@@ -61,6 +62,8 @@ export function ChatRailComposer({
   isStreaming: boolean;
   models: ModelInfo[];
   currentModel: string;
+  tokens: { input: number; output: number; total: number; cacheRead: number; cacheWrite: number } | null;
+  contextUsage: SessionContextUsage | null;
   onSubmit: (
     text: string,
     behavior?: 'steer' | 'followUp',
@@ -276,13 +279,23 @@ export function ChatRailComposer({
     [buildSubmitPayload, clearComposerAfterSubmit, hasContent, input, isStreaming, onSubmit],
   );
 
-  const composerCwdLabel = useMemo(() => formatConversationCwdLabel(workspaceCwd), [workspaceCwd]);
+  // Side chat shares the parent conversation's CWD — never show CWD picker.
   const composerMetaFallback = (
-    <div className="conversation-composer-meta mt-1.5 px-3">
+    <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        {composerCwdLabel ? <FolderIcon className="shrink-0 text-dim/70" /> : <ChatBubbleIcon className="shrink-0 text-dim/70" />}
-        <span className="ui-truncate-start min-w-0">{composerCwdLabel || 'Chat'}</span>
+        <ChatBubbleIcon className="shrink-0 text-dim/70" />
+        <span className="min-w-0">Chat</span>
       </div>
+      {tokens && (
+        <span className="shrink-0 text-dim/60" title={`${tokens.total?.toLocaleString() ?? '?'} tokens used`}>
+          {tokens.total?.toLocaleString() ?? ''}
+        </span>
+      )}
+      {contextUsage?.percent != null && (
+        <span className="shrink-0 text-dim/60" title={`${Math.round(contextUsage.percent * 100)}% of context window used`}>
+          {Math.round(contextUsage.percent * 100)}%
+        </span>
+      )}
     </div>
   );
 
