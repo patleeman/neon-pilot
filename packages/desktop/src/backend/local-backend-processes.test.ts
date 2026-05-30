@@ -201,6 +201,15 @@ describe('LocalBackendProcesses', () => {
       },
     });
     expect(JSON.parse(new TextDecoder().decode(limitedSessionsResponse.body))).toEqual([{ id: 'limited' }]);
+    expect(readConversationSessionsCapabilityMock).toHaveBeenCalledWith({ limit: 100 });
+    expect(bootstrapMocks.setConversationServiceContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        getRuntimeScope: expect.any(Function),
+        getRepoRoot: expect.any(Function),
+        getSavedUiPreferences: expect.any(Function),
+      }),
+    );
+    expect(bootstrapMocks.setConversationServiceContext.mock.calls.at(-1)?.[0].getRuntimeScope()).toBe('shared');
     const sessionDetailResponse = await backend.dispatchApiRequest({
       method: 'GET',
       path: '/api/sessions/conversation%201?tailBlocks=40',

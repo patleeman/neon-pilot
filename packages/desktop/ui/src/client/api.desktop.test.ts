@@ -641,8 +641,8 @@ describe('api desktop transport', () => {
     expect(getEnvironment).not.toHaveBeenCalled();
     expect(readAppStatus).toHaveBeenCalledTimes(1);
     expect(readDaemonState).toHaveBeenCalledTimes(1);
-    expect(readSessions).toHaveBeenCalledTimes(2);
-    expect(limitedSessions).toEqual([{ id: 'conversation-1', title: 'Conversation 1' }]);
+    expect(readSessions).toHaveBeenCalledTimes(1);
+    expect(limitedSessions).toEqual([{ id: 'limited' }]);
     expect(readSessionMeta).toHaveBeenCalledWith('conversation-1');
     expect(readSessionSearchIndex).toHaveBeenCalledWith(['conversation-1']);
     expect(readModels).toHaveBeenCalledTimes(1);

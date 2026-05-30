@@ -365,7 +365,23 @@ export class LocalBackendProcesses {
 
     if (input.method === 'GET' && path === '/api/sessions' && url.searchParams.has('limit')) {
       const { readConversationSessionsCapability } = await import('../../server/conversations/conversationSessionCapability.js');
-      return this.makeJsonResponse(readConversationSessionsCapability(), 'main-process');
+      const { setConversationServiceContext } = await import('../../server/conversations/conversationService.js');
+      setConversationServiceContext({
+        getRuntimeScope: () => 'shared',
+        getRepoRoot: () => process.cwd(),
+        getSavedUiPreferences: () => ({
+          openConversationIds: [],
+          pinnedConversationIds: [],
+          archivedConversationIds: [],
+          activeConversationId: null,
+          workspacePaths: [],
+          remoteControlledConversationIds: [],
+          nodeBrowserViews: [],
+        }),
+      });
+      const limitValue = Number(url.searchParams.get('limit'));
+      const limit = Number.isSafeInteger(limitValue) && limitValue > 0 ? limitValue : undefined;
+      return this.makeJsonResponse(readConversationSessionsCapability(limit === undefined ? {} : { limit }), 'main-process');
     }
     if (input.method === 'POST' && path === '/api/sessions/search') {
       return this.makeJsonResponse({ query: jsonBody.query, mode: 'allTerms', scope: 'all', matches: [] }, 'main-process');

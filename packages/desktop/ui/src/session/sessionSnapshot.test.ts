@@ -14,11 +14,11 @@ describe('fetchSessionsSnapshot', () => {
     vi.mocked(api.sessions).mockReset();
   });
 
-  it('uses the server-authoritative sessions snapshot directly', async () => {
+  it('uses a bounded server-authoritative sessions snapshot for first paint', async () => {
     const sessions = [{ id: 'conv-1', title: 'Conversation', file: '/tmp/conv-1.jsonl' }];
     vi.mocked(api.sessions).mockResolvedValue(sessions as never);
 
     await expect(fetchSessionsSnapshot()).resolves.toBe(sessions);
-    expect(api.sessions).toHaveBeenCalledTimes(1);
+    expect(api.sessions).toHaveBeenCalledWith({ limit: 250 });
   });
 });

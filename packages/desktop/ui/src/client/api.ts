@@ -411,7 +411,10 @@ export const api = {
     extensionPost<{ ok: true; extensionId: string; snapshotPath: string }>(`/extensions/${encodeURIComponent(extensionId)}/snapshot`),
   exportExtension: async (extensionId: string) =>
     extensionPost<{ ok: true; extensionId: string; exportPath: string }>(`/extensions/${encodeURIComponent(extensionId)}/export`),
-  sessions: async () => get<SessionMeta[]>('/sessions'),
+  sessions: async (options?: { limit?: number }) => {
+    const limit = Number.isSafeInteger(options?.limit) && typeof options?.limit === 'number' && options.limit > 0 ? options.limit : null;
+    return get<SessionMeta[]>(limit === null ? '/sessions' : `/sessions?limit=${encodeURIComponent(String(limit))}`);
+  },
   sessionMeta: async (id: string) => get<SessionMeta>(`/sessions/${encodeURIComponent(id)}/meta`),
   sessionDetail: async (
     id: string,
