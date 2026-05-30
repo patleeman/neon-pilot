@@ -161,7 +161,7 @@ import { DEFAULT_RUNTIME_SETTINGS_FILE, persistSettingsWrite } from '../ui/setti
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
-import { startAttentionDispatchLoop } from './bootstrap.js';
+
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
 import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
@@ -463,9 +463,13 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   });
 
   if (isMainThread) {
-    startAttentionDispatchLoop({
-      flushAttentionEvents,
-      pollMs: LOCAL_API_DEFERRED_RESUME_POLL_MS,
+    // Dynamic import — express (1.5MB) is only loaded when the dispatch
+    // loop starts, not at module load time.
+    void import('./bootstrap.js').then(({ startAttentionDispatchLoop }) => {
+      startAttentionDispatchLoop({
+        flushAttentionEvents,
+        pollMs: LOCAL_API_DEFERRED_RESUME_POLL_MS,
+      });
     });
   }
   const attentionAtMs = performance.now();
