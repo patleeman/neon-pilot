@@ -57,7 +57,7 @@ export function KnowledgeTreePanel({ pa }: ExtensionSurfaceProps) {
         <LazyKnowledgeFileTree
           activeFileId={activeFileId}
           onFileSelect={handleFileSelect}
-          onSyncKnowledgeBase={() => pa.extension.invoke('sync', {})}
+          onSyncKnowledgeBase={() => pa.extension.invoke('sync', {}).catch(() => {})}
         />
       </Suspense>
     </div>
