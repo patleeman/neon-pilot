@@ -5019,10 +5019,23 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           });
           const { createdPromise } = await startReservedDraftConversationLiveSessionCreate({
             reserved,
-            createLiveSession: async (reservedSessionFile) => {
+            initialPrompt,
+            createLiveSession: async (reservedSessionFile, prompt) => {
               const draftOptions = await draftOptionsPromise;
-              return api.createLiveSession(draftCwdValue || undefined, undefined, {
+              recordSubmitPhase('beforeDispatchInitialPrompt', createStartedAtMs, {
+                conversationId: newId,
+                delivery: 'createLiveSession',
+              });
+              return api.createLiveSession(draftCwdValue || undefined, prompt?.text, {
                 ...draftOptions.options,
+                ...(prompt?.behavior !== undefined ? { behavior: prompt.behavior } : {}),
+                ...(prompt?.images !== undefined ? { images: prompt.images } : {}),
+                ...(prompt?.attachmentRefs !== undefined ? { attachmentRefs: prompt.attachmentRefs } : {}),
+                ...(prompt?.contextMessages !== undefined ? { contextMessages: prompt.contextMessages } : {}),
+                ...(() => {
+                  const relatedConversationIds = prompt ? normalizePendingRelatedConversationIds(prompt) : undefined;
+                  return relatedConversationIds !== undefined ? { relatedConversationIds } : {};
+                })(),
                 reservedSessionFile,
               });
             },
@@ -5068,19 +5081,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     serverPerf: created.perf ?? null,
                   });
                   await applyDraftCodeModeToCreatedConversation(created.id, draftOptions.codeModeEnabled);
-                  const sendResult = await api.promptSession(
-                    newId,
-                    initialPrompt.text,
-                    initialPrompt.behavior,
-                    initialPrompt.images,
-                    initialPrompt.attachmentRefs,
-                    undefined,
-                    initialPrompt.contextMessages,
-                  );
-                  for (const warning of sendResult.relatedConversationPointerWarnings ?? []) {
-                    showNotice('danger', warning, 5000);
-                  }
-                  if (sendResult.accepted) setPendingConversationPromptDispatching(newId, true);
+                  setPendingConversationPromptDispatching(newId, true);
                 } catch (error) {
                   persistPendingConversationPrompt(newId, initialPrompt);
                   setPendingConversationPromptDispatching(newId, false);

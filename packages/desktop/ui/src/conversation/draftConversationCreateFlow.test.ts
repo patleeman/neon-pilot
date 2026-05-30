@@ -31,7 +31,7 @@ describe('draftConversationCreateFlow', () => {
     await Promise.resolve();
 
     expect(order).toEqual(['create', 'apply-start']);
-    expect(createLiveSession).toHaveBeenCalledWith('/tmp/conv-1.jsonl');
+    expect(createLiveSession).toHaveBeenCalledWith('/tmp/conv-1.jsonl', undefined);
     expect(applyReservedConversation).toHaveBeenCalledWith('conv-1');
 
     finishApply?.();
@@ -58,5 +58,20 @@ describe('draftConversationCreateFlow', () => {
 
     expect(order).toEqual(['create', 'apply']);
     expect(result.createdPromise).toBe(createdPromise);
+  });
+
+  it('passes the initial prompt into live-session creation', async () => {
+    const initialPrompt = { text: 'start here', behavior: 'followUp' };
+    const createdPromise = Promise.resolve({ id: 'conv-1' });
+    const createLiveSession = vi.fn(() => createdPromise);
+
+    await startReservedDraftConversationLiveSessionCreate({
+      reserved: { id: 'conv-1', sessionFile: '/tmp/conv-1.jsonl' },
+      initialPrompt,
+      createLiveSession,
+      applyReservedConversation: vi.fn(async () => undefined),
+    });
+
+    expect(createLiveSession).toHaveBeenCalledWith('/tmp/conv-1.jsonl', initialPrompt);
   });
 });

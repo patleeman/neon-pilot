@@ -42,7 +42,7 @@ describe('OnboardingBootstrap', () => {
     expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
   });
 
-  it('does not yank navigation away from non-landing pages', async () => {
+  it('does not invoke onboarding from non-landing pages', async () => {
     const invoke = vi.fn().mockResolvedValue({ conversationId: 'conv-1', shouldOpen: true });
     const pa = {
       extension: {
@@ -60,11 +60,11 @@ describe('OnboardingBootstrap', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
     });
-    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(invoke).not.toHaveBeenCalled();
     expect(screen.getByTestId('location').textContent).toBe('/knowledge');
   });
 
-  it('stays put when ensure does not return a conversation id', async () => {
+  it('does not invoke onboarding from settings', async () => {
     const invoke = vi.fn().mockResolvedValue({ created: false, skipped: 'completed' });
     const pa = {
       extension: {
@@ -82,11 +82,11 @@ describe('OnboardingBootstrap', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
     });
-    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(invoke).not.toHaveBeenCalled();
     expect(screen.getByTestId('location').textContent).toBe('/settings');
   });
 
-  it('does not reopen onboarding from the draft route after it was already consumed', async () => {
+  it('does not invoke onboarding from the draft route after it was already consumed', async () => {
     const invoke = vi.fn().mockResolvedValue({
       created: false,
       conversationId: 'conv-1',
@@ -109,11 +109,11 @@ describe('OnboardingBootstrap', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
     });
-    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(invoke).not.toHaveBeenCalled();
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
   });
 
-  it('does not auto-open onboarding over an empty draft composer', async () => {
+  it('does not invoke onboarding over an empty draft composer', async () => {
     const invoke = vi.fn().mockResolvedValue({ conversationId: 'conv-1', shouldOpen: true });
     const pa = {
       extension: {
@@ -131,7 +131,7 @@ describe('OnboardingBootstrap', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
     });
-    expect(invoke).toHaveBeenCalledWith('ensure', { source: 'frontend' });
+    expect(invoke).not.toHaveBeenCalled();
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
   });
 });

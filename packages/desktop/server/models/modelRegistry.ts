@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
-import { resolveProviderApiKey } from '../secrets/secretStore.js';
+import { resolveIndexedProviderApiKey, resolveProviderApiKey } from '../secrets/secretStore.js';
 import { normalizeModelContextWindow } from './modelContextWindows.js';
 
 type RegistryModel = ReturnType<ModelRegistry['getAvailable']>[number];
@@ -26,7 +26,7 @@ function applyNeonPilotModelMetadataOverrides(model: RegistryModel): RegistryMod
 
 function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: AuthStorage): ModelRegistry {
   if (typeof authStorage.setFallbackResolver === 'function') {
-    authStorage.setFallbackResolver((provider) => resolveProviderApiKey(provider));
+    authStorage.setFallbackResolver((provider) => resolveIndexedProviderApiKey(provider));
   }
 
   const originalGetAll = registry.getAll.bind(registry);
@@ -34,9 +34,14 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: A
   const originalFind = registry.find.bind(registry);
   const originalGetApiKeyAndHeaders = registry.getApiKeyAndHeaders.bind(registry);
 
-  registry.getAll = () => originalGetAll().filter((model) => !shouldHideNeonPilotModel(model)).map(applyNeonPilotModelMetadataOverrides);
+  registry.getAll = () =>
+    originalGetAll()
+      .filter((model) => !shouldHideNeonPilotModel(model))
+      .map(applyNeonPilotModelMetadataOverrides);
   registry.getAvailable = () =>
-    originalGetAvailable().filter((model) => !shouldHideNeonPilotModel(model)).map(applyNeonPilotModelMetadataOverrides);
+    originalGetAvailable()
+      .filter((model) => !shouldHideNeonPilotModel(model))
+      .map(applyNeonPilotModelMetadataOverrides);
   registry.find = (provider: string, modelId: string) => {
     const model = originalFind(provider, modelId);
     if (model && shouldHideNeonPilotModel(model)) {
@@ -55,10 +60,7 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: A
 }
 
 export function createRuntimeModelRegistry(authStorage: AuthStorage): ModelRegistry {
-  return applyNeonPilotRegistryOverrides(
-    ModelRegistry.create(authStorage, join(getPiAgentRuntimeDir(), 'models.json')),
-    authStorage,
-  );
+  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(getPiAgentRuntimeDir(), 'models.json')), authStorage);
 }
 
 export function createModelRegistryForAuthFile(authFile: string): ModelRegistry {

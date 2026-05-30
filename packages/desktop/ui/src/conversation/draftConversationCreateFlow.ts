@@ -3,12 +3,13 @@ export interface ReservedDraftConversation {
   sessionFile: string;
 }
 
-export async function startReservedDraftConversationLiveSessionCreate<TCreated>(input: {
+export async function startReservedDraftConversationLiveSessionCreate<TCreated, TInitialPrompt = unknown>(input: {
   reserved: ReservedDraftConversation;
-  createLiveSession: (reservedSessionFile: string) => Promise<TCreated>;
+  initialPrompt?: TInitialPrompt;
+  createLiveSession: (reservedSessionFile: string, initialPrompt: TInitialPrompt | undefined) => Promise<TCreated>;
   applyReservedConversation: (conversationId: string) => Promise<void>;
 }): Promise<{ createdPromise: Promise<TCreated> }> {
-  const createdPromise = input.createLiveSession(input.reserved.sessionFile);
+  const createdPromise = input.createLiveSession(input.reserved.sessionFile, input.initialPrompt);
   void createdPromise.catch(() => {});
   await input.applyReservedConversation(input.reserved.id);
   return { createdPromise };

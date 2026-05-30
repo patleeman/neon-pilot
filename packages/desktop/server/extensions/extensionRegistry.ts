@@ -529,12 +529,26 @@ const EXTENSION_FAILURE_THRESHOLD = 3;
 interface ExtensionRegistryReadCache {
   configs: Map<string, ExtensionRegistryConfig>;
   entries: Map<string, ExtensionRegistryEntry[]>;
+  invalidEntries: Map<string, InvalidExtensionEntry[]>;
 }
 
 const registryReadCache = new AsyncLocalStorage<ExtensionRegistryReadCache>();
+const processRegistryReadCache: Pick<ExtensionRegistryReadCache, 'entries' | 'invalidEntries'> = {
+  entries: new Map(),
+  invalidEntries: new Map(),
+};
 
 export async function withExtensionRegistryReadCache<T>(fn: () => Promise<T>): Promise<T> {
-  return registryReadCache.run({ configs: new Map(), entries: new Map() }, fn);
+  return registryReadCache.run({ configs: new Map(), entries: new Map(), invalidEntries: new Map() }, fn);
+}
+
+export function invalidateExtensionRegistryReadCaches(stateRoot: string = getStateRoot()): void {
+  const cache = registryReadCache.getStore();
+  cache?.configs.delete(stateRoot);
+  cache?.entries.delete(stateRoot);
+  cache?.invalidEntries.delete(stateRoot);
+  processRegistryReadCache.entries.delete(stateRoot);
+  processRegistryReadCache.invalidEntries.delete(stateRoot);
 }
 
 export function getRuntimeExtensionsRoot(stateRoot: string = getStateRoot()): string {
@@ -1002,7 +1016,16 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
 }
 
 export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateRoot()): InvalidExtensionEntry[] {
-  return listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
+  const cache = registryReadCache.getStore();
+  const scoped = cache?.invalidEntries.get(stateRoot);
+  if (scoped) return scoped;
+  const cached = processRegistryReadCache.invalidEntries.get(stateRoot);
+  if (cached) {
+    cache?.invalidEntries.set(stateRoot, cached);
+    return cached;
+  }
+
+  const entries = listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
     .filter((entry) => entry.source === 'external')
     .flatMap((entry): InvalidExtensionEntry[] => {
       const manifestPath = join(entry.packageRoot, 'extension.json');
@@ -1023,6 +1046,9 @@ export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateR
         ];
       }
     });
+  cache?.invalidEntries.set(stateRoot, entries);
+  processRegistryReadCache.invalidEntries.set(stateRoot, entries);
+  return entries;
 }
 
 export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
@@ -1041,8 +1067,13 @@ export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()):
 
 export function listExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
   const cache = registryReadCache.getStore();
-  const cached = cache?.entries.get(stateRoot);
-  if (cached) return cached;
+  const scoped = cache?.entries.get(stateRoot);
+  if (scoped) return scoped;
+  const cached = processRegistryReadCache.entries.get(stateRoot);
+  if (cached) {
+    cache?.entries.set(stateRoot, cached);
+    return cached;
+  }
 
   const entries = [
     ...SYSTEM_EXTENSION_ENTRIES.map((entry) => ({ manifest: entry.manifest, packageRoot: entry.packageRoot, source: 'system' as const })),
@@ -1055,6 +1086,7 @@ export function listExtensionEntries(stateRoot: string = getStateRoot()): Extens
     return true;
   });
   cache?.entries.set(stateRoot, filtered);
+  processRegistryReadCache.entries.set(stateRoot, filtered);
   return filtered;
 }
 

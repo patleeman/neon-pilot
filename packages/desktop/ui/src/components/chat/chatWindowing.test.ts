@@ -81,6 +81,9 @@ describe('chatWindowing', () => {
   it('enables bounded rendering before the transcript cap can mount hundreds of blocks', () => {
     expect(CHAT_VIEW_RENDERING_PROFILE.aggressive.windowingThreshold).toBeLessThanOrEqual(120);
     expect(CHAT_VIEW_RENDERING_PROFILE.default.windowingThreshold).toBeLessThanOrEqual(220);
+    expect(
+      CHAT_VIEW_RENDERING_PROFILE.aggressive.windowingChunkSize * (CHAT_VIEW_RENDERING_PROFILE.aggressive.windowingOverscanChunks + 2),
+    ).toBeLessThanOrEqual(48);
     expect(CHAT_VIEW_RENDERING_PROFILE.aggressive.contentVisibilityThreshold).toBeLessThan(
       CHAT_VIEW_RENDERING_PROFILE.default.contentVisibilityThreshold,
     );

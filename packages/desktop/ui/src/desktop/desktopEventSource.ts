@@ -134,8 +134,11 @@ class ClosingNativeEventSource implements EventSourceLike {
     this.source.onerror = (event) => {
       if (this.closed) return;
       this.onerror?.(event);
-      // Don't close — native EventSource auto-reconnects on its own.
-      // Calling close() here would permanently prevent that recovery.
+      // The app protocol handler creates real backend stream subscriptions.
+      // Native EventSource retries can otherwise leave a failing stream in a
+      // tight reconnect loop; the app-level subscription can decide whether to
+      // reconnect later.
+      this.close();
     };
   }
 

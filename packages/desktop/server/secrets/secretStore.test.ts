@@ -18,8 +18,16 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
   ],
 }));
 
-const { deleteSecret, listSecretStatuses, readSecretBackendId, resolveProviderApiKey, resolveSecret, setProviderApiKeySecret, setSecret } =
-  await import('./secretStore.js');
+const {
+  deleteSecret,
+  listSecretStatuses,
+  readSecretBackendId,
+  resolveIndexedProviderApiKey,
+  resolveProviderApiKey,
+  resolveSecret,
+  setProviderApiKeySecret,
+  setSecret,
+} = await import('./secretStore.js');
 
 function createTempStateRoot(): string {
   return join(tmpdir(), `pa-secrets-${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -67,6 +75,14 @@ describe('secretStore', () => {
 
     expect(resolveProviderApiKey('openrouter', stateRoot)).toBe('provider-secret');
     expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.index.json'), 'utf-8'))).toEqual(['provider:openrouter:apiKey']);
+  });
+
+  it('does not probe keychain provider keys that are absent from the secret index', () => {
+    const stateRoot = createTempStateRoot();
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'keychain' } }));
+
+    expect(resolveIndexedProviderApiKey('openrouter', stateRoot)).toBeUndefined();
   });
 
   it('prefers stored secrets over environment variables', () => {

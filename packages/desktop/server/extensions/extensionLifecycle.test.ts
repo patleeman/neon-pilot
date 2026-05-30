@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const findExtensionEntry = vi.fn();
 const getRuntimeExtensionsRoot = vi.fn();
+const invalidateExtensionRegistryReadCaches = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
 const parseExtensionManifest = vi.fn((manifest) => manifest);
 const readInvalidRuntimeExtensionEntries = vi.fn(() => []);
@@ -14,6 +15,7 @@ const readInvalidRuntimeExtensionEntries = vi.fn(() => []);
 vi.mock('./extensionRegistry.js', () => ({
   findExtensionEntry,
   getRuntimeExtensionsRoot,
+  invalidateExtensionRegistryReadCaches,
   listExtensionInstallSummaries,
   parseExtensionManifest,
   readInvalidRuntimeExtensionEntries,
@@ -43,6 +45,7 @@ describe('extensionLifecycle', () => {
     rmSync(stateRoot, { recursive: true, force: true });
     findExtensionEntry.mockReset().mockReturnValue(null);
     getRuntimeExtensionsRoot.mockReset().mockReturnValue(runtimeRoot);
+    invalidateExtensionRegistryReadCaches.mockReset();
     listExtensionInstallSummaries.mockReset().mockReturnValue([{ id: 'my-extension', name: 'My Extension' }]);
     readInvalidRuntimeExtensionEntries.mockReset().mockReturnValue([]);
     parseExtensionManifest.mockClear();

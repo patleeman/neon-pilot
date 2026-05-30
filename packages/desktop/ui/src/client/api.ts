@@ -122,6 +122,7 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
 
 async function requestJson<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
   const requestPath = buildApiPath(path);
+  const startedAtMs = performance.now();
   const res = await fetchWithRetry(requestPath, {
     method,
     ...(method === 'GET'
@@ -131,7 +132,7 @@ async function requestJson<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE
           body: body !== undefined ? JSON.stringify(body) : undefined,
         }),
   });
-  recordApiTiming(requestPath, res);
+  recordApiTiming(requestPath, res, startedAtMs);
   if (!res.ok) throw new Error(await readApiError(res, requestPath));
   return readJsonResponse<T>(res, requestPath);
 }

@@ -32,6 +32,10 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
     const startedPathname = pathnameRef.current;
     let cancelled = false;
     const timer = window.setTimeout(() => {
+      const currentBeforeEnsure = pathnameRef.current;
+      if (!canAutoOpenOnboarding(startedPathname) || !canAutoOpenOnboarding(currentBeforeEnsure)) {
+        return;
+      }
       void pa.extension
         .invoke('ensure', { source: 'frontend' })
         .then((result) => {

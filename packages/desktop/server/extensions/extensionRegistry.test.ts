@@ -9,6 +9,7 @@ import {
   clearExtensionFailureRecordsForOperation,
   completeExtensionStartupGuard,
   isExtensionEnabled,
+  invalidateExtensionRegistryReadCaches,
   listExtensionAssemblyProviderRegistrations,
   listExtensionCommandRegistrations,
   listExtensionComposerInputToolRegistrations,
@@ -131,6 +132,32 @@ describe('extension registry', () => {
       expect(isExtensionEnabled('opt-in', stateRoot)).toBe(false);
       setExtensionEnabled('opt-in', true, stateRoot);
       expect(isExtensionEnabled('opt-in', stateRoot)).toBe(true);
+    });
+
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  it('invalidates process registry entry caches after manifest files change', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+
+    expect(listExtensionInstallSummaries(stateRoot).some((extension) => extension.id === 'added-later')).toBe(false);
+
+    const extensionRoot = join(stateRoot, 'extensions', 'added-later');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'added-later',
+        name: 'Added Later',
+      }),
+    );
+
+    invalidateExtensionRegistryReadCaches(stateRoot);
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'added-later')).toMatchObject({
+      id: 'added-later',
+      status: 'enabled',
     });
 
     rmSync(stateRoot, { recursive: true, force: true });

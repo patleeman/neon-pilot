@@ -27,6 +27,7 @@ import {
   clearBuildError,
   findExtensionCommandRegistration,
   findExtensionEntry,
+  invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
@@ -764,6 +765,7 @@ export function registerExtensionRoutes(
   });
 
   router.post('/api/extensions/reload', (_req, res) => {
+    invalidateExtensionRegistryReadCaches();
     res.json({ ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' });
   });
 
@@ -818,6 +820,7 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/reload', async (req, res) => {
     try {
+      invalidateExtensionRegistryReadCaches();
       clearBuildError(req.params.id);
       const summary = listExtensionInstallSummaries().find((extension) => extension.id === req.params.id);
       if (summary?.status === 'invalid') {

@@ -21,7 +21,7 @@ export const CHAT_VIEW_RENDERING_PROFILE: Record<ChatViewPerformanceMode, ChatWi
     contentVisibilityThreshold: 96,
     windowingThreshold: 120,
     windowingChunkSize: 24,
-    windowingOverscanChunks: 1,
+    windowingOverscanChunks: 0,
   },
 };
 

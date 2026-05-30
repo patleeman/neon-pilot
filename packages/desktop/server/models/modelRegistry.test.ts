@@ -2,10 +2,17 @@ import { join } from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { authStorageCreateMock, getPiAgentRuntimeDirMock, modelRegistryCreateMock, resolveProviderApiKeyMock } = vi.hoisted(() => ({
+const {
+  authStorageCreateMock,
+  getPiAgentRuntimeDirMock,
+  modelRegistryCreateMock,
+  resolveIndexedProviderApiKeyMock,
+  resolveProviderApiKeyMock,
+} = vi.hoisted(() => ({
   authStorageCreateMock: vi.fn(),
   getPiAgentRuntimeDirMock: vi.fn(),
   modelRegistryCreateMock: vi.fn(),
+  resolveIndexedProviderApiKeyMock: vi.fn(),
   resolveProviderApiKeyMock: vi.fn(),
 }));
 
@@ -23,6 +30,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 }));
 
 vi.mock('../secrets/secretStore.js', () => ({
+  resolveIndexedProviderApiKey: resolveIndexedProviderApiKeyMock,
   resolveProviderApiKey: resolveProviderApiKeyMock,
 }));
 
@@ -33,6 +41,7 @@ describe('model registry helpers', () => {
     authStorageCreateMock.mockReset();
     getPiAgentRuntimeDirMock.mockReset();
     modelRegistryCreateMock.mockReset();
+    resolveIndexedProviderApiKeyMock.mockReset();
     resolveProviderApiKeyMock.mockReset();
   });
 
@@ -60,7 +69,7 @@ describe('model registry helpers', () => {
       getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
     };
     getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
-    resolveProviderApiKeyMock.mockReturnValue('secure-key');
+    resolveIndexedProviderApiKeyMock.mockReturnValue('secure-key');
     modelRegistryCreateMock.mockReturnValue(registry);
 
     const created = createRuntimeModelRegistry(authStorage as never);
@@ -70,6 +79,7 @@ describe('model registry helpers', () => {
 
     const resolver = authStorage.setFallbackResolver.mock.calls[0]?.[0] as (provider: string) => string | undefined;
     expect(resolver('opencode-go')).toBe('secure-key');
+    expect(resolveIndexedProviderApiKeyMock).toHaveBeenCalledWith('opencode-go');
   });
 
   it('creates a registry beside the provided auth file', () => {

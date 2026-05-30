@@ -8,6 +8,7 @@ import { getStateRoot } from '@neon-pilot/core';
 import {
   findExtensionEntry,
   getRuntimeExtensionsRoot,
+  invalidateExtensionRegistryReadCaches,
   listExtensionInstallSummaries,
   parseExtensionManifest,
 } from './extensionRegistry.js';
@@ -272,6 +273,7 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
     `${JSON.stringify({ type: 'module', dependencies: { '@neon-pilot/extensions': '*' } }, null, 2)}\n`,
   );
 
+  invalidateExtensionRegistryReadCaches(stateRoot);
   const summary = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
   return { ok: true as const, extension: summary, packageRoot: extensionRoot };
 }
@@ -391,6 +393,7 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
 
     mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
     cpSync(packageRoot, destination, { recursive: true, errorOnExist: true });
+    invalidateExtensionRegistryReadCaches(stateRoot);
     const summary = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
     return { ok: true as const, extension: summary, packageRoot: destination };
   } finally {
@@ -410,6 +413,7 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
     const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
     assertInside(runtimeRoot, invalidEntry.packageRoot);
     rmSync(invalidEntry.packageRoot, { recursive: true, force: true });
+    invalidateExtensionRegistryReadCaches(stateRoot);
     return { ok: true as const, extensionId: id, deleted: true };
   }
   if (entry.manifest.packageType === 'system') {
@@ -434,5 +438,6 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   clearExtensionFailureRecords(id, stateRoot);
 
   rmSync(entry.packageRoot, { recursive: true, force: true });
+  invalidateExtensionRegistryReadCaches(stateRoot);
   return { ok: true as const, extensionId: id, deleted: true };
 }

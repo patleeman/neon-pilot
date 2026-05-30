@@ -285,6 +285,14 @@ export function resolveProviderApiKey(provider: string, stateRoot: string = getS
   return createSecretBackend(stateRoot).get(makeProviderApiKeySecretKey(provider))?.trim() || undefined;
 }
 
+export function resolveIndexedProviderApiKey(provider: string, stateRoot: string = getStateRoot()): string | undefined {
+  const key = makeProviderApiKeySecretKey(provider);
+  if (readSecretBackendId(stateRoot) === 'keychain' && !readSecretIndex(stateRoot).includes(key)) {
+    return undefined;
+  }
+  return resolveProviderApiKey(provider, stateRoot);
+}
+
 export function setProviderApiKeySecret(provider: string, apiKey: string, stateRoot: string = getStateRoot()): void {
   const normalized = apiKey.trim();
   if (!normalized) throw new Error('apiKey is required');
