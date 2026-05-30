@@ -60,9 +60,11 @@ function buildServiceTierAwareStreamFn(modelRegistry: ModelRegistry, serviceTier
       typeof (options as { reasoning?: unknown } | undefined)?.reasoning === 'string'
         ? (options as { reasoning: string }).reasoning
         : undefined;
+    const streamOptions = { ...mergedOptions } as ProviderStreamOptions & { reasoning?: unknown };
+    delete streamOptions.reasoning;
 
     return stream(model, context, {
-      ...mergedOptions,
+      ...streamOptions,
       reasoningEffort,
       serviceTier,
     });

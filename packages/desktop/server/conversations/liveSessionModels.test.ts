@@ -60,7 +60,6 @@ describe('live session models', () => {
     expect(piAi.stream).toHaveBeenCalledWith(model, context, {
       apiKey: 'key',
       headers: { Authorization: 'Bearer key', 'X-Base': 'base', 'X-Request': 'request' },
-      reasoning: 'high',
       reasoningEffort: 'high',
       serviceTier: 'flex',
     });
