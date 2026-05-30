@@ -242,8 +242,23 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
 async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
   await startDaemon();
-  const localApi = await loadRawLocalApiModule();
-  installNativeWorkbenchBrowserBridge(localApi);
+
+  /** Resolves once the local API module is loaded and ready to serve. */
+  let localApiReady = false;
+  let localApi: LocalApiModule | null = null;
+  let localApiPromise = loadRawLocalApiModule()
+    .then((module) => {
+      localApi = module;
+      installNativeWorkbenchBrowserBridge(module);
+      localApiReady = true;
+      return module;
+    })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`[desktop-backend] failed to load local API module: ${message}\n`);
+      // Server stays running — requests will get 503 responses.
+      return null;
+    });
 
   const server = createServer((request, response) => {
     void (async () => {
@@ -251,17 +266,26 @@ async function main(): Promise<void> {
         assertAuthorized(request, token);
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
 
+        // Always respond to health checks regardless of readiness.
         if (request.method === 'GET' && url.pathname === '/health') {
-          writeJson(response, 200, { ok: true, daemonHealthy: daemon?.isRunning() === true });
+          writeJson(response, 200, { ok: true, daemonHealthy: daemon?.isRunning() === true, apiReady: localApiReady });
           return;
         }
+
+        // Return 503 (Service Unavailable) until the API module is fully loaded.
+        if (!localApiReady) {
+          writeJson(response, 503, { error: 'Backend initializing', retryAfter: 1 });
+          return;
+        }
+
+        const api = localApi!;
 
         if (request.method === 'POST' && url.pathname === '/dispatch') {
           const body = await readRequestBody(request);
           if (!body.request) {
             throw new Error('Missing dispatch request.');
           }
-          const result = await localApi.dispatchDesktopLocalApiRequest(body.request);
+          const result = await api.dispatchDesktopLocalApiRequest(body.request);
           writeLocalApiDispatchResponse(response, result);
           return;
         }
@@ -269,11 +293,11 @@ async function main(): Promise<void> {
         if (request.method === 'POST' && url.pathname === '/rpc') {
           const body = await readRequestBody(request);
           const methodName = String(body.method ?? '');
-          const method = (localApi as unknown as Record<string, unknown>)[methodName];
+          const method = (api as unknown as Record<string, unknown>)[methodName];
           if (typeof method !== 'function') {
             throw new Error(`Unknown local API method: ${methodName}`);
           }
-          const result = await (method as (...args: unknown[]) => unknown).apply(localApi, body.args ?? []);
+          const result = await (method as (...args: unknown[]) => unknown).apply(api, body.args ?? []);
           writeJson(response, 200, { ok: true, result });
           return;
         }
@@ -285,7 +309,7 @@ async function main(): Promise<void> {
             'Cache-Control': 'no-cache',
             Connection: 'keep-alive',
           });
-          const unsubscribe = await localApi.subscribeDesktopLocalApiStream(path, (event) => {
+          const unsubscribe = await api.subscribeDesktopLocalApiStream(path, (event) => {
             response.write(`event: ${event.type}\n`);
             if ('data' in event && typeof event.data === 'string') {
               response.write(`data: ${event.data}\n`);
@@ -315,6 +339,8 @@ async function main(): Promise<void> {
     throw new Error('Backend child did not bind a TCP port.');
   }
 
+  // Signal ready immediately — the server is already accepting connections.
+  // The API module loads in the background; early requests get 503.
   sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {

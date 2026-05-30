@@ -76,7 +76,7 @@ export interface ExtensionRegistryApiState {
 
 // ── Retry helpers for transient failures ────────────────────────────────────
 
-const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
+const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000];
 const RETRYABLE_STATUS_CODES = [502, 503, 504];
 
 function isTransientNetworkError(error: unknown): boolean {
@@ -95,23 +95,26 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    const delayMs = attempt < RETRY_DELAYS_MS.length ? RETRY_DELAYS_MS[attempt] : null;
     try {
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
-      // Retry only clearly transient server states.
-      if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status) && attempt < RETRY_DELAYS_MS.length) {
+      // Retry transient server states (503 = backend not ready yet).
+      if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status) && delayMs !== null) {
         lastError = new Error(`Server error ${res.status} for ${input}`);
-        await sleep(RETRY_DELAYS_MS[attempt] as number);
+        await sleep(delayMs);
         continue;
       }
       return res;
     } catch (error) {
       lastError = error;
-      if (!isTransientNetworkError(error) || attempt >= RETRY_DELAYS_MS.length) {
-        throw error;
+      // Transient network errors (ECONNREFUSED while backend starts up) —
+      // retry as long as we have delays left.
+      if (isTransientNetworkError(error) && delayMs !== null) {
+        await sleep(delayMs);
+        continue;
       }
-
-      await sleep(RETRY_DELAYS_MS[attempt] as number);
+      throw error;
     }
   }
 
