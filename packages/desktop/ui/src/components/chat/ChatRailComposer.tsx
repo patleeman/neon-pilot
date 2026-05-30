@@ -1,14 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ClipboardEventHandler, type KeyboardEventHandler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { ModelInfo } from '../../shared/types.js';
-import { cx } from '../ui.js';
+import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
+import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
+import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
+import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import type { ModelInfo } from '../../shared/types';
+import { ConversationComposerActions } from '../conversation/ConversationComposerActions';
+import { ConversationPreferencesRow } from '../conversation/ConversationPreferencesRow';
 
-/**
- * Composer for the right-panel ChatRail.
- *
- * Provides a text input, model picker (inline), send/steer controls,
- * and an abort button during streaming.
- */
+function getComposerPreferenceInlineLimit(composerShellWidth: number | null): number {
+  const width = composerShellWidth ?? Number.POSITIVE_INFINITY;
+  if (width >= 860) return Number.POSITIVE_INFINITY;
+  if (width >= 760) return 4;
+  if (width >= 660) return 3;
+  if (width >= 560) return 2;
+  if (width >= 460) return 1;
+  return 0;
+}
+
 function readForkPromptDraft(conversationId: string): string | null {
   try {
     const raw = sessionStorage.getItem(`pa:reload:conversation:${conversationId}:composer`);
@@ -45,7 +54,12 @@ export function ChatRailComposer({
   onAbortStream: () => void;
   onSelectModel: (modelId: string) => void;
 }) {
+  const { composerControls = [], composerInputTools } = useExtensionRegistry();
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
+  const [composerShellWidth, setComposerShellWidth] = useState<number | null>(null);
+  const composerShellRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Clear fork prompt draft on first render so it doesn't re-fill on remount.
   useEffect(() => {
@@ -53,8 +67,19 @@ export function ChatRailComposer({
       clearForkPromptDraft(conversationId);
     }
   }, [conversationId]);
-  const [modelPickerOpen, setModelPickerOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Track composer shell width for responsive preferences layout.
+  useEffect(() => {
+    const shell = composerShellRef.current;
+    if (!shell) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setComposerShellWidth(entry.contentRect.width);
+    });
+    observer.observe(shell);
+    setComposerShellWidth(shell.getBoundingClientRect().width);
+    return () => observer.disconnect();
+  }, []);
 
   // Auto-resize textarea.
   useEffect(() => {
@@ -69,138 +94,265 @@ export function ChatRailComposer({
     textareaRef.current?.focus();
   }, []);
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
+  const hasContent = input.trim().length > 0;
+  const composerDisabled = !hasContent || isStreaming;
+
+  // ── Selection tracking ───────────────────────────────────────────────
+  const [selectionState, setSelectionState] = useState({ start: 0, end: 0 });
+
+  const rememberComposerSelection = useCallback((textarea: HTMLTextAreaElement) => {
+    setSelectionState({ start: textarea.selectionStart, end: textarea.selectionEnd });
+  }, []);
+
+  // ── Text insertion helpers ───────────────────────────────────────────
+  const insertTextIntoComposer = useCallback(
+    (text: string) => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const start = selectionState.start;
+      const end = selectionState.end;
+      const before = input.slice(0, start);
+      const after = input.slice(end);
+      const next = before + text + after;
+      setInput(next);
+      // Restore cursor position after inserted text.
+      requestAnimationFrame(() => {
+        ta.focus();
+        const pos = start + text.length;
+        ta.setSelectionRange(pos, pos);
+      });
+    },
+    [input, selectionState],
+  );
+
+  const appendTextToComposer = useCallback((text: string) => {
+    setInput((prev) => prev + text);
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        const pos = ta.value.length;
+        ta.setSelectionRange(pos, pos);
+      }
+    });
+  }, []);
+
+  // ── Keyboard handling ────────────────────────────────────────────────
+  const [altHeld, setAltHeld] = useState(false);
+
+  const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = useCallback(
+    (event) => {
+      if (event.key === 'Alt') {
+        setAltHeld(true);
+      }
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
-        if (input.trim() && !isStreaming) {
+        if (hasContent && !isStreaming) {
           onSubmit(input.trim());
           setInput('');
         }
       }
     },
-    [input, isStreaming, onSubmit],
+    [input, isStreaming, hasContent, onSubmit],
   );
 
-  const handleSend = useCallback(() => {
-    if (!input.trim() || isStreaming) return;
-    onSubmit(input.trim());
-    setInput('');
-  }, [input, isStreaming, onSubmit]);
+  const handleKeyUp = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'Alt') {
+      setAltHeld(false);
+    }
+  }, []);
 
-  const hasContent = input.trim().length > 0;
-  const hasModels = models.length > 0;
+  // ── Paste handling ───────────────────────────────────────────────────
+  const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = useCallback(
+    (_event) => {
+      // Default paste behavior is fine — the textarea handles it.
+      // We just need to re-sync after paste.
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          setInput(ta.value);
+          rememberComposerSelection(ta);
+        }
+      });
+    },
+    [rememberComposerSelection],
+  );
+
+  // ── File handling (stub — no file picker in side chat) ───────────────
+  const handleFilesSelected = useCallback((_files: File[]) => {
+    // File attachments not supported in side chat yet.
+  }, []);
+
+  const handleOpenFilePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleUpsertDrawingAttachment = useCallback((_payload: Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>) => {
+    // Drawing attachments not supported in side chat yet.
+  }, []);
+
+  // ── Submit via action bar ────────────────────────────────────────────
+  const handleSubmitForModifiers = useCallback(
+    (altKeyHeld: boolean) => {
+      if (!hasContent || isStreaming) return;
+      onSubmit(input.trim(), altKeyHeld ? 'followUp' : undefined);
+      setInput('');
+    },
+    [input, hasContent, isStreaming, onSubmit],
+  );
+
+  // ── Extension visibility filtering ───────────────────────────────────
+  const visibleComposerInputTools = useMemo(
+    () =>
+      composerInputTools.filter((tool) => {
+        const expr = tool.when;
+        if (!expr) return true;
+        const clauses = expr.split(/\s*&&\s*/).filter(Boolean);
+        for (const clause of clauses) {
+          const trimmed = clause.trim();
+          if (trimmed === 'composerHasContent' && !hasContent) return false;
+          if (trimmed === 'streamIsStreaming' && !isStreaming) return false;
+          if (trimmed === '!streamIsStreaming' && isStreaming) return false;
+        }
+        return true;
+      }),
+    [composerInputTools, hasContent, isStreaming],
+  );
+
+  const visibleComposerControls = useMemo(
+    () =>
+      composerControls.filter((button) => {
+        const expr = button.when;
+        if (!expr) return true;
+        const clauses = expr.split(/\s*&&\s*/).filter(Boolean);
+        for (const clause of clauses) {
+          const trimmed = clause.trim();
+          if (trimmed === 'composerHasContent' && !hasContent) return false;
+          if (trimmed === 'streamIsStreaming' && !isStreaming) return false;
+          if (trimmed === '!streamIsStreaming' && isStreaming) return false;
+        }
+        return true;
+      }),
+    [composerControls, hasContent, isStreaming],
+  );
+
+  const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
+  const visiblePreferenceControls = visibleComposerControls.filter((control) => control.slot === 'preferences');
+
+  const composerControlContext = {
+    composerDisabled,
+    streamIsStreaming: isStreaming,
+    composerHasContent: hasContent,
+    openFilePicker: handleOpenFilePicker,
+    addFiles: handleFilesSelected,
+    insertText: insertTextIntoComposer,
+    appendText: appendTextToComposer,
+    models,
+    currentModel,
+    currentThinkingLevel: '',
+    savingPreference: null,
+    selectModel: onSelectModel,
+    selectThinkingLevel: () => {},
+  };
+
   return (
-    <div className="px-2 py-2">
-      {/* Input row */}
-      <div
-        className={cx(
-          'flex items-end gap-1 rounded-lg border bg-surface px-2 py-1 transition',
-          isStreaming ? 'border-accent/40' : 'border-border-subtle',
-        )}
-      >
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={isStreaming ? 'Waiting for response…' : 'Message...'}
-          disabled={isStreaming}
-          rows={1}
-          className="min-h-[24px] max-h-[160px] flex-1 resize-none bg-transparent text-[13px] text-primary placeholder:text-dim outline-none py-0.5 leading-5"
-          aria-label="Message input"
-        />
-      </div>
+    <div ref={composerShellRef} className="px-3 pt-2.5 pb-2.5">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.excalidraw,application/json"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          if (files.length > 0) {
+            handleFilesSelected(files);
+          }
+          event.target.value = '';
+        }}
+      />
 
-      {/* Action bar */}
-      <div className="mt-1.5 flex items-center gap-1">
-        {/* Send */}
+      <div className="flex flex-col gap-0">
+        <div className="px-1 pt-1">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              const target = event.target;
+              setInput(nextValue);
+              requestAnimationFrame(() => rememberComposerSelection(target));
+            }}
+            onSelect={(event) => {
+              rememberComposerSelection(event.currentTarget);
+            }}
+            onClick={(event) => {
+              rememberComposerSelection(event.currentTarget);
+            }}
+            onKeyUp={handleKeyUp}
+            onFocus={(event) => {
+              rememberComposerSelection(event.currentTarget);
+            }}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            rows={1}
+            disabled={isStreaming}
+            className="w-full resize-none overscroll-contain bg-transparent text-[14px] leading-relaxed text-primary outline-none placeholder:text-dim disabled:cursor-default disabled:text-dim"
+            placeholder={isStreaming ? 'Waiting for response…' : 'Message Neon Pilot…   /  commands · @ notes · ⇧↵ newline'}
+            title="Ctrl+C clears the composer. Alt+Enter queues a follow up while the conversation is busy. ↑/↓ recalls recent prompts."
+            style={{ minHeight: '44px', maxHeight: '160px', WebkitOverflowScrolling: 'touch' }}
+          />
+        </div>
 
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={!hasContent || isStreaming}
-          className={cx(
-            'flex h-7 items-center gap-1 rounded px-2.5 text-[12px] font-medium transition',
-            hasContent && !isStreaming ? 'bg-accent text-white hover:bg-accent/90' : 'bg-surface text-dim cursor-not-allowed',
-          )}
-          title="Send"
-        >
-          Send
-        </button>
-
-        {/* Abort */}
-        {isStreaming && (
-          <button
-            type="button"
-            onClick={onAbortStream}
-            className="flex h-7 items-center gap-1 rounded bg-danger/15 px-2.5 text-[12px] font-medium text-danger transition hover:bg-danger/25"
-          >
-            Stop
-          </button>
-        )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Model picker */}
-        {hasModels && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setModelPickerOpen((o) => !o)}
-              className={cx(
-                'flex h-6 items-center gap-1 rounded px-1.5 text-[11px] font-medium transition',
-                'text-dim hover:bg-surface hover:text-secondary',
-              )}
-            >
-              <ModelChip modelId={currentModel || models[0]?.id} />
-            </button>
-            {modelPickerOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setModelPickerOpen(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border border-border-subtle bg-panel py-1 shadow-lg">
-                  <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">Model</div>
-                  {models.map((model) => (
-                    <button
-                      key={model.id}
-                      type="button"
-                      onClick={() => {
-                        onSelectModel(model.id);
-                        setModelPickerOpen(false);
-                      }}
-                      className={cx(
-                        'flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] transition',
-                        model.id === currentModel
-                          ? 'bg-accent/10 text-accent font-medium'
-                          : 'text-secondary hover:bg-surface hover:text-primary',
-                      )}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{model.label || model.id}</span>
-                      {model.id === currentModel && <span className="shrink-0 text-[10px]">✓</span>}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+        <div className="flex flex-nowrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0">
+          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
+            {visibleLeadingControls.map((control) => (
+              <ComposerButtonHost
+                key={`${control.extensionId}:${control.id}`}
+                registration={control}
+                buttonContext={{ ...composerControlContext, renderMode: 'inline' }}
+              />
+            ))}
+            {visibleComposerInputTools.map((tool) => (
+              <ComposerInputToolHost
+                key={`${tool.extensionId}:${tool.id}`}
+                registration={tool}
+                toolContext={{
+                  conversationId,
+                  composerDisabled,
+                  streamIsStreaming: isStreaming,
+                  composerHasContent: hasContent,
+                  addFiles: handleFilesSelected,
+                  upsertDrawingAttachment: handleUpsertDrawingAttachment,
+                }}
+              />
+            ))}
+            <ConversationPreferencesRow
+              composerButtons={visiblePreferenceControls}
+              composerButtonContext={composerControlContext}
+              inlineLimit={getComposerPreferenceInlineLimit(composerShellWidth)}
+            />
           </div>
-        )}
+
+          <ConversationComposerActions
+            composerDisabled={composerDisabled}
+            streamIsStreaming={isStreaming}
+            conversationNeedsTakeover={false}
+            composerHasContent={hasContent}
+            composerShowsQuestionSubmit={false}
+            composerQuestionCanSubmit={false}
+            composerQuestionRemainingCount={0}
+            composerQuestionSubmitting={false}
+            composerSubmitLabel={isStreaming ? 'Steer' : 'Send'}
+            composerAltHeld={altHeld}
+            onInsertComposerText={insertTextIntoComposer}
+            onAppendComposerText={appendTextToComposer}
+            onSubmitComposerQuestion={() => {}}
+            onSubmitComposerActionForModifiers={handleSubmitForModifiers}
+            onAbortStream={onAbortStream}
+          />
+        </div>
       </div>
     </div>
-  );
-}
-
-function ModelChip({ modelId }: { modelId: string }) {
-  // Show a short version of the model name (e.g. "claude-sonnet-4" → "sonnet")
-  const short = modelId
-    .replace(/^(claude|gpt|gemini)-/, '')
-    .split('-')
-    .slice(0, 2)
-    .join('-');
-  return (
-    <>
-      <span className="w-1.5 h-1.5 rounded-full bg-accent/60" aria-hidden="true" />
-      <span className="truncate max-w-[80px]">{short || modelId}</span>
-    </>
   );
 }
