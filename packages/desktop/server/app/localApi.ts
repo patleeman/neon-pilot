@@ -557,12 +557,14 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     listMemoryDocs: context.listMemoryDocs,
   };
   localLiveSessionCapabilityContext = liveSessionCapabilityContext;
-  void prewarmLiveSessionCapability({}, localLiveSessionCapabilityContext).catch((error) => {
+  try {
+    await prewarmLiveSessionCapability({}, localLiveSessionCapabilityContext);
+  } catch (error) {
     logWarn('default live session prewarm failed', {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
-  });
+  }
 
   localProviderDesktopCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,
