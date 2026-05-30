@@ -99,10 +99,16 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
     try {
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
-      // Retry transient server states (503 = backend not ready yet).
-      if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status) && delayMs !== null) {
+      // 503 = backend still warming up — keep retrying indefinitely.
+      // Exponential backoff runs first (1s, 2s, 4s, 8s), then plateaus at 8s.
+      if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status)) {
         lastError = new Error(`Server error ${res.status} for ${input}`);
-        await sleep(delayMs);
+        if (delayMs !== null) {
+          await sleep(delayMs);
+        } else {
+          // Past the exponential backoff window — poll at the slowest rate.
+          await sleep(RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
+        }
         continue;
       }
       return res;
@@ -112,6 +118,11 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
       // retry as long as we have delays left.
       if (isTransientNetworkError(error) && delayMs !== null) {
         await sleep(delayMs);
+        continue;
+      }
+      if (isTransientNetworkError(error)) {
+        // Past the exponential backoff — poll at the slowest rate.
+        await sleep(RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
         continue;
       }
       throw error;
