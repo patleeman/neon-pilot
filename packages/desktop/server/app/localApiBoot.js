@@ -16,6 +16,10 @@ const FULL_MODULE_PATH = './localApiFull.js';
 // later), the full module will likely be ready, avoiding lazy-load latency.
 modulePromise = import(FULL_MODULE_PATH).then((mod) => {
   fullModule = mod;
+}).catch((err) => {
+  // Failed to load — log to stderr and leave fullModule as null.
+  // Lazy callers will await modulePromise and re-throw the error.
+  process.stderr.write(`[local-api-boot] failed to load full module: ${err.message}\n`);
 });
 
 async function ensureModule() {

@@ -40,21 +40,6 @@ const sharedEsbuildOptions = {
     'esbuild',
     'fsevents',
     'node-pty',
-    // AI provider SDKs — only needed when the user configures that provider.
-    // Externalizing them keeps the cold-start bundle small and lets Node.js
-    // load them lazily from node_modules on first use.
-    'openai',
-    '@anthropic-ai/sdk',
-    '@google/generative-ai',
-    '@aws-sdk/client-bedrock-runtime',
-    '@aws-sdk/client-sagemaker-runtime',
-    '@cohere-ai/cohere-ai',
-    'cohere-ai',
-    '@mistralai/mistralai',
-    // jiti bundles a full Babel copy (~2MB of parser/transformer code).
-    // Only used by @earendil-works/pi-coding-agent for runtime TypeScript
-    // compilation; let Node.js load it from node_modules on demand.
-    'jiti',
   ],
   plugins: [extensionApiAliasPlugin],
 };
