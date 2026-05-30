@@ -91,7 +91,43 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Tracks whether the backend has reported apiReady: true via /health. */
+let backendHealthChecked = false;
+let backendReady = false;
+let healthCheckPromise: Promise<void> | null = null;
+
+async function ensureBackendReady(): Promise<void> {
+  if (backendReady) return;
+  if (!healthCheckPromise) {
+    healthCheckPromise = (async () => {
+      for (;;) {
+        try {
+          const res = await fetch(buildApiPath('/health'), { cache: 'no-store' });
+          if (res.ok) {
+            const body = (await res.json()) as { apiReady?: boolean };
+            if (body.apiReady) {
+              backendReady = true;
+              return;
+            }
+          }
+        } catch {
+          // Backend not reachable yet — keep polling.
+        }
+        await sleep(200);
+      }
+    })();
+  }
+  await healthCheckPromise;
+}
+
 async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  // Gate on backend readiness before the first request.
+  // Subsequent requests skip the check once backendReady is true.
+  if (!backendHealthChecked) {
+    backendHealthChecked = true;
+    await ensureBackendReady();
+  }
+
   let lastError: unknown;
   let attempt = 0;
 
@@ -101,8 +137,6 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
     try {
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
-      // 503 = backend still warming up — retry indefinitely. Uses exponential
-      // backoff (1s, 2s, 4s, 8s), then plateaus at 8s polling.
       if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status)) {
         lastError = new Error(`Server error ${res.status} for ${input}`);
         await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
@@ -111,7 +145,6 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
       return res;
     } catch (error) {
       lastError = error;
-      // Transient network errors (ECONNREFUSED while backend starts up).
       if (isTransientNetworkError(error)) {
         await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
         continue;
