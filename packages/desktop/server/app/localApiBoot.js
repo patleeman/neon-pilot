@@ -5,19 +5,21 @@
 // The build copies this file directly to server/dist/app/localApi.js
 // without going through esbuild, avoiding bundling of unnecessary deps.
 
-// ── Lazy handler loader ────────────────────────────────────────────────────
+// ── Handler loader — starts loading immediately, not on first call ────────
 
 let fullModule = null;
 let modulePromise = null;
 const FULL_MODULE_PATH = './localApiFull.js';
 
+// Start loading the full module eagerly in the background as soon as this
+// bootstrap loads (~5ms). By the time the first API call arrives (~400ms
+// later), the full module will likely be ready, avoiding lazy-load latency.
+modulePromise = import(FULL_MODULE_PATH).then((mod) => {
+  fullModule = mod;
+});
+
 async function ensureModule() {
   if (fullModule) return fullModule;
-  if (!modulePromise) {
-    modulePromise = import(FULL_MODULE_PATH).then((mod) => {
-      fullModule = mod;
-    });
-  }
   await modulePromise;
   return fullModule;
 }

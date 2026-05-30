@@ -113,7 +113,10 @@ await Promise.all([
     mkdirSync(resolve(outdir, 'app'), { recursive: true });
     copyFileSync(resolve(packageRoot, 'server/app/localApiBoot.js'), bundleOutputs[0]);
   })(),
-  // Full handler module — loaded lazily by bootstrap on first API call.
+  // Full handler module — loaded eagerly by bootstrap in the background.
+  // Static imports within localApi.ts mean all code loads together; the
+  // 6.2MB file is parsed in a single shot. This is fine because loading
+  // starts immediately (~5ms after bootstrap) in parallel with server setup.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/app/localApi.ts')],
