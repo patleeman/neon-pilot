@@ -64,12 +64,10 @@ const AUTO_RESUME_CONTEXT_TYPES = new Set([
 ]);
 
 const QUIET_LIFECYCLE_CONTEXT_TYPES = new Set([...AUTO_RESUME_CONTEXT_TYPES, 'conversation_workspace_change']);
-const contextShelfItemClassName =
-  'group/item rounded-lg border border-border-subtle/45 bg-surface/25 px-3 py-2 text-[12px] text-secondary shadow-sm shadow-black/5 transition-colors hover:border-border-subtle/70 hover:bg-surface/35 open:border-accent/25 open:bg-surface/40';
+const contextShelfItemClassName = 'group/item w-full text-[12px] text-secondary';
 const contextShelfSummaryClassName =
-  'grid cursor-pointer list-none grid-cols-[auto_minmax(8rem,11rem)_minmax(0,1fr)_auto] items-center gap-2 marker:hidden [&::-webkit-details-marker]:hidden';
-const contextShelfBodyClassName =
-  'mt-2 max-h-[min(34rem,52vh)] overflow-auto rounded-md border border-border-subtle/35 bg-base/45 px-3 py-2 text-[12px] leading-relaxed text-primary/90';
+  'grid w-full cursor-pointer list-none grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden';
+const contextShelfBodyClassName = 'mx-auto mt-3 w-[78%] max-h-[min(34rem,52vh)] overflow-auto text-[12px] leading-relaxed text-primary/90';
 
 function isAutoResumeLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
   return block.type === 'context' && AUTO_RESUME_CONTEXT_TYPES.has(block.customType ?? '');
@@ -315,8 +313,7 @@ export const ContextShelf = memo(function ContextShelf({
         </div>
       ))}
       <details className="group my-5 block w-full text-dim" data-context-shelf="1">
-        <summary className="grid w-full cursor-pointer grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
-          <span className="h-px bg-border-subtle" aria-hidden="true" />
+        <summary className="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
           <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 text-dim/85 sm:max-w-[42rem]">
             <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
               ›
@@ -341,15 +338,18 @@ export const ContextShelf = memo(function ContextShelf({
               dataAttrs={{ 'data-context-type': 'system_prompt' }}
               summary={
                 <summary className={contextShelfSummaryClassName}>
-                  <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
-                    ›
+                  <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                    <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                      ›
+                    </span>
+                    <span className="shrink-0 font-medium text-primary/90">System prompt</span>
+                    <span className="min-w-0 truncate text-dim/90">
+                      {toolDefinitions.length > 0
+                        ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
+                        : 'Runtime instructions available for inspection.'}
+                    </span>
                   </span>
-                  <span className="min-w-0 truncate font-medium text-primary/90">System prompt</span>
-                  <span className="min-w-0 flex-1 truncate text-dim/90">
-                    {toolDefinitions.length > 0
-                      ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
-                      : 'Runtime instructions available for inspection.'}
-                  </span>
+                  <span className="h-px bg-border-subtle" aria-hidden="true" />
                 </summary>
               }
             >
@@ -367,11 +367,14 @@ export const ContextShelf = memo(function ContextShelf({
           {remoteControlled ? (
             <details className={contextShelfItemClassName} data-context-type="remote_control">
               <summary className={contextShelfSummaryClassName}>
-                <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
-                  ›
+                <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                  <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                    ›
+                  </span>
+                  <span className="shrink-0 font-medium text-primary/90">Remote control</span>
+                  <span className="min-w-0 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
                 </span>
-                <span className="min-w-0 truncate font-medium text-primary/90">Remote control</span>
-                <span className="min-w-0 flex-1 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
+                <span className="h-px bg-border-subtle" aria-hidden="true" />
               </summary>
               <div className={contextShelfBodyClassName}>Controlled remotely from Kitty Litter.</div>
             </details>
@@ -405,12 +408,15 @@ export const ContextShelf = memo(function ContextShelf({
                 }}
                 summary={
                   <summary className={contextShelfSummaryClassName}>
-                    <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
-                      ›
+                    <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                      <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                        ›
+                      </span>
+                      <span className="shrink-0 font-medium text-primary/90">{contextShelfLabel(block)}</span>
+                      <span className="min-w-0 truncate text-dim/90">{contextShelfPreview(block)}</span>
+                      {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
                     </span>
-                    <span className="min-w-0 truncate font-medium text-primary/90">{contextShelfLabel(block)}</span>
-                    <span className="min-w-0 flex-1 truncate text-dim/90">{contextShelfPreview(block)}</span>
-                    {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
+                    <span className="h-px bg-border-subtle" aria-hidden="true" />
                   </summary>
                 }
               >
@@ -778,19 +784,19 @@ function SystemEventFrame({
   children: ReactNode;
 }) {
   return (
-    <details
-      className="group rounded-lg border border-transparent px-2 py-1 text-dim transition-colors hover:border-border-subtle/40 hover:bg-surface/15 open:border-border-subtle/50 open:bg-surface/20"
-      {...dataAttributes}
-    >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
-        <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
-          ›
+    <details className="group w-full text-dim" {...dataAttributes}>
+      <summary className="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+          <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
+            ›
+          </span>
+          <span className="shrink-0 font-medium text-secondary/80">{label}</span>
+          <span className="min-w-0 truncate text-dim/80">{preview}</span>
+          {ts ? <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(ts)}</span> : null}
         </span>
-        <span className="shrink-0 font-medium text-secondary/80">{label}</span>
-        <span className="min-w-0 flex-1 truncate text-dim/80">{preview}</span>
-        {ts ? <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(ts)}</span> : null}
+        <span className="h-px bg-border-subtle" aria-hidden="true" />
       </summary>
-      {children}
+      <div className="mx-auto mt-3 w-[78%]">{children}</div>
     </details>
   );
 }
@@ -1040,8 +1046,7 @@ export const SummaryMessage = memo(function SummaryMessage({
         className="group my-5 block w-full text-dim"
         dataAttrs={{ 'data-summary-kind': block.kind, 'data-compaction-marker': '1' }}
         summary={
-          <summary className="grid w-full cursor-pointer grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
-            <span className="h-px bg-border-subtle" aria-hidden="true" />
+          <summary className="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-1.5 text-dim/85">
               <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
                 ›

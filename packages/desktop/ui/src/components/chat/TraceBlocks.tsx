@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
-import { cx, Pill, SurfacePanel } from '../ui';
+import { Pill, SurfacePanel } from '../ui';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
@@ -353,54 +353,48 @@ export function TraceClusterBlock({
   }, [blocks, open, runningBlockIndex, showAllBlocks]);
   const hiddenBlockCount = open ? Math.max(0, blocks.length - visibleBlocks.length) : 0;
   const visibleStartIndex = blocks.length - visibleBlocks.length;
-  const panelClassName = cx(
-    'flex-1 rounded-xl border px-2.5 py-2 text-left transition-colors',
-    summary.hasError ? 'border-danger/30 bg-danger/5 hover:bg-danger/10' : 'border-border-subtle bg-elevated/60 hover:bg-elevated',
-  );
-
   return (
     <div className="space-y-1.5">
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-2">
+      <div className="grid w-full grid-cols-[auto_1fr] items-center gap-2 text-[11px] text-dim/70">
         <button
           type="button"
           onMouseEnter={hydrateDeferredBlocks}
           onFocus={hydrateDeferredBlocks}
           onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
           aria-expanded={open}
-          className={panelClassName}
+          className="flex min-w-0 max-w-[78vw] items-center gap-1.5 text-left sm:max-w-[42rem]"
         >
-          <div className="flex items-center gap-2 text-[12px]">
-            <span className="font-medium text-primary">{title}</span>
-            <span className="text-secondary">
-              · {summary.stepCount} step{summary.stepCount === 1 ? '' : 's'}
-            </span>
-            <span className="flex-1" />
-            {stableActive && <span className="text-[10px] uppercase tracking-[0.14em] text-accent/80">live</span>}
-            {throughputLabel && (
-              <span
-                className="font-mono text-[11px] text-accent/80"
-                title="Estimated from streamed output using the same chars/4 token heuristic used elsewhere in Pi."
-              >
-                {throughputLabel}
-              </span>
-            )}
-            {durationLabel && !isActive && <span className="text-[11px] text-dim">{durationLabel}</span>}
-            <span className="text-[10px] text-dim">{open ? 'hide' : 'show'}</span>
-          </div>
+          <span className="font-medium text-primary">{title}</span>
+          <span className="text-secondary">
+            · {summary.stepCount} step{summary.stepCount === 1 ? '' : 's'}
+          </span>
           {summary.categories.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            <span className="flex items-center gap-1">
               {expandedCategories.map((category) => (
                 <Pill key={category.key} tone={traceSummaryTone(category)} mono={category.kind === 'tool'}>
                   {category.label}
                   {category.count > 1 ? ` ×${category.count}` : ''}
                 </Pill>
               ))}
-              {remainingCategoryCount > 0 && <span className="text-[11px] text-dim">+{remainingCategoryCount} more</span>}
-            </div>
+              {remainingCategoryCount > 0 && <span className="text-dim">+{remainingCategoryCount}</span>}
+            </span>
           )}
+          <span className="flex-1" />
+          {stableActive && <span className="text-[10px] uppercase tracking-[0.14em] text-accent/80">live</span>}
+          {throughputLabel && (
+            <span
+              className="font-mono text-accent/80"
+              title="Estimated from streamed output using the same chars/4 token heuristic used elsewhere in Pi."
+            >
+              {throughputLabel}
+            </span>
+          )}
+          {durationLabel && !isActive && <span className="text-dim">{durationLabel}</span>}
+          <span className="text-dim">{open ? 'hide' : 'show'}</span>
         </button>
-        <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
+        <span className="h-px bg-border-subtle" aria-hidden="true" />
       </div>
+      <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
 
       {!open && (
         <PinnedToolBlocks
