@@ -100,13 +100,19 @@ interface WorkbenchTabInstance {
   id: string;
   mode: WorkbenchRailMode;
   artifactId?: string | null;
+  conversationId?: string | null;
 }
 
-function createWorkbenchTabInstance(mode: WorkbenchRailMode, options?: { id?: string; artifactId?: string | null }): WorkbenchTabInstance {
+function createWorkbenchTabInstance(
+  mode: WorkbenchRailMode,
+  options?: { id?: string; artifactId?: string | null; conversationId?: string | null },
+): WorkbenchTabInstance {
+  const conversationId = options?.conversationId ?? (mode === 'chat' ? (options?.id ?? null) : null);
   return {
     id: options?.id ?? crypto.randomUUID(),
     mode,
     artifactId: options?.artifactId,
+    conversationId,
   };
 }
 
@@ -468,6 +474,7 @@ function WorkbenchDocumentPane({
   workspaceFileId,
   activeTool,
   activeTabId,
+  activeChatConversationId,
   workspaceCwd,
   extensionWorkbenchSurface,
   extensionRailSurface,
@@ -487,6 +494,7 @@ function WorkbenchDocumentPane({
   workspaceFileId: string | null;
   activeTool: WorkbenchRailMode;
   activeTabId: string | null;
+  activeChatConversationId: string | null;
   workspaceCwd?: string | null;
   extensionWorkbenchSurface: NativeExtensionViewSummary | null;
   extensionRailSurface: ((ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) | null;
@@ -524,10 +532,10 @@ function WorkbenchDocumentPane({
         onStartSideChat={onStartSideChat}
       />
     );
-  } else if (activeTool === 'chat' && activeTabId) {
+  } else if (activeTool === 'chat' && activeChatConversationId) {
     mainContent = (
       <Suspense fallback={<div className="px-4 py-3 text-[12px] text-dim">Loading chat…</div>}>
-        <ChatRail conversationId={activeTabId} workspaceCwd={workspaceCwd ?? null} />
+        <ChatRail key={activeChatConversationId} conversationId={activeChatConversationId} workspaceCwd={workspaceCwd ?? null} />
       </Suspense>
     );
   } else if (extensionWorkbenchSurface) {
@@ -627,6 +635,7 @@ function WorkbenchPanel({
   workspaceFileId,
   activeTool,
   activeTabId,
+  activeChatConversationId,
   workspaceCwd,
   extensionWorkbenchSurface,
   extensionRailSurface,
@@ -651,6 +660,7 @@ function WorkbenchPanel({
   workspaceFileId: string | null;
   activeTool: WorkbenchRailMode;
   activeTabId: string | null;
+  activeChatConversationId: string | null;
   workspaceCwd: string | null;
   extensionWorkbenchSurface: NativeExtensionViewSummary | null;
   extensionRailSurface: ((ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) | null;
@@ -664,7 +674,10 @@ function WorkbenchPanel({
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onOpenNewTab: () => void;
-  onActiveToolChange: (mode: WorkbenchRailMode, options?: { artifactId?: string | null; id?: string }) => void;
+  onActiveToolChange: (
+    mode: WorkbenchRailMode,
+    options?: { artifactId?: string | null; id?: string; conversationId?: string | null; forceNewTab?: boolean },
+  ) => void;
   onWorkspaceFileClear: () => void;
   onStartSideChat?: () => Promise<string | void>;
 }) {
@@ -707,6 +720,7 @@ function WorkbenchPanel({
           workspaceFileId={workspaceFileId}
           activeTool={activeTool}
           activeTabId={activeTabId}
+          activeChatConversationId={activeChatConversationId}
           workspaceCwd={workspaceCwd}
           extensionWorkbenchSurface={extensionWorkbenchSurface}
           extensionRailSurface={extensionRailSurface}
@@ -1134,6 +1148,8 @@ export function Layout() {
   const [browserTabsState, setBrowserTabsState] = useState<BrowserTabsState>(() => readBrowserTabsState());
   const activeWorkbenchTab = openWorkbenchTabs.find((tab) => tab.id === activeWorkbenchTabId) ?? null;
   const activeWorkbenchTool = activeWorkbenchTab?.mode ?? 'new';
+  const activeWorkbenchChatConversationId =
+    activeWorkbenchTab?.mode === 'chat' ? (activeWorkbenchTab.conversationId ?? activeWorkbenchTab.id) : null;
   const [selectedToolByConversation, setSelectedToolByConversation] = useState<Record<string, WorkbenchRailMode>>({});
   const [selectedFileByConversation, setSelectedFileByConversation] = useState<Record<string, string | null>>({});
   const [selectedWorkspaceFileByConversation, setSelectedWorkspaceFileByConversation] = useState<Record<string, string | null>>({});
@@ -1322,22 +1338,31 @@ export function Layout() {
   const [pendingCommandPaletteOpen, setPendingCommandPaletteOpen] = useState<OpenCommandPaletteDetail | null>(null);
 
   const openWorkbenchToolTab = useCallback(
-    (tool: WorkbenchRailMode, options?: { artifactId?: string | null; id?: string }) => {
+    (
+      tool: WorkbenchRailMode,
+      options?: { artifactId?: string | null; id?: string; conversationId?: string | null; forceNewTab?: boolean },
+    ) => {
       if (tool === 'new') {
         setActiveWorkbenchTabId(null);
         return;
       }
-      const requestedId = options?.id;
-      if (requestedId) {
-        const existing = openWorkbenchTabs.find((tab) => tab.id === requestedId);
-        if (existing) {
-          setActiveWorkbenchTabId(existing.id);
-          return;
+      setOpenWorkbenchTabs((current) => {
+        if (!options?.forceNewTab) {
+          const existing =
+            tool === 'chat' && options?.conversationId
+              ? current.find((tab) => tab.mode === 'chat' && tab.conversationId === options.conversationId)
+              : options?.id
+                ? current.find((tab) => tab.id === options.id)
+                : null;
+          if (existing) {
+            setActiveWorkbenchTabId(existing.id);
+            return current;
+          }
         }
-      }
-      const tab = createWorkbenchTabInstance(tool, options);
-      setOpenWorkbenchTabs((current) => [...current, tab]);
-      setActiveWorkbenchTabId(tab.id);
+        const tab = createWorkbenchTabInstance(tool, options);
+        setActiveWorkbenchTabId(tab.id);
+        return [...current, tab];
+      });
       if (activeConversationId && tool !== 'browser') {
         setSelectedToolByConversation((current) => ({
           ...current,
@@ -1345,7 +1370,7 @@ export function Layout() {
         }));
       }
     },
-    [activeConversationId, openWorkbenchTabs],
+    [activeConversationId],
   );
 
   const setActiveConversationTool = useCallback(
@@ -1868,7 +1893,7 @@ export function Layout() {
       const result = await api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
         workspaceCwd: activeWorkspaceCwd ?? undefined,
       });
-      openWorkbenchToolTab('chat', { id: result.id });
+      openWorkbenchToolTab('chat', { conversationId: result.id, forceNewTab: true });
       return result.id;
     } catch {
       // Chat tab creation failed silently.
@@ -1880,7 +1905,7 @@ export function Layout() {
       const detail = (event as CustomEvent<CompanionChatOpenDetail>).detail;
       if (!detail?.conversationId) return;
       handleAppLayoutModeChange('workbench');
-      openWorkbenchToolTab('chat', { id: detail.conversationId });
+      openWorkbenchToolTab('chat', { conversationId: detail.conversationId, forceNewTab: detail.forceNewTab });
     }
 
     function handleCompanionChatClose(event: Event) {
@@ -2055,6 +2080,7 @@ export function Layout() {
                       workspaceFileId={activeWorkbenchWorkspaceFileId}
                       activeTool={activeWorkbenchTool}
                       activeTabId={activeWorkbenchTabId}
+                      activeChatConversationId={activeWorkbenchChatConversationId}
                       workspaceCwd={activeWorkspaceCwd}
                       extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
                       extensionRailSurface={activeWorkbenchRailSurface}
@@ -2106,6 +2132,7 @@ export function Layout() {
                       workspaceFileId={activeWorkbenchWorkspaceFileId}
                       activeTool={activeWorkbenchTool}
                       activeTabId={activeWorkbenchTabId}
+                      activeChatConversationId={activeWorkbenchChatConversationId}
                       workspaceCwd={activeWorkspaceCwd}
                       extensionWorkbenchSurface={activeExtensionWorkbenchSurface}
                       extensionRailSurface={activeWorkbenchRailSurface}

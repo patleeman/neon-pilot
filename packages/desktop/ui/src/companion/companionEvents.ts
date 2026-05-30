@@ -20,6 +20,8 @@ export interface CompanionChatOpenDetail {
   conversationId: string;
   /** Optional human-readable title. */
   title?: string | null;
+  /** Create a new workbench tab even if this conversation is already open. */
+  forceNewTab?: boolean;
 }
 
 /**

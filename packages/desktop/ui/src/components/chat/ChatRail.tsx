@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppEvents } from '../../app/contexts.js';
 import { api } from '../../client/api.js';
+import { dispatchOpenCompanionChat } from '../../companion/companionEvents.js';
 import {
   persistForkPromptDraft,
   resolveBranchEntryIdFromSessionDetailResult,
@@ -132,7 +133,7 @@ export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conv
         if (target.promptDraft) {
           persistForkPromptDraft(forked.newSessionId, target.promptDraft);
         }
-        window.dispatchEvent(new CustomEvent('pa:companion-chat-open', { detail: { conversationId: forked.newSessionId } }));
+        dispatchOpenCompanionChat({ conversationId: forked.newSessionId, forceNewTab: true });
       } catch (error) {
         console.error('Side chat rewind failed:', error);
       }
@@ -182,14 +183,11 @@ export function ChatRail({ conversationId, workspaceCwd: _workspaceCwd }: { conv
         if (clickedBlock.type === 'user') {
           persistForkPromptDraft(forked.newSessionId, clickedBlock.text);
         }
-        window.dispatchEvent(
-          new CustomEvent('pa:companion-chat-open', {
-            detail: {
-              conversationId: forked.newSessionId,
-              title: clickedBlock.type === 'user' ? `Fork: ${clickedBlock.text.slice(0, 40)}` : undefined,
-            },
-          }),
-        );
+        dispatchOpenCompanionChat({
+          conversationId: forked.newSessionId,
+          title: clickedBlock.type === 'user' ? `Fork: ${clickedBlock.text.slice(0, 40)}` : undefined,
+          forceNewTab: true,
+        });
       } catch (error) {
         console.error('Side chat fork failed:', error);
       }
