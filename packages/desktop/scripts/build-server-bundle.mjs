@@ -60,7 +60,8 @@ const sharedEsbuildOptions = {
 };
 
 const bundleOutputs = [
-  resolve(outdir, 'app/localApi.js'),
+  resolve(outdir, 'app/localApi.js'),      // Thin bootstrap (fast load)
+  resolve(outdir, 'app/localApiFull.js'),  // Full handler module (lazy-loaded)
   resolve(outdir, 'conversations/conversationInspectWorker.js'),
   resolve(outdir, 'traces/traceWorker.js'),
   resolve(outdir, 'daemon/index.js'),
@@ -106,11 +107,17 @@ const backendApiLazyModuleEntries = [
 ];
 
 await Promise.all([
-  // Main server bundle
+  // Thin bootstrap — copied directly without bundling (~9KB, loads in ~5ms).
+  // Lazy-imports localApiFull.js on first handler call.
+  (() => {
+    mkdirSync(resolve(outdir, 'app'), { recursive: true });
+    copyFileSync(resolve(packageRoot, 'server/app/localApiBoot.js'), bundleOutputs[0]);
+  })(),
+  // Full handler module — loaded lazily by bootstrap on first API call.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/app/localApi.ts')],
-    outfile: bundleOutputs[0],
+    outfile: bundleOutputs[1],
     banner: {
       js: createRequireBanner,
     },
@@ -119,7 +126,7 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/conversations/conversationInspectWorker.ts')],
-    outfile: bundleOutputs[1],
+    outfile: bundleOutputs[2],
     banner: {
       js: createRequireBanner,
     },
@@ -128,13 +135,13 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/traces/traceWorker.ts')],
-    outfile: bundleOutputs[2],
+    outfile: bundleOutputs[3],
   }),
   // Daemon barrel used by @neon-pilot/daemon.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/daemon/index.ts')],
-    outfile: bundleOutputs[3],
+    outfile: bundleOutputs[4],
     banner: {
       js: createRequireBanner,
     },
@@ -143,7 +150,7 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, 'server/daemon/background-agent-runner.ts')],
-    outfile: bundleOutputs[4],
+    outfile: bundleOutputs[5],
     banner: {
       js: createRequireBanner,
     },
@@ -154,7 +161,7 @@ await Promise.all([
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, '..', 'core/src/index.ts')],
-    outfile: bundleOutputs[5],
+    outfile: bundleOutputs[6],
     banner: {
       js: createRequireBanner,
     },
