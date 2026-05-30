@@ -2311,6 +2311,21 @@ export async function createDesktopLiveSession(input: {
   const contextReadyAtMs = performance.now();
   const created = await createLiveSessionCapability(input, context);
   const createdAtMs = performance.now();
+
+  // Log timing to stderr so the user can see where time is spent.
+  const contextSetupMs = Math.round(contextReadyAtMs - startedAtMs);
+  const createSessionMs = Math.round(createdAtMs - contextReadyAtMs);
+  if (contextSetupMs > 500 || createSessionMs > 500) {
+    const perfLog = {
+      event: 'createDesktopLiveSession',
+      contextSetupMs,
+      createSessionMs,
+      totalMs: Math.round(createdAtMs - startedAtMs),
+      capabilityPerf: created.perf,
+      contextSetupPerf: perf.contextSetupPerf,
+    };
+    process.stderr.write(`[perf] ${JSON.stringify(perfLog)}\n`);
+  }
   const prompt = typeof input.prompt === 'string' ? input.prompt : '';
   if (shouldDispatchInitialLiveSessionPrompt({ prompt, imageCount: input.images?.length })) {
     const dispatchTimer = setTimeout(() => {
