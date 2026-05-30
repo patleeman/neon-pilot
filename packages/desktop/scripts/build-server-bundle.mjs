@@ -51,6 +51,10 @@ const sharedEsbuildOptions = {
     '@cohere-ai/cohere-ai',
     'cohere-ai',
     '@mistralai/mistralai',
+    // jiti bundles a full Babel copy (~2MB of parser/transformer code).
+    // Only used by @earendil-works/pi-coding-agent for runtime TypeScript
+    // compilation; let Node.js load it from node_modules on demand.
+    'jiti',
   ],
   plugins: [extensionApiAliasPlugin],
 };
