@@ -76,6 +76,14 @@ describe('extension host RPC client', () => {
         toolContext: { onUpdate: () => undefined },
       }),
     ).toBe(false);
+    expect(
+      isWireableExtensionHostInvokeActionInput({
+        extensionId: 'ext',
+        actionId: 'safe-tool-snapshot',
+        input: {},
+        toolContextSnapshot: { cwd: '/repo', sessionId: 'session-1' },
+      }),
+    ).toBe(true);
     expect(hasFunction({ nested: [{ fn: () => undefined }] })).toBe(true);
   });
 

@@ -2,6 +2,8 @@ import { type AgentToolResult, createCodingTools, type ExtensionContext, type To
 
 import type { ExtensionBackendContext, ExtensionBackendServerContext } from '../extensions/extensionBackend.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
+import { createExtensionHostToolContextSnapshot } from '../extensions/extensionHostToolContext.js';
 import { listExtensionToolRegistrations } from '../extensions/extensionRegistry.js';
 import { buildToolInjectionPlan } from './toolInventory.js';
 
@@ -74,8 +76,12 @@ export async function invokeExtensionToolByName(
     extensionId: tool.extensionId,
     actionId: tool.action,
     input: input.input ?? {},
-    serverContext,
-    toolContext: input.toolContext,
+    ...(input.toolContext?.onUpdate
+      ? { serverContext, toolContext: input.toolContext }
+      : {
+          serverContextSnapshot: createExtensionHostServerContextSnapshot(serverContext),
+          toolContextSnapshot: createExtensionHostToolContextSnapshot(input.toolContext),
+        }),
   });
   if (!result.ok) {
     return {

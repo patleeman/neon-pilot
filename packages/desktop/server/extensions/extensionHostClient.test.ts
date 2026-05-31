@@ -40,6 +40,41 @@ describe('extension host client', () => {
     );
   });
 
+  it('reconstructs tool context snapshots for in-process request handling', async () => {
+    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { done: true } });
+
+    await expect(
+      handleInProcessExtensionHostRequest({
+        type: 'invokeAction',
+        extensionId: 'ext',
+        actionId: 'doThing',
+        input: { x: 1 },
+        toolContextSnapshot: {
+          cwd: '/repo',
+          conversationId: 'conversation-1',
+          preferredVisionModel: 'openai/gpt-4o',
+          sessionFile: '/repo/session.jsonl',
+          sessionId: 'session-1',
+        },
+      }),
+    ).resolves.toEqual({ ok: true, result: { ok: true, result: { done: true } } });
+
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith(
+      'ext',
+      'doThing',
+      { x: 1 },
+      undefined,
+      {
+        cwd: '/repo',
+        conversationId: 'conversation-1',
+        preferredVisionModel: 'openai/gpt-4o',
+        sessionFile: '/repo/session.jsonl',
+        sessionId: 'session-1',
+      },
+      undefined,
+    );
+  });
+
   it('converts request handler throws into protocol errors', async () => {
     extensionBackend.invokeExtensionAction.mockRejectedValueOnce(new Error('boom'));
 

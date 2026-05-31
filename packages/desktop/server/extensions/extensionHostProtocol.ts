@@ -1,5 +1,6 @@
-import type { ExtensionActionInvokeResult,ExtensionBackendContext, ExtensionBackendServerContext } from './extensionBackend.js';
+import type { ExtensionActionInvokeResult, ExtensionBackendContext, ExtensionBackendServerContext } from './extensionBackend.js';
 import type { ExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
+import type { ExtensionHostToolContextSnapshot } from './extensionHostToolContext.js';
 
 export interface ExtensionHostHealthRequest {
   type: 'health';
@@ -13,6 +14,7 @@ export interface ExtensionHostInvokeActionRequest {
   serverContext?: ExtensionBackendServerContext;
   serverContextSnapshot?: ExtensionHostServerContextSnapshot;
   toolContext?: ExtensionBackendContext['toolContext'];
+  toolContextSnapshot?: ExtensionHostToolContextSnapshot;
   agentToolContext?: unknown;
 }
 
