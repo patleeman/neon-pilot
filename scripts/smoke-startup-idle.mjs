@@ -70,6 +70,19 @@ async function sampleCpu(pid) {
   return { total, offenders };
 }
 
+async function packagedAppExecutablePath(appPath) {
+  const fallbackName = basename(appPath, '.app');
+  const infoPlist = join(appPath, 'Contents', 'Info.plist');
+  let executableName = fallbackName;
+  if (process.platform === 'darwin' && existsSync(infoPlist)) {
+    const { stdout } = await run('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleExecutable', infoPlist]).catch(
+      () => ({ stdout: '' }),
+    );
+    executableName = stdout.trim() || fallbackName;
+  }
+  return join(appPath, 'Contents', 'MacOS', executableName);
+}
+
 async function main() {
   await run(process.execPath, [
     join(repo, 'scripts/seed-startup-profile.mjs'),
@@ -86,7 +99,7 @@ async function main() {
       await run('pnpm', ['--dir', 'packages/desktop', 'run', 'build'], { cwd: repo, env });
       await run('pnpm', ['--dir', 'packages/desktop', 'run', 'launch', '--', '--prepare-only'], { cwd: repo, env }).catch(() => undefined);
     }
-    const executablePath = join(launchApp, 'Contents', 'MacOS', basename(launchApp, '.app'));
+    const executablePath = await packagedAppExecutablePath(launchApp);
     if (!existsSync(executablePath)) throw new Error(`Packaged app executable not found: ${executablePath}`);
     child = spawn(executablePath, [desktopMainFile, '--no-quit-confirmation', `--neon-pilot-state-root=${stateRoot}`], {
       env: {

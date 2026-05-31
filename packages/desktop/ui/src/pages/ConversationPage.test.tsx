@@ -346,14 +346,14 @@ describe('conversation model loading', () => {
     ).toBe(true);
   });
 
-  it('defers model reads while the initial prompt is still pending or in flight', () => {
+  it('keeps model reads hot while the initial prompt is still pending or in flight', () => {
     expect(
       shouldLoadConversationModels({
         draft: false,
         hasPendingInitialPrompt: true,
         hasPendingInitialPromptInFlight: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       shouldLoadConversationModels({
@@ -361,7 +361,7 @@ describe('conversation model loading', () => {
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: true,
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('loads model data once the initial prompt work is clear', () => {
