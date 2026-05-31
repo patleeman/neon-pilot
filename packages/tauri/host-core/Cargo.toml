@@ -7,7 +7,9 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+axum.workspace = true
 dirs.workspace = true
+reqwest.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -7,6 +7,7 @@ import { getStateRoot } from '@neon-pilot/core';
 import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
+import { isTauriHostCoreAvailable } from '../../server/tauriHostCoreClient.js';
 
 interface BackendReadyMessage {
   type: 'ready';
@@ -266,7 +267,12 @@ async function main(): Promise<void> {
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
 
         if (request.method === 'GET' && url.pathname === '/health') {
-          writeJson(response, 200, { ok: true, daemonHealthy: daemon?.isRunning() === true, apiReady: localApiReady });
+          writeJson(response, 200, {
+            ok: true,
+            daemonHealthy: daemon?.isRunning() === true,
+            apiReady: localApiReady,
+            hostCore: isTauriHostCoreAvailable() ? 'tauri-rust' : 'node',
+          });
           return;
         }
 

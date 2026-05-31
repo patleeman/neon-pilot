@@ -55,6 +55,8 @@ function createChild() {
 
 describe('extensionShell', () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
     execFileProcess.mockReset().mockResolvedValue({ stdout: 'out', stderr: 'err', launch: { wrappers: [{ id: 'sandbox' }] } });
     spawnProcess.mockReset();
     terminateProcessGroup.mockReset();
@@ -82,6 +84,43 @@ describe('extensionShell', () => {
         maxBuffer: 1024 * 1024,
         env: expect.objectContaining({ EXTRA: '1' }),
         signal,
+      }),
+    );
+  });
+
+  it('routes exec through the Tauri host-core RPC when available', async () => {
+    vi.stubEnv('NEON_PILOT_TAURI_HOST_CORE_PORT', '4567');
+    vi.stubEnv('NEON_PILOT_TAURI_HOST_CORE_TOKEN', 'host-token');
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          command: 'node',
+          args: ['--version'],
+          stdout: 'rust-out',
+          stderr: '',
+          exitCode: 0,
+          success: true,
+          executionWrappers: [{ id: 'tauri-host-core' }],
+        }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createExtensionShellCapability().exec({ command: 'node', args: ['--version'], cwd: '/repo' })).resolves.toEqual({
+      command: 'node',
+      args: ['--version'],
+      cwd: '/repo',
+      stdout: 'rust-out',
+      stderr: '',
+      executionWrappers: [{ id: 'tauri-host-core' }],
+    });
+
+    expect(execFileProcess).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:4567/process/exec',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer host-token' }),
       }),
     );
   });

@@ -12,25 +12,29 @@ Tauri shell
        ├─ host-owned authority boundaries: app preferences, extension package validation/install
        ├─ scoped filesystem and SQLite migration primitives
        ├─ file-backed secret persistence for the Tauri track
+       ├─ host-core RPC server for JS sidecar authority calls
        └─ JS sidecar boundary
             ├─ existing desktop local API server
             ├─ agent/prompt/runtime behavior during the migration
-            └─ JS/TS extension backend execution
+            └─ JS/TS extension backend execution through Rust-owned host authority
 ```
 
 Rust should own stable authority and lifecycle boundaries first. JS/TS remains the extension and agent-behavior runtime until those contracts settle.
 
-## Current scaffold
+## Current implementation
 
 - `packages/tauri/host-core` is a Rust library for host-owned runtime primitives.
 - `packages/tauri/desktop-shell/src-tauri` is the Tauri shell.
-- Host-core currently owns JS sidecar supervision, repo/state-root path resolution, Tauri desktop app preferences, extension package validation/install, scoped filesystem operations, SQLite migrations, and file-backed secret storage.
+- Host-core currently owns JS sidecar supervision, repo/state-root path resolution, Tauri desktop app preferences, extension package validation/install, scoped filesystem operations, SQLite migrations, process execution authority, and file-backed secret storage.
 - The Tauri shell owns native bridge commands for environment, navigation state, opening paths/URLs, clipboard writes, folder picking, app preferences, update status, extension package validation/install, scoped filesystem operations, SQLite migrations, secret access, and product API dispatch.
 - The React API client detects Tauri and sends product API requests through the Rust `dispatch_local_api` command, which forwards to the supervised JS sidecar.
 - The React desktop bridge detects Tauri and maps desktop-native calls to Tauri commands. Tauri-only host-core primitives are available under `bridge.hostCore`.
+- Before launching the JS sidecar, Tauri starts a localhost Rust host-core RPC server and passes `NEON_PILOT_TAURI_HOST_CORE_PORT` plus `NEON_PILOT_TAURI_HOST_CORE_TOKEN` into the sidecar environment.
+- The JS sidecar reports `hostCore: "tauri-rust"` from `/health` when the Rust host-core RPC bridge is available.
+- Extension shell `exec` and non-PTY `spawn` route through the Rust host-core RPC bridge under Tauri. PTY-backed shell sessions remain JS/node-pty because Tauri has no Rust PTY implementation in this track yet.
 - Electron-only Workbench Browser embedding is explicitly unsupported in the Tauri shell until a native webview strategy is chosen.
 
-The scaffold intentionally keeps the existing React UI and desktop server build artifacts. It does not replace the Electron release path yet.
+The implementation intentionally keeps the existing React UI and desktop server build artifacts. It does not replace the Electron release path yet.
 
 ## Commands
 
@@ -51,12 +55,12 @@ pnpm --dir packages/tauri/desktop-shell run dev
 ## Migration order
 
 1. Keep Electron and Tauri building side by side.
-2. Move host-owned process supervision into Rust. Current status: initial JS sidecar supervision is implemented.
-3. Define a stable Rust-host to JS-sidecar RPC protocol. Current status: product API dispatch is routed through a typed Tauri command to the JS local API sidecar.
+2. Move host-owned process supervision into Rust. Current status: JS sidecar supervision and Rust-owned extension process execution are implemented.
+3. Define a stable Rust-host to JS-sidecar RPC protocol. Current status: product API dispatch is routed through a typed Tauri command to the JS local API sidecar, and sidecar host-authority calls route back through the Rust host-core RPC server.
 4. Move native shell capabilities into Rust. Current status: environment, path/URL open, clipboard write, folder picker, navigation state, update status, and Tauri app preferences are implemented.
 5. Move extension package validation into Rust. Current status: initial package manifest/path validation is implemented in host-core and exposed through Tauri.
 6. Move filesystem authority, secret storage, SQLite primitives, and extension install/update mutation flow into Rust one boundary at a time. Current status: scoped text/list/remove filesystem operations, SQLite migrations, file-backed secret persistence, and local package install copying are implemented in host-core and exposed through Tauri.
-7. Keep extension backend code in JS/TS behind `@neon-pilot/extensions`.
+7. Keep extension backend code in JS/TS behind `@neon-pilot/extensions`. Current status: extension shell process execution is Rust-owned under Tauri; remaining JS extension APIs continue to use the public SDK boundary.
 8. Re-evaluate Workbench Browser parity before considering Electron removal.
 
 ## Non-goals for the first pass
@@ -66,5 +70,6 @@ pnpm --dir packages/tauri/desktop-shell run dev
 - No direct extension import of Rust or desktop internals.
 - No removal of Electron code.
 - No claim of Workbench Browser parity. The Tauri shell fails closed for Electron-only native browser embedding.
-- No claim that JS extension backend APIs are fully Rust-native yet. The Rust primitives are available through Tauri, while existing product extension APIs still run in the supervised JS sidecar during migration.
+- No claim that every JS extension backend API has a Rust implementation yet. The enforced rule for this track is that new host-authority APIs must go through the Rust host-core RPC bridge; existing JS-only APIs are migration debt unless listed as platform blockers here.
 - The Tauri secret store is a local file-backed implementation for this track. It is not a production keychain replacement yet.
+- PTY-backed extension shell sessions still use JS/node-pty. Non-PTY extension shell execution is Rust-owned under Tauri.

@@ -6,8 +6,9 @@ use neon_pilot_host_core::{
     apply_sqlite_migrations, delete_file_secret, get_file_secret, install_extension_package,
     list_file_secret_keys, list_scoped_dir, read_scoped_text, read_tauri_app_preferences,
     remove_scoped_path, resolve_repo_root as resolve_host_repo_root, scoped_path, set_file_secret,
-    update_tauri_app_preferences, validate_extension_package, write_scoped_text, JsSidecarConfig,
-    JsSidecarHandle, JsSidecarReady, JsSidecarStatus, SqliteMigration, TauriAppPreferencesPatch,
+    start_host_core_rpc_server, update_tauri_app_preferences, validate_extension_package,
+    write_scoped_text, HostCoreRpcServer, JsSidecarConfig, JsSidecarHandle, JsSidecarReady,
+    JsSidecarStatus, SqliteMigration, TauriAppPreferencesPatch,
 };
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
@@ -16,6 +17,7 @@ use tokio::sync::Mutex;
 #[derive(Default)]
 struct HostState {
     sidecar: Mutex<Option<JsSidecarHandle>>,
+    host_core_rpc: Mutex<Option<HostCoreRpcServer>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -436,12 +438,22 @@ async fn ensure_js_sidecar(
     let repo_root = resolve_repo_root(app)?;
     let entry_file = repo_root.join("packages/desktop/dist/backend/local-backend-child.js");
     let token = format!("tauri-{}", std::process::id());
+    let host_core_rpc = ensure_host_core_rpc(state).await?;
+    let mut sidecar_env = HashMap::new();
+    sidecar_env.insert(
+        "NEON_PILOT_TAURI_HOST_CORE_PORT".to_string(),
+        host_core_rpc.port.to_string(),
+    );
+    sidecar_env.insert(
+        "NEON_PILOT_TAURI_HOST_CORE_TOKEN".to_string(),
+        host_core_rpc.token.clone(),
+    );
     let sidecar = JsSidecarHandle::launch(JsSidecarConfig {
         node_command: "node".to_string(),
         entry_file,
         repo_root,
         token,
-        env: HashMap::new(),
+        env: sidecar_env,
         ready_timeout_ms: Some(20_000),
         launch_mode: Default::default(),
     })
@@ -454,6 +466,33 @@ async fn ensure_js_sidecar(
         .ok_or_else(|| "JS sidecar did not report readiness.".to_string())?;
     *current = Some(sidecar);
     Ok(ready)
+}
+
+async fn ensure_host_core_rpc(
+    state: &State<'_, Arc<HostState>>,
+) -> Result<HostCoreRpcServerStatus, String> {
+    let mut current = state.host_core_rpc.lock().await;
+    if let Some(server) = current.as_ref() {
+        return Ok(HostCoreRpcServerStatus {
+            port: server.port,
+            token: server.token.clone(),
+        });
+    }
+    let token = format!("host-core-{}", std::process::id());
+    let server = start_host_core_rpc_server(token)
+        .await
+        .map_err(|error| error.to_string())?;
+    let status = HostCoreRpcServerStatus {
+        port: server.port,
+        token: server.token.clone(),
+    };
+    *current = Some(server);
+    Ok(status)
+}
+
+struct HostCoreRpcServerStatus {
+    port: u16,
+    token: String,
 }
 
 fn resolve_repo_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {

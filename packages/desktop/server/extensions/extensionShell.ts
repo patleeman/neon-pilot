@@ -2,6 +2,14 @@ import { type ChildProcess } from 'node:child_process';
 
 import { execFileProcess, spawnProcess, terminateProcessGroup } from '../shared/processLauncher.js';
 import { createPtyProcess, type PtySpawnOptions } from '../shared/ptyLauncher.js';
+import {
+  execTauriHostProcess,
+  isTauriHostCoreAvailable,
+  killTauriHostProcess,
+  readTauriHostProcess,
+  spawnTauriHostProcess,
+  writeTauriHostProcess,
+} from '../tauriHostCoreClient.js';
 
 const spawnedExtensionProcesses = new Set<ChildProcess>();
 let shutdownHooksInstalled = false;
@@ -63,6 +71,66 @@ function createPipeBackedSpawnHandle(
   };
 }
 
+async function createTauriHostSpawnHandle(input: {
+  command: string;
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+  onStdout?: (chunk: string) => void;
+  onStderr?: (chunk: string) => void;
+  onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
+}) {
+  const spawned = await spawnTauriHostProcess({
+    command: input.command,
+    args: input.args ?? [],
+    cwd: input.cwd,
+    env: input.env,
+  });
+  let lastStdoutLength = 0;
+  let lastStderrLength = 0;
+  let stopped = false;
+  const poll = async () => {
+    if (stopped) return;
+    try {
+      const state = await readTauriHostProcess(spawned.id);
+      if (state.stdout.length > lastStdoutLength) {
+        input.onStdout?.(state.stdout.slice(lastStdoutLength));
+        lastStdoutLength = state.stdout.length;
+      }
+      if (state.stderr.length > lastStderrLength) {
+        input.onStderr?.(state.stderr.slice(lastStderrLength));
+        lastStderrLength = state.stderr.length;
+      }
+      if (state.exit) {
+        stopped = true;
+        input.onExit?.({ code: state.exit.code, signal: null });
+      }
+    } catch (error) {
+      stopped = true;
+      input.onStderr?.(error instanceof Error ? error.message : String(error));
+    }
+  };
+  const interval = setInterval(() => void poll(), 100);
+  interval.unref?.();
+  void poll();
+  return {
+    pid: spawned.pid,
+    usingPty: false,
+    executionWrappers: spawned.executionWrappers,
+    kill: () => {
+      stopped = true;
+      clearInterval(interval);
+      void killTauriHostProcess(spawned.id);
+    },
+    write: (data: string) => {
+      void writeTauriHostProcess(spawned.id, data);
+    },
+    resize: (_cols: number, _rows: number) => {
+      // No-op for Rust host pipe-backed processes; resize is only meaningful with PTY.
+    },
+  };
+}
+
 export function createExtensionShellCapability() {
   return {
     async exec(input: {
@@ -82,6 +150,24 @@ export function createExtensionShellCapability() {
       executionWrappers: Array<{ id: string; label?: string }>;
     }> {
       const args = input.args ?? [];
+      if (isTauriHostCoreAvailable()) {
+        const result = await execTauriHostProcess({
+          command: input.command,
+          args,
+          cwd: input.cwd,
+          timeoutMs: input.timeoutMs ?? 30_000,
+          maxBuffer: input.maxBuffer ?? 1024 * 1024,
+          env: input.env,
+        });
+        return {
+          command: input.command,
+          args,
+          ...(input.cwd ? { cwd: input.cwd } : {}),
+          stdout: result.stdout,
+          stderr: result.stderr,
+          executionWrappers: result.executionWrappers,
+        };
+      }
       const result = await execFileProcess({
         command: input.command,
         args,
@@ -120,6 +206,10 @@ export function createExtensionShellCapability() {
     }> {
       installShutdownHooks();
       const resolvedEnv = input.env ? { ...process.env, ...input.env } : process.env;
+
+      if (isTauriHostCoreAvailable() && !input.pty) {
+        return createTauriHostSpawnHandle(input);
+      }
 
       if (input.pty) {
         // PTY-backed spawn: use node-pty
