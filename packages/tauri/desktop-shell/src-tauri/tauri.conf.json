@@ -22,6 +22,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
+        "devtools": true,
         "dragDropEnabled": false,
         "trafficLightPosition": {
           "x": 14,

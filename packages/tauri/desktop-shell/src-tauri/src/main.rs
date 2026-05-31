@@ -1579,6 +1579,14 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
                 Some("CmdOrCtrl+\\"),
             )?,
             &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(
+                app,
+                "toggle-devtools",
+                "Toggle Developer Tools",
+                true,
+                Some("CmdOrCtrl+Alt+I"),
+            )?,
+            &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::fullscreen(app, None)?,
         ],
     )?;
@@ -1803,7 +1811,19 @@ fn handle_native_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: &s
         | "show-workbench-mode"
         | "toggle-sidebar"
         | "toggle-right-rail" => dispatch_shortcut_event(app, id),
+        "toggle-devtools" => toggle_main_devtools(app),
         _ => {}
+    }
+}
+
+fn toggle_main_devtools<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
+        return;
+    };
+    if window.is_devtools_open() {
+        window.close_devtools();
+    } else {
+        window.open_devtools();
     }
 }
 
