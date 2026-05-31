@@ -20,7 +20,7 @@ export function getExtensionHostClient(): ExtensionHostClient {
   return configuredExtensionHostClient;
 }
 
-function createInProcessExtensionHostClient(): ExtensionHostClient {
+export function createInProcessExtensionHostClient(): ExtensionHostClient {
   return {
     async health() {
       const response = await handleInProcessExtensionHostRequest({ type: 'health' });

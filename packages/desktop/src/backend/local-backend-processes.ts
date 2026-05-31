@@ -64,12 +64,26 @@ function resolveBackendChildEntry(): string {
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }
 
+function resolveExtensionHostChildEntry(): string {
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    resolve(currentDir, 'extension-host-child.js'),
+    resolve(currentDir, '..', '..', 'dist', 'backend', 'extension-host-child.js'),
+    resolve(currentDir, '..', 'backend', 'extension-host-child.js'),
+    resolve(currentDir, 'backend', 'extension-host-child.js'),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+}
+
 function renderBackendChildExit(code: number | null, signal: NodeJS.Signals | null): Error {
   return new Error(`Local backend exited before it was ready (code=${String(code)} signal=${String(signal)})`);
 }
 
 export class LocalBackendProcesses {
   private child?: ChildProcess;
+  private extensionHostChild?: ChildProcess;
+  private extensionHostBaseUrl?: string;
+  private extensionHostToken?: string;
   private startPromise?: Promise<void>;
   private disposed = false;
   private baseUrl?: string;
@@ -126,9 +140,13 @@ export class LocalBackendProcesses {
   async stop(): Promise<void> {
     this.disposed = true;
     const child = this.child;
+    const extensionHostChild = this.extensionHostChild;
     this.child = undefined;
+    this.extensionHostChild = undefined;
     this.baseUrl = undefined;
     this.token = undefined;
+    this.extensionHostBaseUrl = undefined;
+    this.extensionHostToken = undefined;
 
     if (this.startPromise) {
       try {
@@ -138,26 +156,7 @@ export class LocalBackendProcesses {
       }
     }
 
-    if (!child || child.killed) {
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => {
-        child.kill('SIGTERM');
-        resolve();
-      }, 3_000);
-      timeout.unref?.();
-      child.once('exit', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-      if (typeof child.send === 'function' && child.connected) {
-        child.send({ type: 'shutdown' });
-      } else {
-        child.kill('SIGTERM');
-      }
-    });
+    await Promise.all([this.stopChild(child), this.stopChild(extensionHostChild)]);
   }
 
   async dispatchApiRequest(input: {
@@ -531,6 +530,7 @@ export class LocalBackendProcesses {
 
   private async startInternal(): Promise<void> {
     const token = randomUUID();
+    const extensionHostReady = await this.startExtensionHostChild();
     const currentDir = dirname(fileURLToPath(import.meta.url));
     const repoRoot = resolve(currentDir, '..', '..', '..');
     const child = spawn(process.execPath, [resolveBackendChildEntry()], {
@@ -539,6 +539,12 @@ export class LocalBackendProcesses {
         ...process.env,
         ELECTRON_RUN_AS_NODE: '1',
         NEON_PILOT_BACKEND_TOKEN: token,
+        ...(extensionHostReady
+          ? {
+              NEON_PILOT_EXTENSION_HOST_BASE_URL: `http://127.0.0.1:${String(extensionHostReady.port)}`,
+              NEON_PILOT_EXTENSION_HOST_TOKEN: extensionHostReady.token,
+            }
+          : {}),
         NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT ?? repoRoot,
       },
     });
@@ -602,6 +608,95 @@ export class LocalBackendProcesses {
         this.token = undefined;
       }
     });
+  }
+
+  private async stopChild(child: ChildProcess | undefined): Promise<void> {
+    if (!child || child.killed) return;
+    await new Promise<void>((resolveStop) => {
+      const timeout = setTimeout(() => {
+        child.kill('SIGTERM');
+        resolveStop();
+      }, 3_000);
+      timeout.unref?.();
+      child.once('exit', () => {
+        clearTimeout(timeout);
+        resolveStop();
+      });
+      if (typeof child.send === 'function' && child.connected) {
+        child.send({ type: 'shutdown' });
+      } else {
+        child.kill('SIGTERM');
+      }
+    });
+  }
+
+  private async startExtensionHostChild(): Promise<BackendReadyMessage | undefined> {
+    if (this.extensionHostChild && !this.extensionHostChild.killed && this.extensionHostBaseUrl && this.extensionHostToken) {
+      return {
+        type: 'ready',
+        port: Number(new URL(this.extensionHostBaseUrl).port),
+        token: this.extensionHostToken,
+      };
+    }
+
+    const token = randomUUID();
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = resolve(currentDir, '..', '..', '..');
+    const child = spawn(process.execPath, [resolveExtensionHostChildEntry()], {
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: '1',
+        NEON_PILOT_EXTENSION_HOST_TOKEN: token,
+        NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT ?? repoRoot,
+      },
+    });
+
+    this.extensionHostChild = child;
+    child.stderr?.on('data', (chunk) => {
+      process.stderr.write(`[extension-host] ${String(chunk)}`);
+    });
+
+    const ready = await new Promise<BackendReadyMessage>((resolveReady, rejectReady) => {
+      const cleanup = () => {
+        child.off('message', onMessage);
+        child.off('exit', onExit);
+        child.off('error', onError);
+      };
+      const onMessage = (message: unknown) => {
+        if (!isBackendChildMessage(message)) return;
+        cleanup();
+        if (message.type === 'ready') {
+          resolveReady(message);
+          return;
+        }
+        rejectReady(new Error(message.error));
+      };
+      const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+        cleanup();
+        rejectReady(new Error(`Extension host exited before it was ready (code=${String(code)} signal=${String(signal)})`));
+      };
+      const onError = (error: Error) => {
+        cleanup();
+        rejectReady(error);
+      };
+      child.on('message', onMessage);
+      child.once('exit', onExit);
+      child.once('error', onError);
+    });
+
+    if (ready.type === 'ready') {
+      this.extensionHostToken = ready.token || token;
+      this.extensionHostBaseUrl = `http://127.0.0.1:${String(ready.port)}`;
+    }
+    child.once('exit', () => {
+      if (this.extensionHostChild === child) {
+        this.extensionHostChild = undefined;
+        this.extensionHostBaseUrl = undefined;
+        this.extensionHostToken = undefined;
+      }
+    });
+    return ready;
   }
 
   private isNativeWorkbenchBrowserRequest(value: unknown): value is NativeWorkbenchBrowserRequest {

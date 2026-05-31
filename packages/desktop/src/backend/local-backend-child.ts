@@ -6,6 +6,8 @@ import { dirname, join } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
+import { createInProcessExtensionHostClient, setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
+import { createExtensionHostRpcClient, createHybridExtensionHostClient } from '../../server/extensions/extensionHostRpcClient.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
 
 interface BackendReadyMessage {
@@ -241,6 +243,16 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
 
 async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
+  const extensionHostBaseUrl = process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL?.trim();
+  const extensionHostToken = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim();
+  if (extensionHostBaseUrl && extensionHostToken) {
+    setExtensionHostClient(
+      createHybridExtensionHostClient({
+        rpcClient: createExtensionHostRpcClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken }),
+        fallbackClient: createInProcessExtensionHostClient(),
+      }),
+    );
+  }
   await startDaemon();
 
   // ── Load the API module ────────────────────────────────────────────
