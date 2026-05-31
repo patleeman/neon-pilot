@@ -1640,7 +1640,7 @@ fn ensure_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
             .decorations(true)
             .title_bar_style(TitleBarStyle::Overlay)
             .hidden_title(true)
-            .traffic_light_position(Position::Logical(LogicalPosition { x: 14.0, y: 14.0 }))
+            .traffic_light_position(Position::Logical(LogicalPosition { x: 14.0, y: 18.0 }))
             .build()
     {
         tracing::warn!("failed to create main Tauri window: {error}");
