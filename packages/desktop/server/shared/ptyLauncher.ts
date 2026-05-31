@@ -1,3 +1,7 @@
+import { chmodSync, existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
+
 import { type IPty, spawn as spawnPty } from 'node-pty';
 
 import { type ProcessLaunchResult, resolveProcessLaunch } from './processLauncher.js';
@@ -16,8 +20,23 @@ export interface PtySpawnResult {
   launch: ProcessLaunchResult;
 }
 
+const require = createRequire(import.meta.url);
+
 function sanitizePtyEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   return Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+}
+
+function ensureNodePtySpawnHelperExecutable(): void {
+  if (process.platform !== 'darwin') return;
+  try {
+    const packageJsonPath = require.resolve('node-pty/package.json');
+    const helperPath = resolve(dirname(packageJsonPath), 'prebuilds', `darwin-${process.arch}`, 'spawn-helper');
+    if (existsSync(helperPath)) {
+      chmodSync(helperPath, 0o755);
+    }
+  } catch {
+    // node-pty will surface the actual spawn failure if the helper cannot be repaired.
+  }
 }
 
 /**
@@ -28,6 +47,8 @@ function sanitizePtyEnv(env: NodeJS.ProcessEnv): Record<string, string> {
  * wrappers (env injection, cwd resolution, etc.) apply consistently.
  */
 export function createPtyProcess(input: PtySpawnOptions): PtySpawnResult {
+  ensureNodePtySpawnHelperExecutable();
+
   const shell = process.env.SHELL || '/bin/bash';
 
   const resolvedArgs = input.args ?? [];

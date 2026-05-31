@@ -63,18 +63,17 @@ describe('terminal backend', () => {
       expect(result.id).toBeDefined();
       expect(result.id).toMatch(/^[0-9a-f-]{36}$/);
       expect(result.pid).toBe(777);
-      expect(result.usingPty).toBe(false);
+      expect(result.usingPty).toBe(true);
       expect(shellSpawn).toHaveBeenCalledWith(
         expect.objectContaining({
-          command: '/bin/sh',
-          args: [],
+          command: expect.any(String),
+          pty: { cols: 80, rows: 24 },
           cwd: '/workspace',
         }),
       );
-      expect(shellSpawn.mock.calls[0][0]).not.toHaveProperty('pty');
     });
 
-    it('uses a predictable pipe-backed shell', async () => {
+    it('uses an executable shell from env or known system fallbacks', async () => {
       const originalShell = process.env.SHELL;
       delete process.env.SHELL;
       const handlePty = createMockSpawnHandle();
@@ -83,13 +82,12 @@ describe('terminal backend', () => {
       await mod.createTerminal({}, createBackendContext());
 
       const callArgs = shellSpawn.mock.calls[0][0];
-      expect(callArgs.command).toBe('/bin/sh');
-      expect(callArgs.args).toEqual([]);
+      expect(['/bin/zsh', '/bin/bash', '/bin/sh']).toContain(callArgs.command);
 
       process.env.SHELL = originalShell;
     });
 
-    it('ignores SHELL env so degraded mode stays non-TTY safe', async () => {
+    it('ignores non-executable SHELL values', async () => {
       const originalShell = process.env.SHELL;
       process.env.SHELL = '/definitely/not/a/shell';
       const handlePty = createMockSpawnHandle();
@@ -98,7 +96,7 @@ describe('terminal backend', () => {
       await mod.createTerminal({}, createBackendContext());
 
       const callArgs = shellSpawn.mock.calls[0][0];
-      expect(callArgs.command).toBe('/bin/sh');
+      expect(callArgs.command).not.toBe('/definitely/not/a/shell');
 
       process.env.SHELL = originalShell;
     });

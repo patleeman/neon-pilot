@@ -18,7 +18,7 @@ function readRgbVar(element: HTMLElement, name: string): string {
   return value ? `rgb(${value})` : '';
 }
 
-function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key' | 'metaKey'>): string | null {
+function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key' | 'metaKey'>, options: { usingPty: boolean }): string | null {
   if (event.metaKey) return null;
   if (event.ctrlKey && event.key.length === 1) {
     const code = event.key.toUpperCase().charCodeAt(0);
@@ -26,7 +26,7 @@ function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key'
   }
   switch (event.key) {
     case 'Enter':
-      return '\n';
+      return options.usingPty ? '\r' : '\n';
     case 'Backspace':
       return '\x7f';
     case 'Tab':
@@ -192,7 +192,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     const handleFocusTerminal = () => focusTerminal(xterm);
     const handleTerminalKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return;
-      const data = terminalKeyData(event);
+      const data = terminalKeyData(event, { usingPty });
       if (!data) return;
       event.preventDefault();
       event.stopPropagation();

@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { accessSync, constants } from 'node:fs';
+import { basename } from 'node:path';
 
 import type {
   ExtensionBackendContext,
@@ -26,6 +28,26 @@ const sessions = new Map<string, TerminalSession>();
 
 function generateId(): string {
   return randomUUID();
+}
+
+function resolveLoginShell(): string {
+  const candidates = [process.env.SHELL, '/bin/zsh', '/bin/bash'].filter((value): value is string => Boolean(value));
+  for (const candidate of candidates) {
+    try {
+      accessSync(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      // Try the next known shell.
+    }
+  }
+  return '/bin/sh';
+}
+
+function resolveShellArgs(shell: string, options: { interactive?: boolean } = {}): string[] | undefined {
+  if (options.interactive === false) return undefined;
+  const binary = basename(shell).toLowerCase();
+  if (binary === 'sh' || binary === 'bash' || binary === 'zsh' || binary === 'fish') return ['-i'];
+  return undefined;
 }
 
 function broadcastOutput(session: TerminalSession, data: string): void {
@@ -90,6 +112,7 @@ export async function createTerminal(
   input: { cwd?: string },
   ctx: ExtensionBackendContext,
 ): Promise<{ id: string; pid: number | null; usingPty: boolean }> {
+  const shell = resolveLoginShell();
   const id = generateId();
 
   const makeSpawnHandlers = (sessionId: string) => ({
@@ -110,13 +133,25 @@ export async function createTerminal(
     },
   });
 
-  const usingPty = false;
-  const child = await ctx.shell.spawn({
-    command: '/bin/sh',
-    args: [],
-    cwd: input.cwd,
-    ...makeSpawnHandlers(id),
-  });
+  let usingPty = true;
+  let child: TerminalSession['process'];
+  try {
+    child = await ctx.shell.spawn({
+      command: shell,
+      pty: { cols: 80, rows: 24 },
+      args: resolveShellArgs(shell, { interactive: true }),
+      cwd: input.cwd,
+      ...makeSpawnHandlers(id),
+    });
+  } catch {
+    usingPty = false;
+    child = await ctx.shell.spawn({
+      command: shell,
+      args: resolveShellArgs(shell, { interactive: false }),
+      cwd: input.cwd,
+      ...makeSpawnHandlers(id),
+    });
+  }
 
   const session: TerminalSession = {
     id,
