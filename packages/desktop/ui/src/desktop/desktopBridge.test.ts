@@ -52,3 +52,34 @@ describe('readDesktopEnvironment', () => {
     expect(getEnvironment).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('Tauri desktop bridge', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllGlobals();
+  });
+
+  it('creates a desktop bridge backed by Tauri invoke', async () => {
+    const invoke = vi.fn(async (command: string, payload?: Record<string, unknown>) => {
+      if (command === 'get_environment') {
+        return { isElectron: false, isTauri: true, activeHostKind: 'local', activeHostLabel: 'Local' };
+      }
+      if (command === 'open_path') {
+        return { path: payload?.targetPath, opened: true };
+      }
+      throw new Error(`unexpected command ${command}`);
+    });
+    vi.stubGlobal('window', {
+      __TAURI_INTERNALS__: { invoke },
+      history: { length: 1, back: vi.fn(), forward: vi.fn() },
+      location: { assign: vi.fn() },
+    } as unknown as Window & typeof globalThis);
+
+    const { getDesktopBridge, readDesktopEnvironment } = await import('./desktopBridge');
+    const bridge = getDesktopBridge();
+
+    await expect(readDesktopEnvironment()).resolves.toMatchObject({ isTauri: true, activeHostKind: 'local' });
+    await expect(bridge?.openPath('/tmp')).resolves.toEqual({ path: '/tmp', opened: true });
+    expect(invoke).toHaveBeenCalledWith('open_path', { targetPath: '/tmp' });
+  });
+});

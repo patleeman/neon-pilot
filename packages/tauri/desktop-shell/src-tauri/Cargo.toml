@@ -1,0 +1,23 @@
+[package]
+name = "neon-pilot-tauri-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+arboard.workspace = true
+neon-pilot-host-core = { path = "../../host-core" }
+open.workspace = true
+reqwest.workspace = true
+rfd.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

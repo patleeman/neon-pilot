@@ -9,6 +9,7 @@ profiles/**/node_modules/
 # Build output
 dist/
 **/target/
+packages/tauri/*/src-tauri/gen/
 installable-extensions/system-alleycat/bin/
 *.tsbuildinfo
 packages/*/dist/

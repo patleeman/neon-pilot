@@ -1,0 +1,11 @@
+{
+  "name": "@neon-pilot/tauri-desktop",
+  "version": "0.9.3-rc.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cargo build --manifest-path src-tauri/Cargo.toml",
+    "check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "dev": "cargo run --manifest-path src-tauri/Cargo.toml"
+  }
+}

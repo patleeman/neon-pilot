@@ -1,0 +1,26 @@
+[workspace]
+members = [
+  "packages/tauri/host-core",
+  "packages/tauri/desktop-shell/src-tauri"
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+version = "0.9.3-rc.3"
+
+[workspace.dependencies]
+anyhow = "1"
+arboard = "3"
+dirs = "6"
+open = "5"
+rfd = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tauri = { version = "2", features = [] }
+tauri-build = { version = "2", features = [] }
+tokio = { version = "1", features = ["io-util", "macros", "process", "rt-multi-thread", "sync", "time"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }

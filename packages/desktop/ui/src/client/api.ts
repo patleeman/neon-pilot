@@ -120,10 +120,35 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 
+function isTauriShell(): boolean {
+  return typeof window !== 'undefined' && typeof window.__TAURI_INTERNALS__?.invoke === 'function';
+}
+
+async function fetchViaTauriLocalApi(path: string, init?: RequestInit): Promise<Response> {
+  const method = String(init?.method ?? 'GET').toUpperCase();
+  const body = typeof init?.body === 'string' && init.body.length > 0 ? JSON.parse(init.body) : undefined;
+  const result = await window.__TAURI_INTERNALS__!.invoke<{
+    statusCode: number;
+    headers: Record<string, string>;
+    body: string;
+  }>('dispatch_local_api', {
+    request: {
+      method,
+      path,
+      body,
+      headers: init?.headers && !Array.isArray(init.headers) ? init.headers : undefined,
+    },
+  });
+  return new Response(result.body, {
+    status: result.statusCode,
+    headers: result.headers,
+  });
+}
+
 async function requestJson<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
   const requestPath = buildApiPath(path);
   const startedAtMs = performance.now();
-  const res = await fetchWithRetry(requestPath, {
+  const requestInit = {
     method,
     ...(method === 'GET'
       ? { cache: 'no-store' as const }
@@ -131,7 +156,8 @@ async function requestJson<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE
           headers: { 'Content-Type': 'application/json' },
           body: body !== undefined ? JSON.stringify(body) : undefined,
         }),
-  });
+  };
+  const res = isTauriShell() ? await fetchViaTauriLocalApi(requestPath, requestInit) : await fetchWithRetry(requestPath, requestInit);
   recordApiTiming(requestPath, res, startedAtMs);
   if (!res.ok) throw new Error(await readApiError(res, requestPath));
   return readJsonResponse<T>(res, requestPath);

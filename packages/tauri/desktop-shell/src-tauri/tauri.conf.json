@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Neon Pilot Tauri",
+  "version": "0.9.3-rc.3",
+  "identifier": "net.neonpilot.tauri",
+  "build": {
+    "beforeBuildCommand": "pnpm --dir ../../desktop run build:ui",
+    "beforeDevCommand": "pnpm --dir ../../desktop run build:ui",
+    "frontendDist": "../../../desktop/ui/dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Neon Pilot Tauri",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 640
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "targets": "all",
+    "icon": [
+      "../../../desktop/assets/icon.png",
+      "../../../desktop/assets/icon.icns"
+    ]
+  }
+}

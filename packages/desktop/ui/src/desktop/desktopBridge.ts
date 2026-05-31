@@ -91,12 +91,80 @@ export interface NeonPilotDesktopBridge {
   snapshotWorkbenchBrowser(input?: { sessionKey?: string | null }): Promise<DesktopWorkbenchBrowserSnapshot>;
 }
 
+let tauriDesktopBridge: NeonPilotDesktopBridge | null = null;
+
+function getTauriInvoke(): (<T = unknown>(command: string, payload?: Record<string, unknown>) => Promise<T>) | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.__TAURI_INTERNALS__?.invoke ?? null;
+}
+
+function unsupportedWorkbenchBrowser(method: string): never {
+  throw new Error(`Workbench Browser native embedding is not available in the Tauri shell yet: ${method}.`);
+}
+
+function readBrowserNavigationState(): DesktopNavigationState {
+  return {
+    canGoBack: typeof window !== 'undefined' ? window.history.length > 1 : false,
+    canGoForward: false,
+  };
+}
+
+function createTauriDesktopBridge(): NeonPilotDesktopBridge | null {
+  const invoke = getTauriInvoke();
+  if (!invoke) {
+    return null;
+  }
+
+  tauriDesktopBridge ??= {
+    getEnvironment: () => invoke<DesktopEnvironmentState>('get_environment'),
+    getNavigationState: () => invoke<DesktopNavigationState>('get_navigation_state').catch(() => readBrowserNavigationState()),
+    openNewConversation: async () => {
+      window.location.assign('/conversations/new?desktop-shell=1');
+    },
+    openConversationPopout: async ({ conversationId }) => {
+      window.location.assign(`/conversations/${encodeURIComponent(conversationId)}?desktop-shell=1`);
+    },
+    openPath: (targetPath) => invoke('open_path', { targetPath }),
+    openExternalUrl: (targetUrl) => invoke('open_external_url', { targetUrl }),
+    writeClipboardText: (text) => invoke('write_clipboard_text', { text }),
+    readDesktopAppPreferences: () => invoke<DesktopAppPreferencesState>('read_desktop_app_preferences'),
+    updateDesktopAppPreferences: (input) => invoke<DesktopAppPreferencesState>('update_desktop_app_preferences', { input }),
+    checkForUpdates: () => invoke<DesktopAppPreferencesState>('check_for_updates'),
+    pickFolder: (input) => invoke<FolderPickerResult>('pick_folder', { input }),
+    captureScreenshot: async () => ({ cancelled: true }),
+    goBack: async () => {
+      window.history.back();
+      return readBrowserNavigationState();
+    },
+    goForward: async () => {
+      window.history.forward();
+      return readBrowserNavigationState();
+    },
+    setWorkbenchBrowserBounds: async () => null,
+    getWorkbenchBrowserState: async () => null,
+    navigateWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('navigate'),
+    goBackWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('goBack'),
+    goForwardWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('goForward'),
+    reloadWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('reload'),
+    stopWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('stop'),
+    snapshotWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('snapshot'),
+  };
+  return tauriDesktopBridge;
+}
+
 export function getDesktopBridge(): NeonPilotDesktopBridge | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
-  return window.neonPilotDesktop ?? null;
+  const bridge = window.neonPilotDesktop ?? createTauriDesktopBridge();
+  if (bridge && typeof document !== 'undefined' && document.documentElement.dataset.neonPilotDesktop !== '1') {
+    document.documentElement.dataset.neonPilotDesktop = '1';
+  }
+  return bridge;
 }
 
 export function isDesktopShell(): boolean {
