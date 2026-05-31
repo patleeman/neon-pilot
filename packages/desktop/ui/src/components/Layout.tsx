@@ -34,7 +34,7 @@ import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '..
 import { readConversationLayout } from '../session/sessionTabs';
 import { primeDesktopConversationStateCache, primeReservedDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
-import { useSession } from '../store';
+import { useAllSessions, useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
@@ -896,6 +896,11 @@ function WorkbenchTabStrip({
   onWorkspaceFileClear: () => void;
 }) {
   const [, setSearchParams] = useSearchParams();
+  const sessions = useAllSessions();
+  const sessionTitleById = useMemo(
+    () => new Map(sessions.map((session) => [session.id, session.title?.trim() || ''] as const).filter(([, title]) => title.length > 0)),
+    [sessions],
+  );
 
   function labelForTab(tab: WorkbenchTabInstance): string {
     if (isBrowserWorkbenchMode(tab.mode)) {
@@ -916,7 +921,7 @@ function WorkbenchTabStrip({
       return `Artifact ${tab.artifactId.slice(0, 8)}`;
     }
     if (tab.mode === 'chat' && tab.conversationId) {
-      return `Chat ${tab.conversationId.slice(0, 8)}`;
+      return sessionTitleById.get(tab.conversationId) ?? `Chat ${tab.conversationId.slice(0, 8)}`;
     }
     return labelForMode(tab.mode);
   }

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
 import { APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
+import { sessionStore } from '../store';
 import { Layout } from './Layout';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -79,6 +80,7 @@ describe('Layout workbench toggle', () => {
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
     window.localStorage.clear();
+    sessionStore.reset?.();
   });
 
   it('does not render a compact workbench panel when the workbench is hidden', () => {
@@ -147,5 +149,35 @@ describe('Layout workbench toggle', () => {
       thinkingLevel: 'high',
       serviceTier: 'priority',
     });
+  });
+
+  it('uses the conversation title for side chat tabs when metadata is available', async () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    sessionStore.upsert({
+      id: 'side-chat-1',
+      file: '/tmp/side-chat-1.jsonl',
+      timestamp: new Date().toISOString(),
+      cwd: '/repo',
+      cwdSlug: 'repo',
+      model: 'deepseek-v4-flash',
+      title: 'Investigate onboarding crash',
+      messageCount: 0,
+    });
+    vi.spyOn(api, 'reserveConversation').mockResolvedValue({
+      id: 'side-chat-1',
+      sessionFile: '/tmp/side-chat-1.jsonl',
+      cwd: '/repo',
+      perf: {},
+    });
+    vi.spyOn(api, 'createLiveSession').mockImplementation(
+      () => new Promise<Awaited<ReturnType<typeof api.createLiveSession>>>(() => {}),
+    );
+
+    renderLayout('/conversations/conv-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chat Open a new chat tab.' }));
+
+    expect(await screen.findByRole('button', { name: 'Investigate onboarding crash' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Chat side-cha/ })).toBeNull();
   });
 });
