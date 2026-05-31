@@ -24,7 +24,7 @@ export function getExtensionHostClient(): ExtensionHostClient {
   return configuredExtensionHostClient;
 }
 
-function createInProcessExtensionHostClient(): ExtensionHostClient {
+export function createInProcessExtensionHostClient(): ExtensionHostClient {
   return {
     async invokeAction(input) {
       const { invokeExtensionAction } = await import('./extensionBackend.js');

@@ -67,3 +67,23 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     },
   };
 }
+
+export function createHybridExtensionHostClient(input: {
+  rpcClient: ExtensionHostClient;
+  fallbackClient: ExtensionHostClient;
+}): ExtensionHostClient {
+  return {
+    async health() {
+      return input.rpcClient.health();
+    },
+    async invokeAction(actionInput) {
+      if (!isWireableExtensionHostInvokeActionInput(actionInput)) {
+        return input.fallbackClient.invokeAction(actionInput);
+      }
+      return input.rpcClient.invokeAction(actionInput);
+    },
+    async publishEvent(source, payload) {
+      return input.rpcClient.publishEvent(source, payload);
+    },
+  };
+}

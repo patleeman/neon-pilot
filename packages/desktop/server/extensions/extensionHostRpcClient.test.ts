@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createExtensionHostRpcClient,
+  createHybridExtensionHostClient,
   hasFunction,
   isWireableExtensionHostInvokeActionInput,
 } from './extensionHostRpcClient.js';
@@ -83,5 +84,27 @@ describe('extension host RPC client', () => {
         body: JSON.stringify({ request: { type: 'publishEvent', source: 'settings', payload: { changed: true } } }),
       }),
     );
+  });
+
+  it('uses RPC for wire-safe calls and fallback for callback-bearing calls', async () => {
+    const rpcClient = {
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+    };
+    const fallbackClient = {
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+    };
+    const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
+
+    await expect(client.invokeAction({ extensionId: 'ext', actionId: 'safe', input: {} })).resolves.toEqual({ ok: true, result: 'rpc' });
+    await expect(
+      client.invokeAction({ extensionId: 'ext', actionId: 'unsafe', input: {}, toolContext: { onUpdate: () => undefined } }),
+    ).resolves.toEqual({ ok: true, result: 'fallback' });
+
+    expect(rpcClient.invokeAction).toHaveBeenCalledTimes(1);
+    expect(fallbackClient.invokeAction).toHaveBeenCalledTimes(1);
   });
 });
