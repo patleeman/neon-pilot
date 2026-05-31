@@ -70,7 +70,7 @@ describe('extension backend action invocation', () => {
     expect(isExtensionEnabled('exit-action-ext', stateRoot)).toBe(false);
   });
 
-  it('enters limp mode by disabling an extension after repeated action handler errors', async () => {
+  it('returns repeated action handler errors without disabling the extension', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'validation-action-ext');
@@ -97,7 +97,7 @@ describe('extension backend action invocation', () => {
       ok: false,
       error: 'Extension "validation-action-ext" action "doThing" failed: validation failed',
     });
-    expect(isExtensionEnabled('validation-action-ext', stateRoot)).toBe(false);
+    expect(isExtensionEnabled('validation-action-ext', stateRoot)).toBe(true);
   });
 
   it('blocks process termination during extension backend import', async () => {

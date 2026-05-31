@@ -707,6 +707,7 @@ export async function invokeExtensionAction(
   agentToolContext?: unknown,
 ): Promise<ExtensionActionInvokeResult> {
   const started = Date.now();
+  let actionHandlerStarted = false;
   try {
     const entry = findExtensionEntry(extensionId);
     if (!entry) {
@@ -735,14 +736,15 @@ export async function invokeExtensionAction(
       });
     }
 
-    const result = await withExtensionProcessGuard(extensionId, `action ${actionId}`, () =>
-      Promise.resolve(
+    const result = await withExtensionProcessGuard(extensionId, `action ${actionId}`, () => {
+      actionHandlerStarted = true;
+      return Promise.resolve(
         (handler as (input: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
           input,
           createBackendContext(extensionId, serverContext, toolContext, agentToolContext),
         ),
-      ),
-    );
+      );
+    });
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };
   } catch (error) {
@@ -760,7 +762,7 @@ export async function invokeExtensionAction(
         message: `${error.message} The extension was disabled to prevent a startup loop.`,
         severity: 'error',
       });
-    } else if (!(error instanceof ExtensionLoadError) || error.code !== 'extension_disabled') {
+    } else if (!actionHandlerStarted && (!(error instanceof ExtensionLoadError) || error.code !== 'extension_disabled')) {
       setExtensionHealthError(extensionId, message);
       const circuit = recordExtensionFailure({ extensionId, operation: `action ${actionId}`, error: message });
       if (circuit.quarantined) {
