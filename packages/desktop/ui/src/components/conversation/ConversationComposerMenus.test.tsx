@@ -34,6 +34,27 @@ describe('ConversationComposerMenus', () => {
     expect(html).toContain('missing');
   });
 
+  it('renders provider-qualified model refs for duplicate ids', () => {
+    const duplicateModels: ModelInfo[] = [
+      { id: 'deepseek-v4-flash', provider: 'opencode-go', name: 'DeepSeek V4 Flash', context: 128000 },
+      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash (ds4.c local)', context: 128000 },
+    ];
+    const html = renderToString(
+      <ModelPicker
+        models={[duplicateModels[1]!]}
+        allModels={duplicateModels}
+        currentModel="ds4/deepseek-v4-flash"
+        query="ds4"
+        idx={0}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('DeepSeek V4 Flash (ds4.c local)');
+    expect(html).toContain('ds4/deepseek-v4-flash');
+  });
+
   it('renders slash and mention menu entries', () => {
     const slashHtml = renderToString(
       <SlashMenu

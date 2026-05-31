@@ -1,6 +1,6 @@
 import { getAvailableModels } from '../conversations/liveSessions.js';
 import { runModelDiscovery } from './modelDiscovery.js';
-import { normalizeSavedModelPreferences } from './modelPreferences.js';
+import { normalizeSavedModelPreferences, readSavedModelRef } from './modelPreferences.js';
 import { getSupportedServiceTiersForModel, modelSupportsServiceTier } from './modelServiceTiers.js';
 
 const MODEL_DEFINITIONS_CACHE_TTL_MS = 60_000;
@@ -140,6 +140,38 @@ export function prewarmModelDefinitions() {
   void refreshModelDefinitionsInBackground();
 }
 
+function modelIdHasMultipleProviders(models: readonly ModelDefinition[], modelId: string): boolean {
+  return models.filter((model) => model.id === modelId).length > 1;
+}
+
+function resolveModelDefinition(modelRef: string, models: readonly ModelDefinition[]): ModelDefinition | null {
+  if (!modelRef) {
+    return null;
+  }
+
+  const exactMatch = models.find((model) => model.id === modelRef);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const slashIndex = modelRef.indexOf('/');
+  if (slashIndex > 0 && slashIndex < modelRef.length - 1) {
+    const provider = modelRef.slice(0, slashIndex);
+    const id = modelRef.slice(slashIndex + 1);
+    return models.find((model) => model.provider === provider && model.id === id) ?? null;
+  }
+
+  return null;
+}
+
+function formatModelStateRef(model: ModelDefinition | null | undefined, models: readonly ModelDefinition[]): string {
+  if (!model) {
+    return '';
+  }
+
+  return modelIdHasMultipleProviders(models, model.id) ? `${model.provider}/${model.id}` : model.id;
+}
+
 export async function listModelDefinitions(): Promise<readonly ModelDefinition[]> {
   const now = Date.now();
   if (modelDefinitionsCache && modelDefinitionsCache.expiresAt > now) {
@@ -162,9 +194,9 @@ export async function listModelDefinitions(): Promise<readonly ModelDefinition[]
 export async function readModelState(settingsFile: string): Promise<ModelState> {
   const models = await listModelDefinitions();
   const saved = normalizeSavedModelPreferences(settingsFile, models);
-  const modelIds = new Set(models.map((model) => model.id));
-  const currentModel = saved.currentModel && modelIds.has(saved.currentModel) ? saved.currentModel : models[0]?.id || '';
-  const selectedModel = models.find((model) => model.id === currentModel) ?? null;
+  const savedModelRef = readSavedModelRef(settingsFile, models) || saved.currentModel;
+  const selectedModel = resolveModelDefinition(savedModelRef, models) ?? models[0] ?? null;
+  const currentModel = formatModelStateRef(selectedModel, models);
 
   return {
     currentModel,

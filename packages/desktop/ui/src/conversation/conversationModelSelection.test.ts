@@ -10,6 +10,14 @@ describe('conversationModelSelection', () => {
     expect(selectComposerModel(models, 'missing', 'default')).toBeNull();
   });
 
+  it('selects provider-qualified model refs when ids collide', () => {
+    const models = [
+      { id: 'deepseek-v4-flash', provider: 'opencode-go' },
+      { id: 'deepseek-v4-flash', provider: 'ds4' },
+    ];
+    expect(selectComposerModel(models, 'ds4/deepseek-v4-flash', '')).toBe(models[1]);
+  });
+
   it('builds live session preference input from explicit values', () => {
     expect(
       buildLiveSessionPreferenceInput({

@@ -384,6 +384,7 @@ export function ChatRailComposer({
           {showModelPicker ? (
             <ModelPicker
               models={modelItems}
+              allModels={models}
               currentModel={currentModel}
               query={modelQuery}
               idx={modelIdx}

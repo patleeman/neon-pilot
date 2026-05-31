@@ -1,11 +1,12 @@
 import { buildConversationServiceTierPreferenceInput } from './conversationInitialState';
+import { resolveSelectableModel } from '../model/modelPreferences';
 
-export function selectComposerModel<TModel extends { id: string }>(
+export function selectComposerModel<TModel extends { id: string; provider?: string }>(
   models: TModel[],
   currentModel: string,
   defaultModel: string,
 ): TModel | null {
-  return models.find((model) => model.id === (currentModel || defaultModel)) ?? null;
+  return resolveSelectableModel(models, currentModel || defaultModel);
 }
 
 export function buildLiveSessionPreferenceInput(input: {

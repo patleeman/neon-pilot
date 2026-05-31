@@ -2,6 +2,7 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'r
 
 import type { SlashMenuItem } from '../commands/slashMenu';
 import { filterModelPickerItems } from '../model/modelPicker';
+import { getModelSelectionValue } from '../model/modelPreferences';
 import type { ModelInfo } from '../shared/types';
 import { resolveConversationComposerMenuState } from './conversationComposerMenuState';
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from './conversationMentions';
@@ -92,7 +93,7 @@ export function useConversationComposerMenus({
           event.preventDefault();
           const selected = modelItems[modelIdx % modelItems.length];
           if (selected) {
-            await onModelSelect(selected.id);
+            await onModelSelect(getModelSelectionValue(selected, models));
           }
           return true;
         }

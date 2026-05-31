@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import type { SlashMenuItem } from '../../commands/slashMenu';
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from '../../conversation/conversationMentions';
+import { getModelSelectionValue, groupModelsByProvider } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton, Pill } from '../ui';
 
@@ -9,6 +10,7 @@ const useMenuLayoutEffect = typeof window === 'undefined' ? useEffect : useLayou
 
 export function ModelPicker({
   models,
+  allModels = models,
   currentModel,
   query,
   idx,
@@ -16,16 +18,17 @@ export function ModelPicker({
   onClose,
 }: {
   models: ModelInfo[];
+  allModels?: ModelInfo[];
   currentModel: string;
   query: string;
   idx: number;
   onSelect: (id: string) => void;
   onClose: () => void;
 }) {
-  const groups: Record<string, ModelInfo[]> = {};
-  for (const model of models) (groups[model.provider] ??= []).push(model);
+  const groups = groupModelsByProvider(models);
   const selectedModel = models.length > 0 ? models[((idx % models.length) + models.length) % models.length] : null;
   const formatContext = (context: number) => (context >= 1_000_000 ? `${context / 1_000_000}M` : `${context / 1_000}k`);
+  const selectedModelValue = selectedModel ? getModelSelectionValue(selectedModel, allModels) : '';
 
   return (
     <div className="ui-menu-shell">
@@ -40,18 +43,19 @@ export function ModelPicker({
           No models match <span className="font-mono text-secondary">{query}</span>
         </div>
       ) : (
-        Object.entries(groups).map(([provider, providerModels]) => (
+        groups.map(([provider, providerModels]) => (
           <div key={provider}>
             <p className="px-3 pt-2 pb-0.5 text-[9px] uppercase tracking-widest text-dim/60 font-semibold">{provider}</p>
             {providerModels.map((model) => {
-              const isCurrent = model.id === currentModel;
-              const isFocused = model.id === selectedModel?.id;
+              const modelValue = getModelSelectionValue(model, allModels);
+              const isCurrent = modelValue === currentModel;
+              const isFocused = modelValue === selectedModelValue;
               return (
                 <button
-                  key={model.id}
+                  key={modelValue}
                   onMouseDown={(event) => {
                     event.preventDefault();
-                    onSelect(model.id);
+                    onSelect(modelValue);
                   }}
                   className={cx(
                     'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors',
@@ -65,7 +69,7 @@ export function ModelPicker({
                   />
                   <span className="flex-1 text-[13px] font-medium truncate">{model.name}</span>
                   <Pill tone={isCurrent ? 'accent' : 'muted'} mono>
-                    {model.id}
+                    {modelValue}
                   </Pill>
                   <span className="text-[10px] text-dim/60 shrink-0">{formatContext(model.context)}</span>
                 </button>

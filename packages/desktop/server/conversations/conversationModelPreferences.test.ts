@@ -169,6 +169,39 @@ describe('conversationModelPreferences', () => {
     expect(sessionManager.getBranch().map((entry) => entry.type)).toEqual(['model_change', 'thinking_level_change']);
   });
 
+  it('preserves provider-qualified refs when duplicate model ids exist', () => {
+    const sessionManager = createSessionManager();
+    const models = [
+      createTestModel({ id: 'deepseek-v4-flash', provider: 'opencode-go', reasoning: true }),
+      createTestModel({ id: 'deepseek-v4-flash', provider: 'ds4', reasoning: true }),
+    ];
+
+    const state = applyConversationModelPreferencesToSessionManager(
+      sessionManager,
+      { model: 'ds4/deepseek-v4-flash' },
+      {
+        currentModel: 'opencode-go/deepseek-v4-flash',
+        currentThinkingLevel: 'medium',
+        currentServiceTier: '',
+      },
+      models,
+    );
+
+    expect(state).toEqual({
+      currentModel: 'ds4/deepseek-v4-flash',
+      currentThinkingLevel: 'medium',
+      currentServiceTier: '',
+      hasExplicitServiceTier: false,
+    });
+    expect(readConversationModelPreferenceSnapshot(sessionManager)).toMatchObject({
+      currentProvider: 'ds4',
+      currentModel: 'deepseek-v4-flash',
+    });
+    expect(resolveConversationModelPreferenceState(readConversationModelPreferenceSnapshot(sessionManager), {}, models).currentModel).toBe(
+      'ds4/deepseek-v4-flash',
+    );
+  });
+
   it('accepts raw model ids that already contain slashes', () => {
     const sessionManager = createSessionManager();
     const models = [

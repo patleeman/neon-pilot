@@ -35,6 +35,7 @@ export interface ConversationModelPreferenceInput {
 
 export interface ConversationModelPreferenceSnapshot {
   currentModel: string;
+  currentProvider?: string;
   currentThinkingLevel: string;
   currentServiceTier: string;
   hasExplicitModel: boolean;
@@ -124,6 +125,18 @@ function resolveModelById(modelId: string, models: Model<Api>[]): Model<Api> | n
   return null;
 }
 
+function modelIdHasMultipleProviders(models: Model<Api>[], modelId: string): boolean {
+  return models.filter((model) => model.id === modelId).length > 1;
+}
+
+function formatModelPreferenceRef(model: Model<Api> | null | undefined, models: Model<Api>[]): string {
+  if (!model) {
+    return '';
+  }
+
+  return modelIdHasMultipleProviders(models, model.id) ? `${model.provider}/${model.id}` : model.id;
+}
+
 function readServiceTierOverride(branch: Array<{ type: string; customType?: string; data?: unknown }>): {
   currentServiceTier: string;
   hasExplicitServiceTier: boolean;
@@ -161,8 +174,11 @@ function buildResolvedState(
   currentModelDefinition: Model<Api> | null;
 } {
   const fallbackModel = readNonEmptyString(defaults.currentModel);
-  const currentModel = snapshot.currentModel || fallbackModel;
-  const currentModelDefinition = resolveModelById(currentModel, models);
+  const snapshotModel = readNonEmptyString(snapshot.currentModel);
+  const snapshotModelRef = snapshot.currentProvider && snapshotModel ? `${snapshot.currentProvider}/${snapshotModel}` : snapshotModel;
+  const currentModelRef = snapshotModelRef || fallbackModel;
+  const currentModelDefinition = resolveModelById(currentModelRef, models);
+  const currentModel = currentModelDefinition ? formatModelPreferenceRef(currentModelDefinition, models) : currentModelRef;
   const fallbackThinkingLevel = normalizeThinkingLevel(defaults.currentThinkingLevel);
   const fallbackServiceTier = clampServiceTier(normalizeServiceTier(defaults.currentServiceTier), currentModelDefinition);
   const currentThinkingLevel = snapshot.hasExplicitThinkingLevel
@@ -215,7 +231,7 @@ function computeNextConversationModelPreferences(
     throw new Error(`Unknown model: ${requestedModel}`);
   }
 
-  const currentModel = nextModel?.id ?? resolved.currentModel;
+  const currentModel = nextModel ? formatModelPreferenceRef(nextModel, models) : resolved.currentModel;
   const shouldAppendModelChange = requestedModel !== undefined && currentModel !== resolved.currentModel;
 
   let nextThinkingLevelForDisplay = resolved.currentThinkingLevel;
@@ -298,6 +314,7 @@ export function readConversationModelPreferenceSnapshot(
 
   return {
     currentModel: context.model?.modelId ?? '',
+    ...(context.model?.provider ? { currentProvider: context.model.provider } : {}),
     currentThinkingLevel: context.thinkingLevel ?? '',
     currentServiceTier: serviceTier.currentServiceTier,
     hasExplicitModel: branch.some((entry) => entry.type === 'model_change'),

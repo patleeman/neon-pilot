@@ -3969,7 +3969,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   );
 
   async function saveModelPreference(modelId: string) {
-    if (shouldSkipModelPreferenceSave({ modelId, currentModel, savingPreference })) {
+    if (shouldSkipModelPreferenceSave({ modelId, currentModel, savingPreference, models })) {
       return;
     }
 
@@ -6318,6 +6318,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               {showModelPicker && (
                 <ModelPicker
                   models={modelItems}
+                  allModels={models}
                   currentModel={currentModel}
                   query={modelQuery}
                   idx={modelIdx}

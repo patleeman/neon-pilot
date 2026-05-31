@@ -1,3 +1,8 @@
+---
+name: ds4-local-agent
+description: Use when the selected model is local DeepSeek V4 Flash served by ds4-server and DS4-compatible tools are active.
+---
+
 # DS4 Local Agent
 
 Use this skill when the active model is `ds4/deepseek-v4-flash`.

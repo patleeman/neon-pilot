@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getAvailableModels = vi.fn();
 const runModelDiscovery = vi.fn();
 const normalizeSavedModelPreferences = vi.fn();
+const readSavedModelRef = vi.fn();
 const getSupportedServiceTiersForModel = vi.fn();
 const modelSupportsServiceTier = vi.fn();
 
 vi.mock('../conversations/liveSessions.js', () => ({ getAvailableModels }));
 vi.mock('./modelDiscovery.js', () => ({ runModelDiscovery }));
-vi.mock('./modelPreferences.js', () => ({ normalizeSavedModelPreferences }));
+vi.mock('./modelPreferences.js', () => ({ normalizeSavedModelPreferences, readSavedModelRef }));
 vi.mock('./modelServiceTiers.js', () => ({ getSupportedServiceTiersForModel, modelSupportsServiceTier }));
 
 const { invalidateModelDefinitionsCache, listModelDefinitions, readModelState } = await import('./modelState.js');
@@ -20,6 +21,7 @@ describe('modelState', () => {
     normalizeSavedModelPreferences
       .mockReset()
       .mockReturnValue({ currentModel: '', currentVisionModel: '', currentThinkingLevel: 'medium', currentServiceTier: '' });
+    readSavedModelRef.mockReset().mockReturnValue('');
     getSupportedServiceTiersForModel.mockReset().mockReturnValue(['auto']);
     modelSupportsServiceTier.mockReset().mockReturnValue(false);
     invalidateModelDefinitionsCache();
@@ -122,5 +124,37 @@ describe('modelState', () => {
     modelSupportsServiceTier.mockReturnValue(true);
 
     await expect(readModelState('/settings.json')).resolves.toMatchObject({ currentModel: 'claude-opus-4-6', currentServiceTier: 'flex' });
+  });
+
+  it('returns provider-qualified current model refs when model ids collide', async () => {
+    getAvailableModels.mockResolvedValue([
+      {
+        id: 'deepseek-v4-flash',
+        provider: 'opencode-go',
+        name: 'DeepSeek V4 Flash',
+        contextWindow: 128_000,
+        input: ['text'],
+        reasoning: true,
+      },
+    ]);
+    runModelDiscovery.mockResolvedValue([
+      {
+        provider: 'ds4',
+        baseUrl: 'http://127.0.0.1:4444',
+        api: 'openai',
+        apiKey: 'x',
+        models: [
+          { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash (ds4.c local)', contextWindow: 128_000, input: ['text'], reasoning: true },
+        ],
+      },
+    ]);
+    readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+
+    await listModelDefinitions();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    const state = await readModelState('/settings.json');
+
+    expect(state.currentModel).toBe('ds4/deepseek-v4-flash');
   });
 });

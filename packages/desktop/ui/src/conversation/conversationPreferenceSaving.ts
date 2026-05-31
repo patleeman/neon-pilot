@@ -1,5 +1,24 @@
-export function shouldSkipModelPreferenceSave(input: { modelId: string; currentModel: string; savingPreference: string | null }): boolean {
-  return !input.modelId || input.modelId === input.currentModel || input.savingPreference !== null;
+import { getModelSelectionValue, resolveSelectableModel } from '../model/modelPreferences';
+
+export function shouldSkipModelPreferenceSave(input: {
+  modelId: string;
+  currentModel: string;
+  savingPreference: string | null;
+  models?: Array<{ id: string; provider?: string }>;
+}): boolean {
+  if (!input.modelId || input.savingPreference !== null) {
+    return true;
+  }
+
+  if (input.models) {
+    const requestedModel = resolveSelectableModel(input.models, input.modelId);
+    const currentModel = resolveSelectableModel(input.models, input.currentModel);
+    if (requestedModel && currentModel) {
+      return getModelSelectionValue(requestedModel, input.models) === getModelSelectionValue(currentModel, input.models);
+    }
+  }
+
+  return input.modelId === input.currentModel;
 }
 
 export function shouldSkipThinkingPreferenceSave(input: {
@@ -14,8 +33,11 @@ export function shouldEnsureControlForPreferenceSave(input: { isLiveSession: boo
   return Boolean(input.conversationId && input.isLiveSession);
 }
 
-export function resolveSelectedModelNotice<TModel extends { id: string; name: string }>(models: TModel[], modelId: string): string | null {
-  const selectedModel = models.find((candidate) => candidate.id === modelId);
+export function resolveSelectedModelNotice<TModel extends { id: string; provider?: string; name: string }>(
+  models: TModel[],
+  modelId: string,
+): string | null {
+  const selectedModel = resolveSelectableModel(models, modelId);
   return selectedModel ? `Model set to ${selectedModel.name} for this conversation.` : null;
 }
 

@@ -12,6 +12,31 @@ function groupModels(models: Model[]): Array<[string, Model[]]> {
   return [...groups.entries()];
 }
 
+function modelIdHasMultipleProviders(models: Model[], modelId: string): boolean {
+  return models.filter((model) => model.id === modelId).length > 1;
+}
+
+function modelSelectionValue(model: Model, models: Model[]): string {
+  return modelIdHasMultipleProviders(models, model.id) ? `${model.provider}/${model.id}` : model.id;
+}
+
+function resolveModel(models: Model[], modelRef: string): Model | null {
+  const normalized = modelRef.trim();
+  if (!normalized) return null;
+
+  const exact = models.find((model) => model.id === normalized);
+  if (exact) return exact;
+
+  const slashIndex = normalized.indexOf('/');
+  if (slashIndex > 0 && slashIndex < normalized.length - 1) {
+    const provider = normalized.slice(0, slashIndex);
+    const id = normalized.slice(slashIndex + 1);
+    return models.find((model) => model.provider === provider && model.id === id) ?? null;
+  }
+
+  return null;
+}
+
 function thinkingOptions(model: Model | null): Array<{ value: string; label: string }> {
   const all = [
     { value: '', label: 'Unset' },
@@ -41,11 +66,14 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
       >
         {groupModels(context.models).map(([provider, providerModels]) => (
           <optgroup key={provider} label={provider}>
-            {providerModels.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))}
+            {providerModels.map((model) => {
+              const value = modelSelectionValue(model, context.models);
+              return (
+                <option key={value} value={value}>
+                  {model.name}
+                </option>
+              );
+            })}
           </optgroup>
         ))}
       </select>
@@ -55,7 +83,7 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
 }
 
 function ThinkingSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
-  const model = context.models.find((candidate) => candidate.id === context.currentModel) ?? null;
+  const model = resolveModel(context.models, context.currentModel);
   const className =
     variant === 'menu'
       ? 'h-9 w-full min-w-0 appearance-none rounded-lg border border-border-subtle bg-surface/45 px-2.5 pr-7 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40'

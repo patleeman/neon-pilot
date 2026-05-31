@@ -25,4 +25,31 @@ describe('conversationPreferenceSaving', () => {
     expect(resolveSelectedModelNotice([{ id: 'gpt', name: 'GPT' }], 'missing')).toBeNull();
     expect(shouldClearComposerForModelSelection(true)).toBe(true);
   });
+
+  it('compares and reports provider-qualified model selections', () => {
+    const models = [
+      { id: 'deepseek-v4-flash', provider: 'opencode-go', name: 'DeepSeek V4 Flash' },
+      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash (ds4.c local)' },
+    ];
+
+    expect(
+      shouldSkipModelPreferenceSave({
+        modelId: 'ds4/deepseek-v4-flash',
+        currentModel: 'ds4/deepseek-v4-flash',
+        savingPreference: null,
+        models,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipModelPreferenceSave({
+        modelId: 'opencode-go/deepseek-v4-flash',
+        currentModel: 'ds4/deepseek-v4-flash',
+        savingPreference: null,
+        models,
+      }),
+    ).toBe(false);
+    expect(resolveSelectedModelNotice(models, 'ds4/deepseek-v4-flash')).toBe(
+      'Model set to DeepSeek V4 Flash (ds4.c local) for this conversation.',
+    );
+  });
 });

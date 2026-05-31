@@ -11,6 +11,7 @@ import {
   resolveSessionEntryIdFromBlockId,
 } from '../../conversation/forking.js';
 import { useDesktopConversationState } from '../../hooks/useDesktopConversationState.js';
+import { getModelSelectionValue } from '../../model/modelPreferences.js';
 import type { MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../../shared/types.js';
 import { ChatRailComposer } from './ChatRailComposer.js';
 import { ChatView } from './ChatView.js';
@@ -68,7 +69,7 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
         if (cancelled) return;
         setModels(result.models ?? []);
         if (!currentModel && result.models.length > 0) {
-          setCurrentModel(result.models[0].id);
+          setCurrentModel(getModelSelectionValue(result.models[0], result.models));
         }
       })
       .catch(() => {

@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getModelSelectableServiceTierOptions,
+  getModelSelectionValue,
   groupModelsByProvider,
   hasSelectableModelId,
+  resolveSelectableModel,
   resolveSelectableModelId,
   THINKING_LEVEL_OPTIONS,
 } from './modelPreferences';
@@ -85,5 +87,34 @@ describe('model preferences helpers', () => {
       ],
       ['anthropic', [{ id: 'claude-sonnet-4-6', provider: 'anthropic', name: 'Claude Sonnet 4.6', context: 200_000 }]],
     ]);
+  });
+
+  it('uses provider-qualified values only for duplicate model ids', () => {
+    const models = [
+      { id: 'deepseek-v4-flash', provider: 'opencode-go', name: 'DeepSeek V4 Flash' },
+      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash (ds4.c local)' },
+      { id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4' },
+    ];
+
+    expect(getModelSelectionValue(models[0]!, models)).toBe('opencode-go/deepseek-v4-flash');
+    expect(getModelSelectionValue(models[1]!, models)).toBe('ds4/deepseek-v4-flash');
+    expect(getModelSelectionValue(models[2]!, models)).toBe('gpt-5.4');
+  });
+
+  it('resolves raw ids and provider-qualified model refs', () => {
+    const models = [
+      { id: 'deepseek-v4-flash', provider: 'opencode-go', name: 'DeepSeek V4 Flash' },
+      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash (ds4.c local)' },
+      { id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4' },
+    ];
+
+    expect(resolveSelectableModel(models, 'ds4/deepseek-v4-flash')).toBe(models[1]);
+    expect(resolveSelectableModel(models, 'gpt-5.4')).toBe(models[2]);
+    expect(hasSelectableModelId(models, 'opencode-go/deepseek-v4-flash')).toBe(true);
+    expect(hasSelectableModelId(models, 'missing')).toBe(false);
+    expect(resolveSelectableModelId({ requestedModel: 'ds4/deepseek-v4-flash', defaultModel: 'gpt-5.4', models })).toBe(
+      'ds4/deepseek-v4-flash',
+    );
+    expect(resolveSelectableModelId({ requestedModel: 'missing', defaultModel: 'gpt-5.4', models })).toBe('gpt-5.4');
   });
 });

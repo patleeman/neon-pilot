@@ -15,8 +15,8 @@ import { api } from '../client/api';
 import { normalizeConversationGroupCwd } from '../conversation/conversationCwdGroups';
 import { useApi } from '../hooks/useApi';
 import { normalizeWorkspacePaths } from '../local/savedWorkspacePaths';
-import { THINKING_LEVEL_OPTIONS } from '../model/modelPreferences';
-import type { ScheduledTaskDetail } from '../shared/types';
+import { getModelSelectionValue, THINKING_LEVEL_OPTIONS } from '../model/modelPreferences';
+import type { ModelInfo, ScheduledTaskDetail } from '../shared/types';
 import { timeAgo } from '../shared/utils';
 import { taskStore, useAllSessions, useSessionsReady } from '../store';
 import { MentionTextarea } from './MentionTextarea';
@@ -327,7 +327,7 @@ function TaskAdvancedMenu({
   onChange,
 }: {
   value: TaskFormState;
-  modelOptions: Array<{ id: string }>;
+  modelOptions: ModelInfo[];
   existingThreadOptions: Array<{ id: string; label: string; cwd?: string }>;
   onChange: (patch: Partial<TaskFormState>) => void;
 }) {
@@ -444,8 +444,8 @@ function TaskAdvancedMenu({
               >
                 <option value="">Default</option>
                 {modelOptions.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.id}
+                  <option key={getModelSelectionValue(model, modelOptions)} value={getModelSelectionValue(model, modelOptions)}>
+                    {getModelSelectionValue(model, modelOptions)}
                   </option>
                 ))}
               </InlineSelect>

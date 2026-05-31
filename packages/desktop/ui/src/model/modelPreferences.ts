@@ -47,8 +47,7 @@ export function getModelSelectableServiceTierOptions(
 }
 
 export function hasSelectableModelId<T extends Pick<ModelInfo, 'id'>>(models: readonly T[], modelId: string | null | undefined): boolean {
-  const normalizedModelId = normalizeModelId(modelId);
-  return normalizedModelId.length > 0 && models.some((model) => model.id === normalizedModelId);
+  return resolveSelectableModel(models, modelId) !== null;
 }
 
 export function resolveSelectableModelId<T extends Pick<ModelInfo, 'id'>>(input: {
@@ -56,15 +55,17 @@ export function resolveSelectableModelId<T extends Pick<ModelInfo, 'id'>>(input:
   defaultModel?: string | null;
   models: readonly T[];
 }): string {
-  if (hasSelectableModelId(input.models, input.requestedModel)) {
-    return normalizeModelId(input.requestedModel);
+  const requestedModel = resolveSelectableModel(input.models, input.requestedModel);
+  if (requestedModel) {
+    return getModelSelectionValue(requestedModel, input.models);
   }
 
-  if (hasSelectableModelId(input.models, input.defaultModel)) {
-    return normalizeModelId(input.defaultModel);
+  const defaultModel = resolveSelectableModel(input.models, input.defaultModel);
+  if (defaultModel) {
+    return getModelSelectionValue(defaultModel, input.models);
   }
 
-  return input.models[0]?.id ?? '';
+  return input.models[0] ? getModelSelectionValue(input.models[0], input.models) : '';
 }
 
 export function groupModelsByProvider<T extends Pick<ModelInfo, 'provider'>>(models: T[]): Array<[string, T[]]> {
@@ -77,4 +78,42 @@ export function groupModelsByProvider<T extends Pick<ModelInfo, 'provider'>>(mod
   }
 
   return [...groups.entries()];
+}
+
+export function modelIdHasMultipleProviders<T extends Pick<ModelInfo, 'id'>>(models: readonly T[], modelId: string): boolean {
+  return models.filter((model) => model.id === modelId).length > 1;
+}
+
+export function getModelSelectionValue<T extends Pick<ModelInfo, 'id'> & Partial<Pick<ModelInfo, 'provider'>>>(
+  model: T,
+  models: readonly T[],
+): string {
+  if (model.provider && modelIdHasMultipleProviders(models, model.id)) {
+    return `${model.provider}/${model.id}`;
+  }
+  return model.id;
+}
+
+export function resolveSelectableModel<T extends Pick<ModelInfo, 'id'> & Partial<Pick<ModelInfo, 'provider'>>>(
+  models: readonly T[],
+  modelId: string | null | undefined,
+): T | null {
+  const normalizedModelId = normalizeModelId(modelId);
+  if (!normalizedModelId) {
+    return null;
+  }
+
+  const exactMatch = models.find((model) => model.id === normalizedModelId);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const slashIndex = normalizedModelId.indexOf('/');
+  if (slashIndex > 0 && slashIndex < normalizedModelId.length - 1) {
+    const provider = normalizedModelId.slice(0, slashIndex);
+    const id = normalizedModelId.slice(slashIndex + 1);
+    return models.find((model) => model.provider === provider && model.id === id) ?? null;
+  }
+
+  return null;
 }
