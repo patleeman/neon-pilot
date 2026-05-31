@@ -1,14 +1,65 @@
-import type {
-  ExtensionActionInvokeResult,
-  ExtensionActionTelemetryEntry,
-  ExtensionBackendContext,
-  ExtensionBackendServerContext,
-  ExtensionProtocolContext,
-  ExtensionRouteRequest,
-  ExtensionRouteResponse,
-} from './extensionBackend.js';
 import type { ExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
 import type { ExtensionHostToolContextSnapshot } from './extensionHostToolContext.js';
+
+export type ExtensionHostActionInvokeResult = { ok: true; result: unknown } | { ok: false; error: string };
+
+export interface ExtensionHostBackendServerContext {
+  getRuntimeScope(): string;
+  buildLiveSessionResourceOptions?: (profile: string) => unknown;
+  getRepoRoot?: () => string;
+  getSettingsFile?: () => string;
+  materializeWebRuntimeConfig?: (profile: string) => unknown;
+  getAuthFile?: () => string;
+  getStateRoot?: () => string;
+}
+
+export interface ExtensionHostToolContext {
+  conversationId?: string;
+  cwd?: string;
+  sessionFile?: string;
+  sessionId?: string;
+  preferredVisionModel?: string;
+  onUpdate?: (update: { content?: Array<{ type: string; text: string }>; isError?: boolean }) => void;
+}
+
+export interface ExtensionHostProtocolStdio {
+  stdin: NodeJS.ReadableStream;
+  stdout: NodeJS.WritableStream;
+  stderr: NodeJS.WritableStream;
+}
+
+export interface ExtensionHostRouteRequest {
+  method: string;
+  path: string;
+  query: Record<string, string | string[]>;
+  params: Record<string, string>;
+  body?: unknown;
+  signal?: AbortSignal;
+}
+
+export interface ExtensionHostRouteSseEvent {
+  event?: string;
+  data?: unknown;
+  id?: string;
+  retry?: number;
+}
+
+export interface ExtensionHostRouteResponse {
+  status?: number;
+  body?: unknown;
+  headers?: Record<string, string>;
+  stream?: 'sse';
+  events?: AsyncIterable<ExtensionHostRouteSseEvent>;
+}
+
+export interface ExtensionHostActionTelemetryEntry {
+  extensionId: string;
+  actionId: string;
+  ok: boolean;
+  durationMs: number;
+  at: string;
+  error?: string;
+}
 
 export interface ExtensionHostHealthRequest {
   type: 'health';
@@ -19,9 +70,9 @@ export interface ExtensionHostInvokeActionRequest {
   extensionId: string;
   actionId: string;
   input: unknown;
-  serverContext?: ExtensionBackendServerContext;
+  serverContext?: ExtensionHostBackendServerContext;
   serverContextSnapshot?: ExtensionHostServerContextSnapshot;
-  toolContext?: ExtensionBackendContext['toolContext'];
+  toolContext?: ExtensionHostToolContext;
   toolContextSnapshot?: ExtensionHostToolContextSnapshot;
   agentToolContext?: unknown;
 }
@@ -36,9 +87,9 @@ export interface ExtensionHostInvokeProtocolEntrypointRequest {
   type: 'invokeProtocolEntrypoint';
   protocolId: string;
   input: unknown;
-  serverContext?: ExtensionBackendServerContext;
+  serverContext?: ExtensionHostBackendServerContext;
   serverContextSnapshot?: ExtensionHostServerContextSnapshot;
-  stdio: ExtensionProtocolContext['stdio'];
+  stdio: ExtensionHostProtocolStdio;
   signal: AbortSignal;
 }
 
@@ -48,7 +99,7 @@ export interface ExtensionHostCheckBackendHealthRequest {
 
 export interface ExtensionHostStartStartupActionsRequest {
   type: 'startStartupActions';
-  serverContext?: ExtensionBackendServerContext;
+  serverContext?: ExtensionHostBackendServerContext;
   serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
@@ -63,8 +114,8 @@ export interface ExtensionHostInvokeRouteRequest {
   extensionId: string;
   method: string;
   routePath: string;
-  request: ExtensionRouteRequest;
-  serverContext?: ExtensionBackendServerContext;
+  request: ExtensionHostRouteRequest;
+  serverContext?: ExtensionHostBackendServerContext;
   serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
@@ -95,9 +146,6 @@ export interface ExtensionHostReloadBackendResult {
   rebuilt: boolean;
 }
 
-export type ExtensionHostActionTelemetryEntry = ExtensionActionTelemetryEntry;
-export type ExtensionHostRouteResponse = ExtensionRouteResponse;
-
 export type ExtensionHostRequest =
   | ExtensionHostHealthRequest
   | ExtensionHostInvokeActionRequest
@@ -119,7 +167,7 @@ export type ExtensionHostResponse =
   | ExtensionHostHealthResponse
   | {
       ok: true;
-      result: ExtensionActionInvokeResult;
+      result: ExtensionHostActionInvokeResult;
     }
   | {
       ok: true;
@@ -135,11 +183,11 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
-      route: ExtensionRouteResponse;
+      route: ExtensionHostRouteResponse;
     }
   | {
       ok: true;
-      telemetry: ExtensionActionTelemetryEntry[];
+      telemetry: ExtensionHostActionTelemetryEntry[];
     }
   | {
       ok: true;

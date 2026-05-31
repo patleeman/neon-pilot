@@ -1,7 +1,9 @@
-import type { ExtensionActionInvokeResult } from './extensionBackend.js';
+import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import type {
+  ExtensionHostActionInvokeResult,
   ExtensionHostActionTelemetryEntry,
   ExtensionHostBackendOperationResult,
+  ExtensionHostBackendServerContext,
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostInvokeRouteRequest,
@@ -15,6 +17,12 @@ import type {
   ExtensionHostStartStartupActionsRequest,
 } from './extensionHostProtocol.js';
 
+function asExtensionBackendServerContext(
+  context: ExtensionHostBackendServerContext | undefined,
+): ExtensionBackendServerContext | undefined {
+  return context as ExtensionBackendServerContext | undefined;
+}
+
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
 export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
@@ -25,7 +33,7 @@ export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStart
 export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
   checkBackendHealth(): Promise<ExtensionHostBackendOperationResult[]>;
-  invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionActionInvokeResult>;
+  invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionHostActionInvokeResult>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -129,7 +137,9 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
           request.extensionId,
           request.actionId,
           request.input,
-          request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+          asExtensionBackendServerContext(
+            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+          ),
           request.toolContext ?? createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
           request.agentToolContext,
         ),
@@ -141,7 +151,9 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         import('./extensionHostServerContext.js'),
       ]);
       await invokeExtensionProtocolEntrypoint(request.protocolId, request.input, {
-        serverContext: request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+        serverContext: asExtensionBackendServerContext(
+          request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+        ),
         stdio: request.stdio,
         signal: request.signal,
       });
@@ -163,7 +175,9 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
           request.method,
           request.routePath,
           request.request,
-          request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+          asExtensionBackendServerContext(
+            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+          ),
         ),
       };
     }
@@ -187,7 +201,9 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
       return {
         ok: true,
         results: await startExtensionStartupActions(
-          request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+          asExtensionBackendServerContext(
+            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+          ),
         ),
       };
     }

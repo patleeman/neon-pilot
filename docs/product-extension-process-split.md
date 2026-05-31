@@ -71,6 +71,8 @@ The RPC adapter must only carry wire-safe data. Product action paths pass serial
 
 The desktop build already emits an `extension-host-child.js` entrypoint for this lane. The local backend configures a hybrid client: wire-safe product runtime traffic goes to the extension host child process, while callback-bearing traffic and stdio protocol entrypoints remain on the in-process fallback until capability channels exist.
 
+Product runtime modules must depend on `ExtensionHostClient` and the public host protocol/context types. They must not import `extensionBackend` directly, including for route, action, telemetry, reload, startup, self-test, or protocol-entrypoint operations.
+
 ## Migration Phases
 
 1. Add the product runtime / extension host terminology and the `ExtensionHostClient` seam.

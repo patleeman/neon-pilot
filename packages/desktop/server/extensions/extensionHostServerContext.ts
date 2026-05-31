@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
 
 import { createRuntimeState, type RuntimeState } from '../app/runtimeState.js';
-import type { ExtensionBackendServerContext } from './extensionBackend.js';
+import type { ExtensionHostBackendServerContext } from './extensionHostProtocol.js';
 
 export interface ExtensionHostServerContextSnapshot {
   runtimeScope: string;
@@ -13,7 +13,7 @@ export interface ExtensionHostServerContextSnapshot {
 }
 
 export function createExtensionHostServerContextSnapshot(
-  context?: ExtensionBackendServerContext,
+  context?: ExtensionHostBackendServerContext,
 ): ExtensionHostServerContextSnapshot | undefined {
   if (!context) return undefined;
   const authFile = context.getAuthFile?.();
@@ -28,7 +28,7 @@ export function createExtensionHostServerContextSnapshot(
 
 export function createExtensionBackendServerContextFromSnapshot(
   snapshot?: ExtensionHostServerContextSnapshot,
-): ExtensionBackendServerContext | undefined {
+): ExtensionHostBackendServerContext | undefined {
   if (!snapshot) return undefined;
   let runtimeState: RuntimeState | undefined;
   const getRuntimeState = () => {

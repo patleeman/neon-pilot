@@ -1,7 +1,7 @@
 import { type AgentToolResult, createCodingTools, type ExtensionContext, type ToolDefinition } from '@earendil-works/pi-coding-agent';
 
-import type { ExtensionBackendContext, ExtensionBackendServerContext } from '../extensions/extensionBackend.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import type { ExtensionHostBackendServerContext, ExtensionHostToolContext } from '../extensions/extensionHostProtocol.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { createExtensionHostToolContextSnapshot } from '../extensions/extensionHostToolContext.js';
 import { listExtensionToolRegistrations } from '../extensions/extensionRegistry.js';
@@ -30,7 +30,7 @@ export interface ToolGatewayInvokeInput {
   name: string;
   input?: unknown;
   runtime?: ToolGatewayRuntimeContext;
-  toolContext?: ExtensionBackendContext['toolContext'];
+  toolContext?: ExtensionHostToolContext;
   agentContext?: ExtensionContext;
   signal?: AbortSignal;
 }
@@ -65,7 +65,7 @@ export function listInvocableExtensionTools(input?: ToolGatewayRuntimeContext): 
 
 export async function invokeExtensionToolByName(
   input: ToolGatewayInvokeInput,
-  serverContext?: ExtensionBackendServerContext,
+  serverContext?: ExtensionHostBackendServerContext,
 ): Promise<AgentToolResult<unknown> & { isError?: boolean; terminate?: boolean }> {
   const name = input.name.trim();
   if (!name) throw new Error('Tool name is required.');
@@ -123,7 +123,7 @@ function builtinToolsFor(input: ToolGatewayInvokeInput): Record<string, ToolDefi
 
 export async function invokeToolByName(
   input: ToolGatewayInvokeInput,
-  serverContext?: ExtensionBackendServerContext,
+  serverContext?: ExtensionHostBackendServerContext,
 ): Promise<AgentToolResult<unknown> & { isError?: boolean; terminate?: boolean }> {
   const name = input.name.trim();
   if (BUILT_IN_TOOL_NAMES.has(name)) {

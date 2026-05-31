@@ -5,11 +5,11 @@ import type { Express, Request, Response } from 'express';
 
 import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtensionRegistryPresentation.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
-import type { ExtensionActionInvokeResult } from '../extensions/extensionBackend.js';
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { listExtensionEventSubscriptions } from '../extensions/extensionEventBus.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import type { ExtensionHostActionInvokeResult } from '../extensions/extensionHostProtocol.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import {
   buildRuntimeExtension,
@@ -731,7 +731,7 @@ export function registerExtensionRoutes(
           return;
         }
       }
-      let actionResult: ExtensionActionInvokeResult | undefined;
+      let actionResult: ExtensionHostActionInvokeResult | undefined;
       if (enabled) {
         setExtensionEnabled(entry.manifest.id, true);
         const onEnableAction = entry.manifest.backend?.onEnableAction;
