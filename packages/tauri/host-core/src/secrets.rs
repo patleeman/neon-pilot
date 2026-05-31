@@ -63,7 +63,9 @@ pub fn set_host_secret(
 ) -> anyhow::Result<FileSecretStatus> {
     match backend {
         HostSecretBackend::File => set_file_secret(key, value),
-        HostSecretBackend::Keychain => set_keychain_secret(key, value).or_else(|_| set_file_secret(key, value)),
+        HostSecretBackend::Keychain => {
+            set_keychain_secret(key, value).or_else(|_| set_file_secret(key, value))
+        }
     }
 }
 
@@ -73,7 +75,9 @@ pub fn delete_host_secret(
 ) -> anyhow::Result<FileSecretStatus> {
     match backend {
         HostSecretBackend::File => delete_file_secret(key),
-        HostSecretBackend::Keychain => delete_keychain_secret(key).or_else(|_| delete_file_secret(key)),
+        HostSecretBackend::Keychain => {
+            delete_keychain_secret(key).or_else(|_| delete_file_secret(key))
+        }
     }
 }
 
@@ -90,7 +94,14 @@ fn get_keychain_secret(key: &str) -> anyhow::Result<Option<String>> {
         return get_file_secret(key);
     }
     let output = Command::new("security")
-        .args(["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", key, "-w"])
+        .args([
+            "find-generic-password",
+            "-s",
+            KEYCHAIN_SERVICE,
+            "-a",
+            key,
+            "-w",
+        ])
         .stdin(Stdio::null())
         .stderr(Stdio::null())
         .output()
@@ -108,7 +119,16 @@ fn set_keychain_secret(key: &str, value: &str) -> anyhow::Result<FileSecretStatu
         return set_file_secret(key, value);
     }
     let status = Command::new("security")
-        .args(["add-generic-password", "-U", "-s", KEYCHAIN_SERVICE, "-a", key, "-w", value])
+        .args([
+            "add-generic-password",
+            "-U",
+            "-s",
+            KEYCHAIN_SERVICE,
+            "-a",
+            key,
+            "-w",
+            value,
+        ])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .status()

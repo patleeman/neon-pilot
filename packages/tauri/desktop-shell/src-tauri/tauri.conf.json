@@ -12,11 +12,13 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Neon Pilot",
         "width": 1280,
         "height": 860,
         "minWidth": 960,
         "minHeight": 640,
+        "visible": true,
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,

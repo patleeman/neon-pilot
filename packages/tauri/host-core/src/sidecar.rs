@@ -65,6 +65,12 @@ struct JsSidecarState {
     ready: JsSidecarReady,
 }
 
+impl Drop for JsSidecarState {
+    fn drop(&mut self) {
+        let _ = self.child.start_kill();
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct JsSidecarHandle {
     state: Arc<Mutex<Option<JsSidecarState>>>,

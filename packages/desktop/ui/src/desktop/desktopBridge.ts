@@ -122,10 +122,6 @@ function getTauriInvoke(): (<T = unknown>(command: string, payload?: Record<stri
   return window.__TAURI_INTERNALS__?.invoke ?? null;
 }
 
-function unsupportedWorkbenchBrowser(method: string): never {
-  throw new Error(`Workbench Browser native embedding is not available in the Tauri shell yet: ${method}.`);
-}
-
 function readBrowserNavigationState(): DesktopNavigationState {
   return {
     canGoBack: typeof window !== 'undefined' ? window.history.length > 1 : false,
@@ -179,14 +175,14 @@ function createTauriDesktopBridge(): NeonPilotDesktopBridge | null {
       window.history.forward();
       return readBrowserNavigationState();
     },
-    setWorkbenchBrowserBounds: async () => null,
-    getWorkbenchBrowserState: async () => null,
-    navigateWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('navigate'),
-    goBackWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('goBack'),
-    goForwardWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('goForward'),
-    reloadWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('reload'),
-    stopWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('stop'),
-    snapshotWorkbenchBrowser: async () => unsupportedWorkbenchBrowser('snapshot'),
+    setWorkbenchBrowserBounds: (input) => invoke<DesktopWorkbenchBrowserState | null>('set_workbench_browser_bounds', { input }),
+    getWorkbenchBrowserState: (input) => invoke<DesktopWorkbenchBrowserState | null>('get_workbench_browser_state', { input }),
+    navigateWorkbenchBrowser: (input) => invoke<DesktopWorkbenchBrowserState>('navigate_workbench_browser', { input }),
+    goBackWorkbenchBrowser: (input) => invoke<DesktopWorkbenchBrowserState>('go_back_workbench_browser', { input }),
+    goForwardWorkbenchBrowser: (input) => invoke<DesktopWorkbenchBrowserState>('go_forward_workbench_browser', { input }),
+    reloadWorkbenchBrowser: (input) => invoke<DesktopWorkbenchBrowserState>('reload_workbench_browser', { input }),
+    stopWorkbenchBrowser: (input) => invoke<DesktopWorkbenchBrowserState>('stop_workbench_browser', { input }),
+    snapshotWorkbenchBrowser: (input) => invoke<DesktopWorkbenchBrowserSnapshot>('snapshot_workbench_browser', { input }),
   };
   return tauriDesktopBridge;
 }

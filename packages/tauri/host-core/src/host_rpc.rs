@@ -63,7 +63,9 @@ struct RpcProcess {
 }
 
 enum RpcProcessKind {
-    Pipe { child: Child },
+    Pipe {
+        child: Child,
+    },
     Pty {
         child: Box<dyn PtyChild + Send + Sync>,
         master: Box<dyn MasterPty + Send>,
@@ -483,7 +485,9 @@ async fn secret_get(
 ) -> RpcResult {
     authorize(&state, &headers)?;
     let backend = HostSecretBackend::from_id(input.backend.as_deref())?;
-    Ok(Json(json!({ "value": get_host_secret(&input.key, backend)? })))
+    Ok(Json(
+        json!({ "value": get_host_secret(&input.key, backend)? }),
+    ))
 }
 
 async fn secret_set(
@@ -508,8 +512,7 @@ async fn secret_delete(
     authorize(&state, &headers)?;
     let backend = HostSecretBackend::from_id(input.backend.as_deref())?;
     Ok(Json(serde_json::to_value(delete_host_secret(
-        &input.key,
-        backend,
+        &input.key, backend,
     )?)?))
 }
 
@@ -774,12 +777,19 @@ mod tests {
                 .await
                 .expect("read");
             body = response.json::<serde_json::Value>().await.expect("json");
-            if body["stdout"].as_str().unwrap_or_default().contains("pty-ok") {
+            if body["stdout"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("pty-ok")
+            {
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         }
-        assert!(body["stdout"].as_str().unwrap_or_default().contains("pty-ok"));
+        assert!(body["stdout"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("pty-ok"));
 
         let kill = client
             .post(format!("http://127.0.0.1:{}/process/kill", server.port))

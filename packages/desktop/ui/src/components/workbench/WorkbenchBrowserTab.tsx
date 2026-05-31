@@ -286,7 +286,7 @@ export function WorkbenchBrowserTab({
   async function runBrowserCommand(command: () => Promise<DesktopWorkbenchBrowserState | null | undefined>) {
     const commandTabId = activeTab.id;
     if (!bridge) {
-      setStatus('Workbench browser is not available in the Tauri desktop app yet.');
+      setStatus('Workbench browser bridge is not available.');
       return;
     }
     try {
@@ -418,7 +418,7 @@ export function WorkbenchBrowserTab({
       <div ref={browserHostRef} className="relative min-h-[220px] flex-1 overflow-hidden bg-base">
         {!bridge ? (
           <div className="flex h-full items-center justify-center px-4 text-center text-[12px] leading-5 text-dim">
-            Browser embedding is not available in the Tauri desktop app yet.
+            Browser embedding is not available in this shell.
           </div>
         ) : null}
         {pendingMarkers.map((marker, index) => {

@@ -11,6 +11,8 @@ tauri-build.workspace = true
 [dependencies]
 anyhow.workspace = true
 arboard.workspace = true
+axum.workspace = true
+base64.workspace = true
 neon-pilot-host-core = { path = "../../host-core" }
 open.workspace = true
 reqwest.workspace = true
@@ -18,6 +20,7 @@ rfd.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tauri.workspace = true
+tauri-plugin-single-instance.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

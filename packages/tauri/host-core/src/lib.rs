@@ -22,13 +22,14 @@ pub use filesystem::{
 pub use host_rpc::{start_host_core_rpc_server, HostCoreRpcServer};
 pub use paths::{resolve_repo_root, resolve_state_root};
 pub use preferences::{
-    read_tauri_app_preferences, update_tauri_app_preferences, TauriAppPreferences,
-    TauriAppPreferencesPatch, TauriAppPreferencesState,
+    read_tauri_app_preferences, read_tauri_window_state, update_tauri_app_preferences,
+    update_tauri_window_state, TauriAppPreferences, TauriAppPreferencesPatch,
+    TauriAppPreferencesState, TauriWindowState,
 };
 pub use process::{exec_host_process, HostProcessExecInput, HostProcessExecResult};
 pub use secrets::{
-    delete_file_secret, delete_host_secret, get_file_secret, get_host_secret, list_file_secret_keys,
-    set_file_secret, set_host_secret, FileSecretStatus, HostSecretBackend,
+    delete_file_secret, delete_host_secret, get_file_secret, get_host_secret,
+    list_file_secret_keys, set_file_secret, set_host_secret, FileSecretStatus, HostSecretBackend,
 };
 pub use sidecar::{
     JsSidecarConfig, JsSidecarHandle, JsSidecarReady, JsSidecarStatus, SidecarLaunchMode,

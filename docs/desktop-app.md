@@ -28,6 +28,7 @@ Tauri Rust shell
     ├── Rust host core
     │       ├── native app/window lifecycle
     │       ├── app preferences and native OS commands
+    │       ├── embedded Workbench Browser webviews
     │       ├── scoped filesystem, SQLite, secrets, and extension package lifecycle
     │       ├── process execution authority
     │       └── host-core RPC for sidecar authority calls
@@ -39,7 +40,7 @@ Tauri Rust shell
             └── Agent/runtime behavior not yet moved to Rust
 ```
 
-- Tauri owns the app shell and native commands.
+- Tauri owns the app shell, close/reopen/quit behavior, native menus, window state, and native commands.
 - Rust host core owns durable host-authority boundaries.
 - The JS sidecar remains for product API compatibility, daemon/runtime behavior, and JS extension execution.
 - New host-authority APIs should be added to Rust host core and exposed to the sidecar through host-core RPC.
@@ -56,4 +57,6 @@ Toggle the left sidebar with `Cmd+/` (or `Ctrl+/`). Toggle the workbench with `C
 
 ## Workbench Browser
 
-The old native embedded browser surface is no longer part of the production desktop shell. The Tauri app fails closed for that surface until a Tauri-native webview strategy is chosen. Browser automation and external browser integrations should remain extension-owned capabilities.
+The Browser workbench tab is backed by Tauri child webviews owned by the Rust shell. The renderer reports the browser host bounds through the Tauri desktop bridge; Rust creates one child webview per browser tab session key, shows/hides it with the workbench tab, and keeps URL/title/loading state synchronized back to the React UI.
+
+The JS sidecar receives a localhost Workbench Browser bridge from Tauri so browser agent tools can resolve active tabs, text snapshots, and screenshots from the same embedded browser session. Raw Chromium CDP command execution is not available in the Tauri WKWebView bridge; browser UI, navigation, tab state, text snapshots, and screenshot capture no longer depend on Electron.

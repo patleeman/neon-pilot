@@ -14,6 +14,8 @@ pub struct TauriAppPreferences {
     pub update_path: String,
     pub start_on_system_start: bool,
     pub keyboard_shortcuts: BTreeMap<String, String>,
+    #[serde(default)]
+    pub window_state: TauriWindowState,
 }
 
 impl Default for TauriAppPreferences {
@@ -23,6 +25,49 @@ impl Default for TauriAppPreferences {
             update_path: "stable".to_string(),
             start_on_system_start: false,
             keyboard_shortcuts: default_keyboard_shortcuts(),
+            window_state: TauriWindowState::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TauriWindowState {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub y: Option<i32>,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Default for TauriWindowState {
+    fn default() -> Self {
+        Self {
+            x: None,
+            y: None,
+            width: 1440,
+            height: 960,
+        }
+    }
+}
+
+impl TauriWindowState {
+    fn normalize(self) -> Self {
+        let defaults = Self::default();
+        Self {
+            x: self.x,
+            y: self.y,
+            width: if self.width > 0 {
+                self.width
+            } else {
+                defaults.width
+            },
+            height: if self.height > 0 {
+                self.height
+            } else {
+                defaults.height
+            },
         }
     }
 }
@@ -105,6 +150,20 @@ pub fn update_tauri_app_preferences(
     Ok(preferences.into_state(current_version))
 }
 
+pub fn read_tauri_window_state() -> anyhow::Result<TauriWindowState> {
+    Ok(read_preferences_file(&preferences_file()?)?.window_state)
+}
+
+pub fn update_tauri_window_state(
+    window_state: TauriWindowState,
+) -> anyhow::Result<TauriWindowState> {
+    let path = preferences_file()?;
+    let mut preferences = read_preferences_file(&path)?;
+    preferences.window_state = window_state.normalize();
+    write_preferences_file(&path, &preferences)?;
+    Ok(preferences.window_state)
+}
+
 fn preferences_file() -> anyhow::Result<PathBuf> {
     Ok(resolve_state_root()?
         .join("desktop")
@@ -164,11 +223,54 @@ mod tests {
     fn default_preferences_include_required_shortcuts() {
         let preferences = TauriAppPreferences::default();
         assert_eq!(preferences.update_path, "stable");
+        assert_eq!(
+            preferences.window_state,
+            TauriWindowState {
+                x: None,
+                y: None,
+                width: 1440,
+                height: 960
+            }
+        );
         assert!(preferences
             .keyboard_shortcuts
             .contains_key("newConversation"));
         assert!(preferences
             .keyboard_shortcuts
             .contains_key("toggleRightRail"));
+    }
+
+    #[test]
+    fn parses_existing_preferences_without_window_state() {
+        let source = r#"{
+          "autoInstallUpdates": true,
+          "updatePath": "test",
+          "startOnSystemStart": false,
+          "keyboardShortcuts": {}
+        }"#;
+
+        let preferences: TauriAppPreferences = serde_json::from_str(source).expect("preferences");
+        assert_eq!(preferences.window_state, TauriWindowState::default());
+    }
+
+    #[test]
+    fn normalizes_invalid_window_state_size() {
+        let state = TauriWindowState {
+            x: Some(20),
+            y: Some(40),
+            width: 0,
+            height: 0,
+        }
+        .normalize();
+
+        assert_eq!(
+            state,
+            TauriWindowState {
+                x: Some(20),
+                y: Some(40),
+                width: 1440,
+                height: 960,
+            }
+        );
     }
 }

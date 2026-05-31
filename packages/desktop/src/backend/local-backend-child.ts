@@ -62,6 +62,13 @@ let daemonLogStream: WriteStream | undefined;
 let shuttingDown = false;
 const nativeWorkbenchBrowserResponses = new Map<string, (message: NativeWorkbenchBrowserResponse) => void>();
 
+function readParentProcessId(): number | null {
+  const value = process.env.NEON_PILOT_TAURI_PARENT_PID?.trim();
+  if (!value) return null;
+  const pid = Number(value);
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : null;
+}
+
 function sendParentMessage(message: BackendReadyMessage | LocalApiRpcResponse | { type: 'fatal'; error: string }): void {
   if (typeof process.send === 'function') {
     process.send(message);
@@ -72,6 +79,25 @@ function sendParentMessage(message: BackendReadyMessage | LocalApiRpcResponse | 
 }
 
 function sendNativeWorkbenchBrowserRequest(method: NativeWorkbenchBrowserRequest['method'], args: unknown[]): Promise<unknown> {
+  const tauriBridgeUrl = process.env.NEON_PILOT_TAURI_BROWSER_BRIDGE_URL?.trim();
+  const tauriBridgeToken = process.env.NEON_PILOT_TAURI_BROWSER_BRIDGE_TOKEN?.trim();
+  if (tauriBridgeUrl && tauriBridgeToken) {
+    return fetch(tauriBridgeUrl, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${tauriBridgeToken}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ method, args }),
+    }).then(async (response) => {
+      const body = (await response.json().catch(() => ({}))) as { ok?: boolean; result?: unknown; error?: string };
+      if (!response.ok || body.ok === false) {
+        throw new Error(body.error || `Workbench Browser native bridge failed for ${method}.`);
+      }
+      return body.result;
+    });
+  }
+
   if (typeof process.send !== 'function') {
     return Promise.reject(new Error('Workbench Browser native bridge is unavailable.'));
   }
@@ -240,6 +266,21 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
   process.exit(0);
 }
 
+function installParentExitMonitor(server: ReturnType<typeof createServer>): void {
+  const parentPid = readParentProcessId();
+  if (parentPid === null) return;
+
+  const timer = setInterval(() => {
+    try {
+      process.kill(parentPid, 0);
+    } catch {
+      clearInterval(timer);
+      void shutdown(server);
+    }
+  }, 1_000);
+  timer.unref?.();
+}
+
 async function main(): Promise<void> {
   const token = process.env.NEON_PILOT_BACKEND_TOKEN?.trim() || randomUUID();
   await startDaemon();
@@ -367,6 +408,7 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => {
     void shutdown(server);
   });
+  installParentExitMonitor(server);
 }
 
 main().catch((error) => {

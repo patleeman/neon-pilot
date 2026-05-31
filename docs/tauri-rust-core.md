@@ -9,6 +9,7 @@ Tauri shell
   └─ Rust host kernel
        ├─ native app/window lifecycle
        ├─ JS sidecar supervision
+       ├─ embedded Workbench Browser webview ownership
        ├─ host-owned authority boundaries: app preferences, extension package validation/install/import
        ├─ scoped filesystem and SQLite migration primitives
        ├─ process and PTY execution authority
@@ -28,15 +29,16 @@ Rust owns stable authority and lifecycle boundaries. JS/TS remains the product r
 - `packages/tauri/host-core` is the Rust host-kernel primitive library.
 - `packages/tauri/desktop-shell/src-tauri` is the production Tauri shell.
 - `packages/desktop` contains the React renderer, bundled server assets, and JS sidecar entry points consumed by Tauri.
-- Host-core owns JS sidecar supervision, repo/state-root path resolution, Tauri desktop app preferences, extension package validation/install/import, scoped filesystem operations, SQLite migrations, process execution authority, PTY execution authority, and secret storage primitives.
-- The Tauri shell owns native bridge commands for environment, navigation state, opening paths/URLs, clipboard writes, folder picking, app preferences, update status, extension package validation/install/import, scoped filesystem operations, SQLite migrations, secret access, and product API dispatch.
+- Host-core owns JS sidecar supervision, repo/state-root path resolution, Tauri desktop app preferences and window state, extension package validation/install/import, scoped filesystem operations, SQLite migrations, process execution authority, PTY execution authority, and secret storage primitives.
+- The Tauri shell owns native lifecycle parity (close hides, reopen shows, quit confirmation, macOS activation policy), native menus/accelerators, native bridge commands for environment, navigation state, opening paths/URLs, clipboard writes, folder picking, app preferences, update status, extension package validation/install/import, scoped filesystem operations, SQLite migrations, secret access, Workbench Browser webviews, and product API dispatch.
 - The React API client detects Tauri and sends product API requests through the Rust `dispatch_local_api` command, which forwards to the supervised JS sidecar.
 - The React desktop bridge detects Tauri and maps desktop-native calls to Tauri commands. Tauri-only host-core primitives are available under `bridge.hostCore`.
 - Before launching the JS sidecar, Tauri starts a localhost Rust host-core RPC server and passes `NEON_PILOT_TAURI_HOST_CORE_PORT` plus `NEON_PILOT_TAURI_HOST_CORE_TOKEN` into the sidecar environment.
+- Tauri also starts a localhost Workbench Browser bridge for the JS sidecar and passes `NEON_PILOT_TAURI_BROWSER_BRIDGE_URL` plus `NEON_PILOT_TAURI_BROWSER_BRIDGE_TOKEN` so browser agent tools can target the Rust-owned embedded browser session.
 - The JS sidecar reports `hostCore: "tauri-rust"` from `/health` when the Rust host-core RPC bridge is available.
 - Extension shell `exec`, pipe-backed `spawn`, PTY-backed `spawn`, process writes, process resize, and process kill route through the Rust host-core RPC bridge under Tauri.
 - `scripts/prepare-tauri-resources.mjs` stages packaged backend resources into the Tauri bundle before `pnpm run tauri:build`; packaged sidecars resolve the runtime from `Contents/Resources/resources`.
-- The old native embedded browser surface is not part of the production shell. The Tauri app fails closed for that capability until a Tauri-native webview strategy is chosen.
+- The Browser workbench tab uses Tauri child webviews. Browser UI navigation, tab visibility, state sync, text snapshots, and screenshots are Tauri-native. Raw Chromium CDP commands are not available in the Tauri WKWebView backend.
 
 ## Commands
 
@@ -67,4 +69,4 @@ pnpm run tauri:build
 ## Remaining Platform Debt
 
 - Synchronous TypeScript secret helpers remain as non-Tauri compatibility for legacy tests and non-host execution. Active Tauri secret reads/writes in routes, model provider auth, and extension backend secrets use the async host-core RPC contract.
-- The native embedded browser capability needs a Tauri-native design before it can return to the production shell.
+- Raw Chromium CDP command execution is not available in the Tauri WKWebView backend. Browser agent tools should prefer `browser_snapshot` and `browser_screenshot`; autonomous development validation should use the agent-browser CLI.
