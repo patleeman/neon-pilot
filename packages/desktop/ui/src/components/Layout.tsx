@@ -664,6 +664,7 @@ function WorkbenchPanel({
   onCloseTab,
   onOpenNewTab,
   onActiveToolChange,
+  onRestoreRail,
   onWorkspaceFileClear,
   onStartSideChat,
 }: {
@@ -690,6 +691,7 @@ function WorkbenchPanel({
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onOpenNewTab: () => void;
+  onRestoreRail: () => void;
   onActiveToolChange: (
     mode: WorkbenchRailMode,
     options?: { artifactId?: string | null; id?: string; conversationId?: string | null; forceNewTab?: boolean },
@@ -724,9 +726,12 @@ function WorkbenchPanel({
         browserTabsState={browserTabsState}
         activeWorkspaceFileId={activeWorkspaceFileId}
         activeKnowledgeFileId={activeKnowledgeFileId}
+        railOpen={railOpen}
+        canRestoreRail={extensionRailSurface !== null}
         onActiveTabChange={onActiveTabChange}
         onCloseTab={onCloseTab}
         onOpenNewTab={onOpenNewTab}
+        onRestoreRail={onRestoreRail}
         onCheckpointSelect={() => undefined}
         onWorkspaceFileClear={onWorkspaceFileClear}
       />
@@ -876,9 +881,12 @@ function WorkbenchTabStrip({
   browserTabsState,
   activeWorkspaceFileId,
   activeKnowledgeFileId,
+  railOpen,
+  canRestoreRail,
   onActiveTabChange,
   onCloseTab,
   onOpenNewTab,
+  onRestoreRail,
   onCheckpointSelect,
   onWorkspaceFileClear,
 }: {
@@ -889,9 +897,12 @@ function WorkbenchTabStrip({
   browserTabsState: BrowserTabsState;
   activeWorkspaceFileId: string | null;
   activeKnowledgeFileId: string | null;
+  railOpen: boolean;
+  canRestoreRail: boolean;
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onOpenNewTab: () => void;
+  onRestoreRail: () => void;
   onCheckpointSelect: (checkpointId: string | null) => void;
   onWorkspaceFileClear: () => void;
 }) {
@@ -1025,6 +1036,31 @@ function WorkbenchTabStrip({
       >
         +
       </button>
+      {canRestoreRail && !railOpen ? (
+        <button
+          type="button"
+          className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary transition hover:bg-surface hover:text-primary"
+          title="Show file tree"
+          aria-label="Show file tree"
+          onClick={onRestoreRail}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 5h16v14H4z" />
+            <path d="M15 5v14" />
+            <path d="m8 9 3 3-3 3" />
+          </svg>
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -2221,6 +2257,10 @@ export function Layout() {
                       onCloseTab={closeWorkbenchTab}
                       onOpenNewTab={openWorkbenchNewTab}
                       onActiveToolChange={openWorkbenchToolTab}
+                      onRestoreRail={() => {
+                        setWorkbenchExplorerOpen(true);
+                        writeStoredWorkbenchExplorerOpen(true);
+                      }}
                       onWorkspaceFileClear={clearActiveWorkbenchFileSelection}
                       onStartSideChat={handleStartSideChat}
                     />
