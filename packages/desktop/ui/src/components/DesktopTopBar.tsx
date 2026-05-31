@@ -280,7 +280,7 @@ export function DesktopTopBar({
   return (
     <div className="ui-desktop-top-bar">
       <div className="ui-desktop-top-bar__leading">
-        <div className="ui-desktop-top-bar__traffic-light-gap" aria-hidden="true" style={dragStyle} />
+        <div className="ui-desktop-top-bar__traffic-light-gap drag-region" aria-hidden="true" style={dragStyle} />
         <div className="ui-desktop-top-bar__controls" style={noDragStyle}>
           <ToolbarButton
             className="ui-desktop-top-bar__icon-button"
@@ -325,7 +325,7 @@ export function DesktopTopBar({
           </div>
         ) : null}
       </div>
-      <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
+      <div className="ui-desktop-top-bar__center drag-region flex items-center justify-center gap-2" style={dragStyle}>
         <div
           ref={searchShellRef}
           className={cx(
