@@ -18,6 +18,8 @@ describe('useConversationModels', () => {
     expect(result.current.models).toEqual([]);
     expect(result.current.defaultModel).toBe('');
     expect(result.current.defaultVisionModel).toBe('');
+    expect(result.current.modelsLoading).toBe(false);
+    expect(result.current.modelsError).toBeNull();
   });
 
   it('fetches models when enabled', async () => {
@@ -36,6 +38,7 @@ describe('useConversationModels', () => {
     expect(result.current.defaultVisionModel).toBe('openai/gpt-4o');
     expect(result.current.defaultThinkingLevel).toBe('high');
     expect(result.current.defaultServiceTier).toBe('standard');
+    expect(result.current.modelsError).toBeNull();
   });
 
   it('handles api error gracefully', async () => {
@@ -43,8 +46,8 @@ describe('useConversationModels', () => {
 
     const { result } = renderHook(() => useConversationModels(true));
 
-    // Wait for effects to settle
-    await vi.waitFor(() => {});
+    await waitFor(() => expect(result.current.modelsError).toBe('Network error'));
     expect(result.current.models).toEqual([]);
+    expect(result.current.modelsLoading).toBe(false);
   });
 });

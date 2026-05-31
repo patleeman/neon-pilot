@@ -10,12 +10,16 @@ export function useConversationModels(enabled: boolean) {
   const [defaultVisionModel, setDefaultVisionModel] = useState<string>('');
   const [defaultThinkingLevel, setDefaultThinkingLevel] = useState<string>('');
   const [defaultServiceTier, setDefaultServiceTier] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refreshModels = useCallback(() => {
     if (!enabled) {
       return Promise.resolve();
     }
 
+    setLoading(true);
+    setError(null);
     return api
       .models()
       .then((data) => {
@@ -25,7 +29,12 @@ export function useConversationModels(enabled: boolean) {
         setDefaultThinkingLevel(data.currentThinkingLevel ?? '');
         setDefaultServiceTier(data.currentServiceTier ?? '');
       })
-      .catch(() => {});
+      .catch((error: unknown) => {
+        setError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [enabled]);
 
   useInvalidateOnTopics(['models'], () => refreshModels());
@@ -40,5 +49,8 @@ export function useConversationModels(enabled: boolean) {
     defaultVisionModel,
     defaultThinkingLevel,
     defaultServiceTier,
+    modelsLoading: loading,
+    modelsError: error,
+    refreshModels,
   };
 }

@@ -34,6 +34,29 @@ describe('ConversationComposerMenus', () => {
     expect(html).toContain('missing');
   });
 
+  it('renders model loading and error states', () => {
+    const loadingHtml = renderToString(
+      <ModelPicker models={[]} currentModel="" query="" idx={0} loading onSelect={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(loadingHtml).toContain('Loading models...');
+
+    const errorHtml = renderToString(
+      <ModelPicker
+        models={[]}
+        currentModel=""
+        query=""
+        idx={0}
+        error="sidecar unavailable"
+        onRetry={vi.fn()}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(errorHtml).toContain('Failed to load models.');
+    expect(errorHtml).toContain('sidecar unavailable');
+    expect(errorHtml).toContain('Retry');
+  });
+
   it('renders slash and mention menu entries', () => {
     const slashHtml = renderToString(
       <SlashMenu

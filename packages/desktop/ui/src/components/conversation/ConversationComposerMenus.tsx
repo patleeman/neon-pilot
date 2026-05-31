@@ -12,6 +12,9 @@ export function ModelPicker({
   currentModel,
   query,
   idx,
+  loading = false,
+  error = null,
+  onRetry,
   onSelect,
   onClose,
 }: {
@@ -19,6 +22,9 @@ export function ModelPicker({
   currentModel: string;
   query: string;
   idx: number;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   onSelect: (id: string) => void;
   onClose: () => void;
 }) {
@@ -37,7 +43,30 @@ export function ModelPicker({
       </div>
       {models.length === 0 ? (
         <div className="px-3 py-4 text-[12px] text-dim">
-          No models match <span className="font-mono text-secondary">{query}</span>
+          {loading ? (
+            'Loading models...'
+          ) : error ? (
+            <div className="space-y-2">
+              <p className="text-danger">Failed to load models.</p>
+              <p className="break-words text-[11px] text-dim">{error}</p>
+              {onRetry ? (
+                <button
+                  type="button"
+                  className="ui-toolbar-button px-2 py-1 text-[11px]"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    onRetry();
+                  }}
+                >
+                  Retry
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              No models match <span className="font-mono text-secondary">{query}</span>
+            </>
+          )}
         </div>
       ) : (
         Object.entries(groups).map(([provider, providerModels]) => (

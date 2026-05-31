@@ -1362,7 +1362,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   });
 
   // Model
-  const { models, defaultModel, defaultVisionModel, defaultThinkingLevel, defaultServiceTier } = useConversationModels(shouldLoadModels);
+  const {
+    models,
+    defaultModel,
+    defaultVisionModel,
+    defaultThinkingLevel,
+    defaultServiceTier,
+    modelsLoading,
+    modelsError,
+    refreshModels,
+  } = useConversationModels(shouldLoadModels);
   const [currentModel, setCurrentModel] = useState<string>('');
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState<string>('');
   const [currentServiceTier, setCurrentServiceTier] = useState<string>('');
@@ -6321,6 +6330,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   currentModel={currentModel}
                   query={modelQuery}
                   idx={modelIdx}
+                  loading={modelsLoading}
+                  error={modelsError}
+                  onRetry={() => {
+                    void refreshModels();
+                  }}
                   onSelect={selectModel}
                   onClose={() => {
                     composerController.clear();
