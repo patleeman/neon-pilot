@@ -46,6 +46,7 @@ function createPipeBackedSpawnHandle(
   });
   return {
     pid: child.pid ?? null,
+    usingPty: false,
     executionWrappers: launch.wrappers,
     kill: () => {
       spawnedExtensionProcesses.delete(child);
@@ -144,6 +145,7 @@ export function createExtensionShellCapability() {
         });
         return {
           pid: pty.pid,
+          usingPty: true,
           executionWrappers: launch.wrappers,
           kill: () => {
             spawnedExtensionProcesses.delete(pty as unknown as ChildProcess);

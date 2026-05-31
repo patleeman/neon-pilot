@@ -1,6 +1,6 @@
 export const EXTENSION_REGISTRY_CHANGED_EVENT = 'neon-pilot-extension-registry-changed';
 
-let extensionRegistryRevision = 0;
+let extensionRegistryRevision = Date.now();
 
 export function getExtensionRegistryRevision(): number {
   return extensionRegistryRevision;

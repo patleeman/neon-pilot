@@ -1323,6 +1323,7 @@ export interface ExtensionBackendContext {
       onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
     }): Promise<{
       pid: number | null;
+      usingPty: boolean;
       executionWrappers: Array<{ id: string; label?: string }>;
       kill: () => void;
       /** Write data to the process stdin. */
