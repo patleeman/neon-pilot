@@ -1,4 +1,4 @@
-import type { ExtensionBackendContext } from './extensionBackend.js';
+import type { ExtensionHostToolContext } from './extensionHostProtocol.js';
 
 export interface ExtensionHostToolContextSnapshot {
   conversationId?: string;
@@ -9,7 +9,7 @@ export interface ExtensionHostToolContextSnapshot {
 }
 
 export function createExtensionHostToolContextSnapshot(
-  context?: ExtensionBackendContext['toolContext'],
+  context?: ExtensionHostToolContext,
 ): ExtensionHostToolContextSnapshot | undefined {
   if (!context) return undefined;
   return {
@@ -23,7 +23,7 @@ export function createExtensionHostToolContextSnapshot(
 
 export function createExtensionBackendToolContextFromSnapshot(
   snapshot?: ExtensionHostToolContextSnapshot,
-): ExtensionBackendContext['toolContext'] | undefined {
+): ExtensionHostToolContext | undefined {
   if (!snapshot) return undefined;
   return { ...snapshot };
 }

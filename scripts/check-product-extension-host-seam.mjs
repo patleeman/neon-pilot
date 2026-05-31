@@ -21,6 +21,10 @@ const productRuntimeFiles = ['packages/desktop/server/protocolCli.ts'];
 const filePattern = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 const forbiddenPatterns = [
   {
+    pattern: /import(?:\s+type)?[\s\S]{0,250}\s+from\s+['"][^'"]*\/extensions\/extensionBackend\.js['"]/,
+    message: 'product runtime code must not import extensionBackend; use ExtensionHostClient and extensionHostProtocol types',
+  },
+  {
     pattern: /import\s+\{[^}]*\binvokeExtensionAction\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionBackend\.js['"]/,
     message: 'product runtime code must invoke extension actions through ExtensionHostClient',
   },

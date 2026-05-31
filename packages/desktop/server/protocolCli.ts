@@ -3,8 +3,8 @@ import { pathToFileURL } from 'node:url';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
-import type { ExtensionBackendServerContext } from './extensions/extensionBackend.js';
 import { getExtensionHostClient } from './extensions/extensionHostClient.js';
+import type { ExtensionHostBackendServerContext } from './extensions/extensionHostProtocol.js';
 
 export const PROTOCOL_CLI_EXIT_CODES = {
   usage: 1,
@@ -14,7 +14,7 @@ export const PROTOCOL_CLI_EXIT_CODES = {
   runtimeFailure: 5,
 } as const;
 
-function buildServerContext(): ExtensionBackendServerContext {
+function buildServerContext(): ExtensionHostBackendServerContext {
   const repoRoot = process.cwd();
   const runtimeState = createRuntimeState({
     repoRoot,
