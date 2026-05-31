@@ -99,7 +99,7 @@ describe('ConversationPage desktop local state', () => {
       </AppDataContext.Provider>,
     );
 
-    expect(conversationBootstrap).toHaveBeenCalledWith(undefined, expect.any(Object));
+    expect(conversationBootstrap).toHaveBeenCalledWith('reserved-conv', expect.any(Object));
   }, 15000);
 
   it('renders the active conversation from the dedicated desktop state subscription', async () => {

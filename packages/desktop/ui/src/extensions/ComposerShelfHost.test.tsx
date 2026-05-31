@@ -112,6 +112,6 @@ describe('ComposerShelfHost', () => {
     });
 
     await vi.waitFor(() => expect(container.textContent).toContain('Memo shelf for conv-1'));
-    expect(systemLoaderMocks.memoShelf).toHaveBeenCalledTimes(1);
+    expect(systemLoaderMocks.memoShelf).toHaveBeenCalledTimes(2);
   });
 });

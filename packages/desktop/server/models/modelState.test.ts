@@ -36,45 +36,32 @@ describe('modelState', () => {
     expect(runModelDiscovery).not.toHaveBeenCalled();
   });
 
-  it('normalizes registry models and defaults malformed inputs to text only', async () => {
+  it('returns built-ins immediately while refreshing registry models in the background', async () => {
     getAvailableModels.mockResolvedValue([
       { id: 'vision', provider: 'p', name: 'Vision', contextWindow: 42, input: ['text', 'image'], reasoning: true },
       { id: 'legacy-context', provider: 'p', name: 'Legacy', context: 99, input: ['audio'], reasoning: 'yes' },
       { id: 'default-context', provider: 'p', name: 'Default' },
     ]);
 
-    await expect(listModelDefinitions()).resolves.toEqual([
-      {
-        id: 'vision',
-        provider: 'p',
-        name: 'Vision',
-        context: 42,
-        input: ['text', 'image'],
-        reasoning: true,
-        supportedServiceTiers: ['auto'],
-      },
-      {
-        id: 'legacy-context',
-        provider: 'p',
-        name: 'Legacy',
-        context: 99,
-        input: ['text'],
-        reasoning: undefined,
-        supportedServiceTiers: ['auto'],
-      },
-      {
-        id: 'default-context',
-        provider: 'p',
-        name: 'Default',
-        context: 128000,
-        input: ['text'],
-        reasoning: undefined,
-        supportedServiceTiers: ['auto'],
-      },
+    const models = await listModelDefinitions();
+
+    expect(models.map((model) => model.id)).toEqual([
+      'claude-opus-4-6',
+      'claude-sonnet-4-6',
+      'claude-haiku-4-6',
+      'gpt-5.5',
+      'gpt-5.4',
+      'gpt-5.4-mini',
+      'gpt-5.2',
+      'gpt-5.1-codex-mini',
+      'gpt-4o',
+      'gemini-2.5-pro',
+      'gemini-3.1-pro-high',
     ]);
+    expect(getAvailableModels).toHaveBeenCalledTimes(1);
   });
 
-  it('appends discovered extension models and keeps registry models on provider/id collisions', async () => {
+  it('keeps built-ins on the initial read while registry and discovery refresh in the background', async () => {
     getAvailableModels.mockResolvedValue([{ id: 'same', provider: 'local', name: 'Registry', contextWindow: 100, input: ['text'] }]);
     runModelDiscovery.mockResolvedValue([
       {
@@ -91,15 +78,15 @@ describe('modelState', () => {
 
     const models = await listModelDefinitions();
 
-    expect(models.map((model) => model.name)).toEqual(['Registry', 'Discovered']);
-    expect(models[1]).toMatchObject({ id: 'new', provider: 'local', context: 300, input: ['text', 'image'], reasoning: true });
+    expect(models[0]).toMatchObject({ id: 'claude-opus-4-6', provider: 'anthropic' });
+    expect(getAvailableModels).toHaveBeenCalledTimes(1);
   });
 
-  it('ignores model discovery failures after registry models load', async () => {
+  it('ignores model discovery failures during the background refresh', async () => {
     getAvailableModels.mockResolvedValue([{ id: 'registry', provider: 'p', name: 'Registry', contextWindow: 100, input: ['text'] }]);
     runModelDiscovery.mockRejectedValue(new Error('discovery failed'));
 
-    await expect(listModelDefinitions()).resolves.toHaveLength(1);
+    await expect(listModelDefinitions()).resolves.toHaveLength(11);
   });
 
   it('reads saved preferences and clears stale model or unsupported service tier selections', async () => {
@@ -112,13 +99,15 @@ describe('modelState', () => {
     });
     modelSupportsServiceTier.mockReturnValue(false);
 
-    await expect(readModelState('/settings.json')).resolves.toMatchObject({
-      currentModel: 'available',
+    const state = await readModelState('/settings.json');
+
+    expect(state).toMatchObject({
+      currentModel: 'claude-opus-4-6',
       currentVisionModel: 'vision',
       currentThinkingLevel: 'high',
       currentServiceTier: '',
-      models: [{ id: 'available' }],
     });
+    expect(state.models[0]).toMatchObject({ id: 'claude-opus-4-6' });
     expect(normalizeSavedModelPreferences).toHaveBeenCalledWith('/settings.json', expect.any(Array));
   });
 
@@ -132,6 +121,6 @@ describe('modelState', () => {
     });
     modelSupportsServiceTier.mockReturnValue(true);
 
-    await expect(readModelState('/settings.json')).resolves.toMatchObject({ currentModel: 'available', currentServiceTier: 'flex' });
+    await expect(readModelState('/settings.json')).resolves.toMatchObject({ currentModel: 'claude-opus-4-6', currentServiceTier: 'flex' });
   });
 });

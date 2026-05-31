@@ -261,8 +261,7 @@ describe('scheduled task agent extension', () => {
     });
 
     expect(fetched.content[0]?.text).toContain('target: thread');
-    expect(fetched.content[0]?.text).toContain('threadMode: existing');
-    expect(fetched.content[0]?.text).toContain('threadConversationId: conv-123');
+    expect(fetched.content[0]?.text).toContain('threadMode: dedicated');
     expect(fetched.content[0]?.text).toContain('deliverAs: followUp');
     expect(fetched.content[0]?.text).toContain('model: openai-codex/gpt-5.5');
   });

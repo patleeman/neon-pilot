@@ -4,19 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.3-rc.2** — release candidate being prepared.
+**v0.9.3-rc.3** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.2
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.3
 
 Highlights in this train:
 
-- Adds a dedicated Extensions use-cases page with 8 categories and richer nav link infrastructure.
-- Improves Extension Manager label clarity: "Add-ons" renamed to "Installed" / "Installed Extensions".
-- Fixes conversation reliability: SQL catalog sync on workspace changes, transcript boundary gating, and session meta event correctness.
-- Polishes chat UX with capped tool output height, independent activity shelf mounting, and stuck-indicator fix on SSE disconnect.
-- Hardens sidebar navigation with unread indicator cleanup, session cwd inclusion, and null workspaceCwd fallback.
-- Includes the LM Studio extension as a first-party installable extension.
-- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.2` candidate.
+- Improves desktop startup responsiveness with a lighter local API bootstrap, warmer model/provider caches, bounded session snapshots, and safer backend warmup paths.
+- Restores and hardens workbench side chats, including preference inheritance, distinct forked chats, reliable tab startup, and clearer side-chat titles.
+- Brings the built-in Terminal back to a real PTY flow with terminal input, output streaming, closed-tab cleanup, and extension spawn typing for PTY sessions.
+- Migrates app data toward entity stores while preserving sidebar layout behavior, thread pruning safety, and conversation running-state correctness.
+- Tightens chat and conversation reliability with better onboarding conversation creation, provider option de-duplication, opencode kimi handling, local product API errors, and release-blocking warmup guards.
+- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.3` candidate.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

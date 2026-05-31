@@ -1,6 +1,6 @@
 {
   "name": "@neon-pilot/extensions",
-  "version": "0.9.3-rc.2",
+  "version": "0.9.3-rc.3",
   "license": "MIT",
   "description": "Public extension API types for Neon Pilot",
   "type": "module",

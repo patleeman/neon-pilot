@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.3-rc.3 — 2026-05-31
+
+### Highlights
+
+- Improves desktop startup responsiveness with a lighter local API bootstrap, warmer model/provider caches, bounded session snapshots, and safer backend warmup paths.
+- Restores and hardens workbench side chats, including preference inheritance, distinct forked chats, reliable tab startup, and clearer side-chat titles.
+- Brings the built-in Terminal back to a real PTY flow with terminal input, output streaming, closed-tab cleanup, and extension spawn typing for PTY sessions.
+- Migrates app data toward entity stores while preserving sidebar layout behavior, thread pruning safety, and conversation running-state correctness.
+- Tightens chat and conversation reliability with better onboarding conversation creation, provider option de-duplication, opencode kimi handling, local product API errors, and release-blocking warmup guards.
+- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.3` candidate.
+
+### Notes
+
+- 91 commits since the previous release.
+
 ## 0.9.3-rc.2 — 2026-05-29
 
 ### Highlights

@@ -1139,8 +1139,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('<details');
     expect(html).toContain('data-context-shelf="1"');
     expect(html).toContain('bg-border-subtle');
-    expect(html).toContain('border-border-subtle/45');
-    expect(html).toContain('hover:bg-surface/35');
+    expect(html).toContain('h-px');
     expect(html).toContain('Context added');
     expect(html).toContain('data-context-type="referenced_context"');
     expect(html).toContain('Conversation automation context');

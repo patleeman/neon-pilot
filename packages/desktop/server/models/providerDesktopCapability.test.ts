@@ -91,8 +91,14 @@ describe('saveModelProviderCapability', () => {
   });
 
   it('auto-populates model rows for providers with registered defaults when API key is provided', () => {
-    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({ providers: { 'opencode-go': { models: [] } } } as never);
-    vi.mocked(modelProviders.upsertModelProviderModel).mockReturnValue({ providers: { 'opencode-go': { models: ['model-a'] } } } as never);
+    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({
+      filePath: '/tmp/providers.json',
+      providers: [{ id: 'opencode-go', authHeader: true, models: [] }],
+    } as never);
+    vi.mocked(modelProviders.upsertModelProviderModel).mockReturnValue({
+      filePath: '/tmp/providers.json',
+      providers: [{ id: 'opencode-go', authHeader: true, models: [{ id: 'model-a' }] }],
+    } as never);
     vi.mocked(modelRegistry.createModelRegistryForAuthFile).mockReturnValue({
       getAll: () => [
         {
@@ -116,7 +122,10 @@ describe('saveModelProviderCapability', () => {
         name: 'model-a',
       }),
     );
-    expect(result).toEqual({ providers: { 'opencode-go': { models: ['model-a'] } });
+    expect(result).toEqual({
+      filePath: '/tmp/providers.json',
+      providers: [{ id: 'opencode-go', authHeader: true, models: [{ id: 'model-a' }] }],
+    });
   });
 
   it('throws on empty provider', () => {
@@ -208,8 +217,14 @@ describe('setProviderApiKeyCapability', () => {
         },
       ],
     } as never);
-    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({ providers: { 'opencode-go': { models: [] } } } as never);
-    vi.mocked(modelProviders.upsertModelProviderModel).mockReturnValue({ providers: { 'opencode-go': { models: ['model-a'] } } } as never);
+    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({
+      filePath: '/tmp/providers.json',
+      providers: [{ id: 'opencode-go', authHeader: true, models: [] }],
+    } as never);
+    vi.mocked(modelProviders.upsertModelProviderModel).mockReturnValue({
+      filePath: '/tmp/providers.json',
+      providers: [{ id: 'opencode-go', authHeader: true, models: [{ id: 'model-a' }] }],
+    } as never);
 
     const context = createContext();
     const result = setProviderApiKeyCapability(context, ' opencode-go ', ' sk-123 ');
