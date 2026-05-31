@@ -127,20 +127,6 @@ describe('terminal backend', () => {
     });
   });
 
-  describe('drainTerminal', () => {
-    it('returns buffered terminal output once', async () => {
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-      const onStdout = shellSpawn.mock.calls[0][0].onStdout;
-
-      onStdout('one');
-      onStdout('two');
-
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: 'onetwo' });
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '' });
-    });
-  });
-
   describe('resizeTerminal', () => {
     it('resizes an existing terminal', async () => {
       const handlePty = createMockSpawnHandle();
@@ -213,7 +199,7 @@ describe('terminal backend', () => {
       onStdout('some terminal output\n');
 
       const event = await nextPromise;
-      expect(event.value).toEqual({ event: 'output', data: 'some terminal output\n' });
+      expect(event.value).toEqual({ data: { type: 'output', data: 'some terminal output\n' } });
       expect(event.done).toBe(false);
 
       // close the terminal → stream should get exit event
@@ -222,7 +208,7 @@ describe('terminal backend', () => {
       onExit({ code: 0, signal: null });
 
       const exitEvent = await exitPromise;
-      expect(exitEvent.value).toEqual({ event: 'exit', data: { code: 0 } });
+      expect(exitEvent.value).toEqual({ data: { type: 'exit', code: 0 } });
     });
   });
 
@@ -249,8 +235,8 @@ describe('terminal backend', () => {
 
       const e1 = await p1;
       const e2 = await p2;
-      expect(e1.value).toEqual({ event: 'exit', data: { code: 1 } });
-      expect(e2.value).toEqual({ event: 'exit', data: { code: 1 } });
+      expect(e1.value).toEqual({ data: { type: 'exit', code: 1 } });
+      expect(e2.value).toEqual({ data: { type: 'exit', code: 1 } });
     });
   });
 });

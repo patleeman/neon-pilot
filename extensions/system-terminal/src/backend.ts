@@ -19,7 +19,6 @@ interface TerminalSession {
     resize: (cols: number, rows: number) => void;
   };
   listeners: Set<(event: ExtensionRouteSseEvent) => void>;
-  outputBuffer: string[];
   startedAt: number;
   closed: boolean;
 }
@@ -52,8 +51,7 @@ function resolveShellArgs(shell: string, options: { interactive?: boolean } = {}
 
 function broadcastOutput(session: TerminalSession, data: string): void {
   if (session.closed) return;
-  session.outputBuffer.push(data);
-  const event: ExtensionRouteSseEvent = { event: 'output', data };
+  const event: ExtensionRouteSseEvent = { data: { type: 'output', data } };
   for (const listener of session.listeners) {
     try {
       listener(event);
@@ -66,7 +64,7 @@ function broadcastOutput(session: TerminalSession, data: string): void {
 function broadcastExit(session: TerminalSession, code: number | null): void {
   if (session.closed) return;
   session.closed = true;
-  const event: ExtensionRouteSseEvent = { event: 'exit', data: { code } };
+  const event: ExtensionRouteSseEvent = { data: { type: 'exit', code } };
   for (const listener of session.listeners) {
     try {
       listener(event);
@@ -158,7 +156,6 @@ export async function createTerminal(
     usingPty,
     process: child,
     listeners: new Set(),
-    outputBuffer: [],
     startedAt: Date.now(),
     closed: false,
   };
@@ -173,14 +170,6 @@ export async function writeTerminal(input: { id: string; data: string }, _ctx: E
   if (!session || session.closed) return { ok: false };
   session.process.write(input.data);
   return { ok: true };
-}
-
-export async function drainTerminal(input: { id: string }, _ctx: ExtensionBackendContext): Promise<{ ok: boolean; output: string }> {
-  const session = sessions.get(input.id);
-  if (!session || session.closed) return { ok: false, output: '' };
-  const output = session.outputBuffer.join('');
-  session.outputBuffer.length = 0;
-  return { ok: true, output };
 }
 
 export async function resizeTerminal(

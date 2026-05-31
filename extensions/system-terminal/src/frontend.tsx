@@ -1,16 +1,41 @@
 import '@xterm/xterm/css/xterm.css';
 
-import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
+import { createDesktopAwareEventSource, type ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { useEffect, useRef } from 'react';
 
 interface TerminalState {
   id: string | null;
-  eventSource: EventSource | null;
+  eventSource: TerminalEventSource | null;
   xterm: Terminal | null;
   fitAddon: FitAddon | null;
   usingPty: boolean;
+}
+
+type TerminalEventSource = {
+  onmessage: ((event: MessageEvent<string>) => void) | null;
+  onerror: ((event: Event) => void) | null;
+  close(): void;
+};
+
+type TerminalStreamMessage = { type: 'output'; data: string } | { type: 'exit'; code: number | null };
+
+const TERMINAL_ROUTE_PREFIX = '/api/extensions/system-terminal/routes';
+
+function buildTerminalStreamUrl(id: string): string {
+  return `${TERMINAL_ROUTE_PREFIX}/stream?id=${encodeURIComponent(id)}`;
+}
+
+function parseTerminalStreamMessage(data: string): TerminalStreamMessage | null {
+  try {
+    const parsed = JSON.parse(data) as Partial<TerminalStreamMessage>;
+    if (parsed.type === 'output' && typeof parsed.data === 'string') return parsed as TerminalStreamMessage;
+    if (parsed.type === 'exit' && (parsed.code === null || typeof parsed.code === 'number')) return parsed as TerminalStreamMessage;
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function readRgbVar(element: HTMLElement, name: string): string {
@@ -119,7 +144,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
 
     // Create terminal session via backend action
     let terminalId: string | null = null;
-    let drainTimer: ReturnType<typeof window.setInterval> | null = null;
+    let eventSource: TerminalEventSource | null = null;
     let closed = false;
     let usingPty = false;
 
@@ -165,19 +190,23 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         // Write a welcome message
         xterm.writeln(`\x1b[90mTerminal ready (pid: ${result.pid ?? '?'}). Type 'exit' to close.\x1b[0m\r\n`);
 
-        const drainOutput = () => {
-          if (closed || !terminalId) return;
-          pa.extension
-            .invoke<{ ok: boolean; output: string }>('terminalDrain', { id: terminalId })
-            .then((drain) => {
-              if (!closed && drain.ok && drain.output) xterm.write(drain.output);
-            })
-            .catch(() => {
-              // Ignore transient drain errors; write/close paths surface terminal state.
-            });
+        eventSource = createDesktopAwareEventSource(buildTerminalStreamUrl(result.id)) as TerminalEventSource;
+        state.eventSource = eventSource;
+        eventSource.onmessage = (event) => {
+          if (closed) return;
+          const message = parseTerminalStreamMessage(event.data);
+          if (!message) return;
+          if (message.type === 'output') {
+            xterm.write(message.data);
+            return;
+          }
+          closed = true;
+          xterm.writeln(`\r\n\x1b[90mProcess exited with code ${message.code ?? 'unknown'}.\x1b[0m`);
         };
-        drainTimer = window.setInterval(drainOutput, 150);
-        drainOutput();
+        eventSource.onerror = () => {
+          if (closed) return;
+          xterm.writeln('\r\n\x1b[91mTerminal output stream disconnected.\x1b[0m');
+        };
       })
       .catch((error) => {
         if (closed) return;
@@ -251,14 +280,12 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         pa.extension.invoke('terminalClose', { id: terminalId }).catch(() => {});
       }
 
-      if (drainTimer) {
-        window.clearInterval(drainTimer);
-      }
+      eventSource?.close();
 
       xterm.dispose();
       state.id = null;
-      delete container.dataset.terminalId;
       state.eventSource = null;
+      delete container.dataset.terminalId;
       state.xterm = null;
       state.fitAddon = null;
       state.usingPty = false;
