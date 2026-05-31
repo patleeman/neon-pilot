@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const invokeExtensionAction = vi.fn();
-const listEnabledExtensionEntries = vi.fn();
+const extensionHostClient = vi.hoisted(() => ({ invokeAction: vi.fn() }));
+const listEnabledExtensionEntries = vi.hoisted(() => vi.fn());
 
-vi.mock('../extensions/extensionBackend.js', () => ({ invokeExtensionAction }));
+vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('../extensions/extensionRegistry.js', () => ({ listEnabledExtensionEntries }));
 
 const { runModelDiscovery } = await import('./modelDiscovery.js');
 
 describe('runModelDiscovery', () => {
   beforeEach(() => {
-    invokeExtensionAction.mockReset();
+    extensionHostClient.invokeAction.mockReset();
     listEnabledExtensionEntries.mockReset();
   });
 
@@ -21,7 +21,7 @@ describe('runModelDiscovery', () => {
     ]);
 
     await expect(runModelDiscovery()).resolves.toEqual([]);
-    expect(invokeExtensionAction).not.toHaveBeenCalled();
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
   });
 
   it('invokes all discovery actions and returns valid live providers', async () => {
@@ -29,7 +29,7 @@ describe('runModelDiscovery', () => {
       { manifest: { id: 'local-a', contributes: { modelDiscovery: { action: 'discover' } } } },
       { manifest: { id: 'local-b', contributes: { modelDiscovery: { action: 'scan' } } } },
     ]);
-    invokeExtensionAction
+    extensionHostClient.invokeAction
       .mockResolvedValueOnce({
         ok: true,
         result: {
@@ -51,8 +51,8 @@ describe('runModelDiscovery', () => {
         models: [{ id: 'mlx', name: 'MLX', reasoning: false, input: ['text'], contextWindow: 8192 }],
       },
     ]);
-    expect(invokeExtensionAction).toHaveBeenNthCalledWith(1, 'local-a', 'discover', null);
-    expect(invokeExtensionAction).toHaveBeenNthCalledWith(2, 'local-b', 'scan', null);
+    expect(extensionHostClient.invokeAction).toHaveBeenNthCalledWith(1, { extensionId: 'local-a', actionId: 'discover', input: null });
+    expect(extensionHostClient.invokeAction).toHaveBeenNthCalledWith(2, { extensionId: 'local-b', actionId: 'scan', input: null });
   });
 
   it('swallows rejected discovery actions and filters malformed provider results', async () => {
@@ -62,7 +62,7 @@ describe('runModelDiscovery', () => {
       { manifest: { id: 'missing-base-url', contributes: { modelDiscovery: { action: 'discover' } } } },
       { manifest: { id: 'missing-models', contributes: { modelDiscovery: { action: 'discover' } } } },
     ]);
-    invokeExtensionAction
+    extensionHostClient.invokeAction
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce({ ok: true, result: null })
       .mockResolvedValueOnce({ ok: true, result: { provider: 'bad', models: [] } })

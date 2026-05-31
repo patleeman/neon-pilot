@@ -1,4 +1,4 @@
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listExtensionPromptContextProviderRegistrations } from '../extensions/extensionRegistry.js';
 import type { AssemblyDiagnostic } from './types.js';
 
@@ -58,11 +58,15 @@ export async function buildPromptContextPlan(input: {
       const providerId = `${provider.extensionId}/${provider.id}`;
       try {
         const invokeResult = await withPromptContextProviderBudget(
-          invokeExtensionAction(provider.extensionId, provider.handler, {
-            prompt: input.prompt,
-            conversationId: input.conversationId,
-            currentCwd: input.currentCwd,
-            relatedConversationIds: selectedSessionIds,
+          getExtensionHostClient().invokeAction({
+            extensionId: provider.extensionId,
+            actionId: provider.handler,
+            input: {
+              prompt: input.prompt,
+              conversationId: input.conversationId,
+              currentCwd: input.currentCwd,
+              relatedConversationIds: selectedSessionIds,
+            },
           }),
         );
         if (invokeResult === PROMPT_CONTEXT_PROVIDER_TIMEOUT) {

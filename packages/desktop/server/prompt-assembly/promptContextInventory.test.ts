@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const extensionBackend = vi.hoisted(() => ({ invokeExtensionAction: vi.fn() }));
+const extensionHostClient = vi.hoisted(() => ({ invokeAction: vi.fn() }));
 const registry = vi.hoisted(() => ({ listExtensionPromptContextProviderRegistrations: vi.fn(() => []) }));
 
-vi.mock('../extensions/extensionBackend.js', () => extensionBackend);
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => extensionHostClient,
+}));
 vi.mock('../extensions/extensionRegistry.js', () => registry);
 
 import { buildPromptContextPlan } from './promptContextInventory.js';
@@ -31,7 +33,7 @@ describe('prompt context inventory', () => {
 
     const plan = await buildPromptContextPlan({ prompt: 'hello', conversationId: 'conv-1' });
 
-    expect(extensionBackend.invokeExtensionAction).not.toHaveBeenCalled();
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
     expect(plan).toEqual({ blocks: [], contextMessages: [], diagnostics: [] });
   });
 
@@ -39,7 +41,7 @@ describe('prompt context inventory', () => {
     registry.listExtensionPromptContextProviderRegistrations.mockReturnValue([
       { extensionId: 'ext', id: 'provider', handler: 'provideContext', title: 'Provider Title' },
     ]);
-    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({
+    extensionHostClient.invokeAction.mockResolvedValueOnce({
       ok: true,
       result: {
         contextMessages: [{ customType: 'raw', content: 'raw context' }],
@@ -60,11 +62,15 @@ describe('prompt context inventory', () => {
       contextMessages: [{ customType: 'existing', content: 'keep me' }],
     });
 
-    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith('ext', 'provideContext', {
-      prompt: 'summarize',
-      conversationId: 'conv-1',
-      currentCwd: '/repo',
-      relatedConversationIds: ['conv-2'],
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith({
+      extensionId: 'ext',
+      actionId: 'provideContext',
+      input: {
+        prompt: 'summarize',
+        conversationId: 'conv-1',
+        currentCwd: '/repo',
+        relatedConversationIds: ['conv-2'],
+      },
     });
     expect(plan.blocks).toEqual([
       { id: 'block-id', providerId: 'ext/provider', title: 'Block Title', content: 'block content', visibility: 'debug' },
@@ -92,7 +98,7 @@ describe('prompt context inventory', () => {
       { extensionId: 'ext', id: 'failed', handler: 'failed', title: 'Failed Provider' },
       { extensionId: 'ext', id: 'throws', handler: 'throws' },
     ]);
-    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: false, error: 'bad' }).mockRejectedValueOnce(new Error('boom'));
+    extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: false, error: 'bad' }).mockRejectedValueOnce(new Error('boom'));
 
     const plan = await buildPromptContextPlan({ prompt: 'hello', conversationId: 'conv-1', selectedSessionIds: ['related-1'] });
 

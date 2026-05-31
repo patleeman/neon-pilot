@@ -54,6 +54,7 @@ The extension host interface starts in-process and then becomes an RPC adapter:
 ```text
 Product runtime caller
   -> ExtensionHostClient
+  -> ExtensionHostRequest
   -> InProcessExtensionHostClient
   -> existing extension backend implementation
 ```
@@ -63,6 +64,7 @@ The later adapter swaps only the final hop:
 ```text
 Product runtime caller
   -> ExtensionHostClient
+  -> ExtensionHostRequest
   -> RpcExtensionHostClient
   -> extension host process
 ```

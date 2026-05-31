@@ -11,7 +11,7 @@
  * picker always reflects current runtime state with no persistent side effects.
  */
 
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listEnabledExtensionEntries } from '../extensions/extensionRegistry.js';
 
 export interface DiscoveredModelEntry {
@@ -41,7 +41,11 @@ export async function runModelDiscovery(): Promise<DiscoveredProvider[]> {
   if (registrations.length === 0) return [];
 
   const results = await Promise.allSettled(
-    registrations.map(({ extensionId, action }) => invokeExtensionAction(extensionId, action, null).then((r) => (r.ok ? r.result : null))),
+    registrations.map(({ extensionId, action }) =>
+      getExtensionHostClient()
+        .invokeAction({ extensionId, actionId: action, input: null })
+        .then((r) => (r.ok ? r.result : null)),
+    ),
   );
 
   return results.flatMap((r) => {
