@@ -40,6 +40,5 @@ Current installable extensions:
 - `system-local-models` — local MLX and GGUF model management UI. Runtime implementation lives in `shared/local-model-runtimes`.
 - `system-self-preservation` — agent self-preservation instruction and context hooks.
 - `system-session-exchange` — import/export flow for conversation session handoff experiments.
-- `system-speechmike` — SpeechMike hardware integration.
 - `system-suggested-context` — related conversation suggestions for new prompts.
 - `system-video-probe` — analyze UI recordings and videos with a video-capable model.

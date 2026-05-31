@@ -107,7 +107,7 @@ describe('extensionShell', () => {
     handle.kill();
 
     expect(spawnProcess).toHaveBeenCalledWith(expect.objectContaining({ options: { detached: true, stdio: ['pipe', 'pipe', 'pipe'] } }));
-    expect(handle).toMatchObject({ pid: 123, executionWrappers: [{ id: 'wrap' }] });
+    expect(handle).toMatchObject({ pid: 123, usingPty: false, executionWrappers: [{ id: 'wrap' }] });
     expect(typeof handle.write).toBe('function');
     expect(typeof handle.resize).toBe('function');
     expect(onStdout).toHaveBeenCalledWith('hello');
@@ -165,7 +165,7 @@ describe('extensionShell', () => {
     handle.kill();
     expect(mockPty.kill).toHaveBeenCalled();
 
-    expect(handle).toMatchObject({ pid: 456, executionWrappers: [{ id: 'wrap-pty' }] });
+    expect(handle).toMatchObject({ pid: 456, usingPty: true, executionWrappers: [{ id: 'wrap-pty' }] });
   });
 
   it('spawns with pty:true uses default 80x24 dimensions', async () => {
@@ -216,7 +216,7 @@ describe('extensionShell', () => {
     handle.resize(100, 40);
     handle.kill();
 
-    expect(handle).toMatchObject({ pid: 123, executionWrappers: [{ id: 'pipe-fallback' }] });
+    expect(handle).toMatchObject({ pid: 123, usingPty: false, executionWrappers: [{ id: 'pipe-fallback' }] });
     expect(onStdout).toHaveBeenCalledWith('pipe stdout');
     expect(onStderr).toHaveBeenCalledWith('pipe stderr');
     expect(onExit).toHaveBeenCalledWith({ code: 0, signal: null });

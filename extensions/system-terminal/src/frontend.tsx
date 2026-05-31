@@ -7,7 +7,6 @@ import { useEffect, useRef } from 'react';
 
 interface TerminalState {
   id: string | null;
-  eventSource: EventSource | null;
   xterm: Terminal | null;
   fitAddon: FitAddon | null;
   usingPty: boolean;
@@ -16,6 +15,14 @@ interface TerminalState {
 function readRgbVar(element: HTMLElement, name: string): string {
   const value = getComputedStyle(element).getPropertyValue(name).trim();
   return value ? `rgb(${value})` : '';
+}
+
+function normalizeDrainResult(value: unknown): { ok: boolean; output: string } | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate =
+    'result' in value && value.result && typeof value.result === 'object' ? (value.result as Record<string, unknown>) : (value as Record<string, unknown>);
+  if (typeof candidate.ok !== 'boolean') return null;
+  return { ok: candidate.ok, output: typeof candidate.output === 'string' ? candidate.output : '' };
 }
 
 function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key' | 'metaKey'>, options: { usingPty: boolean }): string | null {
@@ -48,7 +55,7 @@ function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key'
 
 export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const stateRef = useRef<TerminalState>({ id: null, eventSource: null, xterm: null, fitAddon: null, usingPty: false });
+  const stateRef = useRef<TerminalState>({ id: null, xterm: null, fitAddon: null, usingPty: false });
   const pendingWritesRef = useRef<string[]>([]);
 
   const focusTerminal = (xterm: Terminal) => {
@@ -122,6 +129,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     let drainTimer: ReturnType<typeof window.setInterval> | null = null;
     let closed = false;
     let usingPty = false;
+    let reportedDrainError = false;
 
     const echoInput = (data: string) => {
       if (usingPty) return;
@@ -150,7 +158,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     };
 
     pa.extension
-      .invoke<{ id: string; pid: number | null; usingPty: boolean }>('terminalCreate', {
+      .invoke<{ id: string; pid: number | null; usingPty: boolean; initialOutput?: string }>('terminalCreate', {
         cwd: context.cwd ?? undefined,
       })
       .then((result) => {
@@ -163,20 +171,26 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         flushPendingWrites(result.id);
 
         // Write a welcome message
-        xterm.writeln(`\x1b[90mTerminal ready (pid: ${result.pid ?? '?'}). Type 'exit' to close.\x1b[0m\r\n`);
+        const modeLabel = result.usingPty ? 'PTY ready' : 'Terminal ready (degraded mode)';
+        xterm.writeln(`\x1b[90m${modeLabel} (pid: ${result.pid ?? '?'}). Type 'exit' to close.\x1b[0m\r\n`);
+        if (result.initialOutput) xterm.write(result.initialOutput);
 
         const drainOutput = () => {
           if (closed || !terminalId) return;
           pa.extension
-            .invoke<{ ok: boolean; output: string }>('terminalDrain', { id: terminalId })
-            .then((drain) => {
-              if (!closed && drain.ok && drain.output) xterm.write(drain.output);
+            .invoke('terminalDrain', { id: terminalId })
+            .then((value) => {
+              const drain = normalizeDrainResult(value);
+              if (!closed && drain?.ok && drain.output) xterm.write(drain.output);
             })
-            .catch(() => {
-              // Ignore transient drain errors; write/close paths surface terminal state.
+            .catch((error) => {
+              if (closed || reportedDrainError) return;
+              reportedDrainError = true;
+              const message = error instanceof Error ? error.message : String(error);
+              xterm.writeln(`\r\n\x1b[91mTerminal output drain failed: ${message}\x1b[0m`);
             });
         };
-        drainTimer = window.setInterval(drainOutput, 150);
+        drainTimer = window.setInterval(drainOutput, 33);
         drainOutput();
       })
       .catch((error) => {
@@ -258,7 +272,6 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       xterm.dispose();
       state.id = null;
       delete container.dataset.terminalId;
-      state.eventSource = null;
       state.xterm = null;
       state.fitAddon = null;
       state.usingPty = false;

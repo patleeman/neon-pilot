@@ -2,7 +2,7 @@ import { chmodSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
-import { type IPty, spawn as spawnPty } from 'node-pty';
+import { type IPty, spawn as defaultSpawnPty } from 'node-pty';
 
 import { type ProcessLaunchResult, resolveProcessLaunch } from './processLauncher.js';
 
@@ -22,14 +22,35 @@ export interface PtySpawnResult {
 
 const require = createRequire(import.meta.url);
 
+type NodePtyModule = Pick<typeof import('node-pty'), 'spawn'>;
+
+function createNativeModulesRequire(): NodeJS.Require | null {
+  const nativeModulesDir = process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR?.trim();
+  if (!nativeModulesDir) return null;
+  return createRequire(resolve(nativeModulesDir, 'package.json'));
+}
+
+function loadNodePty(): { nodePty: NodePtyModule; nodePtyRequire: NodeJS.Require } {
+  const nativeRequire = createNativeModulesRequire();
+  if (nativeRequire) {
+    try {
+      return { nodePty: nativeRequire('node-pty') as NodePtyModule, nodePtyRequire: nativeRequire };
+    } catch {
+      // Fall through to the package manager copy; the spawn call will surface
+      // native ABI or helper issues if that copy is not usable in this runtime.
+    }
+  }
+  return { nodePty: { spawn: defaultSpawnPty }, nodePtyRequire: require };
+}
+
 function sanitizePtyEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   return Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
 }
 
-function ensureNodePtySpawnHelperExecutable(): void {
+function ensureNodePtySpawnHelperExecutable(nodePtyRequire: NodeJS.Require): void {
   if (process.platform !== 'darwin') return;
   try {
-    const packageJsonPath = require.resolve('node-pty/package.json');
+    const packageJsonPath = nodePtyRequire.resolve('node-pty/package.json');
     const helperPath = resolve(dirname(packageJsonPath), 'prebuilds', `darwin-${process.arch}`, 'spawn-helper');
     if (existsSync(helperPath)) {
       chmodSync(helperPath, 0o755);
@@ -47,7 +68,8 @@ function ensureNodePtySpawnHelperExecutable(): void {
  * wrappers (env injection, cwd resolution, etc.) apply consistently.
  */
 export function createPtyProcess(input: PtySpawnOptions): PtySpawnResult {
-  ensureNodePtySpawnHelperExecutable();
+  const { nodePty, nodePtyRequire } = loadNodePty();
+  ensureNodePtySpawnHelperExecutable(nodePtyRequire);
 
   const shell = process.env.SHELL || '/bin/bash';
 
@@ -63,7 +85,7 @@ export function createPtyProcess(input: PtySpawnOptions): PtySpawnResult {
     env: input.env,
   });
 
-  const pty = spawnPty(launch.command, launch.args, {
+  const pty = nodePty.spawn(launch.command, launch.args, {
     name: 'xterm-256color',
     cols: input.cols ?? 80,
     rows: input.rows ?? 24,

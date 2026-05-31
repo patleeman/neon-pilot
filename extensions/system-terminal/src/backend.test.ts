@@ -11,12 +11,14 @@ function createBackendContext(overrides?: Partial<ExtensionBackendContext>): Ext
 
 function createMockSpawnHandle(overrides?: {
   pid?: number | null;
+  usingPty?: boolean;
   write?: (data: string) => void;
   resize?: (cols: number, rows: number) => void;
   kill?: () => void;
 }) {
   return {
     pid: overrides?.pid ?? 555,
+    usingPty: overrides?.usingPty ?? true,
     executionWrappers: [] as Array<{ id: string }>,
     write: vi.fn(),
     resize: vi.fn(),
@@ -139,6 +141,18 @@ describe('terminal backend', () => {
       await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: 'onetwo' });
       await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '' });
     });
+
+    it('includes output emitted while the PTY spawn promise is resolving', async () => {
+      const handlePty = createMockSpawnHandle();
+      shellSpawn.mockImplementation(async (options) => {
+        options.onStdout?.('prompt-during-spawn');
+        return handlePty;
+      });
+      const ctx = createBackendContext();
+      const { id } = await mod.createTerminal({}, ctx);
+
+      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '' });
+    });
   });
 
   describe('resizeTerminal', () => {
@@ -198,6 +212,54 @@ describe('terminal backend', () => {
       expect(result.events).toBeDefined();
     });
 
+    it('replays output that arrived before the SSE stream connected', async () => {
+      const handlePty = createMockSpawnHandle();
+      shellSpawn.mockResolvedValue(handlePty);
+      const ctx = createBackendContext();
+      const { id } = await mod.createTerminal({}, ctx);
+
+      const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+      onStdout('prompt-before-stream');
+
+      const { events } = await mod.streamTerminal(routeRequest(id), ctx);
+      const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+
+      const event = await iter.next();
+      expect(event.value).toEqual({ data: { type: 'output', data: 'prompt-before-stream' } });
+      expect(event.done).toBe(false);
+    });
+
+    it('replays output emitted while the PTY spawn promise is resolving', async () => {
+      const handlePty = createMockSpawnHandle();
+      shellSpawn.mockImplementation(async (options) => {
+        options.onStdout?.('prompt-during-spawn');
+        return handlePty;
+      });
+      const ctx = createBackendContext();
+      const { id } = await mod.createTerminal({}, ctx);
+
+      const { events } = await mod.streamTerminal(routeRequest(id), ctx);
+      const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+
+      const event = await iter.next();
+      expect(event.value).toEqual({ data: { type: 'output', data: 'prompt-during-spawn' } });
+      expect(event.done).toBe(false);
+    });
+
+    it('returns startup output from terminalCreate', async () => {
+      const handlePty = createMockSpawnHandle();
+      shellSpawn.mockImplementation(async (options) => {
+        options.onStdout?.('startup-prompt');
+        return handlePty;
+      });
+      const ctx = createBackendContext();
+
+      const result = await mod.createTerminal({}, ctx);
+
+      expect(result.initialOutput).toBe('startup-prompt');
+      await expect(mod.drainTerminal({ id: result.id }, ctx)).resolves.toEqual({ ok: true, output: '' });
+    });
+
     it('SSE stream yields output events from the terminal', async () => {
       const handlePty = createMockSpawnHandle();
       shellSpawn.mockResolvedValue(handlePty);
@@ -213,7 +275,7 @@ describe('terminal backend', () => {
       onStdout('some terminal output\n');
 
       const event = await nextPromise;
-      expect(event.value).toEqual({ event: 'output', data: 'some terminal output\n' });
+      expect(event.value).toEqual({ data: { type: 'output', data: 'some terminal output\n' } });
       expect(event.done).toBe(false);
 
       // close the terminal → stream should get exit event
@@ -222,7 +284,7 @@ describe('terminal backend', () => {
       onExit({ code: 0, signal: null });
 
       const exitEvent = await exitPromise;
-      expect(exitEvent.value).toEqual({ event: 'exit', data: { code: 0 } });
+      expect(exitEvent.value).toEqual({ data: { type: 'exit', code: 0 } });
     });
   });
 
@@ -249,8 +311,8 @@ describe('terminal backend', () => {
 
       const e1 = await p1;
       const e2 = await p2;
-      expect(e1.value).toEqual({ event: 'exit', data: { code: 1 } });
-      expect(e2.value).toEqual({ event: 'exit', data: { code: 1 } });
+      expect(e1.value).toEqual({ data: { type: 'exit', code: 1 } });
+      expect(e2.value).toEqual({ data: { type: 'exit', code: 1 } });
     });
   });
 });

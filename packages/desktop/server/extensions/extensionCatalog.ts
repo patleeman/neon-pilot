@@ -98,11 +98,6 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'Import/export flow for conversation session handoff experiments.',
   },
   {
-    id: 'system-speechmike',
-    name: 'SpeechMike',
-    description: 'SpeechMike hardware integration.',
-  },
-  {
     id: 'system-suggested-context',
     name: 'Suggested Context',
     description: 'Suggests related conversations as pointer context for new prompts.',
