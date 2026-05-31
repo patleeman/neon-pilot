@@ -1649,14 +1649,32 @@ fn clamp_window_position<R: tauri::Runtime>(
     size: PhysicalSize<u32>,
 ) -> PhysicalPosition<i32> {
     let monitors = app.available_monitors().unwrap_or_default();
-    let target = monitors.iter().find(|monitor| {
-        let monitor_position = monitor.position();
-        let monitor_size = monitor.size();
-        position.x >= monitor_position.x
-            && position.y >= monitor_position.y
-            && position.x < monitor_position.x + monitor_size.width as i32
-            && position.y < monitor_position.y + monitor_size.height as i32
-    });
+    let target = monitors
+        .iter()
+        .max_by_key(|monitor| {
+            restored_window_visible_area(
+                position.x,
+                position.y,
+                size.width,
+                size.height,
+                monitor.position().x,
+                monitor.position().y,
+                monitor.size().width,
+                monitor.size().height,
+            )
+        })
+        .filter(|monitor| {
+            restored_window_visible_area(
+                position.x,
+                position.y,
+                size.width,
+                size.height,
+                monitor.position().x,
+                monitor.position().y,
+                monitor.size().width,
+                monitor.size().height,
+            ) > 0
+        });
     let monitor = target.or_else(|| monitors.first());
     let Some(monitor) = monitor else {
         return position;
@@ -1664,12 +1682,43 @@ fn clamp_window_position<R: tauri::Runtime>(
 
     let monitor_position = monitor.position();
     let monitor_size = monitor.size();
-    let max_x = monitor_position.x + (monitor_size.width as i32 - size.width as i32).max(0);
-    let max_y = monitor_position.y + (monitor_size.height as i32 - size.height as i32).max(0);
     PhysicalPosition {
-        x: position.x.clamp(monitor_position.x, max_x),
-        y: position.y.clamp(monitor_position.y, max_y),
+        x: clamp_window_axis(position.x, size.width, monitor_position.x, monitor_size.width),
+        y: clamp_window_axis(
+            position.y,
+            size.height,
+            monitor_position.y,
+            monitor_size.height,
+        ),
     }
+}
+
+fn clamp_window_axis(position: i32, window_span: u32, monitor_min: i32, monitor_span: u32) -> i32 {
+    if window_span >= monitor_span {
+        return monitor_min;
+    }
+    let max = monitor_min + monitor_span as i32 - window_span as i32;
+    position.clamp(monitor_min, max)
+}
+
+fn restored_window_visible_area(
+    window_x: i32,
+    window_y: i32,
+    window_width: u32,
+    window_height: u32,
+    monitor_x: i32,
+    monitor_y: i32,
+    monitor_width: u32,
+    monitor_height: u32,
+) -> i64 {
+    let window_right = window_x.saturating_add(window_width as i32);
+    let window_bottom = window_y.saturating_add(window_height as i32);
+    let monitor_right = monitor_x.saturating_add(monitor_width as i32);
+    let monitor_bottom = monitor_y.saturating_add(monitor_height as i32);
+
+    let width = window_right.min(monitor_right) - window_x.max(monitor_x);
+    let height = window_bottom.min(monitor_bottom) - window_y.max(monitor_y);
+    i64::from(width.max(0)) * i64::from(height.max(0))
 }
 
 fn persist_window_state<R: tauri::Runtime>(window: &tauri::Window<R>) {
@@ -1888,6 +1937,24 @@ mod tests {
             "about:blank"
         );
         assert!(parse_workbench_browser_url("file:///tmp/nope").is_err());
+    }
+
+    #[test]
+    fn clamps_oversized_restored_window_to_monitor_origin() {
+        assert_eq!(clamp_window_axis(788, 1361, 0, 1280), 0);
+        assert_eq!(clamp_window_axis(133, 1813, 0, 2048), 133);
+    }
+
+    #[test]
+    fn measures_restored_window_visible_area() {
+        assert_eq!(
+            restored_window_visible_area(133, 788, 1813, 1361, 0, 0, 2048, 1280),
+            1813 * 492
+        );
+        assert_eq!(
+            restored_window_visible_area(3000, 3000, 1280, 860, 0, 0, 2048, 1280),
+            0
+        );
     }
 }
 
