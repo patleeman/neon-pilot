@@ -4,18 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.3-rc.3** — release candidate being prepared.
+**v0.9.3-rc.4** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.3
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.4
 
 Highlights in this train:
 
-- Improves desktop startup responsiveness with a lighter local API bootstrap, warmer model/provider caches, bounded session snapshots, and safer backend warmup paths.
-- Restores and hardens workbench side chats, including preference inheritance, distinct forked chats, reliable tab startup, and clearer side-chat titles.
-- Brings the built-in Terminal back to a real PTY flow with terminal input, output streaming, closed-tab cleanup, and extension spawn typing for PTY sessions.
-- Migrates app data toward entity stores while preserving sidebar layout behavior, thread pruning safety, and conversation running-state correctness.
-- Tightens chat and conversation reliability with better onboarding conversation creation, provider option de-duplication, opencode kimi handling, local product API errors, and release-blocking warmup guards.
-- Refreshes release dependencies, including the Pi runtime packages, for the `0.9.3-rc.3` candidate.
+- Adds the DS4 local model extension so DeepSeek DS4 can be installed as a first-party local model provider.
+- Completes the DS4 native tool surface with manifest-declared tools, backend coverage, and agent-facing skill guidance.
+- Lets the DS4 extension manage its runtime directly, including command discovery, setup guidance, and backend runtime lifecycle handling.
+- Expands the conversation admin tool with a richer schema, route coverage, docs, and manifest validation.
+- Disambiguates duplicate model selections by preserving provider/runtime identity through model state, preference saving, and composer menus.
+- Introduces an extension host client boundary so prompt assembly can call extension hooks through a narrower host-facing API.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

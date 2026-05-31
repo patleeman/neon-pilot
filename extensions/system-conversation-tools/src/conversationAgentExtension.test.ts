@@ -71,7 +71,7 @@ describe('conversationAgentExtension', () => {
     const { pi } = register();
     expect(pi.registerTool).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: 'conversation',
+        name: 'conversation_admin',
         label: 'Conversation',
         promptGuidelines: expect.arrayContaining(['Use action="deferred_resume" for wait-then-continue; do not run sleep in bash.']),
       }),

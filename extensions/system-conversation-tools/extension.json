@@ -12,12 +12,12 @@
   "contributes": {
     "tools": [
       {
-        "id": "conversation",
-        "name": "conversation",
+        "id": "conversation_admin",
+        "name": "conversation_admin",
         "title": "Conversation",
         "description": "Ask, inspect, and administer conversations, including cross-conversation steering and workspace state.",
         "action": "conversationTool",
-        "promptSnippet": "Use conversation for questions, inspection, title/cwd changes, deferred resumes, and administering other conversations.",
+        "promptSnippet": "Use conversation_admin for questions, inspection, title/cwd changes, deferred resumes, and administering other conversations.",
         "promptGuidelines": [
           "Inspect or list before targeting an unclear conversation.",
           "Use run_turn when you need the remote conversation turn to finish; use send_message for fire-and-forget steering or follow-up.",

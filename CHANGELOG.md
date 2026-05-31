@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.3-rc.4 — 2026-05-31
+
+### Highlights
+
+- Adds the DS4 local model extension so DeepSeek DS4 can be installed as a first-party local model provider.
+- Completes the DS4 native tool surface with manifest-declared tools, backend coverage, and agent-facing skill guidance.
+- Lets the DS4 extension manage its runtime directly, including command discovery, setup guidance, and backend runtime lifecycle handling.
+- Expands the conversation admin tool with a richer schema, route coverage, docs, and manifest validation.
+- Disambiguates duplicate model selections by preserving provider/runtime identity through model state, preference saving, and composer menus.
+- Introduces an extension host client boundary so prompt assembly can call extension hooks through a narrower host-facing API.
+
+### Notes
+
+- 6 commits since the previous release.
+
 ## 0.9.3-rc.3 — 2026-05-31
 
 ### Highlights

@@ -63,10 +63,10 @@ describe('system-conversation-tools manifest', () => {
 
   it('declares focused conversation tools in contributes.tools', () => {
     const toolNames = (manifest.contributes.tools ?? []).map((t: { name?: string }) => t.name);
-    expect(toolNames).toEqual(['conversation', 'ask_user', 'conversation_inspect', 'conversation_title', 'conversation_cwd', 'deferred_resume']);
+    expect(toolNames).toEqual(['conversation_admin', 'ask_user', 'conversation_inspect', 'conversation_title', 'conversation_cwd', 'deferred_resume']);
     expect(manifest.contributes.tools[0]).toEqual(
       expect.objectContaining({
-        name: 'conversation',
+        name: 'conversation_admin',
         action: 'conversationTool',
       }),
     );

@@ -304,7 +304,7 @@ The inspect tool cannot create, modify, or delete conversation state. It is stri
 
 # Conversation Admin
 
-The combined `conversation` tool exposes conversation administration actions. It includes the read-only inspect, ask, title, cwd, and deferred-resume behaviors above, plus cross-conversation write/control actions backed by the host `ctx.conversations` API.
+The combined `conversation_admin` tool exposes conversation administration actions. It includes the read-only inspect, ask, title, cwd, and deferred-resume behaviors above, plus cross-conversation write/control actions backed by the host `ctx.conversations` API.
 
 Before targeting an unclear conversation, use `action: "inspect"` with `inspectAction: "list"` or `inspectAction: "search"` to find the right `conversationId`.
 
