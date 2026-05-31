@@ -1640,6 +1640,7 @@ fn ensure_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
             .decorations(true)
             .title_bar_style(TitleBarStyle::Overlay)
             .hidden_title(true)
+            .disable_drag_drop_handler()
             .traffic_light_position(Position::Logical(LogicalPosition { x: 14.0, y: 24.0 }))
             .build()
     {
