@@ -13,8 +13,7 @@ export function registerSecretRoutes(
   router: Pick<Express, 'get' | 'put' | 'delete'>,
   context: Pick<ServerRouteContext, 'getStateRoot'>,
 ): void {
-  router.get('/api/secrets', (_req, res) => {
-    void (async () => {
+  router.get('/api/secrets', async (_req, res) => {
     try {
       const stateRoot = context.getStateRoot();
       res.json({ backend: readSecretBackendId(stateRoot), secrets: await listSecretStatusesAsync(stateRoot) });
@@ -22,11 +21,9 @@ export function registerSecretRoutes(
       logError('secrets read error', { message: err instanceof Error ? err.message : String(err) });
       res.status(500).json({ error: String(err) });
     }
-    })();
   });
 
-  router.put('/api/secrets/:extensionId/:secretId', (req, res) => {
-    void (async () => {
+  router.put('/api/secrets/:extensionId/:secretId', async (req, res) => {
     try {
       const params = req.params as { extensionId?: unknown; secretId?: unknown };
       const body = req.body as { value?: unknown } | undefined;
@@ -40,11 +37,9 @@ export function registerSecretRoutes(
       logError('secret write error', { message });
       res.status(500).json({ error: message });
     }
-    })();
   });
 
-  router.delete('/api/secrets/:extensionId/:secretId', (req, res) => {
-    void (async () => {
+  router.delete('/api/secrets/:extensionId/:secretId', async (req, res) => {
     try {
       const params = req.params as { extensionId?: unknown; secretId?: unknown };
       const extensionId = readRequiredString(params.extensionId, 'extensionId');
@@ -56,6 +51,5 @@ export function registerSecretRoutes(
       logError('secret delete error', { message });
       res.status(500).json({ error: message });
     }
-    })();
   });
 }
