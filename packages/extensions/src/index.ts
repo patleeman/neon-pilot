@@ -1314,7 +1314,7 @@ export interface ExtensionBackendContext {
       cwd?: string;
       env?: Record<string, string>;
       /**
-       * When true, allocates a pseudo-terminal (PTY) via node-pty.
+       * When true, allocates a pseudo-terminal (PTY) through the Rust host kernel.
        * Accepts `{ cols, rows }` to set initial terminal dimensions.
        * PTY mode merges stdout/stderr into the `onStdout` callback.
        */
@@ -1369,7 +1369,7 @@ export interface ExtensionBackendContext {
   };
   secrets: {
     /** Resolve a secret registered in this extension's manifest. */
-    get(secretId: string): string | undefined;
+    get(secretId: string): Promise<string | undefined>;
   };
   ui: { invalidate(topics: string | string[]): void };
   telemetry: {

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
@@ -49,7 +49,10 @@ pub struct ProcessWrapperMetadata {
 pub async fn exec_host_process(
     input: HostProcessExecInput,
 ) -> anyhow::Result<HostProcessExecResult> {
-    validate_command(&input.command)?;
+    validate_process_command(&input.command)?;
+    validate_process_args(&input.args)?;
+    validate_process_cwd(input.cwd.as_deref())?;
+    validate_process_env(&input.env)?;
     let timeout_ms = input.timeout_ms.unwrap_or(30_000);
     let max_buffer = input.max_buffer.unwrap_or(1024 * 1024);
     let mut command = Command::new(&input.command);
@@ -87,13 +90,51 @@ pub async fn exec_host_process(
     })
 }
 
-fn validate_command(command: &str) -> anyhow::Result<()> {
+pub fn validate_process_command(command: &str) -> anyhow::Result<()> {
     let trimmed = command.trim();
     if trimmed.is_empty() {
         anyhow::bail!("Process command is required.");
     }
     if trimmed.contains('\0') {
         anyhow::bail!("Process command contains an invalid NUL byte.");
+    }
+    Ok(())
+}
+
+pub fn validate_process_args(args: &[String]) -> anyhow::Result<()> {
+    for arg in args {
+        if arg.contains('\0') {
+            anyhow::bail!("Process arguments must not contain NUL bytes.");
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_process_env(env: &HashMap<String, String>) -> anyhow::Result<()> {
+    for (key, value) in env {
+        if key.trim().is_empty() || key.contains('=') || key.contains('\0') {
+            anyhow::bail!("Process environment contains an invalid key.");
+        }
+        if value.contains('\0') {
+            anyhow::bail!("Process environment contains an invalid value.");
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_process_cwd(cwd: Option<&str>) -> anyhow::Result<()> {
+    let Some(cwd) = cwd else {
+        return Ok(());
+    };
+    if cwd.trim().is_empty() || cwd.contains('\0') {
+        anyhow::bail!("Process cwd is invalid.");
+    }
+    let path = Path::new(cwd);
+    if !path.is_absolute() {
+        anyhow::bail!("Process cwd must be an absolute path.");
+    }
+    if !path.is_dir() {
+        anyhow::bail!("Process cwd does not exist or is not a directory.");
     }
     Ok(())
 }

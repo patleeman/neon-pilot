@@ -35,11 +35,23 @@ The long-lived background process that owns durable runtime services such as sch
 
 ### Desktop app
 
-The Electron user interface for conversations, workbench views, settings, automations, and other extension-provided surfaces.
+The Tauri desktop application for conversations, workbench views, settings, automations, and other extension-provided surfaces.
+
+### Host kernel
+
+The trusted Rust/Tauri layer that owns native desktop lifecycle, sidecar supervision, host authority, process and PTY execution, scoped filesystem operations, persistence primitives, extension package install/import, and packaged-resource resolution.
+
+Use **host kernel** when discussing native authority. Do not use **core** for this layer.
+
+### Product runtime
+
+The TypeScript runtime that owns Neon Pilot product behavior: Pi integration, conversations, prompt assembly, workflow orchestration, local API composition, and JS extension backend execution through public extension APIs.
+
+Use **product runtime** for the non-extension backend behavior that wraps Pi and serves the app.
 
 ### Core
 
-The small stable platform: agent/conversation runtime, transcript/event stream, durable storage primitives, prompt assembly, extension host, security boundaries, desktop/web shell, routing, install/update plumbing, and shared UI primitives.
+The small stable TypeScript platform shared by the product runtime and extension SDK: agent/conversation abstractions, transcript/event stream helpers, durable storage contracts, prompt assembly contracts, extension host contracts, routing contracts, install/update contracts, and shared UI primitives.
 
 Do not use **core** for product workflows that should live in extensions.
 
@@ -323,7 +335,7 @@ The built-in desktop browser surface visible to the user inside Neon Pilot.
 
 ### agent-browser
 
-The automation skill/CLI used by agents for autonomous browser or Electron validation.
+The automation skill/CLI used by agents for autonomous browser or desktop app validation.
 
 Do not use Workbench Browser tools for unattended product testing when agent-browser is the right boundary.
 

@@ -38,7 +38,6 @@ const sharedEsbuildOptions = {
     'better-sqlite3',
     'esbuild',
     'fsevents',
-    'node-pty',
   ],
   plugins: [extensionApiAliasPlugin],
 };

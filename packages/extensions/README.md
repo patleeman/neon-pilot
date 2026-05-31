@@ -4,7 +4,7 @@ The normal way to create a Neon Pilot extension is to ask your agent to build it
 
 This package is the public import surface for native Neon Pilot extensions. Extension code should import from `@neon-pilot/extensions` and its subpath modules instead of reaching into `packages/desktop` internals. Backend extensions must use host capabilities such as `ctx.shell` for process execution; direct Node process APIs are blocked so the host can apply sandbox and execution-wrapper policy.
 
-Extension code must not depend on Electron IPC as a product API. Host product data is exposed through SDK capabilities backed by the desktop HTTP data plane; realtime changes are exposed through SDK subscriptions backed by the realtime plane; native OS/Electron actions stay behind explicit host capabilities. If the SDK lacks a capability, add a reusable SDK primitive instead of importing app internals or creating extension-specific IPC.
+Extension code must not depend on desktop-shell IPC as a product API. Host product data is exposed through SDK capabilities backed by the desktop HTTP data plane; realtime changes are exposed through SDK subscriptions backed by the realtime plane; native OS/Tauri actions stay behind explicit host capabilities. If the SDK lacks a capability, add a reusable SDK primitive instead of importing app internals or creating extension-specific IPC.
 
 This doc is written for agents building extensions. Read it before creating or editing an extension, then inspect the current schema/types and nearby system extensions for exact examples.
 
@@ -805,7 +805,7 @@ Rules:
 - Declare permissions in `extension.json`.
 - Keep permissions aligned with what the extension can actually do.
 - The Extension Manager displays permissions and should highlight permission expansion.
-- Do not expose raw SQLite handles, Express routers, Electron main process objects, arbitrary app internals, or the full process environment as extension APIs.
+- Do not expose raw SQLite handles, Express routers, Tauri/Rust host objects, arbitrary app internals, or the full process environment as extension APIs.
 
 ## Packaging and import/export
 

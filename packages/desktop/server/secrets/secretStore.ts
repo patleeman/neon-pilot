@@ -6,6 +6,12 @@ import { dirname, join } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 
 import { listExtensionSecretRegistrations } from '../extensions/extensionRegistry.js';
+import {
+  deleteTauriHostSecret,
+  getTauriHostSecret,
+  isTauriHostCoreAvailable,
+  setTauriHostSecret,
+} from '../tauriHostCoreClient.js';
 
 export type SecretBackendId = 'keychain' | 'file' | 'env-only';
 export type SecretSource = 'env' | SecretBackendId;
@@ -242,6 +248,55 @@ export function resolveSecret(extensionId: string, secretId: string, stateRoot: 
   return undefined;
 }
 
+async function getStoredSecretValue(key: string, stateRoot: string): Promise<string | undefined> {
+  const backend = readSecretBackendId(stateRoot);
+  if (backend === 'env-only') return undefined;
+  if (isTauriHostCoreAvailable()) {
+    return getTauriHostSecret(key, backend);
+  }
+  return createSecretBackendForId(backend, stateRoot).get(key);
+}
+
+async function setStoredSecretValue(key: string, value: string, stateRoot: string): Promise<void> {
+  const backend = readSecretBackendId(stateRoot);
+  if (backend === 'env-only') {
+    throw new Error('The env-only secret backend is read-only. Set the configured environment variable instead.');
+  }
+  if (isTauriHostCoreAvailable()) {
+    await setTauriHostSecret(key, value, backend);
+    return;
+  }
+  createSecretBackendForId(backend, stateRoot).set(key, value);
+}
+
+async function deleteStoredSecretValue(key: string, stateRoot: string): Promise<void> {
+  const backend = readSecretBackendId(stateRoot);
+  if (backend === 'env-only') {
+    throw new Error('The env-only secret backend is read-only.');
+  }
+  if (isTauriHostCoreAvailable()) {
+    await deleteTauriHostSecret(key, backend);
+    return;
+  }
+  createSecretBackendForId(backend, stateRoot).delete(key);
+}
+
+export async function resolveSecretAsync(
+  extensionId: string,
+  secretId: string,
+  stateRoot: string = getStateRoot(),
+): Promise<string | undefined> {
+  const declaration = findSecretRegistration(extensionId, secretId, stateRoot);
+  const backendValue = await getStoredSecretValue(makeSecretKey(extensionId, secretId), stateRoot);
+  if (backendValue) return backendValue;
+  const envName = declaration?.env;
+  if (envName) {
+    const envValue = process.env[envName]?.trim();
+    if (envValue) return envValue;
+  }
+  return undefined;
+}
+
 export function listSecretStatuses(stateRoot: string = getStateRoot()): SecretStatus[] {
   const backend = createSecretBackend(stateRoot);
   return listExtensionSecretRegistrations(stateRoot).map((secret) => {
@@ -263,6 +318,29 @@ export function listSecretStatuses(stateRoot: string = getStateRoot()): SecretSt
   });
 }
 
+export async function listSecretStatusesAsync(stateRoot: string = getStateRoot()): Promise<SecretStatus[]> {
+  const backend = readSecretBackendId(stateRoot);
+  return Promise.all(
+    listExtensionSecretRegistrations(stateRoot).map(async (secret) => {
+      const key = makeSecretKey(secret.extensionId, secret.id);
+      const envValue = secret.env ? process.env[secret.env]?.trim() : undefined;
+      const backendValue = await getStoredSecretValue(key, stateRoot);
+      const source: SecretSource | null = backendValue ? backend : envValue ? 'env' : null;
+      return {
+        extensionId: secret.extensionId,
+        secretId: secret.id,
+        key,
+        label: secret.label,
+        description: secret.description,
+        env: secret.env,
+        configured: source !== null,
+        source,
+        writable: backend !== 'env-only',
+      };
+    }),
+  );
+}
+
 export function setSecret(extensionId: string, secretId: string, value: string, stateRoot: string = getStateRoot()): SecretStatus[] {
   const normalized = value.trim();
   if (!normalized) throw new Error('secret value is required');
@@ -273,6 +351,21 @@ export function setSecret(extensionId: string, secretId: string, value: string, 
   return listSecretStatuses(stateRoot);
 }
 
+export async function setSecretAsync(
+  extensionId: string,
+  secretId: string,
+  value: string,
+  stateRoot: string = getStateRoot(),
+): Promise<SecretStatus[]> {
+  const normalized = value.trim();
+  if (!normalized) throw new Error('secret value is required');
+  findSecretRegistration(extensionId, secretId, stateRoot);
+  const key = makeSecretKey(extensionId, secretId);
+  await setStoredSecretValue(key, normalized, stateRoot);
+  addSecretIndexKey(stateRoot, key);
+  return listSecretStatusesAsync(stateRoot);
+}
+
 export function deleteSecret(extensionId: string, secretId: string, stateRoot: string = getStateRoot()): SecretStatus[] {
   findSecretRegistration(extensionId, secretId, stateRoot);
   const key = makeSecretKey(extensionId, secretId);
@@ -281,8 +374,24 @@ export function deleteSecret(extensionId: string, secretId: string, stateRoot: s
   return listSecretStatuses(stateRoot);
 }
 
+export async function deleteSecretAsync(
+  extensionId: string,
+  secretId: string,
+  stateRoot: string = getStateRoot(),
+): Promise<SecretStatus[]> {
+  findSecretRegistration(extensionId, secretId, stateRoot);
+  const key = makeSecretKey(extensionId, secretId);
+  await deleteStoredSecretValue(key, stateRoot);
+  removeSecretIndexKey(stateRoot, key);
+  return listSecretStatusesAsync(stateRoot);
+}
+
 export function resolveProviderApiKey(provider: string, stateRoot: string = getStateRoot()): string | undefined {
   return createSecretBackend(stateRoot).get(makeProviderApiKeySecretKey(provider))?.trim() || undefined;
+}
+
+export async function resolveProviderApiKeyAsync(provider: string, stateRoot: string = getStateRoot()): Promise<string | undefined> {
+  return (await getStoredSecretValue(makeProviderApiKeySecretKey(provider), stateRoot))?.trim() || undefined;
 }
 
 export function resolveIndexedProviderApiKey(provider: string, stateRoot: string = getStateRoot()): string | undefined {
@@ -293,6 +402,17 @@ export function resolveIndexedProviderApiKey(provider: string, stateRoot: string
   return resolveProviderApiKey(provider, stateRoot);
 }
 
+export async function resolveIndexedProviderApiKeyAsync(
+  provider: string,
+  stateRoot: string = getStateRoot(),
+): Promise<string | undefined> {
+  const key = makeProviderApiKeySecretKey(provider);
+  if (readSecretBackendId(stateRoot) === 'keychain' && !readSecretIndex(stateRoot).includes(key)) {
+    return undefined;
+  }
+  return resolveProviderApiKeyAsync(provider, stateRoot);
+}
+
 export function setProviderApiKeySecret(provider: string, apiKey: string, stateRoot: string = getStateRoot()): void {
   const normalized = apiKey.trim();
   if (!normalized) throw new Error('apiKey is required');
@@ -301,9 +421,23 @@ export function setProviderApiKeySecret(provider: string, apiKey: string, stateR
   addSecretIndexKey(stateRoot, key);
 }
 
+export async function setProviderApiKeySecretAsync(provider: string, apiKey: string, stateRoot: string = getStateRoot()): Promise<void> {
+  const normalized = apiKey.trim();
+  if (!normalized) throw new Error('apiKey is required');
+  const key = makeProviderApiKeySecretKey(provider);
+  await setStoredSecretValue(key, normalized, stateRoot);
+  addSecretIndexKey(stateRoot, key);
+}
+
 export function deleteProviderApiKeySecret(provider: string, stateRoot: string = getStateRoot()): void {
   const key = makeProviderApiKeySecretKey(provider);
   createSecretBackend(stateRoot).delete(key);
+  removeSecretIndexKey(stateRoot, key);
+}
+
+export async function deleteProviderApiKeySecretAsync(provider: string, stateRoot: string = getStateRoot()): Promise<void> {
+  const key = makeProviderApiKeySecretKey(provider);
+  await deleteStoredSecretValue(key, stateRoot);
   removeSecretIndexKey(stateRoot, key);
 }
 

@@ -10,6 +10,7 @@ profiles/**/node_modules/
 dist/
 **/target/
 packages/tauri/*/src-tauri/gen/
+packages/tauri/desktop-shell/src-tauri/resources/
 installable-extensions/system-alleycat/bin/
 *.tsbuildinfo
 packages/*/dist/

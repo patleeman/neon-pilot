@@ -21,7 +21,7 @@ interface HostCoreProcessExecResult {
 interface HostCoreSpawnResult {
   id: string;
   pid: number | null;
-  usingPty: false;
+  usingPty: boolean;
   executionWrappers: Array<{ id: string; label?: string }>;
 }
 
@@ -88,12 +88,14 @@ export async function spawnTauriHostProcess(input: {
   args?: string[];
   cwd?: string;
   env?: Record<string, string>;
+  pty?: { cols?: number; rows?: number };
 }): Promise<HostCoreSpawnResult> {
   return hostCoreRequest<HostCoreSpawnResult>('/process/spawn', {
     command: input.command,
     args: input.args ?? [],
     cwd: input.cwd,
     env: input.env ?? {},
+    pty: input.pty,
   });
 }
 
@@ -103,6 +105,10 @@ export async function readTauriHostProcess(id: string): Promise<HostCoreProcessR
 
 export async function writeTauriHostProcess(id: string, data: string): Promise<void> {
   await hostCoreRequest('/process/write', { id, data });
+}
+
+export async function resizeTauriHostProcess(id: string, cols: number, rows: number): Promise<void> {
+  await hostCoreRequest('/process/resize', { id, cols, rows });
 }
 
 export async function killTauriHostProcess(id: string): Promise<void> {
@@ -117,16 +123,16 @@ export async function writeTauriHostText(input: { root: string; path: string; te
   return hostCoreRequest('/filesystem/write-text', input);
 }
 
-export async function getTauriHostSecret(key: string): Promise<string | undefined> {
-  return (await hostCoreRequest<{ value?: string | null }>('/secrets/get', { key })).value ?? undefined;
+export async function getTauriHostSecret(key: string, backend?: string): Promise<string | undefined> {
+  return (await hostCoreRequest<{ value?: string | null }>('/secrets/get', { key, backend })).value ?? undefined;
 }
 
-export async function setTauriHostSecret(key: string, value: string): Promise<unknown> {
-  return hostCoreRequest('/secrets/set', { key, value });
+export async function setTauriHostSecret(key: string, value: string, backend?: string): Promise<unknown> {
+  return hostCoreRequest('/secrets/set', { key, value, backend });
 }
 
-export async function deleteTauriHostSecret(key: string): Promise<unknown> {
-  return hostCoreRequest('/secrets/delete', { key });
+export async function deleteTauriHostSecret(key: string, backend?: string): Promise<unknown> {
+  return hostCoreRequest('/secrets/delete', { key, backend });
 }
 
 export async function installTauriHostExtensionPackage(packageRoot: string): Promise<unknown> {

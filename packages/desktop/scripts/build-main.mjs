@@ -22,7 +22,7 @@ await build({
   banner: {
     js: `import { createRequire as __paBackendCreateRequire } from 'node:module';var require=__paBackendCreateRequire(import.meta.url);`,
   },
-  external: ['fsevents', 'node-pty'],
+  external: ['fsevents'],
   logLevel: 'info',
   nodePaths,
 });

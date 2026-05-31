@@ -453,6 +453,17 @@ async fn ensure_js_sidecar(
         "NEON_PILOT_TAURI_HOST_CORE_TOKEN".to_string(),
         host_core_rpc.token.clone(),
     );
+    sidecar_env.insert(
+        "NEON_PILOT_REPO_ROOT".to_string(),
+        repo_root.to_string_lossy().to_string(),
+    );
+    sidecar_env.insert(
+        "NEON_PILOT_DESKTOP_APP_PATH".to_string(),
+        repo_root
+            .join("packages/desktop")
+            .to_string_lossy()
+            .to_string(),
+    );
     let sidecar = JsSidecarHandle::launch(JsSidecarConfig {
         node_command: "node".to_string(),
         entry_file,
@@ -515,6 +526,10 @@ fn resolve_repo_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 
     if let Ok(resource_dir) = app.path().resource_dir() {
         if let Ok(repo_root) = resolve_host_repo_root(&resource_dir) {
+            return Ok(repo_root);
+        }
+        let staged_resources = resource_dir.join("resources");
+        if let Ok(repo_root) = resolve_host_repo_root(&staged_resources) {
             return Ok(repo_root);
         }
     }

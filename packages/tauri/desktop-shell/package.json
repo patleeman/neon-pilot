@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tauri build",
-    "check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "build": "node ../../../scripts/prepare-tauri-resources.mjs && tauri build",
+    "check": "node ../../../scripts/prepare-tauri-resources.mjs && cargo check --manifest-path src-tauri/Cargo.toml",
     "dev": "tauri dev"
   }
 }

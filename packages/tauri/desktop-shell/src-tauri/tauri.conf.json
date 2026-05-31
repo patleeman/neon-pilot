@@ -26,6 +26,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": [
+      "resources"
+    ],
     "icon": [
       "../../../desktop/assets/icon.png",
       "../../../desktop/assets/icon.icns"

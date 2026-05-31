@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
-import { resolveIndexedProviderApiKey, resolveProviderApiKey } from '../secrets/secretStore.js';
+import { resolveIndexedProviderApiKey, resolveProviderApiKeyAsync } from '../secrets/secretStore.js';
 import { normalizeModelContextWindow } from './modelContextWindows.js';
 
 type RegistryModel = ReturnType<ModelRegistry['getAvailable']>[number];
@@ -51,7 +51,7 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry, authStorage: A
   };
   registry.getApiKeyAndHeaders = async (model) => {
     const result = await originalGetApiKeyAndHeaders(model);
-    const apiKey = resolveProviderApiKey(model.provider);
+    const apiKey = await resolveProviderApiKeyAsync(model.provider);
     if (!apiKey || (result.ok === false && !result.error.includes('No API key found'))) return result;
     return { ...result, ok: true, apiKey };
   };

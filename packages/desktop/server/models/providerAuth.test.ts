@@ -20,11 +20,11 @@ function createTempDir(): string {
 }
 
 describe('readProviderAuthState', () => {
-  it('returns built-in Pi API-key providers for a missing auth file', () => {
+  it('returns built-in Pi API-key providers for a missing auth file', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    const state = readProviderAuthState(authFile);
+    const state = await readProviderAuthState(authFile);
 
     expect(state.authFile).toBe(authFile);
     expect(Array.isArray(state.providers)).toBe(true);
@@ -53,11 +53,11 @@ describe('readProviderAuthState', () => {
 });
 
 describe('setProviderApiKey', () => {
-  it('writes API keys to auth.json and marks provider as api_key', () => {
+  it('writes API keys to auth.json and marks provider as api_key', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    const state = setProviderApiKey(authFile, 'custom-test-provider', 'test-secret');
+    const state = await setProviderApiKey(authFile, 'custom-test-provider', 'test-secret');
 
     const parsed = JSON.parse(readFileSync(authFile, 'utf-8')) as Record<string, unknown>;
     expect(parsed['custom-test-provider']).toEqual({
@@ -75,48 +75,48 @@ describe('setProviderApiKey', () => {
     });
   });
 
-  it('hides legacy Telegram credentials because the gateway token is managed as an extension secret', () => {
+  it('hides legacy Telegram credentials because the gateway token is managed as an extension secret', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    setProviderApiKey(authFile, 'telegram', 'legacy-token');
+    await setProviderApiKey(authFile, 'telegram', 'legacy-token');
 
-    const state = readProviderAuthState(authFile);
+    const state = await readProviderAuthState(authFile);
 
     expect(state.providers.some((entry) => entry.id === 'telegram')).toBe(false);
   });
 
-  it('ignores stale empty stored credential buckets', () => {
+  it('ignores stale empty stored credential buckets', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
     writeFileSync(authFile, JSON.stringify({ legacy: {} }));
 
-    const state = readProviderAuthState(authFile);
+    const state = await readProviderAuthState(authFile);
 
     expect(state.providers.some((entry) => entry.id === 'legacy')).toBe(false);
   });
 
-  it('preserves existing provider credentials when adding another key', () => {
+  it('preserves existing provider credentials when adding another key', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    setProviderApiKey(authFile, 'provider-one', 'key-one');
-    setProviderApiKey(authFile, 'provider-two', 'key-two');
+    await setProviderApiKey(authFile, 'provider-one', 'key-one');
+    await setProviderApiKey(authFile, 'provider-two', 'key-two');
 
     const parsed = JSON.parse(readFileSync(authFile, 'utf-8')) as Record<string, unknown>;
     expect(parsed['provider-one']).toEqual({ type: 'api_key', key: 'key-one' });
     expect(parsed['provider-two']).toEqual({ type: 'api_key', key: 'key-two' });
   });
 
-  it('stores provider API keys in the secret backend when a state root is provided', () => {
+  it('stores provider API keys in the secret backend when a state root is provided', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
     const stateRoot = join(dir, 'state');
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
 
-    const state = setProviderApiKey(authFile, 'openrouter', 'test-secret', stateRoot);
+    const state = await setProviderApiKey(authFile, 'openrouter', 'test-secret', stateRoot);
 
     expect(existsSync(authFile)).toBe(true);
     expect(JSON.parse(readFileSync(authFile, 'utf-8'))).toEqual({});
@@ -132,22 +132,22 @@ describe('setProviderApiKey', () => {
     });
   });
 
-  it('rejects empty provider ids and API keys', () => {
+  it('rejects empty provider ids and API keys', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    expect(() => setProviderApiKey(authFile, '', 'abc')).toThrow('provider is required');
-    expect(() => setProviderApiKey(authFile, 'provider', '')).toThrow('apiKey is required');
+    await expect(setProviderApiKey(authFile, '', 'abc')).rejects.toThrow('provider is required');
+    await expect(setProviderApiKey(authFile, 'provider', '')).rejects.toThrow('apiKey is required');
   });
 });
 
 describe('removeProviderCredential', () => {
-  it('removes stored credentials for a provider', () => {
+  it('removes stored credentials for a provider', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    setProviderApiKey(authFile, 'custom-test-provider', 'test-secret');
-    const state = removeProviderCredential(authFile, 'custom-test-provider');
+    await setProviderApiKey(authFile, 'custom-test-provider', 'test-secret');
+    const state = await removeProviderCredential(authFile, 'custom-test-provider');
 
     const parsed = JSON.parse(readFileSync(authFile, 'utf-8')) as Record<string, unknown>;
     expect(parsed['custom-test-provider']).toBeUndefined();
@@ -156,25 +156,25 @@ describe('removeProviderCredential', () => {
     expect(provider).toBeUndefined();
   });
 
-  it('removes provider API keys from the secret backend and legacy auth file', () => {
+  it('removes provider API keys from the secret backend and legacy auth file', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
     const stateRoot = join(dir, 'state');
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(join(stateRoot, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
 
-    setProviderApiKey(authFile, 'custom-test-provider', 'test-secret', stateRoot);
-    const state = removeProviderCredential(authFile, 'custom-test-provider', stateRoot);
+    await setProviderApiKey(authFile, 'custom-test-provider', 'test-secret', stateRoot);
+    const state = await removeProviderCredential(authFile, 'custom-test-provider', stateRoot);
 
     expect(JSON.parse(readFileSync(authFile, 'utf-8'))).toEqual({});
     expect(existsSync(join(stateRoot, 'secrets.json'))).toBe(false);
     expect(state.providers.find((entry) => entry.id === 'custom-test-provider')).toBeUndefined();
   });
 
-  it('rejects empty provider ids', () => {
+  it('rejects empty provider ids', async () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 
-    expect(() => removeProviderCredential(authFile, '   ')).toThrow('provider is required');
+    await expect(removeProviderCredential(authFile, '   ')).rejects.toThrow('provider is required');
   });
 });

@@ -43,5 +43,6 @@ function copyBundleArtifacts() {
   }
 }
 
+run('node', ['scripts/prepare-tauri-resources.mjs']);
 run('pnpm', ['--dir', 'packages/tauri/desktop-shell', 'run', 'build']);
 copyBundleArtifacts();

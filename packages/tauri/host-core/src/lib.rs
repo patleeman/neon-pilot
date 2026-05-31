@@ -27,7 +27,8 @@ pub use preferences::{
 };
 pub use process::{exec_host_process, HostProcessExecInput, HostProcessExecResult};
 pub use secrets::{
-    delete_file_secret, get_file_secret, list_file_secret_keys, set_file_secret, FileSecretStatus,
+    delete_file_secret, delete_host_secret, get_file_secret, get_host_secret, list_file_secret_keys,
+    set_file_secret, set_host_secret, FileSecretStatus, HostSecretBackend,
 };
 pub use sidecar::{
     JsSidecarConfig, JsSidecarHandle, JsSidecarReady, JsSidecarStatus, SidecarLaunchMode,

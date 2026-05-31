@@ -6,7 +6,7 @@ import { getPiAgentRuntimeDir, queryAppTelemetryEvents, resolveLocalProfileSetti
 
 import { registerFileSystemAuthorityHostEvents } from '../filesystem/filesystemAuthority.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from '../routes/context.js';
-import { resolveSecret } from '../secrets/secretStore.js';
+import { resolveSecretAsync } from '../secrets/secretStore.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
@@ -150,7 +150,7 @@ export interface ExtensionBackendContext {
   };
   secrets: {
     /** Resolve a secret registered in this extension's manifest. */
-    get(secretId: string): string | undefined;
+    get(secretId: string): Promise<string | undefined>;
   };
   ui: {
     invalidate(topics: string | string[]): void;
@@ -497,7 +497,7 @@ export function createBackendContext(
       setEnabled: (targetExtensionId, enabled) => setExtensionEnabled(targetExtensionId, enabled),
     },
     secrets: {
-      get: (secretId) => resolveSecret(extensionId, secretId),
+      get: (secretId) => resolveSecretAsync(extensionId, secretId),
     },
     ui: {
       invalidate: (topics) => {

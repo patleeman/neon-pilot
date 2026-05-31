@@ -1,12 +1,12 @@
 import { type ChildProcess } from 'node:child_process';
 
 import { execFileProcess, spawnProcess, terminateProcessGroup } from '../shared/processLauncher.js';
-import { createPtyProcess, type PtySpawnOptions } from '../shared/ptyLauncher.js';
 import {
   execTauriHostProcess,
   isTauriHostCoreAvailable,
   killTauriHostProcess,
   readTauriHostProcess,
+  resizeTauriHostProcess,
   spawnTauriHostProcess,
   writeTauriHostProcess,
 } from '../tauriHostCoreClient.js';
@@ -76,15 +76,23 @@ async function createTauriHostSpawnHandle(input: {
   args?: string[];
   cwd?: string;
   env?: Record<string, string>;
+  pty?: boolean | { cols?: number; rows?: number };
   onStdout?: (chunk: string) => void;
   onStderr?: (chunk: string) => void;
   onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
 }) {
+  const pty = input.pty
+    ? {
+        cols: typeof input.pty === 'object' ? (input.pty.cols ?? 80) : 80,
+        rows: typeof input.pty === 'object' ? (input.pty.rows ?? 24) : 24,
+      }
+    : undefined;
   const spawned = await spawnTauriHostProcess({
     command: input.command,
     args: input.args ?? [],
     cwd: input.cwd,
     env: input.env,
+    pty,
   });
   let lastStdoutLength = 0;
   let lastStderrLength = 0;
@@ -115,7 +123,7 @@ async function createTauriHostSpawnHandle(input: {
   void poll();
   return {
     pid: spawned.pid,
-    usingPty: false,
+    usingPty: spawned.usingPty,
     executionWrappers: spawned.executionWrappers,
     kill: () => {
       stopped = true;
@@ -125,8 +133,8 @@ async function createTauriHostSpawnHandle(input: {
     write: (data: string) => {
       void writeTauriHostProcess(spawned.id, data);
     },
-    resize: (_cols: number, _rows: number) => {
-      // No-op for Rust host pipe-backed processes; resize is only meaningful with PTY.
+    resize: (cols: number, rows: number) => {
+      if (spawned.usingPty) void resizeTauriHostProcess(spawned.id, cols, rows);
     },
   };
 }
@@ -207,44 +215,12 @@ export function createExtensionShellCapability() {
       installShutdownHooks();
       const resolvedEnv = input.env ? { ...process.env, ...input.env } : process.env;
 
-      if (isTauriHostCoreAvailable() && !input.pty) {
+      if (isTauriHostCoreAvailable()) {
         return createTauriHostSpawnHandle(input);
       }
 
       if (input.pty) {
-        // PTY-backed spawn: use node-pty
-        const ptyOptions: PtySpawnOptions = {
-          command: input.command,
-          args: input.args ?? [],
-          cwd: input.cwd,
-          env: resolvedEnv,
-          cols: typeof input.pty === 'object' ? input.pty.cols : 80,
-          rows: typeof input.pty === 'object' ? input.pty.rows : 24,
-        };
-        let ptyResult: ReturnType<typeof createPtyProcess>;
-        try {
-          ptyResult = createPtyProcess(ptyOptions);
-        } catch {
-          return createPipeBackedSpawnHandle(input, resolvedEnv);
-        }
-        const { pty, launch } = ptyResult;
-        spawnedExtensionProcesses.add(pty as unknown as ChildProcess);
-        pty.onData((chunk: string) => input.onStdout?.(chunk));
-        pty.onExit((event: { exitCode: number; signal?: number }) => {
-          spawnedExtensionProcesses.delete(pty as unknown as ChildProcess);
-          input.onExit?.({ code: event.exitCode, signal: null });
-        });
-        return {
-          pid: pty.pid,
-          usingPty: true,
-          executionWrappers: launch.wrappers,
-          kill: () => {
-            spawnedExtensionProcesses.delete(pty as unknown as ChildProcess);
-            pty.kill();
-          },
-          write: (data: string) => pty.write(data),
-          resize: (cols: number, rows: number) => pty.resize(cols, rows),
-        };
+        throw new Error('PTY shell sessions require the Tauri Rust host kernel.');
       }
 
       // Non-PTY spawn with stdin pipe for write support

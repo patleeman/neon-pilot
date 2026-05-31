@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, read_to_string, remove_file, write};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,23 @@ pub struct FileSecretStatus {
     pub key: String,
     pub configured: bool,
     pub writable: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostSecretBackend {
+    File,
+    Keychain,
+}
+
+impl HostSecretBackend {
+    pub fn from_id(value: Option<&str>) -> anyhow::Result<Self> {
+        match value.unwrap_or("file") {
+            "file" => Ok(Self::File),
+            "keychain" => Ok(Self::Keychain),
+            "env-only" => anyhow::bail!("The env-only secret backend is read-only."),
+            other => anyhow::bail!("Unsupported secret backend: {other}"),
+        }
+    }
 }
 
 pub fn get_file_secret(key: &str) -> anyhow::Result<Option<String>> {
@@ -31,9 +49,96 @@ pub fn list_file_secret_keys() -> anyhow::Result<Vec<String>> {
     list_file_secret_keys_at(resolve_state_root()?)
 }
 
+pub fn get_host_secret(key: &str, backend: HostSecretBackend) -> anyhow::Result<Option<String>> {
+    match backend {
+        HostSecretBackend::File => get_file_secret(key),
+        HostSecretBackend::Keychain => get_keychain_secret(key).or_else(|_| get_file_secret(key)),
+    }
+}
+
+pub fn set_host_secret(
+    key: &str,
+    value: &str,
+    backend: HostSecretBackend,
+) -> anyhow::Result<FileSecretStatus> {
+    match backend {
+        HostSecretBackend::File => set_file_secret(key, value),
+        HostSecretBackend::Keychain => set_keychain_secret(key, value).or_else(|_| set_file_secret(key, value)),
+    }
+}
+
+pub fn delete_host_secret(
+    key: &str,
+    backend: HostSecretBackend,
+) -> anyhow::Result<FileSecretStatus> {
+    match backend {
+        HostSecretBackend::File => delete_file_secret(key),
+        HostSecretBackend::Keychain => delete_keychain_secret(key).or_else(|_| delete_file_secret(key)),
+    }
+}
+
 fn get_file_secret_at(state_root: impl AsRef<Path>, key: &str) -> anyhow::Result<Option<String>> {
     validate_key(key)?;
     Ok(read_file_secrets(state_root.as_ref())?.get(key).cloned())
+}
+
+const KEYCHAIN_SERVICE: &str = "neon-pilot";
+
+fn get_keychain_secret(key: &str) -> anyhow::Result<Option<String>> {
+    validate_key(key)?;
+    if !cfg!(target_os = "macos") {
+        return get_file_secret(key);
+    }
+    let output = Command::new("security")
+        .args(["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", key, "-w"])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .context("reading secret from macOS Keychain")?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok((!value.is_empty()).then_some(value))
+}
+
+fn set_keychain_secret(key: &str, value: &str) -> anyhow::Result<FileSecretStatus> {
+    validate_key(key)?;
+    if !cfg!(target_os = "macos") {
+        return set_file_secret(key, value);
+    }
+    let status = Command::new("security")
+        .args(["add-generic-password", "-U", "-s", KEYCHAIN_SERVICE, "-a", key, "-w", value])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .status()
+        .context("writing secret to macOS Keychain")?;
+    if !status.success() {
+        anyhow::bail!("macOS Keychain rejected the secret write.");
+    }
+    Ok(FileSecretStatus {
+        key: key.to_string(),
+        configured: true,
+        writable: true,
+    })
+}
+
+fn delete_keychain_secret(key: &str) -> anyhow::Result<FileSecretStatus> {
+    validate_key(key)?;
+    if !cfg!(target_os = "macos") {
+        return delete_file_secret(key);
+    }
+    let _ = Command::new("security")
+        .args(["delete-generic-password", "-s", KEYCHAIN_SERVICE, "-a", key])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    Ok(FileSecretStatus {
+        key: key.to_string(),
+        configured: false,
+        writable: true,
+    })
 }
 
 fn set_file_secret_at(

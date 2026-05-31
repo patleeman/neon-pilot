@@ -1,7 +1,11 @@
 import type { OAuthDeviceCodeInfo, OAuthPrompt, OAuthSelectPrompt } from '@earendil-works/pi-ai';
 import { AuthStorage, type OAuthCredential } from '@earendil-works/pi-coding-agent';
 
-import { deleteProviderApiKeySecret, resolveProviderApiKey, setProviderApiKeySecret } from '../secrets/secretStore.js';
+import {
+  deleteProviderApiKeySecretAsync,
+  resolveProviderApiKeyAsync,
+  setProviderApiKeySecretAsync,
+} from '../secrets/secretStore.js';
 import { createModelRegistryForAuthFile } from './modelRegistry.js';
 
 export type ProviderAuthType = 'none' | 'api_key' | 'oauth' | 'environment';
@@ -159,15 +163,15 @@ function readModelCounts(authFile: string): Map<string, number> {
   return counts;
 }
 
-function deriveAuthType(
+async function deriveAuthType(
   authStorage: AuthStorage,
   provider: string,
   stateRoot?: string,
-): {
+): Promise<{
   authType: ProviderAuthType;
   hasStoredCredential: boolean;
-} {
-  if (stateRoot && resolveProviderApiKey(provider, stateRoot)) {
+}> {
+  if (stateRoot && (await resolveProviderApiKeyAsync(provider, stateRoot))) {
     return { authType: 'api_key', hasStoredCredential: true };
   }
 
@@ -201,7 +205,7 @@ function makeAuthStorage(authFile: string): AuthStorage {
   return AuthStorage.create(authFile);
 }
 
-export function readProviderAuthState(authFile: string, stateRoot?: string): ProviderAuthState {
+export async function readProviderAuthState(authFile: string, stateRoot?: string): Promise<ProviderAuthState> {
   const authStorage = makeAuthStorage(authFile);
   const modelCounts = readModelCounts(authFile);
   const oauthProvidersById = new Map(authStorage.getOAuthProviders().map((provider) => [provider.id, provider]));
@@ -213,12 +217,13 @@ export function readProviderAuthState(authFile: string, stateRoot?: string): Pro
     ...oauthProvidersById.keys(),
   ]);
 
-  const summaries = [...providers]
+  const summaries = await Promise.all(
+    [...providers]
     .filter((provider) => !NON_MODEL_SECRET_PROVIDERS.has(provider))
     .sort((left, right) => left.localeCompare(right))
-    .map((provider) => {
+    .map(async (provider) => {
       const oauthProvider = oauthProvidersById.get(provider);
-      const { authType, hasStoredCredential } = deriveAuthType(authStorage, provider, stateRoot);
+      const { authType, hasStoredCredential } = await deriveAuthType(authStorage, provider, stateRoot);
 
       return {
         id: provider,
@@ -230,7 +235,8 @@ export function readProviderAuthState(authFile: string, stateRoot?: string): Pro
         oauthProviderName: oauthProvider?.name ?? '',
         oauthUsesCallbackServer: Boolean(oauthProvider?.usesCallbackServer),
       } satisfies ProviderAuthSummary;
-    });
+    }),
+  );
 
   return {
     authFile,
@@ -238,7 +244,12 @@ export function readProviderAuthState(authFile: string, stateRoot?: string): Pro
   };
 }
 
-export function setProviderApiKey(authFile: string, providerInput: string, apiKeyInput: string, stateRoot?: string): ProviderAuthState {
+export async function setProviderApiKey(
+  authFile: string,
+  providerInput: string,
+  apiKeyInput: string,
+  stateRoot?: string,
+): Promise<ProviderAuthState> {
   const provider = normalizeProvider(providerInput);
   if (!provider) {
     throw new Error('provider is required');
@@ -250,7 +261,7 @@ export function setProviderApiKey(authFile: string, providerInput: string, apiKe
   }
 
   if (stateRoot) {
-    setProviderApiKeySecret(provider, apiKey, stateRoot);
+    await setProviderApiKeySecretAsync(provider, apiKey, stateRoot);
     makeAuthStorage(authFile).remove(provider);
     return readProviderAuthState(authFile, stateRoot);
   }
@@ -260,14 +271,14 @@ export function setProviderApiKey(authFile: string, providerInput: string, apiKe
   return readProviderAuthState(authFile);
 }
 
-export function removeProviderCredential(authFile: string, providerInput: string, stateRoot?: string): ProviderAuthState {
+export async function removeProviderCredential(authFile: string, providerInput: string, stateRoot?: string): Promise<ProviderAuthState> {
   const provider = normalizeProvider(providerInput);
   if (!provider) {
     throw new Error('provider is required');
   }
 
   if (stateRoot) {
-    deleteProviderApiKeySecret(provider, stateRoot);
+    await deleteProviderApiKeySecretAsync(provider, stateRoot);
   }
   const authStorage = makeAuthStorage(authFile);
   authStorage.remove(provider);

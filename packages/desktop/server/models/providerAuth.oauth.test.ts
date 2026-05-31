@@ -166,7 +166,7 @@ describe('providerAuth OAuth helpers', () => {
     setStoredCredential(authFile, 'api-provider', { type: 'api_key', key: 'api-key' });
     setEnvAuthProviders(authFile, ['env-provider']);
 
-    const state = readProviderAuthState(authFile);
+    const state = await readProviderAuthState(authFile);
 
     expect(state.authFile).toBe(authFile);
     expect(state.providers.find((entry) => entry.id === 'custom-oauth')).toMatchObject({

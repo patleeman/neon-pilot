@@ -23,7 +23,7 @@
     "desktop:demo": "node packages/desktop/scripts/launch-demo-app.mjs",
     "desktop:dist": "pnpm run tauri:build",
     "desktop:dist:dir": "pnpm run tauri:build",
-    "tauri:check": "cargo check --manifest-path packages/tauri/desktop-shell/src-tauri/Cargo.toml",
+    "tauri:check": "node scripts/prepare-tauri-resources.mjs && cargo check --manifest-path packages/tauri/desktop-shell/src-tauri/Cargo.toml",
     "tauri:build": "pnpm run build:ts && pnpm --dir packages/desktop run build:deps && pnpm --dir packages/desktop run build:main && node scripts/build-tauri-desktop.mjs",
     "tauri:dev": "pnpm run build:ts && pnpm --dir packages/desktop run build:deps && pnpm --dir packages/desktop run build:main && pnpm --dir packages/tauri/desktop-shell run dev",
     "tauri:smoke:sidecar": "node scripts/smoke-tauri-sidecar.mjs",

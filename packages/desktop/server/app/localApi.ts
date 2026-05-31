@@ -1727,14 +1727,18 @@ export async function deleteDesktopModelProviderModel(input: { provider: string;
 }
 
 export async function setDesktopProviderApiKey(input: { provider: string; apiKey: string }) {
-  const result = (await models()).setProviderApiKeyCapability(await getLocalProviderDesktopCapabilityContext(), input.provider, input.apiKey);
+  const result = await (await models()).setProviderApiKeyCapability(
+    await getLocalProviderDesktopCapabilityContext(),
+    input.provider,
+    input.apiKey,
+  );
   (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
 }
 
 export async function removeDesktopProviderCredential(provider: string) {
-  const result = (await models()).removeProviderCredentialCapability(await getLocalProviderDesktopCapabilityContext(), provider);
+  const result = await (await models()).removeProviderCredentialCapability(await getLocalProviderDesktopCapabilityContext(), provider);
   (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;

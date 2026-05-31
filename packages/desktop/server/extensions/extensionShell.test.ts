@@ -8,37 +8,6 @@ const terminateProcessGroup = vi.fn();
 
 vi.mock('../shared/processLauncher.js', () => ({ execFileProcess, spawnProcess, terminateProcessGroup }));
 
-// Factory for a mock PTY that looks like node-pty's IPty
-function createMockPty(
-  overrides: Partial<{
-    pid: number;
-    onData: (cb: (chunk: string) => void) => void;
-    onExit: (cb: (event: { exitCode: number; signal?: number }) => void) => void;
-    write: (data: string) => void;
-    resize: (cols: number, rows: number) => void;
-    kill: () => void;
-  }> = {},
-) {
-  const callbacks: { data?: (chunk: string) => void; exit?: (event: { exitCode: number; signal?: number }) => void } = {};
-  return {
-    pid: overrides.pid ?? 456,
-    onData: vi.fn((cb: (chunk: string) => void) => {
-      callbacks.data = cb;
-    }),
-    onExit: vi.fn((cb: (event: { exitCode: number; signal?: number }) => void) => {
-      callbacks.exit = cb;
-    }),
-    write: vi.fn(),
-    resize: vi.fn(),
-    kill: vi.fn(),
-    _callbacks: callbacks,
-    ...overrides,
-  };
-}
-
-const createPtyProcess = vi.fn();
-vi.mock('../shared/ptyLauncher.js', () => ({ createPtyProcess }));
-
 const { createExtensionGitCapability, createExtensionShellCapability } = await import('./extensionShell.js');
 
 function createChild() {
@@ -60,7 +29,6 @@ describe('extensionShell', () => {
     execFileProcess.mockReset().mockResolvedValue({ stdout: 'out', stderr: 'err', launch: { wrappers: [{ id: 'sandbox' }] } });
     spawnProcess.mockReset();
     terminateProcessGroup.mockReset();
-    createPtyProcess.mockReset();
   });
 
   it('executes commands through the process launcher with defaults and merged env', async () => {
@@ -160,107 +128,44 @@ describe('extensionShell', () => {
     expect(child.stdin.write).toHaveBeenCalledWith('test input');
   });
 
-  it('spawns with PTY: delegates to node-pty and wires callbacks', async () => {
-    const mockPty = createMockPty({ pid: 456 });
-    createPtyProcess.mockReturnValue({ pty: mockPty, launch: { wrappers: [{ id: 'wrap-pty' }] } });
-
-    const onStdout = vi.fn();
-    const onExit = vi.fn();
+  it('routes PTY spawn, write, resize, and kill through the Tauri Rust host-core RPC', async () => {
+    vi.stubEnv('NEON_PILOT_TAURI_HOST_CORE_PORT', '4567');
+    vi.stubEnv('NEON_PILOT_TAURI_HOST_CORE_TOKEN', 'host-token');
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      if (url.endsWith('/process/spawn')) {
+        return {
+          ok: true,
+          text: async () => JSON.stringify({ id: 'proc-1', pid: 789, usingPty: true, executionWrappers: [{ id: 'tauri-host-core' }] }),
+        };
+      }
+      return { ok: true, text: async () => JSON.stringify({ id: 'proc-1', stdout: '', stderr: '', exit: null }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
 
     const handle = await createExtensionShellCapability().spawn({
       command: '/bin/bash',
       pty: { cols: 120, rows: 30 },
       cwd: '/workspace',
-      onStdout,
-      onExit,
     });
-
-    // Should delegate to createPtyProcess with correct options
-    expect(createPtyProcess).toHaveBeenCalledWith({
-      command: '/bin/bash',
-      args: [],
-      cwd: '/workspace',
-      env: expect.any(Object),
-      cols: 120,
-      rows: 30,
-    });
-
-    // Should wire pty.onData → onStdout
-    mockPty._callbacks.data?.('terminal output\r\n');
-    expect(onStdout).toHaveBeenCalledWith('terminal output\r\n');
-
-    // Should wire pty.onExit → onExit
-    mockPty._callbacks.exit?.({ exitCode: 0 });
-    expect(onExit).toHaveBeenCalledWith({ code: 0, signal: null });
-
-    // Returned handle should have write/resize that delegate to the pty
     handle.write('echo hi\n');
-    expect(mockPty.write).toHaveBeenCalledWith('echo hi\n');
-
     handle.resize(100, 40);
-    expect(mockPty.resize).toHaveBeenCalledWith(100, 40);
-
-    // kill should delegate
     handle.kill();
-    expect(mockPty.kill).toHaveBeenCalled();
 
-    expect(handle).toMatchObject({ pid: 456, usingPty: true, executionWrappers: [{ id: 'wrap-pty' }] });
-  });
-
-  it('spawns with pty:true uses default 80x24 dimensions', async () => {
-    const mockPty = createMockPty({ pid: 789 });
-    createPtyProcess.mockReturnValue({ pty: mockPty, launch: { wrappers: [] } });
-
-    await createExtensionShellCapability().spawn({
-      command: 'zsh',
-      pty: true,
-    });
-
-    expect(createPtyProcess).toHaveBeenCalledWith(expect.objectContaining({ cols: 80, rows: 24 }));
-  });
-
-  it('falls back to a pipe-backed process when PTY spawn fails', async () => {
-    const child = createChild();
-    Object.assign(child, { stdin: { writable: true, write: vi.fn() } });
-    createPtyProcess.mockImplementation(() => {
-      throw new Error('posix_spawnp failed.');
-    });
-    spawnProcess.mockReturnValue({ child, launch: { wrappers: [{ id: 'pipe-fallback' }] } });
-
-    const onStdout = vi.fn();
-    const onStderr = vi.fn();
-    const onExit = vi.fn();
-
-    const handle = await createExtensionShellCapability().spawn({
-      command: '/bin/zsh',
-      pty: { cols: 120, rows: 30 },
+    expect(handle).toMatchObject({ pid: 789, usingPty: true, executionWrappers: [{ id: 'tauri-host-core' }] });
+    const spawnCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/process/spawn'));
+    expect(JSON.parse(String((spawnCall?.[1] as RequestInit | undefined)?.body))).toMatchObject({
+      command: '/bin/bash',
       cwd: '/workspace',
-      onStdout,
-      onStderr,
-      onExit,
+      pty: { cols: 120, rows: 30 },
     });
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:4567/process/write', expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:4567/process/resize', expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:4567/process/kill', expect.any(Object));
+  });
 
-    expect(spawnProcess).toHaveBeenCalledWith(
-      expect.objectContaining({
-        command: '/bin/zsh',
-        cwd: '/workspace',
-        options: { detached: true, stdio: ['pipe', 'pipe', 'pipe'] },
-      }),
-    );
-
-    child.stdout?.emit('data', Buffer.from('pipe stdout'));
-    child.stderr?.emit('data', Buffer.from('pipe stderr'));
-    child.emit('exit', 0, null);
-    handle.write('echo fallback\n');
-    handle.resize(100, 40);
-    handle.kill();
-
-    expect(handle).toMatchObject({ pid: 123, usingPty: false, executionWrappers: [{ id: 'pipe-fallback' }] });
-    expect(onStdout).toHaveBeenCalledWith('pipe stdout');
-    expect(onStderr).toHaveBeenCalledWith('pipe stderr');
-    expect(onExit).toHaveBeenCalledWith({ code: 0, signal: null });
-    expect(child.stdin.write).toHaveBeenCalledWith('echo fallback\n');
-    expect(terminateProcessGroup).toHaveBeenCalledWith(child);
+  it('rejects PTY shell sessions when the Rust host kernel is unavailable', async () => {
+    await expect(createExtensionShellCapability().spawn({ command: 'zsh', pty: true })).rejects.toThrow('Rust host kernel');
+    expect(spawnProcess).not.toHaveBeenCalled();
   });
 
   it('implements git helpers with focused git commands', async () => {

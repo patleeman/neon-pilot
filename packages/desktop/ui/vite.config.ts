@@ -25,7 +25,7 @@ export default defineConfig({
   },
   build: {
     outDir: resolve(__dirname, 'dist'),
-    // Keep prior hashed chunks available for already-running Electron windows.
+    // Keep prior hashed chunks available for already-running desktop windows.
     // Clean/package flows remove ui/dist before building; incremental build:ui must not
     // break dynamic imports from a renderer that loaded the previous bundle.
     emptyOutDir: false,

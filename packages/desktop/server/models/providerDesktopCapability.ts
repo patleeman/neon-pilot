@@ -338,15 +338,15 @@ export function deleteModelProviderModelCapability(
   return result.state;
 }
 
-export function readProviderAuthCapability(context: ProviderDesktopCapabilityContext): ProviderAuthState {
+export async function readProviderAuthCapability(context: ProviderDesktopCapabilityContext): Promise<ProviderAuthState> {
   return readProviderAuthState(context.getAuthFile(), context.getStateRoot?.());
 }
 
-export function setProviderApiKeyCapability(
+export async function setProviderApiKeyCapability(
   context: ProviderDesktopCapabilityContext,
   providerInput: string,
   apiKeyInput: string,
-): ProviderAuthState {
+): Promise<ProviderAuthState> {
   const provider = providerInput.trim();
   if (!provider) {
     throw new ProviderDesktopCapabilityInputError('provider required');
@@ -357,7 +357,7 @@ export function setProviderApiKeyCapability(
     throw new ProviderDesktopCapabilityInputError('apiKey required');
   }
 
-  const state = setProviderApiKey(context.getAuthFile(), provider, apiKey, context.getStateRoot?.());
+  const state = await setProviderApiKey(context.getAuthFile(), provider, apiKey, context.getStateRoot?.());
   const didSeedDefaults = autoSeedProviderModelsForApiKey(runtimeScope(context), provider, context.getAuthFile());
 
   if (didSeedDefaults) {
@@ -369,13 +369,16 @@ export function setProviderApiKeyCapability(
   return state;
 }
 
-export function removeProviderCredentialCapability(context: ProviderDesktopCapabilityContext, providerInput: string): ProviderAuthState {
+export async function removeProviderCredentialCapability(
+  context: ProviderDesktopCapabilityContext,
+  providerInput: string,
+): Promise<ProviderAuthState> {
   const provider = providerInput.trim();
   if (!provider) {
     throw new ProviderDesktopCapabilityInputError('provider required');
   }
 
-  const state = removeProviderCredential(context.getAuthFile(), provider, context.getStateRoot?.());
+  const state = await removeProviderCredential(context.getAuthFile(), provider, context.getStateRoot?.());
   reloadAllLiveSessionAuth();
   return state;
 }
