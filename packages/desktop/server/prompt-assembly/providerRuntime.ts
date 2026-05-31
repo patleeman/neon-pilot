@@ -1,4 +1,4 @@
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import type { AssemblyDiagnostic } from './types.js';
 
 const DEFAULT_PROVIDER_TIMEOUT_MS = 5_000;
@@ -31,7 +31,11 @@ export async function invokePromptAssemblyProvider<T>(input: {
       timeout = setTimeout(() => reject(new Error(`Timed out after ${timeoutMs}ms`)), timeoutMs);
     });
     const result = await Promise.race([
-      invokeExtensionAction(input.provider.extensionId, input.provider.handler, input.payload),
+      getExtensionHostClient().invokeAction({
+        extensionId: input.provider.extensionId,
+        actionId: input.provider.handler,
+        input: input.payload,
+      }),
       timeoutPromise,
     ]);
     if (!result.ok) {

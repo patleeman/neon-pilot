@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const backend = vi.hoisted(() => ({ invokeExtensionAction: vi.fn() }));
+const extensionHostClient = vi.hoisted(() => ({ invokeAction: vi.fn() }));
 
-vi.mock('../extensions/extensionBackend.js', () => backend);
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => extensionHostClient,
+}));
 
 import { invokePromptAssemblyProvider, isRecord } from './providerRuntime.js';
 
@@ -18,7 +20,7 @@ describe('providerRuntime', () => {
   });
 
   it('returns valid items from object or array provider results and diagnoses invalid items', async () => {
-    backend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { items: [{ id: 'one' }, { bad: true }, { id: 'two' }] } });
+    extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: true, result: { items: [{ id: 'one' }, { bad: true }, { id: 'two' }] } });
 
     await expect(invokePromptAssemblyProvider({ provider, payload: { cwd: '/repo' }, resultKey: 'items', validateItem })).resolves.toEqual({
       items: [{ id: 'one' }, { id: 'two' }],
@@ -31,9 +33,13 @@ describe('providerRuntime', () => {
         },
       ],
     });
-    expect(backend.invokeExtensionAction).toHaveBeenCalledWith('ext', 'getItems', { cwd: '/repo' });
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith({
+      extensionId: 'ext',
+      actionId: 'getItems',
+      input: { cwd: '/repo' },
+    });
 
-    backend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: [{ id: 'array' }] });
+    extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: true, result: [{ id: 'array' }] });
     await expect(invokePromptAssemblyProvider({ provider, payload: {}, resultKey: 'items', validateItem })).resolves.toEqual({
       items: [{ id: 'array' }],
       diagnostics: [],
@@ -41,13 +47,13 @@ describe('providerRuntime', () => {
   });
 
   it('returns warning diagnostics for provider failures and thrown errors', async () => {
-    backend.invokeExtensionAction.mockResolvedValueOnce({ ok: false });
+    extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: false });
     await expect(invokePromptAssemblyProvider({ provider, payload: {}, resultKey: 'items', validateItem })).resolves.toEqual({
       items: [],
       diagnostics: [expect.objectContaining({ code: 'prompt-assembly-provider-failed', sourceId: 'ext/provider' })],
     });
 
-    backend.invokeExtensionAction.mockRejectedValueOnce(new Error('boom'));
+    extensionHostClient.invokeAction.mockRejectedValueOnce(new Error('boom'));
     await expect(invokePromptAssemblyProvider({ provider, payload: {}, resultKey: 'items', validateItem })).resolves.toEqual({
       items: [],
       diagnostics: [expect.objectContaining({ code: 'prompt-assembly-provider-error', message: 'Provider provider error: boom' })],
@@ -56,7 +62,7 @@ describe('providerRuntime', () => {
 
   it('times out slow providers and clears timers', async () => {
     vi.useFakeTimers();
-    backend.invokeExtensionAction.mockReturnValue(new Promise(() => undefined));
+    extensionHostClient.invokeAction.mockReturnValue(new Promise(() => undefined));
     const promise = invokePromptAssemblyProvider({ provider, payload: {}, resultKey: 'items', validateItem, timeoutMs: 25 });
     await vi.advanceTimersByTimeAsync(25);
 

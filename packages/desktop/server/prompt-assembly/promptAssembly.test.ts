@@ -72,38 +72,40 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
   ],
 }));
 
-vi.mock('../extensions/extensionBackend.js', () => ({
-  invokeExtensionAction: vi.fn(async (_extensionId: string, action: string) => {
-    if (action === 'provideTools') {
-      return {
-        ok: true,
-        result: {
-          tools: [
-            {
-              id: 'dynamic-tool',
-              name: 'dynamic_tool',
-              action: 'dynamicTool',
-              description: 'Dynamic tool',
-              inputSchema: { type: 'object' },
-              priority: 1,
-            },
-          ],
-        },
-      };
-    }
-    if (action === 'provideBadSkills') {
-      return {
-        ok: true,
-        result: { skills: [{ id: 'bad-location', title: 'Bad Location', description: 'Bad', location: { kind: 'file' } }] },
-      };
-    }
-    if (action === 'provideBadTemplates') {
-      return { ok: true, result: { templates: [{ id: 'bad-template', title: 'Bad Template', location: { kind: 'file' } }] } };
-    }
-    if (action === 'replaceDiagnostics') {
-      return { ok: true, result: { plan: { diagnostics: [] } } };
-    }
-    return { ok: false, error: new Error(`Unexpected action ${action}`) };
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => ({
+    invokeAction: async ({ actionId }: { actionId: string }) => {
+      if (actionId === 'provideTools') {
+        return {
+          ok: true,
+          result: {
+            tools: [
+              {
+                id: 'dynamic-tool',
+                name: 'dynamic_tool',
+                action: 'dynamicTool',
+                description: 'Dynamic tool',
+                inputSchema: { type: 'object' },
+                priority: 1,
+              },
+            ],
+          },
+        };
+      }
+      if (actionId === 'provideBadSkills') {
+        return {
+          ok: true,
+          result: { skills: [{ id: 'bad-location', title: 'Bad Location', description: 'Bad', location: { kind: 'file' } }] },
+        };
+      }
+      if (actionId === 'provideBadTemplates') {
+        return { ok: true, result: { templates: [{ id: 'bad-template', title: 'Bad Template', location: { kind: 'file' } }] } };
+      }
+      if (actionId === 'replaceDiagnostics') {
+        return { ok: true, result: { plan: { diagnostics: [] } } };
+      }
+      return { ok: false, error: new Error(`Unexpected action ${actionId}`) };
+    },
   }),
 }));
 

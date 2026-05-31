@@ -29,6 +29,24 @@ The system that runs agents, tools, conversations, extensions, storage, and back
 
 Use **runtime** for the operating environment, not for a single background job.
 
+### Product runtime
+
+The runtime lane that owns conversations, prompt assembly, transcript/session orchestration, daemon integration, model/provider selection, and the Pi/Codex adapter.
+
+Use **product runtime** when contrasting agent/conversation ownership with extension execution.
+
+### Extension host
+
+The runtime lane that owns extension registry loading, backend extension execution, actions, tools, services, subscriptions, extension diagnostics, and extension capability mediation.
+
+Use **extension host** for the host that executes or supervises extension backend code, not for React view hosts.
+
+### Extension worker
+
+An isolated runtime for one extension backend, or one trusted extension group, supervised by the extension host.
+
+Use **extension worker** when discussing per-extension backend isolation.
+
 ### Daemon
 
 The long-lived background process that owns durable runtime services such as scheduled automations, persisted runs, and background execution.
