@@ -1,5 +1,5 @@
-import type { ExtensionHostClient, ExtensionHostInvokeActionInput } from './extensionHostClient.js';
-import type { ExtensionHostRequest, ExtensionHostResponse } from './extensionHostProtocol.js';
+import type { ExtensionHostClient, ExtensionHostInvokeActionInput, ExtensionHostInvokeRouteInput } from './extensionHostClient.js';
+import type { ExtensionHostRequest, ExtensionHostResponse, ExtensionHostRouteResponse, ExtensionHostRouteSseEvent } from './extensionHostProtocol.js';
 
 export interface ExtensionHostRpcClientOptions {
   baseUrl: string;
@@ -27,12 +27,76 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
 }
 
 function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHostClient['invokeRoute']>[0]): boolean {
-  return !input.request.signal && !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(input.request);
+  return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(stripRouteSignal(input).request);
 }
 
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {
   if (!isWireableExtensionHostInvokeActionInput(input)) {
     throw new Error('Extension host RPC cannot carry function-bearing contexts; use capability channels before enabling this call path.');
+  }
+}
+
+function stripRouteSignal(input: ExtensionHostInvokeRouteInput): ExtensionHostInvokeRouteInput {
+  const request = { ...input.request };
+  delete request.signal;
+  return { ...input, request };
+}
+
+function decodeRouteResponse(route: ExtensionHostRouteResponse): ExtensionHostRouteResponse {
+  const body = route.body;
+  if (
+    body &&
+    typeof body === 'object' &&
+    !Array.isArray(body) &&
+    (body as { __neonPilotEncoding?: unknown }).__neonPilotEncoding === 'base64' &&
+    typeof (body as { data?: unknown }).data === 'string'
+  ) {
+    return { ...route, body: Uint8Array.from(Buffer.from((body as { data: string }).data, 'base64')) };
+  }
+  return route;
+}
+
+async function* parseSseEvents(response: Response): AsyncIterable<ExtensionHostRouteSseEvent> {
+  if (!response.body) return;
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let event: ExtensionHostRouteSseEvent = {};
+  const flush = function* (): Iterable<ExtensionHostRouteSseEvent> {
+    if ('data' in event || event.event || event.id || typeof event.retry === 'number') {
+      yield event;
+      event = {};
+    }
+  };
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      const lines = buffer.split(/\r?\n/);
+      buffer = done ? '' : (lines.pop() ?? '');
+      for (const line of lines) {
+        if (!line) {
+          yield* flush();
+          continue;
+        }
+        if (line.startsWith(':')) continue;
+        const separator = line.indexOf(':');
+        const field = separator >= 0 ? line.slice(0, separator) : line;
+        const rawValue = separator >= 0 ? line.slice(separator + 1).replace(/^ /, '') : '';
+        if (field === 'event') event.event = rawValue;
+        else if (field === 'id') event.id = rawValue;
+        else if (field === 'retry') {
+          const retry = Number(rawValue);
+          if (Number.isFinite(retry)) event.retry = retry;
+        } else if (field === 'data') {
+          event.data = typeof event.data === 'string' ? `${event.data}\n${rawValue}` : rawValue;
+        }
+      }
+      if (done) break;
+    }
+    yield* flush();
+  } finally {
+    reader.releaseLock();
   }
 }
 
@@ -54,6 +118,34 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       return { ok: false, error: !body.ok ? body.error : `Extension host RPC failed: ${String(response.status)}` };
     }
     return body;
+  }
+
+  async function sendRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse> {
+    const response = await fetchImpl(`${baseUrl}/route`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${options.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ request: stripRouteSignal(input) }),
+      signal: input.request.signal,
+    });
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('text/event-stream')) {
+      return {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        stream: 'sse',
+        events: parseSseEvents(response),
+      };
+    }
+    const body = (await response.json()) as ExtensionHostResponse;
+    if (!response.ok) {
+      throw new Error(!body.ok ? body.error : `Extension host route failed: ${String(response.status)}`);
+    }
+    if (!body.ok) throw new Error(body.error);
+    if (!('route' in body)) throw new Error('Extension host returned an invalid route response.');
+    return decodeRouteResponse(body.route);
   }
 
   return {
@@ -80,16 +172,10 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       throw new Error('Extension host RPC cannot carry protocol stdio streams; use capability channels before enabling this call path.');
     },
     async invokeRoute(input) {
-      if (!isWireableExtensionHostInvokeRouteInput(input)) {
+      if (hasFunction(input.serverContext) || hasFunction(input.serverContextSnapshot) || hasFunction(input.request)) {
         throw new Error('Extension host RPC cannot carry function-bearing route contexts; use capability channels before enabling this call path.');
       }
-      const response = await send({ type: 'invokeRoute', ...input });
-      if (!response.ok) throw new Error(response.error);
-      if (!('route' in response)) throw new Error('Extension host returned an invalid route response.');
-      if (response.route.stream === 'sse' || hasFunction(response.route)) {
-        throw new Error('Extension host RPC cannot carry streaming route responses; use capability channels before enabling this call path.');
-      }
-      return response.route;
+      return sendRoute(input);
     },
     async listActionTelemetry(extensionId) {
       const response = await send({ type: 'listActionTelemetry', ...(extensionId ? { extensionId } : {}) });
@@ -144,7 +230,10 @@ export function createHybridExtensionHostClient(input: {
       return input.fallbackClient.invokeProtocolEntrypoint(protocolInput);
     },
     async invokeRoute(routeInput) {
-      return input.fallbackClient.invokeRoute(routeInput);
+      if (!isWireableExtensionHostInvokeRouteInput(routeInput)) {
+        return input.fallbackClient.invokeRoute(routeInput);
+      }
+      return input.rpcClient.invokeRoute(routeInput);
     },
     async listActionTelemetry(extensionId) {
       return input.rpcClient.listActionTelemetry(extensionId);

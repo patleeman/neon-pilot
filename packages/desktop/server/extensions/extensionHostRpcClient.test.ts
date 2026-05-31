@@ -168,11 +168,10 @@ describe('extension host RPC client', () => {
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       4,
-      'http://host/rpc',
+      'http://host/route',
       expect.objectContaining({
         body: JSON.stringify({
           request: {
-            type: 'invokeRoute',
             extensionId: 'ext',
             method: 'GET',
             routePath: '/status',
@@ -181,6 +180,31 @@ describe('extension host RPC client', () => {
         }),
       }),
     );
+  });
+
+  it('parses extension route SSE responses from the route transport', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response('event: ready\ndata: {"ok":true}\n\nid: 2\ndata: next\n\n', {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
+      }),
+    );
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
+
+    const route = await client.invokeRoute({
+      extensionId: 'ext',
+      method: 'GET',
+      routePath: '/events',
+      request: { method: 'GET', path: '/events', query: {}, params: {} },
+    });
+
+    expect(route.stream).toBe('sse');
+    const events = [];
+    for await (const event of route.events ?? []) events.push(event);
+    expect(events).toEqual([
+      { event: 'ready', data: '{"ok":true}' },
+      { id: '2', data: 'next' },
+    ]);
   });
 
   it('uses RPC for wire-safe calls and fallback for callback-bearing calls', async () => {
@@ -254,7 +278,7 @@ describe('extension host RPC client', () => {
     expect(fallbackClient.invokeProtocolEntrypoint).toHaveBeenCalledWith({ protocolId: 'acp', input: {}, stdio, signal });
   });
 
-  it('keeps backend routes on fallback until route streaming channels exist', async () => {
+  it('uses RPC route transport for wire-safe backend routes', async () => {
     const rpcClient = {
       checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
@@ -288,10 +312,10 @@ describe('extension host RPC client', () => {
         routePath: '/status',
         request: { method: 'GET', path: '/status', query: {}, params: {} },
       }),
-    ).resolves.toEqual({ status: 200, body: 'fallback' });
+    ).resolves.toEqual({ status: 200, body: 'rpc' });
 
-    expect(rpcClient.invokeRoute).not.toHaveBeenCalled();
-    expect(fallbackClient.invokeRoute).toHaveBeenCalled();
+    expect(rpcClient.invokeRoute).toHaveBeenCalled();
+    expect(fallbackClient.invokeRoute).not.toHaveBeenCalled();
   });
 
   it('keeps wire-safe lifecycle operations on RPC in the hybrid client', async () => {

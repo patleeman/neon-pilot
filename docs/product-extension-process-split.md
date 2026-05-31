@@ -69,7 +69,7 @@ Product runtime caller
 
 The RPC adapter must only carry wire-safe data. Product action paths pass serializable server and tool context snapshots where possible. Existing action paths that depend on function-bearing `serverContext`, streaming `onUpdate` callbacks, abort signals, stdio protocol entrypoints, or live agent objects must first move those operations behind capability channels.
 
-The desktop build already emits an `extension-host-child.js` entrypoint for this lane. The local backend configures a hybrid client: wire-safe product runtime traffic goes to the extension host child process, while callback-bearing traffic and stdio protocol entrypoints remain on the in-process fallback until capability channels exist.
+The desktop build already emits an `extension-host-child.js` entrypoint for this lane. The local backend configures a hybrid client: wire-safe product runtime traffic goes to the extension host child process. Extension backend routes use a dedicated host route transport so abort signals and SSE responses can cross the process boundary without being squeezed through JSON RPC. Callback-bearing tool actions and stdio protocol entrypoints remain on the in-process fallback until capability channels exist.
 
 Product runtime modules must depend on `ExtensionHostClient` and the public host protocol/context types. They must not import `extensionBackend` directly, including for route, action, telemetry, reload, startup, self-test, or protocol-entrypoint operations.
 
