@@ -39,11 +39,29 @@ export interface ExtensionHostInvokeProtocolEntrypointRequest {
   signal: AbortSignal;
 }
 
+export interface ExtensionHostCheckBackendHealthRequest {
+  type: 'checkBackendHealth';
+}
+
+export interface ExtensionHostStartStartupActionsRequest {
+  type: 'startStartupActions';
+  serverContext?: ExtensionBackendServerContext;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
+}
+
+export interface ExtensionHostBackendOperationResult {
+  extensionId: string;
+  ok: boolean;
+  error?: string;
+}
+
 export type ExtensionHostRequest =
   | ExtensionHostHealthRequest
   | ExtensionHostInvokeActionRequest
   | ExtensionHostPublishEventRequest
-  | ExtensionHostInvokeProtocolEntrypointRequest;
+  | ExtensionHostInvokeProtocolEntrypointRequest
+  | ExtensionHostCheckBackendHealthRequest
+  | ExtensionHostStartStartupActionsRequest;
 
 export interface ExtensionHostHealthResponse {
   ok: true;
@@ -65,6 +83,10 @@ export type ExtensionHostResponse =
       invoked: true;
     }
   | {
+      ok: true;
+      results: ExtensionHostBackendOperationResult[];
+    }
+  | {
       ok: false;
       error: string;
     };
@@ -73,5 +95,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'invokeAction') return `invokeAction:${request.extensionId}/${request.actionId}`;
   if (request.type === 'invokeProtocolEntrypoint') return `invokeProtocolEntrypoint:${request.protocolId}`;
   if (request.type === 'publishEvent') return `publishEvent:${request.source}`;
+  if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
+  if (request.type === 'startStartupActions') return 'startStartupActions';
   return request.type;
 }

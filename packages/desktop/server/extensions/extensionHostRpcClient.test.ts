@@ -102,18 +102,50 @@ describe('extension host RPC client', () => {
     );
   });
 
+  it('runs backend lifecycle operations over RPC', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'ext', ok: true }] }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'startup-ext', ok: true }] }));
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
+
+    await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
+    await expect(client.startStartupActions({ serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } })).resolves.toEqual([
+      { extensionId: 'startup-ext', ok: true },
+    ]);
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'checkBackendHealth' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: { type: 'startStartupActions', serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } },
+        }),
+      }),
+    );
+  });
+
   it('uses RPC for wire-safe calls and fallback for callback-bearing calls', async () => {
     const rpcClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
       invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
       invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
       publishEvent: vi.fn().mockResolvedValue(undefined),
+      startStartupActions: vi.fn().mockResolvedValue([]),
     };
     const fallbackClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
       invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
       invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
       publishEvent: vi.fn().mockResolvedValue(undefined),
+      startStartupActions: vi.fn().mockResolvedValue([]),
     };
     const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
 
@@ -128,16 +160,20 @@ describe('extension host RPC client', () => {
 
   it('keeps protocol entrypoints on fallback until stdio capability channels exist', async () => {
     const rpcClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
       invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
       invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
       publishEvent: vi.fn().mockResolvedValue(undefined),
+      startStartupActions: vi.fn().mockResolvedValue([]),
     };
     const fallbackClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
       invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
       invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
       publishEvent: vi.fn().mockResolvedValue(undefined),
+      startStartupActions: vi.fn().mockResolvedValue([]),
     };
     const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
     const signal = new AbortController().signal;
@@ -147,5 +183,33 @@ describe('extension host RPC client', () => {
 
     expect(rpcClient.invokeProtocolEntrypoint).not.toHaveBeenCalled();
     expect(fallbackClient.invokeProtocolEntrypoint).toHaveBeenCalledWith({ protocolId: 'acp', input: {}, stdio, signal });
+  });
+
+  it('keeps wire-safe lifecycle operations on RPC in the hybrid client', async () => {
+    const rpcClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([{ extensionId: 'health-ext', ok: true }]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      startStartupActions: vi.fn().mockResolvedValue([{ extensionId: 'startup-ext', ok: true }]),
+    };
+    const fallbackClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      startStartupActions: vi.fn().mockResolvedValue([]),
+    };
+    const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
+
+    await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'health-ext', ok: true }]);
+    await expect(client.startStartupActions({ serverContextSnapshot: { runtimeScope: 'shared' } })).resolves.toEqual([
+      { extensionId: 'startup-ext', ok: true },
+    ]);
+
+    expect(fallbackClient.checkBackendHealth).not.toHaveBeenCalled();
+    expect(fallbackClient.startStartupActions).not.toHaveBeenCalled();
   });
 });
