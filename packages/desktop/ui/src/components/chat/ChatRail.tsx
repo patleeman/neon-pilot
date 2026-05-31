@@ -38,11 +38,27 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
   // ── Models ────────────────────────────────────────────────────────────
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [currentModel, setCurrentModel] = useState('');
+  const [currentThinkingLevel, setCurrentThinkingLevel] = useState('');
 
   useEffect(() => {
     if (!desktopState.state?.sessionDetail?.meta?.model) return;
     setCurrentModel(desktopState.state.sessionDetail.meta.model);
   }, [desktopState.state?.sessionDetail?.meta?.model]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .conversationModelPreferences(conversationId)
+      .then((preferences) => {
+        if (cancelled) return;
+        setCurrentModel(preferences.currentModel ?? '');
+        setCurrentThinkingLevel(preferences.currentThinkingLevel ?? '');
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -219,6 +235,18 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
     [conversationId],
   );
 
+  const handleThinkingLevelSelect = useCallback(
+    async (thinkingLevel: string) => {
+      setCurrentThinkingLevel(thinkingLevel);
+      try {
+        await api.updateConversationModelPreferences(conversationId, { thinkingLevel });
+      } catch {
+        // Ignore thinking level change errors.
+      }
+    },
+    [conversationId],
+  );
+
   const composerWorkspaceCwd = desktopState.state?.sessionDetail?.meta?.cwd ?? workspaceCwd;
 
   return (
@@ -246,11 +274,13 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
           isStreaming={isStreaming}
           models={models}
           currentModel={currentModel}
+          currentThinkingLevel={currentThinkingLevel}
           tokens={tokens}
           contextUsage={contextUsage}
           onSubmit={handleSubmit}
           onAbortStream={handleAbort}
           onSelectModel={handleModelSelect}
+          onSelectThinkingLevel={handleThinkingLevelSelect}
         />
       </div>
     </div>

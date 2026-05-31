@@ -17,9 +17,11 @@ import {
 import { useComposerController } from '../../conversation/useComposerController';
 import { useConversationComposerMenus, type UseConversationComposerMenusState } from '../../conversation/useConversationComposerMenus';
 import { useComposerModifierKeys } from '../../conversation/useConversationKeyboardState';
+import { formatContextUsageLabel } from '../../conversation/conversationHeader';
+import { resolveConversationContextUsageTokens } from '../../conversation/conversationComposerPresentation';
 import type { ModelInfo, PromptAttachmentRefInput, PromptImageInput, SessionContextUsage } from '../../shared/types';
 import { ConversationComposer } from '../conversation/ConversationComposer';
-import { ChatBubbleIcon } from '../conversation/ConversationComposerChrome';
+import { ChatBubbleIcon, FolderIcon } from '../conversation/ConversationComposerChrome';
 import { ConversationComposerInputControls } from '../conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../conversation/ConversationComposerMenus';
 import { addNotification } from '../notifications/notificationStore';
@@ -50,11 +52,13 @@ export function ChatRailComposer({
   isStreaming,
   models,
   currentModel,
+  currentThinkingLevel,
   tokens,
   contextUsage,
   onSubmit,
   onAbortStream,
   onSelectModel,
+  onSelectThinkingLevel,
   composerMeta,
 }: {
   conversationId: string | null;
@@ -62,6 +66,7 @@ export function ChatRailComposer({
   isStreaming: boolean;
   models: ModelInfo[];
   currentModel: string;
+  currentThinkingLevel: string;
   tokens: { input: number; output: number; total: number; cacheRead: number; cacheWrite: number } | null;
   contextUsage: SessionContextUsage | null;
   onSubmit: (
@@ -72,6 +77,7 @@ export function ChatRailComposer({
   ) => void;
   onAbortStream: () => void;
   onSelectModel: (modelId: string) => void;
+  onSelectThinkingLevel: (thinkingLevel: string) => void;
   composerMeta?: ReactNode;
 }) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
@@ -280,20 +286,30 @@ export function ChatRailComposer({
   );
 
   // Side chat shares the parent conversation's CWD — never show CWD picker.
+  const contextTokens = resolveConversationContextUsageTokens({
+    isLiveSession: true,
+    liveUsage: contextUsage,
+    historicalUsage: null,
+    models,
+    currentModel,
+    routeModel: currentModel,
+  });
+  const workspaceLabel = _workspaceCwd?.trim() || 'Chat';
+  const neutralChatCwd = workspaceLabel === 'Chat';
   const composerMetaFallback = (
     <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <ChatBubbleIcon className="shrink-0 text-dim/70" />
-        <span className="min-w-0">Chat</span>
+        {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
+        <span className="ui-truncate-start min-w-0">{workspaceLabel}</span>
       </div>
       {tokens && (
         <span className="shrink-0 text-dim/60" title={`${tokens.total?.toLocaleString() ?? '?'} tokens used`}>
           {tokens.total?.toLocaleString() ?? ''}
         </span>
       )}
-      {contextUsage?.percent != null && (
-        <span className="shrink-0 text-dim/60" title={`${Math.round(contextUsage.percent * 100)}% of context window used`}>
-          {Math.round(contextUsage.percent * 100)}%
+      {contextTokens && (
+        <span className="shrink-0 text-dim/60" title={formatContextUsageLabel(contextTokens.total, contextTokens.contextWindow)}>
+          {formatContextUsageLabel(contextTokens.total, contextTokens.contextWindow)}
         </span>
       )}
     </div>
@@ -396,7 +412,7 @@ export function ChatRailComposer({
           streamIsStreaming={isStreaming}
           models={models}
           currentModel={currentModel}
-          currentThinkingLevel=""
+          currentThinkingLevel={currentThinkingLevel}
           savingPreference={null}
           conversationNeedsTakeover={false}
           composerHasContent={hasContent}
@@ -420,7 +436,7 @@ export function ChatRailComposer({
           onOpenFilePicker={handleOpenFilePicker}
           onUpsertDrawingAttachment={handleUpsertDrawingAttachment}
           onSelectModel={onSelectModel}
-          onSelectThinkingLevel={() => {}}
+          onSelectThinkingLevel={onSelectThinkingLevel}
           onInsertComposerText={insertTextIntoComposer}
           onAppendComposerText={appendTextToComposer}
           onSubmitComposerQuestion={() => {}}

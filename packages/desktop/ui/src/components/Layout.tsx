@@ -1962,6 +1962,7 @@ export function Layout() {
 
   const handleStartSideChat = useCallback(async () => {
     if (!activeConversationId) return;
+    const parentPreferencesPromise = api.conversationModelPreferences(activeConversationId).catch(() => null);
     try {
       const reserved = await api.reserveConversation(activeWorkspaceCwd ?? undefined);
       primeReservedDesktopConversationStateCache(
@@ -1974,10 +1975,15 @@ export function Layout() {
       );
       openWorkbenchToolTab('chat', { conversationId: reserved.id, forceNewTab: true });
 
-      const createdPromise = api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
-        workspaceCwd: activeWorkspaceCwd ?? undefined,
-        reservedSessionFile: reserved.sessionFile,
-      });
+      const createdPromise = parentPreferencesPromise.then((parentPreferences) =>
+        api.createLiveSession(activeWorkspaceCwd ?? undefined, undefined, {
+          workspaceCwd: activeWorkspaceCwd ?? undefined,
+          reservedSessionFile: reserved.sessionFile,
+          ...(parentPreferences?.currentModel ? { model: parentPreferences.currentModel } : {}),
+          ...(parentPreferences?.currentThinkingLevel ? { thinkingLevel: parentPreferences.currentThinkingLevel } : {}),
+          ...(parentPreferences?.currentServiceTier ? { serviceTier: parentPreferences.currentServiceTier } : {}),
+        }),
+      );
       registerPendingSideChatSession(reserved.id, createdPromise);
       void createdPromise
         .then((result) => {

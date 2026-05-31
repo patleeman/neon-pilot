@@ -66,6 +66,11 @@ describe('Layout workbench toggle', () => {
       () => new Promise<Awaited<ReturnType<typeof api.extensionCommands>>>(() => {}),
     );
     vi.spyOn(api, 'models').mockResolvedValue({ models: [], perf: {} });
+    vi.spyOn(api, 'conversationModelPreferences').mockResolvedValue({
+      currentModel: null,
+      currentThinkingLevel: null,
+      currentServiceTier: null,
+    });
   });
 
   afterEach(() => {
@@ -118,6 +123,11 @@ describe('Layout workbench toggle', () => {
     const createLiveSession = vi.spyOn(api, 'createLiveSession').mockImplementation(
       () => new Promise<Awaited<ReturnType<typeof api.createLiveSession>>>(() => {}),
     );
+    vi.mocked(api.conversationModelPreferences).mockResolvedValue({
+      currentModel: 'deepseek-v4-flash',
+      currentThinkingLevel: 'high',
+      currentServiceTier: 'priority',
+    });
 
     renderLayout('/conversations/conv-1');
 
@@ -133,6 +143,9 @@ describe('Layout workbench toggle', () => {
     expect(createLiveSession).toHaveBeenCalledWith(undefined, undefined, {
       workspaceCwd: undefined,
       reservedSessionFile: '/tmp/side-chat-1.jsonl',
+      model: 'deepseek-v4-flash',
+      thinkingLevel: 'high',
+      serviceTier: 'priority',
     });
   });
 });
