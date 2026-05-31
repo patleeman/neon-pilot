@@ -339,7 +339,23 @@ export function deleteModelProviderModelCapability(
 }
 
 export async function readProviderAuthCapability(context: ProviderDesktopCapabilityContext): Promise<ProviderAuthState> {
-  return readProviderAuthState(context.getAuthFile(), context.getStateRoot?.());
+  const state = await readProviderAuthState(context.getAuthFile(), context.getStateRoot?.());
+  let seededDefaults = false;
+
+  const providers = Array.isArray(state.providers) ? state.providers : [];
+  for (const provider of providers) {
+    if (!provider.hasStoredCredential || provider.modelCount === 0) {
+      continue;
+    }
+    seededDefaults = autoSeedProviderModelsForApiKey(runtimeScope(context), provider.id, context.getAuthFile()) || seededDefaults;
+  }
+
+  if (seededDefaults) {
+    materialize(context);
+    refreshAllLiveSessionModelRegistries();
+  }
+
+  return state;
 }
 
 export async function setProviderApiKeyCapability(

@@ -32,6 +32,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 vi.mock('../secrets/secretStore.js', () => ({
   resolveIndexedProviderApiKey: resolveIndexedProviderApiKeyMock,
   resolveProviderApiKey: resolveProviderApiKeyMock,
+  resolveProviderApiKeyAsync: resolveProviderApiKeyMock,
 }));
 
 import { createModelRegistryForAuthFile, createRuntimeModelRegistry } from './modelRegistry.js';
@@ -149,7 +150,7 @@ describe('model registry helpers', () => {
     });
   });
 
-  it('hides opencode-go Kimi K2.6 while its reasoning payload contract is incompatible', () => {
+  it('keeps opencode-go Kimi K2.6 available for provider auto-population', () => {
     const authStorage = { kind: 'auth-storage' };
     const kimiModel = {
       id: 'kimi-k2.6',
@@ -169,9 +170,9 @@ describe('model registry helpers', () => {
 
     const created = createRuntimeModelRegistry(authStorage as never);
 
-    expect(created.getAvailable()).toEqual([]);
-    expect(created.getAll()).toEqual([]);
-    expect(created.find('opencode-go', 'kimi-k2.6')).toBeUndefined();
+    expect(created.getAvailable()).toEqual([kimiModel]);
+    expect(created.getAll()).toEqual([kimiModel]);
+    expect(created.find('opencode-go', 'kimi-k2.6')).toEqual(kimiModel);
   });
 
   it('prefers secure provider secrets when resolving model auth', async () => {
