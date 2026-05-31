@@ -58,7 +58,6 @@ function Ico({ d, size = 14 }: { d: string; size?: number }) {
 }
 
 const ICON = {
-  collapseRail: 'M4 5h16v14H4zM15 5v14m-5-5-3 3 3 3',
   plus: 'M12 5v14M5 12h14',
   folderPlus:
     'M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z',
@@ -75,7 +74,7 @@ const ICON = {
   folderOpen:
     'M3.75 6.75h5.379a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H20.25m-16.5-3A2.25 2.25 0 0 0 1.5 9v8.25A2.25 2.25 0 0 0 3.75 19.5h16.5a2.25 2.25 0 0 0 2.25-2.25v-5.25a2.25 2.25 0 0 0-2.25-2.25H3.75',
 };
-const WORKBENCH_COLLAPSE_RAIL_EVENT = 'pa:workbench-collapse-rail';
+const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 
 const TREE_HOST_STYLE = {
   display: 'block',
@@ -1217,6 +1216,15 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
     void loadSnapshot();
   }, [knowledgeBaseError, knowledgeBaseLoading, knowledgeBaseSnapshotKey, loadSnapshot, resetTree]);
 
+  useEffect(() => {
+    function refreshTree() {
+      void loadSnapshot({ keepLoadingState: false });
+    }
+
+    window.addEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshTree);
+    return () => window.removeEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshTree);
+  }, [loadSnapshot]);
+
   // Delete/Backspace keyboard shortcut — scoped to the tree wrapper so it
   // doesn't process keystrokes from other parts of the app.
   useEffect(() => {
@@ -1456,15 +1464,6 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
                   knowledgeBaseSyncPresentation.pulse && 'animate-pulse',
                 )}
               />
-              <button
-                type="button"
-                className="ui-icon-button ui-icon-button-compact"
-                title="Collapse file tree"
-                aria-label="Collapse file tree"
-                onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_COLLAPSE_RAIL_EVENT))}
-              >
-                <Ico d={ICON.collapseRail} size={12} />
-              </button>
             </div>
           </div>
           <div className="flex flex-1 min-h-0 items-start px-3 pb-3 pt-2">
@@ -1533,15 +1532,6 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
                 onClick={() => openCreateEntryModal('folder', '')}
               >
                 <Ico d={ICON.folderPlus} size={12} />
-              </button>
-              <button
-                type="button"
-                className="ui-icon-button ui-icon-button-compact"
-                title="Collapse file tree"
-                aria-label="Collapse file tree"
-                onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_COLLAPSE_RAIL_EVENT))}
-              >
-                <Ico d={ICON.collapseRail} size={12} />
               </button>
             </div>
           </div>

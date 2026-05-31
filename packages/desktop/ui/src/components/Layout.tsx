@@ -63,6 +63,7 @@ const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
   import('./CommandPalette').then((module) => ({ default: module.CommandPalette })),
 );
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
+const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -495,6 +496,7 @@ function WorkbenchDocumentPane({
   railWidth,
   onRailResizeMouseDown,
   onRailResizeReset,
+  onRailOpenChange,
   onActiveToolChange,
   onCheckpointSelect,
   onWorkspaceFileClear,
@@ -515,6 +517,7 @@ function WorkbenchDocumentPane({
   railWidth: number;
   onRailResizeMouseDown: (event: React.MouseEvent) => void;
   onRailResizeReset: () => void;
+  onRailOpenChange: (open: boolean) => void;
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onCheckpointSelect: (checkpointId: string | null) => void;
   onWorkspaceFileClear: () => void;
@@ -531,6 +534,8 @@ function WorkbenchDocumentPane({
     artifactId && (activeToolSlot === 'artifacts' || isArtifactsRailMode(activeTool))
       ? setConversationArtifactIdInSearch(location.search, artifactId)
       : location.search;
+  const activeFilePath = activeToolSlot === 'knowledge' ? knowledgeFileId : workspaceFileId;
+  const showFileBar = Boolean(activeFilePath && (activeToolSlot === 'files' || activeToolSlot === 'knowledge'));
 
   let mainContent: ReactNode = null;
 
@@ -613,28 +618,85 @@ function WorkbenchDocumentPane({
   }
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden">
-      <div className="min-w-0 flex-1 overflow-hidden">{mainContent}</div>
-      {railOpen && extensionRailSurface ? (
-        <>
-          <ResizeHandle onMouseDown={onRailResizeMouseDown} onDoubleClick={onRailResizeReset} />
-          <aside
-            style={{ width: railWidth }}
-            className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
-            aria-label={`${extensionRailSurface.title ?? 'Workbench'} sidebar`}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {showFileBar ? (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary">
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-mono text-[12px] text-secondary" title={activeFilePath ?? undefined}>
+              {activeFilePath}
+            </div>
+          </div>
+          {extensionRailSurface ? (
+            <button
+              type="button"
+              className="ui-icon-button ui-icon-button-compact shrink-0"
+              title={railOpen ? 'Collapse file tree' : 'Show file tree'}
+              aria-label={railOpen ? 'Collapse file tree' : 'Show file tree'}
+              onClick={() => onRailOpenChange(!railOpen)}
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 5h16v14H4z" />
+                <path d="M15 5v14" />
+                <path d={railOpen ? 'm10 9-3 3 3 3' : 'm8 9 3 3-3 3'} />
+              </svg>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="ui-icon-button ui-icon-button-compact shrink-0"
+            title="Refresh file and tree"
+            aria-label="Refresh file and tree"
+            onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT))}
           >
-            <NativeExtensionSurfaceHost
-              surface={extensionRailSurface}
-              pathname={location.pathname}
-              search={extensionSearch}
-              hash={location.hash}
-              conversationId={conversationId}
-              cwd={workspaceCwd}
-              instanceId={activeTabId}
-            />
-          </aside>
-        </>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+          </button>
+        </div>
       ) : null}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="min-w-0 flex-1 overflow-hidden">{mainContent}</div>
+        {railOpen && extensionRailSurface ? (
+          <>
+            <ResizeHandle onMouseDown={onRailResizeMouseDown} onDoubleClick={onRailResizeReset} />
+            <aside
+              style={{ width: railWidth }}
+              className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
+              aria-label={`${extensionRailSurface.title ?? 'Workbench'} sidebar`}
+            >
+              <NativeExtensionSurfaceHost
+                surface={extensionRailSurface}
+                pathname={location.pathname}
+                search={extensionSearch}
+                hash={location.hash}
+                conversationId={conversationId}
+                cwd={workspaceCwd}
+                instanceId={activeTabId}
+              />
+            </aside>
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -664,7 +726,7 @@ function WorkbenchPanel({
   onCloseTab,
   onOpenNewTab,
   onActiveToolChange,
-  onRestoreRail,
+  onRailOpenChange,
   onWorkspaceFileClear,
   onStartSideChat,
 }: {
@@ -691,7 +753,7 @@ function WorkbenchPanel({
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onOpenNewTab: () => void;
-  onRestoreRail: () => void;
+  onRailOpenChange: (open: boolean) => void;
   onActiveToolChange: (
     mode: WorkbenchRailMode,
     options?: { artifactId?: string | null; id?: string; conversationId?: string | null; forceNewTab?: boolean },
@@ -726,12 +788,9 @@ function WorkbenchPanel({
         browserTabsState={browserTabsState}
         activeWorkspaceFileId={activeWorkspaceFileId}
         activeKnowledgeFileId={activeKnowledgeFileId}
-        railOpen={railOpen}
-        canRestoreRail={extensionRailSurface !== null}
         onActiveTabChange={onActiveTabChange}
         onCloseTab={onCloseTab}
         onOpenNewTab={onOpenNewTab}
-        onRestoreRail={onRestoreRail}
         onCheckpointSelect={() => undefined}
         onWorkspaceFileClear={onWorkspaceFileClear}
       />
@@ -752,6 +811,7 @@ function WorkbenchPanel({
           railWidth={railWidth}
           onRailResizeMouseDown={onRailResizeMouseDown}
           onRailResizeReset={onRailResizeReset}
+          onRailOpenChange={onRailOpenChange}
           onActiveToolChange={onActiveToolChange}
           onCheckpointSelect={() => undefined}
           onWorkspaceFileClear={onWorkspaceFileClear}
@@ -881,12 +941,9 @@ function WorkbenchTabStrip({
   browserTabsState,
   activeWorkspaceFileId,
   activeKnowledgeFileId,
-  railOpen,
-  canRestoreRail,
   onActiveTabChange,
   onCloseTab,
   onOpenNewTab,
-  onRestoreRail,
   onCheckpointSelect,
   onWorkspaceFileClear,
 }: {
@@ -897,12 +954,9 @@ function WorkbenchTabStrip({
   browserTabsState: BrowserTabsState;
   activeWorkspaceFileId: string | null;
   activeKnowledgeFileId: string | null;
-  railOpen: boolean;
-  canRestoreRail: boolean;
   onActiveTabChange: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onOpenNewTab: () => void;
-  onRestoreRail: () => void;
   onCheckpointSelect: (checkpointId: string | null) => void;
   onWorkspaceFileClear: () => void;
 }) {
@@ -1036,31 +1090,6 @@ function WorkbenchTabStrip({
       >
         +
       </button>
-      {canRestoreRail && !railOpen ? (
-        <button
-          type="button"
-          className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary transition hover:bg-surface hover:text-primary"
-          title="Show file tree"
-          aria-label="Show file tree"
-          onClick={onRestoreRail}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M4 5h16v14H4z" />
-            <path d="M15 5v14" />
-            <path d="m8 9 3 3-3 3" />
-          </svg>
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -1918,16 +1947,6 @@ export function Layout() {
     return () => window.clearTimeout(timer);
   }, [commandPaletteMounted, pendingCommandPaletteOpen]);
 
-  useEffect(() => {
-    function handleWorkbenchRailCollapse() {
-      setWorkbenchExplorerOpen(false);
-      writeStoredWorkbenchExplorerOpen(false);
-    }
-
-    window.addEventListener('pa:workbench-collapse-rail', handleWorkbenchRailCollapse);
-    return () => window.removeEventListener('pa:workbench-collapse-rail', handleWorkbenchRailCollapse);
-  }, []);
-
   const toggleWorkbenchExplorer = useCallback(() => {
     setWorkbenchExplorerOpen((current) => {
       const next = !current;
@@ -2257,9 +2276,9 @@ export function Layout() {
                       onCloseTab={closeWorkbenchTab}
                       onOpenNewTab={openWorkbenchNewTab}
                       onActiveToolChange={openWorkbenchToolTab}
-                      onRestoreRail={() => {
-                        setWorkbenchExplorerOpen(true);
-                        writeStoredWorkbenchExplorerOpen(true);
+                      onRailOpenChange={(open) => {
+                        setWorkbenchExplorerOpen(open);
+                        writeStoredWorkbenchExplorerOpen(open);
                       }}
                       onWorkspaceFileClear={clearActiveWorkbenchFileSelection}
                       onStartSideChat={handleStartSideChat}

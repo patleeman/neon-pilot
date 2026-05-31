@@ -81,6 +81,7 @@ export function WorkspaceFileDetailPanel({ context }: ExtensionSurfaceProps) {
           <WorkspaceFileDocument
             cwd={context.cwd}
             path={filePath}
+            hideHeader
             onReplyWithSelection={(selection) => {
               window.dispatchEvent(new CustomEvent(WORKSPACE_REPLY_SELECTION_EVENT, { detail: selection }));
             }}

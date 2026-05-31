@@ -8,7 +8,6 @@ import {
   type CSSProperties,
   lazy,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
   Suspense,
   useCallback,
   useEffect,
@@ -55,7 +54,7 @@ type TreeNodeState = {
 
 const WORKSPACE_EXPLORER_OPEN_KEY = 'pa:workspace-explorer-open';
 const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
-const WORKBENCH_COLLAPSE_RAIL_EVENT = 'pa:workbench-collapse-rail';
+export const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 const WATCH_DEBOUNCE_MS = 180;
 const GIT_REFRESH_DEBOUNCE_MS = 450;
 const STATUS_LABELS: Record<WorkspaceGitStatusChange, string> = {
@@ -79,25 +78,6 @@ const STATUS_TITLES: Record<WorkspaceGitStatusChange, string> = {
   untracked: 'Untracked',
   conflicted: 'Conflicted',
 };
-
-function Icon({ children, size = 12 }: { children: ReactNode; size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="shrink-0"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
 
 const WorkspaceCodeEditor = lazy(() => import('./WorkspaceCodeEditor').then((module) => ({ default: module.WorkspaceCodeEditor })));
 
@@ -565,6 +545,16 @@ export function WorkspaceExplorer({
   }, [cwd, loadRoot]);
 
   useEffect(() => {
+    if (!railOnly) return;
+    function refreshTree() {
+      void loadRoot();
+    }
+
+    window.addEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshTree);
+    return () => window.removeEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshTree);
+  }, [loadRoot, railOnly]);
+
+  useEffect(() => {
     if (!cwd || !activeFilePath) return;
     writeWorkspaceOpenFiles(cwd, addWorkspaceOpenFile(readWorkspaceOpenFiles(cwd, openFilesScope), activeFilePath), openFilesScope);
   }, [activeFilePath, cwd, openFilesScope]);
@@ -824,35 +814,6 @@ export function WorkspaceExplorer({
   if (railOnly) {
     return (
       <div className="flex h-full flex-col bg-panel text-sm">
-        <div className="shrink-0 border-b border-border-subtle bg-surface px-3 py-2">
-          <div className="flex items-center justify-end gap-1">
-            <button
-              type="button"
-              className="ui-icon-button ui-icon-button-compact"
-              title="Collapse file tree"
-              aria-label="Collapse file tree"
-              onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_COLLAPSE_RAIL_EVENT))}
-            >
-              <Icon>
-                <path d="M4 5h16v14H4z" />
-                <path d="M15 5v14" />
-                <path d="m10 9-3 3 3 3" />
-              </Icon>
-            </button>
-            <button
-              type="button"
-              className="ui-icon-button ui-icon-button-compact"
-              title="Refresh workspace"
-              onClick={() => {
-                void loadRoot();
-              }}
-            >
-              <Icon>
-                <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-              </Icon>
-            </button>
-          </div>
-        </div>
         <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-2">
           {rootListing.status === 'loading' && !rootListing.data ? (
             <p className="px-3 py-2 text-[12px] text-dim animate-pulse">Loading…</p>
@@ -1102,10 +1063,12 @@ export function WorkspaceFileDocument({
   cwd,
   path,
   onReplyWithSelection,
+  hideHeader = false,
 }: {
   cwd: string;
   path: string;
   onReplyWithSelection?: (selection: { filePath: string; text: string }) => void;
+  hideHeader?: boolean;
 }) {
   const { theme } = useTheme();
   const [showDiff, setShowDiff] = useState(() => readStoredBoolean(WORKSPACE_EXPLORER_DIFF_KEY, true));
@@ -1165,6 +1128,15 @@ export function WorkspaceFileDocument({
 
   useEffect(() => {
     void loadFile();
+  }, [loadFile]);
+
+  useEffect(() => {
+    function refreshFile() {
+      void loadFile({ force: true });
+    }
+
+    window.addEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshFile);
+    return () => window.removeEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshFile);
   }, [loadFile]);
 
   // Debounced auto-save
@@ -1298,10 +1270,6 @@ export function WorkspaceFileDocument({
     [closeSelectionContextMenu, copySelectedText, onReplyWithSelection, replyWithSelectedText],
   );
 
-  const handleFileClose = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('pa:workbench-close-active-file'));
-  }, []);
-
   if (fileState.status === 'loading' && !selectedFile) {
     return <LoadingState label="Opening file…" className="h-full justify-center" />;
   }
@@ -1316,33 +1284,15 @@ export function WorkspaceFileDocument({
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-base select-text">
-      <div className="flex items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary shrink-0">
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-mono text-[12px] text-secondary" title={path}>
-            {path}
+      {hideHeader ? null : (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary">
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-mono text-[12px] text-secondary" title={path}>
+              {path}
+            </div>
           </div>
         </div>
-        <button
-          type="button"
-          className="ui-icon-button ui-icon-button-compact shrink-0"
-          title="Close file"
-          aria-label="Close file"
-          onClick={handleFileClose}
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6 6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+      )}
       {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
         <div className="flex items-center justify-end border-b border-border-subtle bg-surface px-3 py-1.5">
           <button

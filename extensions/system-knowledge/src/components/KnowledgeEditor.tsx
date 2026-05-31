@@ -80,6 +80,7 @@ function ToolbarButton({
 
 const AUTOSAVE_MS = 800;
 const MAX_CACHED_KNOWLEDGE_DOCUMENTS = 24;
+const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 
 function useAutosave(
   fileId: string | null,
@@ -464,9 +465,10 @@ export interface KnowledgeEditorProps {
   onFileNavigate: (id: string) => void;
   onFileRenamed: (oldId: string, newId: string) => void;
   onClose?: () => void;
+  hideFileMeta?: boolean;
 }
 
-export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRenamed, onClose }: KnowledgeEditorProps) {
+export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRenamed, hideFileMeta = false }: KnowledgeEditorProps) {
   const [frontmatter, setFrontmatter] = useState<Frontmatter>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -538,6 +540,20 @@ export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRename
       }
     });
     return off;
+  }, []);
+
+  useEffect(() => {
+    function refreshFile() {
+      if (!fileIdRef.current) return;
+      cachedKnowledgeDocuments.delete(fileIdRef.current);
+      pendingKnowledgeDocumentReads.delete(fileIdRef.current);
+      cachedKnowledgeBacklinks.delete(fileIdRef.current);
+      pendingKnowledgeBacklinkReads.delete(fileIdRef.current);
+      setReloadCounter((current) => current + 1);
+    }
+
+    window.addEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshFile);
+    return () => window.removeEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshFile);
   }, []);
 
   const suggestionRenderer = useRef(buildWikiLinkRenderer());
@@ -817,41 +833,21 @@ export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRename
 
       <div className="kb-editor-shell">
         <div className="kb-editor-wrapper">
-          <div className="kb-file-meta" aria-label="File path">
-            <span className="kb-file-path" title={fileId}>
-              {fileId}
-            </span>
-            {saveStatus ? (
-              <span
-                className={['kb-file-status', saveError ? 'kb-file-status-error' : null].filter(Boolean).join(' ')}
-                title={saveError ?? undefined}
-              >
-                {saveStatus}
+          {hideFileMeta ? null : (
+            <div className="kb-file-meta" aria-label="File path">
+              <span className="kb-file-path" title={fileId}>
+                {fileId}
               </span>
-            ) : null}
-            {onClose ? (
-              <button
-                type="button"
-                className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-dim hover:bg-surface-2 hover:text-primary transition-colors"
-                title="Close file"
-                aria-label="Close file"
-                onClick={onClose}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              {saveStatus ? (
+                <span
+                  className={['kb-file-status', saveError ? 'kb-file-status-error' : null].filter(Boolean).join(' ')}
+                  title={saveError ?? undefined}
                 >
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
-            ) : null}
-          </div>
+                  {saveStatus}
+                </span>
+              ) : null}
+            </div>
+          )}
 
           <FrontmatterDisclosure
             frontmatter={frontmatter}

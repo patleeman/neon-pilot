@@ -225,6 +225,7 @@ export function KnowledgeFilePanel({ context }: ExtensionSurfaceProps) {
         onFileNavigate={handleFileNavigate}
         onFileRenamed={handleFileRenamed}
         onClose={handleFileClose}
+        hideFileMeta
       />
     </Suspense>
   );
