@@ -120,7 +120,7 @@ describe('conversation page state helpers', () => {
         hasPendingInitialPrompt: true,
         hasPendingInitialPromptInFlight: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('merges active conversation metadata into the session list without rewriting stable rows', () => {

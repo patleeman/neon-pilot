@@ -566,9 +566,6 @@ export function shouldLoadConversationModels(input: {
   hasPendingInitialPrompt: boolean;
   hasPendingInitialPromptInFlight: boolean;
 }): boolean {
-  if (input.draft) {
-    return true;
-  }
-
-  return !input.hasPendingInitialPrompt && !input.hasPendingInitialPromptInFlight;
+  void input;
+  return true;
 }

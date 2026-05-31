@@ -4,6 +4,7 @@ import { formatComposerActionLabel } from '../../conversation/conversationCompos
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import type { ModelInfo } from '../../shared/types';
 import { cx } from '../ui';
 import { ComposerActionIcon } from './ConversationComposerChrome';
 
@@ -20,8 +21,14 @@ export function ConversationComposerActions({
   composerQuestionSubmitting,
   composerSubmitLabel,
   composerAltHeld,
+  models,
+  currentModel,
+  currentThinkingLevel,
+  savingPreference,
   onInsertComposerText,
   onAppendComposerText,
+  onSelectModel,
+  onSelectThinkingLevel,
   onSubmitComposerQuestion,
   onSubmitComposerActionForModifiers,
   onAbortStream,
@@ -36,8 +43,14 @@ export function ConversationComposerActions({
   composerQuestionSubmitting: boolean;
   composerSubmitLabel: ConversationComposerSubmitLabel;
   composerAltHeld: boolean;
+  models: ModelInfo[];
+  currentModel: string;
+  currentThinkingLevel: string;
+  savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
   onInsertComposerText: (text: string) => void;
   onAppendComposerText: (text: string) => void;
+  onSelectModel: (modelId: string) => void;
+  onSelectThinkingLevel: (thinkingLevel: string) => void;
   onSubmitComposerQuestion: () => void;
   onSubmitComposerActionForModifiers: (altKeyHeld: boolean) => void;
   onAbortStream: () => void;
@@ -125,12 +138,12 @@ export function ConversationComposerActions({
             addFiles: () => {},
             insertText: onInsertComposerText,
             appendText: onAppendComposerText,
-            models: [],
-            currentModel: '',
-            currentThinkingLevel: '',
-            savingPreference: null,
-            selectModel: () => {},
-            selectThinkingLevel: () => {},
+            models,
+            currentModel,
+            currentThinkingLevel,
+            savingPreference,
+            selectModel: onSelectModel,
+            selectThinkingLevel: onSelectThinkingLevel,
           }}
         />
       ))}
