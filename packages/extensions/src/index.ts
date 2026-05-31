@@ -108,6 +108,7 @@ export interface NativeExtensionClient {
   workbench: {
     getDetailState<T = unknown>(surfaceId: string): T | null;
     setDetailState(surfaceId: string, state: unknown): void;
+    closeTab(tabId?: string | null): void;
   };
   /** Embedded browser control. Desktop-only. */
   browser: {

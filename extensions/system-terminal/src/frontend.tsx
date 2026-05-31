@@ -130,6 +130,13 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     let closed = false;
     let usingPty = false;
     let reportedDrainError = false;
+    let requestedWorkbenchClose = false;
+
+    const closeWorkbenchTab = () => {
+      if (requestedWorkbenchClose) return;
+      requestedWorkbenchClose = true;
+      pa.workbench.closeTab(context.instanceId);
+    };
 
     const echoInput = (data: string) => {
       if (usingPty) return;
@@ -181,7 +188,12 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
             .invoke('terminalDrain', { id: terminalId })
             .then((value) => {
               const drain = normalizeDrainResult(value);
-              if (!closed && drain?.ok && drain.output) xterm.write(drain.output);
+              if (closed || !drain) return;
+              if (!drain.ok) {
+                closeWorkbenchTab();
+                return;
+              }
+              if (drain.output) xterm.write(drain.output);
             })
             .catch((error) => {
               if (closed || reportedDrainError) return;

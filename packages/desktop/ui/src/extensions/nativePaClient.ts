@@ -91,6 +91,7 @@ export interface NativeExtensionClient {
   workbench: {
     getDetailState<T = unknown>(surfaceId: string): T | null;
     setDetailState(surfaceId: string, state: unknown): void;
+    closeTab(tabId?: string | null): void;
   };
   browser: {
     isAvailable(): boolean;
@@ -292,6 +293,9 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
       setDetailState(surfaceId, state) {
         detailStateByExtensionSurface.set(detailStateKey(extensionId, surfaceId), state);
         window.dispatchEvent(new CustomEvent('neon-pilot-extension-workbench-detail-state', { detail: { extensionId, surfaceId, state } }));
+      },
+      closeTab(tabId) {
+        window.dispatchEvent(new CustomEvent('pa:workbench-close-tab', { detail: { tabId } }));
       },
     },
     browser: {

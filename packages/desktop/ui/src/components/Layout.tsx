@@ -97,6 +97,7 @@ const WORKBENCH_EXPLORER_WIDTH_STORAGE_KEY = 'pa:workbench-explorer-width';
 const WORKBENCH_EXPLORER_OPEN_STORAGE_KEY = 'pa:workbench-explorer-open';
 const WORKBENCH_OPEN_TOOL_TAB_EVENT = 'pa:workbench-open-tool-tab';
 const WORKBENCH_OPEN_ARTIFACT_TAB_EVENT = 'pa:workbench-open-artifact-tab';
+const WORKBENCH_CLOSE_TAB_EVENT = 'pa:workbench-close-tab';
 const BROWSER_TABS_CHANGED_EVENT = 'pa:system-browser-tabs-changed';
 
 interface WorkbenchTabInstance {
@@ -2208,22 +2209,31 @@ export function Layout() {
       });
     }
 
+    function handleCloseWorkbenchTab(event: Event) {
+      const tabId = (event as CustomEvent<{ tabId?: unknown }>).detail?.tabId;
+      if (typeof tabId !== 'string' || tabId.trim().length === 0) return;
+      closeWorkbenchTab(tabId);
+    }
+
     window.addEventListener(DESKTOP_SHORTCUT_EVENT, handleDesktopShortcut);
     window.addEventListener(DESKTOP_NAVIGATE_EVENT, handleDesktopNavigate);
     window.addEventListener(DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, handleShowWorkbenchBrowser);
     window.addEventListener(WORKBENCH_OPEN_TOOL_TAB_EVENT, handleOpenWorkbenchToolTab);
     window.addEventListener(WORKBENCH_OPEN_ARTIFACT_TAB_EVENT, handleOpenWorkbenchArtifactTab);
+    window.addEventListener(WORKBENCH_CLOSE_TAB_EVENT, handleCloseWorkbenchTab);
     return () => {
       window.removeEventListener(DESKTOP_SHORTCUT_EVENT, handleDesktopShortcut);
       window.removeEventListener(DESKTOP_NAVIGATE_EVENT, handleDesktopNavigate);
       window.removeEventListener(DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, handleShowWorkbenchBrowser);
       window.removeEventListener(WORKBENCH_OPEN_TOOL_TAB_EVENT, handleOpenWorkbenchToolTab);
       window.removeEventListener(WORKBENCH_OPEN_ARTIFACT_TAB_EVENT, handleOpenWorkbenchArtifactTab);
+      window.removeEventListener(WORKBENCH_CLOSE_TAB_EVENT, handleCloseWorkbenchTab);
     };
   }, [
     activeRightRailControl,
     appLayoutMode,
     canToggleWorkbench,
+    closeWorkbenchTab,
     handleAppLayoutModeChange,
     handlePrimarySidebarToggle,
     handleWorkbenchToggle,
