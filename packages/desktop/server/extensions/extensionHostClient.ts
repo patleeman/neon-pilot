@@ -1,18 +1,23 @@
 import type { ExtensionActionInvokeResult } from './extensionBackend.js';
 import type {
+  ExtensionHostBackendOperationResult,
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostRequest,
   ExtensionHostResponse,
+  ExtensionHostStartStartupActionsRequest,
 } from './extensionHostProtocol.js';
 
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
+export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
 
 export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
+  checkBackendHealth(): Promise<ExtensionHostBackendOperationResult[]>;
   invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionActionInvokeResult>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
+  startStartupActions(input?: ExtensionHostStartStartupActionsInput): Promise<ExtensionHostBackendOperationResult[]>;
   publishEvent(source: string, payload: unknown): Promise<void>;
 }
 
@@ -35,6 +40,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!('status' in response)) throw new Error('Extension host returned an invalid health response.');
       return { status: response.status };
     },
+    async checkBackendHealth() {
+      const response = await handleInProcessExtensionHostRequest({ type: 'checkBackendHealth' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('results' in response)) throw new Error('Extension host returned an invalid backend health response.');
+      return response.results;
+    },
     async invokeAction(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeAction', ...input });
       if (!response.ok) return { ok: false, error: response.error };
@@ -50,6 +61,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
       if (!response.ok) throw new Error(response.error);
       if (!('invoked' in response)) throw new Error('Extension host returned an invalid protocol entrypoint response.');
+    },
+    async startStartupActions(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'startStartupActions', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('results' in response)) throw new Error('Extension host returned an invalid startup actions response.');
+      return response.results;
     },
   };
 }
@@ -88,6 +105,22 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         signal: request.signal,
       });
       return { ok: true, invoked: true };
+    }
+    if (request.type === 'checkBackendHealth') {
+      const { checkEnabledExtensionBackendHealth } = await import('./extensionBackend.js');
+      return { ok: true, results: await checkEnabledExtensionBackendHealth() };
+    }
+    if (request.type === 'startStartupActions') {
+      const [{ startExtensionStartupActions }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
+        import('./extensionBackend.js'),
+        import('./extensionHostServerContext.js'),
+      ]);
+      return {
+        ok: true,
+        results: await startExtensionStartupActions(
+          request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+        ),
+      };
     }
     const { publishExtensionHostEvent } = await import('./extensionSubscriptions.js');
     await publishExtensionHostEvent(request.source, request.payload);

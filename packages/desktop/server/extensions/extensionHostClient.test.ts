@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const extensionBackend = vi.hoisted(() => ({ invokeExtensionAction: vi.fn(), invokeExtensionProtocolEntrypoint: vi.fn() }));
+const extensionBackend = vi.hoisted(() => ({
+  checkEnabledExtensionBackendHealth: vi.fn(),
+  invokeExtensionAction: vi.fn(),
+  invokeExtensionProtocolEntrypoint: vi.fn(),
+  startExtensionStartupActions: vi.fn(),
+}));
 const extensionSubscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
@@ -91,6 +96,24 @@ describe('extension host client', () => {
     expect(extensionSubscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('settings', { type: 'changed' });
   });
 
+  it('routes backend health checks through the extension host request envelope', async () => {
+    extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
+
+    await expect(getExtensionHostClient().checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
+
+    expect(extensionBackend.checkEnabledExtensionBackendHealth).toHaveBeenCalledWith();
+  });
+
+  it('routes startup actions through the extension host request envelope', async () => {
+    extensionBackend.startExtensionStartupActions.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
+
+    await expect(
+      getExtensionHostClient().startStartupActions({ serverContext: { getRuntimeScope: () => 'shared' } }),
+    ).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
+
+    expect(extensionBackend.startExtensionStartupActions).toHaveBeenCalledWith({ getRuntimeScope: expect.any(Function) });
+  });
+
   it('routes protocol entrypoints through the extension host request envelope', async () => {
     extensionBackend.invokeExtensionProtocolEntrypoint.mockResolvedValueOnce(undefined);
     const signal = new AbortController().signal;
@@ -127,6 +150,8 @@ describe('extension host client', () => {
         signal: new AbortController().signal,
       }),
     ).toBe('invokeProtocolEntrypoint:acp');
+    expect(extensionHostRequestName({ type: 'checkBackendHealth' })).toBe('checkBackendHealth');
+    expect(extensionHostRequestName({ type: 'startStartupActions' })).toBe('startStartupActions');
     expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
   });
 });

@@ -121,7 +121,6 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
-import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import {
@@ -619,7 +618,8 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     // Keep their cold imports and service startup out of the initial conversation
     // creation and transcript navigation window.
     const startupActionsTimer = setTimeout(() => {
-      void startExtensionStartupActions(context)
+      void getExtensionHostClient()
+        .startStartupActions({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) })
         .then(() => completeExtensionStartupGuard())
         .catch((error) => {
           logError('extension startup dispatch failed', { message: (error as Error).message });
@@ -634,7 +634,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     startupActionsTimer.unref?.();
 
     const backendHealthTimer = setTimeout(() => {
-      void checkEnabledExtensionBackendHealth().catch((error) => {
+      void getExtensionHostClient().checkBackendHealth().catch((error) => {
         logError('extension backend health check dispatch failed', { message: (error as Error).message });
       });
     }, 60_000);

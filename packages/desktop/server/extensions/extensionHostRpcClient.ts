@@ -59,6 +59,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('status' in response)) throw new Error('Extension host returned an invalid health response.');
       return { status: response.status };
     },
+    async checkBackendHealth() {
+      const response = await send({ type: 'checkBackendHealth' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('results' in response)) throw new Error('Extension host returned an invalid backend health response.');
+      return response.results;
+    },
     async invokeAction(input) {
       assertWireableInvokeActionInput(input);
       const response = await send({ type: 'invokeAction', ...input });
@@ -68,6 +74,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     },
     async invokeProtocolEntrypoint() {
       throw new Error('Extension host RPC cannot carry protocol stdio streams; use capability channels before enabling this call path.');
+    },
+    async startStartupActions(input) {
+      const response = await send({ type: 'startStartupActions', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('results' in response)) throw new Error('Extension host returned an invalid startup actions response.');
+      return response.results;
     },
     async publishEvent(source, payload) {
       const response = await send({ type: 'publishEvent', source, payload });
@@ -91,8 +103,14 @@ export function createHybridExtensionHostClient(input: {
       }
       return input.rpcClient.invokeAction(actionInput);
     },
+    async checkBackendHealth() {
+      return input.rpcClient.checkBackendHealth();
+    },
     async invokeProtocolEntrypoint(protocolInput) {
       return input.fallbackClient.invokeProtocolEntrypoint(protocolInput);
+    },
+    async startStartupActions(startupInput) {
+      return input.rpcClient.startStartupActions(startupInput);
     },
     async publishEvent(source, payload) {
       return input.rpcClient.publishEvent(source, payload);
