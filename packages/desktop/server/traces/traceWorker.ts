@@ -1,7 +1,7 @@
 /**
  * Trace Worker
  *
- * Runs all trace-db writes off the Electron main thread.
+ * Runs all trace-db writes off the interactive desktop/runtime path.
  * Receives fire-and-forget write messages via postMessage.
  * Never sends responses — callers don't await.
  */

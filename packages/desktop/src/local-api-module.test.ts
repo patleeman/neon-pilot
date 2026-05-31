@@ -24,32 +24,32 @@ describe('resolveLocalApiModuleUrl', () => {
     ).toBe(pathToFileURL(resolve('/repo/packages/desktop/server/dist/app/localApi.js')).href);
   });
 
-  it('resolves the packaged local API module from the bundled server directory', () => {
+  it('resolves the packaged local API module from the Tauri resource server directory', () => {
     expect(
       resolveLocalApiModuleUrl({
-        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/app.asar/dist',
+        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/dist',
         isPackaged: true,
-        appPath: '/Applications/Neon Pilot.app/Contents/Resources/app.asar',
+        appPath: '/Applications/Neon Pilot.app/Contents/Resources',
       }),
-    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/app.asar', 'server', 'dist', 'app', 'localApi.js')).href);
+    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources', 'server', 'dist', 'app', 'localApi.js')).href);
   });
 
   it('resolves the packaged local API module from the backend child bundle directory', () => {
     expect(
       resolveLocalApiModuleUrl({
-        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/app.asar/dist/backend',
+        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/dist/backend',
         isPackaged: true,
       }),
-    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/app.asar/server/dist/app/localApi.js')).href);
+    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/server/dist/app/localApi.js')).href);
   });
 
-  it('can auto-resolve the packaged bundle path without importing electron', () => {
+  it('can auto-resolve the packaged bundle path without importing native shell internals', () => {
     expect(
       resolveLocalApiModuleUrl({
-        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/app.asar/dist',
-        appPath: '/Applications/Neon Pilot.app/Contents/Resources/app.asar',
+        currentDir: '/Applications/Neon Pilot.app/Contents/Resources/dist',
+        appPath: '/Applications/Neon Pilot.app/Contents/Resources',
       }),
-    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources/app.asar', 'server', 'dist', 'app', 'localApi.js')).href);
+    ).toBe(pathToFileURL(resolve('/Applications/Neon Pilot.app/Contents/Resources', 'server', 'dist', 'app', 'localApi.js')).href);
   });
 });
 

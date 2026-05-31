@@ -1,56 +1,49 @@
 # Desktop App
 
-The Electron desktop app is the primary Neon Pilot operator UI. It hosts the React renderer, manages the local daemon lifecycle, and provides the full feature surface.
+The Tauri desktop app is the primary Neon Pilot operator UI. It hosts the React renderer, supervises the JS sidecar, and keeps host-owned authority in Rust.
 
 ## Starting
 
 ```bash
-# Stable production build
 pnpm run desktop:start
-
-# Development mode with hot reload
 pnpm run desktop:dev
-
-# Demo mode with seeded data
 pnpm run desktop:demo
 ```
 
-Both `desktop:start` and `desktop:dev` build the Electron shell and launch it through `packages/desktop/scripts/launch-dev-app.mjs`.
+`desktop:start` and `desktop:dev` now use the Tauri shell in `packages/tauri/desktop-shell`. The `packages/desktop` package remains the renderer/server/sidecar asset package, not the native app shell.
 
-For packaged builds, launch `Neon Pilot.app` from the output directory. RC builds launch as `Neon Pilot RC.app` so they can coexist with the stable app.
+For packaged builds, launch `Neon Pilot.app` from `dist/release/mac-arm64`.
 
 ## Runtime Model
 
-```
-Electron main process
+```text
+Tauri Rust shell
     │
-    ├── Renderer (React) ── neon-pilot://app/
-    │       │
+    ├── React renderer
     │       ├── Conversation routes
     │       ├── Knowledge
     │       ├── Automations
     │       └── Settings
     │
-    ├── Backend child process
-    │       │
-    │       ├── Local API
-    │       ├── Session parsing and search
-    │       ├── Git/checkpoint operations
-    │       ├── Knowledge base reads/writes
-    │       ├── Extension backend host
-    │       └── Daemon runtime
-    │             │
-    │       ├── Scheduled tasks
-    │       ├── Wakeups
-    │       └── Follow-up queue
+    ├── Rust host core
+    │       ├── native app/window lifecycle
+    │       ├── app preferences and native OS commands
+    │       ├── scoped filesystem, SQLite, secrets, and extension package lifecycle
+    │       ├── process execution authority
+    │       └── host-core RPC for sidecar authority calls
+    │
+    └── JS sidecar
+            ├── Local API
+            ├── Extension backend host
+            ├── Daemon runtime
+            └── Agent/runtime behavior not yet moved to Rust
 ```
 
-- Electron owns the UI surface through the `neon-pilot://app/` protocol
-- Keep the startup path tiny: the main-process hot bundle should only create the window, register protocol/IPC, and schedule deferred work
-- Freeze-prone local API work runs in the backend child process; do not import or execute heavy desktop server capabilities directly on the Electron main thread
-- Avoid `spawnSync`/`execSync` in desktop main-process flows
-- The daemon owns durable background behavior inside the backend child and starts after the renderer has had a chance to paint; user actions that need it can force-start it immediately
-- The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions, automations, and daemon status after startup settles
+- Tauri owns the app shell and native commands.
+- Rust host core owns durable host-authority boundaries.
+- The JS sidecar remains for product API compatibility, daemon/runtime behavior, and JS extension execution.
+- New host-authority APIs should be added to Rust host core and exposed to the sidecar through host-core RPC.
+- The renderer uses HTTP/realtime product APIs and the Tauri desktop bridge for native OS operations.
 
 ## Layout
 
@@ -61,45 +54,6 @@ Electron main process
 
 Toggle the left sidebar with `Cmd+/` (or `Ctrl+/`). Toggle the workbench with `Cmd+\` (or `Ctrl+\`).
 
-## Workbench Tabs
+## Workbench Browser
 
-The workbench new tab page includes:
-
-| Tab           | Description                   |
-| ------------- | ----------------------------- |
-| File Explorer | Project file tree browser     |
-| Artifacts     | Rendered HTML, Mermaid, LaTeX |
-| Browser       | Embedded webview              |
-
-Knowledge is also a primary left-sidebar page. Extension-contributed workbench tools can appear on the new tab page. Tabs are context-sensitive; artifacts open from transcript cards and do not appear as a generic new-tab option. Checkpoint diffs and background work render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
-
-## Keyboard Shortcuts
-
-All desktop shortcuts are configurable in Settings → Keyboard. Defaults:
-
-| Action           | Default               |
-| ---------------- | --------------------- |
-| New conversation | `Cmd+N`               |
-| Hide workbench   | `F1`                  |
-| Show workbench   | `F2`                  |
-| Toggle sidebar   | `Cmd+/` (or `Ctrl+/`) |
-| Toggle workbench | `Cmd+\` (or `Ctrl+\`) |
-| Settings         | `Cmd+,`               |
-
-## Routes
-
-| Route                | Page                  |
-| -------------------- | --------------------- |
-| `/conversations`     | Conversation list     |
-| `/conversations/new` | New conversation      |
-| `/conversations/:id` | Existing conversation |
-| `/knowledge`         | Knowledge browser     |
-| `/automations`       | Automation list       |
-| `/automations/:id`   | Automation detail     |
-| `/settings`          | Settings panel        |
-| `/telemetry`         | Telemetry traces page |
-| `/gateways`          | Gateway connections   |
-
-## Demo Mode
-
-`pnpm run desktop:demo` creates an isolated temporary state root with seeded conversations, automations, executions, and assets for UI development and testing. Seeded content includes conversations with artifacts, checkpoints, reminders, subagent demos, and pathological fixtures.
+The old native embedded browser surface is no longer part of the production desktop shell. The Tauri app fails closed for that surface until a Tauri-native webview strategy is chosen. Browser automation and external browser integrations should remain extension-owned capabilities.

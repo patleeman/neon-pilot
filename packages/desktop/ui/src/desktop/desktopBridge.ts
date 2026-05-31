@@ -92,7 +92,7 @@ export interface NeonPilotDesktopBridge {
   }): Promise<DesktopAppPreferencesState>;
   checkForUpdates(): Promise<DesktopAppPreferencesState>;
   pickFolder(input?: { cwd?: string | null; prompt?: string | null }): Promise<FolderPickerResult>;
-  // Native OS screenshot picker. Kept on IPC because Electron owns the UI;
+  // Native OS screenshot picker. Kept on the native bridge because the desktop shell owns the UI;
   // main process rejects oversized image payloads before base64 transfer.
   captureScreenshot(): Promise<DesktopScreenshotCaptureResult>;
   goBack(): Promise<DesktopNavigationState>;
@@ -231,16 +231,16 @@ export function isDesktopShell(): boolean {
     return false;
   }
 
-  return /Electron/i.test(navigator.userAgent);
+  return false;
 }
 
 // App-owned context menus stay in-app on both web and desktop. The native
-// Electron menu path caused hangs and split the UX between surfaces.
+// app menu path caused hangs and split the UX between surfaces.
 export function shouldUseNativeAppContextMenus(): boolean {
   return false;
 }
 
-// Desktop environment reads cross the Electron bridge and can trigger daemon
+// Desktop environment reads cross the native desktop bridge and can trigger daemon
 // status checks. Cache the in-flight result so route changes do not keep poking
 // the desktop runtime while the user clicks around the app.
 let desktopEnvironmentPromise: Promise<DesktopEnvironmentState | null> | null = null;

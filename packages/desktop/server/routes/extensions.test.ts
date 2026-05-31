@@ -7,8 +7,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { registerExtensionRoutes } from './extensions.js';
 
-const originalResourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
-
 type Handler = (
   req: { method?: string; params?: Record<string, string>; body?: unknown; query?: Record<string, string> },
   res: ReturnType<typeof createResponse>,
@@ -51,23 +49,13 @@ function createHarness() {
   };
 }
 
-function setPackagedResourcesPath(value = '/Applications/Neon Pilot.app/Contents/Resources') {
-  Object.defineProperty(process, 'resourcesPath', {
-    configurable: true,
-    enumerable: true,
-    writable: true,
-    value,
-  });
+function markPackagedDesktopMode() {
+  process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE = '0';
 }
 
 afterEach(() => {
   delete process.env.NEON_PILOT_STATE_ROOT;
   delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
-  if (originalResourcesPathDescriptor) {
-    Object.defineProperty(process, 'resourcesPath', originalResourcesPathDescriptor);
-  } else {
-    Reflect.deleteProperty(process, 'resourcesPath');
-  }
 });
 
 describe('registerExtensionRoutes', () => {
@@ -659,7 +647,7 @@ describe('registerExtensionRoutes', () => {
     );
     writeFileSync(join(extensionRoot, 'src', 'frontend.tsx'), 'export function AgentBoard() { return null; }');
     writeFileSync(join(extensionRoot, 'src', 'backend.ts'), 'export async function ping() { return { ok: true }; }');
-    setPackagedResourcesPath();
+    markPackagedDesktopMode();
 
     const harness = createHarness();
     const res = createResponse();
@@ -686,7 +674,7 @@ describe('registerExtensionRoutes', () => {
       }),
     );
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export async function ping() { return { ok: true }; }');
-    setPackagedResourcesPath();
+    markPackagedDesktopMode();
 
     const harness = createHarness();
     const res = createResponse();

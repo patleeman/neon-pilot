@@ -2375,7 +2375,7 @@ export function Layout() {
         <ExtensionModalHost />
       </Suspense>
       <Suspense fallback={null}>
-        <PageSearchBar rootRef={pageSearchRootRef} desktopShell={desktopEnvironment?.isElectron ?? isDesktopShell()} />
+        <PageSearchBar rootRef={pageSearchRootRef} desktopShell={desktopEnvironment?.isTauri ?? isDesktopShell()} />
       </Suspense>
       {commandPaletteMounted ? (
         <Suspense fallback={null}>

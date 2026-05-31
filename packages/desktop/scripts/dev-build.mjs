@@ -24,7 +24,7 @@ run('run', 'clean');
 // build deps (vite UI, esbuild server, system extensions)
 execFileSync('npm', ['run', 'build:deps'], { cwd: packageDir, stdio: 'inherit' });
 
-// tsc for Electron main process and declarations
+// tsc for declarations and the active Tauri sidecar/backend surface
 // Accept non-zero exit — dist files are still generated
 try {
   execFileSync('npx', ['tsc', '--build', '--force'], { cwd: packageDir, stdio: 'inherit' });

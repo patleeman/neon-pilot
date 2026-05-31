@@ -4,11 +4,11 @@ Neon Pilot treats the desktop renderer as a presentation surface, not a product 
 
 ## Process ownership
 
-- **Electron main** owns native shell/bootstrap/control only: windows, app protocol, OS dialogs, screenshots, and native integrations.
+- **Tauri/Rust shell** owns native shell/bootstrap/control only: windows, app protocol, OS dialogs, screenshots, and native integrations.
 - **Backend/local API/daemon lane** owns product work: transcript reads, filesystem scans, session/run/todo/extension state, prompt assembly, telemetry persistence, and transcript projection.
 - **Renderer** owns local UI state and paint: composer input, optimistic rows, rendering immutable view models, and applying small realtime patches.
 
-No hot UI path should depend on Electron IPC product calls, synchronous filesystem work, SQLite indexing, extension providers, or raw transcript shaping in React render.
+No hot UI path should depend on native bridge product calls, synchronous filesystem work, SQLite indexing, extension providers, or raw transcript shaping in React render.
 
 ## Critical lanes
 
@@ -54,6 +54,6 @@ For open-thread, type, send, and stream paths, do not add:
 - global session refreshes
 - large raw transcript JSON payloads
 - React render-time transcript clustering/window construction
-- Electron IPC product reads/mutations
+- native bridge product reads/mutations
 
 If a feature needs one of these, move it behind a cached backend snapshot or a background event.

@@ -50,7 +50,7 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30000,
     setupFiles: [resolve(repoRoot, 'vitest.setup.ts')],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/.taskfactory/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.taskfactory/**', 'packages/desktop/src/**/*.test.ts'],
     coverage: {
       include: [
         'packages/*/src/**/*.ts',

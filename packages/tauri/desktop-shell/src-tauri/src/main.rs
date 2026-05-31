@@ -40,7 +40,6 @@ struct ApiDispatchResponse {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DesktopEnvironment {
-    is_electron: bool,
     is_tauri: bool,
     active_host_id: String,
     active_host_label: String,
@@ -105,7 +104,6 @@ async fn host_status(state: State<'_, Arc<HostState>>) -> Result<JsSidecarStatus
 #[tauri::command]
 async fn get_environment(app: tauri::AppHandle) -> DesktopEnvironment {
     DesktopEnvironment {
-        is_electron: false,
         is_tauri: true,
         active_host_id: "local".to_string(),
         active_host_label: "Local".to_string(),

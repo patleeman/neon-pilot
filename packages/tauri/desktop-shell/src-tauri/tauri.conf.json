@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Neon Pilot Tauri",
+  "productName": "Neon Pilot",
   "version": "0.9.3-rc.3",
-  "identifier": "net.neonpilot.tauri",
+  "identifier": "net.neonpilot.desktop",
   "build": {
     "beforeBuildCommand": "pnpm --dir ../../desktop run build:ui",
     "beforeDevCommand": "pnpm --dir ../../desktop run build:ui",
@@ -24,7 +24,7 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
     "targets": "all",
     "icon": [
       "../../../desktop/assets/icon.png",

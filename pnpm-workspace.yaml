@@ -4,10 +4,8 @@ packages:
 
 allowBuilds:
   better-sqlite3: true
-  electron: true
   esbuild: true
   koffi: true
   '@google/genai': false
-  electron-winstaller: false
   protobufjs: false
   node-pty: true

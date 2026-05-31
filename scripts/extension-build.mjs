@@ -118,7 +118,6 @@ if (manifest.backend?.entry && existsSync(backendSource)) {
       '@neon-pilot/extensions/settings',
       '@neon-pilot/extensions/data',
       '@neon-pilot/extensions/excalidraw',
-      'electron',
       'fsevents',
       'process',
     ],
@@ -468,7 +467,7 @@ function writeBundledRuntimePackageJson(outfile, buildOutputs) {
   // Bundled pi runtime modules read their own package metadata at module
   // initialization. In a bundle, import.meta.url points at the extension dist
   // directory instead of node_modules/@earendil-works/pi-coding-agent, so ship
-  // a minimal compatible package.json next to backend.mjs for packaged Electron.
+  // a minimal compatible package.json next to backend.mjs for packaged desktop apps.
   const sourcePath = join(repoRoot, 'node_modules', '@earendil-works', 'pi-coding-agent', 'package.json');
   const source = existsSync(sourcePath)
     ? JSON.parse(readFileSync(sourcePath, 'utf-8'))
@@ -493,9 +492,6 @@ function findAppNodeModules() {
     resolve(repoRoot, 'packages', 'core', 'node_modules'),
     resolve(repoRoot, 'node_modules'),
   ];
-  if (typeof process.resourcesPath === 'string') {
-    paths.push(resolve(process.resourcesPath, 'app.asar.unpacked/node_modules'));
-  }
   for (let depth = 2; depth <= 5; depth++) {
     paths.push(resolve(currentDir, ...Array(depth).fill('..'), 'node_modules'));
   }

@@ -44,11 +44,11 @@ describe('background run agent argv', () => {
     process.env.NEON_PILOT_REPO_ROOT = '';
     process.env.NEON_PILOT_APP_ROOT = '/app';
     process.env.NEON_PILOT_RESOURCES_ROOT = '/resources';
-    fs.existing.add('/resources/app.asar/server/dist/daemon/background-agent-runner.js');
+    fs.existing.add('/resources/server/dist/daemon/background-agent-runner.js');
 
     expect(buildBackgroundAgentArgv({ prompt: 'do work', allowedTools: [] })).toEqual([
       process.execPath,
-      '/resources/app.asar/server/dist/daemon/background-agent-runner.js',
+      '/resources/server/dist/daemon/background-agent-runner.js',
       '--prompt',
       'do work',
     ]);

@@ -131,7 +131,7 @@ Not every Settings-page control writes to the same JSON file:
 
 | Area                                                    | Source of truth                                                                            |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Appearance theme picker                                 | Browser/Electron `localStorage` plus contributed extension themes                          |
+| Appearance theme picker                                 | Desktop webview/browser `localStorage` plus contributed extension themes                    |
 | Conversation defaults                                   | `<state-root>/neon-pilot-runtime/settings.json`                                            |
 | Workspace default cwd                                   | `<state-root>/neon-pilot-runtime/settings.json`                                            |
 | Skills and extra instruction files                      | `<config-root>/config.json`                                                                |

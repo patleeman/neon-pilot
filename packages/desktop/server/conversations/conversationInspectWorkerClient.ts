@@ -79,8 +79,7 @@ export function resolveConversationInspectWorkerUrlFrom(importMetaUrl: string): 
   // extension cache.
   const currentDir = dirname(fileURLToPath(importMetaUrl));
   const isExtensionCacheClient = currentDir.includes(`${sep}extension-cache${sep}`);
-  const isPackagedExtensionClient =
-    typeof process.resourcesPath === 'string' && currentDir.includes(`${sep}extensions${sep}`) && currentDir.endsWith(`${sep}dist`);
+  const isPackagedExtensionClient = currentDir.includes(`${sep}extensions${sep}`) && currentDir.endsWith(`${sep}dist`);
   const isTranspiledServerClient = currentDir.includes(`${sep}packages${sep}desktop${sep}dist${sep}server${sep}`);
   const relativeUrl = new URL('../conversations/conversationInspectWorker.js', importMetaUrl);
 
@@ -94,25 +93,15 @@ export function resolveConversationInspectWorkerUrlFrom(importMetaUrl: string): 
     }
   }
 
-  const packagedCandidates =
-    typeof process.resourcesPath === 'string'
-      ? [
-          // Node worker_threads cannot execute JavaScript directly from app.asar.
-          // electron-builder mirrors asarUnpack matches under app.asar.unpacked,
-          // so prefer that real filesystem path in packaged builds.
-          resolve(process.resourcesPath, 'app.asar.unpacked/server/dist/conversations/conversationInspectWorker.js'),
-          resolve(process.resourcesPath, 'app/server/dist/conversations/conversationInspectWorker.js'),
-          resolve(process.resourcesPath, 'server/dist/conversations/conversationInspectWorker.js'),
-          resolve(process.resourcesPath, 'app.asar/server/dist/conversations/conversationInspectWorker.js'),
-        ]
-      : [];
-
   const candidates = [
-    ...packagedCandidates,
     ...(process.env.NEON_PILOT_REPO_ROOT
-      ? [resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/server/dist/conversations/conversationInspectWorker.js')]
+      ? [
+          resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/server/dist/conversations/conversationInspectWorker.js'),
+          resolve(process.env.NEON_PILOT_REPO_ROOT, 'server/dist/conversations/conversationInspectWorker.js'),
+        ]
       : []),
     resolve(process.cwd(), 'packages/desktop/server/dist/conversations/conversationInspectWorker.js'),
+    resolve(process.cwd(), 'server/dist/conversations/conversationInspectWorker.js'),
     resolve(currentDir, '../../packages/desktop/server/dist/conversations/conversationInspectWorker.js'),
     resolve(currentDir, '../../../packages/desktop/server/dist/conversations/conversationInspectWorker.js'),
     resolve(currentDir, '../server/dist/conversations/conversationInspectWorker.js'),

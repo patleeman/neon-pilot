@@ -142,7 +142,7 @@ function browserSessionKey(tabId?: string | null): string | null {
 
 function requireDesktopBridge() {
   const bridge = getDesktopBridge();
-  if (!bridge) throw new Error('Browser primitives are only available in the Electron desktop app.');
+  if (!bridge) throw new Error('Browser primitives are only available in a desktop app with a native browser bridge.');
   return bridge;
 }
 

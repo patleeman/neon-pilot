@@ -357,16 +357,18 @@ function collectReleaseFiles(releaseDir, version) {
   const files = readdirSync(releaseDir)
     .filter(
       (name) =>
-        name === 'latest-mac.yml' ||
-        (name.includes(`-${version}-`) && (name.endsWith('.dmg') || name.endsWith('.zip') || name.endsWith('.blockmap'))),
+        name.endsWith('.dmg') ||
+        name.endsWith('.zip') ||
+        name.endsWith('.tar.gz') ||
+        name.endsWith('.AppImage') ||
+        name.endsWith('.msi') ||
+        name.endsWith('.deb'),
     )
     .sort()
     .map((name) => resolve(releaseDir, name));
 
-  const hasLatestMac = files.some((file) => file.endsWith('/latest-mac.yml'));
-  const hasZip = files.some((file) => file.endsWith('.zip'));
-  if (!hasLatestMac || !hasZip) {
-    fail(`Expected latest-mac.yml and at least one .zip artifact in ${releaseDir}`);
+  if (files.length === 0) {
+    fail(`Expected at least one Tauri desktop artifact in ${releaseDir}`);
   }
 
   return files;
@@ -393,31 +395,10 @@ function collectPackagedAppPath(releaseDir) {
 }
 
 function validatePackagedAutoUpdateConfig(releaseDir, releaseRepo) {
-  const appPath = collectPackagedAppPath(releaseDir);
-  if (!appPath) {
-    fail(`Packaged desktop app not found under ${releaseDir}; cannot validate auto-update feed config.`);
-  }
-
-  const appUpdatePath = resolve(appPath, 'Contents', 'Resources', 'app-update.yml');
-  if (!existsSync(appUpdatePath)) {
-    fail(`Packaged auto-update config not found: ${appUpdatePath}`);
-  }
-
-  const config = readFileSync(appUpdatePath, 'utf8');
-  const owner = config.match(/^owner:\s*(.+)$/mu)?.[1]?.trim() ?? '';
-  const repo = config.match(/^repo:\s*(.+)$/mu)?.[1]?.trim() ?? '';
-  const [expectedOwner, expectedRepo] = releaseRepo.split('/', 2);
-
-  if (owner !== expectedOwner || repo !== expectedRepo) {
-    fail(
-      [
-        'Packaged app-update.yml points at the wrong GitHub repo.',
-        `Expected: ${releaseRepo}`,
-        `Actual: ${owner}/${repo}`,
-        `Path: ${appUpdatePath}`,
-      ].join('\n'),
-    );
-  }
+  void releaseDir;
+  void releaseRepo;
+  // Tauri updater signing/feed validation will live here when updater support is
+  // enabled. Legacy updater metadata is no longer part of the release path.
 }
 
 function listWorkspacePackageDirs(buildRoot) {
@@ -584,10 +565,7 @@ function hasPackagedNodeModule(packageName, packageEntries, resourcesDir, buildR
   }
 
   const packagePathSegments = packageName.split('/');
-  if (
-    existsSync(resolve(resourcesDir, 'node_modules', ...packagePathSegments, 'package.json')) ||
-    existsSync(resolve(resourcesDir, 'app.asar.unpacked', 'node_modules', ...packagePathSegments, 'package.json'))
-  ) {
+  if (existsSync(resolve(resourcesDir, 'node_modules', ...packagePathSegments, 'package.json'))) {
     return true;
   }
 
@@ -616,42 +594,10 @@ function hasPackagedNodeModule(packageName, packageEntries, resourcesDir, buildR
 }
 
 function validatePackagedRuntimeDependencies(buildRoot, releaseDir) {
-  // Skipped for pnpm layouts — the walk-based resolution and asar inspection
-  // do not understand pnpm aliases, .pnpm/ store layout, or workspace
-  // symlinks. Electron-builder packages dependencies correctly regardless.
-  return;
-  /* Original validation logic below (kept for reference):
-  const appPath = collectPackagedAppPath(releaseDir);
-  if (!appPath) {
-    fail(`Packaged desktop app not found under ${releaseDir}; cannot validate packaged runtime dependencies.`);
-  }
-
-  const resourcesDir = resolve(appPath, 'Contents', 'Resources');
-  const appAsarPath = resolve(resourcesDir, 'app.asar');
-  if (!existsSync(appAsarPath)) {
-    fail(`Packaged desktop app archive not found: ${appAsarPath}`);
-  }
-
-  const releaseRequire = createRequire(resolve(buildRoot, 'package.json'));
-  const { listPackage } = releaseRequire('@electron/asar');
-  const packageEntries = listPackage(appAsarPath);
-  const expectedPackages = collectExpectedRuntimePackages(buildRoot);
-  const missingPackages = expectedPackages.filter(
-    (packageName) => !hasPackagedNodeModule(packageName, packageEntries, resourcesDir, buildRoot),
-  );
-
-  if (missingPackages.length > 0) {
-    fail(
-      [
-        'Packaged desktop app is missing runtime dependencies.',
-        `App: ${appAsarPath}`,
-        'Missing packages:',
-        ...missingPackages.map((packageName) => `- ${packageName}`),
-      ].join('\n'),
-    );
-  }
-}
-*/
+  void buildRoot;
+  void releaseDir;
+  // Tauri does not package a Node archive. Runtime dependency validation is
+  // covered by TypeScript/build checks plus packaged extension validation.
 }
 
 function sleepMs(ms) {

@@ -63,7 +63,7 @@ my-extension/
 
 Create a new extension by asking your agent to build it. Under the hood, the agent should use Extension Manager actions or the packaged local-extension-development skill; renderer/extension UI should use the public extension SDK clients/capabilities instead of reaching into desktop internals.
 
-Extension frontend code must not depend on Electron IPC channels. Product data flows through host-provided HTTP clients/capabilities, realtime updates flow through host-provided realtime subscriptions, and native OS/Electron operations remain host-owned capabilities. If an extension needs a missing product API, add a reusable SDK capability rather than adding an extension-specific IPC bridge.
+Extension frontend code must not depend on native shell channels. Product data flows through host-provided HTTP clients/capabilities, realtime updates flow through host-provided realtime subscriptions, and native OS operations remain host-owned capabilities. If an extension needs a missing product API, add a reusable SDK capability rather than adding an extension-specific native bridge.
 
 ## Packaging and distribution
 
@@ -1044,7 +1044,7 @@ If a page needs a style that fights these defaults, first ask whether it should 
 The backend runs in the Node.js server process. It exposes actions
 that the frontend can call via `pa.extension.invoke()`. A backend can also declare `onEnableAction` in `extension.json` to run an action immediately after the user enables the extension.
 
-Desktop extension UI should use the PA client/action bridge (`pa.extension.invoke`, `pa.extensions.callAction`, or another typed `pa.*` capability) to communicate with backend code. The host backs these capabilities with the desktop HTTP data plane and WebSocket realtime plane, not Electron IPC. Extension HTTP routes are primarily integration surfaces for external or side-channel consumers: webhooks, OAuth callbacks, local protocol adapters, browser/webview callbacks, third-party tools that cannot use the typed PA SDK bridge, and long-lived streaming endpoints. If an extension UI needs backend push and no typed PA subscription exists, declare an SSE `backend.routes` entry with `stream: "sse"` and consume `/api/extensions/<extension-id>/<route-path>` with `EventSource`.
+Desktop extension UI should use the PA client/action bridge (`pa.extension.invoke`, `pa.extensions.callAction`, or another typed `pa.*` capability) to communicate with backend code. The host backs these capabilities with the desktop HTTP data plane and WebSocket realtime plane, not native shell IPC. Extension HTTP routes are primarily integration surfaces for external or side-channel consumers: webhooks, OAuth callbacks, local protocol adapters, browser/webview callbacks, third-party tools that cannot use the typed PA SDK bridge, and long-lived streaming endpoints. If an extension UI needs backend push and no typed PA subscription exists, declare an SSE `backend.routes` entry with `stream: "sse"` and consume `/api/extensions/<extension-id>/<route-path>` with `EventSource`.
 
 Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions, services, protocol handlers, and agent lifecycle factories with a process-termination guard. If guarded extension code calls `process.exit(...)`, `process.abort()`, or `process.kill(process.pid, ...)`, the call is blocked, surfaced as an extension health error, and runtime action paths disable the extension to prevent startup boot loops.
 

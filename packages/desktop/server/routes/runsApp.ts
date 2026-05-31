@@ -23,7 +23,6 @@ function candidatePaComponentsCssPaths(): string[] {
     process.env.NEON_PILOT_REPO_ROOT
       ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/server/extensions/pa-components.css')
       : null,
-    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'extensions/pa-components.css') : null,
     resolve(process.cwd(), 'server/extensions/pa-components.css'),
     resolve(process.cwd(), 'extensions/pa-components.css'),
     resolve(currentDir, '../extensions/pa-components.css'),

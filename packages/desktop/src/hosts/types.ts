@@ -464,8 +464,7 @@ export interface HostController {
 }
 
 export interface DesktopEnvironmentState {
-  isElectron: boolean;
-  isTauri?: boolean;
+  isTauri: boolean;
   activeHostId: string;
   activeHostLabel: string;
   activeHostKind: DesktopHostRecord['kind'];

@@ -67,7 +67,7 @@ const notificationListeners = new Set<SystemNotificationListener>();
 
 /**
  * Register a listener for badge count changes.
- * Used by the Electron main process IPC bridge.
+ * Used by native desktop notification bridges.
  */
 export function onBadgeChanged(listener: BadgeUpdateListener): () => void {
   badgeListeners.add(listener);
@@ -76,7 +76,7 @@ export function onBadgeChanged(listener: BadgeUpdateListener): () => void {
 
 /**
  * Register a listener for system notification requests.
- * Used by the Electron main process IPC bridge.
+ * Used by native desktop notification bridges.
  */
 export function onSystemNotification(listener: SystemNotificationListener): () => void {
   notificationListeners.add(listener);

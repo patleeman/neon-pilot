@@ -85,7 +85,7 @@ describe('api desktop transport', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
     const getEnvironment = vi.fn().mockResolvedValue({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -113,7 +113,7 @@ describe('api desktop transport', () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true, result: 'pong' }));
     vi.stubGlobal('fetch', fetchMock);
     const getEnvironment = vi.fn().mockResolvedValue({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -194,7 +194,7 @@ describe('api desktop transport', () => {
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'remote',
           activeHostLabel: 'Remote',
           activeHostKind: 'ssh',
@@ -213,7 +213,7 @@ describe('api desktop transport', () => {
     expect(fetchMock).toHaveBeenCalled();
   });
 
-  it('uses dedicated desktop capability bridges on the local Electron host', async () => {
+  it('uses dedicated desktop capability bridges on the local desktop host', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(createJsonResponse({})));
     vi.stubGlobal('fetch', fetchMock);
     const readAppStatus = vi.fn().mockResolvedValue({
@@ -399,7 +399,7 @@ describe('api desktop transport', () => {
     const abortLiveSession = vi.fn().mockResolvedValue({ ok: true });
     const destroyLiveSession = vi.fn().mockResolvedValue({ ok: true });
     const getEnvironment = vi.fn().mockResolvedValue({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -872,7 +872,7 @@ describe('api desktop transport', () => {
     expect(destroyed).toEqual({ ok: true });
   });
 
-  it('uses HTTP for conversation artifacts and attachments on the local Electron host', async () => {
+  it('uses HTTP for conversation artifacts and attachments on the local desktop host', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const readConversationArtifacts = vi.fn().mockResolvedValue({
@@ -938,7 +938,7 @@ describe('api desktop transport', () => {
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'local',
           activeHostLabel: 'Local',
           activeHostKind: 'local',
@@ -1016,7 +1016,7 @@ describe('api desktop transport', () => {
     });
   });
 
-  it('uses HTTP for conversation deferred-resume state on the local Electron host', async () => {
+  it('uses HTTP for conversation deferred-resume state on the local desktop host', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const readConversationDeferredResumes = vi.fn().mockResolvedValue({
@@ -1054,7 +1054,7 @@ describe('api desktop transport', () => {
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'local',
           activeHostLabel: 'Local',
           activeHostKind: 'local',
@@ -1119,7 +1119,7 @@ describe('api desktop transport', () => {
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'local',
           activeHostLabel: 'Local',
           activeHostKind: 'local',
@@ -1149,7 +1149,7 @@ describe('api desktop transport', () => {
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'local',
           activeHostLabel: 'Local',
           activeHostKind: 'local',
@@ -1167,7 +1167,7 @@ describe('api desktop transport', () => {
     expect(pickedFolder).toEqual({ path: '/picked/knowledge', cancelled: false });
   });
 
-  it('uses HTTP for automation workspace product state on the local Electron host', async () => {
+  it('uses HTTP for automation workspace product state on the local desktop host', async () => {
     const fetchMock = vi.fn().mockImplementation(async () =>
       createJsonResponse({
         defaultEnabled: true,
@@ -1188,7 +1188,7 @@ describe('api desktop transport', () => {
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'local',
           activeHostLabel: 'Local',
           activeHostKind: 'local',
@@ -1251,7 +1251,7 @@ describe('api desktop transport', () => {
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockResolvedValue({
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'local',
           activeHostLabel: 'Local',
           activeHostKind: 'local',

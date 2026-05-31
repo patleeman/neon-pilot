@@ -301,12 +301,12 @@ function readJsonFile(path) {
 }
 
 function assertPackagedAgentReadableResources(appBundlePath) {
-  const resourcesPath = join(appBundlePath, 'Contents', 'Resources');
+  const appResourcesDir = join(appBundlePath, 'Contents', 'Resources');
   const requiredResources = ['docs/README.md', 'extensions/system-settings/README.md', 'extensions/system-runs/skills/runs/SKILL.md'];
-  const missing = requiredResources.filter((relativePath) => !existsSync(join(resourcesPath, relativePath)));
+  const missing = requiredResources.filter((relativePath) => !existsSync(join(appResourcesDir, relativePath)));
 
   for (const extensionRootRelativePath of ['extensions']) {
-    const extensionsRoot = join(resourcesPath, extensionRootRelativePath);
+    const extensionsRoot = join(appResourcesDir, extensionRootRelativePath);
     if (!existsSync(extensionsRoot)) continue;
     for (const entry of readdirSync(extensionsRoot, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;

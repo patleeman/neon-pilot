@@ -37,9 +37,9 @@ describe('background agent runner output capture', () => {
     ).toEqual(['model exploded']);
   });
 
-  it('runs from daemon-spawned Electron Node children even when argv path differs', () => {
+  it('runs from daemon-spawned desktop Node children even when argv path differs', () => {
     const moduleUrl = pathToFileURL(
-      '/Applications/Neon Pilot RC.app/Contents/Resources/app.asar/server/dist/background-agent-runner.js',
+      '/Applications/Neon Pilot RC.app/Contents/Resources/server/dist/background-agent-runner.js',
     ).href;
 
     expect(shouldRunBackgroundAgentMain(moduleUrl, '/private/var/folders/runner.js', { NEON_PILOT_RUN_ID: 'run-123' })).toBe(true);

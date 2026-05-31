@@ -8,7 +8,7 @@ This extension owns the product behavior documented below. Keep extension-specif
 
 # Browser
 
-The built-in Browser is an Electron-owned webview embedded in a desktop workbench tab. It provides a shared visual context for the user and agent — both see the same page.
+The built-in Browser is a planned Tauri-native webview embedded in a desktop workbench tab. It should provide a shared visual context for the user and agent, where both see the same page.
 
 ## Opening the Browser
 
@@ -57,7 +57,7 @@ Open the Browser workbench panel before using browser tools.
 
 ### Tool cancellation and timeouts
 
-Browser tool calls are abortable through the normal conversation stop control. Snapshot, screenshot, tab listing, and CDP calls also have a hard 10 second deadline so a stuck Electron/CDP operation returns a clean tool error instead of freezing the agent turn indefinitely.
+Browser tool calls are abortable through the normal conversation stop control. Snapshot, screenshot, tab listing, and CDP calls also have a hard 10 second deadline so a stuck native-browser/CDP operation returns a clean tool error instead of freezing the agent turn indefinitely.
 
 ### CDP commands
 
@@ -97,7 +97,7 @@ After QA, close `Neon Pilot Testing.app` and run `npm run ab:cleanup -- --sessio
 
 | Feature       | Built-in Browser           | agent-browser CLI   |
 | ------------- | -------------------------- | ------------------- |
-| UI            | Workbench rail in Electron | Terminal/Playwright |
+| UI            | Workbench rail in desktop shell | Terminal/Playwright |
 | Session       | Scoped to conversation     | Named CLI sessions  |
 | Comments      | Right-click UI             | Not supported       |
 | Accessibility | End-user feature           | Dev tool only       |

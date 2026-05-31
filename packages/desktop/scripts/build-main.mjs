@@ -9,64 +9,9 @@ const packageNodeModules = resolve(dir, 'node_modules');
 const rootNodeModules = resolve(dir, '..', '..', 'node_modules');
 const nodePaths = [packageNodeModules, rootNodeModules];
 
-// Build main process bundle
-await build({
-  entryPoints: [resolve(dir, 'src', 'main.ts')],
-  outdir: resolve(dir, 'dist'),
-  entryNames: '[name]',
-  chunkNames: 'chunks/[name]-[hash]',
-  bundle: true,
-  splitting: true,
-  platform: 'node',
-  format: 'esm',
-  target: 'node20',
-  banner: {
-    js: `import { createRequire as __paCreateRequire } from 'node:module';var require=__paCreateRequire(import.meta.url);`,
-  },
-  external: ['electron', 'fsevents', 'node-pty'],
-  logLevel: 'info',
-  nodePaths,
-});
-
-// Build preload script (must be CommonJS for Electron sandbox)
-await build({
-  entryPoints: [resolve(dir, 'src', 'preload.cts')],
-  outfile: resolve(dir, 'dist', 'preload.cjs'),
-  bundle: true,
-  platform: 'node',
-  format: 'cjs',
-  target: 'node20',
-  external: ['electron'],
-  logLevel: 'info',
-  nodePaths,
-});
-
-// Build local API workers (runs the server bundle in worker threads)
-await build({
-  entryPoints: [resolve(dir, 'src', 'local-api-worker.ts')],
-  outfile: resolve(dir, 'dist', 'local-api-worker.js'),
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  target: 'node20',
-  external: ['electron'],
-  logLevel: 'info',
-  nodePaths,
-});
-await build({
-  entryPoints: [resolve(dir, 'src', 'readonly-local-api-worker.ts')],
-  outfile: resolve(dir, 'dist', 'readonly-local-api-worker.js'),
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  target: 'node20',
-  external: ['electron'],
-  logLevel: 'info',
-  nodePaths,
-});
-
-// Build local backend child process. Electron main supervises this process; it
-// owns the product backend and daemon runtime.
+// Tauri supervises this sidecar from Rust. It owns the product backend, daemon
+// runtime, and JS extension execution while host-authority calls route back to
+// Rust over the host-core RPC bridge.
 await build({
   entryPoints: [resolve(dir, 'src', 'backend', 'local-backend-child.ts')],
   outfile: resolve(dir, 'dist', 'backend', 'local-backend-child.js'),
@@ -77,7 +22,7 @@ await build({
   banner: {
     js: `import { createRequire as __paBackendCreateRequire } from 'node:module';var require=__paBackendCreateRequire(import.meta.url);`,
   },
-  external: ['electron', 'fsevents', 'node-pty'],
+  external: ['fsevents', 'node-pty'],
   logLevel: 'info',
   nodePaths,
 });

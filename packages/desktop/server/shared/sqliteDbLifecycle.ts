@@ -81,7 +81,7 @@ export function closeAllDbs(log?: LogFn): void {
 /**
  * Register a synchronous `process.on('exit')` handler that closes all
  * databases. This is a last-resort safety net for ungraceful termination
- * (e.g. Electron force-quit, uncaught exception). The 'exit' event fires
+ * (e.g. desktop force-quit, uncaught exception). The 'exit' event fires
  * for most termination scenarios except SIGKILL.
  *
  * better-sqlite3 operations are synchronous, so checkpoint + close works

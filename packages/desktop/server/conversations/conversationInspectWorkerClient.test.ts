@@ -1,13 +1,15 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { chdir } from 'node:process';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveConversationInspectWorkerUrlFrom } from './conversationInspectWorkerClient.js';
 
 const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
+const originalCwd = process.cwd();
 const tempRoots: string[] = [];
 
 function makeTempRoot(): string {
@@ -23,6 +25,7 @@ function touch(path: string): void {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  chdir(originalCwd);
 
   if (previousRepoRoot === undefined) {
     delete process.env.NEON_PILOT_REPO_ROOT;
@@ -80,19 +83,16 @@ describe('resolveConversationInspectWorkerUrlFrom', () => {
     expect(workerUrl.href).toBe(pathToFileURL(bundledWorkerPath).href);
   });
 
-  it('uses the unpacked worker path in packaged extension builds', () => {
+  it('uses the bundled worker path in packaged extension builds', () => {
     const resourcesRoot = makeTempRoot();
-    const appRoot = join(resourcesRoot, 'app.asar');
     const clientPath = join(resourcesRoot, 'extensions/system-conversation-tools/dist/backend.mjs');
-    const packedWorkerPath = join(appRoot, 'server/dist/conversations/conversationInspectWorker.js');
-    const unpackedWorkerPath = join(resourcesRoot, 'app.asar.unpacked/server/dist/conversations/conversationInspectWorker.js');
+    const bundledWorkerPath = join(resourcesRoot, 'server/dist/conversations/conversationInspectWorker.js');
     touch(clientPath);
-    touch(packedWorkerPath);
-    touch(unpackedWorkerPath);
-    vi.stubGlobal('process', { ...process, resourcesPath: resourcesRoot });
+    touch(bundledWorkerPath);
+    chdir(resourcesRoot);
 
     const workerUrl = resolveConversationInspectWorkerUrlFrom(pathToFileURL(clientPath).href);
 
-    expect(workerUrl.href).toBe(pathToFileURL(unpackedWorkerPath).href);
+    expect(realpathSync(fileURLToPath(workerUrl))).toBe(realpathSync(bundledWorkerPath));
   });
 });

@@ -85,7 +85,7 @@ async function main() {
   console.log(`\n🧪 E2E Chat Test — CDP port ${cdpPort}\n`);
 
   // ── Step 1: Connect ──────────────────────────────────────────────────────
-  console.log('1. Connecting to Electron app...');
+  console.log('1. Connecting to desktop app...');
   await ab(['connect', cdpPort]);
   assert('Connected to CDP', true);
 

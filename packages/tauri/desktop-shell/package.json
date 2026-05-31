@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "cargo build --manifest-path src-tauri/Cargo.toml",
+    "build": "tauri build",
     "check": "cargo check --manifest-path src-tauri/Cargo.toml",
-    "dev": "cargo run --manifest-path src-tauri/Cargo.toml"
+    "dev": "tauri dev"
   }
 }

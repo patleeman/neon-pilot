@@ -80,7 +80,7 @@ Each release command performs these steps in order:
 11. **Git push** — pushes the version commit and tag to the remote
 12. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
 
-Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full signed desktop app with Electron Builder `--publish never`, packages installable extensions, validates packaged extensions, then runs the automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
+Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full Tauri desktop app, packages installable extensions, validates packaged extensions, then runs the automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
 
 ## Automated Smoke Test
 
@@ -93,11 +93,11 @@ The release script runs an automated smoke test after signing and notarization, 
 The check verifies:
 
 1. The app process starts successfully
-2. The Electron renderer exposes a page over CDP
+2. The Tauri renderer exposes a page over CDP-compatible WebView debugging when the smoke enables it
 3. The initial route renders non-empty UI without startup errors
 4. Agent-readable packaged resources exist (`docs/README.md`, bundled system extension READMEs, extension skills, and manifest-declared extension bundles)
 5. Packaged renderer API endpoints return successful responses for extensions, gateways, and models
-6. Packaged extension backends import successfully with Electron-style `process.resourcesPath`
+6. Packaged extension backends import successfully from Tauri bundle resources
 7. A live conversation can be created and its `bash` tool returns output
 8. The Knowledge route renders
 9. A conversation route renders
@@ -131,24 +131,20 @@ First reproduce and fix release-blocking issues with the local packaged build. O
 
 ## Release artifacts
 
-Release assets must include Electron updater metadata plus signed macOS artifacts:
+Release assets must include signed Tauri desktop artifacts:
 
-- `latest-mac.yml`
-- signed `.zip` and `.zip.blockmap`
-- optionally `.dmg` and `.dmg.blockmap`
+- signed `.dmg` on macOS
+- other Tauri bundle artifacts for enabled release targets
 
 The publish script loads Apple credentials from `NEON_PILOT_RELEASE_ENV`, then `.env`, then `~/.config/neon-pilot/release-env`. It maps `APPLE_PASSWORD` to `APPLE_APP_SPECIFIC_PASSWORD` for notarization and can target another public release repo with `NEON_PILOT_RELEASE_REPO`.
 
 ## Gotchas
 
 - `pnpm version prerelease --preid=rc` only bumps the version and creates a git tag. It does not build or upload artifacts. Run `pnpm run release:publish` for the full signed release.
-- `desktop:dist` runs `tsc --build --force` through the desktop package build chain. If pre-existing server TypeScript errors block the build, use the direct esbuild/electron-builder path:
+- `desktop:dist` runs the Tauri desktop build chain. If pre-existing server TypeScript errors block the build, fix the TypeScript error before publishing; release builds do not have a legacy desktop-shell fallback path.
 
   ```bash
-  cd packages/desktop
-  pnpm run build:deps
-  node scripts/build-main.mjs
-  npx electron-builder --config electron-builder.config.mjs --publish never
+  pnpm run tauri:build
   ```
 
 ## Prerequisites

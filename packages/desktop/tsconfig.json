@@ -12,7 +12,19 @@
       "@neon-pilot/extensions/host-view-components": ["../extensions/dist/host-view-components.d.ts"]
     }
   },
-  "include": ["src/**/*.ts", "server/**/*.ts", "server/**/*.tsx"],
+  "include": [
+    "src/backend/local-backend-child.ts",
+    "src/backend/local-backend-processes.ts",
+    "src/hosts/types.ts",
+    "src/local-api-module.ts",
+    "src/local-api-worker-client.ts",
+    "src/local-api-worker.ts",
+    "src/readonly-local-api.ts",
+    "src/readonly-local-api-worker.ts",
+    "src/worker-transfer.ts",
+    "server/**/*.ts",
+    "server/**/*.tsx"
+  ],
   "exclude": ["dist", "node_modules", "**/*.test.ts", "**/*.test.tsx", "**/*.d.ts", "**/*.smoke.test.ts", "**/*.integration.test.ts"],
   "references": [{ "path": "../core" }]
 }

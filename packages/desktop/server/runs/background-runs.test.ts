@@ -77,12 +77,12 @@ describe('background runs', () => {
     }
   });
 
-  it('resolves the packaged app.asar runner from explicit packaged roots', () => {
+  it('resolves the packaged runner from explicit packaged roots', () => {
     const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
     const previousResourcesRoot = process.env.NEON_PILOT_RESOURCES_ROOT;
     const previousAppRoot = process.env.NEON_PILOT_APP_ROOT;
     const resourcesRoot = createTempDir('pa-background-runner-resources-');
-    const appRoot = join(resourcesRoot, 'app.asar');
+    const appRoot = resourcesRoot;
     const appAsarRunner = join(appRoot, 'server/dist/daemon/background-agent-runner.js');
 
     mkdirSync(join(appRoot, 'server/dist/daemon'), { recursive: true });

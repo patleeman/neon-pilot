@@ -10,18 +10,18 @@ metadata:
 
 # Built-in Workbench Browser
 
-The built-in Browser is the user-facing browser surface inside the Electron desktop app's Workbench layout.
+The built-in Browser was the user-facing browser surface inside the old desktop Workbench layout. The production Tauri desktop shell does not currently ship an embedded native browser surface.
 
 Use this extension skill when work touches:
 
 - the right-side Workbench **Browser** tab
 - browser comments attached to composer prompts
-- browser snapshot/action behavior inside Electron
+- browser snapshot/action behavior in a future native desktop browser bridge
 - the boundary between the built-in browser and the `agent-browser` CLI/dev tool
 
 ## Product model
 
-The Workbench Browser is an Electron-owned `WebContentsView` embedded in the desktop app.
+The Workbench Browser is a desktop-owned embedded webview concept. It is currently disabled in the Tauri production shell until a Tauri-native webview strategy is implemented.
 
 It is for:
 
@@ -81,11 +81,11 @@ The product model:
 - the Browser tab is the visual surface
 - browser sessions are scoped to the active conversation, like the workbench file/explorer state
 - switching conversations preserves each conversation's embedded webview instead of reusing one global browser
-- Electron main owns navigation, state, snapshots, actions, and comments
+- the native desktop shell owns navigation, state, snapshots, actions, and comments
 - agent browser tools target that same session when running inside desktop conversations
 - if an agent uses a built-in browser tool and the Browser tab is closed, the transcript shows an inline Browser widget; the user chooses when to open Workbench → Browser
 
-Avoid creating two unrelated browsers for the same task. A Playwright/`agent-browser` session and the built-in Electron Browser tab drifting apart is bad UX.
+Avoid creating two unrelated browsers for the same task. A Playwright/`agent-browser` session and a future built-in Browser tab drifting apart is bad UX.
 
 ### `browser_snapshot`
 
@@ -222,7 +222,7 @@ Do not show raw script/debug panels in the user Browser tab. The transcript is w
 
 Do not confuse that with the built-in Workbench Browser:
 
-- **Workbench Browser**: product UI surface in Electron; user-visible; shared communication context between user and agent; supports comments and built-in browser tools.
+- **Workbench Browser**: future product UI surface in the desktop shell; user-visible; shared communication context between user and agent; supports comments and built-in browser tools.
 - **agent-browser CLI**: external automation/dev validation tool; Playwright/CDP-backed; used by agents while developing, validating UI, running local smoke checks, or doing repeatable browser automation.
 
 Long term, desktop browser tools should use the Workbench Browser session directly instead of launching an unrelated `agent-browser` session.
@@ -231,11 +231,9 @@ Long term, desktop browser tools should use the Workbench Browser session direct
 
 Current relevant files:
 
-- `packages/desktop/src/workbench-browser.ts` — Electron browser view controller, validation, snapshots, screenshots, comments
-- `packages/desktop/src/window.ts` — owns the browser controller and routes window-scoped operations
-- `packages/desktop/src/ipc.ts` and `packages/desktop/src/preload.ts` — bridge browser operations/events
 - `packages/desktop/server/extensions/workbenchBrowserAgentExtension.ts` — Pi tool registration for `browser_snapshot`, `browser_cdp`, and `browser_screenshot`
-- `packages/desktop/ui/src/components/Layout.tsx` — Workbench Browser UI and comment overlay
+- `packages/desktop/ui/src/components/Layout.tsx` — Workbench Browser UI entry point
+- `packages/desktop/ui/src/components/workbench/WorkbenchBrowserTab.tsx` — disabled-state UI while the Tauri-native browser bridge is unavailable
 - `packages/desktop/ui/src/pages/ConversationPage.tsx` — pending browser comments in the composer and prompt context injection
 
 Keep changes scoped. The Browser tab is part of Workbench layout, not a new standalone app shell.

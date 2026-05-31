@@ -1843,11 +1843,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const visibleSectionIds = useMemo(() => (sectionIds ? new Set(sectionIds) : null), [sectionIds]);
   const visibleQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
     const shellFiltered =
-      desktopEnvironment?.isElectron || isDesktopShell()
+      desktopEnvironment?.isTauri || isDesktopShell()
         ? SETTINGS_QUICK_LINKS
         : SETTINGS_QUICK_LINKS.filter((item) => item.id !== 'settings-desktop');
     return visibleSectionIds ? shellFiltered.filter((item) => visibleSectionIds.has(item.id)) : shellFiltered;
-  }, [desktopEnvironment?.isElectron, visibleSectionIds]);
+  }, [desktopEnvironment?.isTauri, visibleSectionIds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2217,7 +2217,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }, [desktopEnvironment?.activeHostKind, oauthLoginState?.id, oauthLoginState?.status]);
 
   // Open auth URL in system browser when it becomes available during OAuth login.
-  // Electron's shell.openExternal is not subject to popup-blocker timing, unlike window.open from this async effect.
+  // Native shell open-url calls are not subject to popup-blocker timing, unlike window.open from this async effect.
   useEffect(() => {
     if (oauthLoginState?.status !== 'running' || !oauthLoginState.authUrl) {
       return;

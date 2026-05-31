@@ -128,8 +128,6 @@ export function resolveInstalledAppVersion(): string {
   const candidates = [
     process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'package.json') : null,
     resolve(process.cwd(), 'package.json'),
-    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'app.asar', 'package.json') : null,
-    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'package.json') : null,
   ].filter((value): value is string => Boolean(value));
   for (const candidate of candidates) {
     const version = readJson(candidate)?.version;

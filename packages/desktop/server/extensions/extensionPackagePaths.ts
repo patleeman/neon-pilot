@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,7 +14,6 @@ function candidateBundledExtensionRoots(): string[] {
   return [
     process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'extensions') : null,
     resolve(process.cwd(), 'extensions'),
-    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'extensions') : null,
     resolve(currentDir, '../../../../extensions'),
     resolve(currentDir, '../../../../../extensions'),
   ].filter((value): value is string => Boolean(value));
@@ -51,26 +50,9 @@ export function listExtensionPackagePaths(options: { runtimeRoot?: string } = {}
   ];
 
   const cwd = resolve(process.cwd());
-  const resourcesRoot =
-    typeof process.resourcesPath === 'string' && existsSync(resolve(process.resourcesPath))
-      ? realpathSync(resolve(process.resourcesPath))
-      : null;
   return inputs
     .flatMap(({ path, source }) => expandExtensionPath(path, source))
     .sort((left, right) => {
-      const leftRealPackageRoot = realpathSync(left.packageRoot);
-      const rightRealPackageRoot = realpathSync(right.packageRoot);
-      const leftInResources = resourcesRoot
-        ? leftRealPackageRoot === resourcesRoot || leftRealPackageRoot.startsWith(`${resourcesRoot}/`)
-        : false;
-      const rightInResources = resourcesRoot
-        ? rightRealPackageRoot === resourcesRoot || rightRealPackageRoot.startsWith(`${resourcesRoot}/`)
-        : false;
-      const leftInAsar = left.packageRoot.includes('.asar/');
-      const rightInAsar = right.packageRoot.includes('.asar/');
-      if (leftInResources !== rightInResources) return leftInResources ? -1 : 1;
-      if (leftInAsar !== rightInAsar) return leftInAsar ? 1 : -1;
-
       const leftInCwd = left.packageRoot === cwd || left.packageRoot.startsWith(`${cwd}/`);
       const rightInCwd = right.packageRoot === cwd || right.packageRoot.startsWith(`${cwd}/`);
       if (leftInCwd !== rightInCwd) return leftInCwd ? -1 : 1;

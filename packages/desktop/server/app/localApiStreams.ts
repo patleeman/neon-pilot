@@ -376,7 +376,7 @@ async function subscribeDesktopWorkspaceEventsStream(url: URL, onEvent: (event: 
   emitStreamMessage(onEvent, { type: 'ready', root: snapshot.root });
 
   try {
-    // Avoid recursive repo watches here. In packaged Electron on large repos they can
+    // Avoid recursive repo watches here. In packaged desktop apps on large repos they can
     // create a startup event storm big enough to freeze the renderer. A shallow root
     // watch plus .git watch is enough to invalidate workspace/git status cheaply.
     watchers.push(watch(snapshot.root, emitWorkspaceChange));

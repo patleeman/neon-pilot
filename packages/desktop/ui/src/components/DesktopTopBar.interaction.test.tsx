@@ -12,7 +12,7 @@ function renderTopBar() {
     <MemoryRouter>
       <DesktopTopBar
         environment={{
-          isElectron: true,
+          isTauri: true,
           activeHostId: 'local',
           activeHostLabel: 'Local',
           activeHostKind: 'local',

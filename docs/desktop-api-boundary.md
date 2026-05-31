@@ -2,7 +2,7 @@
 
 Neon Pilot's desktop app uses three process boundaries with one clear ownership rule:
 
-> Product APIs do not use Electron IPC. IPC is a native capability adapter. HTTP is the product data plane. WebSocket is the realtime plane.
+> Product APIs do not use native bridge calls. Tauri commands are native capability adapters. HTTP is the product data plane. WebSocket is the realtime plane.
 
 ## Protocol split
 
@@ -23,7 +23,7 @@ HTTP responses must be bounded, paginated, or streamed. Large binary/text payloa
 
 ### WebSocket: realtime events and control
 
-Use WebSocket for long-lived realtime flows and bidirectional control. The desktop realtime endpoint is `/api/realtime`; clients send typed `subscribe` / `unsubscribe` messages for stream paths and receive small `stream`, `app_event`, `subscribed`, `unsubscribed`, and `error` messages. When the Electron renderer is loaded through the `neon-pilot://app` custom protocol, Chromium cannot resolve `ws://app`; the shell uses the desktop protocol's `text/event-stream` adapter for stream subscriptions instead of opening that WebSocket URL.
+Use WebSocket for long-lived realtime flows and bidirectional control. The desktop realtime endpoint is `/api/realtime`; clients send typed `subscribe` / `unsubscribe` messages for stream paths and receive small `stream`, `app_event`, `subscribed`, `unsubscribed`, and `error` messages.
 
 Examples:
 
@@ -34,9 +34,9 @@ Examples:
 
 WebSocket messages should be small deltas, invalidations, or control messages. Do not routinely broadcast full sessions lists, transcripts, logs, artifacts, or other large snapshots over WebSocket.
 
-### Electron IPC: native/bootstrap only
+### Tauri Commands: Native/Bootstrap Only
 
-Use IPC only when the renderer needs Electron or OS capability, or to bootstrap HTTP/WebSocket access.
+Use Tauri commands only when the renderer needs native OS capability, Rust host-core authority, or bootstrap access.
 
 Allowed IPC surfaces:
 
@@ -44,10 +44,10 @@ Allowed IPC surfaces:
 - native file/folder pickers
 - clipboard read/write
 - open external URLs and reveal/open local paths
-- window/app controls, popouts, menu shortcuts, and shell navigation owned by Electron
-- screenshots, screen picker, app update checks, and native Workbench Browser embedding when required
+- window/app controls, popouts, menu shortcuts, and shell navigation owned by Tauri
+- screenshots, screen picker, app update checks, and native Workbench Browser embedding if a Tauri-native strategy is implemented
 
-IPC payloads should be small. Do not send sessions, transcripts, search results, logs, artifacts, runs/task lists, or app-event snapshots through IPC.
+Native bridge payloads should be small. Do not send sessions, transcripts, search results, logs, artifacts, runs/task lists, or app-event snapshots through Tauri commands.
 
 ## Renderer client rule
 
@@ -55,19 +55,19 @@ Renderer product code should depend on typed clients:
 
 - `api` / HTTP client for product reads and mutations
 - realtime/WebSocket client for subscriptions and live controls through the typed endpoint configuration
-- desktop native bridge for bootstrap and native OS/Electron operations only
+- desktop native bridge for bootstrap, Rust host-core authority, and native OS operations only
 
-Do not add new product-data methods to the Electron preload bridge. If product data is only available through an internal module, expose it through an HTTP route or WebSocket event/control message instead.
+Do not add new product-data methods to the Tauri command bridge. If product data is only available through an internal module, expose it through an HTTP route or WebSocket event/control message instead.
 
 ## Extension API rule
 
-Extensions should use the public `@neon-pilot/extensions` SDK and host-provided clients/capabilities. Extension code must not import desktop internals or depend on Electron IPC channels.
+Extensions should use the public `@neon-pilot/extensions` SDK and host-provided clients/capabilities. Extension code must not import desktop internals or depend on native bridge channels.
 
 Extension frontend code should treat host APIs as product HTTP/realtime capabilities surfaced through the SDK. Extension backend code should use backend context capabilities and shared server modules through stable SDK seams. When an extension needs a missing host capability, add a reusable SDK primitive rather than adding an extension-specific IPC channel.
 
 ## Performance guardrails
 
-- IPC messages should remain control-plane sized; target less than 64KB.
+- Native bridge messages should remain control-plane sized; target less than 64KB.
 - WebSocket app events should be deltas/invalidations; target less than 64KB except explicit chunk protocols.
 - Large data must be fetched by HTTP with pagination, byte streaming, range support, or explicit size limits.
 - Renderer clients should coalesce in-flight large reads where practical.
@@ -80,8 +80,8 @@ When touching a desktop renderer API method:
 
 1. If it is product data or a bounded mutation, route it through HTTP.
 2. If it is realtime stream/control, route it through WebSocket.
-3. If it is native OS/Electron functionality, keep it in IPC.
-4. Delete obsolete IPC product handlers and preload bridge methods.
+3. If it is native OS functionality or host authority, keep it in Tauri/Rust.
+4. Delete obsolete native-bridge product handlers.
 5. Add/keep tests that enforce payload size and protocol ownership where practical.
 
-The desired end state is a renderer with no Electron IPC dependency for product APIs. IPC remains a small native adapter and bootstrap seam.
+The desired end state is a renderer with no native-bridge dependency for product APIs. Tauri commands remain a small native adapter and Rust host-core authority seam.

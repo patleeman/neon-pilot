@@ -22,9 +22,9 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Conversation context](conversation-context.md) — attach files, folders, and generated context
 - [Conversations](conversations.md) — live threads, branching, async follow-through
 - [Projects](projects.md) — project records and workspace metadata
-- [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
-- [Tauri/Rust core track](tauri-rust-core.md) — experimental Tauri shell and Rust host-core migration lane
-- [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
+- [Desktop App](desktop-app.md) — Tauri shell, shortcuts, and app chrome
+- [Tauri/Rust core track](tauri-rust-core.md) — production Tauri shell and Rust host-core ownership
+- [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native bridge policy
 - [Knowledge](../extensions/system-knowledge/README.md) — knowledge, docs, skills, instruction files, and managed sync
 - [Knowledge base sync](knowledge-base.md) — git-backed knowledge base setup, local paths, and sync behavior
 - [Configuration](configuration.md) — file-based config, env vars
@@ -95,7 +95,7 @@ Feature-specific documentation lives beside the owning extension package:
 
 **Core Product Model** — conversations and projects. Core stays a small stable platform; product features should live in system or user extensions.
 
-**Desktop App** — Electron shell and app-level behavior.
+**Desktop App** — Tauri shell and app-level behavior.
 
 **Background Runtime** — daemon lifecycle and runtime operations.
 

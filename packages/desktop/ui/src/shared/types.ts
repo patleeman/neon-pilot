@@ -928,7 +928,7 @@ export interface DesktopHostRecord {
 }
 
 export interface DesktopEnvironmentState {
-  isElectron: boolean;
+  isTauri: boolean;
   isTauri?: boolean;
   activeHostId: string;
   activeHostLabel: string;

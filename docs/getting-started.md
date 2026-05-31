@@ -36,6 +36,6 @@ The desktop app starts and loads the conversation view. Create a new conversatio
 
 - [Views](views.md) — understand Conversation and Workbench layout modes
 - [Conversations](conversations.md) — how to work with agent conversations
-- [Desktop App](desktop-app.md) — Electron shell and shortcuts
+- [Desktop App](desktop-app.md) — Tauri shell and shortcuts
 - [Knowledge](../extensions/system-knowledge/README.md) — knowledge, skills, instruction files, and sync
 - [Configuration](configuration.md) — config files and environment variables

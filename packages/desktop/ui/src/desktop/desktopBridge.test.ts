@@ -62,7 +62,7 @@ describe('Tauri desktop bridge', () => {
   it('creates a desktop bridge backed by Tauri invoke', async () => {
     const invoke = vi.fn(async (command: string, payload?: Record<string, unknown>) => {
       if (command === 'get_environment') {
-        return { isElectron: false, isTauri: true, activeHostKind: 'local', activeHostLabel: 'Local' };
+        return { isTauri: true, activeHostKind: 'local', activeHostLabel: 'Local' };
       }
       if (command === 'open_path') {
         return { path: payload?.targetPath, opened: true };

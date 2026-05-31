@@ -84,19 +84,16 @@ describe('DesktopTopBar', () => {
     expect(readBrowserNavigationState()).toEqual({ canGoBack: false, canGoForward: false });
   });
 
-  it('keeps desktop navigation chrome visible in Electron shells even when the preload bridge is missing', () => {
+  it('keeps desktop navigation chrome visible in desktop shells even when the bridge is missing', () => {
     vi.stubGlobal('window', {
       neonPilotDesktop: undefined,
-      location: { search: '' },
+      location: { search: '?desktop-shell=1' },
       sessionStorage: {
         getItem: () => null,
       },
     });
     vi.stubGlobal('document', {
       documentElement: { dataset: {} },
-    });
-    vi.stubGlobal('navigator', {
-      userAgent: 'Mozilla/5.0 Electron/31.0.2',
     });
 
     const html = renderTopBar();
@@ -106,7 +103,7 @@ describe('DesktopTopBar', () => {
 
   it('renders a testing badge for command-line desktop launches', () => {
     const html = renderTopBar({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -121,7 +118,7 @@ describe('DesktopTopBar', () => {
 
   it('renders a testing badge for dev builds', () => {
     const html = renderTopBar({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -135,7 +132,7 @@ describe('DesktopTopBar', () => {
 
   it('renders an RC badge for release candidate builds', () => {
     const html = renderTopBar({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -150,7 +147,7 @@ describe('DesktopTopBar', () => {
 
   it('hides the environment badge for stable release builds', () => {
     const html = renderTopBar({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -165,7 +162,7 @@ describe('DesktopTopBar', () => {
   it('keeps the panel toggles on the outside edges of the top bar controls', () => {
     const html = renderTopBar(
       {
-        isElectron: true,
+        isTauri: true,
         activeHostId: 'local',
         activeHostLabel: 'Local',
         activeHostKind: 'local',
@@ -183,7 +180,7 @@ describe('DesktopTopBar', () => {
 
   it('keeps the right sidebar toggle disabled when no right sidebar is available', () => {
     const html = renderTopBar({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -196,7 +193,7 @@ describe('DesktopTopBar', () => {
 
   it('does not render the old compact/workbench mode switcher', () => {
     const html = renderTopBar({
-      isElectron: true,
+      isTauri: true,
       activeHostId: 'local',
       activeHostLabel: 'Local',
       activeHostKind: 'local',
@@ -213,7 +210,7 @@ describe('DesktopTopBar', () => {
   it('can relabel the primary collapse control for workbench mode', () => {
     const html = renderTopBar(
       {
-        isElectron: true,
+        isTauri: true,
         activeHostId: 'local',
         activeHostLabel: 'Local',
         activeHostKind: 'local',

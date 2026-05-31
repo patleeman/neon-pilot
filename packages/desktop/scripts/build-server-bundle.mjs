@@ -36,7 +36,6 @@ const sharedEsbuildOptions = {
   external: [
     '@xenova/transformers',
     'better-sqlite3',
-    'electron',
     'esbuild',
     'fsevents',
     'node-pty',
@@ -137,9 +136,9 @@ await Promise.all([
       js: createRequireBanner,
     },
   }),
-  // Package the core runtime behind a stable app.asar path so prebuilt extension
-  // backends can resolve @neon-pilot/core without relying on workspace
-  // node_modules symlinks that do not exist in signed apps.
+  // Package the core runtime behind a stable bundled-app path so prebuilt
+  // extension backends can resolve @neon-pilot/core without relying on
+  // workspace node_modules symlinks that do not exist in signed apps.
   build({
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, '..', 'core/src/index.ts')],

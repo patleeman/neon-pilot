@@ -8,7 +8,7 @@ interface ResolveServerModuleSpecifierOptions {
   importMetaUrl: string;
   relativeSpecifier: string;
   normalize?: (relativeSpecifier: string) => string;
-  resourcesPath?: string;
+  resourceRoot?: string;
 }
 
 export function normalizeServerModuleSpecifier(relativeSpecifier: string): string {
@@ -19,7 +19,7 @@ export function normalizeServerExtensionModuleSpecifier(relativeSpecifier: strin
   return relativeSpecifier.replace(/^\.\.\//, 'extensions/').replace(/^\/+/, '');
 }
 
-function packageEntryCandidates(specifier: string, resourcesPath: string | undefined): string[] {
+function packageEntryCandidates(specifier: string, resourceRoot: string | undefined): string[] {
   const repoRoots = [process.env.NEON_PILOT_REPO_ROOT, process.cwd()].filter((value): value is string => Boolean(value));
   const desktopRoots = repoRoots.flatMap((root) => [resolve(root, 'packages/desktop'), root]);
   const candidates: string[] = [];
@@ -30,9 +30,8 @@ function packageEntryCandidates(specifier: string, resourcesPath: string | undef
     for (const desktopRoot of desktopRoots) candidates.push(resolve(desktopRoot, relativePath));
   };
   const pushResourcePath = (relativePath: string) => {
-    if (typeof resourcesPath !== 'string') return;
-    candidates.push(resolve(resourcesPath, 'app.asar', relativePath));
-    candidates.push(resolve(resourcesPath, 'app.asar.unpacked', relativePath));
+    if (typeof resourceRoot !== 'string') return;
+    candidates.push(resolve(resourceRoot, relativePath));
   };
 
   if (specifier === '@neon-pilot/core') {
@@ -63,11 +62,10 @@ export function resolveServerModuleSpecifierFrom({
   importMetaUrl: _importMetaUrl,
   relativeSpecifier,
   normalize = normalizeServerModuleSpecifier,
-  resourcesPath: providedResourcesPath,
+  resourceRoot,
 }: ResolveServerModuleSpecifierOptions): string {
-  const resourcesPath = providedResourcesPath ?? process.resourcesPath;
   if (!relativeSpecifier.startsWith('.')) {
-    const foundPackageEntry = packageEntryCandidates(relativeSpecifier, resourcesPath).find((candidate) => existsSync(candidate));
+    const foundPackageEntry = packageEntryCandidates(relativeSpecifier, resourceRoot).find((candidate) => existsSync(candidate));
     return foundPackageEntry ? pathToFileURL(foundPackageEntry).href : relativeSpecifier;
   }
 
@@ -83,13 +81,11 @@ export function resolveServerModuleSpecifierFrom({
     resolve(process.cwd(), 'server/dist', normalized),
     resolve(process.cwd(), 'packages/desktop/dist/server', normalized),
     resolve(process.cwd(), 'dist/server', normalized),
-    ...(typeof resourcesPath === 'string'
+    ...(typeof resourceRoot === 'string'
       ? [
-          resolve(resourcesPath, 'app.asar.unpacked/packages/desktop/server/dist', normalized),
-          resolve(resourcesPath, 'app.asar.unpacked/packages/desktop/dist/server', normalized),
-          resolve(resourcesPath, 'app.asar.unpacked/server/dist', normalized),
-          resolve(resourcesPath, 'app.asar/server/dist', normalized),
-          resolve(resourcesPath, 'server/dist', normalized),
+          resolve(resourceRoot, 'packages/desktop/server/dist', normalized),
+          resolve(resourceRoot, 'packages/desktop/dist/server', normalized),
+          resolve(resourceRoot, 'server/dist', normalized),
         ]
       : []),
   ];

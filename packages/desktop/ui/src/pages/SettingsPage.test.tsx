@@ -384,16 +384,13 @@ describe('SettingsPage', () => {
   it('shows a desktop bridge warning instead of hiding desktop connections when preload is unavailable', () => {
     vi.stubGlobal('window', {
       neonPilotDesktop: undefined,
-      location: { search: '' },
+      location: { search: '?desktop-shell=1' },
       sessionStorage: {
         getItem: () => null,
       },
     });
     vi.stubGlobal('document', {
       documentElement: { dataset: {} },
-    });
-    vi.stubGlobal('navigator', {
-      userAgent: 'Mozilla/5.0 Electron/31.0.2',
     });
 
     const html = renderPage('/settings');
