@@ -67,6 +67,8 @@ Product runtime caller
   -> extension host process
 ```
 
+The RPC adapter must only carry wire-safe data. Existing action paths that depend on function-bearing `serverContext`, streaming `onUpdate` callbacks, abort signals, or live agent objects must first move those operations behind capability channels.
+
 ## Migration Phases
 
 1. Add the product runtime / extension host terminology and the `ExtensionHostClient` seam.
