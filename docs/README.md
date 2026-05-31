@@ -63,6 +63,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Conversation Tools](../extensions/system-conversation-tools/README.md)
 - [Diffs](../extensions/system-diffs/README.md)
 - [DuckDuckGo Search](../installable-extensions/system-duckduckgo-search/README.md) — web search using DuckDuckGo's HTML page
+- [DS4](../installable-extensions/system-ds4/README.md) — local DeepSeek V4 Flash provider/profile for antirez/ds4
 - [Exa Search](../installable-extensions/system-exa-search/README.md)
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md)
 - [Extension Manager](../extensions/system-extension-manager/README.md)

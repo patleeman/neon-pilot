@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@neon-pilot/extensions": "workspace:0.9.1-rc.1"
+  }
+}

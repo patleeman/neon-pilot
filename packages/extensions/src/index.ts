@@ -1226,6 +1226,40 @@ export interface ExtensionBackendContext {
     cancel(input: { id: string; sessionFile?: string }): Promise<unknown>;
   };
   automations: Record<string, (...args: never[]) => Promise<unknown>>;
+  models: {
+    list(): Promise<unknown[]>;
+    saveProvider(input: {
+      provider: string;
+      baseUrl?: string;
+      api?: string;
+      apiKey?: string;
+      authHeader?: boolean;
+      headers?: Record<string, string>;
+      compat?: Record<string, unknown>;
+      modelOverrides?: Record<string, unknown>;
+    }): Promise<unknown>;
+    saveProviderModel(input: {
+      provider: string;
+      modelId: string;
+      name?: string;
+      api?: string;
+      baseUrl?: string;
+      reasoning?: boolean;
+      input?: Array<'text' | 'image'>;
+      contextWindow?: number;
+      maxTokens?: number;
+      headers?: Record<string, string>;
+      cost?: {
+        input?: number;
+        output?: number;
+        cacheRead?: number;
+        cacheWrite?: number;
+      };
+      compat?: Record<string, unknown>;
+    }): Promise<unknown>;
+    deleteProvider(provider: string): Promise<unknown>;
+    deleteProviderModel(input: { provider: string; modelId: string }): Promise<unknown>;
+  };
   knowledge: Record<string, (...args: never[]) => Promise<unknown>>;
   conversations: Record<string, (...args: never[]) => Promise<unknown>> & {
     list(...args: never[]): Promise<unknown>;

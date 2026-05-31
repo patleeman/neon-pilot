@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 2,
+  "id": "system-ds4",
+  "name": "DS4",
+  "packageType": "system",
+  "defaultEnabled": false,
+  "description": "DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "src/backend.ts",
+    "agentExtension": "createDs4AgentExtension",
+    "onEnableAction": "ds4InstallProvider",
+    "actions": [
+      { "id": "ds4InstallProvider", "handler": "installProvider", "title": "Install DS4 model provider" },
+      { "id": "ds4Status", "handler": "status", "title": "DS4 server status" },
+      { "id": "ds4Discover", "handler": "discover", "title": "Discover DS4 model" },
+      { "id": "ds4Bash", "handler": "bash", "title": "DS4 bash" },
+      { "id": "ds4Read", "handler": "read", "title": "DS4 read" },
+      { "id": "ds4More", "handler": "more", "title": "DS4 more" },
+      { "id": "ds4Write", "handler": "write", "title": "DS4 write" },
+      { "id": "ds4Edit", "handler": "edit", "title": "DS4 edit" },
+      { "id": "ds4Search", "handler": "search", "title": "DS4 search" }
+    ]
+  },
+  "contributes": {
+    "modelDiscovery": { "action": "ds4Discover" },
+    "modelProfiles": [
+      {
+        "id": "ds4-compatible",
+        "title": "DS4 Compatible",
+        "description": "DeepSeek V4 Flash served by local ds4-server.",
+        "match": ["ds4/*"],
+        "priority": 100
+      }
+    ],
+    "tools": [
+      {
+        "id": "bash",
+        "name": "bash",
+        "title": "Bash",
+        "description": "Run a shell command. DS4-compatible schema accepts timeout_sec and refresh_sec; refresh_sec is advisory.",
+        "action": "ds4Bash",
+        "replaces": "bash",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": { "type": "string" },
+            "timeout_sec": { "type": "number" },
+            "refresh_sec": { "type": "number" }
+          },
+          "required": ["command"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "read",
+        "name": "read",
+        "title": "Read",
+        "description": "Read a text file or a range of lines using ds4-agent-compatible parameters.",
+        "action": "ds4Read",
+        "replaces": "read",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "start_line": { "type": "number" },
+            "max_lines": { "type": "number" },
+            "whole": { "type": "boolean" },
+            "raw": { "type": "boolean" }
+          },
+          "required": ["path"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "more",
+        "name": "more",
+        "title": "More",
+        "description": "Continue the previous DS4 read output for this conversation.",
+        "action": "ds4More",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "count": { "type": "number" }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "write",
+        "name": "write",
+        "title": "Write",
+        "description": "Create or overwrite a text file.",
+        "action": "ds4Write",
+        "replaces": "write",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "content": { "type": "string" }
+          },
+          "required": ["path", "content"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "edit",
+        "name": "edit",
+        "title": "Edit",
+        "description": "Replace exactly one old text match. The old text must match exactly once in the current file.",
+        "action": "ds4Edit",
+        "replaces": "edit",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "promptGuidelines": ["Use read or search first to get exact anchors before edit."],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "old": { "type": "string" },
+            "new": { "type": "string" }
+          },
+          "required": ["path", "old", "new"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "search",
+        "name": "search",
+        "title": "Search",
+        "description": "Search files and return compact edit-friendly matches.",
+        "action": "ds4Search",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string" },
+            "path": { "type": "string" },
+            "mode": { "type": "string" },
+            "glob": { "type": "string" },
+            "context": { "type": "number" },
+            "max_results": { "type": "number" },
+            "case_sensitive": { "type": "boolean" }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "skills": [
+      {
+        "id": "ds4-local-agent",
+        "title": "DS4 Local Agent",
+        "description": "Use when the selected model is local DeepSeek V4 Flash served by ds4-server.",
+        "path": "skills/ds4-local-agent/SKILL.md"
+      }
+    ]
+  },
+  "permissions": ["network:read", "network:write", "shell:exec", "shell:execute"]
+}

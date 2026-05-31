@@ -99,6 +99,10 @@ An agent-callable capability with structured input and output, such as reading f
 
 An external Model Context Protocol server that exposes tools or resources to the agent through MCP.
 
+### DS4
+
+The local DeepSeek V4 Flash runtime from `antirez/ds4`, surfaced in Neon Pilot as a model provider/profile plus DS4-compatible tool schemas.
+
 ### Prompt template
 
 Reusable prompt text selectable or contributed through prompt assembly surfaces.

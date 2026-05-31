@@ -378,7 +378,12 @@ function createStorage(extensionId: string): ExtensionBackendContext['storage'] 
 }
 
 export type ExtensionBackendServerContext = Pick<ServerRouteContext, 'getRuntimeScope'> &
-  Partial<Pick<ServerRouteContext, 'buildLiveSessionResourceOptions' | 'getRepoRoot' | 'getSettingsFile'>>;
+  Partial<
+    Pick<
+      ServerRouteContext,
+      'buildLiveSessionResourceOptions' | 'getRepoRoot' | 'getSettingsFile' | 'materializeWebRuntimeConfig' | 'getAuthFile' | 'getStateRoot'
+    >
+  >;
 
 export function createBackendContext(
   extensionId: string,
@@ -414,7 +419,7 @@ export function createBackendContext(
     automations: createExtensionAutomationsCapability(serverContext),
     runs: createExtensionRunsCapability(extensionId),
     executions: createExtensionExecutionsCapability(extensionId),
-    models: createExtensionModelsCapability(),
+    models: createExtensionModelsCapability(serverContext),
     knowledge: createExtensionKnowledgeCapability(),
     conversations: createExtensionConversationsCapability(serverContext, extensionId),
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext),
@@ -692,7 +697,11 @@ export async function invokeExtensionRoute(
       ),
     ),
   );
-  if (result && typeof result === 'object' && ('body' in result || 'status' in result || 'headers' in result || 'stream' in result || 'events' in result)) {
+  if (
+    result &&
+    typeof result === 'object' &&
+    ('body' in result || 'status' in result || 'headers' in result || 'stream' in result || 'events' in result)
+  ) {
     return result as ExtensionRouteResponse;
   }
   return { status: 200, body: result };
