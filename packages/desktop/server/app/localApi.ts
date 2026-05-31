@@ -69,11 +69,11 @@ import {
   appendConversationOffshootDetachedMetadata,
   appendConversationWorkspaceMetadata,
   publishConversationSessionMetaChanged,
-  setConversationServiceContext,
   readConversationModelPreferenceStateById,
   readConversationSessionMeta,
   renameStoredConversation,
   resolveConversationSessionFile,
+  setConversationServiceContext,
   toggleConversationAttention,
 } from '../conversations/conversationService.js';
 import {
@@ -121,7 +121,9 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
-import { checkEnabledExtensionBackendHealth, invokeExtensionAction, startExtensionStartupActions } from '../extensions/extensionBackend.js';
+import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import {
   beginExtensionStartupGuard,
   completeExtensionStartupGuard,
@@ -164,7 +166,6 @@ import { DEFAULT_RUNTIME_SETTINGS_FILE, persistSettingsWrite } from '../ui/setti
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
-
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
 import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
@@ -955,12 +956,12 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   const extensionActionMatch = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(path);
   if (method === 'POST' && extensionActionMatch) {
     return createDesktopLocalApiJsonResponse(
-      await invokeExtensionAction(
-        decodeURIComponent(extensionActionMatch[1] ?? ''),
-        decodeURIComponent(extensionActionMatch[2] ?? ''),
-        input.body,
-        await getLocalServerRouteContext(),
-      ),
+      await getExtensionHostClient().invokeAction({
+        extensionId: decodeURIComponent(extensionActionMatch[1] ?? ''),
+        actionId: decodeURIComponent(extensionActionMatch[2] ?? ''),
+        input: input.body,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(await getLocalServerRouteContext()),
+      }),
     );
   }
   if (method === 'PATCH' && path === '/api/model-preferences')

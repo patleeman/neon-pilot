@@ -63,6 +63,14 @@ describe('extension host RPC client', () => {
     expect(
       isWireableExtensionHostInvokeActionInput({
         extensionId: 'ext',
+        actionId: 'safe-with-snapshot',
+        input: {},
+        serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' },
+      }),
+    ).toBe(true);
+    expect(
+      isWireableExtensionHostInvokeActionInput({
+        extensionId: 'ext',
         actionId: 'unsafe',
         input: {},
         toolContext: { onUpdate: () => undefined },

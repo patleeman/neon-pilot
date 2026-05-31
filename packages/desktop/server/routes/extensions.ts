@@ -6,7 +6,7 @@ import type { Express, Request, Response } from 'express';
 import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtensionRegistryPresentation.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
 import {
-  invokeExtensionAction,
+  type ExtensionActionInvokeResult,
   invokeExtensionRoute,
   listExtensionActionTelemetry,
   reloadExtensionBackend,
@@ -15,6 +15,8 @@ import {
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { listExtensionEventSubscriptions } from '../extensions/extensionEventBus.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import {
   buildRuntimeExtension,
   createRuntimeExtension,
@@ -483,7 +485,12 @@ export function registerExtensionRoutes(
         res.json({ ok: true, result: handled });
         return;
       }
-      const result = await invokeExtensionAction(command.extensionId, command.action, req.body ?? command.args ?? {}, context);
+      const result = await getExtensionHostClient().invokeAction({
+        extensionId: command.extensionId,
+        actionId: command.action,
+        input: req.body ?? command.args ?? {},
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+      });
       res.json({ ok: true, result });
     } catch (err) {
       sendRouteError(res, 'extension command execute error', err);
@@ -567,7 +574,11 @@ export function registerExtensionRoutes(
       const providers = listExtensionSearchProviderRegistrations().filter((provider) => !providerId || provider.id === providerId);
       const groups = await Promise.all(
         providers.map(async (provider) => {
-          const result = await invokeExtensionAction(provider.extensionId, provider.action, { query, limit, providerId: provider.id });
+          const result = await getExtensionHostClient().invokeAction({
+            extensionId: provider.extensionId,
+            actionId: provider.action,
+            input: { query, limit, providerId: provider.id },
+          });
           return { provider, result };
         }),
       );
@@ -660,7 +671,14 @@ export function registerExtensionRoutes(
         res.status(404).json({ error: `Action "${req.params.actionId}" is not declared in extension "${req.params.id}" backend.actions.` });
         return;
       }
-      res.json(await invokeExtensionAction(req.params.id, req.params.actionId, req.body, context));
+      res.json(
+        await getExtensionHostClient().invokeAction({
+          extensionId: req.params.id,
+          actionId: req.params.actionId,
+          input: req.body,
+          serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+        }),
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status = /not found/i.test(message) ? 404 : 500;
@@ -719,11 +737,18 @@ export function registerExtensionRoutes(
           return;
         }
       }
-      let actionResult: Awaited<ReturnType<typeof invokeExtensionAction>> | undefined;
+      let actionResult: ExtensionActionInvokeResult | undefined;
       if (enabled) {
         setExtensionEnabled(entry.manifest.id, true);
         const onEnableAction = entry.manifest.backend?.onEnableAction;
-        actionResult = onEnableAction ? await invokeExtensionAction(entry.manifest.id, onEnableAction, {}, context) : undefined;
+        actionResult = onEnableAction
+          ? await getExtensionHostClient().invokeAction({
+              extensionId: entry.manifest.id,
+              actionId: onEnableAction,
+              input: {},
+              serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+            })
+          : undefined;
       } else {
         const { stopExtensionServices } = await import('../extensions/extensionServices.js');
         await stopExtensionServices(entry.manifest.id);
@@ -732,7 +757,14 @@ export function registerExtensionRoutes(
         const { uninstallExtensionSubscriptions } = await import('../extensions/extensionSubscriptions.js');
         uninstallExtensionSubscriptions(entry.manifest.id);
         const onDisableAction = entry.manifest.backend?.onDisableAction;
-        actionResult = onDisableAction ? await invokeExtensionAction(entry.manifest.id, onDisableAction, {}, context) : undefined;
+        actionResult = onDisableAction
+          ? await getExtensionHostClient().invokeAction({
+              extensionId: entry.manifest.id,
+              actionId: onDisableAction,
+              input: {},
+              serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+            })
+          : undefined;
         setExtensionEnabled(entry.manifest.id, false);
       }
       if (enabled) {

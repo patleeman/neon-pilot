@@ -17,7 +17,12 @@ export function hasFunction(value: unknown, seen = new WeakSet<object>()): boole
 }
 
 export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInvokeActionInput): boolean {
-  return !hasFunction(input.serverContext) && !hasFunction(input.toolContext) && !hasFunction(input.agentToolContext);
+  return (
+    !hasFunction(input.serverContext) &&
+    !hasFunction(input.serverContextSnapshot) &&
+    !hasFunction(input.toolContext) &&
+    !hasFunction(input.agentToolContext)
+  );
 }
 
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {

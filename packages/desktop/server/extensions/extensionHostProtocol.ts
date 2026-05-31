@@ -1,0 +1,51 @@
+import type { ExtensionActionInvokeResult,ExtensionBackendContext, ExtensionBackendServerContext } from './extensionBackend.js';
+import type { ExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
+
+export interface ExtensionHostHealthRequest {
+  type: 'health';
+}
+
+export interface ExtensionHostInvokeActionRequest {
+  type: 'invokeAction';
+  extensionId: string;
+  actionId: string;
+  input: unknown;
+  serverContext?: ExtensionBackendServerContext;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
+  toolContext?: ExtensionBackendContext['toolContext'];
+  agentToolContext?: unknown;
+}
+
+export interface ExtensionHostPublishEventRequest {
+  type: 'publishEvent';
+  source: string;
+  payload: unknown;
+}
+
+export type ExtensionHostRequest = ExtensionHostHealthRequest | ExtensionHostInvokeActionRequest | ExtensionHostPublishEventRequest;
+
+export interface ExtensionHostHealthResponse {
+  ok: true;
+  status: 'ready';
+}
+
+export type ExtensionHostResponse =
+  | ExtensionHostHealthResponse
+  | {
+      ok: true;
+      result: ExtensionActionInvokeResult;
+    }
+  | {
+      ok: true;
+      published: true;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+export function extensionHostRequestName(request: ExtensionHostRequest): string {
+  if (request.type === 'invokeAction') return `invokeAction:${request.extensionId}/${request.actionId}`;
+  if (request.type === 'publishEvent') return `publishEvent:${request.source}`;
+  return request.type;
+}
