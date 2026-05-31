@@ -98,6 +98,8 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
 
     const fitAddon = new FitAddon();
     xterm.loadAddon(fitAddon);
+    const ansiRequestModeHandler = xterm.parser.registerCsiHandler({ intermediates: '$', final: 'p' }, () => true);
+    const decRequestModeHandler = xterm.parser.registerCsiHandler({ prefix: '?', intermediates: '$', final: 'p' }, () => true);
     xterm.open(container);
     fitAddon.fit();
 
@@ -236,6 +238,8 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       pendingWritesRef.current = [];
 
       disposable.dispose();
+      ansiRequestModeHandler.dispose();
+      decRequestModeHandler.dispose();
       resizeObserver.disconnect();
       container.removeEventListener('mousedown', handleFocusTerminal, true);
       container.removeEventListener('click', handleFocusTerminal, true);
