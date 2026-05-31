@@ -7,7 +7,7 @@ export interface ExtensionHostRpcClientOptions {
   fetchImpl?: typeof fetch;
 }
 
-function hasFunction(value: unknown, seen = new WeakSet<object>()): boolean {
+export function hasFunction(value: unknown, seen = new WeakSet<object>()): boolean {
   if (typeof value === 'function') return true;
   if (!value || typeof value !== 'object') return false;
   if (seen.has(value)) return false;
@@ -16,8 +16,12 @@ function hasFunction(value: unknown, seen = new WeakSet<object>()): boolean {
   return Object.values(value as Record<string, unknown>).some((item) => hasFunction(item, seen));
 }
 
+export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInvokeActionInput): boolean {
+  return !hasFunction(input.serverContext) && !hasFunction(input.toolContext) && !hasFunction(input.agentToolContext);
+}
+
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {
-  if (hasFunction(input.serverContext) || hasFunction(input.toolContext) || hasFunction(input.agentToolContext)) {
+  if (!isWireableExtensionHostInvokeActionInput(input)) {
     throw new Error('Extension host RPC cannot carry function-bearing contexts; use capability channels before enabling this call path.');
   }
 }

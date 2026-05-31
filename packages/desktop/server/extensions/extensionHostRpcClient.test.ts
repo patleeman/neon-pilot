@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createExtensionHostRpcClient } from './extensionHostRpcClient.js';
+import {
+  createExtensionHostRpcClient,
+  hasFunction,
+  isWireableExtensionHostInvokeActionInput,
+} from './extensionHostRpcClient.js';
 
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init });
@@ -52,6 +56,20 @@ describe('extension host RPC client', () => {
       }),
     ).rejects.toThrow('function-bearing contexts');
   });
+
+  it('classifies wireable invoke action inputs', () => {
+    expect(isWireableExtensionHostInvokeActionInput({ extensionId: 'ext', actionId: 'safe', input: { nested: ['ok'] } })).toBe(true);
+    expect(
+      isWireableExtensionHostInvokeActionInput({
+        extensionId: 'ext',
+        actionId: 'unsafe',
+        input: {},
+        toolContext: { onUpdate: () => undefined },
+      }),
+    ).toBe(false);
+    expect(hasFunction({ nested: [{ fn: () => undefined }] })).toBe(true);
+  });
+
 
   it('publishes events over RPC', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ ok: true, published: true }));
