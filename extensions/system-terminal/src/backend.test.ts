@@ -9,7 +9,6 @@ function createBackendContext(overrides?: Partial<ExtensionBackendContext>): Ext
   return { shell: { spawn: shellSpawn }, log: logMock, ...overrides } as unknown as ExtensionBackendContext;
 }
 
-// Helper to create a mock spawn handle returned by ctx.shell.spawn
 function createMockSpawnHandle(overrides?: {
   pid?: number | null;
   write?: (data: string) => void;
@@ -45,6 +44,7 @@ describe('terminal backend', () => {
 
   beforeEach(async () => {
     shellSpawn.mockReset();
+    shellSpawn.mockResolvedValue(createMockSpawnHandle());
     logMock.info.mockReset();
 
     mod = await import(BACKEND_PATH);
@@ -53,7 +53,7 @@ describe('terminal backend', () => {
   });
 
   describe('createTerminal', () => {
-    it('creates a PTY process via ctx.shell.spawn with pty:true', async () => {
+    it('creates an interactive shell process', async () => {
       const handlePty = createMockSpawnHandle({ pid: 777 });
       shellSpawn.mockResolvedValue(handlePty);
       const ctx = createBackendContext();
@@ -63,17 +63,18 @@ describe('terminal backend', () => {
       expect(result.id).toBeDefined();
       expect(result.id).toMatch(/^[0-9a-f-]{36}$/);
       expect(result.pid).toBe(777);
-
+      expect(result.usingPty).toBe(false);
       expect(shellSpawn).toHaveBeenCalledWith(
         expect.objectContaining({
-          command: expect.any(String),
-          pty: { cols: 80, rows: 24 },
+          command: '/bin/sh',
+          args: [],
           cwd: '/workspace',
         }),
       );
+      expect(shellSpawn.mock.calls[0][0]).not.toHaveProperty('pty');
     });
 
-    it('uses an executable shell from env or known system fallbacks', async () => {
+    it('uses a predictable pipe-backed shell', async () => {
       const originalShell = process.env.SHELL;
       delete process.env.SHELL;
       const handlePty = createMockSpawnHandle();
@@ -82,12 +83,13 @@ describe('terminal backend', () => {
       await mod.createTerminal({}, createBackendContext());
 
       const callArgs = shellSpawn.mock.calls[0][0];
-      expect(['/bin/zsh', '/bin/bash', '/bin/sh']).toContain(callArgs.command);
+      expect(callArgs.command).toBe('/bin/sh');
+      expect(callArgs.args).toEqual([]);
 
       process.env.SHELL = originalShell;
     });
 
-    it('ignores non-executable SHELL values', async () => {
+    it('ignores SHELL env so degraded mode stays non-TTY safe', async () => {
       const originalShell = process.env.SHELL;
       process.env.SHELL = '/definitely/not/a/shell';
       const handlePty = createMockSpawnHandle();
@@ -96,7 +98,7 @@ describe('terminal backend', () => {
       await mod.createTerminal({}, createBackendContext());
 
       const callArgs = shellSpawn.mock.calls[0][0];
-      expect(callArgs.command).not.toBe('/definitely/not/a/shell');
+      expect(callArgs.command).toBe('/bin/sh');
 
       process.env.SHELL = originalShell;
     });
@@ -124,6 +126,20 @@ describe('terminal backend', () => {
     it('returns { ok: false } for unknown terminal id', async () => {
       const result = await mod.writeTerminal({ id: 'nonexistent', data: 'x' }, createBackendContext());
       expect(result).toEqual({ ok: false });
+    });
+  });
+
+  describe('drainTerminal', () => {
+    it('returns buffered terminal output once', async () => {
+      const ctx = createBackendContext();
+      const { id } = await mod.createTerminal({}, ctx);
+      const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+
+      onStdout('one');
+      onStdout('two');
+
+      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: 'onetwo' });
+      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '' });
     });
   });
 
@@ -195,7 +211,6 @@ describe('terminal backend', () => {
 
       // The spawn was called with onStdout — simulate output arriving
       const onStdout = shellSpawn.mock.calls[0][0].onStdout;
-
       const nextPromise = iter.next();
       onStdout('some terminal output\n');
 
@@ -204,8 +219,8 @@ describe('terminal backend', () => {
       expect(event.done).toBe(false);
 
       // close the terminal → stream should get exit event
-      const exitPromise = iter.next();
       const onExit = shellSpawn.mock.calls[0][0].onExit;
+      const exitPromise = iter.next();
       onExit({ code: 0, signal: null });
 
       const exitEvent = await exitPromise;

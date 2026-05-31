@@ -14,6 +14,7 @@
     "actions": [
       { "id": "terminalCreate", "handler": "createTerminal", "title": "Create terminal" },
       { "id": "terminalWrite", "handler": "writeTerminal", "title": "Write to terminal" },
+      { "id": "terminalDrain", "handler": "drainTerminal", "title": "Drain terminal output" },
       { "id": "terminalResize", "handler": "resizeTerminal", "title": "Resize terminal" },
       { "id": "terminalClose", "handler": "closeTerminal", "title": "Close terminal" }
     ],
