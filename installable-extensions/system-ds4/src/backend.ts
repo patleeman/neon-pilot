@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { extractReadableHtml, parseDuckDuckGoHtml } from '@neon-pilot/extensions/backend/webContent';
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const PROVIDER = 'ds4';
@@ -9,6 +9,11 @@ const MODEL_ID = 'deepseek-v4-flash';
 const MODEL_REF = `${PROVIDER}/${MODEL_ID}`;
 const BASE_URL = 'http://127.0.0.1:8000/v1';
 const API_KEY = 'dsv4-local';
+const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
+const MODEL_VARIANT = 'q2-imatrix';
+const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
+const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
+const SERVER_PID_KEY = 'runtime/serverPid';
 const DEFAULT_READ_LINES = 500;
 const DEFAULT_SEARCH_RESULTS = 80;
 const MAX_INLINE_TEXT_BYTES = 256 * 1024;
@@ -30,6 +35,94 @@ type ShellJob = {
 
 let nextJobId = 1;
 const shellJobs = new Map<number, ShellJob>();
+
+async function exists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function shellQuote(value: string) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+async function runtimePaths(ctx: ExtensionBackendContext) {
+  const appRoot = await ctx.filesystem.app({
+    access: ['read', 'write', 'delete', 'list', 'metadata'],
+    reason: 'manage DS4 local runtime files',
+  });
+  const root = path.join(appRoot.root.path, 'runtime');
+  const repoDir = path.join(root, 'ds4');
+  return {
+    root,
+    repoDir,
+    serverBin: path.join(repoDir, 'ds4-server'),
+    modelPath: path.join(repoDir, 'gguf', MODEL_FILENAME),
+    modelLink: path.join(repoDir, 'ds4flash.gguf'),
+    kvDir: path.join(root, 'kv-cache'),
+    bootstrapLog: path.join(root, 'bootstrap.log'),
+    bootstrapStatus: path.join(root, 'bootstrap.status'),
+    serverLog: path.join(root, 'server.log'),
+  };
+}
+
+async function readTail(filePath: string, maxBytes = 30_000) {
+  try {
+    const text = await readFile(filePath, 'utf8');
+    return text.length > maxBytes ? text.slice(-maxBytes) : text;
+  } catch {
+    return '';
+  }
+}
+
+async function readStoredPid(ctx: ExtensionBackendContext, key: string) {
+  const stored = await ctx.storage.get(key).catch(() => null);
+  const pid = typeof stored === 'number' ? stored : Number(stored);
+  return Number.isFinite(pid) && pid > 0 ? pid : null;
+}
+
+async function isPidRunning(ctx: ExtensionBackendContext, pid: number | null) {
+  if (!pid) return false;
+  const result = await ctx.shell.exec({ command: 'sh', args: ['-c', `kill -0 ${pid} >/dev/null 2>&1 && echo yes || true`] });
+  return result.stdout.trim() === 'yes';
+}
+
+async function readBootstrapState(ctx: ExtensionBackendContext, paths?: Awaited<ReturnType<typeof runtimePaths>>) {
+  paths ??= await runtimePaths(ctx);
+  const pid = await readStoredPid(ctx, BOOTSTRAP_PID_KEY);
+  const running = await isPidRunning(ctx, pid);
+  const status = (await readTail(paths.bootstrapStatus, 1024)).trim() || (running ? 'running' : 'idle');
+  return {
+    status,
+    running,
+    pid,
+    log: await readTail(paths.bootstrapLog),
+  };
+}
+
+async function readServerHealth() {
+  try {
+    const response = await fetch(`${BASE_URL}/models`, { signal: AbortSignal.timeout(1500) });
+    if (!response.ok) return { reachable: false, status: response.status, models: [] as string[] };
+    const body = (await response.json()) as { data?: Array<{ id?: string }> };
+    return { reachable: true, status: response.status, models: (body.data ?? []).map((model) => model.id ?? '').filter(Boolean) };
+  } catch (error) {
+    return { reachable: false, error: error instanceof Error ? error.message : String(error), models: [] as string[] };
+  }
+}
+
+async function waitForHealth(timeoutMs: number) {
+  const deadline = Date.now() + timeoutMs;
+  let last = await readServerHealth();
+  while (!last.reachable && Date.now() < deadline) {
+    await delay(1000);
+    last = await readServerHealth();
+  }
+  return last;
+}
 
 function toolRuntime(ctx: ExtensionBackendContext) {
   return {
@@ -143,32 +236,46 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
   return { ok: true, provider: PROVIDER, model: MODEL_REF, state };
 }
 
-export async function status() {
-  try {
-    const response = await fetch(`${BASE_URL}/models`, { signal: AbortSignal.timeout(1500) });
-    if (!response.ok) {
-      return { ok: true, reachable: false, status: response.status, baseUrl: BASE_URL, models: [] };
-    }
-    const body = (await response.json()) as { data?: Array<{ id?: string }> };
-    return {
-      ok: true,
-      reachable: true,
-      baseUrl: BASE_URL,
-      models: (body.data ?? []).map((model) => model.id).filter(Boolean),
-    };
-  } catch (error) {
-    return {
-      ok: true,
-      reachable: false,
-      baseUrl: BASE_URL,
-      models: [],
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+export async function status(_input: unknown, ctx: ExtensionBackendContext) {
+  const paths = await runtimePaths(ctx);
+  const [repoInstalled, serverInstalled, modelInstalled, bootstrap, serverPid, server] = await Promise.all([
+    exists(path.join(paths.repoDir, '.git')),
+    exists(paths.serverBin),
+    exists(paths.modelPath),
+    readBootstrapState(ctx, paths),
+    readStoredPid(ctx, SERVER_PID_KEY),
+    readServerHealth(),
+  ]);
+  const managedRunning = await isPidRunning(ctx, serverPid);
+  return {
+    ok: true,
+    reachable: server.reachable,
+    baseUrl: BASE_URL,
+    models: server.models,
+    runtime: {
+      managedRoot: paths.root,
+      repoUrl: DS4_REPO_URL,
+      repoDir: paths.repoDir,
+      repoInstalled,
+      serverInstalled,
+      serverPath: paths.serverBin,
+      modelVariant: MODEL_VARIANT,
+      modelInstalled,
+      modelPath: paths.modelPath,
+      installed: serverInstalled && modelInstalled,
+    },
+    bootstrap,
+    server: {
+      ...server,
+      managedPid: serverPid,
+      managedRunning,
+      log: await readTail(paths.serverLog),
+    },
+  };
 }
 
-export async function discover() {
-  const current = await status();
+export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
+  const current = await status({}, ctx);
   if (!current.reachable) return null;
   return {
     provider: PROVIDER,
@@ -185,6 +292,87 @@ export async function discover() {
       },
     ],
   };
+}
+
+export async function bootstrapRuntime(input: { force?: unknown; start?: unknown }, ctx: ExtensionBackendContext) {
+  const paths = await runtimePaths(ctx);
+  await mkdir(paths.root, { recursive: true });
+  const running = await readBootstrapState(ctx, paths);
+  if (running.running) return { ok: true, started: false, bootstrap: running, status: await status({}, ctx) };
+
+  const force = input.force === true;
+  if (!force && (await exists(paths.serverBin)) && (await exists(paths.modelPath))) {
+    if (input.start !== false) await startServer({}, ctx);
+    return { ok: true, started: false, cached: true, status: await status({}, ctx) };
+  }
+
+  const script = `set -euo pipefail
+mkdir -p ${shellQuote(paths.root)} ${shellQuote(path.dirname(paths.modelPath))} ${shellQuote(paths.kvDir)}
+printf running > ${shellQuote(paths.bootstrapStatus)}
+{
+  echo "[$(date -u +%FT%TZ)] Preparing DS4 runtime in ${paths.root}"
+  if [ ! -d ${shellQuote(path.join(paths.repoDir, '.git'))} ]; then
+    rm -rf ${shellQuote(paths.repoDir)}
+    git clone --depth 1 ${shellQuote(DS4_REPO_URL)} ${shellQuote(paths.repoDir)}
+  else
+    git -C ${shellQuote(paths.repoDir)} fetch --depth 1 origin main
+    git -C ${shellQuote(paths.repoDir)} reset --hard origin/main
+  fi
+  make -C ${shellQuote(paths.repoDir)} -j"$(sysctl -n hw.ncpu 2>/dev/null || echo 4)"
+  if [ ${force ? '1' : '0'} -eq 1 ] || [ ! -f ${shellQuote(paths.modelPath)} ]; then
+    cd ${shellQuote(paths.repoDir)}
+    ./download_model.sh ${shellQuote(MODEL_VARIANT)}
+  fi
+  test -x ${shellQuote(paths.serverBin)}
+  test -f ${shellQuote(paths.modelPath)}
+  printf succeeded > ${shellQuote(paths.bootstrapStatus)}
+  echo "[$(date -u +%FT%TZ)] DS4 runtime ready"
+} >> ${shellQuote(paths.bootstrapLog)} 2>&1 || {
+  printf failed > ${shellQuote(paths.bootstrapStatus)}
+  exit 1
+}
+`;
+  const result = await ctx.shell.exec({
+    command: 'sh',
+    args: ['-c', `nohup sh -c ${shellQuote(script)} >/dev/null 2>&1 & echo $!`],
+  });
+  const pid = Number(result.stdout.trim());
+  await ctx.storage.put(BOOTSTRAP_PID_KEY, pid);
+  return { ok: true, started: true, pid, status: await status({}, ctx) };
+}
+
+export async function startServer(input: { timeoutMs?: unknown }, ctx: ExtensionBackendContext) {
+  const paths = await runtimePaths(ctx);
+  const health = await readServerHealth();
+  if (health.reachable) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
+
+  if (!(await exists(paths.serverBin)) || !(await exists(paths.modelPath))) {
+    throw new Error('DS4 is not installed yet. Run ds4BootstrapRuntime first; it clones ds4, builds ds4-server, and downloads the GGUF model.');
+  }
+
+  const pid = await readStoredPid(ctx, SERVER_PID_KEY);
+  if (await isPidRunning(ctx, pid)) return { ok: true, starting: true, status: await status({}, ctx) };
+
+  await mkdir(paths.kvDir, { recursive: true });
+  await chmod(paths.serverBin, 0o755).catch(() => undefined);
+  const command = `cd ${shellQuote(paths.repoDir)} && exec ${shellQuote(paths.serverBin)} --ctx 100000 --kv-disk-dir ${shellQuote(paths.kvDir)} --kv-disk-space-mb 8192 >> ${shellQuote(paths.serverLog)} 2>&1`;
+  const result = await ctx.shell.exec({
+    command: 'sh',
+    args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`],
+  });
+  const serverPid = Number(result.stdout.trim());
+  await ctx.storage.put(SERVER_PID_KEY, serverPid);
+  const timeoutMs = typeof input.timeoutMs === 'number' && Number.isFinite(input.timeoutMs) ? Math.max(0, Math.floor(input.timeoutMs)) : 60_000;
+  if (timeoutMs > 0) await waitForHealth(timeoutMs);
+  return { ok: true, started: true, pid: serverPid, status: await status({}, ctx) };
+}
+
+export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) {
+  const pid = await readStoredPid(ctx, SERVER_PID_KEY);
+  if (!(await isPidRunning(ctx, pid))) return { ok: true, stopped: false, status: await status({}, ctx) };
+  await ctx.shell.exec({ command: 'sh', args: ['-c', `kill ${pid} >/dev/null 2>&1 || true`] });
+  await ctx.storage.put(SERVER_PID_KEY, 0);
+  return { ok: true, stopped: true, pid, status: await status({}, ctx) };
 }
 
 function formatJobUpdate(job: ShellJob, options: { stopped?: boolean } = {}) {

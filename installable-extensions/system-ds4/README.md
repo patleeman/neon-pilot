@@ -2,13 +2,15 @@
 
 DeepSeek V4 Flash local model profile for [`antirez/ds4`](https://github.com/antirez/ds4).
 
-Enable this extension after building or installing it. On enable it installs a `ds4` model provider that points at the upstream default server endpoint:
+Enable this extension after building or installing it. On enable it installs a `ds4` model provider that points at the upstream default server endpoint used by the managed runtime:
 
 ```sh
 ./ds4-server --ctx 100000 --kv-disk-dir /tmp/ds4-kv --kv-disk-space-mb 8192
 ```
 
 The provider model is `ds4/deepseek-v4-flash`, served from `http://127.0.0.1:8000/v1` with API key `dsv4-local`, matching the Pi config documented by ds4.
+
+The extension owns DS4 runtime setup. It does not assume `ds4` is already installed on the machine. Use the backend action `ds4BootstrapRuntime` to clone `https://github.com/antirez/ds4`, build `ds4-server`, and download the recommended `q2-imatrix` DeepSeek V4 Flash GGUF into extension-owned app storage. The action runs in the background because the model is about 81 GB. Use `ds4Status` to inspect bootstrap progress and `ds4StartServer` / `ds4StopServer` to manage the local server.
 
 When that model is selected, the extension activates DS4-compatible tool schemas for `google_search`, `visit_page`, `bash`, `bash_status`, `bash_stop`, `read`, `more`, `write`, `edit`, `search`, and `list`. The tools route through Neon Pilot host boundaries rather than importing core or desktop internals.
 

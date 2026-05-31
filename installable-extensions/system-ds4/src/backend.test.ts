@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -16,7 +16,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
       cwd: '/repo',
     },
     storage: {
-      get: vi.fn(),
+      get: vi.fn(async () => null),
       put: vi.fn(async () => ({ ok: true })),
       delete: vi.fn(async () => ({ ok: true, deleted: true })),
     },
@@ -28,9 +28,16 @@ function ctx(overrides: Record<string, unknown> = {}) {
       exec: vi.fn(),
       spawn: vi.fn(),
     },
+    filesystem: {
+      app: vi.fn(async () => ({ root: { path: path.join(tmpdir(), 'ds4-extension-app') } })),
+    },
     ...overrides,
   } as never;
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('DS4 provider setup', () => {
   it('installs the upstream ds4 Pi provider shape', async () => {
@@ -57,6 +64,114 @@ describe('DS4 provider setup', () => {
         maxTokens: 384000,
       }),
     );
+  });
+});
+
+describe('DS4 managed runtime', () => {
+  it('reports extension-owned install and server state', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-runtime-'));
+    try {
+      await mkdir(path.join(dir, 'runtime', 'ds4', '.git'), { recursive: true });
+      await mkdir(path.join(dir, 'runtime', 'ds4', 'gguf'), { recursive: true });
+      await writeFile(path.join(dir, 'runtime', 'ds4', 'ds4-server'), '#!/bin/sh\n', 'utf8');
+      await writeFile(
+        path.join(dir, 'runtime', 'ds4', 'gguf', 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf'),
+        '',
+        'utf8',
+      );
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: [{ id: 'deepseek-v4-flash' }] }),
+        })),
+      );
+      const context = ctx({
+        filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        shell: {
+          exec: vi.fn(async () => ({ stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] })),
+          spawn: vi.fn(),
+        },
+      });
+
+      const result = await backend.status({}, context);
+
+      expect(result.reachable).toBe(true);
+      expect(result.runtime).toEqual(
+        expect.objectContaining({
+          installed: true,
+          repoInstalled: true,
+          serverInstalled: true,
+          modelInstalled: true,
+        }),
+      );
+      expect(result.models).toEqual(['deepseek-v4-flash']);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('starts bootstrap in the extension app root instead of requiring a machine install', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-runtime-'));
+    try {
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+      const exec = vi.fn(async (input: { args?: string[] }) => {
+        const command = input.args?.join(' ') ?? '';
+        if (command.includes('kill -0')) return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        return { stdout: '12345\n', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+      });
+      const context = ctx({
+        filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        shell: { exec, spawn: vi.fn() },
+      });
+
+      const result = await backend.bootstrapRuntime({}, context);
+
+      expect(result.started).toBe(true);
+      expect(context.storage.put).toHaveBeenCalledWith('runtime/bootstrapPid', 12345);
+      const launchScript = exec.mock.calls.find(([input]) => (input.args?.join(' ') ?? '').includes('git clone'))?.[0].args?.join(' ');
+      expect(launchScript).toContain('https://github.com/antirez/ds4.git');
+      expect(launchScript).toContain('./download_model.sh');
+      expect(launchScript).toContain('q2-imatrix');
+      expect(launchScript).toContain(dir);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('starts the managed ds4-server when the runtime is installed', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-runtime-'));
+    try {
+      await mkdir(path.join(dir, 'runtime', 'ds4', 'gguf'), { recursive: true });
+      await writeFile(path.join(dir, 'runtime', 'ds4', 'ds4-server'), '#!/bin/sh\n', 'utf8');
+      await writeFile(
+        path.join(dir, 'runtime', 'ds4', 'gguf', 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf'),
+        '',
+        'utf8',
+      );
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+      const exec = vi.fn(async (input: { args?: string[] }) => {
+        const command = input.args?.join(' ') ?? '';
+        if (command.includes('kill -0')) return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        return { stdout: '54321\n', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+      });
+      const context = ctx({
+        filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        shell: { exec, spawn: vi.fn() },
+      });
+
+      const result = await backend.startServer({ timeoutMs: 0 }, context);
+
+      expect(result.started).toBe(true);
+      expect(context.storage.put).toHaveBeenCalledWith('runtime/serverPid', 54321);
+      const launchScript = exec.mock.calls.find(([input]) => (input.args?.join(' ') ?? '').includes('ds4-server'))?.[0].args?.join(' ');
+      expect(launchScript).toContain('--ctx 100000');
+      expect(launchScript).toContain('--kv-disk-space-mb 8192');
+      expect(launchScript).toContain(path.join(dir, 'runtime'));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
 
