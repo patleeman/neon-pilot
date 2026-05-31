@@ -106,11 +106,13 @@ describe('extension host RPC client', () => {
     const rpcClient = {
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
       invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
       publishEvent: vi.fn().mockResolvedValue(undefined),
     };
     const fallbackClient = {
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
       invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
       publishEvent: vi.fn().mockResolvedValue(undefined),
     };
     const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
@@ -122,5 +124,28 @@ describe('extension host RPC client', () => {
 
     expect(rpcClient.invokeAction).toHaveBeenCalledTimes(1);
     expect(fallbackClient.invokeAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps protocol entrypoints on fallback until stdio capability channels exist', async () => {
+    const rpcClient = {
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+    };
+    const fallbackClient = {
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+    };
+    const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
+    const signal = new AbortController().signal;
+    const stdio = { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr };
+
+    await expect(client.invokeProtocolEntrypoint({ protocolId: 'acp', input: {}, stdio, signal })).resolves.toBeUndefined();
+
+    expect(rpcClient.invokeProtocolEntrypoint).not.toHaveBeenCalled();
+    expect(fallbackClient.invokeProtocolEntrypoint).toHaveBeenCalledWith({ protocolId: 'acp', input: {}, stdio, signal });
   });
 });

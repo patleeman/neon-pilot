@@ -1,4 +1,9 @@
-import type { ExtensionActionInvokeResult, ExtensionBackendContext, ExtensionBackendServerContext } from './extensionBackend.js';
+import type {
+  ExtensionActionInvokeResult,
+  ExtensionBackendContext,
+  ExtensionBackendServerContext,
+  ExtensionProtocolContext,
+} from './extensionBackend.js';
 import type { ExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
 import type { ExtensionHostToolContextSnapshot } from './extensionHostToolContext.js';
 
@@ -24,7 +29,21 @@ export interface ExtensionHostPublishEventRequest {
   payload: unknown;
 }
 
-export type ExtensionHostRequest = ExtensionHostHealthRequest | ExtensionHostInvokeActionRequest | ExtensionHostPublishEventRequest;
+export interface ExtensionHostInvokeProtocolEntrypointRequest {
+  type: 'invokeProtocolEntrypoint';
+  protocolId: string;
+  input: unknown;
+  serverContext?: ExtensionBackendServerContext;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
+  stdio: ExtensionProtocolContext['stdio'];
+  signal: AbortSignal;
+}
+
+export type ExtensionHostRequest =
+  | ExtensionHostHealthRequest
+  | ExtensionHostInvokeActionRequest
+  | ExtensionHostPublishEventRequest
+  | ExtensionHostInvokeProtocolEntrypointRequest;
 
 export interface ExtensionHostHealthResponse {
   ok: true;
@@ -42,12 +61,17 @@ export type ExtensionHostResponse =
       published: true;
     }
   | {
+      ok: true;
+      invoked: true;
+    }
+  | {
       ok: false;
       error: string;
     };
 
 export function extensionHostRequestName(request: ExtensionHostRequest): string {
   if (request.type === 'invokeAction') return `invokeAction:${request.extensionId}/${request.actionId}`;
+  if (request.type === 'invokeProtocolEntrypoint') return `invokeProtocolEntrypoint:${request.protocolId}`;
   if (request.type === 'publishEvent') return `publishEvent:${request.source}`;
   return request.type;
 }

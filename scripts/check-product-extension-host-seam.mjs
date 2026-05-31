@@ -16,6 +16,7 @@ const productRuntimeRoots = [
   'packages/desktop/server/tools',
   'packages/desktop/server/workspace',
 ];
+const productRuntimeFiles = ['packages/desktop/server/protocolCli.ts'];
 
 const filePattern = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 const forbiddenPatterns = [
@@ -26,6 +27,14 @@ const forbiddenPatterns = [
   {
     pattern: /import\(\s*['"][^'"]*\/extensions\/extensionBackend\.js['"]\s*\)[\s\S]{0,300}\binvokeExtensionAction\b/,
     message: 'product runtime code must invoke extension actions through ExtensionHostClient',
+  },
+  {
+    pattern: /import\s+\{[^}]*\binvokeExtensionProtocolEntrypoint\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionBackend\.js['"]/,
+    message: 'product runtime code must invoke extension protocol entrypoints through ExtensionHostClient',
+  },
+  {
+    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionBackend\.js['"]\s*\)[\s\S]{0,300}\binvokeExtensionProtocolEntrypoint\b/,
+    message: 'product runtime code must invoke extension protocol entrypoints through ExtensionHostClient',
   },
   {
     pattern: /import\s+\{[^}]*\bpublishExtensionHostEvent\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionSubscriptions\.js['"]/,
@@ -41,7 +50,8 @@ function listFiles() {
   try {
     return execFileSync('git', ['ls-files', ...productRuntimeRoots], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
       .split('\n')
-      .filter(Boolean);
+      .filter(Boolean)
+      .concat(productRuntimeFiles);
   } catch {
     return [];
   }

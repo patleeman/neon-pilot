@@ -3,7 +3,8 @@ import { pathToFileURL } from 'node:url';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
-import { type ExtensionBackendServerContext, invokeExtensionProtocolEntrypoint } from './extensions/extensionBackend.js';
+import type { ExtensionBackendServerContext } from './extensions/extensionBackend.js';
+import { getExtensionHostClient } from './extensions/extensionHostClient.js';
 
 export const PROTOCOL_CLI_EXIT_CODES = {
   usage: 1,
@@ -63,19 +64,17 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
   }
 
   try {
-    await invokeExtensionProtocolEntrypoint(
+    await getExtensionHostClient().invokeProtocolEntrypoint({
       protocolId,
-      { args: protocolArgs },
-      {
-        serverContext: buildServerContext(),
-        stdio: {
-          stdin: process.stdin,
-          stdout: process.stdout,
-          stderr: process.stderr,
-        },
-        signal,
+      input: { args: protocolArgs },
+      serverContext: buildServerContext(),
+      stdio: {
+        stdin: process.stdin,
+        stdout: process.stdout,
+        stderr: process.stderr,
       },
-    );
+      signal,
+    });
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
