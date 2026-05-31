@@ -99,6 +99,7 @@ const electronBuilderConfig = {
     'node_modules/better-sqlite3{,/**/*}',
     'node_modules/bindings{,/**/*}',
     'node_modules/file-uri-to-path{,/**/*}',
+    'node_modules/node-pty{,/**/*}',
     'node_modules/fsevents{,/**/*}',
   ],
   asarUnpack: [
@@ -112,6 +113,7 @@ const electronBuilderConfig = {
     'node_modules/better-sqlite3/**/*',
     'node_modules/bindings/**/*',
     'node_modules/file-uri-to-path/**/*',
+    'node_modules/node-pty/**/*',
   ],
   extraMetadata: {
     main: './dist/main.js',
