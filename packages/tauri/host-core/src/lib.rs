@@ -9,7 +9,9 @@ pub mod secrets;
 pub mod sidecar;
 pub mod sqlite;
 
-pub use extension_install::{install_extension_package, InstalledExtensionPackage};
+pub use extension_install::{
+    import_extension_bundle, install_extension_package, InstalledExtensionPackage,
+};
 pub use extension_package::{
     validate_extension_package, ExtensionPackageValidationReport, ExtensionPackageValidationStatus,
 };

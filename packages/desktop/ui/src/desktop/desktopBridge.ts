@@ -57,6 +57,7 @@ export interface DesktopWorkbenchBrowserCommentTarget {
 export interface NeonPilotHostCoreBridge {
   validateExtensionPackage(packageRoot: string): Promise<unknown>;
   installExtensionPackage(packageRoot: string): Promise<unknown>;
+  importExtensionBundle(zipPath: string): Promise<unknown>;
   resolveScopedPath(input: { root: string; path: string }): Promise<unknown>;
   readScopedText(input: { root: string; path: string }): Promise<string>;
   writeScopedText(input: { root: string; path: string; text: string }): Promise<unknown>;
@@ -142,6 +143,7 @@ function createTauriDesktopBridge(): NeonPilotDesktopBridge | null {
     hostCore: {
       validateExtensionPackage: (packageRoot) => invoke('validate_extension_package_command', { packageRoot }),
       installExtensionPackage: (packageRoot) => invoke('install_extension_package_command', { packageRoot }),
+      importExtensionBundle: (zipPath) => invoke('import_extension_bundle_command', { zipPath }),
       resolveScopedPath: (input) => invoke('scoped_resolve_path', { input }),
       readScopedText: (input) => invoke<string>('scoped_read_text', { input }),
       writeScopedText: (input) => invoke('scoped_write_text', { input }),

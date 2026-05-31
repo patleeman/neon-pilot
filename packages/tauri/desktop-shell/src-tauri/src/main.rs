@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use neon_pilot_host_core::{
-    apply_sqlite_migrations, delete_file_secret, get_file_secret, install_extension_package,
-    list_file_secret_keys, list_scoped_dir, read_scoped_text, read_tauri_app_preferences,
-    remove_scoped_path, resolve_repo_root as resolve_host_repo_root, scoped_path, set_file_secret,
-    start_host_core_rpc_server, update_tauri_app_preferences, validate_extension_package,
-    write_scoped_text, HostCoreRpcServer, JsSidecarConfig, JsSidecarHandle, JsSidecarReady,
-    JsSidecarStatus, SqliteMigration, TauriAppPreferencesPatch,
+    apply_sqlite_migrations, delete_file_secret, get_file_secret, import_extension_bundle,
+    install_extension_package, list_file_secret_keys, list_scoped_dir, read_scoped_text,
+    read_tauri_app_preferences, remove_scoped_path, resolve_repo_root as resolve_host_repo_root,
+    scoped_path, set_file_secret, start_host_core_rpc_server, update_tauri_app_preferences,
+    validate_extension_package, write_scoped_text, HostCoreRpcServer, JsSidecarConfig,
+    JsSidecarHandle, JsSidecarReady, JsSidecarStatus, SqliteMigration, TauriAppPreferencesPatch,
 };
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
@@ -312,6 +312,13 @@ async fn install_extension_package_command(
 }
 
 #[tauri::command]
+async fn import_extension_bundle_command(zip_path: String) -> Result<serde_json::Value, String> {
+    import_extension_bundle(PathBuf::from(zip_path))
+        .and_then(|report| serde_json::to_value(report).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 async fn scoped_resolve_path(input: ScopedPathInput) -> Result<serde_json::Value, String> {
     scoped_path(input.root, input.path)
         .and_then(|path| serde_json::to_value(path).map_err(Into::into))
@@ -534,6 +541,7 @@ fn main() {
             get_navigation_state,
             get_secret,
             host_status,
+            import_extension_bundle_command,
             install_extension_package_command,
             list_secret_keys,
             open_external_url,

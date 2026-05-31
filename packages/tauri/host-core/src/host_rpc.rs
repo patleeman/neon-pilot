@@ -17,7 +17,7 @@ use tokio::process::{Child, Command};
 use tokio::sync::{oneshot, Mutex};
 use tracing::warn;
 
-use crate::extension_install::install_extension_package;
+use crate::extension_install::{import_extension_bundle, install_extension_package};
 use crate::extension_package::validate_extension_package;
 use crate::filesystem::{
     list_scoped_dir, read_scoped_text, remove_scoped_path, scoped_path, write_scoped_text,
@@ -150,6 +150,7 @@ pub async fn start_host_core_rpc_server(token: String) -> anyhow::Result<HostCor
         .route("/sqlite/migrate", post(sqlite_migrate))
         .route("/extensions/validate", post(extension_validate))
         .route("/extensions/install", post(extension_install))
+        .route("/extensions/import-bundle", post(extension_import_bundle))
         .with_state(state);
     tokio::spawn(async move {
         let server = axum::serve(listener, app).with_graceful_shutdown(async {
@@ -420,6 +421,20 @@ async fn extension_install(
         .ok_or_else(|| anyhow!("packageRoot is required."))?;
     Ok(Json(serde_json::to_value(install_extension_package(
         package_root,
+    )?)?))
+}
+
+async fn extension_import_bundle(
+    State(state): State<Arc<HostCoreRpcState>>,
+    headers: HeaderMap,
+    Json(input): Json<HashMap<String, String>>,
+) -> RpcResult {
+    authorize(&state, &headers)?;
+    let zip_path = input
+        .get("zipPath")
+        .ok_or_else(|| anyhow!("zipPath is required."))?;
+    Ok(Json(serde_json::to_value(import_extension_bundle(
+        zip_path,
     )?)?))
 }
 

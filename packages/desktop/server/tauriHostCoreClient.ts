@@ -128,3 +128,11 @@ export async function setTauriHostSecret(key: string, value: string): Promise<un
 export async function deleteTauriHostSecret(key: string): Promise<unknown> {
   return hostCoreRequest('/secrets/delete', { key });
 }
+
+export async function installTauriHostExtensionPackage(packageRoot: string): Promise<unknown> {
+  return hostCoreRequest('/extensions/install', { packageRoot });
+}
+
+export async function importTauriHostExtensionBundle(zipPath: string): Promise<unknown> {
+  return hostCoreRequest('/extensions/import-bundle', { zipPath });
+}
