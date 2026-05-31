@@ -25,8 +25,18 @@ const forbiddenPatterns = [
     message: 'product runtime code must invoke extension actions through ExtensionHostClient',
   },
   {
+    pattern:
+      /import\s+\{[^}]*\b(?:invokeExtensionRoute|listExtensionActionTelemetry|reloadExtensionBackend|runExtensionSelfTest|checkEnabledExtensionBackendHealth|startExtensionStartupActions)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionBackend\.js['"]/,
+    message: 'product runtime code must invoke extension backend operations through ExtensionHostClient',
+  },
+  {
     pattern: /import\(\s*['"][^'"]*\/extensions\/extensionBackend\.js['"]\s*\)[\s\S]{0,300}\binvokeExtensionAction\b/,
     message: 'product runtime code must invoke extension actions through ExtensionHostClient',
+  },
+  {
+    pattern:
+      /import\(\s*['"][^'"]*\/extensions\/extensionBackend\.js['"]\s*\)[\s\S]{0,300}\b(?:invokeExtensionRoute|listExtensionActionTelemetry|reloadExtensionBackend|runExtensionSelfTest|checkEnabledExtensionBackendHealth|startExtensionStartupActions)\b/,
+    message: 'product runtime code must invoke extension backend operations through ExtensionHostClient',
   },
   {
     pattern: /import\s+\{[^}]*\binvokeExtensionProtocolEntrypoint\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionBackend\.js['"]/,

@@ -26,6 +26,10 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
   );
 }
 
+function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHostClient['invokeRoute']>[0]): boolean {
+  return !input.request.signal && !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(input.request);
+}
+
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {
   if (!isWireableExtensionHostInvokeActionInput(input)) {
     throw new Error('Extension host RPC cannot carry function-bearing contexts; use capability channels before enabling this call path.');
@@ -75,6 +79,36 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     async invokeProtocolEntrypoint() {
       throw new Error('Extension host RPC cannot carry protocol stdio streams; use capability channels before enabling this call path.');
     },
+    async invokeRoute(input) {
+      if (!isWireableExtensionHostInvokeRouteInput(input)) {
+        throw new Error('Extension host RPC cannot carry function-bearing route contexts; use capability channels before enabling this call path.');
+      }
+      const response = await send({ type: 'invokeRoute', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('route' in response)) throw new Error('Extension host returned an invalid route response.');
+      if (response.route.stream === 'sse' || hasFunction(response.route)) {
+        throw new Error('Extension host RPC cannot carry streaming route responses; use capability channels before enabling this call path.');
+      }
+      return response.route;
+    },
+    async listActionTelemetry(extensionId) {
+      const response = await send({ type: 'listActionTelemetry', ...(extensionId ? { extensionId } : {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('telemetry' in response)) throw new Error('Extension host returned an invalid telemetry response.');
+      return response.telemetry;
+    },
+    async reloadBackend(input) {
+      const response = await send({ type: 'reloadBackend', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('reload' in response)) throw new Error('Extension host returned an invalid reload response.');
+      return response.reload;
+    },
+    async runSelfTest(input) {
+      const response = await send({ type: 'runSelfTest', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('selfTest' in response)) throw new Error('Extension host returned an invalid self-test response.');
+      return response.selfTest;
+    },
     async startStartupActions(input) {
       const response = await send({ type: 'startStartupActions', ...(input ?? {}) });
       if (!response.ok) throw new Error(response.error);
@@ -108,6 +142,18 @@ export function createHybridExtensionHostClient(input: {
     },
     async invokeProtocolEntrypoint(protocolInput) {
       return input.fallbackClient.invokeProtocolEntrypoint(protocolInput);
+    },
+    async invokeRoute(routeInput) {
+      return input.fallbackClient.invokeRoute(routeInput);
+    },
+    async listActionTelemetry(extensionId) {
+      return input.rpcClient.listActionTelemetry(extensionId);
+    },
+    async reloadBackend(reloadInput) {
+      return input.rpcClient.reloadBackend(reloadInput);
+    },
+    async runSelfTest(selfTestInput) {
+      return input.rpcClient.runSelfTest(selfTestInput);
     },
     async startStartupActions(startupInput) {
       return input.rpcClient.startStartupActions(startupInput);
