@@ -54,7 +54,27 @@ export interface DesktopWorkbenchBrowserCommentTarget {
   devicePixelRatio: number;
 }
 
+export interface NeonPilotHostCoreBridge {
+  validateExtensionPackage(packageRoot: string): Promise<unknown>;
+  installExtensionPackage(packageRoot: string): Promise<unknown>;
+  resolveScopedPath(input: { root: string; path: string }): Promise<unknown>;
+  readScopedText(input: { root: string; path: string }): Promise<string>;
+  writeScopedText(input: { root: string; path: string; text: string }): Promise<unknown>;
+  listScopedDir(input: { root: string; path: string }): Promise<unknown>;
+  removeScopedPath(input: { root: string; path: string }): Promise<unknown>;
+  getSecret(key: string): Promise<string | null>;
+  setSecret(key: string, value: string): Promise<unknown>;
+  deleteSecret(key: string): Promise<unknown>;
+  listSecretKeys(): Promise<string[]>;
+  applySqliteMigrations(input: {
+    root: string;
+    path: string;
+    migrations: Array<{ version: number; description: string; sql: string }>;
+  }): Promise<number>;
+}
+
 export interface NeonPilotDesktopBridge {
+  hostCore?: NeonPilotHostCoreBridge;
   getEnvironment(): Promise<DesktopEnvironmentState>;
   getNavigationState(): Promise<DesktopNavigationState>;
   openNewConversation(): Promise<void>;
@@ -119,6 +139,20 @@ function createTauriDesktopBridge(): NeonPilotDesktopBridge | null {
   }
 
   tauriDesktopBridge ??= {
+    hostCore: {
+      validateExtensionPackage: (packageRoot) => invoke('validate_extension_package_command', { packageRoot }),
+      installExtensionPackage: (packageRoot) => invoke('install_extension_package_command', { packageRoot }),
+      resolveScopedPath: (input) => invoke('scoped_resolve_path', { input }),
+      readScopedText: (input) => invoke<string>('scoped_read_text', { input }),
+      writeScopedText: (input) => invoke('scoped_write_text', { input }),
+      listScopedDir: (input) => invoke('scoped_list_dir', { input }),
+      removeScopedPath: (input) => invoke('scoped_remove_path', { input }),
+      getSecret: (key) => invoke<string | null>('get_secret', { input: { key } }),
+      setSecret: (key, value) => invoke('set_secret', { input: { key, value } }),
+      deleteSecret: (key) => invoke('delete_secret', { input: { key } }),
+      listSecretKeys: () => invoke<string[]>('list_secret_keys'),
+      applySqliteMigrations: (input) => invoke<number>('apply_sqlite_migrations_command', { input }),
+    },
     getEnvironment: () => invoke<DesktopEnvironmentState>('get_environment'),
     getNavigationState: () => invoke<DesktopNavigationState>('get_navigation_state').catch(() => readBrowserNavigationState()),
     openNewConversation: async () => {

@@ -3,9 +3,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use neon_pilot_host_core::{
-    read_tauri_app_preferences, resolve_repo_root as resolve_host_repo_root,
-    update_tauri_app_preferences, validate_extension_package, JsSidecarConfig, JsSidecarHandle,
-    JsSidecarReady, JsSidecarStatus, TauriAppPreferencesPatch,
+    apply_sqlite_migrations, delete_file_secret, get_file_secret, install_extension_package,
+    list_file_secret_keys, list_scoped_dir, read_scoped_text, read_tauri_app_preferences,
+    remove_scoped_path, resolve_repo_root as resolve_host_repo_root, scoped_path, set_file_secret,
+    update_tauri_app_preferences, validate_extension_package, write_scoped_text, JsSidecarConfig,
+    JsSidecarHandle, JsSidecarReady, JsSidecarStatus, SqliteMigration, TauriAppPreferencesPatch,
 };
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
@@ -206,6 +208,42 @@ struct PickFolderInput {
     prompt: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScopedPathInput {
+    root: String,
+    path: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScopedWriteTextInput {
+    root: String,
+    path: String,
+    text: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SecretInput {
+    key: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SecretSetInput {
+    key: String,
+    value: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SqliteMigrateInput {
+    root: String,
+    path: String,
+    migrations: Vec<SqliteMigration>,
+}
+
 #[tauri::command]
 async fn pick_folder(input: Option<PickFolderInput>) -> Result<FolderPickerResult, String> {
     tokio::task::spawn_blocking(move || {
@@ -260,6 +298,80 @@ async fn validate_extension_package_command(
     validate_extension_package(PathBuf::from(package_root))
         .and_then(|report| serde_json::to_value(report).map_err(Into::into))
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn install_extension_package_command(
+    package_root: String,
+) -> Result<serde_json::Value, String> {
+    install_extension_package(PathBuf::from(package_root))
+        .and_then(|report| serde_json::to_value(report).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn scoped_resolve_path(input: ScopedPathInput) -> Result<serde_json::Value, String> {
+    scoped_path(input.root, input.path)
+        .and_then(|path| serde_json::to_value(path).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn scoped_read_text(input: ScopedPathInput) -> Result<String, String> {
+    read_scoped_text(input.root, input.path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn scoped_write_text(input: ScopedWriteTextInput) -> Result<serde_json::Value, String> {
+    write_scoped_text(input.root, input.path, &input.text)
+        .and_then(|path| serde_json::to_value(path).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn scoped_list_dir(input: ScopedPathInput) -> Result<serde_json::Value, String> {
+    list_scoped_dir(input.root, input.path)
+        .and_then(|entries| serde_json::to_value(entries).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn scoped_remove_path(input: ScopedPathInput) -> Result<serde_json::Value, String> {
+    remove_scoped_path(input.root, input.path)
+        .and_then(|path| serde_json::to_value(path).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn get_secret(input: SecretInput) -> Result<Option<String>, String> {
+    get_file_secret(&input.key).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn set_secret(input: SecretSetInput) -> Result<serde_json::Value, String> {
+    set_file_secret(&input.key, &input.value)
+        .and_then(|status| serde_json::to_value(status).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn delete_secret(input: SecretInput) -> Result<serde_json::Value, String> {
+    delete_file_secret(&input.key)
+        .and_then(|status| serde_json::to_value(status).map_err(Into::into))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn list_secret_keys() -> Result<Vec<String>, String> {
+    list_file_secret_keys().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn apply_sqlite_migrations_command(input: SqliteMigrateInput) -> Result<u32, String> {
+    let db_path = scoped_path(input.root, input.path)
+        .map(|path| path.absolute_path)
+        .map_err(|error| error.to_string())?;
+    apply_sqlite_migrations(db_path, &input.migrations).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -376,14 +488,25 @@ fn main() {
     tauri::Builder::default()
         .manage(host_state)
         .invoke_handler(tauri::generate_handler![
+            apply_sqlite_migrations_command,
             check_for_updates,
+            delete_secret,
             get_environment,
             get_navigation_state,
+            get_secret,
             host_status,
+            install_extension_package_command,
+            list_secret_keys,
             open_external_url,
             open_path,
             pick_folder,
             read_desktop_app_preferences,
+            scoped_list_dir,
+            scoped_read_text,
+            scoped_remove_path,
+            scoped_resolve_path,
+            scoped_write_text,
+            set_secret,
             start_js_sidecar,
             dispatch_local_api,
             update_desktop_app_preferences,

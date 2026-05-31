@@ -67,6 +67,12 @@ describe('Tauri desktop bridge', () => {
       if (command === 'open_path') {
         return { path: payload?.targetPath, opened: true };
       }
+      if (command === 'scoped_read_text') {
+        return 'hello';
+      }
+      if (command === 'apply_sqlite_migrations_command') {
+        return 2;
+      }
       throw new Error(`unexpected command ${command}`);
     });
     vi.stubGlobal('window', {
@@ -81,5 +87,21 @@ describe('Tauri desktop bridge', () => {
     await expect(readDesktopEnvironment()).resolves.toMatchObject({ isTauri: true, activeHostKind: 'local' });
     await expect(bridge?.openPath('/tmp')).resolves.toEqual({ path: '/tmp', opened: true });
     expect(invoke).toHaveBeenCalledWith('open_path', { targetPath: '/tmp' });
+    await expect(bridge?.hostCore?.readScopedText({ root: '/tmp/state', path: 'notes.txt' })).resolves.toBe('hello');
+    expect(invoke).toHaveBeenCalledWith('scoped_read_text', { input: { root: '/tmp/state', path: 'notes.txt' } });
+    await expect(
+      bridge?.hostCore?.applySqliteMigrations({
+        root: '/tmp/state',
+        path: 'extension-data/sample/databases/main.db',
+        migrations: [{ version: 2, description: 'schema', sql: 'CREATE TABLE items (id TEXT PRIMARY KEY);' }],
+      }),
+    ).resolves.toBe(2);
+    expect(invoke).toHaveBeenCalledWith('apply_sqlite_migrations_command', {
+      input: {
+        root: '/tmp/state',
+        path: 'extension-data/sample/databases/main.db',
+        migrations: [{ version: 2, description: 'schema', sql: 'CREATE TABLE items (id TEXT PRIMARY KEY);' }],
+      },
+    });
   });
 });
