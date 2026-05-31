@@ -248,6 +248,7 @@ const smokes = {
     writeFileSync(target, 'hello\n');
     const result = await module.applyPatch({ patch: '*** Begin Patch\n*** Update File: smoke.txt\n@@\n-hello\n+hello smoke\n*** End Patch' }, ctx);
     assert(result.text.includes('updated: smoke.txt'), 'applyPatch did not update smoke file');
+    await expectReject(() => module.image({ prompt: 'draw smoke' }, { ...ctx, agentToolContext: undefined }), /active agent tool context/i);
   },
   async 'system-code-mode'() {
     await smokeAgentFactory('default');
@@ -323,9 +324,6 @@ const smokes = {
     const result = await module.readSettings({}, ctx);
     assert(result.ok === true && result.settings && typeof result.settings.backend === 'string', 'readSettings failed');
   },
-  async 'system-images'() {
-    await expectReject(() => module.image({ prompt: 'draw smoke' }, { ...ctx, agentToolContext: undefined }), /active agent tool context/i);
-  },
   async 'system-knowledge'() {
     const list = await module.knowledgeListFiles({}, ctx);
     assert(list.root === knowledgeRoot && Array.isArray(list.files), 'knowledgeListFiles failed');
@@ -369,6 +367,12 @@ const smokes = {
   async 'system-telemetry'() {
     const result = await module.summary({ query: {} });
     assert(result.status === 200 && result.body, 'telemetry summary failed');
+  },
+  async 'system-terminal'() {
+    const terminal = await module.createTerminal({ cwd }, ctx);
+    assert(terminal.id && terminal.pid === 12345, 'terminal create failed');
+    const closed = await module.closeTerminal({ id: terminal.id }, ctx);
+    assert(closed.ok === true, 'terminal close failed');
   },
   async 'system-todo'() {
     const empty = await module.getState({}, ctx);

@@ -17,7 +17,7 @@ function createCtx(overrides?: Record<string, unknown>) {
   };
 }
 
-describe('system-images backend', () => {
+describe('system-codex-profile image backend', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

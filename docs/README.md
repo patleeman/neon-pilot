@@ -56,13 +56,13 @@ Feature-specific documentation lives beside the owning extension package:
 - [Automations](../extensions/system-automations/README.md)
 - [Browser](../installable-extensions/system-browser/README.md)
 - [Caffeinate](../extensions/system-caffeinate/README.md)
-- [Codex Profile](../extensions/system-codex-profile/README.md)
+- [Codex Profile](../extensions/system-codex-profile/README.md) — Codex/OpenAI tool profile, including `apply_patch` and image generation
 - [Composer Attachments](../extensions/system-composer-attachments/README.md)
 - [Context Hardening](../extensions/system-context-hardening/README.md)
 - [Context Usage](../extensions/system-context-usage/README.md)
 - [Conversation Tools](../extensions/system-conversation-tools/README.md)
 - [Diffs](../extensions/system-diffs/README.md)
-- [DuckDuckGo Search](../installable-extensions/system-duckduckgo-search/README.md)
+- [DuckDuckGo Search](../installable-extensions/system-duckduckgo-search/README.md) — web search using DuckDuckGo's HTML page
 - [Exa Search](../installable-extensions/system-exa-search/README.md)
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md)
 - [Extension Manager](../extensions/system-extension-manager/README.md)
@@ -70,7 +70,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [Git Status](../extensions/system-git-status/README.md)
 - [Host view components](host-view-components.md)
 - [Image Probe](../extensions/system-image-probe/README.md)
-- [Images](../installable-extensions/system-images/README.md)
 - [Kitty Litter Mobile Pairing](../installable-extensions/system-alleycat/README.md)
 - [Knowledge](../extensions/system-knowledge/README.md)
 - [Local Dictation](../extensions/system-local-dictation/README.md)
@@ -81,7 +80,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md)
 - [Runs](../extensions/system-runs/README.md)
-- [Session Exchange](../installable-extensions/system-session-exchange/README.md)
 - [Self Preservation](../installable-extensions/system-self-preservation/README.md)
 - [Settings](../extensions/system-settings/README.md)
 - [Skills](../extensions/system-skills/README.md)

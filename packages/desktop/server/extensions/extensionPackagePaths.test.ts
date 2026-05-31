@@ -46,7 +46,7 @@ describe('extension package paths', () => {
 
   it('loads configured installable extension paths as external user extensions', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
-    const extensionRoot = writeExtension(join(tempRoot, 'installable-extensions'), 'system-images');
+    const extensionRoot = writeExtension(join(tempRoot, 'installable-extensions'), 'system-local-models');
     const runtimeRoot = join(tempRoot, 'runtime-extensions');
 
     try {

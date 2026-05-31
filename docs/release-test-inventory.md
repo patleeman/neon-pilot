@@ -237,10 +237,9 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Web/search/image tools
 
 - `web_fetch` (`system-web-tools`): URL fetch, raw HTML option, invalid URL, network failure, large page.
-- `web_search` (`system-duckduckgo-search`): query, count, page, empty/no-result, network failure.
+- `web_search` (`system-duckduckgo-search`): DuckDuckGo HTML page search, query, count, page, empty/no-result, network failure.
 - `web_search` (`system-exa-search`): query, count, page, API/config failure.
 - `probe_image` (`system-image-probe`): image IDs, question, missing image, multiple images.
-- `image` (`system-images`, default disabled): generate/edit, size, quality, background, source selection/count, transparent/opaque, failures.
 
 ### MCP (`system-mcp`)
 
@@ -251,20 +250,14 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 ### Codex Compatibility (`system-codex-profile`)
 
-- Agent tools/actions: `apply_patch`, `write-file`, `apply-patch-edit`.
+- Agent tools/actions: `apply_patch`, `image`, `write-file`, `apply-patch-edit`.
+- Image tool: generate/edit, size, quality, background, source selection/count, transparent/opaque, failures.
 - Test patch success, patch failure, write new file, overwrite file, invalid path, permissions, transcript output.
 
 ### Skills (`system-skills`)
 
 - Actions: `listSkills`, `updateSkillEnabled`.
 - Skills page/surface: list skills, enable/disable, search/filter if present, persistence, prompt assembly integration.
-
-### Session Exchange (`system-session-exchange`, default disabled)
-
-- Actions: `exportSession`, `importSession`.
-- Conversation list context menu: `export-session` / Export Session.
-- Conversation header action: `import-session` / Import Session.
-- Test export current conversation, import valid conversation, malformed import, conflicts/duplicates, transcript/tool preservation.
 
 ### Alleycat mobile pairing (`system-alleycat`, default disabled)
 
@@ -491,20 +484,9 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - skills: browser
 - backend actions: browserSnapshot, browserCdp, browserScreenshot
 
-### system-images — Images (default disabled)
-
-- tools: image
-- backend actions: image
-
 ### system-local-models — Local Models (default disabled)
 
 - views: main (/ext/system-local-models)
 - nav: system-local-models (/ext/system-local-models)
 - modelDiscovery: {"action":"localModelsDiscover"}
 - backend actions: localModelsStatus, localModelsMlxSetModel, localModelsMlxSetup, localModelsMlxUpdateRuntime, localModelsMlxStart, localModelsMlxStop, localModelsMlxSearch, localModelsSearch, localModelsModelDetails, localModelsGgufDownload, localModelsGgufCancelDownload, localModelsGgufSaveSettings, localModelsGgufSetModel, localModelsGgufReveal, localModelsMlxDelete, localModelsGgufDelete, localModelsGgufInstallRuntime, localModelsGgufStart, localModelsGgufStop, localModelsGgufRunPrompt, localModelsDiscover
-
-### system-session-exchange — Session Exchange (default disabled)
-
-- contextMenus: export-session on conversationList
-- threadHeaderActions: import-session
-- backend actions: exportSession, importSession

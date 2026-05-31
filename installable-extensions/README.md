@@ -34,11 +34,9 @@ Current installable extensions:
 - `system-agent-browser` — agent-browser CLI tool integration for autonomous browser/app automation.
 - `system-alleycat` — mobile pairing bridge for Kitty Litter clients.
 - `system-browser` — browser automation tool and Workbench browser views.
-- `system-duckduckgo-search` — agent tool for DuckDuckGo web search.
+- `system-duckduckgo-search` — agent web search tool backed by DuckDuckGo HTML results.
 - `system-exa-search` — agent tool for Exa web search.
-- `system-images` — image generation tooling while provider behavior and UX are still experimental.
 - `system-local-models` — local MLX and GGUF model management UI. Runtime implementation lives in `shared/local-model-runtimes`.
 - `system-self-preservation` — agent self-preservation instruction and context hooks.
-- `system-session-exchange` — import/export flow for conversation session handoff experiments.
 - `system-suggested-context` — related conversation suggestions for new prompts.
 - `system-video-probe` — analyze UI recordings and videos with a video-capable model.

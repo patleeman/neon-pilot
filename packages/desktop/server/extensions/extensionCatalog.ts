@@ -70,17 +70,12 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
   {
     id: 'system-duckduckgo-search',
     name: 'DuckDuckGo Search',
-    description: 'Agent tool for DuckDuckGo web search.',
+    description: 'Agent web search tool backed by DuckDuckGo HTML results.',
   },
   {
     id: 'system-exa-search',
     name: 'Exa Search',
     description: 'Agent tool for Exa web search.',
-  },
-  {
-    id: 'system-images',
-    name: 'Images',
-    description: 'Image generation tooling while provider behavior and UX are still experimental.',
   },
   {
     id: 'system-local-models',
@@ -91,11 +86,6 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     id: 'system-self-preservation',
     name: 'Self Preservation',
     description: 'Agent self-preservation instruction and context hooks.',
-  },
-  {
-    id: 'system-session-exchange',
-    name: 'Session Exchange',
-    description: 'Import/export flow for conversation session handoff experiments.',
   },
   {
     id: 'system-suggested-context',

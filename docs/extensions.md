@@ -1686,7 +1686,6 @@ See bundled system extensions in `extensions/` and optional installable extensio
 - **`system-agent-browser`** — agent-browser CLI tool integration (`installable-extensions/system-agent-browser`)
 - **`system-browser`** — Experimental browser automation tool + views (`installable-extensions/system-browser`)
 - **`system-automations`** — Scheduled tasks, follow-up queues, and the Automations page
-- **`system-images`** — Experimental image generation tool (`installable-extensions/system-images`)
 - **`system-conversation-tools`** — Agent lifecycle hooks + contextMenus
 - **`system-extension-manager`** — Extension management UI + nav
 - **`system-runs`** — Background runs + composer shelf (ActivityShelf)

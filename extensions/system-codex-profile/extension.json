@@ -14,6 +14,11 @@
         "id": "applyPatch",
         "handler": "applyPatch",
         "title": "Apply Patch"
+      },
+      {
+        "id": "image",
+        "handler": "image",
+        "title": "Image"
       }
     ]
   },
@@ -50,7 +55,52 @@
           "required": ["patch"],
           "additionalProperties": false
         }
+      },
+      {
+        "id": "image",
+        "name": "image",
+        "title": "Generate image",
+        "description": "Generate or edit a single image from a prompt, optionally using recent conversation images as references.",
+        "action": "image",
+        "when": {
+          "providers": ["openai", "openai-codex"]
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string"
+            },
+            "size": {
+              "type": "string"
+            },
+            "quality": {
+              "type": "string",
+              "enum": ["auto", "low", "medium", "high"]
+            },
+            "background": {
+              "type": "string",
+              "enum": ["auto", "opaque", "transparent"]
+            },
+            "action": {
+              "type": "string",
+              "enum": ["auto", "generate", "edit"]
+            },
+            "source": {
+              "type": "string",
+              "enum": ["none", "latest", "latest-user", "latest-generated", "recent"]
+            },
+            "sourceCount": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 4
+            }
+          },
+          "required": ["prompt"],
+          "additionalProperties": false
+        }
       }
     ]
-  }
+  },
+  "permissions": ["images:read", "images:write"]
 }

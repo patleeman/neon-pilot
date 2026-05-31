@@ -1,6 +1,6 @@
 # Codex Compatibility
 
-Contributes the `codex-compatible` model profile for GPT/Codex-style coding models, provides the `apply_patch` agent tool, and owns Codex/OpenAI native Responses compaction behavior.
+Contributes the `codex-compatible` model profile for GPT/Codex-style coding models, provides the `apply_patch` and `image` agent tools, and owns Codex/OpenAI native Responses compaction behavior.
 
 The model profile matches `openai-codex/*`. When the extension is enabled and a matching model is active, its agent extension adds `apply_patch` and removes the built-in `write` and `edit` tools. Other tools stay active.
 
@@ -24,7 +24,7 @@ The extension intentionally uses a JSON `{ "patch": string }` envelope because m
 
 ## Tool surface
 
-When the Codex-compatible model profile is active, this extension adds `apply_patch` and removes the built-in `write` and `edit` tools. It intentionally leaves unrelated tools alone, including tools contributed by other extensions.
+When the Codex-compatible model profile is active, this extension adds `apply_patch` and removes the built-in `write` and `edit` tools. It also contributes the OpenAI/Codex `image` generation and editing tool. It intentionally leaves unrelated tools alone, including tools contributed by other extensions.
 
 ## Native compaction
 

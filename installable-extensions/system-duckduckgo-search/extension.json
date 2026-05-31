@@ -3,7 +3,7 @@
   "id": "system-duckduckgo-search",
   "name": "DuckDuckGo Search",
   "packageType": "system",
-  "description": "Agent tool for DuckDuckGo web search.",
+  "description": "Agent web search tool backed by DuckDuckGo HTML results.",
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
@@ -15,7 +15,7 @@
         "id": "duckduckgo-search",
         "name": "web_search",
         "title": "Search web",
-        "description": "Agent web search tool that searches DuckDuckGo's HTML results and returns titles, URLs, and snippets.",
+        "description": "Agent web search tool that fetches DuckDuckGo's HTML page and returns titles, URLs, and snippets.",
         "action": "duckDuckGoSearch",
         "priority": 10,
         "inputSchema": {
