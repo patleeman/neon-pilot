@@ -1,6 +1,6 @@
 import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 
-import { publishExtensionHostEvent } from '../extensions/extensionSubscriptions.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { persistTraceCompaction, persistTraceToolCall } from '../traces/tracePersistence.js';
 import type { WebLiveConversationRunState } from './conversationRuns.js';
@@ -88,7 +88,7 @@ function stringifyToolError(result: unknown): string | undefined {
 }
 
 function publishConversationLifecycleEvent(sessionId: string, type: string, payload: Record<string, unknown> = {}): void {
-  void publishExtensionHostEvent('conversation', { conversationId: sessionId, type, ...payload });
+  void getExtensionHostClient().publishEvent('conversation', { conversationId: sessionId, type, ...payload });
 }
 
 function readToolInputMetadata(toolName: string, toolInput: unknown): Record<string, unknown> | undefined {

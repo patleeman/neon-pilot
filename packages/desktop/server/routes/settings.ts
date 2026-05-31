@@ -1,15 +1,14 @@
 import type { Express } from 'express';
 
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import type { ServerRouteContext } from './context.js';
 
 function publishHostEvent(source: string, payload: unknown): void {
-  void import('../extensions/extensionSubscriptions.js')
-    .then(({ publishExtensionHostEvent }) => publishExtensionHostEvent(source, payload))
-    .catch((error) => {
-      logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
-    });
+  void getExtensionHostClient().publishEvent(source, payload).catch((error) => {
+    logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
+  });
 }
 
 export function registerSettingsRoutes(
