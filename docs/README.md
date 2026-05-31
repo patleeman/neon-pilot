@@ -85,7 +85,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [Self Preservation](../installable-extensions/system-self-preservation/README.md)
 - [Settings](../extensions/system-settings/README.md)
 - [Skills](../extensions/system-skills/README.md)
-- [SpeechMike](../installable-extensions/system-speechmike/README.md)
 - [Suggested Context](../installable-extensions/system-suggested-context/README.md)
 - [Telemetry extension](../extensions/system-telemetry/README.md)
 - [Video Probe](../installable-extensions/system-video-probe/README.md)

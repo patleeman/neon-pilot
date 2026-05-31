@@ -66,7 +66,6 @@ describe('extension catalog', () => {
           enabled: true,
           bundleUrl: `https://github.com/patleeman/neon-pilot/releases/download/v${version}/system-browser.neon-extension.zip`,
         }),
-        expect.objectContaining({ id: 'system-speechmike', installed: false }),
         expect.objectContaining({
           id: 'system-suggested-context',
           installed: false,

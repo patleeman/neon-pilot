@@ -6,7 +6,7 @@ The extension contributes the composer mic button through `contributes.composerB
 
 The composer button keeps microphone capture in the extension frontend while recording, then sends one full PCM buffer to the extension backend on stop. Avoid periodic partial transcription for now; repeatedly running local Whisper on growing snapshots can saturate the app and beachball the desktop UI.
 
-Dictation also supports the host command `dictation.toggle`, which starts recording when idle and stops/transcribes when recording. Bind this command from Settings → Commands for hardware controllers such as SpeechMike. Pair it with `composer.submit` when a hardware button should send the current composer message after dictation inserts text.
+Dictation also supports the host command `dictation.toggle`, which starts recording when idle and stops/transcribes when recording. Bind this command from Settings → Commands for hardware controllers. Pair it with `composer.submit` when a hardware button should send the current composer message after dictation inserts text.
 
 The Settings panel lets users pick a curated Whisper.cpp model (`tiny`, `base`, `small`, or `medium`, with English-only `.en` variants) or enter a custom direct Hugging Face `/resolve/` URL to a Whisper.cpp-compatible `ggml-*.bin` file. Curated models download from `ggerganov/whisper.cpp`; custom URLs are cached in the same `transcription-models` directory by file name.
 

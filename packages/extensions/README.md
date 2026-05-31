@@ -702,9 +702,9 @@ Commands are the shared action substrate for app navigation, hardware controls, 
       {
         "id": "toggleDictation",
         "title": "Toggle Dictation",
-        "category": "SpeechMike",
+        "category": "Dictation",
         "action": "toggleDictation",
-        "enablement": "speechmic.connected"
+        "enablement": "dictation.available"
       }
     ],
     "keybindings": [
