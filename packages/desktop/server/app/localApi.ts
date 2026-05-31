@@ -69,11 +69,11 @@ import {
   appendConversationOffshootDetachedMetadata,
   appendConversationWorkspaceMetadata,
   publishConversationSessionMetaChanged,
-  setConversationServiceContext,
   readConversationModelPreferenceStateById,
   readConversationSessionMeta,
   renameStoredConversation,
   resolveConversationSessionFile,
+  setConversationServiceContext,
   toggleConversationAttention,
 } from '../conversations/conversationService.js';
 import {
@@ -123,6 +123,7 @@ import {
 } from '../conversations/liveSessions.js';
 import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import {
   beginExtensionStartupGuard,
   completeExtensionStartupGuard,
@@ -165,7 +166,6 @@ import { DEFAULT_RUNTIME_SETTINGS_FILE, persistSettingsWrite } from '../ui/setti
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
-
 import { buildDesktopConversationGoalState, validateDesktopConversationGoalInput } from './localApiConversationGoal.js';
 import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
@@ -960,7 +960,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         extensionId: decodeURIComponent(extensionActionMatch[1] ?? ''),
         actionId: decodeURIComponent(extensionActionMatch[2] ?? ''),
         input: input.body,
-        serverContext: await getLocalServerRouteContext(),
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(await getLocalServerRouteContext()),
       }),
     );
   }

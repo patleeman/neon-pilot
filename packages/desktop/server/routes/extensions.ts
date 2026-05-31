@@ -16,6 +16,7 @@ import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensi
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { listExtensionEventSubscriptions } from '../extensions/extensionEventBus.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import {
   buildRuntimeExtension,
   createRuntimeExtension,
@@ -488,7 +489,7 @@ export function registerExtensionRoutes(
         extensionId: command.extensionId,
         actionId: command.action,
         input: req.body ?? command.args ?? {},
-        serverContext: context,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
       });
       res.json({ ok: true, result });
     } catch (err) {
@@ -675,7 +676,7 @@ export function registerExtensionRoutes(
           extensionId: req.params.id,
           actionId: req.params.actionId,
           input: req.body,
-          serverContext: context,
+          serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
         }),
       );
     } catch (err) {
@@ -745,7 +746,7 @@ export function registerExtensionRoutes(
               extensionId: entry.manifest.id,
               actionId: onEnableAction,
               input: {},
-              serverContext: context,
+              serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
             })
           : undefined;
       } else {
@@ -761,7 +762,7 @@ export function registerExtensionRoutes(
               extensionId: entry.manifest.id,
               actionId: onDisableAction,
               input: {},
-              serverContext: context,
+              serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
             })
           : undefined;
         setExtensionEnabled(entry.manifest.id, false);
