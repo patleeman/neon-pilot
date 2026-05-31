@@ -16,9 +16,7 @@ The repo intentionally avoids a root `postinstall`. Third-party build scripts ar
 For the desktop dev app:
 
 ```bash
-cd packages/desktop && pnpm run dev
-# or from repo root:
-pnpm run desktop:dev
+pnpm run start:dev
 ```
 
 ## Validation

@@ -6,6 +6,6 @@
   "scripts": {
     "build": "node ../../../scripts/prepare-tauri-resources.mjs && tauri build",
     "check": "node ../../../scripts/prepare-tauri-resources.mjs && cargo check --manifest-path src-tauri/Cargo.toml",
-    "dev": "tauri dev"
+    "dev": "tauri dev --"
   }
 }

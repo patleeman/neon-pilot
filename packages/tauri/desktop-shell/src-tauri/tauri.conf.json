@@ -5,7 +5,7 @@
   "identifier": "net.neonpilot.desktop",
   "build": {
     "beforeBuildCommand": "pnpm --dir ../../desktop run build:ui",
-    "beforeDevCommand": "pnpm --dir ../../desktop run build:ui",
+    "beforeDevCommand": "pnpm --dir ../../desktop run dev:ui",
     "frontendDist": "../../../desktop/ui/dist",
     "devUrl": "http://localhost:5173"
   },

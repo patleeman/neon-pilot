@@ -35,7 +35,7 @@ Ask for a workflow once, then keep it: commands, tools, automations, UI surfaces
 Neon Pilot keeps core small and pushes user-facing behavior into extensions.
 
 - `packages/core` — shared runtime primitives, resource resolution, prompt assembly inputs, conversation/storage utilities.
-- `packages/desktop` — Electron app shell, desktop/server runtime, local API, extension host, daemon integration, UI.
+- `packages/desktop` — desktop/server runtime, local API, extension host, daemon integration, UI assets, and shared desktop plumbing.
 - `packages/extensions` — public extension SDK types and frontend/backend seams.
 - `extensions/system-*` — bundled first-party product features.
 - `installable-extensions/*` — optional first-party extensions that install into runtime state as user extensions.
@@ -58,7 +58,7 @@ pnpm run desktop:start
 For the desktop dev app:
 
 ```bash
-pnpm run desktop:dev
+pnpm run start:dev
 ```
 
 For the website:
