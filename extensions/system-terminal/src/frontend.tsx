@@ -17,12 +17,17 @@ function readRgbVar(element: HTMLElement, name: string): string {
   return value ? `rgb(${value})` : '';
 }
 
-function normalizeDrainResult(value: unknown): { ok: boolean; output: string } | null {
+function normalizeDrainResult(value: unknown): { ok: boolean; output: string; exited: boolean; exitCode: number | null } | null {
   if (!value || typeof value !== 'object') return null;
   const candidate =
     'result' in value && value.result && typeof value.result === 'object' ? (value.result as Record<string, unknown>) : (value as Record<string, unknown>);
   if (typeof candidate.ok !== 'boolean') return null;
-  return { ok: candidate.ok, output: typeof candidate.output === 'string' ? candidate.output : '' };
+  return {
+    ok: candidate.ok,
+    output: typeof candidate.output === 'string' ? candidate.output : '',
+    exited: candidate.exited === true,
+    exitCode: typeof candidate.exitCode === 'number' ? candidate.exitCode : null,
+  };
 }
 
 function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key' | 'metaKey'>, options: { usingPty: boolean }): string | null {
@@ -189,7 +194,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
             .then((value) => {
               const drain = normalizeDrainResult(value);
               if (closed || !drain) return;
-              if (!drain.ok) {
+              if (!drain.ok || drain.exited) {
                 closeWorkbenchTab();
                 return;
               }

@@ -138,8 +138,8 @@ describe('terminal backend', () => {
       onStdout('one');
       onStdout('two');
 
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: 'onetwo' });
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '' });
+      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: 'onetwo', exited: false, exitCode: null });
+      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: false, exitCode: null });
     });
 
     it('includes output emitted while the PTY spawn promise is resolving', async () => {
@@ -151,7 +151,20 @@ describe('terminal backend', () => {
       const ctx = createBackendContext();
       const { id } = await mod.createTerminal({}, ctx);
 
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '' });
+      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: false, exitCode: null });
+    });
+
+    it('reports exited sessions before close removes them', async () => {
+      const handlePty = createMockSpawnHandle();
+      shellSpawn.mockResolvedValue(handlePty);
+      const ctx = createBackendContext();
+      const { id } = await mod.createTerminal({}, ctx);
+
+      const onExit = shellSpawn.mock.calls[0][0].onExit;
+      onExit({ code: 0, signal: null });
+
+      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: true, exitCode: 0 });
+      await expect(mod.writeTerminal({ id, data: 'x' }, ctx)).resolves.toEqual({ ok: false });
     });
   });
 
@@ -257,7 +270,7 @@ describe('terminal backend', () => {
       const result = await mod.createTerminal({}, ctx);
 
       expect(result.initialOutput).toBe('startup-prompt');
-      await expect(mod.drainTerminal({ id: result.id }, ctx)).resolves.toEqual({ ok: true, output: '' });
+      await expect(mod.drainTerminal({ id: result.id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: false, exitCode: null });
     });
 
     it('SSE stream yields output events from the terminal', async () => {

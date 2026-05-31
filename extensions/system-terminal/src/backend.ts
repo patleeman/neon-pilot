@@ -24,6 +24,8 @@ interface TerminalSession {
   outputBuffer: string[];
   startedAt: number;
   closed: boolean;
+  exited: boolean;
+  exitCode: number | null;
 }
 
 const sessions = new Map<string, TerminalSession>();
@@ -80,7 +82,8 @@ function broadcastOutput(session: TerminalSession, data: string): void {
 
 function broadcastExit(session: TerminalSession, code: number | null): void {
   if (session.closed) return;
-  session.closed = true;
+  session.exited = true;
+  session.exitCode = code;
   const event: ExtensionRouteSseEvent = { data: { type: 'exit', code } };
   for (const listener of session.listeners) {
     try {
@@ -111,13 +114,13 @@ export function _clearSessions(): void {
 function removeSession(id: string): void {
   const session = sessions.get(id);
   if (!session) return;
-  session.closed = true;
   try {
     session.process.kill();
   } catch {
     /* ignore */
   }
   broadcastExit(session, null);
+  session.closed = true;
   sessions.delete(id);
 }
 
@@ -154,7 +157,6 @@ export async function createTerminal(
       const session = sessions.get(sessionId);
       if (session) {
         broadcastExit(session, event.code);
-        sessions.delete(sessionId);
       }
     },
   });
@@ -189,6 +191,8 @@ export async function createTerminal(
     outputBuffer: [...earlyOutputReplay],
     startedAt: Date.now(),
     closed: false,
+    exited: false,
+    exitCode: null,
   };
   sessions.set(id, session);
   await waitForStartupOutput(session);
@@ -201,17 +205,20 @@ export async function createTerminal(
 
 export async function writeTerminal(input: { id: string; data: string }, _ctx: ExtensionBackendContext): Promise<{ ok: boolean }> {
   const session = sessions.get(input.id);
-  if (!session || session.closed) return { ok: false };
+  if (!session || session.closed || session.exited) return { ok: false };
   session.process.write(input.data);
   return { ok: true };
 }
 
-export async function drainTerminal(input: { id: string }, _ctx: ExtensionBackendContext): Promise<{ ok: boolean; output: string }> {
+export async function drainTerminal(
+  input: { id: string },
+  _ctx: ExtensionBackendContext,
+): Promise<{ ok: boolean; output: string; exited: boolean; exitCode: number | null }> {
   const session = sessions.get(input.id);
-  if (!session || session.closed) return { ok: false, output: '' };
+  if (!session || session.closed) return { ok: false, output: '', exited: true, exitCode: null };
   const output = session.outputBuffer.join('');
   session.outputBuffer.length = 0;
-  return { ok: true, output };
+  return { ok: true, output, exited: session.exited, exitCode: session.exitCode };
 }
 
 export async function resizeTerminal(
@@ -219,7 +226,7 @@ export async function resizeTerminal(
   _ctx: ExtensionBackendContext,
 ): Promise<{ ok: boolean }> {
   const session = sessions.get(input.id);
-  if (!session || session.closed) return { ok: false };
+  if (!session || session.closed || session.exited) return { ok: false };
   session.process.resize(input.cols, input.rows);
   return { ok: true };
 }
@@ -272,7 +279,7 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
   session.listeners.add(listener);
 
   try {
-    while (!session.closed) {
+    while (!session.closed && !session.exited) {
       if (pendingEvent) {
         const event = pendingEvent;
         pendingEvent = null;
