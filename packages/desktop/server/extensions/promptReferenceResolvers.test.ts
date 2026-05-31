@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const invokeExtensionAction = vi.fn();
+const extensionHostClient = { invokeAction: vi.fn() };
 const listExtensionPromptReferenceRegistrations = vi.fn();
 
-vi.mock('./extensionBackend.js', () => ({ invokeExtensionAction }));
+vi.mock('./extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('./extensionRegistry.js', () => ({ listExtensionPromptReferenceRegistrations }));
 
 const { resolveExtensionPromptReferences } = await import('./promptReferenceResolvers.js');
 
 describe('resolveExtensionPromptReferences', () => {
   beforeEach(() => {
-    invokeExtensionAction.mockReset();
+    extensionHostClient.invokeAction.mockReset();
     listExtensionPromptReferenceRegistrations.mockReset();
   });
 
@@ -18,7 +18,7 @@ describe('resolveExtensionPromptReferences', () => {
     listExtensionPromptReferenceRegistrations.mockReturnValue([{ extensionId: 'ext', handler: 'resolve' }]);
 
     await expect(resolveExtensionPromptReferences({ text: 'plain prompt' })).resolves.toEqual({ contextBlocks: [], references: [] });
-    expect(invokeExtensionAction).not.toHaveBeenCalled();
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
   });
 
   it('passes extracted mention ids to each resolver and combines normalized results', async () => {
@@ -26,7 +26,7 @@ describe('resolveExtensionPromptReferences', () => {
       { extensionId: 'knowledge', handler: 'resolveMentions' },
       { extensionId: 'files', handler: 'resolveMentions' },
     ]);
-    invokeExtensionAction
+    extensionHostClient.invokeAction
       .mockResolvedValueOnce({
         ok: true,
         result: {
@@ -43,9 +43,13 @@ describe('resolveExtensionPromptReferences', () => {
         { kind: 'file', id: 'f1' },
       ],
     });
-    expect(invokeExtensionAction).toHaveBeenNthCalledWith(1, 'knowledge', 'resolveMentions', {
-      text: 'Use @note:n1 and @file:f1 please',
-      mentionIds: ['note', 'file'],
+    expect(extensionHostClient.invokeAction).toHaveBeenNthCalledWith(1, {
+      extensionId: 'knowledge',
+      actionId: 'resolveMentions',
+      input: {
+        text: 'Use @note:n1 and @file:f1 please',
+        mentionIds: ['note', 'file'],
+      },
     });
   });
 
@@ -55,7 +59,7 @@ describe('resolveExtensionPromptReferences', () => {
       { extensionId: 'malformed', handler: 'resolve' },
       { extensionId: 'valid', handler: 'resolve' },
     ]);
-    invokeExtensionAction
+    extensionHostClient.invokeAction
       .mockResolvedValueOnce({ ok: false, result: { contextBlocks: ['ignored'] } })
       .mockResolvedValueOnce({ ok: true, result: 'not-an-object' })
       .mockResolvedValueOnce({ ok: true, result: { references: [{ kind: 'node', id: '123', path: 456 }] } });

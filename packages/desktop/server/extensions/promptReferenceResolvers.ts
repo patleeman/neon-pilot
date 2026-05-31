@@ -1,5 +1,5 @@
 import { extractMentionIds } from '../knowledge/promptReferences.js';
-import { invokeExtensionAction } from './extensionBackend.js';
+import { getExtensionHostClient } from './extensionHostClient.js';
 import { listExtensionPromptReferenceRegistrations } from './extensionRegistry.js';
 
 export interface ExtensionPromptReferenceContextBlock {
@@ -61,7 +61,11 @@ export async function resolveExtensionPromptReferences(input: { text: string }):
   const contextBlocks: string[] = [];
   const references: ExtensionPromptReferenceItem[] = [];
   for (const resolver of listExtensionPromptReferenceRegistrations()) {
-    const result = await invokeExtensionAction(resolver.extensionId, resolver.handler, { text: input.text, mentionIds });
+    const result = await getExtensionHostClient().invokeAction({
+      extensionId: resolver.extensionId,
+      actionId: resolver.handler,
+      input: { text: input.text, mentionIds },
+    });
     if (!result.ok) continue;
     const normalized = normalizeResolution(result.result);
     contextBlocks.push(...(normalized.contextBlocks ?? []).map((block) => block.content));
