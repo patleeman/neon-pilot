@@ -5370,14 +5370,17 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
   // Keyboard handling
   async function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const textarea = e.currentTarget;
+    const composerInput = textarea.value;
+    const isComposing = e.nativeEvent.isComposing;
     const clearShortcut = resolveComposerClearShortcut({
       key: e.key,
       ctrlKey: e.ctrlKey,
       metaKey: e.metaKey,
       altKey: e.altKey,
       shiftKey: e.shiftKey,
-      isComposing: e.nativeEvent.isComposing,
-      composerInput: e.currentTarget.value,
+      isComposing,
+      composerInput,
       attachmentCount: attachments.length,
       drawingAttachmentCount: drawingAttachments.length,
     });
@@ -5401,13 +5404,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     const canUseComposerQuestionHotkeys =
       Boolean(pendingAskUserQuestion) &&
       !composerQuestionSubmitting &&
-      e.currentTarget.value.length === 0 &&
+      composerInput.length === 0 &&
       attachments.length === 0 &&
       drawingAttachments.length === 0 &&
       !e.ctrlKey &&
       !e.metaKey &&
       !e.altKey &&
-      !e.nativeEvent.isComposing;
+      !isComposing;
 
     if (canUseComposerQuestionHotkeys) {
       if (e.key === 'ArrowDown' && composerActiveQuestion) {
@@ -5459,13 +5462,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
     }
 
     if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-      if (canNavigateComposerHistory(e.currentTarget, e.key) && navigateComposerHistory(e.key === 'ArrowUp' ? 'older' : 'newer')) {
+      if (canNavigateComposerHistory(textarea, e.key) && navigateComposerHistory(e.key === 'ArrowUp' ? 'older' : 'newer')) {
         e.preventDefault();
         return;
       }
     }
 
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
       e.preventDefault();
       const altKeyHeld = e.altKey || e.nativeEvent.getModifierState('Alt') || composerAltHeld;
       await submitComposerActionForModifiers(altKeyHeld);
