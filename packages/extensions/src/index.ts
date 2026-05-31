@@ -965,8 +965,11 @@ export interface ExtensionConversationCreateInput {
   cwd?: string;
   /** Set to false to create a persisted conversation shell without starting a live agent session. */
   live?: boolean;
+  prompt?: string;
   initialPrompt?: string;
   model?: string;
+  thinkingLevel?: string;
+  serviceTier?: string;
   /** When set, only these tool names are exposed to the created live session. */
   allowedToolNames?: string[];
   metadata?: Record<string, unknown>;
@@ -977,6 +980,8 @@ export interface ExtensionConversationForkInput {
   conversationId: string;
   atBlockId?: string;
   title?: string;
+  cwd?: string;
+  targetCwd?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -1295,7 +1300,9 @@ export interface ExtensionBackendContext {
       },
     ): Promise<{ accepted: boolean }>;
     setTitle(conversationId: string, title: string): Promise<unknown>;
-    compact(conversationId: string): Promise<unknown>;
+    compact(conversationId: string, customInstructions?: string): Promise<unknown>;
+    abort(conversationId: string): Promise<{ ok: true }>;
+    rollback(conversationId: string, count: number): Promise<{ rolledBackTo: string | null }>;
     create(input?: ExtensionConversationCreateInput): Promise<ExtensionConversationResult>;
     ensureLive(conversationId: string, options?: { cwd?: string; runtimeId?: string }): Promise<ExtensionConversationResult>;
     fork(input: ExtensionConversationForkInput): Promise<ExtensionConversationResult>;

@@ -4,7 +4,26 @@ import { CONVERSATION_ACTIONS, ConversationToolParams } from './conversationTool
 
 describe('conversationToolSchema', () => {
   it('declares the supported conversation actions in UI/tool order', () => {
-    expect(CONVERSATION_ACTIONS).toEqual(['ask', 'inspect', 'set_title', 'change_working_directory', 'deferred_resume']);
+    expect(CONVERSATION_ACTIONS).toEqual([
+      'ask',
+      'inspect',
+      'set_title',
+      'change_working_directory',
+      'deferred_resume',
+      'create',
+      'ensure_live',
+      'send_message',
+      'run_turn',
+      'abort',
+      'compact',
+      'fork',
+      'set_active_tools',
+      'workspace_get',
+      'workspace_update',
+      'append_transcript_block',
+      'update_transcript_block',
+      'rollback',
+    ]);
   });
 
   it('combines action-specific properties into a closed conversation tool schema', () => {
@@ -22,6 +41,17 @@ describe('conversationToolSchema', () => {
         'delay',
         'deliverAs',
         'reason',
+        'conversationId',
+        'text',
+        'steer',
+        'images',
+        'timeoutMs',
+        'toolNames',
+        'openConversationIds',
+        'remoteControlledConversationIds',
+        'blockType',
+        'blockId',
+        'count',
       ]),
     );
     expect(ConversationToolParams.required).toEqual(['action']);
@@ -31,5 +61,12 @@ describe('conversationToolSchema', () => {
     expect(JSON.stringify(ConversationToolParams.properties.action)).toContain('deferred_resume');
     expect(JSON.stringify(ConversationToolParams.properties.deferredAction)).toContain('cancel');
     expect(ConversationToolParams.properties.reason.description).toContain('Required when scheduling a wakeup');
+  });
+
+  it('includes key conversation admin actions and parameters', () => {
+    expect(JSON.stringify(ConversationToolParams.properties.action)).toContain('run_turn');
+    expect(JSON.stringify(ConversationToolParams.properties.action)).toContain('workspace_update');
+    expect(JSON.stringify(ConversationToolParams.properties.images)).toContain('mimeType');
+    expect(JSON.stringify(ConversationToolParams.properties.toolNames)).toContain('Active tool names');
   });
 });

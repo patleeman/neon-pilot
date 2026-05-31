@@ -12,6 +12,181 @@
   "contributes": {
     "tools": [
       {
+        "id": "conversation",
+        "name": "conversation",
+        "title": "Conversation",
+        "description": "Ask, inspect, and administer conversations, including cross-conversation steering and workspace state.",
+        "action": "conversationTool",
+        "promptSnippet": "Use conversation for questions, inspection, title/cwd changes, deferred resumes, and administering other conversations.",
+        "promptGuidelines": [
+          "Inspect or list before targeting an unclear conversation.",
+          "Use run_turn when you need the remote conversation turn to finish; use send_message for fire-and-forget steering or follow-up.",
+          "Use deferred_resume for time-based continuation; avoid changing unrelated workspace state."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "ask",
+                "inspect",
+                "set_title",
+                "change_working_directory",
+                "deferred_resume",
+                "create",
+                "ensure_live",
+                "send_message",
+                "run_turn",
+                "abort",
+                "compact",
+                "fork",
+                "set_active_tools",
+                "workspace_get",
+                "workspace_update",
+                "append_transcript_block",
+                "update_transcript_block",
+                "rollback"
+              ],
+              "description": "Conversation operation to perform."
+            },
+            "conversationId": {
+              "type": "string",
+              "description": "Target conversation id. For set_title, omitted means the current conversation."
+            },
+            "inspectAction": {
+              "type": "string",
+              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
+              "description": "Inspect operation when action is inspect."
+            },
+            "question": {
+              "type": "string"
+            },
+            "questions": {
+              "type": "array"
+            },
+            "details": {
+              "type": "string"
+            },
+            "options": {
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "continuePrompt": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string",
+              "description": "Message or prompt text for send_message and run_turn."
+            },
+            "steer": {
+              "type": "boolean"
+            },
+            "images": {
+              "type": "array"
+            },
+            "timeoutMs": {
+              "type": "number",
+              "minimum": 1
+            },
+            "deferredAction": {
+              "type": "string",
+              "enum": ["add", "list", "cancel"]
+            },
+            "trigger": {
+              "type": "string",
+              "enum": ["after_turn", "delay", "at"]
+            },
+            "delay": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string"
+            },
+            "deliverAs": {
+              "type": "string",
+              "enum": ["steer", "followUp"]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "customInstructions": {
+              "type": "string"
+            },
+            "count": {
+              "type": "number",
+              "minimum": 1
+            },
+            "toolNames": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "live": {
+              "type": "boolean"
+            },
+            "initialPrompt": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            },
+            "thinkingLevel": {
+              "type": "string"
+            },
+            "serviceTier": {
+              "type": "string"
+            },
+            "allowedToolNames": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "targetCwd": {
+              "type": "string"
+            },
+            "blockType": {
+              "type": "string"
+            },
+            "blockId": {
+              "type": "string"
+            },
+            "data": {},
+            "openConversationIds": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "pinnedConversationIds": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "archivedConversationIds": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "activeConversationId": {
+              "type": "string"
+            },
+            "workspacePaths": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "remoteControlledConversationIds": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["action"],
+          "additionalProperties": false
+        }
+      },
+      {
         "id": "ask_user",
         "name": "ask_user",
         "title": "Ask User",
@@ -408,6 +583,11 @@
   "backend": {
     "entry": "src/backend.ts",
     "actions": [
+      {
+        "id": "conversationTool",
+        "handler": "conversationTool",
+        "title": "Conversation"
+      },
       {
         "id": "askUser",
         "handler": "askUser",

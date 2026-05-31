@@ -75,6 +75,82 @@ function conversationInspectPayload(params: Record<string, unknown>): Record<str
   return payload;
 }
 
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function requiredString(params: Record<string, unknown>, key: string): string {
+  const value = optionalString(params[key]);
+  if (!value) throw new Error(`${key} is required.`);
+  return value;
+}
+
+function optionalStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean);
+}
+
+function optionalPositiveNumber(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return value > 0 ? value : undefined;
+}
+
+function readImages(value: unknown): Array<{ data: string; mimeType: string; name?: string }> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const images = value
+    .map((image) => {
+      if (!image || typeof image !== 'object' || Array.isArray(image)) return null;
+      const data = optionalString((image as { data?: unknown }).data);
+      const mimeType = optionalString((image as { mimeType?: unknown }).mimeType);
+      if (!data || !mimeType) return null;
+      const name = optionalString((image as { name?: unknown }).name);
+      return { data, mimeType, ...(name ? { name } : {}) };
+    })
+    .filter((image): image is { data: string; mimeType: string; name?: string } => Boolean(image));
+  return images.length > 0 ? images : undefined;
+}
+
+function conversationSendOptions(params: Record<string, unknown>) {
+  return {
+    ...(typeof params.steer === 'boolean' ? { steer: params.steer } : {}),
+    ...(readImages(params.images) ? { images: readImages(params.images) } : {}),
+  };
+}
+
+function conversationCreateInput(params: Record<string, unknown>) {
+  return {
+    ...(optionalString(params.title) ? { title: optionalString(params.title) } : {}),
+    ...(optionalString(params.cwd) ? { cwd: optionalString(params.cwd) } : {}),
+    ...(typeof params.live === 'boolean' ? { live: params.live } : {}),
+    ...(optionalString(params.initialPrompt) ? { initialPrompt: optionalString(params.initialPrompt) } : {}),
+    ...(optionalString(params.prompt) ? { prompt: optionalString(params.prompt) } : {}),
+    ...(optionalString(params.model) ? { model: optionalString(params.model) } : {}),
+    ...(optionalString(params.thinkingLevel) ? { thinkingLevel: optionalString(params.thinkingLevel) } : {}),
+    ...(optionalString(params.serviceTier) ? { serviceTier: optionalString(params.serviceTier) } : {}),
+    ...(optionalStringArray(params.allowedToolNames) ? { allowedToolNames: optionalStringArray(params.allowedToolNames) } : {}),
+  };
+}
+
+function workspaceUpdateInput(params: Record<string, unknown>) {
+  return {
+    ...(Array.isArray(params.openConversationIds) ? { openConversationIds: optionalStringArray(params.openConversationIds) ?? [] } : {}),
+    ...(Array.isArray(params.pinnedConversationIds) ? { pinnedConversationIds: optionalStringArray(params.pinnedConversationIds) ?? [] } : {}),
+    ...(Array.isArray(params.archivedConversationIds) ? { archivedConversationIds: optionalStringArray(params.archivedConversationIds) ?? [] } : {}),
+    ...(params.activeConversationId !== undefined ? { activeConversationId: optionalString(params.activeConversationId) ?? null } : {}),
+    ...(Array.isArray(params.workspacePaths) ? { workspacePaths: optionalStringArray(params.workspacePaths) ?? [] } : {}),
+    ...(Array.isArray(params.remoteControlledConversationIds)
+      ? { remoteControlledConversationIds: optionalStringArray(params.remoteControlledConversationIds) ?? [] }
+      : {}),
+  };
+}
+
+function toolResult(action: string, details: unknown) {
+  return {
+    content: [{ type: 'text' as const, text: `${action} complete.` }],
+    details,
+  };
+}
+
 export async function conversationTool(input: unknown, ctx: ExtensionBackendContext) {
   const toolCtx = ctx.toolContext;
   const conversationId = toolCtx?.conversationId ?? toolCtx?.sessionId ?? '';
@@ -100,7 +176,9 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
       return executeConversationInspectTool(conversationInspectPayload(params), sessionManagerCtx);
 
     case 'set_title':
-      return executeSetConversationTitle(payload, sessionManagerCtx, (title) => ctx.conversations.setTitle(conversationId, title));
+      return executeSetConversationTitle(payload, sessionManagerCtx, (title) =>
+        ctx.conversations.setTitle(optionalString(payload.conversationId) ?? conversationId, title),
+      );
 
     case 'change_working_directory':
       return executeChangeWorkingDirectory(
@@ -128,6 +206,93 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
         details: result,
       };
     }
+
+    case 'create':
+      return toolResult(action, await ctx.conversations.create(conversationCreateInput(payload)));
+
+    case 'ensure_live':
+      return toolResult(
+        action,
+        await ctx.conversations.ensureLive(requiredString(payload, 'conversationId'), optionalString(payload.cwd) ? { cwd: optionalString(payload.cwd) } : undefined),
+      );
+
+    case 'send_message':
+      return toolResult(
+        action,
+        await ctx.conversations.sendMessage(requiredString(payload, 'conversationId'), requiredString(payload, 'text'), conversationSendOptions(payload)),
+      );
+
+    case 'run_turn':
+      return toolResult(
+        action,
+        await ctx.conversations.runTurn(requiredString(payload, 'conversationId'), requiredString(payload, 'text'), {
+          ...conversationSendOptions(payload),
+          ...(optionalString(payload.cwd) ? { cwd: optionalString(payload.cwd) } : {}),
+          ...(optionalPositiveNumber(payload.timeoutMs) ? { timeoutMs: optionalPositiveNumber(payload.timeoutMs) } : {}),
+        }),
+      );
+
+    case 'abort':
+      return toolResult(action, await ctx.conversations.abort(requiredString(payload, 'conversationId')));
+
+    case 'compact':
+      return toolResult(
+        action,
+        await ctx.conversations.compact(requiredString(payload, 'conversationId'), optionalString(payload.customInstructions)),
+      );
+
+    case 'fork':
+      return toolResult(
+        action,
+        await ctx.conversations.fork({
+          conversationId: requiredString(payload, 'conversationId'),
+          ...(optionalString(payload.targetCwd) ? { targetCwd: optionalString(payload.targetCwd) } : {}),
+          ...(optionalString(payload.cwd) ? { cwd: optionalString(payload.cwd) } : {}),
+          ...(optionalString(payload.title) ? { title: optionalString(payload.title) } : {}),
+        }),
+      );
+
+    case 'set_active_tools':
+      return toolResult(
+        action,
+        await ctx.conversations.setActiveTools(requiredString(payload, 'conversationId'), optionalStringArray(payload.toolNames) ?? []),
+      );
+
+    case 'workspace_get':
+      return toolResult(action, await ctx.conversations.getWorkspace());
+
+    case 'workspace_update':
+      return toolResult(action, await ctx.conversations.updateWorkspace(workspaceUpdateInput(payload)));
+
+    case 'append_transcript_block':
+      return toolResult(
+        action,
+        await ctx.conversations.appendTranscriptBlock({
+          conversationId: requiredString(payload, 'conversationId'),
+          blockType: requiredString(payload, 'blockType'),
+          data: payload.data,
+          ...(optionalString(payload.title) ? { title: optionalString(payload.title) } : {}),
+          ...(optionalString(payload.blockId) ? { blockId: optionalString(payload.blockId) } : {}),
+        }),
+      );
+
+    case 'update_transcript_block':
+      return toolResult(
+        action,
+        await ctx.conversations.updateTranscriptBlock({
+          conversationId: requiredString(payload, 'conversationId'),
+          blockType: requiredString(payload, 'blockType'),
+          blockId: requiredString(payload, 'blockId'),
+          data: payload.data,
+          ...(optionalString(payload.title) ? { title: optionalString(payload.title) } : {}),
+        }),
+      );
+
+    case 'rollback':
+      return toolResult(
+        action,
+        await ctx.conversations.rollback(requiredString(payload, 'conversationId'), optionalPositiveNumber(payload.count) ?? 1),
+      );
   }
 }
 

@@ -50,11 +50,27 @@ import {
 } from './backend.js';
 
 function ctx(overrides: Record<string, unknown> = {}) {
+  const conversations = {
+    setTitle: vi.fn().mockResolvedValue({ ok: true }),
+    create: vi.fn().mockResolvedValue({ conversationId: 'created-1' }),
+    ensureLive: vi.fn().mockResolvedValue({ conversationId: 'conv-2' }),
+    sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
+    runTurn: vi.fn().mockResolvedValue({ accepted: true }),
+    abort: vi.fn().mockResolvedValue({ ok: true }),
+    compact: vi.fn().mockResolvedValue({ ok: true }),
+    fork: vi.fn().mockResolvedValue({ conversationId: 'fork-1' }),
+    setActiveTools: vi.fn().mockResolvedValue({ conversationId: 'conv-2', toolNames: ['bash'] }),
+    getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: ['conv-1'] }),
+    updateWorkspace: vi.fn().mockResolvedValue({ openConversationIds: ['conv-2'] }),
+    appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'block-1' }),
+    updateTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'block-1' }),
+    rollback: vi.fn().mockResolvedValue({ rolledBackTo: 'entry-1' }),
+  };
   return {
     profile: 'shared',
     log: { info: vi.fn() },
     toolContext: { conversationId: 'conv-1', sessionFile: '/session.json', cwd: '/repo' },
-    conversations: { setTitle: vi.fn() },
+    conversations,
     ...overrides,
   } as never;
 }
@@ -113,6 +129,19 @@ describe('system-conversation-tools backend routing', () => {
     expect((context as { conversations: { setTitle: ReturnType<typeof vi.fn> } }).conversations.setTitle).toHaveBeenCalledWith(
       'conv-1',
       'New Title',
+    );
+  });
+
+  it('sets the title on an explicit target conversation when conversationId is provided', async () => {
+    const context = ctx();
+
+    await conversationTool({ action: 'set_title', conversationId: 'conv-2', title: 'Target Title' }, context);
+    const setTitleCallback = title.executeSetConversationTitle.mock.calls[0][2] as (nextTitle: string) => Promise<unknown>;
+    await setTitleCallback('Target Title');
+
+    expect((context as { conversations: { setTitle: ReturnType<typeof vi.fn> } }).conversations.setTitle).toHaveBeenCalledWith(
+      'conv-2',
+      'Target Title',
     );
   });
 
@@ -175,6 +204,120 @@ describe('system-conversation-tools backend routing', () => {
     expect(queue.deferredResume).toHaveBeenCalledWith(
       { action: 'add', prompt: 'Continue' },
       { profile: 'shared', toolContext: { sessionId: 'conv-1', sessionFile: '/session.json', cwd: '/repo' } },
+    );
+  });
+
+  it('routes remote conversation admin actions through ctx.conversations', async () => {
+    const context = ctx();
+    const conversations = (context as { conversations: Record<string, ReturnType<typeof vi.fn>> }).conversations;
+
+    await expect(conversationTool({ action: 'create', title: 'New', cwd: '/repo', live: false }, context)).resolves.toMatchObject({
+      details: { conversationId: 'created-1' },
+    });
+    expect(conversations.create).toHaveBeenCalledWith({ title: 'New', cwd: '/repo', live: false });
+
+    await conversationTool({ action: 'ensure_live', conversationId: 'conv-2', cwd: '/repo' }, context);
+    expect(conversations.ensureLive).toHaveBeenCalledWith('conv-2', { cwd: '/repo' });
+
+    await conversationTool({ action: 'send_message', conversationId: 'conv-2', text: 'Go', steer: true }, context);
+    expect(conversations.sendMessage).toHaveBeenCalledWith('conv-2', 'Go', { steer: true });
+
+    await conversationTool(
+      {
+        action: 'run_turn',
+        conversationId: 'conv-2',
+        text: 'Finish',
+        cwd: '/repo',
+        steer: true,
+        timeoutMs: 123,
+        images: [{ data: 'abc', mimeType: 'image/png', name: 'a.png' }],
+      },
+      context,
+    );
+    expect(conversations.runTurn).toHaveBeenCalledWith('conv-2', 'Finish', {
+      cwd: '/repo',
+      steer: true,
+      timeoutMs: 123,
+      images: [{ data: 'abc', mimeType: 'image/png', name: 'a.png' }],
+    });
+
+    await conversationTool({ action: 'abort', conversationId: 'conv-2' }, context);
+    expect(conversations.abort).toHaveBeenCalledWith('conv-2');
+
+    await conversationTool({ action: 'compact', conversationId: 'conv-2', customInstructions: 'short' }, context);
+    expect(conversations.compact).toHaveBeenCalledWith('conv-2', 'short');
+
+    await conversationTool({ action: 'fork', conversationId: 'conv-2', targetCwd: '/fork', title: 'Fork' }, context);
+    expect(conversations.fork).toHaveBeenCalledWith({ conversationId: 'conv-2', targetCwd: '/fork', title: 'Fork' });
+
+    await conversationTool({ action: 'set_active_tools', conversationId: 'conv-2', toolNames: [' bash ', ''] }, context);
+    expect(conversations.setActiveTools).toHaveBeenCalledWith('conv-2', ['bash']);
+
+    await conversationTool({ action: 'workspace_get' }, context);
+    expect(conversations.getWorkspace).toHaveBeenCalledWith();
+
+    await conversationTool({ action: 'rollback', conversationId: 'conv-2', count: 2 }, context);
+    expect(conversations.rollback).toHaveBeenCalledWith('conv-2', 2);
+  });
+
+  it('passes only provided fields for workspace updates', async () => {
+    const context = ctx();
+    const conversations = (context as { conversations: { updateWorkspace: ReturnType<typeof vi.fn> } }).conversations;
+
+    await conversationTool(
+      {
+        action: 'workspace_update',
+        openConversationIds: ['conv-2'],
+        remoteControlledConversationIds: ['conv-2'],
+      },
+      context,
+    );
+
+    expect(conversations.updateWorkspace).toHaveBeenCalledWith({
+      openConversationIds: ['conv-2'],
+      remoteControlledConversationIds: ['conv-2'],
+    });
+  });
+
+  it('routes transcript block writes', async () => {
+    const context = ctx();
+    const conversations = (context as {
+      conversations: { appendTranscriptBlock: ReturnType<typeof vi.fn>; updateTranscriptBlock: ReturnType<typeof vi.fn> };
+    }).conversations;
+
+    await conversationTool(
+      { action: 'append_transcript_block', conversationId: 'conv-2', blockType: 'note', title: 'Note', data: { ok: true } },
+      context,
+    );
+    expect(conversations.appendTranscriptBlock).toHaveBeenCalledWith({
+      conversationId: 'conv-2',
+      blockType: 'note',
+      title: 'Note',
+      data: { ok: true },
+    });
+
+    await conversationTool(
+      { action: 'update_transcript_block', conversationId: 'conv-2', blockType: 'note', blockId: 'block-1', data: { ok: false } },
+      context,
+    );
+    expect(conversations.updateTranscriptBlock).toHaveBeenCalledWith({
+      conversationId: 'conv-2',
+      blockType: 'note',
+      blockId: 'block-1',
+      data: { ok: false },
+    });
+  });
+
+  it('lets host live-only errors surface without masking', async () => {
+    const context = ctx({
+      conversations: {
+        ...((ctx() as { conversations: Record<string, unknown> }).conversations as Record<string, unknown>),
+        abort: vi.fn().mockRejectedValue(new Error('Conversation "conv-2" is not live.')),
+      },
+    });
+
+    await expect(conversationTool({ action: 'abort', conversationId: 'conv-2' }, context)).rejects.toThrow(
+      'Conversation "conv-2" is not live.',
     );
   });
 

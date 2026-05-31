@@ -63,16 +63,20 @@ describe('system-conversation-tools manifest', () => {
 
   it('declares focused conversation tools in contributes.tools', () => {
     const toolNames = (manifest.contributes.tools ?? []).map((t: { name?: string }) => t.name);
-    expect(toolNames).toEqual(['ask_user', 'conversation_inspect', 'conversation_title', 'conversation_cwd', 'deferred_resume']);
-    expect(toolNames).not.toContain('conversation');
+    expect(toolNames).toEqual(['conversation', 'ask_user', 'conversation_inspect', 'conversation_title', 'conversation_cwd', 'deferred_resume']);
+    expect(manifest.contributes.tools[0]).toEqual(
+      expect.objectContaining({
+        name: 'conversation',
+        action: 'conversationTool',
+      }),
+    );
   });
 
   it('declares backend actions for the focused conversation tools', () => {
     const actionIds = (manifest.backend.actions ?? []).map((a: { id: string }) => a.id);
     expect(actionIds).toEqual(
-      expect.arrayContaining(['askUser', 'conversationInspect', 'conversationTitle', 'conversationCwd', 'deferredResume']),
+      expect.arrayContaining(['conversationTool', 'askUser', 'conversationInspect', 'conversationTitle', 'conversationCwd', 'deferredResume']),
     );
-    expect(actionIds).not.toContain('conversationTool');
   });
 
   it('does not use an agentExtension for conversation tools', () => {
