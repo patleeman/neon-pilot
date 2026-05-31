@@ -374,7 +374,6 @@ class LocalApiResponse {
 
 let localRoutesPromise: Promise<RegisteredRoute[]> | null = null;
 let localContextsPromise: Promise<{ context: ServerRouteContext; perf: Record<string, number> }> | null = null;
-let localContextBuildPerf: Record<string, number> | null = null;
 let localServerRouteContext: ServerRouteContext | null = null;
 let localLiveSessionCapabilityContext: LiveSessionCapabilityContext | null = null;
 let localProviderDesktopCapabilityContext: ProviderDesktopCapabilityContext | null = null;
@@ -574,7 +573,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   // Warm the resource options cache synchronously (fast — ~100ms, reads
   // SKILL.md/template files from disk) so the first createLiveSession
   // doesn't pay that cost even if the extension factory load is deferred.
-  context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope()).catch(() => {});
+  context.buildLiveSessionResourceOptionsAsync?.(context.getRuntimeScope())?.catch(() => {});
   prewarmDesktopModelDefinitions();
 
   // Extension factory loading is slow (~9s, dynamic imports of extension
