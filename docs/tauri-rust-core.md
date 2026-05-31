@@ -24,6 +24,17 @@ Tauri shell
 
 Rust owns stable authority and lifecycle boundaries. JS/TS remains the product runtime and extension runtime behind public extension contracts.
 
+## Ownership Split
+
+The Tauri architecture intentionally makes the extension boundary physical instead of only conventional. Rust and JS/TS have different jobs:
+
+- Rust host-core owns native trust boundaries: desktop lifecycle, window authority, sidecar supervision, packaged resource resolution, process and PTY execution, scoped filesystem operations, SQLite migrations, secret persistence, and extension package validation/install/import.
+- The JS sidecar owns the product runtime: Pi integration, conversations, prompt assembly, workflow orchestration, local API composition, and JS extension backend execution.
+- React owns renderer UI and talks to product APIs through HTTP/WebSocket clients, using Tauri commands only for native/bootstrap capabilities.
+- Extensions own user-facing product capabilities by default. They access host functionality through `@neon-pilot/extensions` frontend/backend contracts instead of importing desktop, core, or Tauri internals.
+
+This split is deliberate discipline. If a feature needs native authority, add the smallest reusable Rust host-core or Tauri command surface. If a product workflow needs host data or actions, expose it through the product API or extension SDK. Do not rebuild Electron-style shared backend access by letting extension code reach into desktop internals.
+
 ## Current Implementation
 
 - `packages/tauri/host-core` is the Rust host-kernel primitive library.
