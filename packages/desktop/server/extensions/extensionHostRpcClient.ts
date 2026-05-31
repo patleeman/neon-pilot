@@ -21,6 +21,7 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
     !hasFunction(input.serverContext) &&
     !hasFunction(input.serverContextSnapshot) &&
     !hasFunction(input.toolContext) &&
+    !hasFunction(input.toolContextSnapshot) &&
     !hasFunction(input.agentToolContext)
   );
 }

@@ -1,6 +1,7 @@
 import type { ExtensionActionInvokeResult } from './extensionBackend.js';
 import type { ExtensionHostInvokeActionRequest, ExtensionHostRequest, ExtensionHostResponse } from './extensionHostProtocol.js';
 import { createExtensionBackendServerContextFromSnapshot } from './extensionHostServerContext.js';
+import { createExtensionBackendToolContextFromSnapshot } from './extensionHostToolContext.js';
 
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
 
@@ -57,7 +58,7 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
           request.actionId,
           request.input,
           request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
-          request.toolContext,
+          request.toolContext ?? createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
           request.agentToolContext,
         ),
       };
