@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const extensionBackend = vi.hoisted(() => ({ invokeExtensionAction: vi.fn() }));
+const extensionBackend = vi.hoisted(() => ({ invokeExtensionAction: vi.fn(), invokeExtensionProtocolEntrypoint: vi.fn() }));
 const extensionSubscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
@@ -91,11 +91,42 @@ describe('extension host client', () => {
     expect(extensionSubscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('settings', { type: 'changed' });
   });
 
+  it('routes protocol entrypoints through the extension host request envelope', async () => {
+    extensionBackend.invokeExtensionProtocolEntrypoint.mockResolvedValueOnce(undefined);
+    const signal = new AbortController().signal;
+    const stdio = { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr };
+
+    await expect(
+      getExtensionHostClient().invokeProtocolEntrypoint({
+        protocolId: 'acp',
+        input: { args: ['--stdio'] },
+        serverContext: { getRuntimeScope: () => 'shared' },
+        stdio,
+        signal,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(extensionBackend.invokeExtensionProtocolEntrypoint).toHaveBeenCalledWith('acp', { args: ['--stdio'] }, {
+      serverContext: { getRuntimeScope: expect.any(Function) },
+      stdio,
+      signal,
+    });
+  });
+
   it('names requests for logs and future RPC diagnostics', () => {
     expect(extensionHostRequestName({ type: 'health' })).toBe('health');
     expect(extensionHostRequestName({ type: 'invokeAction', extensionId: 'ext', actionId: 'doThing', input: null })).toBe(
       'invokeAction:ext/doThing',
     );
+    expect(
+      extensionHostRequestName({
+        type: 'invokeProtocolEntrypoint',
+        protocolId: 'acp',
+        input: null,
+        stdio: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr },
+        signal: new AbortController().signal,
+      }),
+    ).toBe('invokeProtocolEntrypoint:acp');
     expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
   });
 });

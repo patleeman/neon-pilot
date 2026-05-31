@@ -7,11 +7,11 @@ const runtime = vi.hoisted(() => ({
     buildLiveSessionResourceOptions: vi.fn(() => ({ additionalSkillPaths: ['/skills'] })),
   })),
 }));
-const backend = vi.hoisted(() => ({ invokeExtensionProtocolEntrypoint: vi.fn(async () => undefined) }));
+const extensionHostClient = vi.hoisted(() => ({ invokeProtocolEntrypoint: vi.fn(async () => undefined) }));
 
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('./app/runtimeState.js', () => runtime);
-vi.mock('./extensions/extensionBackend.js', () => backend);
+vi.mock('./extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 
 import { main, PROTOCOL_CLI_EXIT_CODES, runProtocolCli } from './protocolCli.js';
 
@@ -28,7 +28,7 @@ describe('protocol CLI', () => {
     await expect(runProtocolCli([])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
     await expect(runProtocolCli(['other', 'acp'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Usage: neon-pilot protocol <protocol-id>\n'));
-    expect(backend.invokeExtensionProtocolEntrypoint).not.toHaveBeenCalled();
+    expect(extensionHostClient.invokeProtocolEntrypoint).not.toHaveBeenCalled();
   });
 
   it('invokes protocol entrypoints with args, stdio, signal, and server context', async () => {
@@ -41,10 +41,10 @@ describe('protocol CLI', () => {
       agentDir: '/agent',
       logger: { warn: expect.any(Function) },
     });
-    expect(backend.invokeExtensionProtocolEntrypoint).toHaveBeenCalledWith(
-      'acp',
-      { args: ['--stdio'] },
+    expect(extensionHostClient.invokeProtocolEntrypoint).toHaveBeenCalledWith(
       expect.objectContaining({
+        protocolId: 'acp',
+        input: { args: ['--stdio'] },
         serverContext: expect.objectContaining({
           getRuntimeScope: expect.any(Function),
           buildLiveSessionResourceOptions: expect.any(Function),
@@ -54,7 +54,7 @@ describe('protocol CLI', () => {
         signal: controller.signal,
       }),
     );
-    const serverContext = backend.invokeExtensionProtocolEntrypoint.mock.calls[0][2].serverContext;
+    const serverContext = extensionHostClient.invokeProtocolEntrypoint.mock.calls[0][0].serverContext;
     expect(serverContext.getRepoRoot()).toBe(process.cwd());
     expect(serverContext.buildLiveSessionResourceOptions()).toEqual({ additionalSkillPaths: ['/skills'] });
   });
@@ -70,14 +70,14 @@ describe('protocol CLI', () => {
     ];
 
     for (const [message, code] of cases) {
-      backend.invokeExtensionProtocolEntrypoint.mockRejectedValueOnce(new Error(message));
+      extensionHostClient.invokeProtocolEntrypoint.mockRejectedValueOnce(new Error(message));
       await expect(runProtocolCli(['protocol', 'acp'])).resolves.toBe(code);
       expect(stderrWrite).toHaveBeenLastCalledWith(`${message}\n`);
     }
   });
 
   it('main sets process.exitCode from run result', async () => {
-    backend.invokeExtensionProtocolEntrypoint.mockRejectedValueOnce(new Error('runtime exploded'));
+    extensionHostClient.invokeProtocolEntrypoint.mockRejectedValueOnce(new Error('runtime exploded'));
     await main(['protocol', 'acp']);
     expect(process.exitCode).toBe(PROTOCOL_CLI_EXIT_CODES.runtimeFailure);
   });

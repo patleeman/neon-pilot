@@ -66,6 +66,9 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('result' in response)) return { ok: false, error: 'Extension host returned an invalid action response.' };
       return response.result;
     },
+    async invokeProtocolEntrypoint() {
+      throw new Error('Extension host RPC cannot carry protocol stdio streams; use capability channels before enabling this call path.');
+    },
     async publishEvent(source, payload) {
       const response = await send({ type: 'publishEvent', source, payload });
       if (!response.ok) throw new Error(response.error);
@@ -87,6 +90,9 @@ export function createHybridExtensionHostClient(input: {
         return input.fallbackClient.invokeAction(actionInput);
       }
       return input.rpcClient.invokeAction(actionInput);
+    },
+    async invokeProtocolEntrypoint(protocolInput) {
+      return input.fallbackClient.invokeProtocolEntrypoint(protocolInput);
     },
     async publishEvent(source, payload) {
       return input.rpcClient.publishEvent(source, payload);

@@ -1,11 +1,18 @@
 import type { ExtensionActionInvokeResult } from './extensionBackend.js';
-import type { ExtensionHostInvokeActionRequest, ExtensionHostRequest, ExtensionHostResponse } from './extensionHostProtocol.js';
+import type {
+  ExtensionHostInvokeActionRequest,
+  ExtensionHostInvokeProtocolEntrypointRequest,
+  ExtensionHostRequest,
+  ExtensionHostResponse,
+} from './extensionHostProtocol.js';
 
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
+export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
 
 export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
   invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionActionInvokeResult>;
+  invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   publishEvent(source: string, payload: unknown): Promise<void>;
 }
 
@@ -39,6 +46,11 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('published' in response)) throw new Error('Extension host returned an invalid publish response.');
     },
+    async invokeProtocolEntrypoint(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('invoked' in response)) throw new Error('Extension host returned an invalid protocol entrypoint response.');
+    },
   };
 }
 
@@ -64,6 +76,18 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
           request.agentToolContext,
         ),
       };
+    }
+    if (request.type === 'invokeProtocolEntrypoint') {
+      const [{ invokeExtensionProtocolEntrypoint }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
+        import('./extensionBackend.js'),
+        import('./extensionHostServerContext.js'),
+      ]);
+      await invokeExtensionProtocolEntrypoint(request.protocolId, request.input, {
+        serverContext: request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+        stdio: request.stdio,
+        signal: request.signal,
+      });
+      return { ok: true, invoked: true };
     }
     const { publishExtensionHostEvent } = await import('./extensionSubscriptions.js');
     await publishExtensionHostEvent(request.source, request.payload);
