@@ -1564,6 +1564,8 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
                 Some("CmdOrCtrl+\\"),
             )?,
             &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "reload-window", "Reload", true, Some("CmdOrCtrl+R"))?,
+            &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(
                 app,
                 "toggle-devtools",
@@ -1794,9 +1796,17 @@ fn handle_native_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: &s
         | "find-in-page"
         | "toggle-sidebar"
         | "toggle-right-rail" => dispatch_shortcut_event(app, id),
+        "reload-window" => reload_main_window(app),
         "toggle-devtools" => toggle_main_devtools(app),
         _ => {}
     }
+}
+
+fn reload_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
+        return;
+    };
+    let _ = window.reload();
 }
 
 fn toggle_main_devtools<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
