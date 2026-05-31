@@ -14,6 +14,7 @@ import {
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type NativeViewContribution = NonNullable<NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['views']>[number];
@@ -139,7 +140,10 @@ function ExtensionActionsMenu({
   onReinstall?: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -147,11 +151,36 @@ function ExtensionActionsMenu({
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
       if (target instanceof Node && rootRef.current?.contains(target)) return;
+      if (target instanceof Node && menuRef.current?.contains(target)) return;
       setOpen(false);
     }
 
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+
+    function updateMenuPosition() {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuPosition({
+        top: rect.bottom + 8,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    }
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
   }, [open]);
 
   const run = useCallback((event: ReactMouseEvent<HTMLButtonElement>, action: () => void) => {
@@ -166,6 +195,7 @@ function ExtensionActionsMenu({
   return (
     <div ref={rootRef} className="relative" onClick={(event) => event.stopPropagation()}>
       <button
+        ref={buttonRef}
         type="button"
         className="ui-icon-button ui-icon-button-compact"
         title={busy ? 'Working…' : 'More actions'}
@@ -180,29 +210,38 @@ function ExtensionActionsMenu({
       >
         <MoreIcon />
       </button>
-      {open ? (
-        <div className="absolute right-0 z-20 mt-2 w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl" role="menu">
-          {extension.packageRoot ? (
-            <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
-              Open folder
-            </button>
-          ) : null}
-          {onReinstall ? (
-            <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onReinstall)}>
-              Reinstall
-            </button>
-          ) : null}
-          {canDelete ? (
-            <button
-              className={`${menuButtonClass} text-danger hover:text-danger`}
-              disabled={busy}
-              onClick={(event) => run(event, onDelete)}
+      {open && menuPosition
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="fixed z-[70] w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl"
+              style={{ top: menuPosition.top, right: menuPosition.right }}
+              role="menu"
+              onClick={(event) => event.stopPropagation()}
             >
-              Uninstall
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+              {extension.packageRoot ? (
+                <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
+                  Open folder
+                </button>
+              ) : null}
+              {onReinstall ? (
+                <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onReinstall)}>
+                  Reinstall
+                </button>
+              ) : null}
+              {canDelete ? (
+                <button
+                  className={`${menuButtonClass} text-danger hover:text-danger`}
+                  disabled={busy}
+                  onClick={(event) => run(event, onDelete)}
+                >
+                  Uninstall
+                </button>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
