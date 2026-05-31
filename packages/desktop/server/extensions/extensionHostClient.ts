@@ -6,6 +6,7 @@ export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionReque
 export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
   invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionActionInvokeResult>;
+  publishEvent(source: string, payload: unknown): Promise<void>;
 }
 
 let configuredExtensionHostClient: ExtensionHostClient | undefined;
@@ -33,6 +34,11 @@ function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!('result' in response)) return { ok: false, error: 'Extension host returned an invalid action response.' };
       return response.result;
     },
+    async publishEvent(source, payload) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'publishEvent', source, payload });
+      if (!response.ok) throw new Error(response.error);
+      if (!('published' in response)) throw new Error('Extension host returned an invalid publish response.');
+    },
   };
 }
 
@@ -42,17 +48,22 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
       return { ok: true, status: 'ready' };
     }
     const { invokeExtensionAction } = await import('./extensionBackend.js');
-    return {
-      ok: true,
-      result: await invokeExtensionAction(
-        request.extensionId,
-        request.actionId,
-        request.input,
-        request.serverContext,
-        request.toolContext,
-        request.agentToolContext,
-      ),
-    };
+    if (request.type === 'invokeAction') {
+      return {
+        ok: true,
+        result: await invokeExtensionAction(
+          request.extensionId,
+          request.actionId,
+          request.input,
+          request.serverContext,
+          request.toolContext,
+          request.agentToolContext,
+        ),
+      };
+    }
+    const { publishExtensionHostEvent } = await import('./extensionSubscriptions.js');
+    await publishExtensionHostEvent(request.source, request.payload);
+    return { ok: true, published: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

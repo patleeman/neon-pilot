@@ -14,7 +14,13 @@ export interface ExtensionHostInvokeActionRequest {
   agentToolContext?: unknown;
 }
 
-export type ExtensionHostRequest = ExtensionHostHealthRequest | ExtensionHostInvokeActionRequest;
+export interface ExtensionHostPublishEventRequest {
+  type: 'publishEvent';
+  source: string;
+  payload: unknown;
+}
+
+export type ExtensionHostRequest = ExtensionHostHealthRequest | ExtensionHostInvokeActionRequest | ExtensionHostPublishEventRequest;
 
 export interface ExtensionHostHealthResponse {
   ok: true;
@@ -28,10 +34,16 @@ export type ExtensionHostResponse =
       result: ExtensionActionInvokeResult;
     }
   | {
+      ok: true;
+      published: true;
+    }
+  | {
       ok: false;
       error: string;
     };
 
 export function extensionHostRequestName(request: ExtensionHostRequest): string {
-  return request.type === 'invokeAction' ? `invokeAction:${request.extensionId}/${request.actionId}` : request.type;
+  if (request.type === 'invokeAction') return `invokeAction:${request.extensionId}/${request.actionId}`;
+  if (request.type === 'publishEvent') return `publishEvent:${request.source}`;
+  return request.type;
 }

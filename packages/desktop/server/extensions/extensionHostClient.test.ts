@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const extensionBackend = vi.hoisted(() => ({ invokeExtensionAction: vi.fn() }));
+const extensionSubscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
+vi.mock('./extensionSubscriptions.js', () => extensionSubscriptions);
 
 import { getExtensionHostClient, handleInProcessExtensionHostRequest, setExtensionHostClient } from './extensionHostClient.js';
 import { extensionHostRequestName } from './extensionHostProtocol.js';
@@ -46,10 +48,19 @@ describe('extension host client', () => {
     ).resolves.toEqual({ ok: false, error: 'boom' });
   });
 
+  it('routes publishEvent through the extension host request envelope', async () => {
+    extensionSubscriptions.publishExtensionHostEvent.mockResolvedValueOnce(undefined);
+
+    await expect(getExtensionHostClient().publishEvent('settings', { type: 'changed' })).resolves.toBeUndefined();
+
+    expect(extensionSubscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('settings', { type: 'changed' });
+  });
+
   it('names requests for logs and future RPC diagnostics', () => {
     expect(extensionHostRequestName({ type: 'health' })).toBe('health');
     expect(extensionHostRequestName({ type: 'invokeAction', extensionId: 'ext', actionId: 'doThing', input: null })).toBe(
       'invokeAction:ext/doThing',
     );
+    expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
   });
 });

@@ -522,8 +522,8 @@ export function registerFileSystemAuthorityHostEvents(): void {
   defaultFileSystemAuthority.onAudit((event) => {
     if (event.outcome !== 'success') return;
     if (!['write', 'delete', 'move', 'copy-in', 'archive-extract'].includes(event.operation)) return;
-    void import('../extensions/extensionSubscriptions.js')
-      .then(({ publishExtensionHostEvent }) => publishExtensionHostEvent('filesystem', event))
+    void import('../extensions/extensionHostClient.js')
+      .then(({ getExtensionHostClient }) => getExtensionHostClient().publishEvent('filesystem', event))
       .catch(() => {});
   });
 }

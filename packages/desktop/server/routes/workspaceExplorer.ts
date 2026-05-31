@@ -2,6 +2,7 @@ import { watch } from 'node:fs';
 
 import type { Express } from 'express';
 
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { logError } from '../shared/logging.js';
 import {
   createWorkspaceFolder,
@@ -37,11 +38,9 @@ function writeWorkspaceError(res: { status: (code: number) => { json: (body: unk
 }
 
 function publishHostEvent(source: string, payload: unknown): void {
-  void import('../extensions/extensionSubscriptions.js')
-    .then(({ publishExtensionHostEvent }) => publishExtensionHostEvent(source, payload))
-    .catch((error) => {
-      logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
-    });
+  void getExtensionHostClient().publishEvent(source, payload).catch((error) => {
+    logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
+  });
 }
 
 export function registerWorkspaceExplorerRoutes(
