@@ -10,6 +10,7 @@ interface TerminalState {
   eventSource: EventSource | null;
   xterm: Terminal | null;
   fitAddon: FitAddon | null;
+  usingPty: boolean;
 }
 
 function readRgbVar(element: HTMLElement, name: string): string {
@@ -47,7 +48,7 @@ function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key'
 
 export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const stateRef = useRef<TerminalState>({ id: null, eventSource: null, xterm: null, fitAddon: null });
+  const stateRef = useRef<TerminalState>({ id: null, eventSource: null, xterm: null, fitAddon: null, usingPty: false });
   const pendingWritesRef = useRef<string[]>([]);
 
   const focusTerminal = (xterm: Terminal) => {
@@ -118,8 +119,25 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     let terminalId: string | null = null;
     let drainTimer: ReturnType<typeof window.setInterval> | null = null;
     let closed = false;
+    let usingPty = false;
+
+    const echoInput = (data: string) => {
+      if (usingPty) return;
+      switch (data) {
+        case '\n':
+        case '\r':
+          xterm.write('\r\n');
+          break;
+        case '\x7f':
+          xterm.write('\b \b');
+          break;
+        default:
+          if (data >= ' ') xterm.write(data);
+      }
+    };
 
     const writeTerminalData = (data: string) => {
+      echoInput(data);
       if (terminalId && !closed) {
         pa.extension.invoke('terminalWrite', { id: terminalId, data }).catch(() => {
           // Ignore write errors if terminal was closed.
@@ -137,15 +155,13 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         if (closed) return;
         terminalId = result.id;
         state.id = result.id;
+        state.usingPty = result.usingPty;
+        usingPty = result.usingPty;
         container.dataset.terminalId = result.id;
         flushPendingWrites(result.id);
 
         // Write a welcome message
         xterm.writeln(`\x1b[90mTerminal ready (pid: ${result.pid ?? '?'}). Type 'exit' to close.\x1b[0m\r\n`);
-        if (!result.usingPty) {
-          xterm.writeln(`\x1b[101m\x1b[97m Notice: Degraded terminal mode (PTY unavailable) \x1b[0m\x1b[93m\r\n`);
-          xterm.writeln(`\x1b[93mInput/output may be limited until a PTY-capable shell is available.\x1b[0m\r\n`);
-        }
 
         const drainOutput = () => {
           if (closed || !terminalId) return;
@@ -241,6 +257,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       state.eventSource = null;
       state.xterm = null;
       state.fitAddon = null;
+      state.usingPty = false;
     };
   }, [pa, context.cwd]);
 
