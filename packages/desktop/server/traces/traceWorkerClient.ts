@@ -7,6 +7,8 @@
  */
 
 import { Worker } from 'node:worker_threads';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import {
   writeTraceAutoMode,
@@ -23,6 +25,18 @@ import type { TraceWorkerMessage } from './traceWorker.js';
 let workerInstance: Worker | null = null;
 let useDirectWrites = false;
 
+function resolveTraceWorkerUrl(): URL {
+  const candidates = [
+    // Source and server/dist/traces imports.
+    new URL('./traceWorker.js', import.meta.url),
+    // server/dist/app/localApi.js.
+    new URL('../traces/traceWorker.js', import.meta.url),
+    // server/dist/app/chunks/*.js after app bundle chunking.
+    new URL('../../traces/traceWorker.js', import.meta.url),
+  ];
+  return candidates.find((candidate) => existsSync(fileURLToPath(candidate))) ?? candidates[1];
+}
+
 function getOrCreateWorker(): Worker {
   if (workerInstance) {
     return workerInstance;
@@ -30,7 +44,7 @@ function getOrCreateWorker(): Worker {
 
   // The main bundle is at server/dist/app/localApi.js and the worker is at
   // server/dist/traces/traceWorker.js.
-  const workerUrl = new URL('../traces/traceWorker.js', import.meta.url);
+  const workerUrl = resolveTraceWorkerUrl();
 
   const worker = new Worker(workerUrl);
 

@@ -8,6 +8,7 @@ import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
 import { isTauriHostCoreAvailable } from '../../server/tauriHostCoreClient.js';
+import { createDesktopRealtimeUpgradeHandler } from '../../server/app/realtime.js';
 
 interface BackendReadyMessage {
   type: 'ready';
@@ -377,6 +378,7 @@ async function main(): Promise<void> {
   await new Promise<void>((resolve) => {
     server.listen(0, '127.0.0.1', () => resolve());
   });
+  server.on('upgrade', createDesktopRealtimeUpgradeHandler());
 
   const address = server.address();
   if (!address || typeof address === 'string') {

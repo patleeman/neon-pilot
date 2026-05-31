@@ -2,6 +2,16 @@ import { buildDesktopWebSocketUrl } from '../client/endpoints';
 import type { DesktopAppEvent } from '../shared/types';
 import { createDesktopAwareEventSource } from './desktopEventSource';
 
+interface TauriSidecarReady {
+  port: number;
+  token: string;
+}
+
+interface TauriSidecarStatus {
+  running: boolean;
+  ready?: TauriSidecarReady | null;
+}
+
 interface DesktopRealtimeListener {
   onopen?: () => void;
   onevent?: (event: DesktopAppEvent) => void;
@@ -20,8 +30,16 @@ function shouldUseDesktopEventStream(): boolean {
   return typeof window !== 'undefined' && window.location.protocol === 'neon-pilot:';
 }
 
-async function ensureTauriSidecarStarted(): Promise<void> {
-  await getTauriInvoke()?.('start_js_sidecar').catch(() => undefined);
+async function resolveRealtimeWebSocketUrl(): Promise<string> {
+  const invoke = getTauriInvoke();
+  if (!invoke) return buildDesktopWebSocketUrl('/api/realtime');
+
+  const status = await invoke<TauriSidecarStatus>('start_js_sidecar');
+  const port = status.ready?.port;
+  if (typeof port !== 'number') {
+    throw new Error('Tauri JS sidecar did not return a realtime port.');
+  }
+  return `ws://127.0.0.1:${port}/api/realtime`;
 }
 
 export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListener): () => void {
@@ -42,9 +60,9 @@ export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListe
   let closed = false;
   let socket: WebSocket | null = null;
 
-  const openSocket = () => {
+  const openSocket = (url: string) => {
     if (closed) return;
-    socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
+    socket = new WebSocket(url);
 
     socket.addEventListener('open', () => listener.onopen?.());
     socket.addEventListener('message', (event) => {
@@ -64,11 +82,12 @@ export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListe
     });
   };
 
-  if (getTauriInvoke()) {
-    void ensureTauriSidecarStarted().then(openSocket);
-  } else {
-    openSocket();
-  }
+  void resolveRealtimeWebSocketUrl().then(openSocket, () => {
+    if (closed) return;
+    closed = true;
+    listener.onerror?.();
+    listener.onclose?.();
+  });
 
   return () => {
     if (closed) return;

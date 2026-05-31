@@ -1,5 +1,15 @@
 import { buildDesktopWebSocketUrl } from '../client/endpoints';
 
+interface TauriSidecarReady {
+  port: number;
+  token: string;
+}
+
+interface TauriSidecarStatus {
+  running: boolean;
+  ready?: TauriSidecarReady | null;
+}
+
 function shouldUseNativeEventSource(): boolean {
   if (typeof window === 'undefined') return false;
   // Chromium cannot establish a WebSocket to the app host when the renderer is
@@ -15,8 +25,16 @@ function getTauriInvoke(): (<T = unknown>(command: string, payload?: Record<stri
   return window.__TAURI_INTERNALS__?.invoke ?? null;
 }
 
-async function ensureTauriSidecarStarted(): Promise<void> {
-  await getTauriInvoke()?.('start_js_sidecar').catch(() => undefined);
+async function resolveRealtimeWebSocketUrl(): Promise<string> {
+  const invoke = getTauriInvoke();
+  if (!invoke) return buildDesktopWebSocketUrl('/api/realtime');
+
+  const status = await invoke<TauriSidecarStatus>('start_js_sidecar');
+  const port = status.ready?.port;
+  if (typeof port !== 'number') {
+    throw new Error('Tauri JS sidecar did not return a realtime port.');
+  }
+  return `ws://127.0.0.1:${port}/api/realtime`;
 }
 
 export interface EventSourceLike {
@@ -52,9 +70,9 @@ class DesktopRealtimeEventSource implements EventSourceLike {
   private closed = false;
 
   constructor(private readonly path: string) {
-    const openSocket = () => {
+    const openSocket = (url: string) => {
       if (this.closed) return;
-      this.socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
+      this.socket = new WebSocket(url);
       this.socket.addEventListener('open', () => {
         this.socket?.send(JSON.stringify({ type: 'subscribe', id: this.requestId, path: this.path }));
       });
@@ -71,11 +89,11 @@ class DesktopRealtimeEventSource implements EventSourceLike {
       });
     };
 
-    if (getTauriInvoke()) {
-      void ensureTauriSidecarStarted().then(openSocket);
-    } else {
-      openSocket();
-    }
+    void resolveRealtimeWebSocketUrl().then(openSocket, () => {
+      if (this.closed) return;
+      this.readyState = DesktopRealtimeEventSource.CLOSED;
+      this.onerror?.(new Event('error'));
+    });
   }
 
   close(): void {

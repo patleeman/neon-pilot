@@ -12,6 +12,8 @@ pnpm run desktop:demo
 
 `desktop:start` and `desktop:dev` now use the Tauri shell in `packages/tauri/desktop-shell`. The `packages/desktop` package remains the renderer/server/sidecar asset package, not the native app shell.
 
+Tauri dev loads the renderer from `http://127.0.0.1:5173`. The desktop dev UI launcher reuses an already-running Vite server on that port, so rerunning `pnpm run desktop:dev` does not fail when a previous renderer server is still active.
+
 For packaged builds, launch `Neon Pilot.app` from `dist/release/mac-arm64`.
 
 ## Runtime Model
@@ -44,7 +46,7 @@ Tauri Rust shell
 - Rust host core owns durable host-authority boundaries.
 - The JS sidecar remains for product API compatibility, daemon/runtime behavior, and JS extension execution.
 - New host-authority APIs should be added to Rust host core and exposed to the sidecar through host-core RPC.
-- The renderer uses HTTP/realtime product APIs and the Tauri desktop bridge for native OS operations.
+- The renderer uses Tauri-dispatched HTTP product APIs, sidecar-hosted realtime WebSockets, and the Tauri desktop bridge for native OS operations.
 
 ## Layout
 

@@ -11,7 +11,7 @@
   "main": "./dist/backend/local-backend-child.js",
   "scripts": {
     "build:ui": "cd ui && vite build",
-    "dev:ui": "cd ui && vite --host 127.0.0.1 --strictPort",
+    "dev:ui": "node scripts/dev-ui.mjs",
     "build:server": "node scripts/build-server-bundle.mjs",
     "build:deps": "pnpm --dir ../core run build && pnpm run build:ui && pnpm run build:server && node ../../scripts/build-system-extensions.mjs",
     "build:main": "node scripts/build-main.mjs",
