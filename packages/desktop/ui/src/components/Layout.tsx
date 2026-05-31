@@ -211,17 +211,13 @@ function FileDocumentBar({
 type DesktopLayoutShortcutAction =
   | 'toggle-sidebar'
   | 'toggle-right-rail'
-  | 'toggle-layout-mode'
-  | 'show-conversation-mode'
-  | 'show-workbench-mode';
+  | 'toggle-layout-mode';
 
 function isDesktopLayoutShortcutAction(value: unknown): value is DesktopLayoutShortcutAction {
   return (
     value === 'toggle-sidebar' ||
     value === 'toggle-right-rail' ||
-    value === 'toggle-layout-mode' ||
-    value === 'show-conversation-mode' ||
-    value === 'show-workbench-mode'
+    value === 'toggle-layout-mode'
   );
 }
 
@@ -2147,16 +2143,6 @@ export function Layout() {
 
       if (action === 'toggle-layout-mode') {
         handleAppLayoutModeChange(appLayoutMode === 'workbench' ? 'compact' : 'workbench');
-        return;
-      }
-
-      if (action === 'show-conversation-mode') {
-        handleAppLayoutModeChange('compact');
-        return;
-      }
-
-      if (action === 'show-workbench-mode') {
-        handleAppLayoutModeChange('workbench');
         return;
       }
 

@@ -1551,21 +1551,6 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
         &[
             &MenuItem::with_id(
                 app,
-                "show-conversation-mode",
-                "Conversation Mode",
-                true,
-                Some("F1"),
-            )?,
-            &MenuItem::with_id(
-                app,
-                "show-workbench-mode",
-                "Workbench Mode",
-                true,
-                Some("F2"),
-            )?,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(
-                app,
                 "toggle-sidebar",
                 "Toggle Left Sidebar",
                 true,
@@ -1807,8 +1792,6 @@ fn handle_native_menu_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: &s
         | "rename-conversation"
         | "edit-working-directory"
         | "find-in-page"
-        | "show-conversation-mode"
-        | "show-workbench-mode"
         | "toggle-sidebar"
         | "toggle-right-rail" => dispatch_shortcut_event(app, id),
         "toggle-devtools" => toggle_main_devtools(app),
