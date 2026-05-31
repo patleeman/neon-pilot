@@ -14,6 +14,7 @@ import { useDesktopConversationState } from '../../hooks/useDesktopConversationS
 import type { MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../../shared/types.js';
 import { ChatRailComposer } from './ChatRailComposer.js';
 import { ChatView } from './ChatView.js';
+import { awaitPendingSideChatSession } from './sideChatSessionReadiness.js';
 
 /**
  * Full chat experience rendered inside a right-panel companion tab.
@@ -82,6 +83,7 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
     async (text: string, behavior?: 'steer' | 'followUp', images?: PromptImageInput[], attachmentRefs?: PromptAttachmentRefInput[]) => {
       if (!text.trim() && !images?.length && !attachmentRefs?.length) return;
       try {
+        await awaitPendingSideChatSession(conversationId);
         await desktopState.send(text, behavior, images, attachmentRefs);
       } catch {
         // Composer stays usable on error.

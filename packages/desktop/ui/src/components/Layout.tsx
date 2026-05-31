@@ -40,6 +40,7 @@ import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, w
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { DesktopTopBar } from './DesktopTopBar';
+import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -1977,6 +1978,7 @@ export function Layout() {
         workspaceCwd: activeWorkspaceCwd ?? undefined,
         reservedSessionFile: reserved.sessionFile,
       });
+      registerPendingSideChatSession(reserved.id, createdPromise);
       void createdPromise
         .then((result) => {
           // Prime the desktop conversation state cache so ChatRail loads instantly

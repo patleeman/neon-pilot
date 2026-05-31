@@ -111,6 +111,9 @@ const maxConversationSwitchContentMs = Number(arg('max-conversation-switch-conte
 const maxConversationSwitchRenderMs = Number(arg('max-conversation-switch-render-ms', '80')) || 80;
 const maxConversationContentOpenPhaseMs = Number(arg('max-conversation-content-open-phase-ms', '750')) || 750;
 const maxConversationExtensionOpenPhaseMs = Number(arg('max-conversation-extension-open-phase-ms', '750')) || 750;
+const maxWorkbenchToggleMs = Number(arg('max-workbench-toggle-ms', '750')) || 750;
+const maxSideChatOpenMs = Number(arg('max-side-chat-open-ms', '2500')) || 2500;
+const maxSideChatPromptVisibleMs = Number(arg('max-side-chat-prompt-visible-ms', '2500')) || 2500;
 const maxRecoveryMs = Number(arg('max-recovery-ms', '2000')) || 2000;
 const maxPostSubmitLongTaskMs = Number(arg('max-post-submit-longtask-ms', '250')) || 250;
 const maxForkMs = Number(arg('max-fork-ms', '2000')) || 2000;
@@ -971,6 +974,211 @@ async function main() {
         ?.at(0);
       return typeof sample?.committedAtMs === 'number' ? Math.max(0, Math.round(sample.committedAtMs - clickStartMs)) : null;
     })();
+    const workbenchSideChat = await measure('workbench side chat open and start', async () => {
+      if (!draftSubmitCreatedConversationId) {
+        return { skipped: true, reason: 'draft created conversation id missing' };
+      }
+
+      await openConversationSpa(cdp, child, draftSubmitCreatedConversationId, { waitForNewRender: false });
+
+      const clickWorkbenchToggle = async (label) =>
+        evalJs(
+          cdp,
+          `(() => {
+            const label = ${JSON.stringify(label)};
+            const button = Array.from(document.querySelectorAll('button')).find((candidate) =>
+              candidate.getAttribute('aria-label') === label ||
+              candidate.getAttribute('title') === label ||
+              (candidate.textContent || '').trim() === label
+            );
+            if (!button) return false;
+            button.click();
+            return true;
+          })()`,
+        );
+
+      const openStartedAtMs = await evalJs(cdp, `performance.now()`);
+      if (!(await clickWorkbenchToggle('Show workbench')) && !(await evalJs(cdp, `Boolean(document.querySelector('[data-workbench-document-pane="true"]'))`))) {
+        return { skipped: true, reason: 'show workbench button missing' };
+      }
+      await waitForExpression(cdp, child, `Boolean(document.querySelector('[data-workbench-document-pane="true"]'))`, 5_000, 16);
+      const openMs = Math.round((await evalJs(cdp, `performance.now()`)) - openStartedAtMs);
+
+      const collapseStartedAtMs = await evalJs(cdp, `performance.now()`);
+      if (!(await clickWorkbenchToggle('Hide workbench'))) {
+        return { skipped: true, reason: 'hide workbench button missing' };
+      }
+      await waitForExpression(cdp, child, `!document.querySelector('[data-workbench-document-pane="true"]')`, 5_000, 16);
+      const collapseMs = Math.round((await evalJs(cdp, `performance.now()`)) - collapseStartedAtMs);
+      const collapsedPaneCount = await evalJs(cdp, `document.querySelectorAll('[data-workbench-document-pane="true"]').length`);
+
+      const reopenStartedAtMs = await evalJs(cdp, `performance.now()`);
+      if (!(await clickWorkbenchToggle('Show workbench'))) {
+        return { skipped: true, reason: 'show workbench button missing after collapse' };
+      }
+      await waitForExpression(
+        cdp,
+        child,
+        `Boolean(document.querySelector('[data-workbench-document-pane="true"]')) &&
+          Array.from(document.querySelectorAll('button')).some((button) => (button.textContent || '').includes('Open a new chat tab.'))`,
+        5_000,
+        16,
+      );
+      const reopenMs = Math.round((await evalJs(cdp, `performance.now()`)) - reopenStartedAtMs);
+
+      const sidePrompt = `Perf side chat ${Date.now()}`;
+      const sideOpenStartedAtMs = await evalJs(
+        cdp,
+        `(() => {
+          const button = Array.from(document.querySelectorAll('button')).find((candidate) =>
+            (candidate.textContent || '').includes('Open a new chat tab.')
+          );
+          if (!button) return null;
+          const startedAtMs = performance.now();
+          button.click();
+          return startedAtMs;
+        })()`,
+      );
+      if (typeof sideOpenStartedAtMs !== 'number') {
+        return { skipped: true, reason: 'side chat button missing' };
+      }
+      await waitForExpression(
+        cdp,
+        child,
+        `Boolean(document.querySelector('[data-chat-rail="1"] textarea:not([disabled])'))`,
+        5_000,
+        16,
+      );
+      const sideChatOpenMs = Math.round((await evalJs(cdp, `performance.now()`)) - sideOpenStartedAtMs);
+      const sideConversationId = await evalJs(
+        cdp,
+        `(() => {
+          const samples = globalThis.__NEON_PILOT_APP_PERF__?.clientSamples ?? [];
+          const reserveSample = samples
+            .filter((sample) =>
+              sample.name === 'desktop.reserveConversation' &&
+              typeof sample.startTimeMs === 'number' &&
+              sample.startTimeMs >= ${JSON.stringify(sideOpenStartedAtMs)} &&
+              typeof sample.meta?.conversationId === 'string'
+            )
+            .at(-1);
+          if (reserveSample?.meta?.conversationId) return reserveSample.meta.conversationId;
+          const closeButton = Array.from(document.querySelectorAll('button')).find((button) =>
+            (button.getAttribute('aria-label') || '').startsWith('Close Chat ')
+          );
+          return (closeButton?.getAttribute('aria-label') || '').replace(/^Close Chat\\s+/, '') || null;
+        })()`,
+      );
+
+      await evalJs(
+        cdp,
+        `(() => {
+          const rail = document.querySelector('[data-chat-rail="1"]');
+          const textarea = rail?.querySelector('textarea:not([disabled])');
+          if (!(textarea instanceof HTMLTextAreaElement)) return null;
+          const prompt = ${JSON.stringify(sidePrompt)};
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+          setter?.call(textarea, prompt);
+          textarea.focus();
+          textarea.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: prompt }));
+          return true;
+        })()`,
+      );
+      await waitForExpression(
+        cdp,
+        child,
+        `(() => {
+          const rail = document.querySelector('[data-chat-rail="1"]');
+          return Array.from(rail?.querySelectorAll('button') ?? []).some((candidate) =>
+            !candidate.disabled &&
+            (candidate.getAttribute('aria-label') === 'Send' ||
+              candidate.getAttribute('title') === 'Send' ||
+              (candidate.textContent || '').trim() === 'Send')
+          );
+        })()`,
+        5_000,
+        16,
+      );
+      const promptStartedAtMs = await evalJs(
+        cdp,
+        `(() => {
+          const rail = document.querySelector('[data-chat-rail="1"]');
+          const button = Array.from(rail.querySelectorAll('button')).find((candidate) =>
+            candidate.getAttribute('aria-label') === 'Send' ||
+            candidate.getAttribute('title') === 'Send' ||
+            (candidate.textContent || '').trim() === 'Send'
+          );
+          if (!button || button.disabled) return null;
+          const startedAtMs = performance.now();
+          button.click();
+          return startedAtMs;
+        })()`,
+      );
+      if (typeof promptStartedAtMs !== 'number') {
+        return { skipped: true, reason: 'side chat send button unavailable', sideChatOpenMs, sideConversationId };
+      }
+      await waitForExpression(
+        cdp,
+        child,
+        `(() => {
+          const railText = document.querySelector('[data-chat-rail="1"]')?.textContent || '';
+          if (railText.includes(${JSON.stringify(sidePrompt)})) return true;
+          const samples = globalThis.__NEON_PILOT_APP_PERF__?.clientSamples ?? [];
+          return samples.some((sample) =>
+            sample.name === 'desktop.promptSession' &&
+            sample.meta?.conversationId === ${JSON.stringify(sideConversationId)} &&
+            sample.meta?.promptLength === ${JSON.stringify(sidePrompt.length)} &&
+            typeof sample.endTimeMs === 'number' &&
+            sample.endTimeMs >= ${JSON.stringify(promptStartedAtMs)}
+          );
+        })()`,
+        5_000,
+        16,
+      );
+      const promptResult = await evalJs(
+        cdp,
+        `(() => {
+          const railText = document.querySelector('[data-chat-rail="1"]')?.textContent || '';
+          const samples = globalThis.__NEON_PILOT_APP_PERF__?.clientSamples ?? [];
+          const sample = samples.find((entry) =>
+            entry.name === 'desktop.promptSession' &&
+            entry.meta?.conversationId === ${JSON.stringify(sideConversationId)} &&
+            entry.meta?.promptLength === ${JSON.stringify(sidePrompt.length)} &&
+            typeof entry.endTimeMs === 'number' &&
+            entry.endTimeMs >= ${JSON.stringify(promptStartedAtMs)}
+          );
+          return {
+            promptVisible: railText.includes(${JSON.stringify(sidePrompt)}),
+            promptStartMs: Math.round(((sample?.endTimeMs ?? performance.now()) - ${JSON.stringify(promptStartedAtMs)})),
+            promptSessionSample: sample ?? null,
+          };
+        })()`,
+      );
+      const finalCollapseStartedAtMs = await evalJs(cdp, `performance.now()`);
+      let finalCollapseMs = null;
+      if (await evalJs(cdp, `Boolean(document.querySelector('[data-workbench-document-pane="true"]'))`)) {
+        if (!(await clickWorkbenchToggle('Hide workbench'))) {
+          return { skipped: true, reason: 'hide workbench button missing after side chat', sideChatOpenMs, sideConversationId };
+        }
+        await waitForExpression(cdp, child, `!document.querySelector('[data-workbench-document-pane="true"]')`, 5_000, 16);
+        finalCollapseMs = Math.round((await evalJs(cdp, `performance.now()`)) - finalCollapseStartedAtMs);
+      }
+
+      return {
+        skipped: false,
+        openMs,
+        collapseMs,
+        collapsedPaneCount,
+        reopenMs,
+        finalCollapseMs,
+        sideChatOpenMs,
+        sideChatPromptStartMs: promptResult?.promptStartMs ?? null,
+        sideChatPromptVisibleMs: promptResult?.promptVisible ? promptResult.promptStartMs : null,
+        sideChatPromptSessionSample: promptResult?.promptSessionSample ?? null,
+        sideConversationId,
+        prompt: sidePrompt,
+      };
+    });
     const forkFixture = {
       sessionFile: join(stateRoot, 'sync', 'pi-agent', 'sessions', 'personal-agent', 'startup-fixture-00000.jsonl'),
       cwd: '/tmp/neon-fixture/personal-agent',
@@ -1777,6 +1985,7 @@ async function main() {
     for (const conversationId of new Set(
       [
         draftSubmitCreatedConversationId,
+        workbenchSideChat.result?.sideConversationId,
         forkSmoke.result?.forkSessionId,
         forkSmoke.result?.rewindSessionId,
         longTranscriptRecovery.result?.result?.conversationId,
@@ -1839,6 +2048,8 @@ async function main() {
       draftSubmitReservedConversationAttachMs: draftSubmitResult.result.reservedConversationAttachMs,
       draftSubmitCreatedConversationAttachMs: draftSubmitResult.result.createdConversationAttachMs,
       draftPromptVisibleAfterRouteMs: draftSubmitResult.result.promptVisibleAfterRouteMs,
+      workbenchSideChatMs: workbenchSideChat.durationMs,
+      workbenchSideChatResult: workbenchSideChat.result,
       reserveConversationClientMs,
       createLiveSessionClientMs,
       createLiveSessionServerPerf,
@@ -1977,6 +2188,37 @@ async function main() {
     }
     if (typeof draftSubmitInitialPromptDispatchMs === 'number' && draftSubmitInitialPromptDispatchMs > maxDraftInitialPromptDispatchMs) {
       failures.push(`draftSubmitInitialPromptDispatchMs ${draftSubmitInitialPromptDispatchMs} > ${maxDraftInitialPromptDispatchMs}`);
+    }
+    if (workbenchSideChat.result?.skipped) {
+      failures.push(`workbenchSideChat skipped: ${workbenchSideChat.result.reason ?? 'unknown reason'}`);
+    } else {
+      const workbenchResult = workbenchSideChat.result ?? {};
+      if (workbenchResult.collapsedPaneCount !== 0) {
+        failures.push(`workbenchSideChat collapsedPaneCount ${workbenchResult.collapsedPaneCount} !== 0`);
+      }
+      if (typeof workbenchResult.openMs === 'number' && workbenchResult.openMs > maxWorkbenchToggleMs) {
+        failures.push(`workbenchSideChat openMs ${workbenchResult.openMs} > ${maxWorkbenchToggleMs}`);
+      }
+      if (typeof workbenchResult.collapseMs === 'number' && workbenchResult.collapseMs > maxWorkbenchToggleMs) {
+        failures.push(`workbenchSideChat collapseMs ${workbenchResult.collapseMs} > ${maxWorkbenchToggleMs}`);
+      }
+      if (typeof workbenchResult.reopenMs === 'number' && workbenchResult.reopenMs > maxWorkbenchToggleMs) {
+        failures.push(`workbenchSideChat reopenMs ${workbenchResult.reopenMs} > ${maxWorkbenchToggleMs}`);
+      }
+      if (typeof workbenchResult.finalCollapseMs === 'number' && workbenchResult.finalCollapseMs > maxWorkbenchToggleMs) {
+        failures.push(`workbenchSideChat finalCollapseMs ${workbenchResult.finalCollapseMs} > ${maxWorkbenchToggleMs}`);
+      }
+      if (typeof workbenchResult.sideChatOpenMs === 'number' && workbenchResult.sideChatOpenMs > maxSideChatOpenMs) {
+        failures.push(`workbenchSideChat sideChatOpenMs ${workbenchResult.sideChatOpenMs} > ${maxSideChatOpenMs}`);
+      }
+      if (
+        typeof workbenchResult.sideChatPromptStartMs === 'number' &&
+        workbenchResult.sideChatPromptStartMs > maxSideChatPromptVisibleMs
+      ) {
+        failures.push(
+          `workbenchSideChat sideChatPromptStartMs ${workbenchResult.sideChatPromptStartMs} > ${maxSideChatPromptVisibleMs}`,
+        );
+      }
     }
     const draftClickStartMs = postDraftPerfStore?.smokeDraftClickStartMs;
     const postDraftApiPaths = (postDraftPerfStore?.apiSamples ?? [])
