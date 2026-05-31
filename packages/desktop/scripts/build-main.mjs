@@ -81,3 +81,21 @@ await build({
   logLevel: 'info',
   nodePaths,
 });
+
+// Build extension host child process. This is the future extension backend
+// execution lane; product-runtime traffic remains on the in-process adapter
+// until capability channels are ready for function-bearing contexts.
+await build({
+  entryPoints: [resolve(dir, 'src', 'backend', 'extension-host-child.ts')],
+  outfile: resolve(dir, 'dist', 'backend', 'extension-host-child.js'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node20',
+  banner: {
+    js: `import { createRequire as __paExtensionHostCreateRequire } from 'node:module';var require=__paExtensionHostCreateRequire(import.meta.url);`,
+  },
+  external: ['electron', 'fsevents', 'node-pty'],
+  logLevel: 'info',
+  nodePaths,
+});

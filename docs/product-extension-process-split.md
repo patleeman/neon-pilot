@@ -71,6 +71,8 @@ Product runtime caller
 
 The RPC adapter must only carry wire-safe data. Existing action paths that depend on function-bearing `serverContext`, streaming `onUpdate` callbacks, abort signals, or live agent objects must first move those operations behind capability channels.
 
+The desktop build already emits an `extension-host-child.js` entrypoint for this lane. Product runtime traffic stays on the in-process adapter until the relevant action paths are wire-safe.
+
 ## Migration Phases
 
 1. Add the product runtime / extension host terminology and the `ExtensionHostClient` seam.
