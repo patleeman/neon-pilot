@@ -1,15 +1,25 @@
 import type { ExtensionActionInvokeResult } from './extensionBackend.js';
 import type {
+  ExtensionHostActionTelemetryEntry,
   ExtensionHostBackendOperationResult,
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
+  ExtensionHostInvokeRouteRequest,
+  ExtensionHostReloadBackendRequest,
+  ExtensionHostReloadBackendResult,
   ExtensionHostRequest,
   ExtensionHostResponse,
+  ExtensionHostRouteResponse,
+  ExtensionHostRunSelfTestRequest,
+  ExtensionHostSelfTestResult,
   ExtensionHostStartStartupActionsRequest,
 } from './extensionHostProtocol.js';
 
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
+export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
+export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
+export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
 export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
 
 export interface ExtensionHostClient {
@@ -17,6 +27,10 @@ export interface ExtensionHostClient {
   checkBackendHealth(): Promise<ExtensionHostBackendOperationResult[]>;
   invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionActionInvokeResult>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
+  invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
+  listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
+  reloadBackend(input: ExtensionHostReloadBackendInput): Promise<ExtensionHostReloadBackendResult>;
+  runSelfTest(input: ExtensionHostRunSelfTestInput): Promise<ExtensionHostSelfTestResult>;
   startStartupActions(input?: ExtensionHostStartStartupActionsInput): Promise<ExtensionHostBackendOperationResult[]>;
   publishEvent(source: string, payload: unknown): Promise<void>;
 }
@@ -61,6 +75,33 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
       if (!response.ok) throw new Error(response.error);
       if (!('invoked' in response)) throw new Error('Extension host returned an invalid protocol entrypoint response.');
+    },
+    async invokeRoute(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'invokeRoute', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('route' in response)) throw new Error('Extension host returned an invalid route response.');
+      return response.route;
+    },
+    async listActionTelemetry(extensionId) {
+      const response = await handleInProcessExtensionHostRequest({
+        type: 'listActionTelemetry',
+        ...(extensionId ? { extensionId } : {}),
+      });
+      if (!response.ok) throw new Error(response.error);
+      if (!('telemetry' in response)) throw new Error('Extension host returned an invalid telemetry response.');
+      return response.telemetry;
+    },
+    async reloadBackend(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'reloadBackend', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('reload' in response)) throw new Error('Extension host returned an invalid reload response.');
+      return response.reload;
+    },
+    async runSelfTest(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'runSelfTest', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('selfTest' in response)) throw new Error('Extension host returned an invalid self-test response.');
+      return response.selfTest;
     },
     async startStartupActions(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'startStartupActions', ...(input ?? {}) });
@@ -109,6 +150,34 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
     if (request.type === 'checkBackendHealth') {
       const { checkEnabledExtensionBackendHealth } = await import('./extensionBackend.js');
       return { ok: true, results: await checkEnabledExtensionBackendHealth() };
+    }
+    if (request.type === 'invokeRoute') {
+      const [{ invokeExtensionRoute }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
+        import('./extensionBackend.js'),
+        import('./extensionHostServerContext.js'),
+      ]);
+      return {
+        ok: true,
+        route: await invokeExtensionRoute(
+          request.extensionId,
+          request.method,
+          request.routePath,
+          request.request,
+          request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+        ),
+      };
+    }
+    if (request.type === 'listActionTelemetry') {
+      const { listExtensionActionTelemetry } = await import('./extensionBackend.js');
+      return { ok: true, telemetry: listExtensionActionTelemetry(request.extensionId) };
+    }
+    if (request.type === 'reloadBackend') {
+      const { reloadExtensionBackend } = await import('./extensionBackend.js');
+      return { ok: true, reload: await reloadExtensionBackend(request.extensionId) };
+    }
+    if (request.type === 'runSelfTest') {
+      const { runExtensionSelfTest } = await import('./extensionBackend.js');
+      return { ok: true, selfTest: await runExtensionSelfTest(request.extensionId) };
     }
     if (request.type === 'startStartupActions') {
       const [{ startExtensionStartupActions }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([

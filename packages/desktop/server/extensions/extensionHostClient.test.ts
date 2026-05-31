@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 const extensionBackend = vi.hoisted(() => ({
   checkEnabledExtensionBackendHealth: vi.fn(),
   invokeExtensionAction: vi.fn(),
+  invokeExtensionRoute: vi.fn(),
   invokeExtensionProtocolEntrypoint: vi.fn(),
+  listExtensionActionTelemetry: vi.fn(),
+  reloadExtensionBackend: vi.fn(),
+  runExtensionSelfTest: vi.fn(),
   startExtensionStartupActions: vi.fn(),
 }));
 const extensionSubscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }));
@@ -104,6 +108,56 @@ describe('extension host client', () => {
     expect(extensionBackend.checkEnabledExtensionBackendHealth).toHaveBeenCalledWith();
   });
 
+  it('routes extension backend routes through the extension host request envelope', async () => {
+    extensionBackend.invokeExtensionRoute.mockResolvedValueOnce({ status: 201, body: { ok: true } });
+
+    await expect(
+      getExtensionHostClient().invokeRoute({
+        extensionId: 'ext',
+        method: 'POST',
+        routePath: '/do-thing',
+        request: { method: 'POST', path: '/do-thing', query: {}, params: {}, body: { x: 1 } },
+        serverContext: { getRuntimeScope: () => 'shared' },
+      }),
+    ).resolves.toEqual({ status: 201, body: { ok: true } });
+
+    expect(extensionBackend.invokeExtensionRoute).toHaveBeenCalledWith(
+      'ext',
+      'POST',
+      '/do-thing',
+      { method: 'POST', path: '/do-thing', query: {}, params: {}, body: { x: 1 } },
+      { getRuntimeScope: expect.any(Function) },
+    );
+  });
+
+  it('routes telemetry, self-test, and reload operations through the extension host request envelope', async () => {
+    extensionBackend.listExtensionActionTelemetry.mockReturnValueOnce([{ extensionId: 'ext', actionId: 'run', ok: true }]);
+    extensionBackend.runExtensionSelfTest.mockResolvedValueOnce({
+      ok: true,
+      extensionId: 'ext',
+      checks: [{ name: 'backend import', ok: true }],
+    });
+    extensionBackend.reloadExtensionBackend.mockResolvedValueOnce({ ok: true, extensionId: 'ext', rebuilt: false });
+
+    await expect(getExtensionHostClient().listActionTelemetry('ext')).resolves.toEqual([
+      { extensionId: 'ext', actionId: 'run', ok: true },
+    ]);
+    await expect(getExtensionHostClient().runSelfTest({ extensionId: 'ext' })).resolves.toEqual({
+      ok: true,
+      extensionId: 'ext',
+      checks: [{ name: 'backend import', ok: true }],
+    });
+    await expect(getExtensionHostClient().reloadBackend({ extensionId: 'ext' })).resolves.toEqual({
+      ok: true,
+      extensionId: 'ext',
+      rebuilt: false,
+    });
+
+    expect(extensionBackend.listExtensionActionTelemetry).toHaveBeenCalledWith('ext');
+    expect(extensionBackend.runExtensionSelfTest).toHaveBeenCalledWith('ext');
+    expect(extensionBackend.reloadExtensionBackend).toHaveBeenCalledWith('ext');
+  });
+
   it('routes startup actions through the extension host request envelope', async () => {
     extensionBackend.startExtensionStartupActions.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
 
@@ -152,6 +206,18 @@ describe('extension host client', () => {
     ).toBe('invokeProtocolEntrypoint:acp');
     expect(extensionHostRequestName({ type: 'checkBackendHealth' })).toBe('checkBackendHealth');
     expect(extensionHostRequestName({ type: 'startStartupActions' })).toBe('startStartupActions');
+    expect(
+      extensionHostRequestName({
+        type: 'invokeRoute',
+        extensionId: 'ext',
+        method: 'GET',
+        routePath: '/status',
+        request: { method: 'GET', path: '/status', query: {}, params: {} },
+      }),
+    ).toBe('invokeRoute:ext:GET:/status');
+    expect(extensionHostRequestName({ type: 'listActionTelemetry', extensionId: 'ext' })).toBe('listActionTelemetry');
+    expect(extensionHostRequestName({ type: 'runSelfTest', extensionId: 'ext' })).toBe('runSelfTest:ext');
+    expect(extensionHostRequestName({ type: 'reloadBackend', extensionId: 'ext' })).toBe('reloadBackend:ext');
     expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
   });
 });

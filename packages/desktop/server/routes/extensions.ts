@@ -5,13 +5,7 @@ import type { Express, Request, Response } from 'express';
 
 import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtensionRegistryPresentation.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
-import {
-  type ExtensionActionInvokeResult,
-  invokeExtensionRoute,
-  listExtensionActionTelemetry,
-  reloadExtensionBackend,
-  runExtensionSelfTest,
-} from '../extensions/extensionBackend.js';
+import type { ExtensionActionInvokeResult } from '../extensions/extensionBackend.js';
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { listExtensionEventSubscriptions } from '../extensions/extensionEventBus.js';
@@ -115,11 +109,11 @@ async function dispatchExtensionBackendRoute(
   try {
     const extensionId = req.params.id;
     const routePath = `/${req.params[0] ?? ''}`;
-    const result = await invokeExtensionRoute(
+    const result = await getExtensionHostClient().invokeRoute({
       extensionId,
-      req.method,
+      method: req.method,
       routePath,
-      {
+      request: {
         method: req.method,
         path: routePath,
         query: normalizeRouteQuery(req.query),
@@ -127,8 +121,8 @@ async function dispatchExtensionBackendRoute(
         body: req.body,
         signal: abort.signal,
       },
-      context,
-    );
+      serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+    });
     for (const [key, value] of Object.entries(result.headers ?? {})) res.setHeader(key, value);
     const status = result.status ?? 200;
     if (result.stream === 'sse' && result.events) {
@@ -252,10 +246,10 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/telemetry', (req, res) => {
+  router.get('/api/extensions/telemetry', async (req, res) => {
     try {
       const extensionId = typeof req.query.extensionId === 'string' ? req.query.extensionId : undefined;
-      res.json(listExtensionActionTelemetry(extensionId));
+      res.json(await getExtensionHostClient().listActionTelemetry(extensionId));
     } catch (err) {
       sendRouteError(res, 'extensions telemetry error', err);
     }
@@ -823,7 +817,7 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/self-test', async (req, res) => {
     try {
-      res.json(await runExtensionSelfTest(req.params.id));
+      res.json(await getExtensionHostClient().runSelfTest({ extensionId: req.params.id }));
     } catch (err) {
       sendRouteError(res, 'extension self-test error', err);
     }
@@ -864,7 +858,7 @@ export function registerExtensionRoutes(
         res.json({ ok: true, id: req.params.id, reloaded: false, message: 'Runtime manifests are read on demand.' });
         return;
       }
-      const result = await reloadExtensionBackend(req.params.id);
+      const result = await getExtensionHostClient().reloadBackend({ extensionId: req.params.id });
       res.json({
         ok: true,
         id: req.params.id,
