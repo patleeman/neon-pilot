@@ -27,20 +27,20 @@ import {
   type NativeExtensionViewSummary,
 } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
+import { primeDesktopConversationStateCache, primeReservedDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
 import { readConversationLayout } from '../session/sessionTabs';
-import { primeDesktopConversationStateCache, primeReservedDesktopConversationStateCache } from '../hooks/useDesktopConversationState';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useAllSessions, useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
+import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { DesktopTopBar } from './DesktopTopBar';
-import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -1882,6 +1882,16 @@ export function Layout() {
     return () => window.clearTimeout(timer);
   }, [commandPaletteMounted, pendingCommandPaletteOpen]);
 
+  useEffect(() => {
+    function handleWorkbenchRailCollapse() {
+      setWorkbenchExplorerOpen(false);
+      writeStoredWorkbenchExplorerOpen(false);
+    }
+
+    window.addEventListener('pa:workbench-collapse-rail', handleWorkbenchRailCollapse);
+    return () => window.removeEventListener('pa:workbench-collapse-rail', handleWorkbenchRailCollapse);
+  }, []);
+
   const toggleWorkbenchExplorer = useCallback(() => {
     setWorkbenchExplorerOpen((current) => {
       const next = !current;
@@ -2236,7 +2246,6 @@ export function Layout() {
                     </aside>
                   </>
                 ) : null}
-
               </RouteContentBoundary>
             </div>
           </div>

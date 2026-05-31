@@ -8,6 +8,7 @@ import {
   type CSSProperties,
   lazy,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   Suspense,
   useCallback,
   useEffect,
@@ -54,6 +55,7 @@ type TreeNodeState = {
 
 const WORKSPACE_EXPLORER_OPEN_KEY = 'pa:workspace-explorer-open';
 const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
+const WORKBENCH_COLLAPSE_RAIL_EVENT = 'pa:workbench-collapse-rail';
 const WATCH_DEBOUNCE_MS = 180;
 const GIT_REFRESH_DEBOUNCE_MS = 450;
 const STATUS_LABELS: Record<WorkspaceGitStatusChange, string> = {
@@ -77,6 +79,25 @@ const STATUS_TITLES: Record<WorkspaceGitStatusChange, string> = {
   untracked: 'Untracked',
   conflicted: 'Conflicted',
 };
+
+function Icon({ children, size = 12 }: { children: ReactNode; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
 
 const WorkspaceCodeEditor = lazy(() => import('./WorkspaceCodeEditor').then((module) => ({ default: module.WorkspaceCodeEditor })));
 
@@ -803,8 +824,21 @@ export function WorkspaceExplorer({
   if (railOnly) {
     return (
       <div className="flex h-full flex-col bg-panel text-sm">
-        <div className="shrink-0 border-b border-border-subtle px-4 py-2.5">
-          <div className="flex items-center justify-end">
+        <div className="shrink-0 border-b border-border-subtle bg-surface px-3 py-2">
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              className="ui-icon-button ui-icon-button-compact"
+              title="Collapse file tree"
+              aria-label="Collapse file tree"
+              onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_COLLAPSE_RAIL_EVENT))}
+            >
+              <Icon>
+                <path d="M4 5h16v14H4z" />
+                <path d="M15 5v14" />
+                <path d="m10 9-3 3 3 3" />
+              </Icon>
+            </button>
             <button
               type="button"
               className="ui-icon-button ui-icon-button-compact"
@@ -813,7 +847,9 @@ export function WorkspaceExplorer({
                 void loadRoot();
               }}
             >
-              ↻
+              <Icon>
+                <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </Icon>
             </button>
           </div>
         </div>
