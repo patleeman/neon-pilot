@@ -3,6 +3,9 @@ members = [
   "packages/tauri/host-core",
   "packages/tauri/desktop-shell/src-tauri"
 ]
+exclude = [
+  "installable-extensions/system-alleycat/sidecar"
+]
 resolver = "2"
 
 [workspace.package]

@@ -15,6 +15,16 @@ const args = process.argv.slice(2);
 const preserveSmokeState = args.includes('--preserve-state');
 const appArg = args.find((arg) => arg !== '--preserve-state');
 const appPath = appArg ? resolve(appArg) : '';
+const desktopApiSmokeEndpoints = [
+  '/api/extensions/installed',
+  '/api/extensions/routes',
+  '/api/extensions/surfaces',
+  '/api/gateways',
+  '/api/extensions/keybindings',
+  '/api/extensions',
+  '/api/extensions/slash-commands',
+  '/api/extensions/mentions',
+];
 
 function fail(message) {
   console.error(message);
@@ -47,6 +57,21 @@ async function fetchJson(url) {
   return response.json();
 }
 
+async function runText(command, args) {
+  return new Promise((resolveRun, rejectRun) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => (stdout += chunk));
+    child.stderr.on('data', (chunk) => (stderr += chunk));
+    child.on('error', rejectRun);
+    child.on('exit', (code) => {
+      if (code === 0) resolveRun(stdout);
+      else rejectRun(new Error(stderr || `${command} ${args.join(' ')} exited with ${code}`));
+    });
+  });
+}
+
 async function waitForPageTarget(port, child, logs, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
   let lastError = '';
@@ -71,6 +96,55 @@ async function waitForPageTarget(port, child, logs, timeoutMs = 45_000) {
   }
 
   throw new Error(`Timed out waiting for desktop app CDP page target: ${lastError}\n${logs()}`);
+}
+
+async function findTauriSidecar(parentPid) {
+  const psOutput = await runText('ps', ['-axo', 'pid,ppid,command']);
+  const sidecarLine = psOutput
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => {
+      const match = line.match(/^(\d+)\s+(\d+)\s+(.+)$/);
+      return match && Number(match[2]) === parentPid && match[3].includes('local-backend-child.js');
+    });
+  if (!sidecarLine) return null;
+
+  const sidecarPid = Number(sidecarLine.match(/^(\d+)/)?.[1]);
+  if (!Number.isFinite(sidecarPid)) return null;
+
+  const lsofOutput = await runText('lsof', ['-Pan', '-p', String(sidecarPid), '-iTCP', '-sTCP:LISTEN']);
+  const port = lsofOutput
+    .split('\n')
+    .map((line) => line.match(/127\.0\.0\.1:(\d+)\s+\(LISTEN\)/)?.[1])
+    .find(Boolean);
+  return port ? { pid: sidecarPid, port: Number(port), token: `tauri-${parentPid}` } : null;
+}
+
+async function waitForTauriSidecar(child, logs, timeoutMs = 45_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = '';
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(`App exited while waiting for Tauri sidecar with code ${child.exitCode}.\n${logs()}`);
+    }
+    try {
+      const ready = await findTauriSidecar(child.pid);
+      if (ready) {
+        const response = await fetch(`http://127.0.0.1:${ready.port}/health`, {
+          headers: { authorization: `Bearer ${ready.token}` },
+        });
+        const health = await response.json();
+        if (response.ok && health.ok === true && health.apiReady === true) {
+          return ready;
+        }
+        lastError = JSON.stringify(health);
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    await sleep(500);
+  }
+  throw new Error(`Timed out waiting for Tauri sidecar: ${lastError}\n${logs()}`);
 }
 
 function connectCdp(webSocketDebuggerUrl) {
@@ -162,16 +236,7 @@ async function assertDesktopApiEndpoints(cdp, child, logs) {
     throw new Error(`App exited before desktop API smoke checks.\n${logs()}`);
   }
 
-  const endpoints = [
-    '/api/extensions/installed',
-    '/api/extensions/routes',
-    '/api/extensions/surfaces',
-    '/api/gateways',
-    '/api/extensions/keybindings',
-    '/api/extensions',
-    '/api/extensions/slash-commands',
-    '/api/extensions/mentions',
-  ];
+  const endpoints = desktopApiSmokeEndpoints;
   const expression = `
     (async () => {
       const endpoints = ${JSON.stringify(endpoints)};
@@ -205,6 +270,55 @@ async function assertDesktopApiEndpoints(cdp, child, logs) {
         .join('\n'),
     );
   }
+}
+
+async function dispatchTauriLocalApi(ready, request) {
+  const response = await fetch(`http://127.0.0.1:${ready.port}/dispatch`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${ready.token}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ request }),
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    throw new Error(`${request.method} ${request.path} returned ${response.status}: ${body.slice(0, 500)}`);
+  }
+  return body ? JSON.parse(body) : null;
+}
+
+async function assertTauriDesktopApiEndpoints(ready) {
+  const checks = await Promise.all(
+    desktopApiSmokeEndpoints.map(async (path) => {
+      try {
+        await dispatchTauriLocalApi(ready, { method: 'GET', path });
+        return { path, ok: true };
+      } catch (error) {
+        return { path, ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    }),
+  );
+  const failures = checks.filter((check) => !check.ok);
+  if (failures.length > 0) {
+    throw new Error(['Tauri packaged desktop API smoke checks failed:', ...failures.map((check) => `${check.path}: ${check.error}`)].join('\n'));
+  }
+
+  const models = await dispatchTauriLocalApi(ready, { method: 'GET', path: '/api/models' });
+  if (!Array.isArray(models.models)) {
+    throw new Error(`Tauri packaged model smoke returned malformed models: ${JSON.stringify(models).slice(0, 500)}`);
+  }
+  if (models.models.some((model) => model?.id === 'gpt-5.4')) {
+    throw new Error('Tauri packaged model smoke returned stale gpt-5.4 model.');
+  }
+  const critical = await dispatchTauriLocalApi(ready, { method: 'GET', path: '/api/extensions/registry/critical' });
+  const criticalIds = new Set((critical.extensions ?? []).map((extension) => extension.id));
+  for (const id of ['system-model-picker', 'system-composer-attachments', 'system-settings', 'system-knowledge']) {
+    if (!criticalIds.has(id)) {
+      throw new Error(`Tauri packaged critical registry is missing ${id}`);
+    }
+  }
+  await dispatchTauriLocalApi(ready, { method: 'POST', path: '/api/extensions/system-knowledge/actions/knowledgeListFiles', body: {} });
 }
 
 /**
@@ -300,13 +414,44 @@ function readJsonFile(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+async function packagedAppExecutablePath(appBundlePath) {
+  const fallbackName = basename(appBundlePath, '.app');
+  const infoPlist = join(appBundlePath, 'Contents', 'Info.plist');
+  let executableName = fallbackName;
+  if (process.platform === 'darwin' && existsSync(infoPlist)) {
+    try {
+      const output = await new Promise((resolveOutput, rejectOutput) => {
+        const child = spawn('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleExecutable', infoPlist], {
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (chunk) => (stdout += chunk));
+        child.stderr.on('data', (chunk) => (stderr += chunk));
+        child.on('error', rejectOutput);
+        child.on('exit', (code) => {
+          if (code === 0) resolveOutput(stdout);
+          else rejectOutput(new Error(stderr || `PlistBuddy exited with ${code}`));
+        });
+      });
+      executableName = String(output).trim() || fallbackName;
+    } catch {
+      executableName = fallbackName;
+    }
+  }
+  return join(appBundlePath, 'Contents', 'MacOS', executableName);
+}
+
 function assertPackagedAgentReadableResources(appBundlePath) {
   const appResourcesDir = join(appBundlePath, 'Contents', 'Resources');
+  const runtimeResourcesDir = existsSync(join(appResourcesDir, 'resources', 'package.json'))
+    ? join(appResourcesDir, 'resources')
+    : appResourcesDir;
   const requiredResources = ['docs/README.md', 'extensions/system-settings/README.md', 'extensions/system-runs/skills/runs/SKILL.md'];
-  const missing = requiredResources.filter((relativePath) => !existsSync(join(appResourcesDir, relativePath)));
+  const missing = requiredResources.filter((relativePath) => !existsSync(join(runtimeResourcesDir, relativePath)));
 
   for (const extensionRootRelativePath of ['extensions']) {
-    const extensionsRoot = join(appResourcesDir, extensionRootRelativePath);
+    const extensionsRoot = join(runtimeResourcesDir, extensionRootRelativePath);
     if (!existsSync(extensionsRoot)) continue;
     for (const entry of readdirSync(extensionsRoot, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
@@ -335,7 +480,7 @@ async function main() {
 
   assertPackagedAgentReadableResources(appPath);
 
-  const executablePath = join(appPath, 'Contents', 'MacOS', basename(appPath, '.app'));
+  const executablePath = await packagedAppExecutablePath(appPath);
   const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-release-smoke-'));
   const stateRoot = join(tempRoot, 'state');
   const daemonSocketPath = join(tempRoot, 'daemon.sock');
@@ -368,7 +513,18 @@ async function main() {
 
   let cdp;
   try {
-    const page = await waitForPageTarget(debugPort, child, renderLogs);
+    let page;
+    try {
+      page = await waitForPageTarget(debugPort, child, renderLogs);
+    } catch (error) {
+      if (!String(error instanceof Error ? error.message : error).includes('Timed out waiting for desktop app CDP page target')) {
+        throw error;
+      }
+      const ready = await waitForTauriSidecar(child, renderLogs);
+      await assertTauriDesktopApiEndpoints(ready);
+      console.log(`Release desktop Tauri sidecar smoke test passed with isolated state root: ${stateRoot}`);
+      return;
+    }
     cdp = connectCdp(page.webSocketDebuggerUrl);
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');

@@ -26,7 +26,11 @@ process.env.NEON_PILOT_CONFIG_ROOT ??= smokeConfigRoot;
 process.env.NEON_PILOT_KNOWLEDGE_ROOT ??= smokeKnowledgeRoot;
 const inputRoot = process.argv[2] ? resolve(process.argv[2]) : repoRoot;
 const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'Contents', 'Resources') : null;
-const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
+const packagedRuntimeRoot =
+  packagedAppResourcesRoot && existsSync(join(packagedAppResourcesRoot, 'resources', 'package.json'))
+    ? join(packagedAppResourcesRoot, 'resources')
+    : packagedAppResourcesRoot;
+const extensionsRoot = packagedRuntimeRoot ? join(packagedRuntimeRoot, 'extensions') : join(inputRoot, 'extensions');
 
 const nodeBuiltins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)]);
 const allowedBackendBareImports = new Set([

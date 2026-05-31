@@ -32,6 +32,8 @@ copyRequired(
   resolve(repoRoot, 'packages', 'desktop', 'server', 'dist'),
   resolve(resourcesRoot, 'packages', 'desktop', 'server', 'dist'),
 );
+copyRequired(resolve(repoRoot, 'docs'), resolve(resourcesRoot, 'docs'));
+copyRequired(resolve(repoRoot, 'extensions'), resolve(resourcesRoot, 'extensions'));
 copyRequired(resolve(repoRoot, 'installable-extensions'), resolve(resourcesRoot, 'installable-extensions'));
 
 console.log(`[tauri] staged runtime resources at ${resourcesRoot}`);
