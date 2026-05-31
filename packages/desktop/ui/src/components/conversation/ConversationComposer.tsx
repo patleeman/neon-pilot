@@ -23,6 +23,7 @@ interface ConversationComposerProps extends Omit<ConversationComposerContainerPr
   childrenClassName?: string;
   containerClassName?: string;
   layoutMode?: ConversationComposerLayout;
+  floatingShelves?: ReactNode;
 }
 
 export function ConversationComposer({
@@ -30,6 +31,7 @@ export function ConversationComposer({
   shellClassName,
   layoutMode = 'main',
   menus,
+  floatingShelves,
   shelves,
   inputControls,
   composerMeta,
@@ -53,6 +55,7 @@ export function ConversationComposer({
 
       <div className={childrenClassName || 'relative mx-auto w-full max-w-6xl'}>
         {menus}
+        {floatingShelves}
 
         <ConversationComposerContainer
           ref={shellRef}

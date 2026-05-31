@@ -6330,39 +6330,40 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               )}
             </>
           }
+          floatingShelves={
+            hasComposerAttachmentShelfContent ? (
+              <div className="mb-2 max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
+                {composerAttachmentProviders.length > 0 ? (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {composerAttachmentProviders.map((provider) => (
+                      <button
+                        key={`${provider.extensionId}:${provider.id}`}
+                        type="button"
+                        className="ui-toolbar-button px-2 py-1 text-[11px]"
+                        onClick={() => {
+                          void invokeComposerAttachmentProvider(provider);
+                        }}
+                      >
+                        {provider.icon ? <span aria-hidden="true">{provider.icon}</span> : null}
+                        <span>{provider.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <ComposerAttachmentShelf
+                  attachments={attachments}
+                  drawingAttachments={drawingAttachments}
+                  drawingsBusy={drawingsBusy}
+                  drawingsError={drawingsError}
+                  onRemoveAttachment={removeAttachment}
+                  onEditDrawing={editDrawing}
+                  onRemoveDrawingAttachment={removeDrawingAttachment}
+                />
+              </div>
+            ) : null
+          }
           shelves={
             <>
-              {hasComposerAttachmentShelfContent && (
-                <div className="mb-2 max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
-                  {composerAttachmentProviders.length > 0 ? (
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {composerAttachmentProviders.map((provider) => (
-                        <button
-                          key={`${provider.extensionId}:${provider.id}`}
-                          type="button"
-                          className="ui-toolbar-button px-2 py-1 text-[11px]"
-                          onClick={() => {
-                            void invokeComposerAttachmentProvider(provider);
-                          }}
-                        >
-                          {provider.icon ? <span aria-hidden="true">{provider.icon}</span> : null}
-                          <span>{provider.title}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                  <ComposerAttachmentShelf
-                    attachments={attachments}
-                    drawingAttachments={drawingAttachments}
-                    drawingsBusy={drawingsBusy}
-                    drawingsError={drawingsError}
-                    onRemoveAttachment={removeAttachment}
-                    onEditDrawing={editDrawing}
-                    onRemoveDrawingAttachment={removeDrawingAttachment}
-                  />
-                </div>
-              )}
-
               {showTextOnlyImageHint ? (
                 <p className="mb-2 text-[12px] text-secondary">Set a vision model in Settings to inspect attached images.</p>
               ) : null}
