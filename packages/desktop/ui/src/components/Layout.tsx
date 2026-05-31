@@ -133,6 +133,80 @@ function getDisplayFileName(path: string): string {
   return parts.at(-1) ?? trimmed;
 }
 
+function FileDocumentBar({
+  filePath,
+  railOpen,
+  canToggleRail,
+  collapseLabel = 'Collapse file tree',
+  expandLabel = 'Show file tree',
+  onRailOpenChange,
+}: {
+  filePath: string;
+  railOpen: boolean;
+  canToggleRail: boolean;
+  collapseLabel?: string;
+  expandLabel?: string;
+  onRailOpenChange: (open: boolean) => void;
+}) {
+  const railLabel = railOpen ? collapseLabel : expandLabel;
+
+  return (
+    <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary">
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-mono text-[12px] text-secondary" title={filePath}>
+          {filePath}
+        </div>
+      </div>
+      {canToggleRail ? (
+        <button
+          type="button"
+          className="ui-icon-button ui-icon-button-compact shrink-0"
+          title={railLabel}
+          aria-label={railLabel}
+          onClick={() => onRailOpenChange(!railOpen)}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 5h16v14H4z" />
+            <path d="M15 5v14" />
+            <path d={railOpen ? 'm10 9-3 3 3 3' : 'm8 9 3 3-3 3'} />
+          </svg>
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className="ui-icon-button ui-icon-button-compact shrink-0"
+        title="Refresh file and tree"
+        aria-label="Refresh file and tree"
+        onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT))}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 type DesktopLayoutShortcutAction =
   | 'toggle-sidebar'
   | 'toggle-right-rail'
@@ -620,59 +694,12 @@ function WorkbenchDocumentPane({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {showFileBar ? (
-        <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary">
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-mono text-[12px] text-secondary" title={activeFilePath ?? undefined}>
-              {activeFilePath}
-            </div>
-          </div>
-          {extensionRailSurface ? (
-            <button
-              type="button"
-              className="ui-icon-button ui-icon-button-compact shrink-0"
-              title={railOpen ? 'Collapse file tree' : 'Show file tree'}
-              aria-label={railOpen ? 'Collapse file tree' : 'Show file tree'}
-              onClick={() => onRailOpenChange(!railOpen)}
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M4 5h16v14H4z" />
-                <path d="M15 5v14" />
-                <path d={railOpen ? 'm10 9-3 3 3 3' : 'm8 9 3 3-3 3'} />
-              </svg>
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="ui-icon-button ui-icon-button-compact shrink-0"
-            title="Refresh file and tree"
-            aria-label="Refresh file and tree"
-            onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT))}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-          </button>
-        </div>
+        <FileDocumentBar
+          filePath={activeFilePath ?? ''}
+          railOpen={railOpen}
+          canToggleRail={Boolean(extensionRailSurface)}
+          onRailOpenChange={onRailOpenChange}
+        />
       ) : null}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="min-w-0 flex-1 overflow-hidden">{mainContent}</div>
@@ -1446,6 +1473,13 @@ export function Layout() {
     !routePrimaryRailSurface &&
     routeIsKnowledge(location.pathname, extensionRegistry.surfaces) &&
     railOpen &&
+    systemKnowledgeExtensionSurface !== null;
+  const knowledgeRouteFileId =
+    !showWorkbench && routeIsKnowledge(location.pathname, extensionRegistry.surfaces) ? (searchParams.get('file') ?? null) : null;
+  const canToggleKnowledgeRouteRail =
+    !showWorkbench &&
+    !routePrimaryRailSurface &&
+    routeIsKnowledge(location.pathname, extensionRegistry.surfaces) &&
     systemKnowledgeExtensionSurface !== null;
   const activeExtensionWorkbenchSurface = useMemo(
     () => resolveActiveExtensionWorkbenchSurface({ activeWorkbenchTool, extensionRightToolPanels, extensionWorkbenchSurfaces }),
@@ -2238,18 +2272,11 @@ export function Layout() {
 
             <div ref={pageSearchRootRef} className="relative z-0 flex min-w-0 flex-1 overflow-hidden">
               <RouteContentBoundary resetKey={`${location.pathname}${location.search}`} pathname={location.pathname}>
-                <main
-                  className={
-                    showWorkbench
-                      ? 'flex-1 min-w-[360px] overflow-y-auto overflow-x-hidden select-text'
-                      : 'flex-1 min-w-0 overflow-y-auto overflow-x-hidden select-text'
-                  }
-                >
-                  <Outlet />
-                </main>
-
                 {showWorkbench ? (
                   <>
+                    <main className="flex-1 min-w-[360px] overflow-y-auto overflow-x-hidden select-text">
+                      <Outlet />
+                    </main>
                     <ResizeHandle onMouseDown={workbenchDocument.onMouseDown} onDoubleClick={workbenchDocument.reset} />
                     <WorkbenchPanel
                       width={workbenchDocument.width + workbenchExplorer.width}
@@ -2284,27 +2311,42 @@ export function Layout() {
                       onStartSideChat={handleStartSideChat}
                     />
                   </>
-                ) : null}
-
-                {!showWorkbench &&
-                ((showRoutePrimaryRail && routePrimaryRailSurface) || (showKnowledgeRouteRail && systemKnowledgeExtensionSurface)) ? (
-                  <>
-                    <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
-                    <aside
-                      style={{ width: railWidth }}
-                      className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
-                    >
-                      <NativeExtensionSurfaceHost
-                        surface={routePrimaryRailSurface ?? systemKnowledgeExtensionSurface}
-                        pathname={location.pathname}
-                        search={location.search}
-                        hash={location.hash}
-                        conversationId={activeConversationId}
-                        cwd={activeWorkspaceCwd}
+                ) : (
+                  <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                    {knowledgeRouteFileId ? (
+                      <FileDocumentBar
+                        filePath={knowledgeRouteFileId}
+                        railOpen={showKnowledgeRouteRail}
+                        canToggleRail={canToggleKnowledgeRouteRail}
+                        onRailOpenChange={setRailOpen}
                       />
-                    </aside>
-                  </>
-                ) : null}
+                    ) : null}
+                    <div className="flex min-h-0 flex-1 overflow-hidden">
+                      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden select-text">
+                        <Outlet />
+                      </main>
+
+                      {(showRoutePrimaryRail && routePrimaryRailSurface) || (showKnowledgeRouteRail && systemKnowledgeExtensionSurface) ? (
+                        <>
+                          <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
+                          <aside
+                            style={{ width: railWidth }}
+                            className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
+                          >
+                            <NativeExtensionSurfaceHost
+                              surface={routePrimaryRailSurface ?? systemKnowledgeExtensionSurface}
+                              pathname={location.pathname}
+                              search={location.search}
+                              hash={location.hash}
+                              conversationId={activeConversationId}
+                              cwd={activeWorkspaceCwd}
+                            />
+                          </aside>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
               </RouteContentBoundary>
             </div>
           </div>

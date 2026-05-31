@@ -82,13 +82,6 @@ export function KnowledgePageSurface() {
     },
     [activeFileId, setSearchParams],
   );
-  const handleFileClose = useCallback(() => {
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete('file');
-      return next;
-    });
-  }, [setSearchParams]);
 
   const fileName = activeFileId ? activeFileId.split('/').filter(Boolean).pop() : undefined;
 
@@ -159,7 +152,7 @@ export function KnowledgePageSurface() {
           fileName={fileName}
           onFileNavigate={handleFileNavigate}
           onFileRenamed={handleFileRenamed}
-          onClose={handleFileClose}
+          hideFileMeta
         />
       </Suspense>
     );
