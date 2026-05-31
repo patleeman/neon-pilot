@@ -121,7 +121,8 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
-import { checkEnabledExtensionBackendHealth, invokeExtensionAction, startExtensionStartupActions } from '../extensions/extensionBackend.js';
+import { checkEnabledExtensionBackendHealth, startExtensionStartupActions } from '../extensions/extensionBackend.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import {
   beginExtensionStartupGuard,
   completeExtensionStartupGuard,
@@ -955,12 +956,12 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   const extensionActionMatch = /^\/api\/extensions\/([^/]+)\/actions\/([^/]+)$/.exec(path);
   if (method === 'POST' && extensionActionMatch) {
     return createDesktopLocalApiJsonResponse(
-      await invokeExtensionAction(
-        decodeURIComponent(extensionActionMatch[1] ?? ''),
-        decodeURIComponent(extensionActionMatch[2] ?? ''),
-        input.body,
-        await getLocalServerRouteContext(),
-      ),
+      await getExtensionHostClient().invokeAction({
+        extensionId: decodeURIComponent(extensionActionMatch[1] ?? ''),
+        actionId: decodeURIComponent(extensionActionMatch[2] ?? ''),
+        input: input.body,
+        serverContext: await getLocalServerRouteContext(),
+      }),
     );
   }
   if (method === 'PATCH' && path === '/api/model-preferences')

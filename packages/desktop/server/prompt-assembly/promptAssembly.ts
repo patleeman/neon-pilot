@@ -1,4 +1,4 @@
-import { invokeExtensionAction } from '../extensions/extensionBackend.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listExtensionPromptAssemblyHookRegistrations } from '../extensions/extensionRegistry.js';
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
 import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
@@ -80,7 +80,11 @@ async function runPromptAssemblyHooks(plan: PromptAssemblyPlan, ctx: AssemblyRun
   const hooks = listExtensionPromptAssemblyHookRegistrations();
   await Promise.allSettled(
     hooks.map(async (hook) => {
-      const result = await invokeExtensionAction(hook.extensionId, hook.handler, { plan, context: ctx, phase: hook.phase });
+      const result = await getExtensionHostClient().invokeAction({
+        extensionId: hook.extensionId,
+        actionId: hook.handler,
+        input: { plan, context: ctx, phase: hook.phase },
+      });
       if (!result.ok) {
         plan.diagnostics.push({
           severity: 'warning',

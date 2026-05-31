@@ -1,6 +1,7 @@
 import { type AgentToolResult, createCodingTools, type ExtensionContext, type ToolDefinition } from '@earendil-works/pi-coding-agent';
 
 import type { ExtensionBackendContext, ExtensionBackendServerContext } from '../extensions/extensionBackend.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listExtensionToolRegistrations } from '../extensions/extensionRegistry.js';
 import { buildToolInjectionPlan } from './toolInventory.js';
 
@@ -69,8 +70,13 @@ export async function invokeExtensionToolByName(
   const tool = activeRegistrations(input.runtime).find((candidate) => (candidate.replaces?.trim() || candidate.name) === name);
   if (!tool) throw new Error(`Tool is not available: ${name}`);
 
-  const { invokeExtensionAction } = await import('../extensions/extensionBackend.js');
-  const result = await invokeExtensionAction(tool.extensionId, tool.action, input.input ?? {}, serverContext, input.toolContext);
+  const result = await getExtensionHostClient().invokeAction({
+    extensionId: tool.extensionId,
+    actionId: tool.action,
+    input: input.input ?? {},
+    serverContext,
+    toolContext: input.toolContext,
+  });
   if (!result.ok) {
     return {
       content: [{ type: 'text', text: result.error }],
