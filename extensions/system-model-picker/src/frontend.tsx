@@ -25,8 +25,7 @@ function thinkingOptions(model: Model | null): Array<{ value: string; label: str
 }
 
 function ModelSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
-  const selectedModel = context.models.find((model) => model.id === context.currentModel) ?? null;
-  const hasCurrentModelOption = Boolean(selectedModel);
+  const selectedModel = context.models.find((model) => model.id === context.currentModel) ?? context.models[0] ?? null;
   const className =
     variant === 'menu'
       ? 'h-9 w-full min-w-0 appearance-none rounded-lg border border-border-subtle bg-surface/45 px-2.5 pr-7 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40'
@@ -35,7 +34,7 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
     <label className={variant === 'menu' ? 'relative flex min-w-0 items-center' : 'relative inline-flex min-w-0 items-center'}>
       <span className="sr-only">Conversation model</span>
       <select
-        value={context.currentModel}
+        value={selectedModel?.id ?? ''}
         onChange={(event) => context.selectModel(event.target.value)}
         disabled={context.savingPreference !== null || context.models.length === 0}
         className={className}
@@ -43,8 +42,6 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
       >
         {context.models.length === 0 ? (
           <option value="">Loading models...</option>
-        ) : !hasCurrentModelOption && context.currentModel ? (
-          <option value={context.currentModel}>{context.currentModel}</option>
         ) : null}
         {groupModels(context.models).map(([provider, providerModels]) => (
           <optgroup key={provider} label={provider}>
