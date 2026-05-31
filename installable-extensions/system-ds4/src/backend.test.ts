@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 const backend = await import('./backend.js');
 
@@ -23,6 +26,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
     },
     shell: {
       exec: vi.fn(),
+      spawn: vi.fn(),
     },
     ...overrides,
   } as never;
@@ -73,6 +77,74 @@ describe('DS4 agent profile activation', () => {
       },
     );
 
-    expect(calls).toEqual([['artifact', 'bash', 'read', 'more', 'write', 'edit', 'search']]);
+    expect(calls).toEqual([
+      ['artifact', 'google_search', 'visit_page', 'bash', 'bash_status', 'bash_stop', 'read', 'more', 'write', 'edit', 'search', 'list'],
+    ]);
+  });
+});
+
+describe('DS4 file tools', () => {
+  it('supports raw chunk reads and compact directory listing', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-extension-'));
+    try {
+      await writeFile(path.join(dir, 'sample.txt'), 'one\ntwo\nthree\nfour\n', 'utf8');
+      const context = ctx({ runtime: { getRepoRoot: () => dir }, toolContext: { conversationId: 'conversation-1', cwd: dir } });
+
+      const readResult = await backend.read({ path: 'sample.txt', raw: true, start_line: 2, max_lines: 2 }, context);
+      const listResult = await backend.list({ path: '.' }, context);
+
+      expect(readResult.text).toBe('two\nthree');
+      expect(listResult.text).toContain('sample.txt');
+      expect(context.storage.put).toHaveBeenCalledWith(
+        'read-state:conversation-1',
+        expect.objectContaining({ path: 'sample.txt', nextLine: 4, count: 2 }),
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('applies ds4 [upto] edit anchors', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-extension-'));
+    try {
+      const file = path.join(dir, 'sample.txt');
+      await writeFile(file, 'alpha\nstart\nmiddle\nend\nomega\n', 'utf8');
+      const context = ctx({ runtime: { getRepoRoot: () => dir }, toolContext: { conversationId: 'conversation-1', cwd: dir } });
+
+      await backend.edit({ path: 'sample.txt', old: 'start\n[upto]end\n', new: 'replacement\n' }, context);
+
+      await expect(readFile(file, 'utf8')).resolves.toBe('alpha\nreplacement\nomega\n');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('DS4 bash jobs', () => {
+  it('starts, reports, and stops refresh_sec jobs', async () => {
+    let stdout: ((chunk: string) => void) | undefined;
+    let exit: ((event: { code: number | null; signal: NodeJS.Signals | null }) => void) | undefined;
+    const kill = vi.fn(() => exit?.({ code: null, signal: 'SIGTERM' }));
+    const context = ctx({
+      shell: {
+        exec: vi.fn(),
+        spawn: vi.fn(async (input: { onStdout?: (chunk: string) => void; onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void }) => {
+          stdout = input.onStdout;
+          exit = input.onExit;
+          stdout?.('first\n');
+          return { pid: 42, usingPty: false, executionWrappers: [], kill, write: vi.fn(), resize: vi.fn() };
+        }),
+      },
+    });
+
+    const started = await backend.bash({ command: 'sleep 30', refresh_sec: 0.001 }, context);
+    stdout?.('second\n');
+    const status = await backend.bash_status({ job: started.details.job }, context);
+    const stopped = await backend.bash_stop({ job: started.details.job }, context);
+
+    expect(started.text).toContain('first');
+    expect(status.text).toContain('second');
+    expect(kill).toHaveBeenCalled();
+    expect(stopped.text).toContain('SIGTERM');
   });
 });

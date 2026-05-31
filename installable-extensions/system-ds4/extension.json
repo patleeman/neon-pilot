@@ -14,12 +14,17 @@
       { "id": "ds4InstallProvider", "handler": "installProvider", "title": "Install DS4 model provider" },
       { "id": "ds4Status", "handler": "status", "title": "DS4 server status" },
       { "id": "ds4Discover", "handler": "discover", "title": "Discover DS4 model" },
+      { "id": "ds4GoogleSearch", "handler": "google_search", "title": "DS4 google_search" },
+      { "id": "ds4VisitPage", "handler": "visit_page", "title": "DS4 visit_page" },
       { "id": "ds4Bash", "handler": "bash", "title": "DS4 bash" },
+      { "id": "ds4BashStatus", "handler": "bash_status", "title": "DS4 bash_status" },
+      { "id": "ds4BashStop", "handler": "bash_stop", "title": "DS4 bash_stop" },
       { "id": "ds4Read", "handler": "read", "title": "DS4 read" },
       { "id": "ds4More", "handler": "more", "title": "DS4 more" },
       { "id": "ds4Write", "handler": "write", "title": "DS4 write" },
       { "id": "ds4Edit", "handler": "edit", "title": "DS4 edit" },
-      { "id": "ds4Search", "handler": "search", "title": "DS4 search" }
+      { "id": "ds4Search", "handler": "search", "title": "DS4 search" },
+      { "id": "ds4List", "handler": "list", "title": "DS4 list" }
     ]
   },
   "contributes": {
@@ -34,6 +39,43 @@
       }
     ],
     "tools": [
+      {
+        "id": "google-search",
+        "name": "google_search",
+        "title": "Google Search",
+        "description": "Search the web and return compact Markdown links. Uses a local DS4-compatible google_search schema backed by DuckDuckGo HTML search.",
+        "action": "ds4GoogleSearch",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string" },
+            "count": { "type": "number" },
+            "page": { "type": "number" }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "visit-page",
+        "name": "visit_page",
+        "title": "Visit Page",
+        "description": "Fetch a URL and return rendered-page Markdown using the ds4-agent-compatible visit_page schema.",
+        "action": "ds4VisitPage",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "raw": { "type": "boolean" }
+          },
+          "required": ["url"],
+          "additionalProperties": false
+        }
+      },
       {
         "id": "bash",
         "name": "bash",
@@ -51,6 +93,44 @@
             "refresh_sec": { "type": "number" }
           },
           "required": ["command"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "bash-status",
+        "name": "bash_status",
+        "title": "Bash Status",
+        "description": "Report current status and new output for a DS4 bash job started with refresh_sec.",
+        "action": "ds4BashStatus",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job": { "type": "number" },
+            "pid": { "type": "number" },
+            "refresh_sec": { "type": "number" }
+          },
+          "required": ["job"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "bash-stop",
+        "name": "bash_stop",
+        "title": "Bash Stop",
+        "description": "Terminate a running DS4 bash job and report final output.",
+        "action": "ds4BashStop",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job": { "type": "number" },
+            "pid": { "type": "number" },
+            "refresh_sec": { "type": "number" }
+          },
+          "required": ["job"],
           "additionalProperties": false
         }
       },
@@ -115,7 +195,7 @@
         "id": "edit",
         "name": "edit",
         "title": "Edit",
-        "description": "Replace exactly one old text match. The old text must match exactly once in the current file.",
+        "description": "Replace exactly one old text match. The old text must match exactly once; old may contain [upto] between unique head and tail anchors.",
         "action": "ds4Edit",
         "replaces": "edit",
         "priority": 100,
@@ -152,6 +232,23 @@
             "case_sensitive": { "type": "boolean" }
           },
           "required": ["query"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "list",
+        "name": "list",
+        "title": "List",
+        "description": "List one directory compactly.",
+        "action": "ds4List",
+        "priority": 100,
+        "when": { "providers": ["ds4"] },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" }
+          },
+          "required": ["path"],
           "additionalProperties": false
         }
       }
