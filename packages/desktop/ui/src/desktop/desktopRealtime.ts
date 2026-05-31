@@ -11,8 +11,17 @@ interface DesktopRealtimeListener {
 
 type DesktopRealtimeMessage = { type: 'connected' } | { type: 'app_event'; event: DesktopAppEvent } | { type: 'error'; message: string };
 
+function getTauriInvoke(): (<T = unknown>(command: string, payload?: Record<string, unknown>) => Promise<T>) | null {
+  if (typeof window === 'undefined') return null;
+  return window.__TAURI_INTERNALS__?.invoke ?? null;
+}
+
 function shouldUseDesktopEventStream(): boolean {
   return typeof window !== 'undefined' && window.location.protocol === 'neon-pilot:';
+}
+
+async function ensureTauriSidecarStarted(): Promise<void> {
+  await getTauriInvoke()?.('start_js_sidecar').catch(() => undefined);
 }
 
 export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListener): () => void {
@@ -30,29 +39,40 @@ export function subscribeDesktopRealtimeAppEvents(listener: DesktopRealtimeListe
     return () => source.close();
   }
 
-  const socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
   let closed = false;
+  let socket: WebSocket | null = null;
 
-  socket.addEventListener('open', () => listener.onopen?.());
-  socket.addEventListener('message', (event) => {
-    try {
-      const message = JSON.parse(String(event.data)) as DesktopRealtimeMessage;
-      if (message.type === 'app_event') listener.onevent?.(message.event);
-      if (message.type === 'error') listener.onerror?.();
-    } catch {
-      listener.onerror?.();
-    }
-  });
-  socket.addEventListener('error', () => listener.onerror?.());
-  socket.addEventListener('close', () => {
+  const openSocket = () => {
     if (closed) return;
-    closed = true;
-    listener.onclose?.();
-  });
+    socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
+
+    socket.addEventListener('open', () => listener.onopen?.());
+    socket.addEventListener('message', (event) => {
+      try {
+        const message = JSON.parse(String(event.data)) as DesktopRealtimeMessage;
+        if (message.type === 'app_event') listener.onevent?.(message.event);
+        if (message.type === 'error') listener.onerror?.();
+      } catch {
+        listener.onerror?.();
+      }
+    });
+    socket.addEventListener('error', () => listener.onerror?.());
+    socket.addEventListener('close', () => {
+      if (closed) return;
+      closed = true;
+      listener.onclose?.();
+    });
+  };
+
+  if (getTauriInvoke()) {
+    void ensureTauriSidecarStarted().then(openSocket);
+  } else {
+    openSocket();
+  }
 
   return () => {
     if (closed) return;
     closed = true;
-    socket.close();
+    socket?.close();
   };
 }

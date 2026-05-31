@@ -13,9 +13,27 @@ interface RendererTelemetryEvent {
   metadata?: Record<string, unknown>;
 }
 
+function getTauriInvoke(): (<T = unknown>(command: string, payload?: Record<string, unknown>) => Promise<T>) | null {
+  if (typeof window === 'undefined') return null;
+  return window.__TAURI_INTERNALS__?.invoke ?? null;
+}
+
 function postTelemetry(event: RendererTelemetryEvent): void {
   try {
     const body = JSON.stringify(event);
+    const invoke = getTauriInvoke();
+    if (invoke) {
+      void invoke('dispatch_local_api', {
+        request: {
+          method: 'POST',
+          path: '/api/telemetry/event',
+          headers: { 'content-type': 'application/json' },
+          body: event,
+        },
+      }).catch(() => undefined);
+      return;
+    }
+
     if (navigator.sendBeacon) {
       const blob = new Blob([body], { type: 'application/json' });
       if (navigator.sendBeacon('/api/telemetry/event', blob)) return;

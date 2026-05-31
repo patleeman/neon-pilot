@@ -10,6 +10,15 @@ function shouldUseNativeEventSource(): boolean {
   return window.location.protocol === 'neon-pilot:';
 }
 
+function getTauriInvoke(): (<T = unknown>(command: string, payload?: Record<string, unknown>) => Promise<T>) | null {
+  if (typeof window === 'undefined') return null;
+  return window.__TAURI_INTERNALS__?.invoke ?? null;
+}
+
+async function ensureTauriSidecarStarted(): Promise<void> {
+  await getTauriInvoke()?.('start_js_sidecar').catch(() => undefined);
+}
+
 export interface EventSourceLike {
   onopen: ((event: Event) => void) | null;
   onmessage: ((event: MessageEvent<string>) => void) | null;
@@ -37,36 +46,46 @@ class DesktopRealtimeEventSource implements EventSourceLike {
   onerror: ((event: Event) => void) | null = null;
   readyState = DesktopRealtimeEventSource.CONNECTING;
 
-  private readonly socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
   private readonly requestId = `stream:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
+  private socket: WebSocket | null = null;
   private subscriptionId: string | null = null;
   private closed = false;
 
   constructor(private readonly path: string) {
-    this.socket.addEventListener('open', () => {
-      this.socket.send(JSON.stringify({ type: 'subscribe', id: this.requestId, path: this.path }));
-    });
-    this.socket.addEventListener('message', (event) => this.handleMessage(event));
-    this.socket.addEventListener('error', () => {
+    const openSocket = () => {
       if (this.closed) return;
-      this.readyState = DesktopRealtimeEventSource.CONNECTING;
-      this.onerror?.(new Event('error'));
-    });
-    this.socket.addEventListener('close', () => {
-      if (this.closed) return;
-      this.readyState = DesktopRealtimeEventSource.CLOSED;
-      this.onerror?.(new Event('error'));
-    });
+      this.socket = new WebSocket(buildDesktopWebSocketUrl('/api/realtime'));
+      this.socket.addEventListener('open', () => {
+        this.socket?.send(JSON.stringify({ type: 'subscribe', id: this.requestId, path: this.path }));
+      });
+      this.socket.addEventListener('message', (event) => this.handleMessage(event));
+      this.socket.addEventListener('error', () => {
+        if (this.closed) return;
+        this.readyState = DesktopRealtimeEventSource.CONNECTING;
+        this.onerror?.(new Event('error'));
+      });
+      this.socket.addEventListener('close', () => {
+        if (this.closed) return;
+        this.readyState = DesktopRealtimeEventSource.CLOSED;
+        this.onerror?.(new Event('error'));
+      });
+    };
+
+    if (getTauriInvoke()) {
+      void ensureTauriSidecarStarted().then(openSocket);
+    } else {
+      openSocket();
+    }
   }
 
   close(): void {
     if (this.closed) return;
     this.closed = true;
     this.readyState = DesktopRealtimeEventSource.CLOSED;
-    if (this.subscriptionId && this.socket.readyState === WebSocket.OPEN) {
+    if (this.subscriptionId && this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ type: 'unsubscribe', subscriptionId: this.subscriptionId }));
     }
-    this.socket.close();
+    this.socket?.close();
   }
 
   private handleMessage(event: MessageEvent): void {
