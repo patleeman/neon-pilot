@@ -154,7 +154,7 @@ function formatModelStateRef(model: ModelDefinition | null | undefined, models: 
 
 export async function listModelDefinitions(): Promise<readonly ModelDefinition[]> {
   const now = Date.now();
-  if (modelDefinitionsCache && modelDefinitionsCache.expiresAt > now) {
+  if (modelDefinitionsCache && modelDefinitionsCache.expiresAt > now && modelDefinitionsCache.models.length > 0) {
     return modelDefinitionsCache.models;
   }
 

@@ -96,6 +96,21 @@ describe('DS4 provider setup', () => {
       }),
     );
   });
+
+  it('discovers the configured DS4 model even when the local server is offline', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('offline');
+      }),
+    );
+
+    await expect(backend.discover({}, ctx())).resolves.toMatchObject({
+      provider: 'ds4',
+      baseUrl: 'http://127.0.0.1:8000/v1',
+      models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash' }],
+    });
+  });
 });
 
 describe('DS4 managed runtime', () => {

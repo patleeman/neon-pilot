@@ -413,8 +413,6 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
 }
 
 export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
-  const current = await status({}, ctx);
-  if (!current.reachable) return null;
   return {
     provider: PROVIDER,
     baseUrl: BASE_URL,

@@ -36,6 +36,16 @@ describe('modelState', () => {
     expect(runModelDiscovery).not.toHaveBeenCalled();
   });
 
+  it('does not reuse an empty cold-start cache when models become available', async () => {
+    getAvailableModels.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      { id: 'ready', provider: 'local', name: 'Ready', contextWindow: 42, input: ['text'] },
+    ]);
+
+    await expect(listModelDefinitions()).resolves.toEqual([]);
+    await expect(listModelDefinitions()).resolves.toMatchObject([{ id: 'ready', provider: 'local' }]);
+    expect(getAvailableModels).toHaveBeenCalledTimes(2);
+  });
+
   it('awaits registry models on cold cache so first model picker load is populated', async () => {
     getAvailableModels.mockResolvedValue([
       { id: 'vision', provider: 'p', name: 'Vision', contextWindow: 42, input: ['text', 'image'], reasoning: true },
