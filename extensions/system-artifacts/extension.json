@@ -15,7 +15,11 @@
       {
         "id": "artifact",
         "handler": "artifact",
-        "title": "Artifact"
+        "title": "Artifact",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["save", "get", "list", "delete"]
+        }
       }
     ]
   },

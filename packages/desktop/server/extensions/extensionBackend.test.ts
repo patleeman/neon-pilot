@@ -285,6 +285,53 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).toHaveBeenCalled();
   });
 
+  it('runs artifact backend actions through the worker runner when manifest-declared', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ text: 'No artifacts saved for conversation conv-1.', action: 'list' })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-artifacts', 'artifact', { action: 'list' }, undefined, {
+        conversationId: 'conv-1',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { text: 'No artifacts saved for conversation conv-1.', action: 'list' },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-artifacts',
+      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-artifacts', 'dist', 'backend.mjs')) }),
+      'artifact',
+      { type: 'action', label: 'action artifact', target: 'artifact' },
+      [{ action: 'list' }],
+      {
+        context: {
+          type: 'backend',
+          runtimeScope: 'shared',
+          toolContext: { conversationId: 'conv-1' },
+        },
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
