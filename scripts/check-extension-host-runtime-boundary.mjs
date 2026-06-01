@@ -11,6 +11,12 @@ const allowedProcessGuardFiles = new Set([
   'packages/desktop/server/extensions/extensionBackendRunner.ts',
   'packages/desktop/server/extensions/extensionProcessGuard.ts',
 ]);
+const allowedBackendLoaderFiles = new Set(['packages/desktop/server/extensions/extensionBackend.ts']);
+const allowedBackendRunnerFiles = new Set([
+  'packages/desktop/server/extensions/extensionAgentExtensions.ts',
+  'packages/desktop/server/extensions/extensionBackend.ts',
+  'packages/desktop/server/extensions/extensionBackendRunner.ts',
+]);
 const extensionHostClientFile = 'packages/desktop/server/extensions/extensionHostClient.ts';
 
 function listExtensionFiles() {
@@ -35,6 +41,22 @@ for (const file of listExtensionFiles()) {
   if (rawRunnerOperation) {
     const line = text.slice(0, rawRunnerOperation.index).split('\n').length;
     failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend runner operations must use extensionBackendOperation(...)`);
+  }
+
+  if (!allowedBackendLoaderFiles.has(file)) {
+    const directBackendLoad = /import\s+\{[^}]*\bloadExtensionBackend\b[^}]*\}\s+from\s+['"]\.\/extensionBackend\.js['"]/.exec(text);
+    if (directBackendLoad) {
+      const line = text.slice(0, directBackendLoad.index).split('\n').length;
+      failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend module loading must stay behind extensionBackend.ts`);
+    }
+  }
+
+  if (!allowedBackendRunnerFiles.has(file)) {
+    const directBackendRunner = /import\s+\{[^}]*\bgetExtensionBackendRunner\b[^}]*\}\s+from\s+['"]\.\/extensionBackendRunner\.js['"]/.exec(text);
+    if (directBackendRunner) {
+      const line = text.slice(0, directBackendRunner.index).split('\n').length;
+      failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend execution must go through extensionBackend.ts helpers`);
+    }
   }
 }
 

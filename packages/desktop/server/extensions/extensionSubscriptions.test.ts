@@ -4,6 +4,7 @@ const logError = vi.fn();
 const logInfo = vi.fn();
 const createBackendContext = vi.fn();
 const loadExtensionBackend = vi.fn();
+const runExtensionBackendExport = vi.fn();
 const runnerRun = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
 const publishExtensionEvent = vi.fn();
 const subscribeExtensionEvents = vi.fn();
@@ -18,7 +19,7 @@ let handlers: Array<{ extensionId: string; pattern: string; handler: (event: unk
   [];
 
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
-vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend }));
+vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend, runExtensionBackendExport }));
 vi.mock('./extensionBackendRunner.js', () => ({
   extensionBackendOperation: (type: string, label: string, options: { target?: string } = {}) => ({ type, label, ...options }),
   getExtensionBackendRunner: () => ({ run: runnerRun }),
@@ -50,6 +51,7 @@ describe('extensionSubscriptions', () => {
       logInfo,
       createBackendContext,
       loadExtensionBackend,
+      runExtensionBackendExport,
       runnerRun,
       publishExtensionEvent,
       subscribeExtensionEvents,
@@ -63,6 +65,20 @@ describe('extensionSubscriptions', () => {
       mock.mockReset();
     }
     createBackendContext.mockReturnValue({ ctx: true });
+    runExtensionBackendExport.mockImplementation(
+      async (
+        extensionId: string,
+        exportName: string,
+        operation: unknown,
+        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
+        options?: { missingExportMessage?: string },
+      ) => {
+        const backend = await loadExtensionBackend(extensionId);
+        const handler = backend[exportName];
+        if (typeof handler !== 'function') throw new Error(options?.missingExportMessage ?? `Missing export "${exportName}".`);
+        return runnerRun(extensionId, operation, () => invoke(handler));
+      },
+    );
     isExtensionEnabled.mockReturnValue(true);
     subscribeExtensionEvents.mockImplementation((extensionId, pattern, handler) => {
       const unsubscribe = vi.fn();

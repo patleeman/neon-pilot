@@ -1,7 +1,7 @@
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
-import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
-import { extensionBackendOperation, getExtensionBackendRunner } from './extensionBackendRunner.js';
+import { createBackendContext, runExtensionBackendExport } from './extensionBackend.js';
+import { extensionBackendOperation } from './extensionBackendRunner.js';
 import { type ExtensionEvent, publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
@@ -65,19 +65,23 @@ export async function installSubscriptionsForExtension(extensionId: string, serv
       // Skip if the extension was disabled after the subscription was installed.
       if (!isExtensionEnabled(extensionId)) return;
       try {
-        const backend = await loadExtensionBackend(extensionId);
-        const handler = backend[subscription.handler];
-        if (typeof handler !== 'function') throw new Error(`Missing subscription handler export "${subscription.handler}".`);
-        await getExtensionBackendRunner().run(
+        await runExtensionBackendExport(
           extensionId,
+          subscription.handler,
           extensionBackendOperation('subscription', `subscription ${subscription.id}`, { target: subscription.id }),
-          () =>
+          (handler) =>
             Promise.resolve(
-              (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-                { subscriptionId: subscription.id, event: event.event, payload: event.payload, sourceExtensionId: event.sourceExtensionId },
+              handler(
+                {
+                  subscriptionId: subscription.id,
+                  event: event.event,
+                  payload: event.payload,
+                  sourceExtensionId: event.sourceExtensionId,
+                },
                 createBackendContext(extensionId, serverContext),
               ),
             ),
+          { missingExportMessage: `Missing subscription handler export "${subscription.handler}".` },
         );
       } catch (error) {
         if (error instanceof ExtensionProcessTerminationBlockedError) {

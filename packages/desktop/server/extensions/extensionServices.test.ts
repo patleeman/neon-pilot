@@ -7,6 +7,7 @@ const logError = vi.fn();
 const logInfo = vi.fn();
 const createBackendContext = vi.fn();
 const loadExtensionBackend = vi.fn();
+const runExtensionBackendExport = vi.fn();
 const runnerRun = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
 const findExtensionEntry = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
@@ -18,7 +19,7 @@ const setExtensionEnabled = vi.fn();
 
 vi.mock('../shared/appEvents.js', () => ({ publishAppEvent }));
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
-vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend }));
+vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend, runExtensionBackendExport }));
 vi.mock('./extensionBackendRunner.js', () => ({
   extensionBackendOperation: (type: string, label: string, options: { target?: string } = {}) => ({ type, label, ...options }),
   getExtensionBackendRunner: () => ({ run: runnerRun }),
@@ -51,6 +52,7 @@ describe('extensionServices', () => {
       logInfo,
       createBackendContext,
       loadExtensionBackend,
+      runExtensionBackendExport,
       runnerRun,
       findExtensionEntry,
       listExtensionInstallSummaries,
@@ -63,6 +65,20 @@ describe('extensionServices', () => {
       mock.mockReset();
     }
     createBackendContext.mockReturnValue({ ctx: true });
+    runExtensionBackendExport.mockImplementation(
+      async (
+        extensionId: string,
+        exportName: string,
+        operation: unknown,
+        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
+        options?: { missingExportMessage?: string },
+      ) => {
+        const backend = await loadExtensionBackend(extensionId);
+        const handler = backend[exportName];
+        if (typeof handler !== 'function') throw new Error(options?.missingExportMessage ?? `Missing export "${exportName}".`);
+        return runnerRun(extensionId, operation, () => invoke(handler));
+      },
+    );
   });
 
   it('starts enabled extension services, stores stop handles, and stops them', async () => {
@@ -182,7 +198,7 @@ describe('extensionServices', () => {
       checkSync: vi.fn(() => process.exit(1)),
     });
     runnerRun
-      .mockImplementationOnce(async (_extensionId: string, _operation: string, handler: () => unknown) => handler())
+      .mockImplementationOnce(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler())
       .mockRejectedValueOnce(
         new ExtensionProcessTerminationBlockedError('ext', 'service sync health check', 'Extension attempted to terminate the application.'),
       );

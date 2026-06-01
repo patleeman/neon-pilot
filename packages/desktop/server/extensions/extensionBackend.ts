@@ -15,6 +15,7 @@ import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.
 import {
   type ExtensionBackendLoadTarget,
   type ExtensionBackendModule,
+  type ExtensionBackendOperation,
   extensionBackendOperation,
   getExtensionBackendRunner,
 } from './extensionBackendRunner.js';
@@ -607,6 +608,23 @@ export async function loadExtensionBackend(extensionId: string): Promise<Extensi
     throw createPrebuiltBackendRequiredError(extensionId, { packageRoot: entry.packageRoot }, backendEntry);
   }
   return loadCompiledExtensionBackendModule(extensionId, loadTarget);
+}
+
+export type ExtensionBackendExportHandler = (...args: unknown[]) => unknown;
+
+export async function runExtensionBackendExport<T>(
+  extensionId: string,
+  exportName: string,
+  operation: ExtensionBackendOperation,
+  invoke: (handler: ExtensionBackendExportHandler) => Promise<T> | T,
+  options: { missingExportMessage?: string } = {},
+): Promise<T> {
+  const backend = await loadExtensionBackend(extensionId);
+  const handler = backend[exportName];
+  if (typeof handler !== 'function') {
+    throw new Error(options.missingExportMessage ?? `Extension backend export not found: ${exportName}`);
+  }
+  return getExtensionBackendRunner().run(extensionId, operation, () => invoke(handler as ExtensionBackendExportHandler));
 }
 
 export async function loadExtensionAgentFactory(extensionId: string, exportName = 'default'): Promise<ExtensionFactory> {
