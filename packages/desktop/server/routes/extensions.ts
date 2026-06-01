@@ -251,6 +251,14 @@ export function registerExtensionRoutes(
     }
   });
 
+  router.get('/api/extensions/audit-events', async (_req, res) => {
+    try {
+      res.json(await getExtensionHostClient().listAuditEvents());
+    } catch (err) {
+      sendRouteError(res, 'extensions audit error', err);
+    }
+  });
+
   router.get('/api/extensions/installed', async (_req, res) => {
     try {
       res.json(await readExtensionInstallSummariesWithRuntimeState());

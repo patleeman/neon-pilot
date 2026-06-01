@@ -74,6 +74,16 @@ export interface ExtensionRegistryApiState {
   settings: Record<string, unknown>;
 }
 
+export interface ExtensionHostAuditEvent {
+  id: number;
+  requestType: string;
+  requestName: string;
+  ok: boolean;
+  durationMs: number;
+  at: string;
+  error?: string;
+}
+
 // ── Retry helpers for transient failures ────────────────────────────────────
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000];
@@ -92,7 +102,6 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  let lastError: unknown;
   let attempt = 0;
 
   for (;;) {
@@ -102,13 +111,11 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
       if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status)) {
-        lastError = new Error(`Server error ${res.status} for ${input}`);
         await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
         continue;
       }
       return res;
     } catch (error) {
-      lastError = error;
       if (isTransientNetworkError(error)) {
         await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
         continue;
@@ -394,6 +401,7 @@ export const api = {
     extensionGet<Array<{ extensionId: string; actionId: string; ok: boolean; durationMs: number; at: string; error?: string }>>(
       `/extensions/telemetry${extensionId ? `?extensionId=${encodeURIComponent(extensionId)}` : ''}`,
     ),
+  extensionAuditEvents: async () => extensionGet<ExtensionHostAuditEvent[]>('/extensions/audit-events'),
   reloadExtensions: async () => extensionPost<{ ok: boolean; reloaded: boolean; message: string }>('/extensions/reload'),
   updateExtension: async (extensionId: string, input: { enabled: boolean }) =>
     extensionPatch<{ ok: true; extension?: ExtensionInstallSummary; actionResult?: { ok: boolean; result?: unknown; error?: string } }>(

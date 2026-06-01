@@ -6,6 +6,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { clearExtensionHostAuditEvents } from '../extensions/extensionHostAudit.js';
 import { createInProcessExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionRequestAbortSignal, registerExtensionRoutes } from './extensions.js';
 
@@ -99,6 +100,18 @@ describe('registerExtensionRoutes', () => {
     const schemaRes = createResponse();
     await harness.getHandler('/api/extensions/schema')({}, schemaRes);
     expect(schemaRes.json).toHaveBeenCalledWith(expect.objectContaining({ placements: expect.arrayContaining(['main', 'right']) }));
+
+    clearExtensionHostAuditEvents();
+    await harness.getHandler('/api/extensions/schema')({}, createResponse());
+    const auditRes = createResponse();
+    await harness.getHandler('/api/extensions/audit-events')({}, auditRes);
+    expect(auditRes.json).toHaveBeenCalledWith([
+      expect.objectContaining({
+        requestType: 'readRegistryPresentation',
+        requestName: 'readRegistryPresentation',
+        ok: true,
+      }),
+    ]);
 
     const listRes = createResponse();
     await harness.getHandler('/api/extensions')({}, listRes);
