@@ -43,7 +43,7 @@
     "check:coverage": "vitest run --coverage --reporter=verbose || echo '⚠ Coverage check complete — review numbers above'",
     "check": "pnpm run check:types && pnpm run lint && pnpm run fmt && pnpm test && pnpm run check:extensions:static; knip --no-config-hints || true",
     "check:extensions": "pnpm run check:extensions:static && pnpm run test:extensions",
-    "check:extensions:static": "node scripts/check-extension-backend-api.mjs && node scripts/check-filesystem-authority.mjs && node scripts/check-conversation-storage-boundary.mjs && node scripts/check-core-extension-boundary.mjs && node scripts/check-product-extension-host-seam.mjs && node scripts/check-extension-permission-boundary.mjs && node scripts/check-packaged-extensions.mjs",
+    "check:extensions:static": "node scripts/check-extension-backend-api.mjs && node scripts/check-filesystem-authority.mjs && node scripts/check-conversation-storage-boundary.mjs && node scripts/check-core-extension-boundary.mjs && node scripts/check-product-extension-host-seam.mjs && node scripts/check-extension-permission-boundary.mjs && node scripts/check-extension-host-runtime-boundary.mjs && node scripts/check-packaged-extensions.mjs",
     "check:release": "pnpm run build:ts && pnpm run build:extensions && pnpm test && pnpm run check:extensions:static",
     "extensions:bundle-report": "node scripts/report-extension-bundles.mjs",
     "fix": "pnpm run fmt:fix && pnpm run lint:fix",
