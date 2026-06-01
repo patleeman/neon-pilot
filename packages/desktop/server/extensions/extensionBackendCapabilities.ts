@@ -1,5 +1,6 @@
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
+import { createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
@@ -17,10 +18,22 @@ interface ExtensionBackendCapabilityStorage {
   list(extensionId: string, prefix?: string): unknown;
 }
 
+interface ExtensionBackendCapabilityShell {
+  exec(input: {
+    command: string;
+    args?: string[];
+    cwd?: string;
+    timeoutMs?: number;
+    maxBuffer?: number;
+    env?: Record<string, string>;
+  }): Promise<unknown> | unknown;
+}
+
 export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
   log?: ExtensionBackendCapabilityLogger;
+  shell?: ExtensionBackendCapabilityShell;
   storage?: ExtensionBackendCapabilityStorage;
 }
 
@@ -102,10 +115,62 @@ function dispatchStorageCapability(
   throw new Error(`Unsupported storage capability operation: ${request.operation}`);
 }
 
+function optionalStringArray(value: unknown, label: string): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+    throw new Error(`${label} must be an array of strings when provided.`);
+  }
+  return value;
+}
+
+function optionalStringRecord(value: unknown, label: string): Record<string, string> | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object when provided.`);
+  }
+  const entries = Object.entries(value);
+  if (entries.some(([, item]) => typeof item !== 'string')) {
+    throw new Error(`${label} values must be strings.`);
+  }
+  return Object.fromEntries(entries) as Record<string, string>;
+}
+
+function optionalNumber(value: unknown, label: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number') {
+    throw new Error(`${label} must be a number when provided.`);
+  }
+  return value;
+}
+
+function optionalString(value: unknown, label: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') {
+    throw new Error(`${label} must be a string when provided.`);
+  }
+  return value;
+}
+
+function dispatchShellCapability(shell: ExtensionBackendCapabilityShell, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation !== 'exec') {
+    throw new Error(`Unsupported shell capability operation: ${request.operation}`);
+  }
+  const input = normalizeRecordInput(request.input, 'Shell');
+  return shell.exec({
+    command: requireString(input.command, 'Shell command'),
+    ...(input.args !== undefined ? { args: optionalStringArray(input.args, 'Shell args') } : {}),
+    ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Shell cwd') } : {}),
+    ...(input.timeoutMs !== undefined ? { timeoutMs: optionalNumber(input.timeoutMs, 'Shell timeoutMs') } : {}),
+    ...(input.maxBuffer !== undefined ? { maxBuffer: optionalNumber(input.maxBuffer, 'Shell maxBuffer') } : {}),
+    ...(input.env !== undefined ? { env: optionalStringRecord(input.env, 'Shell env') } : {}),
+  });
+}
+
 export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
+  const shell = options.shell ?? createExtensionShellCapability();
   const storage = options.storage ?? {
     get: (extensionId: string, key: string) => readExtensionState(extensionId, key)?.value ?? null,
     put: (extensionId: string, key: string, value: unknown, storageOptions?: { expectedVersion?: number }) => {
@@ -119,6 +184,9 @@ export function createExtensionBackendCapabilityDispatcher(
   return (request) => {
     if (request.capability === 'log') {
       return dispatchLogCapability(logger, request);
+    }
+    if (request.capability === 'shell') {
+      return dispatchShellCapability(shell, request);
     }
     if (request.capability === 'storage') {
       return dispatchStorageCapability(storage, request);

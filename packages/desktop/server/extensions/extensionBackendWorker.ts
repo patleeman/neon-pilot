@@ -70,6 +70,9 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       delete: (key: string) => callHostCapability(extensionId, 'storage', 'delete', { key }),
       list: (prefix?: string) => callHostCapability(extensionId, 'storage', 'list', { prefix }),
     },
+    shell: {
+      exec: (input: unknown) => callHostCapability(extensionId, 'shell', 'exec', input),
+    },
   };
 }
 

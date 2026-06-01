@@ -107,4 +107,55 @@ describe('extension backend capability dispatcher', () => {
     expect(storage.delete).toHaveBeenCalledWith('ext', 'tasks/one');
     expect(storage.list).toHaveBeenCalledWith('ext', 'tasks/');
   });
+
+  it('dispatches shell exec capability calls', async () => {
+    const shell = {
+      exec: vi.fn(async () => ({ stdout: 'done', stderr: '' })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ shell });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'shell',
+          operation: 'exec',
+          input: {
+            command: 'git',
+            args: ['status', '--short'],
+            cwd: '/repo',
+            timeoutMs: 1000,
+            maxBuffer: 2048,
+            env: { A: 'B' },
+          },
+        }),
+      ),
+    ).resolves.toEqual({ stdout: 'done', stderr: '' });
+
+    expect(shell.exec).toHaveBeenCalledWith({
+      command: 'git',
+      args: ['status', '--short'],
+      cwd: '/repo',
+      timeoutMs: 1000,
+      maxBuffer: 2048,
+      env: { A: 'B' },
+    });
+  });
+
+  it('rejects malformed shell capability inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({ shell: { exec: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'exec',
+        input: { command: 'git', args: ['status', 1] },
+      }),
+    ).rejects.toThrow('Shell args must be an array of strings when provided.');
+  });
 });

@@ -201,4 +201,50 @@ export async function doThing(_input, ctx) {
       },
     });
   });
+
+  it('runs backend exports with host-mediated shell exec', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  return await ctx.shell.exec({ command: 'git', args: ['status', '--short'], cwd: '/repo', timeoutMs: 1000 });
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 40,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-4' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'exec',
+      input: { command: 'git', args: ['status', '--short'], cwd: '/repo', timeoutMs: 1000 },
+    });
+    workerThreads.messageHandler?.({
+      id: 1,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { command: 'git', args: ['status', '--short'], stdout: '', stderr: '', executionWrappers: [] },
+    });
+
+    await waitForPostMessage({
+      id: 40,
+      ok: true,
+      result: { command: 'git', args: ['status', '--short'], stdout: '', stderr: '', executionWrappers: [] },
+    });
+  });
 });
