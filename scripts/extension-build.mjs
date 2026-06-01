@@ -162,8 +162,10 @@ function buildNativeSidecarIfPresent() {
   const source = join(packageRoot, 'sidecar', 'target', 'release', packageName);
   if (!existsSync(source)) throw new Error(`Built sidecar binary is missing: ${source}`);
   const destination = join(packageRoot, 'bin', `${packageName}-${platformBinarySuffix()}`);
+  const aliasDestination = join(packageRoot, 'bin', packageName);
   mkdirSync(dirname(destination), { recursive: true });
   copyFileSync(source, destination);
+  copyFileSync(source, aliasDestination);
 }
 
 function copyStaticDirectoryIfPresent(name, buildOutputs) {
