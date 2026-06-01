@@ -50,6 +50,20 @@ const RTK_AUTO_PREFIX_COMMANDS = new Set([
   'vitest',
   'wget',
 ]);
+
+function resolveDs4CliBinDir(): string {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [path.join(moduleDir, '..', 'bin'), path.join(moduleDir, 'bin')];
+  return candidates.find((candidate) => existsSync(path.join(candidate, 'ds4'))) ?? candidates[0];
+}
+
+function publishDs4CliToProcessPath(cliBinDir = resolveDs4CliBinDir()): void {
+  const currentPath = process.env.PATH ?? '';
+  const parts = currentPath.split(path.delimiter).filter(Boolean);
+  if (parts[0] === cliBinDir) return;
+  process.env.PATH = [cliBinDir, ...parts.filter((part) => part !== cliBinDir)].join(path.delimiter);
+  process.env.DS4_CLI_BIN = path.join(cliBinDir, 'ds4');
+}
 const BOOTSTRAP_STEPS = [
   { id: 'tools', title: 'Check tools', progress: 8 },
   { id: 'source', title: 'Download source', progress: 22 },
@@ -451,6 +465,7 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
 }
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
+  publishDs4CliToProcessPath();
   const paths = await runtimePaths(ctx);
   const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, server, tools, settings, rtk] = await Promise.all([
     exists(path.join(paths.repoDir, '.git')),
@@ -1058,9 +1073,8 @@ export async function optimizePromptAssembly(input: { plan?: unknown; context?: 
 
 export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
-    const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-    const cliBinDirCandidates = [path.join(moduleDir, '..', 'bin'), path.join(moduleDir, 'bin')];
-    const cliBinDir = cliBinDirCandidates.find((candidate) => existsSync(path.join(candidate, 'ds4'))) ?? cliBinDirCandidates[0];
+    const cliBinDir = resolveDs4CliBinDir();
+    publishDs4CliToProcessPath(cliBinDir);
     const maybeWrapperApi = pi as ExtensionAPI & {
       registerBashProcessWrapper?: (
         id: string,

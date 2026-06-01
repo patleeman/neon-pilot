@@ -114,6 +114,30 @@ describe('DS4 provider setup', () => {
 });
 
 describe('DS4 managed runtime', () => {
+  it('publishes the DS4 helper CLI to process PATH when status is read', async () => {
+    const previousPath = process.env.PATH;
+    const previousCli = process.env.DS4_CLI_BIN;
+    process.env.PATH = '/usr/bin';
+    delete process.env.DS4_CLI_BIN;
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+    const exec = vi.fn(async (input: { args?: string[] }) => {
+      const command = input.args?.join('\n') ?? '';
+      if (command.includes('command -v rtk')) return { stdout: 'installed=no\n', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+      return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+    });
+
+    try {
+      await backend.status({}, ctx({ shell: { exec, spawn: vi.fn() } }));
+
+      expect(process.env.PATH?.split(path.delimiter)[0]).toContain('system-ds4/bin');
+      expect(process.env.DS4_CLI_BIN).toContain('system-ds4/bin/ds4');
+    } finally {
+      process.env.PATH = previousPath;
+      if (previousCli === undefined) delete process.env.DS4_CLI_BIN;
+      else process.env.DS4_CLI_BIN = previousCli;
+    }
+  });
+
   it('reports extension-owned install and server state', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'ds4-runtime-'));
     try {
