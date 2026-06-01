@@ -102,6 +102,19 @@ describe('extensionBackendRunner', () => {
     ]);
   });
 
+  it('checks backend export availability through the runner boundary', async () => {
+    const runner = createInProcessExtensionBackendRunner();
+    const packageRoot = await mkdtemp(join(tmpdir(), 'pa-ext-runner-has-export-'));
+    const dist = join(packageRoot, 'dist');
+    mkdirSync(dist);
+    const backendPath = join(dist, 'backend.mjs');
+    writeFileSync(backendPath, 'export function doThing() { return true; }\nexport const notHandler = true;\n');
+
+    await expect(runner.hasExport('ext-has-export', { path: backendPath, hash: 'test-1' }, 'doThing')).resolves.toBe(true);
+    await expect(runner.hasExport('ext-has-export', { path: backendPath, hash: 'test-1' }, 'notHandler')).resolves.toBe(false);
+    await expect(runner.hasExport('ext-has-export', { path: backendPath, hash: 'test-1' }, 'missing')).resolves.toBe(false);
+  });
+
   it('serializes operation descriptors to wire-safe metadata only', () => {
     const operation = {
       ...extensionBackendOperation('action', 'action doThing', { exportName: 'doThing', target: 'doThing' }),

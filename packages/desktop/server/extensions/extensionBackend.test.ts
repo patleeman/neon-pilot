@@ -156,6 +156,7 @@ describe('extension backend action invocation', () => {
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
+      hasExport: vi.fn(),
       run,
       runExport,
     });
@@ -202,6 +203,7 @@ describe('extension backend action invocation', () => {
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
+      hasExport: vi.fn(),
       runExport: vi.fn(),
       run,
     });
@@ -251,6 +253,7 @@ describe('extension backend action invocation', () => {
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
+      hasExport: vi.fn(),
       run,
       runExport,
     });

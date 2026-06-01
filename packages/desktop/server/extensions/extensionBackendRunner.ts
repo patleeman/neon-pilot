@@ -32,6 +32,7 @@ export interface ExtensionBackendOperation {
 export interface ExtensionBackendRunner {
   loadModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<ExtensionBackendModule>;
   clearModule(extensionId: string): void;
+  hasExport(extensionId: string, compiled: ExtensionBackendLoadTarget, exportName: string): Promise<boolean>;
   runExport<T>(
     extensionId: string,
     compiled: ExtensionBackendLoadTarget,
@@ -121,6 +122,10 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
     },
     clearModule(extensionId) {
       backendModuleCache.delete(extensionId);
+    },
+    async hasExport(extensionId, compiled, exportName) {
+      const backend = await runner.loadModule(extensionId, compiled);
+      return typeof backend[exportName] === 'function';
     },
     async runExport(extensionId, compiled, exportName, operation, invoke) {
       const backend = await runner.loadModule(extensionId, compiled);
