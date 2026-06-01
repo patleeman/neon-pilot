@@ -74,6 +74,7 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
 
 vi.mock('../extensions/manifestToolAgentExtension.js', () => ({
   createManifestToolAgentExtensions: vi.fn(() => []),
+  listManifestToolAgentExtensionCacheEntries: listExtensionToolRegistrationsMock,
 }));
 
 vi.mock('../extensions/extensionAgentExtensions.js', () => ({

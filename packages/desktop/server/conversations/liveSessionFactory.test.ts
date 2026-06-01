@@ -18,7 +18,7 @@ const launcher = vi.hoisted(() => ({
   formatProcessLaunchShellCommand: vi.fn(() => 'wrapped command'),
   resolveProcessLaunch: vi.fn((input) => ({ ...input, env: { ...input.env, WRAPPED: '1' } })),
 }));
-const tools = vi.hoisted(() => ({ buildToolInjectionPlan: vi.fn(() => ({ activeToolNames: ['web_search', 'artifact'] })) }));
+const tools = vi.hoisted(() => ({ buildToolInjectionPlanAsync: vi.fn(async () => ({ activeToolNames: ['web_search', 'artifact'] })) }));
 const prefs = vi.hoisted(() => ({ applyConversationModelPreferencesToLiveSession: vi.fn(async () => undefined) }));
 const loader = vi.hoisted(() => ({ makeLoader: vi.fn(async () => ({ loader: true })) }));
 const liveModels = vi.hoisted(() => ({
@@ -87,14 +87,14 @@ describe('live session factory', () => {
     expect(modelRegistry.createRuntimeModelRegistry).toHaveBeenCalledWith(auth);
   });
 
-  it('warms and caches extension tool selection for the same runtime/model key', () => {
-    expect(warmLiveSessionToolSelection('/settings.json')).toEqual(['web_search', 'artifact']);
-    expect(warmLiveSessionToolSelection('/settings.json')).toEqual(['web_search', 'artifact']);
-    expect(tools.buildToolInjectionPlan).toHaveBeenCalledTimes(1);
+  it('warms and caches extension tool selection for the same runtime/model key', async () => {
+    await expect(warmLiveSessionToolSelection('/settings.json')).resolves.toEqual(['web_search', 'artifact']);
+    await expect(warmLiveSessionToolSelection('/settings.json')).resolves.toEqual(['web_search', 'artifact']);
+    expect(tools.buildToolInjectionPlanAsync).toHaveBeenCalledTimes(1);
 
     vi.setSystemTime(61_000);
-    expect(warmLiveSessionToolSelection('/settings.json')).toEqual(['web_search', 'artifact']);
-    expect(tools.buildToolInjectionPlan).toHaveBeenCalledTimes(2);
+    await expect(warmLiveSessionToolSelection('/settings.json')).resolves.toEqual(['web_search', 'artifact']);
+    expect(tools.buildToolInjectionPlanAsync).toHaveBeenCalledTimes(2);
   });
 
   it('creates prepared sessions with loader/settings/model/persistence/tool wiring', async () => {

@@ -1,10 +1,9 @@
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import {
-  type ExtensionToolRegistration,
-  listExtensionToolRegistrations,
-} from '../extensions/extensionRegistry.js';
+import type { ExtensionHostToolRegistration } from '../extensions/extensionHostProtocol.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
+
+export type ExtensionToolRegistration = ExtensionHostToolRegistration;
 
 export interface ToolDefinition {
   id: string;
@@ -49,6 +48,7 @@ export interface ToolRuntimeHook {
 
 const runtimeHooks: ToolRuntimeHook[] = [];
 const OVERRIDABLE_TOOLS = new Set(['bash', 'read', 'write', 'edit', 'grep', 'find', 'ls', 'notify', 'web_fetch', 'web_search']);
+let lastStaticToolRegistrations: ExtensionToolRegistration[] = [];
 
 export function registerToolRuntimeHook(hook: ToolRuntimeHook): () => void {
   runtimeHooks.push(hook);
@@ -60,7 +60,14 @@ export function registerToolRuntimeHook(hook: ToolRuntimeHook): () => void {
 }
 
 export function listToolDefinitions(ctx: AssemblyRuntimeContext): ToolDefinition[] {
-  let tools = listExtensionToolRegistrations().map(extensionToolToDefinition);
+  return listToolDefinitionsFromRegistrations(lastStaticToolRegistrations, ctx);
+}
+
+export function listToolDefinitionsFromRegistrations(
+  registrations: readonly ExtensionToolRegistration[],
+  ctx: AssemblyRuntimeContext,
+): ToolDefinition[] {
+  let tools = registrations.map(extensionToolToDefinition);
   for (const hook of runtimeHooks) {
     if (hook.afterToolDiscovery) tools = hook.afterToolDiscovery(tools, ctx);
   }
@@ -75,11 +82,8 @@ async function listToolDefinitionsWithDiagnosticsAsync(
   ctx: AssemblyRuntimeContext,
 ): Promise<{ definitions: ToolDefinition[]; diagnostics: AssemblyDiagnostic[] }> {
   const { tools: staticTools } = await getExtensionHostClient().listStaticContributions();
-  let tools = staticTools.map(extensionToolToDefinition);
-  for (const hook of runtimeHooks) {
-    if (hook.afterToolDiscovery) tools = hook.afterToolDiscovery(tools, ctx);
-  }
-  tools = tools.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
+  lastStaticToolRegistrations = staticTools;
+  const tools = listToolDefinitionsFromRegistrations(staticTools, ctx);
   const diagnostics: AssemblyDiagnostic[] = [];
   const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
   const providers = assemblyProviders.filter((provider) => provider.kind === 'tools');
@@ -135,6 +139,13 @@ function isToolDefinitionLike(value: unknown): value is ToolDefinition {
 
 export function buildToolInjectionPlan(ctx: AssemblyRuntimeContext): ToolInjectionPlan {
   return buildToolInjectionPlanFromDefinitions(listToolDefinitions(ctx), ctx);
+}
+
+export function buildToolInjectionPlanFromRegistrations(
+  registrations: readonly ExtensionToolRegistration[],
+  ctx: AssemblyRuntimeContext,
+): ToolInjectionPlan {
+  return buildToolInjectionPlanFromDefinitions(listToolDefinitionsFromRegistrations(registrations, ctx), ctx);
 }
 
 export async function buildToolInjectionPlanAsync(ctx: AssemblyRuntimeContext): Promise<ToolInjectionPlan> {

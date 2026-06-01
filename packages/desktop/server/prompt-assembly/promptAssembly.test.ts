@@ -200,8 +200,8 @@ describe('buildPromptAssemblyPlan', () => {
     writeFileSync(promptTemplatePath, '# Summary\n');
 
     const { buildPromptAssemblyPlan, buildPromptAssemblyPlanAsync } = await import('./promptAssembly.js');
-    const plan = buildPromptAssemblyPlan({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
     const asyncPlan = await buildPromptAssemblyPlanAsync({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
+    const plan = buildPromptAssemblyPlan({ profile: 'test', repoRoot: root, modelRef: 'openai/gpt-4o' });
 
     expect(plan.skills.skillPaths).toEqual(
       expect.arrayContaining([

@@ -12,10 +12,12 @@ import {
   isExtensionEnabled,
   listExtensionAgentRegistrations,
   listExtensionEntries,
-  listExtensionToolRegistrations,
   resolveExtensionModelProfile,
 } from '../extensions/extensionRegistry.js';
-import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
+import {
+  createManifestToolAgentExtensions,
+  listManifestToolAgentExtensionCacheEntries,
+} from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
@@ -302,15 +304,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         extensionId: registration.extensionId,
         exportName: registration.exportName,
       })),
-      toolRegistrations: listExtensionToolRegistrations().map((tool) => ({
-        extensionId: tool.extensionId,
-        id: tool.id,
-        name: tool.name,
-        action: tool.action,
-        nativeRegistration: tool.nativeRegistration,
-        replaces: tool.replaces,
-        when: tool.when,
-      })),
+      toolRegistrations: listManifestToolAgentExtensionCacheEntries(),
     });
     if (liveSessionExtensionFactoriesCache?.key === cacheKey) {
       return liveSessionExtensionFactoriesCache.value;

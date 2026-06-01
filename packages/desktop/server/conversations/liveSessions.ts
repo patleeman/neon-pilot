@@ -139,7 +139,7 @@ export { type PromptImageAttachment, type QueuedPromptPreview } from './liveSess
 export { isPlaceholderConversationTitle, resolveStableSessionTitle } from './liveSessionTitle.js';
 
 export function prewarmLiveSessionToolSelection(): void {
-  warmLiveSessionToolSelection(SETTINGS_FILE);
+  void warmLiveSessionToolSelection(SETTINGS_FILE);
 }
 
 const AGENT_DIR = getPiAgentRuntimeDir();

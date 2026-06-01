@@ -13,7 +13,7 @@ import { resolveChildProcessEnv } from '@neon-pilot/core';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { formatProcessLaunchShellCommand, resolveProcessLaunch } from '../shared/processLauncher.js';
-import { buildToolInjectionPlan } from '../tools/toolInventory.js';
+import { buildToolInjectionPlanAsync } from '../tools/toolInventory.js';
 import { applyConversationModelPreferencesToLiveSession } from './conversationModelPreferences.js';
 import { type LiveSessionLoaderOptions, makeLoader } from './liveSessionLoader.js';
 import {
@@ -89,7 +89,7 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
   });
 }
 
-export function warmLiveSessionToolSelection(settingsFile: string): string[] {
+export async function warmLiveSessionToolSelection(settingsFile: string): Promise<string[]> {
   const profile = process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared';
   const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd();
   const modelRef = readSavedModelRef(settingsFile);
@@ -100,18 +100,18 @@ export function warmLiveSessionToolSelection(settingsFile: string): string[] {
       ? cachedToolSelection.activeToolNames
       : null;
   if (!extensionToolNames) {
-    const plan = buildToolInjectionPlan({ profile, repoRoot, modelRef });
+    const plan = await buildToolInjectionPlanAsync({ profile, repoRoot, modelRef });
     extensionToolNames = plan.activeToolNames;
     cachedToolSelection = { key: cacheKey, activeToolNames: extensionToolNames, cachedAtMs: nowMs };
   }
   return extensionToolNames;
 }
 
-function applyExtensionToolSelection(session: AgentSession, settingsFile: string): void {
+async function applyExtensionToolSelection(session: AgentSession, settingsFile: string): Promise<void> {
   const patchable = session as unknown as { setActiveTools?: (toolNames: string[]) => void; getActiveToolNames?: () => string[] };
   if (typeof patchable.setActiveTools !== 'function') return;
 
-  const extensionToolNames = warmLiveSessionToolSelection(settingsFile);
+  const extensionToolNames = await warmLiveSessionToolSelection(settingsFile);
   const currentToolNames = patchable.getActiveToolNames?.() ?? [];
   if (currentToolNames.length === 1 && extensionToolNames.includes(currentToolNames[0] ?? '')) {
     return;
@@ -188,7 +188,7 @@ export async function createPreparedLiveAgentSession(input: {
     resolveConversationPreferenceStateForSession(input.settingsFile, session.sessionManager, availableModels).currentServiceTier,
   );
 
-  applyExtensionToolSelection(session, input.settingsFile);
+  await applyExtensionToolSelection(session, input.settingsFile);
   const doneAtMs = performance.now();
 
   return {

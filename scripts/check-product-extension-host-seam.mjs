@@ -92,6 +92,14 @@ const forbiddenPatterns = [
     message: 'product runtime prompt assembly code must read extension contributions through ExtensionHostClient',
   },
   {
+    pattern: /import\s+\{[^}]*\blistExtensionToolRegistrations\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'product runtime code must read extension tool registrations through ExtensionHostClient',
+  },
+  {
+    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\blistExtensionToolRegistrations\b/,
+    message: 'product runtime code must read extension tool registrations through ExtensionHostClient',
+  },
+  {
     pattern:
       /import(?:\s+type)?\s+\{[^}]*\b(?:findExtensionCommandRegistration|readExtensionSchema|readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSearchProviderRegistrations|listExtensionSlashCommandRegistrations)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'product runtime presentation code must read extension registry presentation through ExtensionHostClient',

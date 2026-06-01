@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const buildToolInjectionPlan = vi.fn();
+const buildToolInjectionPlanFromRegistrations = vi.fn();
 const extensionHostClient = { invokeAction: vi.fn() };
 const listExtensionToolRegistrations = vi.fn();
-vi.mock('../tools/toolInventory.js', () => ({ buildToolInjectionPlan }));
+vi.mock('../tools/toolInventory.js', () => ({ buildToolInjectionPlanFromRegistrations }));
 vi.mock('./extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('./extensionRegistry.js', () => ({ listExtensionToolRegistrations }));
 
-const { createManifestToolAgentExtensions } = await import('./manifestToolAgentExtension.js');
+const { createManifestToolAgentExtensions, listManifestToolAgentExtensionCacheEntries } = await import('./manifestToolAgentExtension.js');
 
 function baseOptions(overrides: Partial<Parameters<typeof createManifestToolAgentExtensions>[0]> = {}) {
   return {
@@ -46,7 +46,7 @@ function registerTools() {
 
 describe('manifestToolAgentExtension', () => {
   beforeEach(() => {
-    buildToolInjectionPlan.mockReset().mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
+    buildToolInjectionPlanFromRegistrations.mockReset().mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
     extensionHostClient.invokeAction.mockReset().mockResolvedValue({ ok: true, result: { text: 'done', details: { ok: true } } });
     listExtensionToolRegistrations.mockReset().mockReturnValue([tool()]);
   });
@@ -106,7 +106,7 @@ describe('manifestToolAgentExtension', () => {
   });
 
   it('filters inactive, native, and model-condition-mismatched tools', () => {
-    buildToolInjectionPlan.mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'active' }] });
+    buildToolInjectionPlanFromRegistrations.mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'active' }] });
     listExtensionToolRegistrations.mockReturnValue([
       tool({ id: 'active', when: { providers: ['openai'] } }),
       tool({ id: 'inactive' }),
@@ -125,7 +125,7 @@ describe('manifestToolAgentExtension', () => {
       tool({ id: 'tool', name: 'better_read', replaces: 'read' }),
       tool({ id: 'other', name: 'bad_replace', replaces: 'conversation' }),
     ]);
-    buildToolInjectionPlan.mockReturnValue({
+    buildToolInjectionPlanFromRegistrations.mockReturnValue({
       registrations: [
         { extensionId: 'ext', id: 'tool' },
         { extensionId: 'ext', id: 'other' },
@@ -189,5 +189,23 @@ describe('manifestToolAgentExtension', () => {
     listExtensionToolRegistrations.mockReturnValue([tool({ id: 'tool', name: 'probe_image' })]);
 
     expect(registerTools()).toHaveLength(1);
+  });
+
+  it('exposes stable cache entries for product runtime factory caching', () => {
+    listExtensionToolRegistrations.mockReturnValue([
+      tool({ id: 'tool', name: 'better_read', replaces: 'read', nativeRegistration: true, when: { providers: ['openai'] } }),
+    ]);
+
+    expect(listManifestToolAgentExtensionCacheEntries()).toEqual([
+      {
+        extensionId: 'ext',
+        id: 'tool',
+        name: 'better_read',
+        action: 'doThing',
+        nativeRegistration: true,
+        replaces: 'read',
+        when: { providers: ['openai'] },
+      },
+    ]);
   });
 });

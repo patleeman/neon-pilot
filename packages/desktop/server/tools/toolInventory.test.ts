@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const registry = vi.hoisted(() => ({
-  listExtensionToolRegistrations: vi.fn(() => []),
-}));
 const extensionHostClient = vi.hoisted(() => ({
   listPromptAssemblyContributions: vi.fn(() => ({ assemblyProviders: [], contextProviders: [], hooks: [] })),
   listStaticContributions: vi.fn(() => ({ skills: [], tools: [], modelDiscovery: [] })),
@@ -12,15 +9,15 @@ const providerRuntime = vi.hoisted(() => ({
   isRecord: (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value),
 }));
 
-vi.mock('../extensions/extensionRegistry.js', () => registry);
 vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('../prompt-assembly/providerRuntime.js', () => providerRuntime);
 
 import {
-  buildToolInjectionPlan,
   buildToolInjectionPlanAsync,
+  buildToolInjectionPlanFromRegistrations,
   listToolDefinitions,
   listToolDefinitionsAsync,
+  listToolDefinitionsFromRegistrations,
   registerToolRuntimeHook,
 } from './toolInventory.js';
 
@@ -31,7 +28,6 @@ describe('tool inventory', () => {
     vi.clearAllMocks();
     extensionHostClient.listPromptAssemblyContributions.mockReturnValue({ assemblyProviders: [], contextProviders: [], hooks: [] });
     extensionHostClient.listStaticContributions.mockReturnValue({ skills: [], tools: [], modelDiscovery: [] });
-    registry.listExtensionToolRegistrations.mockReturnValue([]);
   });
 
   function tool(overrides: Record<string, unknown> = {}) {
@@ -49,13 +45,24 @@ describe('tool inventory', () => {
   }
 
   it('converts extension tool registrations to sorted tool definitions', () => {
-    registry.listExtensionToolRegistrations.mockReturnValue([tool({ id: 'low', priority: 1 }), tool({ id: 'high', priority: 10 })]);
+    const registrations = [tool({ id: 'low', priority: 1 }), tool({ id: 'high', priority: 10 })];
 
-    expect(listToolDefinitions(ctx).map((definition) => definition.id)).toEqual(['ext/high', 'ext/low']);
-    expect(listToolDefinitions(ctx)[0]).toMatchObject({
+    expect(listToolDefinitionsFromRegistrations(registrations, ctx).map((definition) => definition.id)).toEqual(['ext/high', 'ext/low']);
+    expect(listToolDefinitionsFromRegistrations(registrations, ctx)[0]).toMatchObject({
       providerId: 'extension:ext',
       source: { kind: 'extension', label: 'ext', extensionId: 'ext' },
     });
+  });
+
+  it('serves synchronous definitions from the last host-backed static contribution read', async () => {
+    extensionHostClient.listStaticContributions.mockReturnValue({
+      skills: [],
+      tools: [tool({ id: 'cached', priority: 2 })],
+      modelDiscovery: [],
+    });
+
+    await expect(listToolDefinitionsAsync(ctx)).resolves.toContainEqual(expect.objectContaining({ id: 'ext/cached' }));
+    expect(listToolDefinitions(ctx)).toContainEqual(expect.objectContaining({ id: 'ext/cached' }));
   });
 
   it('runs runtime hooks in order and supports disposal', () => {
@@ -86,24 +93,22 @@ describe('tool inventory', () => {
       },
       afterToolInjection: () => events.push('after:a'),
     });
-    registry.listExtensionToolRegistrations.mockReturnValue([tool()]);
-
-    buildToolInjectionPlan(ctx);
+    buildToolInjectionPlanFromRegistrations([tool()], ctx);
     expect(events).toEqual(['discover:a', 'discover:b', 'inject:a', 'inject:b', 'after:a', 'after:b']);
     disposeA();
     disposeB();
   });
 
   it('applies model/provider conditions, validation, replacement policy, and duplicate shadowing', () => {
-    registry.listExtensionToolRegistrations.mockReturnValue([
+    const registrations = [
       tool({ id: 'bash-replacer', name: 'safe_bash', replaces: 'bash', priority: 20, promptGuidelines: ['Use safe bash.'] }),
       tool({ id: 'bash-low', name: 'other_bash', replaces: 'bash', priority: 1 }),
       tool({ id: 'bad-replacer', name: 'replace_model', replaces: 'model', priority: 5 }),
       tool({ id: 'provider-mismatch', name: 'anthropic_only', when: { providers: ['anthropic'] }, priority: 5 }),
       tool({ id: 'invalid', name: '', description: '', action: undefined, priority: 5 }),
-    ]);
+    ];
 
-    const plan = buildToolInjectionPlan(ctx);
+    const plan = buildToolInjectionPlanFromRegistrations(registrations, ctx);
 
     expect(plan.activeToolNames).toEqual(['bash']);
     expect(plan.promptGuidelines).toEqual(['Use safe bash.']);
@@ -130,10 +135,12 @@ describe('tool inventory', () => {
   });
 
   it('does not apply extension-specific secret policy in core tool inventory', () => {
-    registry.listExtensionToolRegistrations.mockReturnValue([
-      tool({ extensionId: 'system-exa-search', id: 'exa', name: 'web_search', priority: 10 }),
-    ]);
-    expect(buildToolInjectionPlan(ctx).activeToolNames).toEqual(['web_search']);
+    expect(
+      buildToolInjectionPlanFromRegistrations(
+        [tool({ extensionId: 'system-exa-search', id: 'exa', name: 'web_search', priority: 10 })],
+        ctx,
+      ).activeToolNames,
+    ).toEqual(['web_search']);
   });
 
   it('merges async provider tools, diagnostics, and raw registrations for action-backed tools', async () => {

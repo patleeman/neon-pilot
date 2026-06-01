@@ -1,7 +1,7 @@
 import type { AgentToolResult, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 import type { ServerRouteContext } from '../routes/context.js';
-import { buildToolInjectionPlan } from '../tools/toolInventory.js';
+import { buildToolInjectionPlanFromRegistrations } from '../tools/toolInventory.js';
 import { getExtensionHostClient } from './extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
 import { createExtensionHostToolContextSnapshot } from './extensionHostToolContext.js';
@@ -52,20 +52,41 @@ function modelConditionMatches(tool: { when?: { providers?: string[]; models?: s
 
 type ManifestToolResult = AgentToolResult<unknown> & { isError?: boolean };
 
+export function listManifestToolAgentExtensionCacheEntries(): Array<{
+  extensionId: string;
+  id: string;
+  name: string;
+  action: string;
+  nativeRegistration?: boolean;
+  replaces?: string;
+  when?: { providers?: string[]; models?: string[] };
+}> {
+  return listExtensionToolRegistrations().map((tool) => ({
+    extensionId: tool.extensionId,
+    id: tool.id,
+    name: tool.name,
+    action: tool.action,
+    nativeRegistration: tool.nativeRegistration,
+    replaces: tool.replaces,
+    when: tool.when,
+  }));
+}
+
 function normalizeUpdateContent(content: Array<{ type: string; text: string }> | undefined): AgentToolResult<unknown>['content'] {
   return (content ?? []).map((item) => ({ type: 'text' as const, text: item.text }));
 }
 
 export function createManifestToolAgentExtensions(options: ManifestToolFactoryOptions): Array<(pi: ExtensionAPI) => void> {
   const currentModelRef = options.getCurrentModelRef?.() ?? '';
+  const registrations = listExtensionToolRegistrations();
   const activeToolIds = new Set(
-    buildToolInjectionPlan({
+    buildToolInjectionPlanFromRegistrations(registrations, {
       profile: options.getRuntimeScope(),
       repoRoot: options.repoRoot,
       modelRef: currentModelRef,
     }).registrations.map((tool) => `${tool.extensionId}/${tool.id}`),
   );
-  return listExtensionToolRegistrations()
+  return registrations
     .filter((tool) => activeToolIds.has(`${tool.extensionId}/${tool.id}`))
     .filter((tool) => !tool.nativeRegistration)
     .filter((tool) => modelConditionMatches(tool, currentModelRef))
