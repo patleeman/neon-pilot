@@ -92,8 +92,9 @@ function readLegacyHfToken(): string {
   return loadSettings().hfToken.trim();
 }
 
-function readHfToken(ctx: ExtensionBackendContext): string {
-  return ctx.secrets.get(HF_TOKEN_SECRET_ID)?.trim() || readLegacyHfToken();
+async function readHfToken(ctx: ExtensionBackendContext): Promise<string> {
+  const secret = await Promise.resolve(ctx.secrets.get(HF_TOKEN_SECRET_ID));
+  return secret?.trim() || readLegacyHfToken();
 }
 
 function readToolHfToken(ctx: unknown): string {
@@ -101,9 +102,9 @@ function readToolHfToken(ctx: unknown): string {
   return maybeCtx?.secrets?.get?.(HF_TOKEN_SECRET_ID)?.trim() || readLegacyHfToken();
 }
 
-function publicSettings(ctx: ExtensionBackendContext): VideoProbeSettings {
+async function publicSettings(ctx: ExtensionBackendContext): Promise<VideoProbeSettings> {
   const settings = loadSettings();
-  return { ...settings, hfToken: readHfToken(ctx) ? 'configured' : '' };
+  return { ...settings, hfToken: (await readHfToken(ctx)) ? 'configured' : '' };
 }
 
 function readOpenRouterAuthStatus(runtimeDir: string): OpenRouterAuthStatus {
@@ -128,7 +129,7 @@ function readOpenRouterAuthStatus(runtimeDir: string): OpenRouterAuthStatus {
 }
 
 export async function readSettings(_input: unknown, ctx: ExtensionBackendContext) {
-  return { ok: true, settings: publicSettings(ctx) };
+  return { ok: true, settings: await publicSettings(ctx) };
 }
 
 export async function writeSettings(input: unknown, ctx: ExtensionBackendContext) {
@@ -141,7 +142,7 @@ export async function writeSettings(input: unknown, ctx: ExtensionBackendContext
     hfToken: current.hfToken,
   };
   saveSettings(next);
-  return { ok: true, settings: publicSettings(ctx) };
+  return { ok: true, settings: await publicSettings(ctx) };
 }
 
 // ---------------------------------------------------------------------------
@@ -226,7 +227,7 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     isPidRunning(ctx, setupPid),
     readServerHealth(),
   ]);
-  const settings = publicSettings(ctx);
+  const settings = await publicSettings(ctx);
   return {
     ok: true,
     modelId: settings.localModel,
@@ -246,7 +247,7 @@ export async function setup(_input: unknown, ctx: ExtensionBackendContext) {
   if (setupRunning) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
   mkdirSync(CACHE_DIR, { recursive: true });
   const { localModel } = loadSettings();
-  const hfToken = readHfToken(ctx);
+  const hfToken = await readHfToken(ctx);
   const env = hfEnv(hfToken);
   const script = [
     `: > ${shellQuote(LOG_FILE)}`,
@@ -273,7 +274,7 @@ export async function startServer(_input: unknown, ctx: ExtensionBackendContext)
     return { ok: false, error: 'mlx-vlm is not installed. Run setup first.', status: await status({}, ctx) };
   }
   const { localModel } = loadSettings();
-  const hfToken = readHfToken(ctx);
+  const hfToken = await readHfToken(ctx);
   const command = `exec env ${hfEnv(hfToken)} ${shellQuote(VENV_MLX_VLM_SERVER)} --model ${shellQuote(localModel)} --host 127.0.0.1 --port ${MODEL_PORT} >> ${shellQuote(LOG_FILE)} 2>&1`;
   const result = await ctx.shell.exec({
     command: 'sh',

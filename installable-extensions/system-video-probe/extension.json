@@ -13,14 +13,29 @@
     "entry": "dist/backend.mjs",
     "agentExtension": "createVideoProbeAgentExtension",
     "actions": [
-      { "id": "videoProbeStatus", "handler": "status", "title": "Video probe status" },
-      { "id": "videoProbeSetup", "handler": "setup", "title": "Install runtime and download model" },
-      { "id": "videoProbeStart", "handler": "startServer", "title": "Start mlx-vlm server" },
-      { "id": "videoProbeStop", "handler": "stopServer", "title": "Stop mlx-vlm server" },
-      { "id": "videoProbeReadSettings", "handler": "readSettings", "title": "Read video probe settings" },
-      { "id": "videoProbeWriteSettings", "handler": "writeSettings", "title": "Write video probe settings" },
-      { "id": "videoProbeCancel", "handler": "cancelSetup", "title": "Cancel setup" },
-      { "id": "videoProbeReset", "handler": "resetInstallation", "title": "Reset installation" }
+      { "id": "videoProbeStatus", "handler": "status", "title": "Video probe status", "worker": { "enabled": true } },
+      {
+        "id": "videoProbeSetup",
+        "handler": "setup",
+        "title": "Install runtime and download model",
+        "worker": { "enabled": true }
+      },
+      { "id": "videoProbeStart", "handler": "startServer", "title": "Start mlx-vlm server", "worker": { "enabled": true } },
+      { "id": "videoProbeStop", "handler": "stopServer", "title": "Stop mlx-vlm server", "worker": { "enabled": true } },
+      {
+        "id": "videoProbeReadSettings",
+        "handler": "readSettings",
+        "title": "Read video probe settings",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "videoProbeWriteSettings",
+        "handler": "writeSettings",
+        "title": "Write video probe settings",
+        "worker": { "enabled": true }
+      },
+      { "id": "videoProbeCancel", "handler": "cancelSetup", "title": "Cancel setup", "worker": { "enabled": true } },
+      { "id": "videoProbeReset", "handler": "resetInstallation", "title": "Reset installation", "worker": { "enabled": true } }
     ]
   },
   "contributes": {

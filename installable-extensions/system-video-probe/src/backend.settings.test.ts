@@ -71,6 +71,13 @@ describe('system-video-probe settings backend', () => {
     await expect(backend.readSettings({}, ctx)).resolves.toMatchObject({ settings: { hfToken: 'configured' } });
   });
 
+  it('accepts Hugging Face tokens resolved through an async worker bridge', async () => {
+    const backend = await loadBackend(home);
+    vi.mocked(ctx.secrets.get).mockResolvedValue('hf-worker-secret');
+
+    await expect(backend.readSettings({}, ctx)).resolves.toMatchObject({ settings: { hfToken: 'configured' } });
+  });
+
   it('falls back to defaults when settings JSON is corrupt', async () => {
     const settingsFile = join(home, '.cache', 'neon-pilot', 'video-probe', 'settings.json');
     rmSync(join(home, '.cache'), { recursive: true, force: true });

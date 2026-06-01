@@ -867,6 +867,125 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe installable video probe actions through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const videoProbeRoot = join(stateRoot, 'extensions', 'system-video-probe');
+    mkdirSync(join(videoProbeRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(videoProbeRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-video-probe',
+        name: 'Video Probe',
+        packageType: 'system',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [
+            { id: 'videoProbeStatus', handler: 'status', title: 'Video probe status', worker: { enabled: true } },
+            { id: 'videoProbeSetup', handler: 'setup', title: 'Install runtime and download model', worker: { enabled: true } },
+            { id: 'videoProbeStart', handler: 'startServer', title: 'Start mlx-vlm server', worker: { enabled: true } },
+            { id: 'videoProbeStop', handler: 'stopServer', title: 'Stop mlx-vlm server', worker: { enabled: true } },
+            { id: 'videoProbeReadSettings', handler: 'readSettings', title: 'Read video probe settings', worker: { enabled: true } },
+            { id: 'videoProbeWriteSettings', handler: 'writeSettings', title: 'Write video probe settings', worker: { enabled: true } },
+            { id: 'videoProbeCancel', handler: 'cancelSetup', title: 'Cancel setup', worker: { enabled: true } },
+            { id: 'videoProbeReset', handler: 'resetInstallation', title: 'Reset installation', worker: { enabled: true } },
+          ],
+        },
+      }),
+    );
+    writeFileSync(join(videoProbeRoot, 'dist', 'backend.mjs'), 'export function status() { return true; }\n');
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) => ({ ok: true, action: exportName })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-video-probe', 'videoProbeStatus', {})).resolves.toEqual({
+      ok: true,
+      result: { ok: true, action: 'status' },
+    });
+    await expect(
+      invokeExtensionAction('system-video-probe', 'videoProbeWriteSettings', { backend: 'local', localModel: 'mlx/model' }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, action: 'writeSettings' },
+    });
+    await expect(invokeExtensionAction('system-video-probe', 'videoProbeReset', {})).resolves.toEqual({
+      ok: true,
+      result: { ok: true, action: 'resetInstallation' },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-video-probe',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-video-probe', 'dist', 'backend.mjs')),
+      }),
+      'status',
+      { type: 'action', label: 'action videoProbeStatus', target: 'videoProbeStatus' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-video-probe',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-video-probe', 'dist', 'backend.mjs')),
+      }),
+      'writeSettings',
+      { type: 'action', label: 'action videoProbeWriteSettings', target: 'videoProbeWriteSettings' },
+      [{ backend: 'local', localModel: 'mlx/model' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-video-probe',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-video-probe', 'dist', 'backend.mjs')),
+      }),
+      'resetInstallation',
+      { type: 'action', label: 'action videoProbeReset', target: 'videoProbeReset' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('runs worker-safe telemetry aggregate actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),
