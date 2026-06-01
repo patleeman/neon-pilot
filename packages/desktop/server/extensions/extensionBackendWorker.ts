@@ -64,6 +64,9 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       warn: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'warn', { message, fields }),
       error: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'error', { message, fields }),
     },
+    events: {
+      publish: (input: { event: string; payload: unknown }) => callHostCapability(extensionId, 'events', 'publish', input),
+    },
     git: {
       status: (input: unknown) => callHostCapability(extensionId, 'git', 'status', input),
       diff: (input: unknown) => callHostCapability(extensionId, 'git', 'diff', input),

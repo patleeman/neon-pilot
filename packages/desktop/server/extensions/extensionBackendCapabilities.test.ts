@@ -3,6 +3,43 @@ import { describe, expect, it, vi } from 'vitest';
 import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
 
 describe('extension backend capability dispatcher', () => {
+  it('dispatches extension-scoped event publish capability calls', async () => {
+    const events = {
+      publish: vi.fn(async () => undefined),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ events });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'events',
+          operation: 'publish',
+          input: { event: 'task:completed', payload: { taskId: 'task-1' } },
+        }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(events.publish).toHaveBeenCalledWith('ext', 'task:completed', { taskId: 'task-1' });
+  });
+
+  it('rejects malformed event publish capability inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({ events: { publish: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'events',
+        operation: 'publish',
+        input: { event: 1, payload: {} },
+      }),
+    ).rejects.toThrow('Event name must be a string.');
+  });
+
   it('dispatches extension-scoped git capability calls', async () => {
     const git = {
       status: vi.fn(() => ({ porcelain: '## main' })),

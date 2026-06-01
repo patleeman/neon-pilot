@@ -3,6 +3,7 @@ import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../sha
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
+import { publishExtensionEvent } from './extensionEventBus.js';
 import {
   isSystemNotificationAvailable,
   sendNotifyAsSystemNotification,
@@ -24,6 +25,10 @@ interface ExtensionBackendCapabilityGit {
   status(input: { cwd: string }): Promise<unknown> | unknown;
   diff(input: { cwd: string; path?: string; staged?: boolean }): Promise<unknown> | unknown;
   log(input: { cwd: string; maxCount?: number }): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityEvents {
+  publish(extensionId: string, event: string, payload: unknown): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityNotify {
@@ -87,6 +92,7 @@ interface ExtensionBackendCapabilityUi {
 export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
+  events?: ExtensionBackendCapabilityEvents;
   git?: ExtensionBackendCapabilityGit;
   log?: ExtensionBackendCapabilityLogger;
   notify?: ExtensionBackendCapabilityNotify;
@@ -122,6 +128,14 @@ function dispatchLogCapability(logger: ExtensionBackendCapabilityLogger, request
   const { message, fields } = normalizeLogInput(request.input);
   logger[level](`extension:${request.extensionId} ${message}`, fields);
   return undefined;
+}
+
+function dispatchEventsCapability(events: ExtensionBackendCapabilityEvents, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation !== 'publish') {
+    throw new Error(`Unsupported events capability operation: ${request.operation}`);
+  }
+  const input = normalizeRecordInput(request.input, 'Events');
+  return events.publish(request.extensionId, requireString(input.event, 'Event name'), input.payload);
 }
 
 function dispatchGitCapability(git: ExtensionBackendCapabilityGit, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -368,6 +382,7 @@ function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: Extensi
 export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
+  const events = options.events ?? { publish: publishExtensionEvent };
   const git = options.git ?? createExtensionGitCapability();
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const notify = options.notify ?? {
@@ -409,6 +424,9 @@ export function createExtensionBackendCapabilityDispatcher(
       listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
   };
   return (request) => {
+    if (request.capability === 'events') {
+      return dispatchEventsCapability(events, request);
+    }
     if (request.capability === 'git') {
       return dispatchGitCapability(git, request);
     }
