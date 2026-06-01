@@ -19,14 +19,16 @@
         "title": "Kitty Litter companion host",
         "description": "Runs the PA-owned Alleycat-compatible host while the extension is enabled.",
         "healthCheck": "status",
-        "restart": "on-failure"
+        "stopHandler": "stop",
+        "restart": "on-failure",
+        "worker": { "enabled": true }
       }
     ],
     "actions": [
-      { "id": "alleycatStart", "handler": "start", "title": "Start Alleycat host" },
-      { "id": "alleycatStop", "handler": "stop", "title": "Stop Alleycat host" },
-      { "id": "alleycatStatus", "handler": "status", "title": "Alleycat host status" },
-      { "id": "rotateToken", "handler": "rotateToken", "title": "Rotate Alleycat pairing token" }
+      { "id": "alleycatStart", "handler": "start", "title": "Start Alleycat host", "worker": { "enabled": true } },
+      { "id": "alleycatStop", "handler": "stop", "title": "Stop Alleycat host", "worker": { "enabled": true } },
+      { "id": "alleycatStatus", "handler": "status", "title": "Alleycat host status", "worker": { "enabled": true } },
+      { "id": "rotateToken", "handler": "rotateToken", "title": "Rotate Alleycat pairing token", "worker": { "enabled": true } }
     ]
   },
   "contributes": {

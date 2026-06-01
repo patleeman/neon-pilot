@@ -8,6 +8,7 @@ const logInfo = vi.fn();
 const createBackendContext = vi.fn();
 const loadExtensionBackend = vi.fn();
 const runExtensionBackendExport = vi.fn();
+const runExtensionBackendExportInWorker = vi.fn();
 const runnerRun = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
 const findExtensionEntry = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
@@ -19,7 +20,12 @@ const setExtensionEnabled = vi.fn();
 
 vi.mock('../shared/appEvents.js', () => ({ publishAppEvent }));
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
-vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend, runExtensionBackendExport }));
+vi.mock('./extensionBackend.js', () => ({
+  createBackendContext,
+  loadExtensionBackend,
+  runExtensionBackendExport,
+  runExtensionBackendExportInWorker,
+}));
 vi.mock('./extensionBackendRunner.js', () => ({
   extensionBackendOperation: (type: string, label: string, options: { target?: string } = {}) => ({ type, label, ...options }),
   getExtensionBackendRunner: () => ({ run: runnerRun }),
@@ -53,6 +59,7 @@ describe('extensionServices', () => {
       createBackendContext,
       loadExtensionBackend,
       runExtensionBackendExport,
+      runExtensionBackendExportInWorker,
       runnerRun,
       findExtensionEntry,
       listExtensionInstallSummaries,
@@ -79,6 +86,7 @@ describe('extensionServices', () => {
         return runnerRun(extensionId, { ...(operation as Record<string, unknown>), exportName }, () => invoke(handler));
       },
     );
+    runExtensionBackendExportInWorker.mockResolvedValue(undefined);
   });
 
   it('starts enabled extension services, stores stop handles, and stops them', async () => {
@@ -106,6 +114,47 @@ describe('extensionServices', () => {
     await stopExtensionServices('ext');
     expect(stop).toHaveBeenCalledOnce();
     expect(isExtensionServiceRunning('ext', 'sync')).toBe(false);
+  });
+
+  it('runs worker services through the worker runner and stops them with stopHandler', async () => {
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        backend: {
+          services: [{ id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', worker: { enabled: true } }],
+        },
+      },
+    });
+    runExtensionBackendExportInWorker.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ running: true }).mockResolvedValueOnce({
+      ok: true,
+    });
+
+    await expect(startExtensionServices({ server: true } as never)).resolves.toEqual([{ extensionId: 'ext', serviceId: 'sync', ok: true }]);
+    await runExtensionServiceHealthChecks({ server: true } as never);
+    await stopExtensionServices('ext');
+
+    expect(runExtensionBackendExportInWorker).toHaveBeenCalledWith(
+      'ext',
+      'startSync',
+      { type: 'service-startup', label: 'service sync startup', target: 'sync' },
+      [{ serviceId: 'sync' }],
+      { server: true },
+    );
+    expect(runExtensionBackendExportInWorker).toHaveBeenCalledWith(
+      'ext',
+      'checkSync',
+      { type: 'service-health-check', label: 'service sync health check', target: 'sync' },
+      [{ serviceId: 'sync' }],
+      { server: true },
+    );
+    expect(runExtensionBackendExportInWorker).toHaveBeenCalledWith(
+      'ext',
+      'stopSync',
+      { type: 'service-stop', label: 'service sync stop', target: 'sync' },
+      [{ serviceId: 'sync' }],
+      { server: true },
+    );
+    expect(runExtensionBackendExport).not.toHaveBeenCalled();
   });
 
   it('is idempotent for already-running services', async () => {

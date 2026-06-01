@@ -22,6 +22,7 @@ export type ExtensionBackendOperationType =
   | 'route'
   | 'self-test-action'
   | 'service-health-check'
+  | 'service-stop'
   | 'service-startup'
   | 'subscription';
 

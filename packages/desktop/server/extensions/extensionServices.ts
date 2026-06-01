@@ -1,7 +1,7 @@
 import { publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
-import { createBackendContext, runExtensionBackendExport } from './extensionBackend.js';
+import { createBackendContext, runExtensionBackendExport, runExtensionBackendExportInWorker } from './extensionBackend.js';
 import { extensionBackendOperation } from './extensionBackendRunner.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
@@ -57,21 +57,24 @@ export async function stopAllExtensionServices(): Promise<void> {
 
 async function startOneExtensionService(
   extensionId: string,
-  service: { id: string; handler: string },
+  service: { id: string; handler: string; stopHandler?: string; worker?: { enabled?: boolean } },
   serverContext?: ExtensionBackendServerContext,
 ): Promise<{ extensionId: string; serviceId: string; ok: boolean; error?: string }> {
   const key = serviceKey(extensionId, service.id);
   if (runningServices.has(key)) return { extensionId, serviceId: service.id, ok: true };
   try {
     const SERVICE_STARTUP_TIMEOUT_MS = 30_000;
+    const operation = extensionBackendOperation('service-startup', `service ${service.id} startup`, { target: service.id });
     const result = await Promise.race([
-      runExtensionBackendExport(
-        extensionId,
-        service.handler,
-        extensionBackendOperation('service-startup', `service ${service.id} startup`, { target: service.id }),
-        (handler) => Promise.resolve(handler({ serviceId: service.id }, createBackendContext(extensionId, serverContext))),
-        { missingExportMessage: `Missing service handler export "${service.handler}".` },
-      ),
+      service.worker?.enabled
+        ? runExtensionBackendExportInWorker(extensionId, service.handler, operation, [{ serviceId: service.id }], serverContext)
+        : runExtensionBackendExport(
+            extensionId,
+            service.handler,
+            operation,
+            (handler) => Promise.resolve(handler({ serviceId: service.id }, createBackendContext(extensionId, serverContext))),
+            { missingExportMessage: `Missing service handler export "${service.handler}".` },
+          ),
       new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error(`Service "${service.id}" startup timed out after ${SERVICE_STARTUP_TIMEOUT_MS / 1000}s.`)),
@@ -79,7 +82,19 @@ async function startOneExtensionService(
         ).unref(),
       ),
     ]);
-    const stop = typeof result === 'function' ? (result as () => unknown | Promise<unknown>) : undefined;
+    const stop =
+      typeof result === 'function'
+        ? (result as () => unknown | Promise<unknown>)
+        : service.worker?.enabled && service.stopHandler
+          ? () =>
+              runExtensionBackendExportInWorker(
+                extensionId,
+                service.stopHandler!,
+                extensionBackendOperation('service-stop', `service ${service.id} stop`, { target: service.id }),
+                [{ serviceId: service.id }],
+                serverContext,
+              )
+          : undefined;
     runningServices.set(key, { extensionId, serviceId: service.id, stop, startedAt: new Date().toISOString() });
     clearExtensionHealthError(extensionId);
     clearExtensionFailureRecordsForOperation(extensionId, `service ${service.id} startup`);
@@ -123,13 +138,21 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
       try {
         const HEALTH_CHECK_TIMEOUT_MS = 15_000;
         const result = await Promise.race([
-          runExtensionBackendExport(
-            summary.id,
-            service.healthCheck,
-            extensionBackendOperation('service-health-check', `service ${service.id} health check`, { target: service.id }),
-            (handler) => Promise.resolve(handler({ serviceId: service.id }, createBackendContext(summary.id, serverContext))),
-            { missingExportMessage: `Missing service healthCheck export "${service.healthCheck}".` },
-          ),
+          service.worker?.enabled
+            ? runExtensionBackendExportInWorker(
+                summary.id,
+                service.healthCheck,
+                extensionBackendOperation('service-health-check', `service ${service.id} health check`, { target: service.id }),
+                [{ serviceId: service.id }],
+                serverContext,
+              )
+            : runExtensionBackendExport(
+                summary.id,
+                service.healthCheck,
+                extensionBackendOperation('service-health-check', `service ${service.id} health check`, { target: service.id }),
+                (handler) => Promise.resolve(handler({ serviceId: service.id }, createBackendContext(summary.id, serverContext))),
+                { missingExportMessage: `Missing service healthCheck export "${service.healthCheck}".` },
+              ),
           new Promise<never>((_, reject) =>
             setTimeout(
               () => reject(new Error(`Health check for service "${service.id}" timed out after ${HEALTH_CHECK_TIMEOUT_MS / 1000}s.`)),

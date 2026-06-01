@@ -843,7 +843,11 @@ export interface ExtensionBackendService {
   title?: string;
   description?: string;
   healthCheck?: string;
+  stopHandler?: string;
   restart?: 'never' | 'on-failure' | 'always';
+  worker?: {
+    enabled?: boolean;
+  };
 }
 
 export interface ExtensionBackendAction {

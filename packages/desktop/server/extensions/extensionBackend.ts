@@ -744,6 +744,28 @@ async function runExtensionBackendActionInWorker(
   );
 }
 
+export async function runExtensionBackendExportInWorker(
+  extensionId: string,
+  exportName: string,
+  operation: ExtensionBackendOperation,
+  args: unknown[],
+  serverContext?: ExtensionBackendServerContext,
+  toolContext?: ExtensionBackendContext['toolContext'],
+): Promise<unknown> {
+  const runner = getWorkerImportBackendRunner();
+  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
+  if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
+    throw new ExtensionLoadError({
+      extensionId,
+      code: 'handler_not_found',
+      message: `Extension "${extensionId}" backend does not export handler "${exportName}".`,
+    });
+  }
+  return runner.runWorkerExport(extensionId, loadTarget, exportName, operation, args, {
+    context: workerBackendContextOptions(serverContext, toolContext),
+  });
+}
+
 function canRunRouteInBackendWorker(route: { stream?: 'sse'; worker?: { enabled?: boolean } } | undefined): boolean {
   return route?.worker?.enabled === true && route.stream === undefined;
 }
