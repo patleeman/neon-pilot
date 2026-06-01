@@ -16,7 +16,10 @@
       {
         "id": "ensure",
         "handler": "ensure",
-        "title": "Ensure onboarding conversation"
+        "title": "Ensure onboarding conversation",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },

@@ -814,6 +814,60 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe onboarding actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ created: true, conversationId: 'conv-1', shouldOpen: true })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-onboarding', 'ensure', { source: 'frontend' })).resolves.toEqual({
+      ok: true,
+      result: { created: true, conversationId: 'conv-1', shouldOpen: true },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-onboarding',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-onboarding', 'dist', 'backend.mjs')),
+      }),
+      'ensure',
+      { type: 'action', label: 'action ensure', target: 'ensure' },
+      [{ source: 'frontend' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          liveSessionResourceOptions: expect.objectContaining({
+            additionalExtensionPaths: expect.any(Array),
+            additionalSkillPaths: expect.any(Array),
+            additionalPromptTemplatePaths: expect.any(Array),
+            additionalThemePaths: expect.any(Array),
+          }),
+          toolContext: undefined,
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

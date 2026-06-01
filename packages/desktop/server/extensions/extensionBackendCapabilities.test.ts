@@ -6,8 +6,10 @@ describe('extension backend capability dispatcher', () => {
   it('dispatches extension-scoped live conversation capability calls', async () => {
     const conversations = {
       get: vi.fn(async () => ({ id: 'conv-1', running: false, toolNames: ['read'] })),
+      create: vi.fn(async () => ({ id: 'conv-2', conversationId: 'conv-2' })),
       setActiveTools: vi.fn(async () => ({ conversationId: 'conv-1', toolNames: ['exec_code'] })),
       appendCustomEntry: vi.fn(async () => ({ ok: true })),
+      appendTranscriptBlock: vi.fn(async () => ({ blockId: 'block-1' })),
       metadata: {
         get: vi.fn(),
         set: vi.fn(),
@@ -52,10 +54,41 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toEqual({ ok: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 4,
+          kind: 'capabilityRequest',
+          extensionId: 'system-onboarding',
+          capability: 'conversations',
+          operation: 'create',
+          input: { cwd: '/repo', title: 'Welcome', live: false },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'conv-2', conversationId: 'conv-2' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 5,
+          kind: 'capabilityRequest',
+          extensionId: 'system-onboarding',
+          capability: 'conversations',
+          operation: 'appendTranscriptBlock',
+          input: { conversationId: 'conv-2', blockType: 'onboarding_intro', title: 'Welcome', data: { source: 'system-onboarding' } },
+        }),
+      ),
+    ).resolves.toEqual({ blockId: 'block-1' });
 
     expect(conversations.get).toHaveBeenCalledWith('system-code-mode', 'conv-1');
     expect(conversations.setActiveTools).toHaveBeenCalledWith('system-code-mode', 'conv-1', ['exec_code']);
     expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-code-mode', 'conv-1', 'code-mode-state', { enabled: true });
+    expect(conversations.create).toHaveBeenCalledWith('system-onboarding', { cwd: '/repo', title: 'Welcome', live: false });
+    expect(conversations.appendTranscriptBlock).toHaveBeenCalledWith('system-onboarding', {
+      conversationId: 'conv-2',
+      blockType: 'onboarding_intro',
+      title: 'Welcome',
+      data: { source: 'system-onboarding' },
+    });
   });
 
   it('rejects malformed live conversation capability inputs', async () => {

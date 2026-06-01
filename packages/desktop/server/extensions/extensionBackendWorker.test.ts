@@ -260,9 +260,16 @@ export async function doThing(_input, ctx) {
       `
 export async function doThing(_input, ctx) {
   const before = await ctx.conversations.get('conv-1');
+  const created = await ctx.conversations.create({ cwd: '/repo', title: 'Welcome', live: false });
   const tools = await ctx.conversations.setActiveTools('conv-1', ['exec_code']);
   const entry = await ctx.conversations.appendCustomEntry('conv-1', 'code-mode-state', { enabled: true });
-  return { before, tools, entry };
+  const block = await ctx.conversations.appendTranscriptBlock({
+    conversationId: created.conversationId,
+    blockType: 'onboarding_intro',
+    title: 'Welcome',
+    data: { source: 'worker-ext' },
+  });
+  return { before, created, tools, entry, block };
 }
 `,
     );
@@ -292,28 +299,55 @@ export async function doThing(_input, ctx) {
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
-      operation: 'setActiveTools',
-      input: { conversationId: 'conv-1', toolNames: ['exec_code'] },
+      operation: 'create',
+      input: { cwd: '/repo', title: 'Welcome', live: false },
     });
-    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { conversationId: 'conv-1', toolNames: ['exec_code'] } });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { id: 'conv-2', conversationId: 'conv-2' } });
 
     await waitForPostMessage({
       id: 3,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
       capability: 'conversations',
+      operation: 'setActiveTools',
+      input: { conversationId: 'conv-1', toolNames: ['exec_code'] },
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: { conversationId: 'conv-1', toolNames: ['exec_code'] } });
+
+    await waitForPostMessage({
+      id: 4,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
       operation: 'appendCustomEntry',
       input: { conversationId: 'conv-1', customType: 'code-mode-state', data: { enabled: true } },
     });
-    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+    workerThreads.messageHandler?.({ id: 4, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 5,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'appendTranscriptBlock',
+      input: {
+        conversationId: 'conv-2',
+        blockType: 'onboarding_intro',
+        title: 'Welcome',
+        data: { source: 'worker-ext' },
+      },
+    });
+    workerThreads.messageHandler?.({ id: 5, kind: 'capabilityResponse', ok: true, result: { blockId: 'block-1' } });
 
     await waitForPostMessage({
       id: 17,
       ok: true,
       result: {
         before: { id: 'conv-1', toolNames: ['read'] },
+        created: { id: 'conv-2', conversationId: 'conv-2' },
         tools: { conversationId: 'conv-1', toolNames: ['exec_code'] },
         entry: { ok: true },
+        block: { blockId: 'block-1' },
       },
     });
   });

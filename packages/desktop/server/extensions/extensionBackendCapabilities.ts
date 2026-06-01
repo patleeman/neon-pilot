@@ -38,8 +38,26 @@ interface ExtensionBackendCapabilityEvents {
 
 interface ExtensionBackendCapabilityConversations {
   get(extensionId: string, conversationId: string): Promise<unknown> | unknown;
+  create?(
+    extensionId: string,
+    input?: {
+      cwd?: string;
+      live?: boolean;
+      title?: string;
+      prompt?: string;
+      initialPrompt?: string;
+      model?: string | null;
+      thinkingLevel?: string | null;
+      serviceTier?: string | null;
+      allowedToolNames?: string[];
+    },
+  ): Promise<unknown> | unknown;
   setActiveTools(extensionId: string, conversationId: string, toolNames: string[]): Promise<unknown> | unknown;
   appendCustomEntry(extensionId: string, conversationId: string, customType: string, data?: unknown): Promise<unknown> | unknown;
+  appendTranscriptBlock?(
+    extensionId: string,
+    input: { conversationId: string; blockType: string; data: unknown; title?: string; blockId?: string },
+  ): Promise<unknown> | unknown;
   metadata: {
     get(extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }): Promise<unknown> | unknown;
     set(
@@ -216,6 +234,33 @@ function dispatchConversationsCapability(
     return conversations.get(request.extensionId, requireString(input.conversationId, 'Conversation id'));
   }
 
+  if (request.operation === 'create') {
+    if (!conversations.create) {
+      throw new Error('Conversation create capability is unavailable.');
+    }
+    return conversations.create(request.extensionId, {
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Conversation cwd') } : {}),
+      ...(input.live !== undefined ? { live: optionalBoolean(input.live, 'Conversation live') } : {}),
+      ...(input.title !== undefined ? { title: optionalString(input.title, 'Conversation title') } : {}),
+      ...(input.prompt !== undefined ? { prompt: optionalString(input.prompt, 'Conversation prompt') } : {}),
+      ...(input.initialPrompt !== undefined ? { initialPrompt: optionalString(input.initialPrompt, 'Conversation initialPrompt') } : {}),
+      ...(input.model === null ? { model: null } : input.model !== undefined ? { model: optionalString(input.model, 'Conversation model') } : {}),
+      ...(input.thinkingLevel === null
+        ? { thinkingLevel: null }
+        : input.thinkingLevel !== undefined
+          ? { thinkingLevel: optionalString(input.thinkingLevel, 'Conversation thinkingLevel') }
+          : {}),
+      ...(input.serviceTier === null
+        ? { serviceTier: null }
+        : input.serviceTier !== undefined
+          ? { serviceTier: optionalString(input.serviceTier, 'Conversation serviceTier') }
+          : {}),
+      ...(input.allowedToolNames !== undefined
+        ? { allowedToolNames: optionalStringArray(input.allowedToolNames, 'Conversation allowed tool names') }
+        : {}),
+    });
+  }
+
   if (request.operation === 'setActiveTools') {
     return conversations.setActiveTools(
       request.extensionId,
@@ -231,6 +276,19 @@ function dispatchConversationsCapability(
       requireString(input.customType, 'Conversation custom type'),
       input.data,
     );
+  }
+
+  if (request.operation === 'appendTranscriptBlock') {
+    if (!conversations.appendTranscriptBlock) {
+      throw new Error('Conversation appendTranscriptBlock capability is unavailable.');
+    }
+    return conversations.appendTranscriptBlock(request.extensionId, {
+      conversationId: requireString(input.conversationId, 'Conversation id'),
+      blockType: requireString(input.blockType, 'Conversation transcript block type'),
+      data: input.data,
+      ...(input.title !== undefined ? { title: optionalString(input.title, 'Conversation transcript title') } : {}),
+      ...(input.blockId !== undefined ? { blockId: optionalString(input.blockId, 'Conversation transcript block id') } : {}),
+    });
   }
 
   if (request.operation === 'metadata.get') {
@@ -578,10 +636,16 @@ export function createExtensionBackendCapabilityDispatcher(
 ): ExtensionBackendCapabilityDispatcher {
   const conversations = options.conversations ?? {
     get: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().get(conversationId),
+    create: (_extensionId: string, input?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['create']>[0]) =>
+      createExtensionConversationsCapability().create(input),
     setActiveTools: (_extensionId: string, conversationId: string, toolNames: string[]) =>
       createExtensionConversationsCapability().setActiveTools(conversationId, toolNames),
     appendCustomEntry: (_extensionId: string, conversationId: string, customType: string, data?: unknown) =>
       createExtensionConversationsCapability().appendCustomEntry(conversationId, customType, data),
+    appendTranscriptBlock: (
+      _extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['appendTranscriptBlock']>[0],
+    ) => createExtensionConversationsCapability().appendTranscriptBlock(input),
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
         readConversationMetadata({ ...input, extensionId }),
