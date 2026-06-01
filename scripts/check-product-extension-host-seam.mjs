@@ -136,6 +136,14 @@ const forbiddenPatterns = [
     message: 'product runtime code must manage extension startup guards through ExtensionHostClient',
   },
   {
+    pattern: /import\s+\{[^}]*\bfindExtensionEntry\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'product runtime code must resolve extension package entries through ExtensionHostClient',
+  },
+  {
+    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\bfindExtensionEntry\b/,
+    message: 'product runtime code must resolve extension package entries through ExtensionHostClient',
+  },
+  {
     files: [/^packages\/desktop\/server\/conversations\//],
     pattern: /import\s+\{[^}]*\bresolveExtensionModelProfile\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'conversation runtime code must resolve extension model profiles through ExtensionHostClient',

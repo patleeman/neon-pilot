@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
@@ -31,6 +31,17 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
     beginStartupGuard: async () => ({ safeMode: false, disabledIds: [] }),
     completeStartupGuard: async () => undefined,
     startStartupActions: async () => [],
+    resolveFilePath: async ({ extensionId, relativePath }: { extensionId: string; relativePath: string }) => {
+      const registry = await import('../extensions/extensionRegistry.js');
+      const entry = registry.findExtensionEntry(extensionId);
+      if (!entry?.packageRoot) throw new Error('Extension files are unavailable for this extension.');
+      const packageRoot = resolve(entry.packageRoot);
+      const filePath = resolve(packageRoot, relativePath);
+      if (filePath !== packageRoot && !filePath.startsWith(`${packageRoot}${sep}`)) {
+        throw new Error('Extension file path escapes package root.');
+      }
+      return filePath;
+    },
     readRegistryPresentation: async () => {
       const registry = await import('../extensions/extensionRegistry.js');
       return {

@@ -320,6 +320,19 @@ describe('extension host client', () => {
     expect(extensionRegistry.resolveExtensionModelProfile).toHaveBeenCalledWith({ provider: 'openai', model: 'gpt-5' });
   });
 
+  it('routes extension file path resolution through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.findExtensionEntry.mockReturnValueOnce({ packageRoot: '/extensions/ext' });
+
+    await expect(getExtensionHostClient().resolveFilePath({ extensionId: 'ext', relativePath: 'dist/frontend.js' })).resolves.toBe(
+      '/extensions/ext/dist/frontend.js',
+    );
+    extensionRegistry.findExtensionEntry.mockReturnValueOnce({ packageRoot: '/extensions/ext' });
+    await expect(getExtensionHostClient().resolveFilePath({ extensionId: 'ext', relativePath: '../escape.js' })).rejects.toThrow(
+      'Extension file path escapes package root.',
+    );
+  });
+
   it('routes startup guard lifecycle through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.beginExtensionStartupGuard.mockReturnValueOnce({ safeMode: true, disabledIds: ['ext'] });
@@ -468,6 +481,9 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'listStaticContributions' })).toBe('listStaticContributions');
     expect(extensionHostRequestName({ type: 'listEventSubscriptions' })).toBe('listEventSubscriptions');
     expect(extensionHostRequestName({ type: 'readRegistryPresentation' })).toBe('readRegistryPresentation');
+    expect(extensionHostRequestName({ type: 'resolveFilePath', extensionId: 'ext', relativePath: 'dist/frontend.js' })).toBe(
+      'resolveFilePath:ext/dist/frontend.js',
+    );
     expect(extensionHostRequestName({ type: 'resolveModelProfile', provider: 'openai', model: 'gpt-5' })).toBe(
       'resolveModelProfile:openai/gpt-5',
     );

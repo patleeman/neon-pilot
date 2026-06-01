@@ -1,5 +1,4 @@
 import { readFileSync, statSync } from 'node:fs';
-import { resolve, sep } from 'node:path';
 
 import type { Express, Request, Response } from 'express';
 
@@ -21,7 +20,6 @@ import type { ExtensionManifest } from '../extensions/extensionManifest.js';
 import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js';
 import {
   clearBuildError,
-  findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
   setBuildError,
 } from '../extensions/extensionRegistry.js';
@@ -193,22 +191,7 @@ async function sendExtensionSseResponse(
   }
 }
 
-function resolveExtensionFilePath(extensionId: string, relativePath: string): string {
-  const entry = findExtensionEntry(extensionId);
-  if (!entry?.packageRoot) {
-    throw new Error('Extension files are unavailable for this extension.');
-  }
-
-  const packageRoot = resolve(entry.packageRoot);
-  const filePath = resolve(packageRoot, relativePath);
-  if (filePath !== packageRoot && !filePath.startsWith(`${packageRoot}${sep}`)) {
-    throw new Error('Extension file path escapes package root.');
-  }
-
-  return filePath;
-}
-
-function readExtensionFile(req: Request, res: Response): void {
+async function readExtensionFile(req: Request, res: Response): Promise<void> {
   try {
     const extensionId = req.params.id;
     const relativePath = req.params[0];
@@ -217,7 +200,7 @@ function readExtensionFile(req: Request, res: Response): void {
       return;
     }
 
-    const filePath = resolveExtensionFilePath(extensionId, relativePath);
+    const filePath = await getExtensionHostClient().resolveFilePath({ extensionId, relativePath });
     if (!statSync(filePath).isFile()) {
       res.status(404).json({ error: 'Extension file not found.' });
       return;

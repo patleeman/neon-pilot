@@ -392,6 +392,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('modelProfile' in response)) throw new Error('Extension host returned invalid model profile resolution.');
       return response.modelProfile;
     },
+    async resolveFilePath(input) {
+      const response = await send({ type: 'resolveFilePath', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('filePath' in response)) throw new Error('Extension host returned invalid file path resolution.');
+      return response.filePath;
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },

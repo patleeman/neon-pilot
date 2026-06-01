@@ -253,6 +253,12 @@ export interface ExtensionHostResolveModelProfileRequest {
   model: string;
 }
 
+export interface ExtensionHostResolveFilePathRequest {
+  type: 'resolveFilePath';
+  extensionId: string;
+  relativePath: string;
+}
+
 export interface ExtensionHostInvokeProtocolEntrypointRequest {
   type: 'invokeProtocolEntrypoint';
   protocolId: string;
@@ -374,6 +380,7 @@ export type ExtensionHostRequest =
   | ExtensionHostListEventSubscriptionsRequest
   | ExtensionHostReadRegistryPresentationRequest
   | ExtensionHostResolveModelProfileRequest
+  | ExtensionHostResolveFilePathRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostBeginStartupGuardRequest
@@ -439,6 +446,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      filePath: string;
+    }
+  | {
+      ok: true;
       invoked: true;
     }
   | {
@@ -496,6 +507,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'listEventSubscriptions') return 'listEventSubscriptions';
   if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
   if (request.type === 'resolveModelProfile') return `resolveModelProfile:${request.provider}/${request.model}`;
+  if (request.type === 'resolveFilePath') return `resolveFilePath:${request.extensionId}/${request.relativePath}`;
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'beginStartupGuard') return 'beginStartupGuard';
   if (request.type === 'completeStartupGuard') return 'completeStartupGuard';

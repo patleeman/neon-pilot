@@ -170,7 +170,8 @@ describe('extension host RPC client', () => {
           },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ ok: true, modelProfile: { kind: 'resolved', profile: { extensionId: 'ext', id: 'gpt' } } }));
+      .mockResolvedValueOnce(jsonResponse({ ok: true, modelProfile: { kind: 'resolved', profile: { extensionId: 'ext', id: 'gpt' } } }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, filePath: '/extensions/ext/dist/frontend.js' }));
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
@@ -212,6 +213,9 @@ describe('extension host RPC client', () => {
       kind: 'resolved',
       profile: { extensionId: 'ext', id: 'gpt' },
     });
+    await expect(client.resolveFilePath({ extensionId: 'ext', relativePath: 'dist/frontend.js' })).resolves.toBe(
+      '/extensions/ext/dist/frontend.js',
+    );
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       1,
@@ -284,6 +288,13 @@ describe('extension host RPC client', () => {
       12,
       'http://host/rpc',
       expect.objectContaining({ body: JSON.stringify({ request: { type: 'resolveModelProfile', provider: 'openai', model: 'gpt-5' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      13,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({ request: { type: 'resolveFilePath', extensionId: 'ext', relativePath: 'dist/frontend.js' } }),
+      }),
     );
   });
 

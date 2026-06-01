@@ -271,7 +271,7 @@ describe('registerExtensionRoutes', () => {
     expect(surfacesRes.json).toHaveBeenCalledWith([view]);
   });
 
-  it('serves runtime extension bundles inside the package root', () => {
+  it('serves runtime extension bundles inside the package root', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
@@ -281,13 +281,13 @@ describe('registerExtensionRoutes', () => {
 
     const harness = createHarness();
     const res = createResponse();
-    harness.getHandler('/api/extensions/:id/files/*')({ params: { id: 'agent-board', 0: 'dist/frontend.js' } }, res);
+    await harness.getHandler('/api/extensions/:id/files/*')({ params: { id: 'agent-board', 0: 'dist/frontend.js' } }, res);
 
     expect(res.type).toHaveBeenCalledWith('text/javascript; charset=utf-8');
     expect(res.send).toHaveBeenCalledWith(expect.stringContaining('AgentBoardPage'));
   });
 
-  it('rejects extension file traversal', () => {
+  it('rejects extension file traversal', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
@@ -296,7 +296,7 @@ describe('registerExtensionRoutes', () => {
 
     const harness = createHarness();
     const res = createResponse();
-    harness.getHandler('/api/extensions/:id/files/*')({ params: { id: 'agent-board', 0: '../escape.html' } }, res);
+    await harness.getHandler('/api/extensions/:id/files/*')({ params: { id: 'agent-board', 0: '../escape.html' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({ error: 'Extension file path escapes package root.' });

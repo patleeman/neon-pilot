@@ -1,3 +1,5 @@
+import { resolve as resolvePath, sep } from 'node:path';
+
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import type {
   ExtensionHostActionInvokeResult,
@@ -17,6 +19,7 @@ import type {
   ExtensionHostReloadBackendRequest,
   ExtensionHostReloadBackendResult,
   ExtensionHostRequest,
+  ExtensionHostResolveFilePathRequest,
   ExtensionHostResolveModelProfileRequest,
   ExtensionHostResponse,
   ExtensionHostRouteResponse,
@@ -50,6 +53,7 @@ export type ExtensionHostInstallSubscriptionsInput = Omit<ExtensionHostInstallSu
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
 export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
+export type ExtensionHostResolveFilePathInput = Omit<ExtensionHostResolveFilePathRequest, 'type'>;
 export type ExtensionHostResolveModelProfileInput = Omit<ExtensionHostResolveModelProfileRequest, 'type'>;
 export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
 export type ExtensionHostSetEnabledInput = Omit<ExtensionHostSetEnabledRequest, 'type'>;
@@ -72,6 +76,7 @@ export interface ExtensionHostClient {
   listStaticContributions(): Promise<ExtensionHostStaticContributions>;
   listEventSubscriptions(): Promise<ExtensionHostEventSubscription[]>;
   readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
+  resolveFilePath(input: ExtensionHostResolveFilePathInput): Promise<string>;
   resolveModelProfile(input: ExtensionHostResolveModelProfileInput): Promise<ExtensionHostModelProfileResolution>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
@@ -180,6 +185,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('modelProfile' in response)) throw new Error('Extension host returned invalid model profile resolution.');
       return response.modelProfile;
+    },
+    async resolveFilePath(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'resolveFilePath', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('filePath' in response)) throw new Error('Extension host returned invalid file path resolution.');
+      return response.filePath;
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -538,6 +549,19 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         ok: true,
         modelProfile: resolveExtensionModelProfile({ provider: request.provider, model: request.model }) as ExtensionHostModelProfileResolution,
       };
+    }
+    if (request.type === 'resolveFilePath') {
+      const { findExtensionEntry } = await import('./extensionRegistry.js');
+      const entry = findExtensionEntry(request.extensionId);
+      if (!entry?.packageRoot) {
+        throw new Error('Extension files are unavailable for this extension.');
+      }
+      const packageRoot = resolvePath(entry.packageRoot);
+      const filePath = resolvePath(packageRoot, request.relativePath);
+      if (filePath !== packageRoot && !filePath.startsWith(`${packageRoot}${sep}`)) {
+        throw new Error('Extension file path escapes package root.');
+      }
+      return { ok: true, filePath };
     }
     if (request.type === 'beginStartupGuard') {
       const { beginExtensionStartupGuard } = await import('./extensionRegistry.js');
