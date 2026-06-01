@@ -73,6 +73,11 @@ const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     description: 'Agent web search tool backed by DuckDuckGo HTML results.',
   },
   {
+    id: 'system-ds4',
+    name: 'DS4',
+    description: 'DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4.',
+  },
+  {
     id: 'system-exa-search',
     name: 'Exa Search',
     description: 'Agent tool for Exa web search.',

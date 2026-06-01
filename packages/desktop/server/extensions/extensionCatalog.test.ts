@@ -71,6 +71,11 @@ describe('extension catalog', () => {
           installed: false,
           bundleUrl: `https://github.com/patleeman/neon-pilot/releases/download/v${version}/system-suggested-context.neon-extension.zip`,
         }),
+        expect.objectContaining({
+          id: 'system-ds4',
+          installed: false,
+          bundleUrl: `https://github.com/patleeman/neon-pilot/releases/download/v${version}/system-ds4.neon-extension.zip`,
+        }),
       ]),
     );
   });
