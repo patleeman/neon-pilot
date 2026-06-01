@@ -6,7 +6,6 @@ import {
   getExtensionHostInvokeActionFallbackReason,
   getExtensionHostInvokeRouteFallbackReason,
   getExtensionHostProtocolEntrypointFallbackReason,
-  getExtensionHostStartupActionsFallbackReason,
   hasFunction,
   isWireableExtensionHostInvokeActionInput,
 } from './extensionHostRpcClient.js';
@@ -145,10 +144,6 @@ describe('extension host RPC client', () => {
         request: { method: 'GET', path: '/unsafe', query: {}, params: {}, body: { callback: () => undefined } },
       }),
     ).toBe('route:function-bearing-context');
-    expect(getExtensionHostStartupActionsFallbackReason({ serverContextSnapshot: { runtimeScope: 'shared' } })).toBeNull();
-    expect(getExtensionHostStartupActionsFallbackReason({ serverContext: { getRuntimeScope: () => 'shared' } })).toBe(
-      'startup:function-bearing-context',
-    );
     expect(getExtensionHostProtocolEntrypointFallbackReason()).toBe('protocol:stdio-streams');
   });
 
@@ -479,7 +474,7 @@ describe('extension host RPC client', () => {
     expect(fallbackClient.reloadBackend).not.toHaveBeenCalled();
   });
 
-  it('falls back for live startup action server contexts in the hybrid client', async () => {
+  it('rejects live startup action server contexts in the hybrid client', async () => {
     const rpcClient = {
       checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
@@ -507,9 +502,9 @@ describe('extension host RPC client', () => {
     const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
     const serverContext = { getRuntimeScope: () => 'shared' };
 
-    await expect(client.startStartupActions({ serverContext })).resolves.toEqual([{ extensionId: 'fallback-startup-ext', ok: true }]);
+    await expect(client.startStartupActions({ serverContext })).rejects.toThrow('pass a server context snapshot');
 
     expect(rpcClient.startStartupActions).not.toHaveBeenCalled();
-    expect(fallbackClient.startStartupActions).toHaveBeenCalledWith({ serverContext });
+    expect(fallbackClient.startStartupActions).not.toHaveBeenCalled();
   });
 });

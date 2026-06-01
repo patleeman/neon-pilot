@@ -37,8 +37,7 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
 export type ExtensionHostFallbackReason =
   | 'action:function-bearing-context'
   | 'protocol:stdio-streams'
-  | 'route:function-bearing-context'
-  | 'startup:function-bearing-context';
+  | 'route:function-bearing-context';
 
 export function getExtensionHostInvokeActionFallbackReason(
   input: ExtensionHostInvokeActionInput,
@@ -79,12 +78,6 @@ function isWireableExtensionHostStartStartupActionsInput(input: Parameters<Exten
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot);
 }
 
-export function getExtensionHostStartupActionsFallbackReason(
-  input: Parameters<ExtensionHostClient['startStartupActions']>[0],
-): ExtensionHostFallbackReason | null {
-  return isWireableExtensionHostStartStartupActionsInput(input) ? null : 'startup:function-bearing-context';
-}
-
 export function getExtensionHostProtocolEntrypointFallbackReason(): ExtensionHostFallbackReason {
   return 'protocol:stdio-streams';
 }
@@ -92,6 +85,12 @@ export function getExtensionHostProtocolEntrypointFallbackReason(): ExtensionHos
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {
   if (!isWireableExtensionHostInvokeActionInput(input)) {
     throw new Error('Extension host RPC cannot carry function-bearing contexts; use capability channels before enabling this call path.');
+  }
+}
+
+function assertWireableStartupActionsInput(input: Parameters<ExtensionHostClient['startStartupActions']>[0]): void {
+  if (!isWireableExtensionHostStartStartupActionsInput(input)) {
+    throw new Error('Extension host RPC cannot carry function-bearing startup contexts; pass a server context snapshot.');
   }
 }
 
@@ -298,6 +297,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       return response.selfTest;
     },
     async startStartupActions(input) {
+      assertWireableStartupActionsInput(input);
       const response = await send({ type: 'startStartupActions', ...(input ?? {}) });
       if (!response.ok) throw new Error(response.error);
       if (!('results' in response)) throw new Error('Extension host returned an invalid startup actions response.');
@@ -347,9 +347,7 @@ export function createHybridExtensionHostClient(input: {
       return input.rpcClient.runSelfTest(selfTestInput);
     },
     async startStartupActions(startupInput) {
-      if (getExtensionHostStartupActionsFallbackReason(startupInput)) {
-        return input.fallbackClient.startStartupActions(startupInput);
-      }
+      assertWireableStartupActionsInput(startupInput);
       return input.rpcClient.startStartupActions(startupInput);
     },
     async publishEvent(source, payload) {

@@ -83,10 +83,11 @@ The hybrid extension host client keeps each remaining in-process path named and 
 
 - `action:function-bearing-context`: backend action calls that still carry live callback or capability objects outside the supported streaming `toolContext.onUpdate` channel.
 - `route:function-bearing-context`: backend route calls whose request or host context still contains functions after stripping the abort signal.
-- `startup:function-bearing-context`: startup action calls that still receive live server context functions instead of a serializable server context snapshot.
 - `protocol:stdio-streams`: protocol entrypoints that still require raw stdio streams.
 
 Removing a fallback reason means first replacing the live object with a capability channel or snapshot, then routing that call through `ExtensionHostClient` RPC.
+
+Startup actions are no longer allowed to fall back when they carry live server context functions. Product callers must pass `serverContextSnapshot` so startup dispatch stays on the extension host child process.
 
 ## Migration Phases
 
