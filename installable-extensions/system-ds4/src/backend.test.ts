@@ -381,7 +381,7 @@ describe('DS4 agent profile activation', () => {
       },
     );
 
-    expect(calls).toEqual([['bash', 'read', 'edit']]);
+    expect(calls).toEqual([['bash', 'read', 'edit', 'subagent']]);
   });
 
   it('adds the DS4 CLI to bash PATH for DS4 sessions', () => {

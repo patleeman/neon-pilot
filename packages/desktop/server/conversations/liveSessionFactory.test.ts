@@ -160,7 +160,7 @@ describe('live session factory', () => {
     modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
     extensionRegistry.resolveModelProfile.mockResolvedValue({
       kind: 'resolved',
-      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit'] },
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit', 'subagent'] },
     });
     agent.createAgentSession.mockResolvedValueOnce({ session: s });
 
@@ -177,7 +177,7 @@ describe('live session factory', () => {
       '/repo',
       expect.objectContaining({ additionalSkillPaths: [], noSkills: true, progressiveDisclosure: true, skillDiscoveryPaths: [] }),
     );
-    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit'] }));
+    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit', 'subagent'] }));
     expect(s.setActiveTools).not.toHaveBeenCalled();
   });
 

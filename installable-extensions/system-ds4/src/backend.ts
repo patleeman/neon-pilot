@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { access, chmod, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +16,7 @@ const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
 const MODEL_NAME = 'DeepSeek V4 Flash';
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
-const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
+const DS4_CORE_TOOLS = ['bash', 'read', 'edit', 'subagent'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
 const SETTINGS_KEY = 'settings';
@@ -1045,7 +1046,9 @@ export async function optimizePromptAssembly(input: { plan?: unknown; context?: 
 
 export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
-    const cliBinDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'bin');
+    const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+    const cliBinDirCandidates = [path.join(moduleDir, '..', 'bin'), path.join(moduleDir, 'bin')];
+    const cliBinDir = cliBinDirCandidates.find((candidate) => existsSync(path.join(candidate, 'ds4'))) ?? cliBinDirCandidates[0];
     const maybeWrapperApi = pi as ExtensionAPI & {
       registerBashProcessWrapper?: (
         id: string,

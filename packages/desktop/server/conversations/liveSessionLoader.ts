@@ -24,7 +24,8 @@ function buildDs4SystemPrompt(skillPaths: string[]): string {
   return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}
 
 DS4 local model mode:
-- Core tools are stable: bash, read, and edit.
+- Core tools are stable: bash, read, edit, and subagent.
+- Use the subagent tool directly when the user asks to create, start, inspect, follow up with, or cancel delegated agent work.
 - If DS4 RTK shell compression is enabled in settings, simple supported bash commands are automatically run through RTK for compact output.
 - Use bash to discover and run extended capabilities through the DS4 CLI.
 - Start with \`ds4 help\` when you need CLI capabilities.
