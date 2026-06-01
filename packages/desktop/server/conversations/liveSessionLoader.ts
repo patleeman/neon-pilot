@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+
 import { DefaultResourceLoader, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
@@ -14,8 +16,38 @@ Guidelines:
 - Be concise in your responses.
 - Show file paths clearly when working with files.
 - Use available tools deliberately and prefer small, verifiable changes.
-- Runtime AGENTS.md files are pointers to instruction sources. Read only the relevant source file before relying on it.
-- Discover skills on demand from the skills directory or extension skill folders, then read the matching SKILL.md before using that workflow.`;
+- Load only relevant knowledge: AGENTS.md for standing context, skills for procedures, notes/projects for reference.
+- When a task matches an available skill, read that SKILL.md before using the workflow.`;
+
+function buildDs4SystemPrompt(skillPaths: string[]): string {
+  const skillLines = normalizeLiveSessionLoaderPaths(skillPaths).map((path) => `- ${path}`);
+  return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}
+
+DS4 local model mode:
+- Core tools are stable: bash, read, and edit.
+- Use bash to discover and run extended capabilities through the DS4 CLI.
+- Start with \`ds4 help\` when you need CLI capabilities.
+- Useful CLI commands include \`ds4 list\`, \`ds4 search\`, \`ds4 read\`, \`ds4 write\`, \`ds4 edit\`, and \`ds4 fetch\`.
+- Prefer direct shell commands when they are shorter or more precise, such as \`rg\`, \`git status --short\`, and focused test commands.
+- Skills are pointers only in DS4 mode. Search these skill files first when the task may match a workflow, then read the matching SKILL.md before using it:
+${skillLines.length > 0 ? skillLines.join('\n') : '- No extension skill paths were provided for this session.'}`;
+}
+
+function labelAgentsFile(filePath: string, agentDir: string): string {
+  const normalizedPath = resolve(filePath);
+  const normalizedAgentDir = resolve(agentDir);
+  if (normalizedPath === resolve(normalizedAgentDir, 'AGENTS.md') || normalizedPath.startsWith(`${normalizedAgentDir}/`)) {
+    return 'Global user agent preferences';
+  }
+  return 'Repo user agent preferences';
+}
+
+function renderAgentsPointerContent(filePath: string, agentDir: string): string {
+  const label = labelAgentsFile(filePath, agentDir);
+  return `${label}: ${filePath}
+
+For DS4, this file is a pointer only. Read it only when the task depends on these preferences.`;
+}
 
 export interface LiveSessionLoaderOptions {
   agentDir?: string;
@@ -31,6 +63,9 @@ export interface LiveSessionLoaderOptions {
   allowedToolNames?: string[];
   /** When set, skills are not loaded into the prompt up front. */
   noSkills?: boolean;
+  /** When set, AGENTS.md and skills are disclosed as pointers for local DS4 sessions. */
+  progressiveDisclosure?: boolean;
+  skillDiscoveryPaths?: string[];
 }
 
 interface PrewarmedLiveSessionLoaderEntry {
@@ -56,21 +91,37 @@ function buildLiveSessionLoaderCacheKey(cwd: string, options: LiveSessionLoaderO
     additionalSkillPaths: normalizeLiveSessionLoaderPaths(options.additionalSkillPaths),
     additionalPromptTemplatePaths: normalizeLiveSessionLoaderPaths(options.additionalPromptTemplatePaths),
     additionalThemePaths: normalizeLiveSessionLoaderPaths(options.additionalThemePaths),
+    noSkills: options.noSkills ?? false,
+    progressiveDisclosure: options.progressiveDisclosure ?? false,
+    skillDiscoveryPaths: normalizeLiveSessionLoaderPaths(options.skillDiscoveryPaths),
   });
 }
 
 function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions = {}): DefaultResourceLoader {
+  const agentDir = options.agentDir ?? AGENT_DIR;
   return new DefaultResourceLoader({
     cwd,
-    agentDir: options.agentDir ?? AGENT_DIR,
+    agentDir,
     extensionFactories: options.extensionFactories,
     additionalExtensionPaths: options.additionalExtensionPaths,
     additionalSkillPaths: options.additionalSkillPaths,
     additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
     additionalThemePaths: options.additionalThemePaths,
-    systemPrompt: NEON_LIVE_SESSION_SYSTEM_PROMPT,
+    systemPrompt: options.progressiveDisclosure
+      ? buildDs4SystemPrompt(options.skillDiscoveryPaths ?? options.additionalSkillPaths ?? [])
+      : NEON_LIVE_SESSION_SYSTEM_PROMPT,
     noSkills: options.noSkills,
     noThemes: true,
+    ...(options.progressiveDisclosure
+      ? {
+          agentsFilesOverride: (base: { agentsFiles: Array<{ path: string; content: string }> }) => ({
+            agentsFiles: base.agentsFiles.map((file) => ({
+              ...file,
+              content: renderAgentsPointerContent(file.path, agentDir),
+            })),
+          }),
+        }
+      : {}),
   });
 }
 

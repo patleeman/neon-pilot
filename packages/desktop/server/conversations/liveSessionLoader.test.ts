@@ -69,6 +69,39 @@ describe('live session loader cache', () => {
     expect(agent.DefaultResourceLoader.instances[0].reload).toHaveBeenCalledOnce();
   });
 
+  it('turns AGENTS files and skills into pointers for progressive DS4 sessions', async () => {
+    await makeLoader('/repo', {
+      agentDir: '/agent-runtime',
+      progressiveDisclosure: true,
+      noSkills: true,
+      additionalSkillPaths: [],
+      skillDiscoveryPaths: ['/skills/ds4/SKILL.md', '/skills/repo/SKILL.md'],
+    });
+
+    const options = agent.DefaultResourceLoader.instances[0].options as {
+      systemPrompt: string;
+      noSkills: boolean;
+      agentsFilesOverride: (base: { agentsFiles: Array<{ path: string; content: string }> }) => {
+        agentsFiles: Array<{ path: string; content: string }>;
+      };
+    };
+    expect(options.noSkills).toBe(true);
+    expect(options.systemPrompt).toContain('DS4 local model mode');
+    expect(options.systemPrompt).toContain('ds4 help');
+    expect(options.systemPrompt).toContain('/skills/ds4/SKILL.md');
+
+    const result = options.agentsFilesOverride({
+      agentsFiles: [
+        { path: '/agent-runtime/AGENTS.md', content: 'full global instructions' },
+        { path: '/repo/AGENTS.md', content: 'full repo instructions' },
+      ],
+    });
+    expect(result.agentsFiles[0]?.content).toContain('Global user agent preferences: /agent-runtime/AGENTS.md');
+    expect(result.agentsFiles[0]?.content).not.toContain('full global instructions');
+    expect(result.agentsFiles[1]?.content).toContain('Repo user agent preferences: /repo/AGENTS.md');
+    expect(result.agentsFiles[1]?.content).not.toContain('full repo instructions');
+  });
+
   it('returns a prewarmed loader once and reloads fresh after it is consumed', async () => {
     await prewarmLiveSessionLoader('/repo', { additionalExtensionPaths: ['/b', '/a'] });
     expect(agent.DefaultResourceLoader.instances).toHaveLength(1);

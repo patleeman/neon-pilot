@@ -168,7 +168,15 @@ export async function createPreparedLiveAgentSession(input: {
   const modelProfilePolicy = await resolveModelProfileSessionPolicy(readSavedModelRef(input.settingsFile, modelRegistry.getAvailable()));
   const resourceLoader = await makeLoader(
     input.cwd,
-    modelProfilePolicy.progressiveSkillDiscovery ? { ...options, additionalSkillPaths: [], noSkills: true } : options,
+    modelProfilePolicy.progressiveSkillDiscovery
+      ? {
+          ...options,
+          additionalSkillPaths: [],
+          noSkills: true,
+          progressiveDisclosure: true,
+          skillDiscoveryPaths: options.additionalSkillPaths ?? [],
+        }
+      : options,
   );
   const loaderAtMs = performance.now();
   const { session } = await createAgentSession({

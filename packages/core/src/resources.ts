@@ -861,18 +861,6 @@ export interface MaterializeRuntimeResourcesResult {
   writtenFiles: string[];
 }
 
-function renderAgentsPointerFile(paths: string[]): string {
-  const lines = [
-    '# Runtime instruction pointers',
-    '',
-    'Do not treat this file as the full instruction source. It lists instruction files available on disk.',
-    'Read only the relevant source file before relying on its details.',
-    '',
-    ...paths.map((path) => `- ${path}`),
-  ];
-  return `${lines.join('\n')}\n`;
-}
-
 export function materializeRuntimeResourcesToAgentDir(
   resources: ResolvedRuntimeResources,
   agentDir: string,
@@ -919,7 +907,8 @@ export function materializeRuntimeResourcesToAgentDir(
 
   const sourceAgentsFiles = excludeTargetFile(resources.agentsFiles, 'AGENTS.md');
   if (sourceAgentsFiles.length > 0) {
-    writeOrRemove('AGENTS.md', renderAgentsPointerFile(sourceAgentsFiles));
+    const agentsContent = combineMarkdownFiles(sourceAgentsFiles);
+    writeOrRemove('AGENTS.md', `${agentsContent}\n`);
   } else {
     writeOrRemove('AGENTS.md', undefined);
   }
