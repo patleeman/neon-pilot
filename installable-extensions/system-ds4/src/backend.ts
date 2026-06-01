@@ -12,6 +12,7 @@ const BASE_URL = 'http://127.0.0.1:8000/v1';
 const API_KEY = 'dsv4-local';
 const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
+const MODEL_NAME = 'DeepSeek V4 Flash';
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
@@ -273,7 +274,7 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
   const state = await ctx.models.saveProviderModel({
     provider: PROVIDER,
     modelId: MODEL_ID,
-    name: 'DeepSeek V4 Flash (ds4.c local)',
+    name: MODEL_NAME,
     reasoning: true,
     input: ['text'],
     contextWindow: 100000,
@@ -341,7 +342,7 @@ export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
     models: [
       {
         id: MODEL_ID,
-        name: 'DeepSeek V4 Flash (ds4.c local)',
+        name: MODEL_NAME,
         reasoning: true,
         input: ['text'],
         contextWindow: 100000,

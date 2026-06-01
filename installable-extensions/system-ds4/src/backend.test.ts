@@ -81,7 +81,7 @@ describe('DS4 provider setup', () => {
       expect.objectContaining({
         provider: 'ds4',
         modelId: 'deepseek-v4-flash',
-        name: 'DeepSeek V4 Flash (ds4.c local)',
+        name: 'DeepSeek V4 Flash',
         reasoning: true,
         contextWindow: 100000,
         maxTokens: 384000,

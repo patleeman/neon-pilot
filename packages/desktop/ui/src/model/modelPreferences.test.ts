@@ -92,7 +92,7 @@ describe('model preferences helpers', () => {
   it('uses provider-qualified values only for duplicate model ids', () => {
     const models = [
       { id: 'deepseek-v4-flash', provider: 'opencode-go', name: 'DeepSeek V4 Flash' },
-      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash (ds4.c local)' },
+      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash' },
       { id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4' },
     ];
 
@@ -104,7 +104,7 @@ describe('model preferences helpers', () => {
   it('resolves raw ids and provider-qualified model refs', () => {
     const models = [
       { id: 'deepseek-v4-flash', provider: 'opencode-go', name: 'DeepSeek V4 Flash' },
-      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash (ds4.c local)' },
+      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash' },
       { id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4' },
     ];
 

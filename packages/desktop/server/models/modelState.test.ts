@@ -138,7 +138,7 @@ describe('modelState', () => {
         api: 'openai',
         apiKey: 'x',
         models: [
-          { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash (ds4.c local)', contextWindow: 128_000, input: ['text'], reasoning: true },
+          { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 128_000, input: ['text'], reasoning: true },
         ],
       },
     ]);

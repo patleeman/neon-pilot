@@ -29,7 +29,7 @@ describe('conversationPreferenceSaving', () => {
   it('compares and reports provider-qualified model selections', () => {
     const models = [
       { id: 'deepseek-v4-flash', provider: 'opencode-go', name: 'DeepSeek V4 Flash' },
-      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash (ds4.c local)' },
+      { id: 'deepseek-v4-flash', provider: 'ds4', name: 'DeepSeek V4 Flash' },
     ];
 
     expect(
@@ -49,7 +49,7 @@ describe('conversationPreferenceSaving', () => {
       }),
     ).toBe(false);
     expect(resolveSelectedModelNotice(models, 'ds4/deepseek-v4-flash')).toBe(
-      'Model set to DeepSeek V4 Flash (ds4.c local) for this conversation.',
+      'Model set to DeepSeek V4 Flash for this conversation.',
     );
   });
 });
