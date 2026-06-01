@@ -294,7 +294,7 @@ description: Commit and push the agent's current work.
     expect(runtimePrompt).not.toContain('<available_skills>');
     expect(runtimePrompt).not.toContain(join(syncRoot, 'skills', 'checkpoint', 'SKILL.md'));
     expect(runtimePrompt).not.toContain("Commit and push the agent's current work.");
-    expect(runtimePrompt).toContain(`Primary knowledge path: ${syncRoot}`);
+    expect(runtimePrompt).not.toContain(`Primary knowledge path: ${syncRoot}`);
     expect(readFileSync(join(runtime, 'AGENTS.md'), 'utf-8')).toContain('# Durable shared');
     expect(runtimeSettings.defaultModel).toBe('gpt-5.4');
     expect(runtimeSettings.defaultProvider).toBe('openai-codex');

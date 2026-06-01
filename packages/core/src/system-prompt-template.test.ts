@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { renderSystemPromptTemplate } from './system-prompt-template.js';
 
 describe('system-prompt-template', () => {
-  it('renders durable path variables into the default system prompt', () => {
+  it('renders concise default system guidance without durable paths', () => {
     const rendered = renderSystemPromptTemplate({
       knowledge_root: '/knowledge',
       agents_edit_target: '/knowledge/AGENTS.md',
@@ -12,10 +12,9 @@ describe('system-prompt-template', () => {
     });
 
     expect(rendered).toContain("You are Patrick Lee's personal AI agent");
-    expect(rendered).toContain('Primary knowledge path: /knowledge');
-    expect(rendered).toContain('Durable AGENTS.md target: /knowledge/AGENTS.md');
-    expect(rendered).toContain('Skills directory: /knowledge/skills');
-    expect(rendered).toContain('Scheduled tasks directory: /state/tasks');
+    expect(rendered).toContain('Use only relevant context');
+    expect(rendered).not.toContain('/knowledge');
+    expect(rendered).not.toContain('/state/tasks');
   });
 
   it('normalizes absent and false values to empty strings without leaving template whitespace noise', () => {
@@ -26,16 +25,14 @@ describe('system-prompt-template', () => {
       tasks_dir: '',
     });
 
-    expect(rendered).toContain('Primary knowledge path:');
-    expect(rendered).toContain('Durable AGENTS.md target:');
     expect(rendered).not.toMatch(/[ \t]+\n/);
     expect(rendered).not.toMatch(/\n{3,}/);
     expect(rendered).toBe(rendered.trim());
   });
 
   it('does not autoescape rendered values because the prompt is plain text', () => {
-    const rendered = renderSystemPromptTemplate({ knowledge_root: '<knowledge>&path' });
+    const rendered = renderSystemPromptTemplate({ custom_value: '<knowledge>&path' }, 'Custom value: {{ custom_value }}');
 
-    expect(rendered).toContain('Primary knowledge path: <knowledge>&path');
+    expect(rendered).toContain('Custom value: <knowledge>&path');
   });
 });

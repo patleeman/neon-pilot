@@ -104,7 +104,7 @@ describe('resources negative tests', () => {
   });
 
   describe('materializeRuntimeResourcesToAgentDir edge cases', () => {
-    it('writes APPEND_SYSTEM with durable knowledge guidance even when no other system append content exists', () => {
+    it('writes APPEND_SYSTEM with concise default guidance even when no other system append content exists', () => {
       const repo = createTempDir('neon-pilot-resources-');
       const runtimeConfigRoot = createTempRuntimeConfigRoot();
       const runtime = createTempDir('neon-pilot-runtime-');
@@ -122,7 +122,9 @@ describe('resources negative tests', () => {
 
       const appendSystemPath = join(runtime, 'APPEND_SYSTEM.md');
       expect(existsSync(appendSystemPath)).toBe(true);
-      expect(readFileSync(appendSystemPath, 'utf-8')).toContain(`Primary knowledge path: ${syncRoot}`);
+      const appendSystem = readFileSync(appendSystemPath, 'utf-8');
+      expect(appendSystem).toContain("You are Patrick Lee's personal AI agent");
+      expect(appendSystem).not.toContain(`Primary knowledge path: ${syncRoot}`);
     });
 
     it('handles runtime directory that does not exist', () => {
