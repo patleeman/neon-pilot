@@ -2291,6 +2291,7 @@ describe('extension backend action invocation', () => {
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName, _operation, args) => {
         if (exportName === 'createExtension') return { ok: true, id: 'new-extension' };
         if (exportName === 'snapshotExtension') return { ok: true, extensionId: 'system-todo', files: [] };
+        if (exportName === 'reloadExtension') return { ok: true, extensionId: 'system-todo', rebuilt: false };
         if (exportName === 'validateExtension') return { ok: true, valid: true, findings: [] };
         if (exportName === 'installCatalogExtension') return { ok: true, id: 'system-browser', installed: true };
         if (exportName === 'installExtensionFromUrl') return { ok: true, id: 'remote-extension', installed: true };
@@ -2299,6 +2300,8 @@ describe('extension backend action invocation', () => {
           const action = (args[0] as { action?: string }).action;
           return action === 'create'
             ? { ok: true, id: 'managed-extension' }
+            : action === 'reload'
+              ? { ok: true, extensionId: 'system-todo', rebuilt: false }
             : action === 'updateSearchPaths'
               ? { ok: true, configuredPaths: ['/extensions/one'] }
             : { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' };
@@ -2331,6 +2334,10 @@ describe('extension backend action invocation', () => {
       ok: true,
       result: { ok: true, extensionId: 'system-todo', files: [] },
     });
+    await expect(invokeExtensionAction('system-extension-manager', 'reloadExtension', { id: 'system-todo' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, extensionId: 'system-todo', rebuilt: false },
+    });
     await expect(invokeExtensionAction('system-extension-manager', 'validateExtension', { id: 'system-todo' })).resolves.toEqual({
       ok: true,
       result: { ok: true, valid: true, findings: [] },
@@ -2355,6 +2362,15 @@ describe('extension backend action invocation', () => {
     ).resolves.toEqual({
       ok: true,
       result: { ok: true, id: 'managed-extension' },
+    });
+    await expect(
+      invokeExtensionAction('system-extension-manager', 'manageExtension', {
+        action: 'reload',
+        id: 'system-todo',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, extensionId: 'system-todo', rebuilt: false },
     });
     await expect(invokeExtensionAction('system-extension-manager', 'updateSearchPaths', { paths: ['/extensions/one'] })).resolves.toEqual({
       ok: true,
@@ -2436,6 +2452,40 @@ describe('extension backend action invocation', () => {
       'manageExtension',
       { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
       [{ action: 'create', id: 'managed-extension' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'reloadExtension',
+      { type: 'action', label: 'action reloadExtension', target: 'reloadExtension' },
+      [{ id: 'system-todo' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'manageExtension',
+      { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
+      [{ action: 'reload', id: 'system-todo' }],
       {
         context: expect.objectContaining({
           type: 'backend',

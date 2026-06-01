@@ -36,7 +36,14 @@
           "enabled": true
         }
       },
-      { "id": "reloadExtension", "handler": "reloadExtension", "title": "Reload extension" },
+      {
+        "id": "reloadExtension",
+        "handler": "reloadExtension",
+        "title": "Reload extension",
+        "worker": {
+          "enabled": true
+        }
+      },
       {
         "id": "validateExtension",
         "handler": "validateExtension",
@@ -112,6 +119,7 @@
             "list",
             "create",
             "snapshot",
+            "reload",
             "validate",
             "hostViewComponents",
             "listInstallable",
