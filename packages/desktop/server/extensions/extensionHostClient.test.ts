@@ -15,17 +15,29 @@ const extensionSubscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi
 vi.mock('./extensionBackend.js', () => extensionBackend);
 vi.mock('./extensionSubscriptions.js', () => extensionSubscriptions);
 
-import { getExtensionHostClient, handleInProcessExtensionHostRequest, setExtensionHostClient } from './extensionHostClient.js';
+import {
+  createInProcessExtensionHostClient,
+  getExtensionHostClient,
+  handleInProcessExtensionHostRequest,
+  setExtensionHostClient,
+} from './extensionHostClient.js';
 import { extensionHostRequestName } from './extensionHostProtocol.js';
 
 describe('extension host client', () => {
-  it('reports in-process host health', async () => {
+  it('requires product callers to configure an extension host client', () => {
     setExtensionHostClient(undefined);
+
+    expect(() => getExtensionHostClient()).toThrow('Extension host client is not configured');
+  });
+
+  it('reports in-process host health when explicitly configured', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
 
     await expect(getExtensionHostClient().health()).resolves.toEqual({ status: 'ready' });
   });
 
   it('routes invokeAction through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { done: true } });
 
     await expect(
@@ -93,6 +105,7 @@ describe('extension host client', () => {
   });
 
   it('routes publishEvent through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
     extensionSubscriptions.publishExtensionHostEvent.mockResolvedValueOnce(undefined);
 
     await expect(getExtensionHostClient().publishEvent('settings', { type: 'changed' })).resolves.toBeUndefined();
@@ -101,6 +114,7 @@ describe('extension host client', () => {
   });
 
   it('routes backend health checks through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
 
     await expect(getExtensionHostClient().checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
@@ -109,6 +123,7 @@ describe('extension host client', () => {
   });
 
   it('routes extension backend routes through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.invokeExtensionRoute.mockResolvedValueOnce({ status: 201, body: { ok: true } });
 
     await expect(
@@ -131,6 +146,7 @@ describe('extension host client', () => {
   });
 
   it('routes telemetry, self-test, and reload operations through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.listExtensionActionTelemetry.mockReturnValueOnce([{ extensionId: 'ext', actionId: 'run', ok: true }]);
     extensionBackend.runExtensionSelfTest.mockResolvedValueOnce({
       ok: true,
@@ -159,6 +175,7 @@ describe('extension host client', () => {
   });
 
   it('routes startup actions through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.startExtensionStartupActions.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
 
     await expect(
@@ -169,6 +186,7 @@ describe('extension host client', () => {
   });
 
   it('routes protocol entrypoints through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.invokeExtensionProtocolEntrypoint.mockResolvedValueOnce(undefined);
     const signal = new AbortController().signal;
     const stdio = { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr };

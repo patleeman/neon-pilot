@@ -50,7 +50,9 @@ export function setExtensionHostClient(client: ExtensionHostClient | undefined):
 }
 
 export function getExtensionHostClient(): ExtensionHostClient {
-  configuredExtensionHostClient ??= createInProcessExtensionHostClient();
+  if (!configuredExtensionHostClient) {
+    throw new Error('Extension host client is not configured. Product runtime must connect to the extension host RPC process.');
+  }
   return configuredExtensionHostClient;
 }
 
