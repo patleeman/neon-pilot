@@ -12,7 +12,14 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "listSkills", "handler": "listSkills", "title": "List skills" },
+      {
+        "id": "listSkills",
+        "handler": "listSkills",
+        "title": "List skills",
+        "worker": {
+          "enabled": true
+        }
+      },
       { "id": "updateSkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
     ]
   },
