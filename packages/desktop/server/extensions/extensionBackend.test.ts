@@ -982,6 +982,11 @@ describe('extension backend action invocation', () => {
           entry: 'dist/backend.mjs',
           actions: [
             { id: 'ds4InstallProvider', handler: 'installProvider', title: 'Install DS4 model provider', worker: { enabled: true } },
+            { id: 'ds4Status', handler: 'status', title: 'DS4 server status', worker: { enabled: true } },
+            { id: 'ds4Discover', handler: 'discover', title: 'Discover DS4 model', worker: { enabled: true } },
+            { id: 'ds4BootstrapRuntime', handler: 'bootstrapRuntime', title: 'Download and build DS4 runtime', worker: { enabled: true } },
+            { id: 'ds4StartServer', handler: 'startServer', title: 'Start managed DS4 server', worker: { enabled: true } },
+            { id: 'ds4StopServer', handler: 'stopServer', title: 'Stop managed DS4 server', worker: { enabled: true } },
             { id: 'ds4GoogleSearch', handler: 'google_search', title: 'DS4 google_search', worker: { enabled: true } },
             { id: 'ds4Read', handler: 'read', title: 'DS4 read', worker: { enabled: true } },
             { id: 'ds4List', handler: 'list', title: 'DS4 list', worker: { enabled: true } },
@@ -1019,6 +1024,19 @@ describe('extension backend action invocation', () => {
       ok: true,
       result: { ok: true, action: 'installProvider' },
     });
+    const runtimeActions: Array<[string, string, Record<string, unknown>]> = [
+      ['ds4Status', 'status', {}],
+      ['ds4Discover', 'discover', {}],
+      ['ds4BootstrapRuntime', 'bootstrapRuntime', { start: false }],
+      ['ds4StartServer', 'startServer', { timeoutMs: 0 }],
+      ['ds4StopServer', 'stopServer', {}],
+    ];
+    for (const [actionId, exportName, input] of runtimeActions) {
+      await expect(invokeExtensionAction('system-ds4', actionId, input)).resolves.toEqual({
+        ok: true,
+        result: { ok: true, action: exportName },
+      });
+    }
     await expect(invokeExtensionAction('system-ds4', 'ds4GoogleSearch', { query: 'neon pilot' })).resolves.toEqual({
       ok: true,
       result: { ok: true, action: 'google_search' },
@@ -1050,7 +1068,26 @@ describe('extension backend action invocation', () => {
         }),
       },
     );
-    expect(workerRunner.runWorkerExport).toHaveBeenCalledTimes(4);
+    for (const [actionId, exportName, input] of runtimeActions) {
+      expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+        'system-ds4',
+        expect.objectContaining({
+          path: expect.stringContaining(join('extensions', 'system-ds4', 'dist', 'backend.mjs')),
+        }),
+        exportName,
+        { type: 'action', label: `action ${actionId}`, target: actionId },
+        [input],
+        {
+          context: expect.objectContaining({
+            type: 'backend',
+            runtimeScope: 'shared',
+            runtimeDir: expect.any(String),
+            runtimeSettingsFilePath: expect.any(String),
+          }),
+        },
+      );
+    }
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledTimes(9);
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
