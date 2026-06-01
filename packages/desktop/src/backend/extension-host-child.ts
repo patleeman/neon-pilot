@@ -145,7 +145,8 @@ async function main(): Promise<void> {
             throw new Error('Missing extension host route request.');
           }
           const abort = new AbortController();
-          request.on('close', () => abort.abort());
+          request.on('aborted', () => abort.abort());
+          response.on('close', () => abort.abort());
           const result = await handleInProcessExtensionHostRequest({
             type: 'invokeRoute',
             ...body.request,
@@ -174,14 +175,21 @@ async function main(): Promise<void> {
           if (!body.request) {
             throw new Error('Missing extension host action request.');
           }
+          const abort = new AbortController();
+          request.on('close', () => abort.abort());
           response.writeHead(200, {
             'Content-Type': 'text/event-stream; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
             Connection: 'keep-alive',
           });
+          const agentToolContext =
+            body.request.agentToolContext && typeof body.request.agentToolContext === 'object' && !Array.isArray(body.request.agentToolContext)
+              ? { ...(body.request.agentToolContext as Record<string, unknown>), signal: abort.signal }
+              : { signal: abort.signal };
           const result = await handleInProcessExtensionHostRequest({
             type: 'invokeAction',
             ...body.request,
+            agentToolContext,
             toolContext: {
               onUpdate: (update) => writeSseEvent(response, { event: 'update', data: update }),
             },
