@@ -455,6 +455,83 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe local dictation model and transcription actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'installModel'
+          ? { provider: 'local-whisper', model: 'base.en', cacheDir: '/runtime/transcription-models' }
+          : { text: 'hello world', provider: 'local-whisper', model: 'base.en', durationMs: 500 },
+      ),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-local-dictation', 'installModel', { model: 'base.en' })).resolves.toEqual({
+      ok: true,
+      result: { provider: 'local-whisper', model: 'base.en', cacheDir: '/runtime/transcription-models' },
+    });
+    await expect(
+      invokeExtensionAction('system-local-dictation', 'transcribeFile', {
+        dataBase64: 'AAE=',
+        mimeType: 'audio/pcm',
+        language: 'en',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { text: 'hello world', provider: 'local-whisper', model: 'base.en', durationMs: 500 },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-local-dictation',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-local-dictation', 'dist', 'backend.mjs')),
+      }),
+      'installModel',
+      { type: 'action', label: 'action installModel', target: 'installModel' },
+      [{ model: 'base.en' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-local-dictation',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-local-dictation', 'dist', 'backend.mjs')),
+      }),
+      'transcribeFile',
+      { type: 'action', label: 'action transcribeFile', target: 'transcribeFile' },
+      [{ dataBase64: 'AAE=', mimeType: 'audio/pcm', language: 'en' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('runs worker-safe caffeinate process actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),
