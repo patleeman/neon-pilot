@@ -262,7 +262,6 @@ function ModelSelect({
         </select>
         <Chevron />
       </label>
-      <Ds4HealthIndicator health={health} variant={variant} active={health.isDs4 && context.streamIsStreaming} />
     </div>
   );
 }
@@ -344,6 +343,7 @@ export function ModelPreferencesComposerControl({
     <>
       <ModelSelect context={context} variant="inline" health={ds4Health} />
       <ThinkingSelect context={context} variant="inline" />
+      <Ds4HealthIndicator health={ds4Health} variant="inline" active={ds4Health.isDs4 && context.streamIsStreaming} />
     </>
   );
 }
