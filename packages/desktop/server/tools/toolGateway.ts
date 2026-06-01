@@ -79,6 +79,7 @@ export async function invokeExtensionToolByName(
     serverContextSnapshot: createExtensionHostServerContextSnapshot(serverContext),
     toolContextSnapshot: createExtensionHostToolContextSnapshot(input.toolContext),
     ...(input.toolContext?.onUpdate ? { toolContext: { onUpdate: input.toolContext.onUpdate } } : {}),
+    ...(input.signal ? { signal: input.signal } : {}),
   });
   if (!result.ok) {
     return {

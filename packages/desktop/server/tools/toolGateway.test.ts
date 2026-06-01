@@ -64,10 +64,11 @@ describe('tool gateway', () => {
 
   it('uses snapshots plus update callback channel for streaming extension tool calls', async () => {
     const onUpdate = vi.fn();
+    const signal = new AbortController().signal;
     const serverContext = { getRuntimeScope: () => 'shared' };
     const toolContext = { cwd: '/repo', onUpdate };
 
-    await invokeExtensionToolByName({ name: 'example_tool', toolContext }, serverContext);
+    await invokeExtensionToolByName({ name: 'example_tool', toolContext, signal }, serverContext);
 
     expect(extensionHostClient.invokeAction).toHaveBeenCalledWith({
       extensionId: 'ext',
@@ -76,6 +77,7 @@ describe('tool gateway', () => {
       serverContextSnapshot: { runtimeScope: 'shared' },
       toolContext: { onUpdate },
       toolContextSnapshot: { cwd: '/repo' },
+      signal,
     });
   });
 });
