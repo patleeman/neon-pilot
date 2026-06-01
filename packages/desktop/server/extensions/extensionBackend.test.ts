@@ -1191,6 +1191,84 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe knowledge read actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'knowledgeReadFile'
+          ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
+          : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
+      ),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-knowledge', 'knowledgeListFiles', {})).resolves.toEqual({
+      ok: true,
+      result: { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
+    });
+    await expect(invokeExtensionAction('system-knowledge', 'knowledgeReadFile', { id: 'notes/a.md' })).resolves.toEqual({
+      ok: true,
+      result: { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')),
+      }),
+      'knowledgeListFiles',
+      { type: 'action', label: 'action knowledgeListFiles', target: 'knowledgeListFiles' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          liveSessionResourceOptions: expect.objectContaining({
+            additionalExtensionPaths: expect.any(Array),
+            additionalSkillPaths: expect.any(Array),
+            additionalPromptTemplatePaths: expect.any(Array),
+            additionalThemePaths: expect.any(Array),
+          }),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')),
+      }),
+      'knowledgeReadFile',
+      { type: 'action', label: 'action knowledgeReadFile', target: 'knowledgeReadFile' },
+      [{ id: 'notes/a.md' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

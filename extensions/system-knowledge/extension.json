@@ -30,22 +30,34 @@
       {
         "id": "provideKnowledgeInstructions",
         "handler": "provideKnowledgeInstructions",
-        "title": "Provide knowledge path instructions"
+        "title": "Provide knowledge path instructions",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeListFiles",
         "handler": "knowledgeListFiles",
-        "title": "List knowledge files"
+        "title": "List knowledge files",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeTree",
         "handler": "knowledgeTree",
-        "title": "Read knowledge tree"
+        "title": "Read knowledge tree",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeReadFile",
         "handler": "knowledgeReadFile",
-        "title": "Read knowledge file"
+        "title": "Read knowledge file",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeWriteFile",
@@ -75,12 +87,18 @@
       {
         "id": "knowledgeBacklinks",
         "handler": "knowledgeBacklinks",
-        "title": "Read knowledge backlinks"
+        "title": "Read knowledge backlinks",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeSearch",
         "handler": "knowledgeSearch",
-        "title": "Search knowledge"
+        "title": "Search knowledge",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeUploadImage",
@@ -105,7 +123,10 @@
       {
         "id": "resolvePromptReferences",
         "handler": "resolvePromptReferences",
-        "title": "Resolve knowledge prompt references"
+        "title": "Resolve knowledge prompt references",
+        "worker": {
+          "enabled": true
+        }
       }
     ],
     "routes": [
