@@ -127,8 +127,11 @@ describe('DS4 managed runtime', () => {
           repoInstalled: true,
           serverInstalled: true,
           modelInstalled: true,
+          modelBytes: 0,
+          tools: expect.any(Object),
         }),
       );
+      expect(result.bootstrap.steps.map((step) => step.id)).toEqual(['tools', 'source', 'build', 'model', 'verify', 'done']);
       expect(result.models).toEqual(['deepseek-v4-flash']);
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -155,6 +158,9 @@ describe('DS4 managed runtime', () => {
       expect(context.storage.put).toHaveBeenCalledWith('runtime/bootstrapPid', 12345);
       const launchScript = exec.mock.calls.find(([input]) => (input.args?.join(' ') ?? '').includes('git clone'))?.[0].args?.join(' ');
       expect(launchScript).toContain('https://github.com/antirez/ds4.git');
+      expect(launchScript).toContain('write_status running tools');
+      expect(launchScript).toContain('Missing required tools');
+      expect(launchScript).toContain('Downloading DeepSeek V4 Flash model');
       expect(launchScript).toContain('./download_model.sh');
       expect(launchScript).toContain('q2-imatrix');
       expect(launchScript).toContain(dir);

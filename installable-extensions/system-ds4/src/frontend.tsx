@@ -21,8 +21,19 @@ type Ds4Status = {
     installed?: boolean;
     modelPath?: string;
     serverPath?: string;
+    modelBytes?: number | null;
+    tools?: Record<string, boolean>;
   };
-  bootstrap?: { running?: boolean; status?: string; log?: string };
+  bootstrap?: {
+    running?: boolean;
+    status?: string;
+    phase?: string;
+    progress?: number;
+    message?: string;
+    updatedAt?: string;
+    steps?: Array<{ id: string; title: string; progress: number }>;
+    log?: string;
+  };
   server?: { managedRunning?: boolean; managedPid?: number | null; error?: string; log?: string };
 };
 
@@ -48,6 +59,31 @@ function dotClass(tone: ReturnType<typeof statusLabel>['tone']) {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function formatBytes(bytes: number | null | undefined): string {
+  if (!bytes) return 'Missing';
+  const gib = bytes / 1024 / 1024 / 1024;
+  return `${gib.toFixed(gib >= 10 ? 1 : 2)} GB`;
+}
+
+function setupProgress(status: Ds4Status | null): number {
+  if (!status) return 0;
+  if (status.runtime?.installed) return 100;
+  if (typeof status.bootstrap?.progress === 'number') return Math.max(0, Math.min(100, status.bootstrap.progress));
+  if (status.runtime?.modelInstalled) return 90;
+  if (status.runtime?.serverInstalled) return 45;
+  if (status.runtime?.repoInstalled) return 22;
+  return 0;
+}
+
+function stepState(step: { id: string; progress: number }, status: Ds4Status | null): 'done' | 'active' | 'pending' | 'failed' {
+  const phase = status?.bootstrap?.phase;
+  const progress = setupProgress(status);
+  if (status?.bootstrap?.status === 'failed' && phase === step.id) return 'failed';
+  if (phase === step.id && status?.bootstrap?.running) return 'active';
+  if (progress >= step.progress || status?.runtime?.installed) return 'done';
+  return 'pending';
 }
 
 export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
@@ -107,6 +143,17 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
 
   const runtimeInstalled = status?.runtime?.installed === true;
   const bootstrapRunning = status?.bootstrap?.running === true;
+  const progress = setupProgress(status);
+  const tools = status?.runtime?.tools ?? {};
+  const steps =
+    status?.bootstrap?.steps ?? [
+      { id: 'tools', title: 'Check tools', progress: 8 },
+      { id: 'source', title: 'Download source', progress: 22 },
+      { id: 'build', title: 'Build ds4-server', progress: 42 },
+      { id: 'model', title: 'Download model', progress: 82 },
+      { id: 'verify', title: 'Verify install', progress: 95 },
+      { id: 'done', title: 'Ready', progress: 100 },
+    ];
 
   return (
     <div className="space-y-4 text-[13px] text-secondary">
@@ -137,24 +184,76 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
 
       {error ? <div className="rounded-md border border-danger/30 bg-danger/10 p-3 text-[12px] text-danger">{error}</div> : null}
 
+      <div className="rounded-md border border-border-subtle bg-surface/40 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Setup progress</p>
+            <p className="mt-1 text-primary">{status?.bootstrap?.message ?? (runtimeInstalled ? 'DS4 runtime ready' : 'Waiting to start setup')}</p>
+          </div>
+          <span className="font-mono text-[12px] text-dim">{Math.round(progress)}%</span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-base">
+          <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          {steps.map((step) => (
+            <Step key={step.id} title={step.title} state={stepState(step, status)} />
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-2 md:grid-cols-2">
         <Info label="Repository" value={status?.runtime?.repoInstalled ? 'Installed' : 'Missing'} />
         <Info label="Server binary" value={status?.runtime?.serverInstalled ? 'Installed' : 'Missing'} />
-        <Info label="Model file" value={status?.runtime?.modelInstalled ? 'Installed' : 'Missing'} />
+        <Info label="Model file" value={status?.runtime?.modelInstalled ? formatBytes(status.runtime.modelBytes) : 'Missing'} />
         <Info label="Server process" value={status?.server?.managedRunning ? `Running${status.server.managedPid ? ` (${status.server.managedPid})` : ''}` : 'Stopped'} />
+      </div>
+
+      <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Local tools</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {['git', 'make', 'cc', 'curl'].map((tool) => (
+            <span
+              key={tool}
+              className={`rounded border px-2 py-1 text-[12px] ${
+                tools[tool] ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-300'
+              }`}
+            >
+              {tool}: {tools[tool] ? 'ready' : 'missing'}
+            </span>
+          ))}
+        </div>
+        <p className="mt-2 text-[12px] text-dim">On macOS, Command Line Tools provide git, make, cc, and curl. Run xcode-select --install if any are missing.</p>
       </div>
 
       <div className="rounded-md border border-border-subtle bg-surface/40 p-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Setup</p>
         <p className="mt-2">
           Setup clones antirez/ds4, builds ds4-server, and downloads the recommended DeepSeek V4 Flash GGUF into extension-owned app storage.
-          The model download is about 81 GB and can take a while.
+          The model download is about 81 GB and can take a while. If the model file is already present, setup skips the download and can finish offline.
         </p>
         {status?.runtime?.managedRoot ? <p className="mt-2 break-all font-mono text-[11px] text-dim">{status.runtime.managedRoot}</p> : null}
       </div>
 
       {status?.bootstrap?.log ? <Log title="Bootstrap log" text={status.bootstrap.log} /> : null}
       {status?.server?.log ? <Log title="Server log" text={status.server.log} /> : null}
+    </div>
+  );
+}
+
+function Step({ title, state }: { title: string; state: 'done' | 'active' | 'pending' | 'failed' }) {
+  const tone =
+    state === 'done'
+      ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
+      : state === 'active'
+        ? 'border-accent/40 bg-accent/10 text-primary'
+        : state === 'failed'
+          ? 'border-danger/30 bg-danger/10 text-danger'
+          : 'border-border-subtle bg-base/40 text-dim';
+  return (
+    <div className={`flex items-center gap-2 rounded-md border px-2.5 py-2 ${tone}`}>
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+      <span className="min-w-0 truncate text-[12px]">{title}</span>
     </div>
   );
 }

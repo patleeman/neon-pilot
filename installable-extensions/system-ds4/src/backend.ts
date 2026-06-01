@@ -1,4 +1,4 @@
-import { access, chmod, mkdir, readFile } from 'node:fs/promises';
+import { access, chmod, mkdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
@@ -18,6 +18,14 @@ const SERVER_PID_KEY = 'runtime/serverPid';
 const DEFAULT_READ_LINES = 500;
 const DEFAULT_SEARCH_RESULTS = 80;
 const MAX_INLINE_TEXT_BYTES = 256 * 1024;
+const BOOTSTRAP_STEPS = [
+  { id: 'tools', title: 'Check tools', progress: 8 },
+  { id: 'source', title: 'Download source', progress: 22 },
+  { id: 'build', title: 'Build ds4-server', progress: 42 },
+  { id: 'model', title: 'Download model', progress: 82 },
+  { id: 'verify', title: 'Verify install', progress: 95 },
+  { id: 'done', title: 'Ready', progress: 100 },
+] as const;
 
 type ToolResult = { content?: Array<{ type?: string; text?: string }>; details?: unknown; isError?: boolean };
 type ShellJob = {
@@ -79,6 +87,36 @@ async function readTail(filePath: string, maxBytes = 30_000) {
   }
 }
 
+async function fileSize(filePath: string): Promise<number | null> {
+  try {
+    return (await stat(filePath)).size;
+  } catch {
+    return null;
+  }
+}
+
+function parseBootstrapStatus(raw: string): {
+  status: string;
+  phase?: string;
+  progress?: number;
+  message?: string;
+  updatedAt?: string;
+} {
+  const trimmed = raw.trim();
+  if (!trimmed) return { status: 'idle' };
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const status = typeof parsed.status === 'string' ? parsed.status : 'running';
+    const phase = typeof parsed.phase === 'string' ? parsed.phase : undefined;
+    const progress = typeof parsed.progress === 'number' && Number.isFinite(parsed.progress) ? parsed.progress : undefined;
+    const message = typeof parsed.message === 'string' ? parsed.message : undefined;
+    const updatedAt = typeof parsed.updatedAt === 'string' ? parsed.updatedAt : undefined;
+    return { status, ...(phase ? { phase } : {}), ...(progress !== undefined ? { progress } : {}), ...(message ? { message } : {}), ...(updatedAt ? { updatedAt } : {}) };
+  } catch {
+    return { status: trimmed };
+  }
+}
+
 async function readStoredPid(ctx: ExtensionBackendContext, key: string) {
   const stored = await ctx.storage.get(key).catch(() => null);
   const pid = typeof stored === 'number' ? stored : Number(stored);
@@ -95,13 +133,30 @@ async function readBootstrapState(ctx: ExtensionBackendContext, paths?: Awaited<
   paths ??= await runtimePaths(ctx);
   const pid = await readStoredPid(ctx, BOOTSTRAP_PID_KEY);
   const running = await isPidRunning(ctx, pid);
-  const status = (await readTail(paths.bootstrapStatus, 1024)).trim() || (running ? 'running' : 'idle');
+  const parsed = parseBootstrapStatus(await readTail(paths.bootstrapStatus, 4096));
+  const status = parsed.status === 'idle' && running ? 'running' : parsed.status;
   return {
+    ...parsed,
     status,
     running,
     pid,
+    steps: BOOTSTRAP_STEPS,
     log: await readTail(paths.bootstrapLog),
   };
+}
+
+async function readToolAvailability(ctx: ExtensionBackendContext) {
+  const result = await ctx.shell.exec({
+    command: 'sh',
+    args: ['-c', 'for tool in git make curl cc; do if command -v "$tool" >/dev/null 2>&1; then printf "%s=ok\\n" "$tool"; else printf "%s=missing\\n" "$tool"; fi; done'],
+  });
+  return Object.fromEntries(
+    result.stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim().split('='))
+      .filter((entry): entry is [string, string] => entry.length === 2 && Boolean(entry[0]))
+      .map(([tool, state]) => [tool, state === 'ok']),
+  ) as Record<string, boolean>;
 }
 
 async function readServerHealth() {
@@ -235,13 +290,15 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
   const paths = await runtimePaths(ctx);
-  const [repoInstalled, serverInstalled, modelInstalled, bootstrap, serverPid, server] = await Promise.all([
+  const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, server, tools] = await Promise.all([
     exists(path.join(paths.repoDir, '.git')),
     exists(paths.serverBin),
     exists(paths.modelPath),
+    fileSize(paths.modelPath),
     readBootstrapState(ctx, paths),
     readStoredPid(ctx, SERVER_PID_KEY),
     readServerHealth(),
+    readToolAvailability(ctx),
   ]);
   const managedRunning = await isPidRunning(ctx, serverPid);
   return {
@@ -259,7 +316,9 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
       modelVariant: MODEL_VARIANT,
       modelInstalled,
       modelPath: paths.modelPath,
+      modelBytes,
       installed: serverInstalled && modelInstalled,
+      tools,
     },
     bootstrap,
     server: {
@@ -305,27 +364,61 @@ export async function bootstrapRuntime(input: { force?: unknown; start?: unknown
 
   const script = `set -euo pipefail
 mkdir -p ${shellQuote(paths.root)} ${shellQuote(path.dirname(paths.modelPath))} ${shellQuote(paths.kvDir)}
-printf running > ${shellQuote(paths.bootstrapStatus)}
+write_status() {
+  status="$1"
+  phase="$2"
+  progress="$3"
+  message="$4"
+  now="$(date -u +%FT%TZ)"
+  printf '{"status":"%s","phase":"%s","progress":%s,"message":"%s","updatedAt":"%s"}' "$status" "$phase" "$progress" "$message" "$now" > ${shellQuote(paths.bootstrapStatus)}
+}
+write_status running tools 2 "Checking required local tools"
 {
   echo "[$(date -u +%FT%TZ)] Preparing DS4 runtime in ${paths.root}"
+  missing=""
+  for tool in git make curl cc; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      echo "[$(date -u +%FT%TZ)] Tool available: $tool"
+    else
+      echo "[$(date -u +%FT%TZ)] Missing required tool: $tool"
+      missing="$missing $tool"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    write_status failed tools 2 "Missing required tools:$missing"
+    echo "Install the missing tools, then run setup again. On macOS, xcode-select --install provides make and cc; curl and git are normally provided by Command Line Tools or Homebrew."
+    exit 1
+  fi
+  write_status running source 8 "Preparing ds4 source checkout"
   if [ ! -d ${shellQuote(path.join(paths.repoDir, '.git'))} ]; then
     rm -rf ${shellQuote(paths.repoDir)}
+    echo "[$(date -u +%FT%TZ)] Cloning ${DS4_REPO_URL}"
     git clone --depth 1 ${shellQuote(DS4_REPO_URL)} ${shellQuote(paths.repoDir)}
   else
+    echo "[$(date -u +%FT%TZ)] Updating existing ds4 checkout"
     git -C ${shellQuote(paths.repoDir)} fetch --depth 1 origin main
     git -C ${shellQuote(paths.repoDir)} reset --hard origin/main
   fi
+  write_status running build 22 "Building ds4-server"
   make -C ${shellQuote(paths.repoDir)} -j"$(sysctl -n hw.ncpu 2>/dev/null || echo 4)"
   if [ ${force ? '1' : '0'} -eq 1 ] || [ ! -f ${shellQuote(paths.modelPath)} ]; then
+    write_status running model 42 "Downloading DeepSeek V4 Flash model (~81 GB)"
+    echo "[$(date -u +%FT%TZ)] Downloading model variant ${MODEL_VARIANT}. This is roughly 81 GB and may take a long time."
     cd ${shellQuote(paths.repoDir)}
     ./download_model.sh ${shellQuote(MODEL_VARIANT)}
+  else
+    write_status running model 82 "Model file already present; offline setup can reuse it"
+    echo "[$(date -u +%FT%TZ)] Model file already exists; skipping download"
   fi
+  write_status running verify 95 "Verifying DS4 runtime files"
   test -x ${shellQuote(paths.serverBin)}
   test -f ${shellQuote(paths.modelPath)}
-  printf succeeded > ${shellQuote(paths.bootstrapStatus)}
+  write_status succeeded done 100 "DS4 runtime ready"
   echo "[$(date -u +%FT%TZ)] DS4 runtime ready"
 } >> ${shellQuote(paths.bootstrapLog)} 2>&1 || {
-  printf failed > ${shellQuote(paths.bootstrapStatus)}
+  if ! grep -q '"status":"failed"' ${shellQuote(paths.bootstrapStatus)} 2>/dev/null; then
+    write_status failed failed 0 "DS4 setup failed; open the bootstrap log for details"
+  fi
   exit 1
 }
 `;
