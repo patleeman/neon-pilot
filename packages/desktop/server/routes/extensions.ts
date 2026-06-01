@@ -24,7 +24,6 @@ import {
   clearBuildError,
   findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
-  isExtensionEnabled,
   listExtensionInstallSummaries,
   setBuildError,
   setExtensionEnabled,
@@ -57,6 +56,18 @@ async function readExtensionManifestFromHost(extensionId: string): Promise<Exten
   const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
   const manifest = snapshot.extensions.find((extension) => extension.id === extensionId);
   return (manifest ?? null) as ExtensionManifest | null;
+}
+
+async function readExtensionActionTargetFromHost(
+  extensionId: string,
+  actionId: string,
+): Promise<{ manifest: ExtensionManifest; action: NonNullable<NonNullable<ExtensionManifest['backend']>['actions']>[number] } | null> {
+  const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
+  const summary = installSummaries.find((extension) => extension.id === extensionId);
+  if (!summary || summary.status !== 'enabled') return null;
+  const manifest = (summary as { manifest?: unknown }).manifest as ExtensionManifest | undefined;
+  const action = manifest?.backend?.actions?.find((candidate) => candidate.id === actionId);
+  return manifest && action ? { manifest, action } : null;
 }
 
 async function findExtensionCommandRegistrationFromHost(commandId: string) {
@@ -696,14 +707,21 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/:id/actions/:actionId', async (req, res) => {
     const signal = createExtensionRequestAbortSignal(req, res);
     try {
-      const entry = findExtensionEntry(req.params.id);
-      if (!entry || !isExtensionEnabled(req.params.id)) {
-        res.status(404).json({ error: `Extension "${req.params.id}" not found or is disabled.` });
+      const actionTarget = await readExtensionActionTargetFromHost(req.params.id, req.params.actionId);
+      if (!actionTarget) {
+        const manifest = await readExtensionManifestFromHost(req.params.id);
+        const disabled = (await getExtensionHostClient().readRegistryPresentation()).installSummaries.some(
+          (summary) => summary.id === req.params.id && summary.status !== 'enabled',
+        );
+        if (!manifest || disabled) {
+          res.status(404).json({ error: `Extension "${req.params.id}" not found or is disabled.` });
+          return;
+        }
+        res.status(404).json({ error: `Action "${req.params.actionId}" is not declared in extension "${req.params.id}" backend.actions.` });
         return;
       }
-      const declaredAction = entry.manifest.backend?.actions?.find((a) => a.id === req.params.actionId);
-      if (!declaredAction) {
-        res.status(404).json({ error: `Action "${req.params.actionId}" is not declared in extension "${req.params.id}" backend.actions.` });
+      if (!actionTarget.manifest.backend?.entry) {
+        res.status(404).json({ error: `Extension "${req.params.id}" not found or is disabled.` });
         return;
       }
       res.json(
