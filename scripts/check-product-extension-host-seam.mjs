@@ -98,6 +98,11 @@ const forbiddenPatterns = [
   },
   {
     pattern:
+      /import\s+type\s+\{[^}]*\b(?:ExtensionInstallSummary|ExtensionRegistrySnapshot)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'product runtime presentation code must use host presentation types instead of extension registry internals',
+  },
+  {
+    pattern:
       /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\b(?:findExtensionCommandRegistration|readExtensionSchema|readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSearchProviderRegistrations|listExtensionSlashCommandRegistrations)\b/,
     message: 'product runtime presentation code must read extension registry presentation through ExtensionHostClient',
   },

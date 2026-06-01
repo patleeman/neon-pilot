@@ -1,5 +1,40 @@
-import type { ExtensionContributions } from '../extensions/extensionManifest.js';
-import type { ExtensionInstallSummary, ExtensionRegistrySnapshot } from '../extensions/extensionRegistry.js';
+import type {
+  ExtensionContributions,
+  ExtensionManifest,
+  ExtensionSurface,
+  ExtensionViewContribution,
+} from '../extensions/extensionManifest.js';
+
+type ExtensionPackageType = 'system' | 'user';
+type CriticalExtensionManifest = {
+  schemaVersion: number;
+  id: string;
+  name: string;
+  packageType: ExtensionPackageType;
+  version?: string;
+  description?: string;
+  frontend?: ExtensionManifest['frontend'];
+  contributes?: ExtensionContributions;
+  surfaces?: ExtensionManifest['surfaces'];
+};
+type CriticalExtensionRegistrySnapshot = {
+  extensions: CriticalExtensionManifest[];
+  routes: Array<{ route: string; extensionId: string; surfaceId: string; packageType: ExtensionPackageType }>;
+  surfaces: Array<ExtensionSurface & { extensionId: string; packageType: ExtensionPackageType }>;
+  views: Array<ExtensionViewContribution & { extensionId: string; packageType: ExtensionPackageType; frontend?: ExtensionManifest['frontend'] }>;
+};
+type CriticalExtensionInstallSummary = {
+  id: string;
+  name: string;
+  packageType: ExtensionPackageType;
+  enabled: boolean;
+  status: 'enabled';
+  manifest: CriticalExtensionManifest;
+  permissions: [];
+  surfaces: ExtensionManifest['surfaces'];
+  routes: Array<{ route: string; surfaceId: string }>;
+};
+
 type CriticalExtensionContributionKey = keyof Pick<
   ExtensionContributions,
   | 'views'
@@ -68,7 +103,7 @@ function buildCriticalExtensionContributions(contributes: ExtensionContributions
   return Object.keys(criticalContributes).length > 0 ? criticalContributes : undefined;
 }
 
-function extensionHasCriticalRegistrySurface(snapshot: ExtensionRegistrySnapshot, extensionId: string): boolean {
+function extensionHasCriticalRegistrySurface(snapshot: CriticalExtensionRegistrySnapshot, extensionId: string): boolean {
   return (
     snapshot.routes.some((route) => route.extensionId === extensionId) ||
     snapshot.surfaces.some((surface) => surface.extensionId === extensionId) ||
@@ -77,10 +112,8 @@ function extensionHasCriticalRegistrySurface(snapshot: ExtensionRegistrySnapshot
 }
 
 export function buildCriticalExtensionInstallSummaries(
-  snapshot: ExtensionRegistrySnapshot,
-): Array<
-  Pick<ExtensionInstallSummary, 'id' | 'name' | 'packageType' | 'enabled' | 'status' | 'manifest' | 'permissions' | 'surfaces' | 'routes'>
-> {
+  snapshot: CriticalExtensionRegistrySnapshot,
+): CriticalExtensionInstallSummary[] {
   return snapshot.extensions.flatMap((manifest) => {
     const criticalContributes = buildCriticalExtensionContributions(manifest.contributes);
     if (!criticalContributes && !manifest.surfaces?.length && !extensionHasCriticalRegistrySurface(snapshot, manifest.id)) {
@@ -113,7 +146,7 @@ export function buildCriticalExtensionInstallSummaries(
   });
 }
 
-export function buildCriticalExtensionRegistryResponse(snapshot: ExtensionRegistrySnapshot) {
+export function buildCriticalExtensionRegistryResponse(snapshot: CriticalExtensionRegistrySnapshot) {
   return {
     extensions: buildCriticalExtensionInstallSummaries(snapshot),
     routes: snapshot.routes,
