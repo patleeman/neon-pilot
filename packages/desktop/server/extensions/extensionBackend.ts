@@ -624,7 +624,11 @@ export async function runExtensionBackendExport<T>(
   if (typeof handler !== 'function') {
     throw options.createMissingExportError?.() ?? new Error(options.missingExportMessage ?? `Extension backend export not found: ${exportName}`);
   }
-  return getExtensionBackendRunner().run(extensionId, operation, () => invoke(handler as ExtensionBackendExportHandler));
+  return getExtensionBackendRunner().run(
+    extensionId,
+    { ...operation, exportName: operation.exportName ?? exportName },
+    () => invoke(handler as ExtensionBackendExportHandler),
+  );
 }
 
 export async function loadExtensionAgentFactory(extensionId: string, exportName = 'default'): Promise<ExtensionFactory> {
@@ -641,7 +645,7 @@ export async function loadExtensionAgentFactory(extensionId: string, exportName 
   if (candidate.length === 0) {
     const built = await getExtensionBackendRunner().run(
       extensionId,
-      extensionBackendOperation('agent-factory-builder', 'agent extension factory builder', { target: exportName }),
+      extensionBackendOperation('agent-factory-builder', 'agent extension factory builder', { exportName, target: exportName }),
       () => (candidate as () => unknown)(),
     );
     if (typeof built !== 'function') {
@@ -661,7 +665,7 @@ export async function runExtensionAgentFactory(
 ): Promise<void> {
   await getExtensionBackendRunner().run(
     extensionId,
-    extensionBackendOperation('agent-factory', 'agent extension factory', { target: exportName }),
+    extensionBackendOperation('agent-factory', 'agent extension factory', { exportName, target: exportName }),
     () => Promise.resolve(factory(pi)),
   );
 }

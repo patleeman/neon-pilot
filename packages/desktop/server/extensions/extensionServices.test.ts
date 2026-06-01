@@ -76,7 +76,7 @@ describe('extensionServices', () => {
         const backend = await loadExtensionBackend(extensionId);
         const handler = backend[exportName];
         if (typeof handler !== 'function') throw new Error(options?.missingExportMessage ?? `Missing export "${exportName}".`);
-        return runnerRun(extensionId, operation, () => invoke(handler));
+        return runnerRun(extensionId, { ...(operation as Record<string, unknown>), exportName }, () => invoke(handler));
       },
     );
   });
@@ -95,7 +95,7 @@ describe('extensionServices', () => {
     expect(startSync).toHaveBeenCalledWith({ serviceId: 'sync' }, { ctx: true });
     expect(runnerRun).toHaveBeenCalledWith(
       'ext',
-      { type: 'service-startup', label: 'service sync startup', target: 'sync' },
+      { type: 'service-startup', label: 'service sync startup', exportName: 'startSync', target: 'sync' },
       expect.any(Function),
     );
     expect(isExtensionServiceRunning('ext', 'sync')).toBe(true);
@@ -158,7 +158,7 @@ describe('extensionServices', () => {
     expect(clearExtensionFailureRecordsForOperation).toHaveBeenCalledWith('ext', 'service sync health check');
     expect(runnerRun).toHaveBeenCalledWith(
       'ext',
-      { type: 'service-health-check', label: 'service sync health check', target: 'sync' },
+      { type: 'service-health-check', label: 'service sync health check', exportName: 'checkSync', target: 'sync' },
       expect.any(Function),
     );
     expect(recordExtensionFailure).not.toHaveBeenCalled();

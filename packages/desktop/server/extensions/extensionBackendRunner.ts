@@ -25,6 +25,7 @@ export type ExtensionBackendOperationType =
 export interface ExtensionBackendOperation {
   type: ExtensionBackendOperationType;
   label: string;
+  exportName?: string;
   target?: string;
 }
 
@@ -37,11 +38,12 @@ export interface ExtensionBackendRunner {
 export function extensionBackendOperation(
   type: ExtensionBackendOperationType,
   label: string,
-  options: { target?: string } = {},
+  options: { exportName?: string; target?: string } = {},
 ): ExtensionBackendOperation {
   return {
     type,
     label,
+    ...(options.exportName ? { exportName: options.exportName } : {}),
     ...(options.target ? { target: options.target } : {}),
   };
 }

@@ -76,7 +76,7 @@ describe('extensionSubscriptions', () => {
         const backend = await loadExtensionBackend(extensionId);
         const handler = backend[exportName];
         if (typeof handler !== 'function') throw new Error(options?.missingExportMessage ?? `Missing export "${exportName}".`);
-        return runnerRun(extensionId, operation, () => invoke(handler));
+        return runnerRun(extensionId, { ...(operation as Record<string, unknown>), exportName }, () => invoke(handler));
       },
     );
     isExtensionEnabled.mockReturnValue(true);
@@ -112,7 +112,11 @@ describe('extensionSubscriptions', () => {
 
     handlers[0]?.handler({ event: 'host:settings:changed', payload: { x: 1 }, sourceExtensionId: 'host' });
     await vi.waitFor(() => expect(handler).toHaveBeenCalledOnce());
-    expect(runnerRun).toHaveBeenCalledWith('ext', { type: 'subscription', label: 'subscription sub', target: 'sub' }, expect.any(Function));
+    expect(runnerRun).toHaveBeenCalledWith(
+      'ext',
+      { type: 'subscription', label: 'subscription sub', exportName: 'onSettings', target: 'sub' },
+      expect.any(Function),
+    );
     expect(handler).toHaveBeenCalledWith(
       { subscriptionId: 'sub', event: 'host:settings:changed', payload: { x: 1 }, sourceExtensionId: 'host' },
       { ctx: true },

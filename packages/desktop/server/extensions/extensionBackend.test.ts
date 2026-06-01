@@ -158,7 +158,7 @@ describe('extension backend action invocation', () => {
     );
     expect(run).toHaveBeenCalledWith(
       'runner-action-ext',
-      { type: 'action', label: 'action doThing', target: 'doThing' },
+      { type: 'action', label: 'action doThing', exportName: 'doThing', target: 'doThing' },
       expect.any(Function),
     );
   });
@@ -195,7 +195,7 @@ describe('extension backend action invocation', () => {
     expect(create).toHaveBeenCalledOnce();
     expect(run).toHaveBeenCalledWith(
       'runner-agent-builder-ext',
-      { type: 'agent-factory-builder', label: 'agent extension factory builder', target: 'create' },
+      { type: 'agent-factory-builder', label: 'agent extension factory builder', exportName: 'create', target: 'create' },
       expect.any(Function),
     );
   });
@@ -230,7 +230,11 @@ describe('extension backend action invocation', () => {
       invokeExtensionRoute('runner-route-ext', 'GET', '/ping', { method: 'GET', path: '/ping', query: {}, params: {} }),
     ).resolves.toEqual({ status: 201, body: { via: 'runner' } });
 
-    expect(run).toHaveBeenCalledWith('runner-route-ext', { type: 'route', label: 'route GET /ping', target: '/ping' }, expect.any(Function));
+    expect(run).toHaveBeenCalledWith(
+      'runner-route-ext',
+      { type: 'route', label: 'route GET /ping', exportName: 'ping', target: '/ping' },
+      expect.any(Function),
+    );
   });
 
   it('returns HTTP 500 when a backend route export is missing', async () => {
