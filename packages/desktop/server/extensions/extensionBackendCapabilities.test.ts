@@ -3,6 +3,87 @@ import { describe, expect, it, vi } from 'vitest';
 import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
 
 describe('extension backend capability dispatcher', () => {
+  it('dispatches extension-scoped conversation metadata capability calls', async () => {
+    const conversations = {
+      metadata: {
+        get: vi.fn(async () => ({ items: [] })),
+        set: vi.fn(async () => ({ items: [{ id: 'todo-1' }] })),
+        query: vi.fn(async () => [{ conversationId: 'conv-1', metadata: { items: [] } }]),
+      },
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-todo',
+          capability: 'conversations',
+          operation: 'metadata.get',
+          input: { conversationId: 'conv-1', namespace: 'todos', profile: 'shared' },
+        }),
+      ),
+    ).resolves.toEqual({ items: [] });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'system-todo',
+          capability: 'conversations',
+          operation: 'metadata.set',
+          input: { conversationId: 'conv-1', values: { items: [{ id: 'todo-1' }] }, profile: 'shared' },
+        }),
+      ),
+    ).resolves.toEqual({ items: [{ id: 'todo-1' }] });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'system-todo',
+          capability: 'conversations',
+          operation: 'metadata.query',
+          input: { namespace: 'todos', where: [{ key: 'status', op: 'eq', value: 'open' }], limit: 5, profile: 'shared' },
+        }),
+      ),
+    ).resolves.toEqual([{ conversationId: 'conv-1', metadata: { items: [] } }]);
+
+    expect(conversations.metadata.get).toHaveBeenCalledWith('system-todo', {
+      conversationId: 'conv-1',
+      namespace: 'todos',
+      profile: 'shared',
+    });
+    expect(conversations.metadata.set).toHaveBeenCalledWith('system-todo', {
+      conversationId: 'conv-1',
+      values: { items: [{ id: 'todo-1' }] },
+      profile: 'shared',
+    });
+    expect(conversations.metadata.query).toHaveBeenCalledWith('system-todo', {
+      namespace: 'todos',
+      where: [{ key: 'status', op: 'eq', value: 'open' }],
+      limit: 5,
+      profile: 'shared',
+    });
+  });
+
+  it('rejects malformed conversation metadata capability inputs', async () => {
+    const conversations = { metadata: { get: vi.fn(), set: vi.fn(), query: vi.fn() } };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'system-todo',
+        capability: 'conversations',
+        operation: 'metadata.set',
+        input: { conversationId: 'conv-1', values: [] },
+      }),
+    ).rejects.toThrow('Conversation metadata values must be an object when provided.');
+  });
+
   it('dispatches extension-scoped event publish capability calls', async () => {
     const events = {
       publish: vi.fn(async () => undefined),

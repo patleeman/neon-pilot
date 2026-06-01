@@ -13,13 +13,13 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "getState", "handler": "getState", "title": "Get Todos" },
-      { "id": "addItem", "handler": "addItem", "title": "Add Todo" },
-      { "id": "updateItem", "handler": "updateItem", "title": "Update Todo" },
-      { "id": "deleteItem", "handler": "deleteItem", "title": "Delete Todo" },
-      { "id": "clearItems", "handler": "clearItems", "title": "Clear Todos" },
-      { "id": "todoTool", "handler": "todoTool", "title": "Todo tool" },
-      { "id": "provideTurnContext", "handler": "provideTurnContext", "title": "Todo turn context" }
+      { "id": "getState", "handler": "getState", "title": "Get Todos", "worker": { "enabled": true } },
+      { "id": "addItem", "handler": "addItem", "title": "Add Todo", "worker": { "enabled": true } },
+      { "id": "updateItem", "handler": "updateItem", "title": "Update Todo", "worker": { "enabled": true } },
+      { "id": "deleteItem", "handler": "deleteItem", "title": "Delete Todo", "worker": { "enabled": true } },
+      { "id": "clearItems", "handler": "clearItems", "title": "Clear Todos", "worker": { "enabled": true } },
+      { "id": "todoTool", "handler": "todoTool", "title": "Todo tool", "worker": { "enabled": true } },
+      { "id": "provideTurnContext", "handler": "provideTurnContext", "title": "Todo turn context", "worker": { "enabled": true } }
     ]
   },
   "contributes": {

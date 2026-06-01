@@ -83,6 +83,19 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     events: {
       publish: (input: { event: string; payload: unknown }) => callHostCapability(extensionId, 'events', 'publish', input),
     },
+    conversations: {
+      metadata: {
+        get: (input: { conversationId: string; namespace?: string }) =>
+          callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, profile: runtimeScope }),
+        set: (input: { conversationId: string; namespace?: string; values: Record<string, unknown> }) =>
+          callHostCapability(extensionId, 'conversations', 'metadata.set', { ...input, profile: runtimeScope }),
+        query: (input: {
+          namespace?: string;
+          where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
+          limit?: number;
+        }) => callHostCapability(extensionId, 'conversations', 'metadata.query', { ...input, profile: runtimeScope }),
+      },
+    },
     extensions: {
       listActions: () => callHostCapability(extensionId, 'extensions', 'listActions'),
       getStatus: (targetExtensionId: string) =>

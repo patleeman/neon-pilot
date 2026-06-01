@@ -179,6 +179,78 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({ id: 15, ok: true, result: { ok: true } });
   });
 
+  it('runs backend exports with host-mediated conversation metadata capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const before = await ctx.conversations.metadata.get({ conversationId: 'conv-1', namespace: 'todos' });
+  const after = await ctx.conversations.metadata.set({ conversationId: 'conv-1', namespace: 'todos', values: { count: 1 } });
+  const matches = await ctx.conversations.metadata.query({ namespace: 'todos', where: [{ key: 'count', op: 'eq', value: 1 }], limit: 5 });
+  return { before, after, matches };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 16,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-conversations' },
+      exportName: 'doThing',
+      args: [{}],
+      context: { type: 'backend', runtimeScope: 'project' },
+    });
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'metadata.get',
+      input: { conversationId: 'conv-1', namespace: 'todos', profile: 'project' },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { count: 0 } });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'metadata.set',
+      input: { conversationId: 'conv-1', namespace: 'todos', values: { count: 1 }, profile: 'project' },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { count: 1 } });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'metadata.query',
+      input: { namespace: 'todos', where: [{ key: 'count', op: 'eq', value: 1 }], limit: 5, profile: 'project' },
+    });
+    workerThreads.messageHandler?.({
+      id: 3,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: [{ conversationId: 'conv-1', metadata: { count: 1 } }],
+    });
+
+    await waitForPostMessage({
+      id: 16,
+      ok: true,
+      result: {
+        before: { count: 0 },
+        after: { count: 1 },
+        matches: [{ conversationId: 'conv-1', metadata: { count: 1 } }],
+      },
+    });
+  });
+
   it('runs backend exports with host-mediated extension registry capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

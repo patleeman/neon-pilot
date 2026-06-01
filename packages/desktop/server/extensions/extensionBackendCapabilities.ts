@@ -3,6 +3,7 @@ import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../sha
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
+import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import {
@@ -32,6 +33,25 @@ interface ExtensionBackendCapabilityGit {
 
 interface ExtensionBackendCapabilityEvents {
   publish(extensionId: string, event: string, payload: unknown): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityConversations {
+  metadata: {
+    get(extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }): Promise<unknown> | unknown;
+    set(
+      extensionId: string,
+      input: { conversationId: string; namespace?: string; values: Record<string, unknown>; profile?: string },
+    ): Promise<unknown> | unknown;
+    query(
+      extensionId: string,
+      input: {
+        namespace?: string;
+        where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
+        limit?: number;
+        profile?: string;
+      },
+    ): Promise<unknown> | unknown;
+  };
 }
 
 interface ExtensionBackendCapabilityExtensions {
@@ -111,6 +131,7 @@ interface ExtensionBackendCapabilityWorkspace {
 export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
+  conversations?: ExtensionBackendCapabilityConversations;
   events?: ExtensionBackendCapabilityEvents;
   extensions?: ExtensionBackendCapabilityExtensions;
   git?: ExtensionBackendCapabilityGit;
@@ -158,6 +179,65 @@ function dispatchEventsCapability(events: ExtensionBackendCapabilityEvents, requ
   }
   const input = normalizeRecordInput(request.input, 'Events');
   return events.publish(request.extensionId, requireString(input.event, 'Event name'), input.payload);
+}
+
+function optionalConversationMetadataWhere(
+  value: unknown,
+): Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }> | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new Error('Conversation metadata where must be an array when provided.');
+  }
+  return value.map((item) => {
+    const record = normalizeRecordInput(item, 'Conversation metadata where');
+    const op = record.op;
+    if (op !== undefined && op !== 'eq' && op !== 'neq' && op !== 'in' && op !== 'exists') {
+      throw new Error('Conversation metadata where op must be eq, neq, in, or exists when provided.');
+    }
+    return {
+      key: requireString(record.key, 'Conversation metadata where key'),
+      ...(op === undefined ? {} : { op }),
+      ...(record.value === undefined ? {} : { value: record.value }),
+    };
+  });
+}
+
+function dispatchConversationsCapability(
+  conversations: ExtensionBackendCapabilityConversations,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
+  const input = normalizeRecordInput(request.input, 'Conversations');
+
+  if (request.operation === 'metadata.get') {
+    const metadataInput = {
+      conversationId: requireString(input.conversationId, 'Conversation id'),
+      ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
+      ...(input.profile !== undefined ? { profile: optionalString(input.profile, 'Conversation metadata profile') } : {}),
+    };
+    return conversations.metadata.get(request.extensionId, metadataInput);
+  }
+
+  if (request.operation === 'metadata.set') {
+    const metadataInput = {
+      conversationId: requireString(input.conversationId, 'Conversation id'),
+      ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
+      ...(input.profile !== undefined ? { profile: optionalString(input.profile, 'Conversation metadata profile') } : {}),
+    };
+    const values = optionalRecord(input.values, 'Conversation metadata values');
+    if (!values) throw new Error('Conversation metadata values must be an object.');
+    return conversations.metadata.set(request.extensionId, { ...metadataInput, values });
+  }
+
+  if (request.operation === 'metadata.query') {
+    return conversations.metadata.query(request.extensionId, {
+      ...(input.namespace !== undefined ? { namespace: optionalString(input.namespace, 'Conversation metadata namespace') } : {}),
+      ...(input.profile !== undefined ? { profile: optionalString(input.profile, 'Conversation metadata profile') } : {}),
+      ...(input.where !== undefined ? { where: optionalConversationMetadataWhere(input.where) } : {}),
+      ...(input.limit !== undefined ? { limit: optionalNumber(input.limit, 'Conversation metadata limit') } : {}),
+    });
+  }
+
+  throw new Error(`Unsupported conversations capability operation: ${request.operation}`);
 }
 
 function dispatchExtensionsCapability(extensions: ExtensionBackendCapabilityExtensions, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -464,6 +544,23 @@ function dispatchWorkspaceCapability(workspace: ExtensionBackendCapabilityWorksp
 export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
+  const conversations = options.conversations ?? {
+    metadata: {
+      get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
+        readConversationMetadata({ ...input, extensionId }),
+      set: (extensionId: string, input: { conversationId: string; namespace?: string; values: Record<string, unknown>; profile?: string }) =>
+        writeConversationMetadata({ ...input, extensionId }),
+      query: (
+        extensionId: string,
+        input: {
+          namespace?: string;
+          where?: Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }>;
+          limit?: number;
+          profile?: string;
+        },
+      ) => queryConversationMetadata({ ...input, namespace: input.namespace?.trim() || extensionId }),
+    },
+  };
   const events = options.events ?? { publish: publishExtensionEvent };
   const extensions = options.extensions ?? {
     listActions: () =>
@@ -540,6 +637,9 @@ export function createExtensionBackendCapabilityDispatcher(
       listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
   };
   return (request) => {
+    if (request.capability === 'conversations') {
+      return dispatchConversationsCapability(conversations, request);
+    }
     if (request.capability === 'events') {
       return dispatchEventsCapability(events, request);
     }
