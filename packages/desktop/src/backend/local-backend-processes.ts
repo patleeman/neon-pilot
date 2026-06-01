@@ -164,6 +164,7 @@ export class LocalBackendProcesses {
     path: string;
     body?: unknown;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
   }): Promise<{ statusCode: number; headers: Record<string, string>; body: Uint8Array }> {
     const fastPath = await this.tryDispatchFastPath(input);
     if (fastPath) {
@@ -171,10 +172,13 @@ export class LocalBackendProcesses {
     }
 
     await this.ensureStarted();
+    const request = { ...input };
+    delete request.signal;
     const response = await this.fetch('/dispatch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ request: input }),
+      body: JSON.stringify({ request }),
+      signal: input.signal,
     });
     const body = new Uint8Array(await response.arrayBuffer());
     return {

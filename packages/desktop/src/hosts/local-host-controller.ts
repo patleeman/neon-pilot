@@ -46,6 +46,7 @@ interface LocalBackendController {
     path: string;
     body?: unknown;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
   }): Promise<{ statusCode: number; headers: Record<string, string>; body: Uint8Array }>;
   callLocalApiMethod(method: string, args: unknown[]): Promise<unknown>;
   subscribeApiStream(path: string, onEvent: (event: DesktopApiStreamEvent) => void): Promise<() => void>;
@@ -74,6 +75,7 @@ class LazyLocalBackendProcesses implements LocalBackendController {
     path: string;
     body?: unknown;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
   }): Promise<{ statusCode: number; headers: Record<string, string>; body: Uint8Array }> {
     return (await this.load()).dispatchApiRequest(input);
   }
@@ -201,6 +203,7 @@ export class LocalHostController implements HostController {
     path: string;
     body?: unknown;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
   }) {
     const module = await this.loadLocalApi();
     return module.dispatchDesktopLocalApiRequest(input);

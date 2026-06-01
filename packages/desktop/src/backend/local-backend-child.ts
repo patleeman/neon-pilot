@@ -290,11 +290,14 @@ async function main(): Promise<void> {
         const api = localApi!;
 
         if (request.method === 'POST' && url.pathname === '/dispatch') {
+          const abort = new AbortController();
+          request.on('aborted', () => abort.abort());
+          response.on('close', () => abort.abort());
           const body = await readRequestBody(request);
           if (!body.request) {
             throw new Error('Missing dispatch request.');
           }
-          const result = await api.dispatchDesktopLocalApiRequest(body.request);
+          const result = await api.dispatchDesktopLocalApiRequest({ ...body.request, signal: abort.signal });
           writeLocalApiDispatchResponse(response, result);
           return;
         }
