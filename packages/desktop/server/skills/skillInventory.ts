@@ -3,7 +3,8 @@ import { basename, dirname, join } from 'node:path';
 
 import { getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
 
-import { listExtensionAssemblyProviderRegistrations, listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 import { getAssemblyRuntimeScope } from '../prompt-assembly/runtimeScope.js';
 
@@ -111,7 +112,8 @@ async function listSkillDefinitionsWithDiagnosticsAsync(
 ): Promise<{ definitions: SkillDefinition[]; diagnostics: SkillDiagnostic[] }> {
   const skills = listSkillDefinitions(ctx);
   const diagnostics: SkillDiagnostic[] = [];
-  const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'skills');
+  const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
+  const providers = assemblyProviders.filter((provider) => provider.kind === 'skills');
   await Promise.allSettled(
     providers.map(async (provider) => {
       const { items: provided, diagnostics: providerDiagnostics } = await invokePromptAssemblyProvider<SkillDefinition>({

@@ -362,6 +362,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!response.ok) throw new Error(response.error);
       if (!('servicesStopped' in response)) throw new Error('Extension host returned an invalid service stop response.');
     },
+    async listPromptAssemblyContributions() {
+      const response = await send({ type: 'listPromptAssemblyContributions' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('promptAssemblyContributions' in response)) throw new Error('Extension host returned invalid prompt assembly contributions.');
+      return response.promptAssemblyContributions;
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },

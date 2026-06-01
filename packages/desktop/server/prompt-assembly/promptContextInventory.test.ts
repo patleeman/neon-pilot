@@ -1,19 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const extensionHostClient = vi.hoisted(() => ({ invokeAction: vi.fn() }));
-const registry = vi.hoisted(() => ({ listExtensionPromptContextProviderRegistrations: vi.fn(() => []) }));
+const extensionHostClient = vi.hoisted(() => ({
+  invokeAction: vi.fn(),
+  listPromptAssemblyContributions: vi.fn(() => ({ assemblyProviders: [], contextProviders: [], hooks: [] })),
+}));
 
 vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => extensionHostClient,
 }));
-vi.mock('../extensions/extensionRegistry.js', () => registry);
 
 import { buildPromptContextPlan } from './promptContextInventory.js';
 
 describe('prompt context inventory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    registry.listExtensionPromptContextProviderRegistrations.mockReturnValue([]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({ assemblyProviders: [], contextProviders: [], hooks: [] });
   });
 
   it('returns existing context messages when no providers are registered', async () => {
@@ -27,9 +28,11 @@ describe('prompt context inventory', () => {
   });
 
   it('skips providers for plain prompts without explicit context or related sessions', async () => {
-    registry.listExtensionPromptContextProviderRegistrations.mockReturnValue([
-      { extensionId: 'ext', id: 'provider', handler: 'provideContext', title: 'Provider Title' },
-    ]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
+      assemblyProviders: [],
+      contextProviders: [{ extensionId: 'ext', id: 'provider', handler: 'provideContext', title: 'Provider Title' }],
+      hooks: [],
+    });
 
     const plan = await buildPromptContextPlan({ prompt: 'hello', conversationId: 'conv-1' });
 
@@ -38,9 +41,11 @@ describe('prompt context inventory', () => {
   });
 
   it('invokes providers and normalizes blocks into extension turn context messages', async () => {
-    registry.listExtensionPromptContextProviderRegistrations.mockReturnValue([
-      { extensionId: 'ext', id: 'provider', handler: 'provideContext', title: 'Provider Title' },
-    ]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
+      assemblyProviders: [],
+      contextProviders: [{ extensionId: 'ext', id: 'provider', handler: 'provideContext', title: 'Provider Title' }],
+      hooks: [],
+    });
     extensionHostClient.invokeAction.mockResolvedValueOnce({
       ok: true,
       result: {
@@ -94,10 +99,14 @@ describe('prompt context inventory', () => {
   });
 
   it('records diagnostics for failed provider results and thrown provider errors', async () => {
-    registry.listExtensionPromptContextProviderRegistrations.mockReturnValue([
-      { extensionId: 'ext', id: 'failed', handler: 'failed', title: 'Failed Provider' },
-      { extensionId: 'ext', id: 'throws', handler: 'throws' },
-    ]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
+      assemblyProviders: [],
+      contextProviders: [
+        { extensionId: 'ext', id: 'failed', handler: 'failed', title: 'Failed Provider' },
+        { extensionId: 'ext', id: 'throws', handler: 'throws' },
+      ],
+      hooks: [],
+    });
     extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: false, error: 'bad' }).mockRejectedValueOnce(new Error('boom'));
 
     const plan = await buildPromptContextPlan({ prompt: 'hello', conversationId: 'conv-1', selectedSessionIds: ['related-1'] });

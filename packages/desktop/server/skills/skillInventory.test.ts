@@ -20,7 +20,6 @@ vi.mock('@neon-pilot/core', async () => {
 });
 
 vi.mock('../extensions/extensionRegistry.js', () => ({
-  listExtensionAssemblyProviderRegistrations: () => [],
   listExtensionSkillRegistrations: () => [
     {
       extensionId: 'test-extension',
@@ -43,6 +42,12 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
       packageRoot: extensionRoot,
     },
   ],
+}));
+
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => ({
+    listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
+  }),
 }));
 
 let stateRoot = '';

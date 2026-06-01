@@ -4,7 +4,9 @@ const fs = vi.hoisted(() => ({ existsSync: vi.fn(() => true) }));
 const core = vi.hoisted(() => ({
   resolveRuntimeResources: vi.fn(() => ({ promptEntries: ['/repo/prompts/default.md', '/repo/prompts/review.txt'] })),
 }));
-const registry = vi.hoisted(() => ({ listExtensionAssemblyProviderRegistrations: vi.fn(() => []) }));
+const extensionHostClient = vi.hoisted(() => ({
+  listPromptAssemblyContributions: vi.fn(() => ({ assemblyProviders: [], contextProviders: [], hooks: [] })),
+}));
 const providerRuntime = vi.hoisted(() => ({
   invokePromptAssemblyProvider: vi.fn(),
   isRecord: (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value),
@@ -13,7 +15,7 @@ const runtimeScope = vi.hoisted(() => ({ getAssemblyRuntimeScope: vi.fn(() => 's
 
 vi.mock('node:fs', () => fs);
 vi.mock('@neon-pilot/core', () => core);
-vi.mock('../extensions/extensionRegistry.js', () => registry);
+vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('../prompt-assembly/providerRuntime.js', () => providerRuntime);
 vi.mock('../prompt-assembly/runtimeScope.js', () => runtimeScope);
 
@@ -31,7 +33,7 @@ describe('prompt template inventory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fs.existsSync.mockReturnValue(true);
-    registry.listExtensionAssemblyProviderRegistrations.mockReturnValue([]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({ assemblyProviders: [], contextProviders: [], hooks: [] });
   });
 
   it('discovers configured prompt template files from runtime resources', () => {
@@ -114,10 +116,14 @@ describe('prompt template inventory', () => {
   });
 
   it('merges extension provider prompt templates, diagnostics, and default provider metadata', async () => {
-    registry.listExtensionAssemblyProviderRegistrations.mockReturnValue([
-      { id: 'provider-1', extensionId: 'ext-one', kind: 'promptTemplates', title: 'Ext One' },
-      { id: 'provider-2', extensionId: 'ext-two', kind: 'other' },
-    ]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
+      assemblyProviders: [
+        { id: 'provider-1', extensionId: 'ext-one', kind: 'promptTemplates', title: 'Ext One' },
+        { id: 'provider-2', extensionId: 'ext-two', kind: 'tools' },
+      ],
+      contextProviders: [],
+      hooks: [],
+    });
     providerRuntime.invokePromptAssemblyProvider.mockResolvedValue({
       items: [{ id: 'ext-template', title: 'Extension Template', location: { kind: 'file', path: '/ext/template.md' }, priority: 10 }],
       diagnostics: [{ severity: 'warning', code: 'provider-warning', message: 'careful' }],

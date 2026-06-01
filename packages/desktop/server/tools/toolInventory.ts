@@ -1,6 +1,6 @@
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import {
   type ExtensionToolRegistration,
-  listExtensionAssemblyProviderRegistrations,
   listExtensionToolRegistrations,
 } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
@@ -76,7 +76,8 @@ async function listToolDefinitionsWithDiagnosticsAsync(
 ): Promise<{ definitions: ToolDefinition[]; diagnostics: AssemblyDiagnostic[] }> {
   const tools = listToolDefinitions(ctx);
   const diagnostics: AssemblyDiagnostic[] = [];
-  const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'tools');
+  const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
+  const providers = assemblyProviders.filter((provider) => provider.kind === 'tools');
   await Promise.allSettled(
     providers.map(async (provider) => {
       const { items: provided, diagnostics: providerDiagnostics } = await invokePromptAssemblyProvider<ToolDefinition>({

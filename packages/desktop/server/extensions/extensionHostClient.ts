@@ -8,6 +8,7 @@ import type {
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostInvokeRouteRequest,
+  ExtensionHostPromptAssemblyContributions,
   ExtensionHostReloadBackendRequest,
   ExtensionHostReloadBackendResult,
   ExtensionHostRequest,
@@ -45,6 +46,7 @@ export interface ExtensionHostClient {
   listServices(): Promise<ExtensionHostRunningService[]>;
   startServices(input?: ExtensionHostStartServicesInput): Promise<ExtensionHostServiceOperationResult[]>;
   stopServices(extensionId: string): Promise<void>;
+  listPromptAssemblyContributions(): Promise<ExtensionHostPromptAssemblyContributions>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -118,6 +120,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       const response = await handleInProcessExtensionHostRequest({ type: 'stopServices', extensionId });
       if (!response.ok) throw new Error(response.error);
       if (!('servicesStopped' in response)) throw new Error('Extension host returned an invalid service stop response.');
+    },
+    async listPromptAssemblyContributions() {
+      const response = await handleInProcessExtensionHostRequest({ type: 'listPromptAssemblyContributions' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('promptAssemblyContributions' in response)) throw new Error('Extension host returned invalid prompt assembly contributions.');
+      return response.promptAssemblyContributions;
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -285,6 +293,21 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
       const { stopExtensionServices } = await import('./extensionServices.js');
       await stopExtensionServices(request.extensionId);
       return { ok: true, servicesStopped: true };
+    }
+    if (request.type === 'listPromptAssemblyContributions') {
+      const {
+        listExtensionAssemblyProviderRegistrations,
+        listExtensionPromptAssemblyHookRegistrations,
+        listExtensionPromptContextProviderRegistrations,
+      } = await import('./extensionRegistry.js');
+      return {
+        ok: true,
+        promptAssemblyContributions: {
+          contextProviders: listExtensionPromptContextProviderRegistrations(),
+          assemblyProviders: listExtensionAssemblyProviderRegistrations(),
+          hooks: listExtensionPromptAssemblyHookRegistrations(),
+        },
+      };
     }
     const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
     uninstallExtensionSubscriptions(request.extensionId);

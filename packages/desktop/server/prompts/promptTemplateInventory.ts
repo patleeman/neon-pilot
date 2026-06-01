@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 
 import { resolveRuntimeResources } from '@neon-pilot/core';
 
-import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { invokePromptAssemblyProvider, isRecord } from '../prompt-assembly/providerRuntime.js';
 import { getAssemblyRuntimeScope } from '../prompt-assembly/runtimeScope.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from '../prompt-assembly/types.js';
@@ -76,7 +76,8 @@ async function listPromptTemplateDefinitionsWithDiagnosticsAsync(
 ): Promise<{ definitions: PromptTemplateDefinition[]; diagnostics: AssemblyDiagnostic[] }> {
   const templates = listPromptTemplateDefinitions(ctx);
   const diagnostics: AssemblyDiagnostic[] = [];
-  const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'promptTemplates');
+  const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
+  const providers = assemblyProviders.filter((provider) => provider.kind === 'promptTemplates');
   await Promise.allSettled(
     providers.map(async (provider) => {
       const { items: provided, diagnostics: providerDiagnostics } = await invokePromptAssemblyProvider<PromptTemplateDefinition>({

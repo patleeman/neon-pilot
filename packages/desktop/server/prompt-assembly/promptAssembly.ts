@@ -1,5 +1,4 @@
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { listExtensionPromptAssemblyHookRegistrations } from '../extensions/extensionRegistry.js';
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
 import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
 import { buildToolInjectionPlan, buildToolInjectionPlanAsync } from '../tools/toolInventory.js';
@@ -77,7 +76,7 @@ export async function buildPromptAssemblyPlanAsync(
 }
 
 async function runPromptAssemblyHooks(plan: PromptAssemblyPlan, ctx: AssemblyRuntimeContext): Promise<void> {
-  const hooks = listExtensionPromptAssemblyHookRegistrations();
+  const { hooks } = await getExtensionHostClient().listPromptAssemblyContributions();
   await Promise.allSettled(
     hooks.map(async (hook) => {
       const result = await getExtensionHostClient().invokeAction({

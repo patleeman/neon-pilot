@@ -13,7 +13,7 @@ import {
   type SystemPromptTemplateVariables,
 } from '@neon-pilot/core';
 
-import { listExtensionAssemblyProviderRegistrations } from '../extensions/extensionRegistry.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { invokePromptAssemblyProvider, isRecord } from './providerRuntime.js';
 import { getAssemblyRuntimeScope } from './runtimeScope.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from './types.js';
@@ -82,7 +82,8 @@ export async function buildInstructionPlan(ctx: AssemblyRuntimeContext): Promise
       });
     }
   }
-  const providers = listExtensionAssemblyProviderRegistrations().filter((provider) => provider.kind === 'instructions');
+  const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
+  const providers = assemblyProviders.filter((provider) => provider.kind === 'instructions');
   await Promise.allSettled(
     providers.map(async (provider) => {
       const result = await invokePromptAssemblyProvider<InstructionLayer>({

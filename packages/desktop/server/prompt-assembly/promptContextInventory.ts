@@ -1,5 +1,4 @@
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { listExtensionPromptContextProviderRegistrations } from '../extensions/extensionRegistry.js';
 import type { AssemblyDiagnostic } from './types.js';
 
 const PROMPT_CONTEXT_PROVIDER_BUDGET_MS = 200;
@@ -51,7 +50,7 @@ export async function buildPromptContextPlan(input: {
     return { blocks, contextMessages, diagnostics };
   }
 
-  const providers = listExtensionPromptContextProviderRegistrations();
+  const { contextProviders: providers } = await getExtensionHostClient().listPromptAssemblyContributions();
 
   await Promise.allSettled(
     providers.map(async (provider) => {

@@ -18,7 +18,9 @@ const core = vi.hoisted(() => ({
     appendSystemFiles: ['/repo/APPEND.md'],
   })),
 }));
-const registry = vi.hoisted(() => ({ listExtensionAssemblyProviderRegistrations: vi.fn(() => []) }));
+const extensionHostClient = vi.hoisted(() => ({
+  listPromptAssemblyContributions: vi.fn(() => ({ assemblyProviders: [], contextProviders: [], hooks: [] })),
+}));
 const providerRuntime = vi.hoisted(() => ({
   invokePromptAssemblyProvider: vi.fn(),
   isRecord: (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value),
@@ -27,7 +29,7 @@ const runtimeScope = vi.hoisted(() => ({ getAssemblyRuntimeScope: vi.fn(() => 's
 
 vi.mock('node:fs', () => fs);
 vi.mock('@neon-pilot/core', () => core);
-vi.mock('../extensions/extensionRegistry.js', () => registry);
+vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('./providerRuntime.js', () => providerRuntime);
 vi.mock('./runtimeScope.js', () => runtimeScope);
 
@@ -41,7 +43,7 @@ describe('instruction inventory', () => {
     fs.existsSync.mockReturnValue(true);
     fs.readFileSync.mockImplementation((path: string) => `content:${path}`);
     template.renderSystemPromptTemplate.mockReturnValue('generated template');
-    registry.listExtensionAssemblyProviderRegistrations.mockReturnValue([]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({ assemblyProviders: [], contextProviders: [], hooks: [] });
   });
 
   it('builds ordered instruction layers from runtime files and generated template', async () => {
@@ -106,9 +108,11 @@ describe('instruction inventory', () => {
   });
 
   it('merges extension instruction provider layers, diagnostics, and default metadata', async () => {
-    registry.listExtensionAssemblyProviderRegistrations.mockReturnValue([
-      { id: 'instructions', extensionId: 'ext', kind: 'instructions', title: 'Extension Instructions' },
-    ]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
+      assemblyProviders: [{ id: 'instructions', extensionId: 'ext', kind: 'instructions', title: 'Extension Instructions' }],
+      contextProviders: [],
+      hooks: [],
+    });
     providerRuntime.invokePromptAssemblyProvider.mockResolvedValue({
       items: [
         {

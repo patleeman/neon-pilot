@@ -132,7 +132,17 @@ describe('extension host RPC client', () => {
       .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, services: [{ extensionId: 'ext', serviceId: 'svc', startedAt: '2026-01-01T00:00:00.000Z' }] }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, serviceResults: [{ extensionId: 'ext', serviceId: 'svc', ok: true }] }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, servicesStopped: true }));
+      .mockResolvedValueOnce(jsonResponse({ ok: true, servicesStopped: true }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          promptAssemblyContributions: {
+            contextProviders: [{ extensionId: 'ext', id: 'ctx', handler: 'context' }],
+            assemblyProviders: [{ extensionId: 'ext', id: 'instructions', handler: 'instructions', kind: 'instructions' }],
+            hooks: [{ extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' }],
+          },
+        }),
+      );
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
@@ -148,6 +158,11 @@ describe('extension host RPC client', () => {
       { extensionId: 'ext', serviceId: 'svc', ok: true },
     ]);
     await expect(client.stopServices('ext')).resolves.toBeUndefined();
+    await expect(client.listPromptAssemblyContributions()).resolves.toEqual({
+      contextProviders: [{ extensionId: 'ext', id: 'ctx', handler: 'context' }],
+      assemblyProviders: [{ extensionId: 'ext', id: 'instructions', handler: 'instructions', kind: 'instructions' }],
+      hooks: [{ extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' }],
+    });
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       1,
@@ -195,6 +210,11 @@ describe('extension host RPC client', () => {
       7,
       'http://host/rpc',
       expect.objectContaining({ body: JSON.stringify({ request: { type: 'stopServices', extensionId: 'ext' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      8,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'listPromptAssemblyContributions' } }) }),
     );
   });
 

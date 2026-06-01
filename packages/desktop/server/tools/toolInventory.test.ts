@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const registry = vi.hoisted(() => ({
-  listExtensionAssemblyProviderRegistrations: vi.fn(() => []),
   listExtensionToolRegistrations: vi.fn(() => []),
+}));
+const extensionHostClient = vi.hoisted(() => ({
+  listPromptAssemblyContributions: vi.fn(() => ({ assemblyProviders: [], contextProviders: [], hooks: [] })),
 }));
 const providerRuntime = vi.hoisted(() => ({
   invokePromptAssemblyProvider: vi.fn(),
@@ -10,6 +12,7 @@ const providerRuntime = vi.hoisted(() => ({
 }));
 
 vi.mock('../extensions/extensionRegistry.js', () => registry);
+vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('../prompt-assembly/providerRuntime.js', () => providerRuntime);
 
 import {
@@ -25,7 +28,7 @@ describe('tool inventory', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    registry.listExtensionAssemblyProviderRegistrations.mockReturnValue([]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({ assemblyProviders: [], contextProviders: [], hooks: [] });
     registry.listExtensionToolRegistrations.mockReturnValue([]);
   });
 
@@ -132,9 +135,11 @@ describe('tool inventory', () => {
   });
 
   it('merges async provider tools, diagnostics, and raw registrations for action-backed tools', async () => {
-    registry.listExtensionAssemblyProviderRegistrations.mockReturnValue([
-      { id: 'provider', extensionId: 'ext-provider', packageType: 'system', kind: 'tools', title: 'Tools' },
-    ]);
+    extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
+      assemblyProviders: [{ id: 'provider', extensionId: 'ext-provider', packageType: 'system', kind: 'tools', title: 'Tools' }],
+      contextProviders: [],
+      hooks: [],
+    });
     providerRuntime.invokePromptAssemblyProvider.mockResolvedValue({
       items: [{ id: 'provided', name: 'provided_tool', action: 'run', description: 'Provided tool', inputSchema: {}, priority: 3 }],
       diagnostics: [{ severity: 'warning', code: 'provider-warning', message: 'careful' }],

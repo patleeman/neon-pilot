@@ -75,6 +75,42 @@ export interface ExtensionHostServiceOperationResult {
   error?: string;
 }
 
+export interface ExtensionHostPromptContextProviderRegistration {
+  extensionId: string;
+  id: string;
+  packageType: 'system' | 'user';
+  handler: string;
+  title?: string;
+  priority?: number;
+  scope?: Array<'global' | 'workspace' | 'conversation'>;
+}
+
+export interface ExtensionHostAssemblyProviderRegistration {
+  extensionId: string;
+  id: string;
+  packageType: 'system' | 'user';
+  handler: string;
+  title?: string;
+  priority?: number;
+  kind: 'skills' | 'tools' | 'promptTemplates' | 'instructions';
+}
+
+export interface ExtensionHostPromptAssemblyHookRegistration {
+  extensionId: string;
+  id: string;
+  packageType: 'system' | 'user';
+  handler: string;
+  title?: string;
+  priority?: number;
+  phase: 'after-discovery' | 'before-policy' | 'after-policy' | 'before-injection' | 'after-assembly';
+}
+
+export interface ExtensionHostPromptAssemblyContributions {
+  contextProviders: ExtensionHostPromptContextProviderRegistration[];
+  assemblyProviders: ExtensionHostAssemblyProviderRegistration[];
+  hooks: ExtensionHostPromptAssemblyHookRegistration[];
+}
+
 export interface ExtensionHostHealthRequest {
   type: 'health';
 }
@@ -123,6 +159,10 @@ export interface ExtensionHostStartServicesRequest {
 export interface ExtensionHostStopServicesRequest {
   type: 'stopServices';
   extensionId: string;
+}
+
+export interface ExtensionHostListPromptAssemblyContributionsRequest {
+  type: 'listPromptAssemblyContributions';
 }
 
 export interface ExtensionHostInvokeProtocolEntrypointRequest {
@@ -197,6 +237,7 @@ export type ExtensionHostRequest =
   | ExtensionHostListServicesRequest
   | ExtensionHostStartServicesRequest
   | ExtensionHostStopServicesRequest
+  | ExtensionHostListPromptAssemblyContributionsRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostStartStartupActionsRequest
@@ -238,6 +279,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      promptAssemblyContributions: ExtensionHostPromptAssemblyContributions;
+    }
+  | {
+      ok: true;
       invoked: true;
     }
   | {
@@ -274,6 +319,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'listServices') return 'listServices';
   if (request.type === 'startServices') return 'startServices';
   if (request.type === 'stopServices') return `stopServices:${request.extensionId}`;
+  if (request.type === 'listPromptAssemblyContributions') return 'listPromptAssemblyContributions';
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;

@@ -20,10 +20,16 @@ const extensionServices = vi.hoisted(() => ({
   startExtensionServices: vi.fn(),
   stopExtensionServices: vi.fn(),
 }));
+const extensionRegistry = vi.hoisted(() => ({
+  listExtensionAssemblyProviderRegistrations: vi.fn(),
+  listExtensionPromptAssemblyHookRegistrations: vi.fn(),
+  listExtensionPromptContextProviderRegistrations: vi.fn(),
+}));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
 vi.mock('./extensionSubscriptions.js', () => extensionSubscriptions);
 vi.mock('./extensionServices.js', () => extensionServices);
+vi.mock('./extensionRegistry.js', () => extensionRegistry);
 
 import {
   createInProcessExtensionHostClient,
@@ -162,6 +168,21 @@ describe('extension host client', () => {
     expect(extensionServices.stopExtensionServices).toHaveBeenCalledWith('ext');
   });
 
+  it('routes prompt assembly contribution reads through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.listExtensionPromptContextProviderRegistrations.mockReturnValueOnce([{ extensionId: 'ext', id: 'ctx', handler: 'context' }]);
+    extensionRegistry.listExtensionAssemblyProviderRegistrations.mockReturnValueOnce([
+      { extensionId: 'ext', id: 'instructions', handler: 'instructions', kind: 'instructions' },
+    ]);
+    extensionRegistry.listExtensionPromptAssemblyHookRegistrations.mockReturnValueOnce([{ extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' }]);
+
+    await expect(getExtensionHostClient().listPromptAssemblyContributions()).resolves.toEqual({
+      contextProviders: [{ extensionId: 'ext', id: 'ctx', handler: 'context' }],
+      assemblyProviders: [{ extensionId: 'ext', id: 'instructions', handler: 'instructions', kind: 'instructions' }],
+      hooks: [{ extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' }],
+    });
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -291,5 +312,6 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'listServices' })).toBe('listServices');
     expect(extensionHostRequestName({ type: 'startServices' })).toBe('startServices');
     expect(extensionHostRequestName({ type: 'stopServices', extensionId: 'ext' })).toBe('stopServices:ext');
+    expect(extensionHostRequestName({ type: 'listPromptAssemblyContributions' })).toBe('listPromptAssemblyContributions');
   });
 });

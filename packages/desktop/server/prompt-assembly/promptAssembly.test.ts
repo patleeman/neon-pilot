@@ -74,6 +74,36 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
 
 vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => ({
+    listPromptAssemblyContributions: async () => ({
+      assemblyProviders: [
+        {
+          extensionId: 'test-extension',
+          packageType: 'system',
+          id: 'dynamic-tools',
+          kind: 'tools',
+          handler: 'provideTools',
+          title: 'Dynamic Tools',
+        },
+        {
+          extensionId: 'test-extension',
+          packageType: 'system',
+          id: 'bad-skills',
+          kind: 'skills',
+          handler: 'provideBadSkills',
+          title: 'Bad Skills',
+        },
+        {
+          extensionId: 'test-extension',
+          packageType: 'system',
+          id: 'bad-templates',
+          kind: 'promptTemplates',
+          handler: 'provideBadTemplates',
+          title: 'Bad Templates',
+        },
+      ],
+      contextProviders: [],
+      hooks: promptAssemblyHooks,
+    }),
     invokeAction: async ({ actionId }: { actionId: string }) => {
       if (actionId === 'provideTools') {
         return {
