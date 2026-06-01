@@ -140,13 +140,19 @@
         "method": "GET",
         "path": "/knowledge/tree",
         "handler": "knowledgeTreeRoute",
-        "title": "Read knowledge tree route"
+        "title": "Read knowledge tree route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "GET",
         "path": "/knowledge/file",
         "handler": "knowledgeReadFileRoute",
-        "title": "Read knowledge file route"
+        "title": "Read knowledge file route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "PUT",
@@ -182,19 +188,28 @@
         "method": "GET",
         "path": "/knowledge/backlinks",
         "handler": "knowledgeBacklinksRoute",
-        "title": "Read knowledge backlinks route"
+        "title": "Read knowledge backlinks route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "GET",
         "path": "/knowledge/search",
         "handler": "knowledgeSearchRoute",
-        "title": "Search knowledge route"
+        "title": "Search knowledge route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "GET",
         "path": "/knowledge/note-search",
         "handler": "knowledgeSearchRoute",
-        "title": "Search knowledge notes route"
+        "title": "Search knowledge notes route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "POST",

@@ -1492,6 +1492,54 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe knowledge read routes through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ status: 200, body: { results: [{ id: 'notes/a.md' }] } })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionRoute('system-knowledge', 'GET', '/knowledge/search', {
+        method: 'GET',
+        path: '/knowledge/search',
+        query: { q: 'alpha' },
+        params: {},
+      }),
+    ).resolves.toEqual({ status: 200, body: { results: [{ id: 'notes/a.md' }] } });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')) }),
+      'knowledgeSearchRoute',
+      { type: 'route', label: 'route GET /knowledge/search', target: '/knowledge/search' },
+      [{ method: 'GET', path: '/knowledge/search', query: { q: 'alpha' }, params: {} }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('keeps SSE backend routes in-process even when worker-declared', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
