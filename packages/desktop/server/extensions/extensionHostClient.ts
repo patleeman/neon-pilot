@@ -51,6 +51,14 @@ function asExtensionBackendServerContext(
   return context as ExtensionBackendServerContext | undefined;
 }
 
+async function resolveRequestServerContext(request: {
+  serverContext?: ExtensionHostBackendServerContext;
+  serverContextSnapshot?: ExtensionHostInvokeActionRequest['serverContextSnapshot'];
+}): Promise<ExtensionBackendServerContext | undefined> {
+  const { resolveExtensionBackendServerContext } = await import('./extensionHostServerContext.js');
+  return asExtensionBackendServerContext(resolveExtensionBackendServerContext(request));
+}
+
 function normalizeDependencyId(dependency: string | { id: string; optional?: boolean }): { id: string; optional: boolean } {
   return typeof dependency === 'string'
     ? { id: dependency, optional: false }
@@ -346,33 +354,23 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     }
     const { invokeExtensionAction } = await import('./extensionBackend.js');
     if (request.type === 'invokeAction') {
-      const [{ createExtensionBackendServerContextFromSnapshot }, { createExtensionBackendToolContextFromSnapshot }] = await Promise.all([
-        import('./extensionHostServerContext.js'),
-        import('./extensionHostToolContext.js'),
-      ]);
+      const { createExtensionBackendToolContextFromSnapshot } = await import('./extensionHostToolContext.js');
       return {
         ok: true,
         result: await invokeExtensionAction(
           request.extensionId,
           request.actionId,
           request.input,
-          asExtensionBackendServerContext(
-            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
-          ),
+          await resolveRequestServerContext(request),
           request.toolContext ?? createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
           request.agentToolContext,
         ),
       };
     }
     if (request.type === 'invokeProtocolEntrypoint') {
-      const [{ invokeExtensionProtocolEntrypoint }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
-        import('./extensionBackend.js'),
-        import('./extensionHostServerContext.js'),
-      ]);
+      const { invokeExtensionProtocolEntrypoint } = await import('./extensionBackend.js');
       await invokeExtensionProtocolEntrypoint(request.protocolId, request.input, {
-        serverContext: asExtensionBackendServerContext(
-          request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
-        ),
+        serverContext: await resolveRequestServerContext(request),
         stdio: request.stdio,
         signal: request.signal,
       });
@@ -383,10 +381,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, results: await checkEnabledExtensionBackendHealth() };
     }
     if (request.type === 'invokeRoute') {
-      const [{ invokeExtensionRoute }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
-        import('./extensionBackend.js'),
-        import('./extensionHostServerContext.js'),
-      ]);
+      const { invokeExtensionRoute } = await import('./extensionBackend.js');
       return {
         ok: true,
         route: await invokeExtensionRoute(
@@ -394,9 +389,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
           request.method,
           request.routePath,
           request.request,
-          asExtensionBackendServerContext(
-            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
-          ),
+          await resolveRequestServerContext(request),
         ),
       };
     }
@@ -417,14 +410,11 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, selfTest: await runExtensionSelfTest(request.extensionId) };
     }
     if (request.type === 'setEnabled') {
-      const [
-        {
-          findExtensionEntry,
-          listExtensionInstallSummaries,
-          setExtensionEnabled,
-        },
-        { createExtensionBackendServerContextFromSnapshot },
-      ] = await Promise.all([import('./extensionRegistry.js'), import('./extensionHostServerContext.js')]);
+      const {
+        findExtensionEntry,
+        listExtensionInstallSummaries,
+        setExtensionEnabled,
+      } = await import('./extensionRegistry.js');
       const entry = findExtensionEntry(request.extensionId);
       const summary = listExtensionInstallSummaries().find((extension) => extension.id === request.extensionId);
       if (!entry && summary?.status === 'invalid') {
@@ -460,9 +450,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
           };
         }
       }
-      const serverContext = asExtensionBackendServerContext(
-        request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
-      );
+      const serverContext = await resolveRequestServerContext(request);
       let actionResult: ExtensionHostActionInvokeResult | undefined;
       if (request.enabled) {
         setExtensionEnabled(entry.manifest.id, true);
@@ -519,17 +507,10 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, keybindingUpdated: true };
     }
     if (request.type === 'startStartupActions') {
-      const [{ startExtensionStartupActions }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
-        import('./extensionBackend.js'),
-        import('./extensionHostServerContext.js'),
-      ]);
+      const { startExtensionStartupActions } = await import('./extensionBackend.js');
       return {
         ok: true,
-        results: await startExtensionStartupActions(
-          asExtensionBackendServerContext(
-            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
-          ),
-        ),
+        results: await startExtensionStartupActions(await resolveRequestServerContext(request)),
       };
     }
     const { publishExtensionHostEvent } = await import('./extensionSubscriptions.js');
@@ -538,14 +519,8 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, published: true };
     }
     if (request.type === 'installSubscriptions') {
-      const [{ installSubscriptionsForExtension }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
-        import('./extensionSubscriptions.js'),
-        import('./extensionHostServerContext.js'),
-      ]);
-      await installSubscriptionsForExtension(
-        request.extensionId,
-        asExtensionBackendServerContext(request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot)),
-      );
+      const { installSubscriptionsForExtension } = await import('./extensionSubscriptions.js');
+      await installSubscriptionsForExtension(request.extensionId, await resolveRequestServerContext(request));
       return { ok: true, subscriptionsUpdated: true };
     }
     if (request.type === 'listServices') {
@@ -553,17 +528,10 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, services: listRunningExtensionServices().map(({ extensionId, serviceId, startedAt, lastError }) => ({ extensionId, serviceId, startedAt, lastError })) };
     }
     if (request.type === 'startServices') {
-      const [{ startExtensionServices }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
-        import('./extensionServices.js'),
-        import('./extensionHostServerContext.js'),
-      ]);
+      const { startExtensionServices } = await import('./extensionServices.js');
       return {
         ok: true,
-        serviceResults: await startExtensionServices(
-          asExtensionBackendServerContext(
-            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
-          ),
-        ),
+        serviceResults: await startExtensionServices(await resolveRequestServerContext(request)),
       };
     }
     if (request.type === 'stopServices') {

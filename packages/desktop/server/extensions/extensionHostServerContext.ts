@@ -49,3 +49,10 @@ export function createExtensionBackendServerContextFromSnapshot(
     buildLiveSessionResourceOptions: () => getRuntimeState().buildLiveSessionResourceOptions(),
   };
 }
+
+export function resolveExtensionBackendServerContext(input: {
+  serverContext?: ExtensionHostBackendServerContext;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
+}): ExtensionHostBackendServerContext | undefined {
+  return input.serverContext ?? createExtensionBackendServerContextFromSnapshot(input.serverContextSnapshot);
+}

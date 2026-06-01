@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createExtensionBackendServerContextFromSnapshot,
   createExtensionHostServerContextSnapshot,
+  resolveExtensionBackendServerContext,
 } from './extensionHostServerContext.js';
 
 describe('extension host server context snapshots', () => {
@@ -40,5 +41,19 @@ describe('extension host server context snapshots', () => {
     expect(context?.getSettingsFile?.()).toBe('/agent/settings.json');
     expect(context?.getAuthFile?.()).toBe('/agent/auth.json');
     expect(context?.getStateRoot?.()).toBe('/state');
+  });
+
+  it('prefers a live backend server context while keeping snapshot reconstruction centralized', () => {
+    const liveContext = { getRuntimeScope: () => 'live' };
+    const resolvedLive = resolveExtensionBackendServerContext({
+      serverContext: liveContext,
+      serverContextSnapshot: { runtimeScope: 'snapshot' },
+    });
+    const resolvedSnapshot = resolveExtensionBackendServerContext({
+      serverContextSnapshot: { runtimeScope: 'snapshot' },
+    });
+
+    expect(resolvedLive).toBe(liveContext);
+    expect(resolvedSnapshot?.getRuntimeScope()).toBe('snapshot');
   });
 });
