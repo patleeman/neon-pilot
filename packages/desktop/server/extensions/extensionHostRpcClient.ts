@@ -1,5 +1,11 @@
 import type { ExtensionHostClient, ExtensionHostInvokeActionInput, ExtensionHostInvokeRouteInput } from './extensionHostClient.js';
-import type { ExtensionHostRequest, ExtensionHostResponse, ExtensionHostRouteResponse, ExtensionHostRouteSseEvent } from './extensionHostProtocol.js';
+import type {
+  ExtensionHostActionInvokeResult,
+  ExtensionHostRequest,
+  ExtensionHostResponse,
+  ExtensionHostRouteResponse,
+  ExtensionHostRouteSseEvent,
+} from './extensionHostProtocol.js';
 
 export interface ExtensionHostRpcClientOptions {
   baseUrl: string;
@@ -26,6 +32,23 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
   );
 }
 
+function hasOnlyToolUpdateCallback(input: ExtensionHostInvokeActionInput): boolean {
+  const toolContext = input.toolContext;
+  if (!toolContext || typeof toolContext !== 'object') return false;
+  const entries = Object.entries(toolContext);
+  return entries.length === 1 && entries[0]?.[0] === 'onUpdate' && typeof entries[0]?.[1] === 'function';
+}
+
+function isWireableExtensionHostStreamingActionInput(input: ExtensionHostInvokeActionInput): boolean {
+  if (!hasOnlyToolUpdateCallback(input)) return false;
+  return (
+    !hasFunction(input.serverContext) &&
+    !hasFunction(input.serverContextSnapshot) &&
+    !hasFunction(input.toolContextSnapshot) &&
+    !hasFunction(input.agentToolContext)
+  );
+}
+
 function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHostClient['invokeRoute']>[0]): boolean {
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(stripRouteSignal(input).request);
 }
@@ -40,6 +63,12 @@ function stripRouteSignal(input: ExtensionHostInvokeRouteInput): ExtensionHostIn
   const request = { ...input.request };
   delete request.signal;
   return { ...input, request };
+}
+
+function stripActionUpdateCallback(input: ExtensionHostInvokeActionInput): ExtensionHostInvokeActionInput {
+  const request = { ...input };
+  delete request.toolContext;
+  return request;
 }
 
 function decodeRouteResponse(route: ExtensionHostRouteResponse): ExtensionHostRouteResponse {
@@ -148,6 +177,35 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     return decodeRouteResponse(body.route);
   }
 
+  async function sendStreamingAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionHostActionInvokeResult> {
+    const response = await fetchImpl(`${baseUrl}/action`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${options.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ request: stripActionUpdateCallback(input) }),
+    });
+    if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+      const body = (await response.json()) as ExtensionHostResponse;
+      return { ok: false, error: !body.ok ? body.error : `Extension host action failed: ${String(response.status)}` };
+    }
+    let finalResult: ExtensionHostActionInvokeResult | undefined;
+    for await (const event of parseSseEvents(response)) {
+      if (event.event === 'update') {
+        input.toolContext?.onUpdate?.(
+          (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Parameters<NonNullable<typeof input.toolContext.onUpdate>>[0],
+        );
+      } else if (event.event === 'result') {
+        finalResult = typeof event.data === 'string' ? (JSON.parse(event.data) as ExtensionHostActionInvokeResult) : (event.data as ExtensionHostActionInvokeResult);
+      } else if (event.event === 'error') {
+        const message = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
+        finalResult = { ok: false, error: message };
+      }
+    }
+    return finalResult ?? { ok: false, error: 'Extension host action stream ended without a result.' };
+  }
+
   return {
     async health() {
       const response = await send({ type: 'health' });
@@ -162,6 +220,9 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       return response.results;
     },
     async invokeAction(input) {
+      if (isWireableExtensionHostStreamingActionInput(input)) {
+        return sendStreamingAction(input);
+      }
       assertWireableInvokeActionInput(input);
       const response = await send({ type: 'invokeAction', ...input });
       if (!response.ok) return { ok: false, error: response.error };
@@ -218,6 +279,9 @@ export function createHybridExtensionHostClient(input: {
       return input.rpcClient.health();
     },
     async invokeAction(actionInput) {
+      if (isWireableExtensionHostStreamingActionInput(actionInput)) {
+        return input.rpcClient.invokeAction(actionInput);
+      }
       if (!isWireableExtensionHostInvokeActionInput(actionInput)) {
         return input.fallbackClient.invokeAction(actionInput);
       }

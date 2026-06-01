@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
 import { handleInProcessExtensionHostRequest } from '../../server/extensions/extensionHostClient.js';
-import type { ExtensionHostInvokeRouteRequest, ExtensionHostRequest, ExtensionHostRouteResponse } from '../../server/extensions/extensionHostProtocol.js';
+import type {
+  ExtensionHostInvokeActionRequest,
+  ExtensionHostInvokeRouteRequest,
+  ExtensionHostRequest,
+  ExtensionHostRouteResponse,
+} from '../../server/extensions/extensionHostProtocol.js';
 
 interface ExtensionHostReadyMessage {
   type: 'ready';
@@ -16,6 +21,10 @@ interface ExtensionHostRequestBody {
 
 interface ExtensionHostRouteRequestBody {
   request?: Omit<ExtensionHostInvokeRouteRequest, 'type'>;
+}
+
+interface ExtensionHostActionRequestBody {
+  request?: Omit<ExtensionHostInvokeActionRequest, 'type'>;
 }
 
 let shuttingDown = false;
@@ -83,16 +92,20 @@ async function writeSseRouteResponse(response: ServerResponse, route: ExtensionH
   });
   try {
     for await (const event of route.events ?? []) {
-      if (event.id) response.write(`id: ${event.id}\n`);
-      if (event.event) response.write(`event: ${event.event}\n`);
-      if (typeof event.retry === 'number') response.write(`retry: ${event.retry}\n`);
-      const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data ?? null);
-      for (const line of data.split(/\r?\n/)) response.write(`data: ${line}\n`);
-      response.write('\n');
+      writeSseEvent(response, event);
     }
   } finally {
     response.end();
   }
+}
+
+function writeSseEvent(response: ServerResponse, event: { event?: string; data?: unknown; id?: string; retry?: number }): void {
+  if (event.id) response.write(`id: ${event.id}\n`);
+  if (event.event) response.write(`event: ${event.event}\n`);
+  if (typeof event.retry === 'number') response.write(`retry: ${event.retry}\n`);
+  const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data ?? null);
+  for (const line of data.split(/\r?\n/)) response.write(`data: ${line}\n`);
+  response.write('\n');
 }
 
 async function shutdown(server: ReturnType<typeof createServer>): Promise<void> {
@@ -153,6 +166,28 @@ async function main(): Promise<void> {
             return;
           }
           writeJson(response, result.route.status ?? 200, { ok: true, route: encodeRouteResponse(result.route) });
+          return;
+        }
+
+        if (request.method === 'POST' && url.pathname === '/action') {
+          const body = (await readRequestBody(request)) as ExtensionHostActionRequestBody;
+          if (!body.request) {
+            throw new Error('Missing extension host action request.');
+          }
+          response.writeHead(200, {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            Connection: 'keep-alive',
+          });
+          const result = await handleInProcessExtensionHostRequest({
+            type: 'invokeAction',
+            ...body.request,
+            toolContext: {
+              onUpdate: (update) => writeSseEvent(response, { event: 'update', data: update }),
+            },
+          });
+          writeSseEvent(response, result.ok && 'result' in result ? { event: 'result', data: result.result } : { event: 'error', data: result });
+          response.end();
           return;
         }
 

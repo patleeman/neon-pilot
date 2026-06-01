@@ -76,12 +76,9 @@ export async function invokeExtensionToolByName(
     extensionId: tool.extensionId,
     actionId: tool.action,
     input: input.input ?? {},
-    ...(input.toolContext?.onUpdate
-      ? { serverContext, toolContext: input.toolContext }
-      : {
-          serverContextSnapshot: createExtensionHostServerContextSnapshot(serverContext),
-          toolContextSnapshot: createExtensionHostToolContextSnapshot(input.toolContext),
-        }),
+    serverContextSnapshot: createExtensionHostServerContextSnapshot(serverContext),
+    toolContextSnapshot: createExtensionHostToolContextSnapshot(input.toolContext),
+    ...(input.toolContext?.onUpdate ? { toolContext: { onUpdate: input.toolContext.onUpdate } } : {}),
   });
   if (!result.ok) {
     return {
