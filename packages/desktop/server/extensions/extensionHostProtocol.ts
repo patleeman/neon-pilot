@@ -160,6 +160,7 @@ export interface ExtensionHostStaticContributions {
 }
 
 export interface ExtensionHostRegistryPresentation {
+  schema: Record<string, unknown>;
   installSummaries: Array<Record<string, unknown>>;
   commandRegistrations: Array<Record<string, unknown>>;
   keybindingRegistrations: Array<Record<string, unknown>>;

@@ -31,6 +31,7 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
     readRegistryPresentation: async () => {
       const registry = await import('../extensions/extensionRegistry.js');
       return {
+        schema: registry.readExtensionSchema(),
         installSummaries: registry.listExtensionInstallSummaries(),
         commandRegistrations: registry.listExtensionCommandRegistrations(),
         keybindingRegistrations: registry.listExtensionKeybindingRegistrations(),

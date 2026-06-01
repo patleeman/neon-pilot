@@ -37,6 +37,7 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionQuickOpenRegistrations: vi.fn(),
   listExtensionSearchProviderRegistrations: vi.fn(),
   listExtensionSlashCommandRegistrations: vi.fn(),
+  readExtensionSchema: vi.fn(),
   readExtensionRegistrySnapshot: vi.fn(),
 }));
 
@@ -227,6 +228,7 @@ describe('extension host client', () => {
     extensionRegistry.listExtensionMentionRegistrations.mockReturnValueOnce([{ id: 'mention' }]);
     extensionRegistry.listExtensionQuickOpenRegistrations.mockReturnValueOnce([{ id: 'quick' }]);
     extensionRegistry.listExtensionSearchProviderRegistrations.mockReturnValueOnce([{ id: 'search' }]);
+    extensionRegistry.readExtensionSchema.mockReturnValueOnce({ manifestVersion: 2 });
     extensionRegistry.readExtensionRegistrySnapshot.mockReturnValueOnce({
       extensions: [{ id: 'ext' }],
       routes: [],
@@ -235,6 +237,7 @@ describe('extension host client', () => {
     });
 
     await expect(getExtensionHostClient().readRegistryPresentation()).resolves.toEqual({
+      schema: { manifestVersion: 2 },
       installSummaries: [{ id: 'ext', name: 'Ext' }],
       commandRegistrations: [{ id: 'command' }],
       keybindingRegistrations: [{ id: 'keybinding' }],

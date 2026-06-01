@@ -360,11 +360,13 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         listExtensionQuickOpenRegistrations,
         listExtensionSearchProviderRegistrations,
         listExtensionSlashCommandRegistrations,
+        readExtensionSchema,
         readExtensionRegistrySnapshot,
       } = await import('./extensionRegistry.js');
       return {
         ok: true,
         registryPresentation: {
+          schema: readExtensionSchema() as unknown as Record<string, unknown>,
           installSummaries: listExtensionInstallSummaries() as unknown as Array<Record<string, unknown>>,
           commandRegistrations: listExtensionCommandRegistrations() as unknown as Array<Record<string, unknown>>,
           keybindingRegistrations: listExtensionKeybindingRegistrations() as unknown as Array<Record<string, unknown>>,

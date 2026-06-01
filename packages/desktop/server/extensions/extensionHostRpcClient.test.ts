@@ -158,6 +158,7 @@ describe('extension host RPC client', () => {
         jsonResponse({
           ok: true,
           registryPresentation: {
+            schema: { manifestVersion: 2 },
             installSummaries: [{ id: 'ext', name: 'Ext' }],
             commandRegistrations: [{ id: 'command' }],
             keybindingRegistrations: [{ id: 'keybinding' }],
@@ -196,6 +197,7 @@ describe('extension host RPC client', () => {
     });
     await expect(client.listEventSubscriptions()).resolves.toEqual([{ extensionId: 'ext', pattern: 'host:*' }]);
     await expect(client.readRegistryPresentation()).resolves.toEqual({
+      schema: { manifestVersion: 2 },
       installSummaries: [{ id: 'ext', name: 'Ext' }],
       commandRegistrations: [{ id: 'command' }],
       keybindingRegistrations: [{ id: 'keybinding' }],

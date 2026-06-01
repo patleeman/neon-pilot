@@ -97,7 +97,7 @@ describe('registerExtensionRoutes', () => {
     const harness = createHarness();
 
     const schemaRes = createResponse();
-    harness.getHandler('/api/extensions/schema')({}, schemaRes);
+    await harness.getHandler('/api/extensions/schema')({}, schemaRes);
     expect(schemaRes.json).toHaveBeenCalledWith(expect.objectContaining({ placements: expect.arrayContaining(['main', 'right']) }));
 
     const listRes = createResponse();

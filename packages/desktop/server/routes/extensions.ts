@@ -26,7 +26,6 @@ import {
   invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
   listExtensionInstallSummaries,
-  readExtensionSchema,
   setBuildError,
   setExtensionEnabled,
   setExtensionKeybinding,
@@ -247,9 +246,9 @@ export function registerExtensionRoutes(
   router.patch('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
   router.delete('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
 
-  router.get('/api/extensions/schema', (_req, res) => {
+  router.get('/api/extensions/schema', async (_req, res) => {
     try {
-      res.json(readExtensionSchema());
+      res.json((await getExtensionHostClient().readRegistryPresentation()).schema);
     } catch (err) {
       sendRouteError(res, 'extensions schema error', err);
     }
