@@ -277,6 +277,35 @@ describe('DS4 managed runtime', () => {
     await expect(backend.runtimeService()).resolves.toEqual({ ok: true });
     await expect(backend.runtimeServiceHealth()).resolves.toEqual({ running: true });
   });
+
+  it('reveals runtime paths and clears the KV cache from settings actions', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-runtime-'));
+    try {
+      await mkdir(path.join(dir, 'runtime', 'kv-cache'), { recursive: true });
+      await writeFile(path.join(dir, 'runtime', 'kv-cache', 'cache.bin'), 'cache', 'utf8');
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+      const exec = vi.fn(async (input: { command?: string; args?: string[] }) => {
+        const command = input.args?.join(' ') ?? '';
+        if (command.includes('kill -0')) return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        return { stdout: '', stderr: '', command: input.command ?? 'open', args: input.args ?? [], executionWrappers: [] };
+      });
+      const context = ctx({
+        filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        shell: { exec, spawn: vi.fn() },
+      });
+
+      await backend.revealRuntimeFolder({}, context);
+      await backend.revealModelFile({}, context);
+      const cleared = await backend.clearKvCache({}, context);
+
+      expect(exec).toHaveBeenCalledWith({ command: 'open', args: [path.join(dir, 'runtime')] });
+      expect(exec).toHaveBeenCalledWith({ command: 'open', args: ['-R', path.join(dir, 'runtime', 'ds4', 'gguf')] });
+      await expect(stat(path.join(dir, 'runtime', 'kv-cache', 'cache.bin'))).rejects.toThrow();
+      expect(cleared.path).toBe(path.join(dir, 'runtime', 'kv-cache'));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('DS4 agent profile activation', () => {

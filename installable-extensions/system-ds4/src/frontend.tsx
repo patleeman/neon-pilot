@@ -6,6 +6,7 @@ type ExtensionClient = {
   };
   ui?: {
     notify?(options: { message: string; type?: 'info' | 'warning' | 'error'; details?: string; source?: string }): void;
+    confirm?(options: { title?: string; message: string }): Promise<boolean>;
   };
 };
 
@@ -88,7 +89,7 @@ function stepState(step: { id: string; progress: number }, status: Ds4Status | n
 
 export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
   const [status, setStatus] = useState<Ds4Status | null>(null);
-  const [busy, setBusy] = useState<'setup' | 'start' | 'stop' | 'refresh' | null>(null);
+  const [busy, setBusy] = useState<'setup' | 'repair' | 'start' | 'stop' | 'restart' | 'refresh' | 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy' | null>(null);
   const [error, setError] = useState('');
   const label = statusLabel(status);
 
@@ -118,15 +119,37 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     };
   }, [refresh]);
 
-  const run = async (action: 'setup' | 'start' | 'stop') => {
-    const actionId = action === 'setup' ? 'ds4BootstrapRuntime' : action === 'start' ? 'ds4StartServer' : 'ds4StopServer';
+  const run = async (action: 'setup' | 'repair' | 'start' | 'stop' | 'restart') => {
+    const actionId =
+      action === 'setup' || action === 'repair'
+        ? 'ds4BootstrapRuntime'
+        : action === 'start'
+          ? 'ds4StartServer'
+          : action === 'stop'
+            ? 'ds4StopServer'
+            : null;
     setBusy(action);
     try {
-      const result = (await pa.extension.invoke(actionId, {})) as { status?: Ds4Status };
+      let result: { status?: Ds4Status } | undefined;
+      if (action === 'restart') {
+        await pa.extension.invoke('ds4StopServer', {});
+        result = (await pa.extension.invoke('ds4StartServer', {})) as { status?: Ds4Status };
+      } else {
+        result = (await pa.extension.invoke(actionId!, action === 'repair' ? { force: true } : {})) as { status?: Ds4Status };
+      }
       if (result.status) setStatus(result.status);
       setError('');
       pa.ui?.notify?.({
-        message: action === 'setup' ? 'DS4 setup started.' : action === 'start' ? 'DS4 server started.' : 'DS4 server stopped.',
+        message:
+          action === 'setup'
+            ? 'DS4 setup started.'
+            : action === 'repair'
+              ? 'DS4 repair started.'
+              : action === 'start'
+                ? 'DS4 server started.'
+                : action === 'restart'
+                  ? 'DS4 server restarted.'
+                  : 'DS4 server stopped.',
         type: 'info',
         source: 'DS4',
       });
@@ -136,6 +159,47 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       setError(message);
       pa.ui?.notify?.({ message: 'DS4 action failed.', details: message, type: 'error', source: 'DS4' });
       await refresh();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runMaintenance = async (action: 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy') => {
+    if (action === 'clear-kv') {
+      const confirmed =
+        (await pa.ui?.confirm?.({
+          title: 'Clear DS4 KV cache?',
+          message: 'This deletes the local DS4 KV cache. The model and ds4 checkout stay installed.',
+        })) ?? false;
+      if (!confirmed) return;
+    }
+    setBusy(action);
+    try {
+      if (action === 'copy') {
+        await navigator.clipboard.writeText(JSON.stringify(status ?? (await pa.extension.invoke('ds4Status', {})), null, 2));
+        pa.ui?.notify?.({ message: 'DS4 diagnostics copied.', type: 'info', source: 'DS4' });
+      } else {
+        const actionId =
+          action === 'reveal-root' ? 'ds4RevealRuntimeFolder' : action === 'reveal-model' ? 'ds4RevealModelFile' : 'ds4ClearKvCache';
+        const result = (await pa.extension.invoke(actionId, {})) as { status?: Ds4Status };
+        if (result.status) setStatus(result.status);
+        pa.ui?.notify?.({
+          message:
+            action === 'reveal-root'
+              ? 'DS4 runtime folder opened.'
+              : action === 'reveal-model'
+                ? 'DS4 model location opened.'
+                : 'DS4 KV cache cleared.',
+          type: 'info',
+          source: 'DS4',
+        });
+      }
+      setError('');
+      await refresh();
+    } catch (maintenanceError) {
+      const message = errorText(maintenanceError);
+      setError(message);
+      pa.ui?.notify?.({ message: 'DS4 maintenance action failed.', details: message, type: 'error', source: 'DS4' });
     } finally {
       setBusy(null);
     }
@@ -178,6 +242,9 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
           </button>
           <button type="button" className={BUTTON_CLASS} onClick={() => void run('stop')} disabled={busy !== null || !status?.server?.managedRunning}>
             {busy === 'stop' ? 'Stopping' : 'Stop'}
+          </button>
+          <button type="button" className={BUTTON_CLASS} onClick={() => void run('restart')} disabled={busy !== null || !runtimeInstalled}>
+            {busy === 'restart' ? 'Restarting' : 'Restart'}
           </button>
         </div>
       </div>
@@ -233,6 +300,27 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
           The model download is about 81 GB and can take a while. If the model file is already present, setup skips the download and can finish offline.
         </p>
         {status?.runtime?.managedRoot ? <p className="mt-2 break-all font-mono text-[11px] text-dim">{status.runtime.managedRoot}</p> : null}
+      </div>
+
+      <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Maintenance</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" className={BUTTON_CLASS} onClick={() => void runMaintenance('copy')} disabled={busy !== null}>
+            {busy === 'copy' ? 'Copying' : 'Copy diagnostics'}
+          </button>
+          <button type="button" className={BUTTON_CLASS} onClick={() => void runMaintenance('reveal-root')} disabled={busy !== null}>
+            Reveal runtime folder
+          </button>
+          <button type="button" className={BUTTON_CLASS} onClick={() => void runMaintenance('reveal-model')} disabled={busy !== null}>
+            Open model file location
+          </button>
+          <button type="button" className={BUTTON_CLASS} onClick={() => void run('repair')} disabled={busy !== null || bootstrapRunning}>
+            {busy === 'repair' ? 'Repairing' : 'Reinstall / repair runtime'}
+          </button>
+          <button type="button" className={BUTTON_CLASS} onClick={() => void runMaintenance('clear-kv')} disabled={busy !== null}>
+            {busy === 'clear-kv' ? 'Clearing' : 'Clear KV cache'}
+          </button>
+        </div>
       </div>
 
       {status?.bootstrap?.log ? <Log title="Bootstrap log" text={status.bootstrap.log} /> : null}

@@ -1,5 +1,6 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
 import { cx } from '@neon-pilot/extensions/ui';
+import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 const SELECT_CLASS =
@@ -41,15 +42,23 @@ function resolveModel(models: Model[], modelRef: string): Model | null {
 type Ds4Status = {
   reachable?: boolean;
   runtime?: { installed?: boolean };
-  bootstrap?: { running?: boolean; status?: string };
+  bootstrap?: { running?: boolean; status?: string; progress?: number; message?: string };
   server?: { managedRunning?: boolean; error?: string };
 };
 
-function useDs4Health(pa: { extensions: { callAction(extensionId: string, actionId: string, input?: unknown): Promise<unknown> } }, model: Model | null) {
+function useDs4Health(
+  pa: {
+    commands?: { execute(command: string, args?: unknown): Promise<boolean> };
+    extensions: { callAction(extensionId: string, actionId: string, input?: unknown): Promise<unknown> };
+  },
+  model: Model | null,
+) {
   const isDs4 = model?.provider === 'ds4';
   const [status, setStatus] = useState<Ds4Status | null>(null);
   const [checking, setChecking] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [settingUp, setSettingUp] = useState(false);
   const [error, setError] = useState('');
 
@@ -121,7 +130,44 @@ function useDs4Health(pa: { extensions: { callAction(extensionId: string, action
     }
   };
 
-  return { isDs4, status, checking, starting, settingUp, error, refresh, start, setup };
+  const stop = async () => {
+    if (!isDs4 || stopping) return;
+    setStopping(true);
+    try {
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4StopServer', {})) as { status?: Ds4Status };
+      setStatus(result.status ?? null);
+      setError('');
+      await refresh();
+    } catch (stopError) {
+      setError(stopError instanceof Error ? stopError.message : String(stopError));
+      await refresh();
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  const restart = async () => {
+    if (!isDs4 || restarting) return;
+    setRestarting(true);
+    try {
+      await pa.extensions.callAction('system-ds4', 'ds4StopServer', {});
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', {})) as { status?: Ds4Status };
+      setStatus(result.status ?? null);
+      setError('');
+      await refresh();
+    } catch (restartError) {
+      setError(restartError instanceof Error ? restartError.message : String(restartError));
+      await refresh();
+    } finally {
+      setRestarting(false);
+    }
+  };
+
+  const openSettings = async () => {
+    await pa.commands?.execute('app.navigate', { to: '/settings#settings-ds4' });
+  };
+
+  return { isDs4, status, checking, starting, stopping, restarting, settingUp, error, refresh, start, stop, restart, setup, openSettings };
 }
 
 function thinkingOptions(model: Model | null): Array<{ value: string; label: string }> {
@@ -173,6 +219,10 @@ function Ds4HealthIndicator({
 }) {
   const description = describeDs4Health(health, active);
   if (!description) return null;
+  const setupProgress =
+    health.status?.bootstrap?.running && typeof health.status.bootstrap.progress === 'number'
+      ? Math.max(0, Math.min(100, Math.round(health.status.bootstrap.progress)))
+      : null;
   const needsLabel =
     variant === 'menu' || active || description.tone === 'danger' || description.tone === 'warn' || 'canSetup' in description || description.canStart;
   const dotClass =
@@ -185,41 +235,71 @@ function Ds4HealthIndicator({
         : description.tone === 'warn'
           ? 'bg-amber-400'
           : 'bg-dim';
+  const compactStatus = (
+    <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
+      {setupProgress !== null ? (
+        <span className="font-mono text-[10px] leading-none text-amber-300">{setupProgress}%</span>
+      ) : (
+        <>
+          {active ? <span className="absolute h-3 w-3 rounded-full bg-accent/25 animate-ping" /> : null}
+          <span className={cx('relative h-1.5 w-1.5 rounded-full', dotClass)} />
+        </>
+      )}
+    </span>
+  );
   return (
-    <div
+    <details
       className={cx(
-        'flex min-w-0 items-center gap-1.5 text-[11px] text-dim',
+        'group relative flex min-w-0 items-center gap-1.5 text-[11px] text-dim',
         variant === 'menu' ? 'mt-1.5 justify-between' : 'max-w-[8.5rem]',
       )}
       title={description.title}
-      aria-label={description.label}
     >
-      <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
-        {active ? <span className="absolute h-3 w-3 rounded-full bg-accent/25 animate-ping" /> : null}
-        <span className={cx('relative h-1.5 w-1.5 rounded-full', dotClass)} />
-      </span>
-      {needsLabel ? <span className="min-w-0 truncate">{description.label}</span> : null}
-      {description.canStart ? (
-        <button
-          type="button"
-          className="shrink-0 rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-medium text-secondary hover:bg-surface/55 hover:text-primary disabled:opacity-50"
-          onClick={() => void health.start()}
-          disabled={health.starting}
-        >
-          {health.starting ? 'Starting' : 'Start'}
-        </button>
-      ) : null}
-      {'canSetup' in description && description.canSetup ? (
-        <button
-          type="button"
-          className="shrink-0 rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-medium text-secondary hover:bg-surface/55 hover:text-primary disabled:opacity-50"
-          onClick={() => void health.setup()}
-          disabled={health.settingUp}
-        >
-          {health.settingUp ? 'Setting up' : 'Setup'}
-        </button>
-      ) : null}
-    </div>
+      <summary
+        className="flex min-w-0 cursor-pointer list-none items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface/55 hover:text-primary [&::-webkit-details-marker]:hidden"
+        aria-label={`${description.label} menu`}
+      >
+        {compactStatus}
+        {needsLabel ? <span className="min-w-0 truncate">{setupProgress !== null ? 'DS4 setup' : description.label}</span> : null}
+      </summary>
+      <div className="absolute bottom-full right-0 z-50 mb-2 w-48 rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl">
+        <MenuButton onClick={() => void health.refresh()} disabled={health.checking}>
+          {health.checking ? 'Refreshing' : 'Refresh status'}
+        </MenuButton>
+        {'canSetup' in description && description.canSetup ? (
+          <MenuButton onClick={() => void health.setup()} disabled={health.settingUp}>
+            {health.settingUp ? 'Setting up' : 'Run setup'}
+          </MenuButton>
+        ) : null}
+        <MenuButton onClick={() => void health.start()} disabled={health.starting || health.status?.reachable === true}>
+          {health.starting ? 'Starting' : 'Start server'}
+        </MenuButton>
+        <MenuButton onClick={() => void health.stop()} disabled={health.stopping || health.status?.server?.managedRunning !== true}>
+          {health.stopping ? 'Stopping' : 'Stop server'}
+        </MenuButton>
+        <MenuButton onClick={() => void health.restart()} disabled={health.restarting || health.status?.runtime?.installed === false}>
+          {health.restarting ? 'Restarting' : 'Restart server'}
+        </MenuButton>
+        <div className="my-1 border-t border-border-subtle" />
+        <MenuButton onClick={() => void health.openSettings()}>Open DS4 settings</MenuButton>
+      </div>
+    </details>
+  );
+}
+
+function MenuButton({ children, disabled, onClick }: { children: React.ReactNode; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-[11px] text-secondary hover:bg-surface/65 hover:text-primary disabled:cursor-default disabled:opacity-40"
+      disabled={disabled}
+      onClick={(event) => {
+        event.currentTarget.closest('details')?.removeAttribute('open');
+        onClick();
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -317,7 +397,10 @@ export function ModelPreferencesComposerControl({
   controlContext,
   buttonContext,
 }: {
-  pa: { extensions: { callAction(extensionId: string, actionId: string, input?: unknown): Promise<unknown> } };
+  pa: {
+    commands?: { execute(command: string, args?: unknown): Promise<boolean> };
+    extensions: { callAction(extensionId: string, actionId: string, input?: unknown): Promise<unknown> };
+  };
   controlContext?: ComposerControlContext;
   buttonContext: ComposerControlContext;
 }) {

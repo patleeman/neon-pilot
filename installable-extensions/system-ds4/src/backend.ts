@@ -1,4 +1,4 @@
-import { access, chmod, mkdir, readFile, stat } from 'node:fs/promises';
+import { access, chmod, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
@@ -498,6 +498,28 @@ export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) 
   }
   await ctx.storage.put(SERVER_PID_KEY, 0);
   return { ok: true, stopped: true, pid, graceful: exited, status: await status({}, ctx) };
+}
+
+export async function revealRuntimeFolder(_input: unknown, ctx: ExtensionBackendContext) {
+  const paths = await runtimePaths(ctx);
+  await mkdir(paths.root, { recursive: true });
+  await ctx.shell.exec({ command: 'open', args: [paths.root] });
+  return { ok: true, path: paths.root };
+}
+
+export async function revealModelFile(_input: unknown, ctx: ExtensionBackendContext) {
+  const paths = await runtimePaths(ctx);
+  const target = (await exists(paths.modelPath)) ? paths.modelPath : path.dirname(paths.modelPath);
+  await mkdir(path.dirname(paths.modelPath), { recursive: true });
+  await ctx.shell.exec({ command: 'open', args: ['-R', target] });
+  return { ok: true, path: target };
+}
+
+export async function clearKvCache(_input: unknown, ctx: ExtensionBackendContext) {
+  const paths = await runtimePaths(ctx);
+  await rm(paths.kvDir, { recursive: true, force: true });
+  await mkdir(paths.kvDir, { recursive: true });
+  return { ok: true, path: paths.kvDir, status: await status({}, ctx) };
 }
 
 function formatJobUpdate(job: ShellJob, options: { stopped?: boolean } = {}) {
