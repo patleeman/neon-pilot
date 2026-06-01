@@ -6,7 +6,7 @@ import {
   createRuntimeExtension,
   installCatalogExtension as installCatalogExtensionFromHost,
   installExtensionBundleFromUrl,
-  installMarketplacePackageSource,
+  installMarketplacePackageAsExtension,
   listExtensionInstallSummaries,
   listInstallableExtensionCatalog as listInstallableExtensionCatalogFromHost,
   reloadExtensionBackend,
@@ -15,8 +15,6 @@ import {
   writeAdditionalExtensionSearchPaths,
 } from '@neon-pilot/extensions/backend/extensions';
 import { HOST_VIEW_COMPONENT_DEFINITIONS } from '@neon-pilot/extensions/host-view-components';
-
-import { createImportedPackageExtension } from './importedPackageWrapper.js';
 
 const ADDITIONAL_EXTENSION_PATHS_SETTING = 'extensions.additionalPaths';
 
@@ -53,7 +51,7 @@ export async function installExtensionFromUrl(input: unknown, _ctx: ExtensionBac
   return { ok: true, ...result };
 }
 
-export async function installMarketplacePackage(input: unknown, _ctx: ExtensionBackendContext) {
+export async function installMarketplacePackage(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
   const packageType = typeof body.packageType === 'string' ? body.packageType : '';
   if (!MARKETPLACE_BEHAVIOR_PACKAGE_TYPES.has(packageType)) {
@@ -62,16 +60,13 @@ export async function installMarketplacePackage(input: unknown, _ctx: ExtensionB
   const source = typeof body.source === 'string' ? body.source.trim() : '';
   if (!source) throw new Error('marketplace package source is required.');
 
-  const result = await installMarketplacePackageSource({
+  const ecosystem = typeof body.ecosystem === 'string' ? body.ecosystem : 'external';
+  const result = await installMarketplacePackageAsExtension({
+    ecosystem,
+    packageType,
     source,
     target: body.target === 'local' || body.target === undefined ? 'local' : body.target,
     sourceBaseDir: body.sourceBaseDir,
-  });
-  const ecosystem = typeof body.ecosystem === 'string' ? body.ecosystem : 'external';
-  const wrapper = createImportedPackageExtension({
-    ecosystem,
-    packageType,
-    source: result.source,
     runtimeDir: ctx.runtimeDir,
   });
 
@@ -79,7 +74,6 @@ export async function installMarketplacePackage(input: unknown, _ctx: ExtensionB
     ok: true,
     packageType,
     ecosystem,
-    extension: wrapper,
     ...result,
   };
 }

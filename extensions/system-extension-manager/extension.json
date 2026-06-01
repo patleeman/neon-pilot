@@ -76,7 +76,14 @@
           "enabled": true
         }
       },
-      { "id": "installMarketplacePackage", "handler": "installMarketplacePackage", "title": "Install marketplace package source" },
+      {
+        "id": "installMarketplacePackage",
+        "handler": "installMarketplacePackage",
+        "title": "Install marketplace package source",
+        "worker": {
+          "enabled": true
+        }
+      },
       {
         "id": "listHostViewComponents",
         "handler": "listHostViewComponents",
@@ -125,6 +132,7 @@
             "listInstallable",
             "installCatalog",
             "installFromUrl",
+            "installMarketplacePackage",
             "readSearchPaths",
             "updateSearchPaths",
             "reloadExtensions"

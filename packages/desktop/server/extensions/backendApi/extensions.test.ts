@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -101,6 +101,47 @@ describe('backendApi/extensions', () => {
     await expect(installMarketplacePackageSource({ source: '/packages/review', target: 'workspace' })).rejects.toThrow(
       'marketplace package target must be local',
     );
+  });
+
+  it('installs marketplace packages as managed extension wrappers', async () => {
+    const { installMarketplacePackageAsExtension } = await import('./extensions.js');
+    const sourceRoot = mkdtempSync(join(tmpdir(), 'np-marketplace-source-'));
+    const runtimeDir = mkdtempSync(join(tmpdir(), 'np-marketplace-runtime-'));
+    mkdirSync(join(sourceRoot, 'skills', 'review-code'), { recursive: true });
+    writeFileSync(join(sourceRoot, 'skills', 'review-code', 'SKILL.md'), '---\nname: review-code\n---\n');
+    resolverMocks.installPackageSource.mockReturnValueOnce({
+      installed: true,
+      alreadyPresent: false,
+      source: sourceRoot,
+      target: 'local',
+      settingsPath: '/profile/settings.json',
+    });
+
+    const result = await installMarketplacePackageAsExtension({
+      ecosystem: 'codex',
+      packageType: 'skill',
+      source: sourceRoot,
+      runtimeDir,
+    });
+
+    expect(result).toMatchObject({
+      installed: true,
+      alreadyPresent: false,
+      source: sourceRoot,
+      target: 'local',
+      extension: { skillCount: 1, copiedSource: true },
+    });
+    expect(result.extension.id).toContain('imported-codex-skill');
+    expect(existsSync(join(result.extension.packageRoot, 'extension.json'))).toBe(true);
+    expect(JSON.parse(readFileSync(join(result.extension.packageRoot, 'extension.json'), 'utf-8'))).toMatchObject({
+      importedPackage: { ecosystem: 'codex', packageType: 'skill', source: sourceRoot, copiedSource: true },
+      contributes: { skills: [{ id: 'review-code', path: 'package/skills/review-code/SKILL.md' }] },
+    });
+    expect(resolverMocks.installPackageSource).toHaveBeenCalledWith({
+      source: sourceRoot,
+      sourceBaseDir: undefined,
+      target: 'local',
+    });
   });
 
   it('writes additional extension search paths to profile and state-root settings files', async () => {

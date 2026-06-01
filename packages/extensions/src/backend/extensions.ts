@@ -51,6 +51,15 @@ export interface MarketplacePackageSourceInstallResult {
   settingsPath: string;
 }
 
+export interface ImportedMarketplacePackageExtensionResult extends MarketplacePackageSourceInstallResult {
+  extension: {
+    id: string;
+    packageRoot: string;
+    skillCount: number;
+    copiedSource: boolean;
+  };
+}
+
 export async function buildRuntimeExtension(_extensionId: string): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
@@ -66,6 +75,17 @@ export async function listExtensionInstallSummaries(): Promise<ExtensionInstallS
 export async function installMarketplacePackageSource(
   _options: MarketplacePackageSourceInstallOptions,
 ): Promise<MarketplacePackageSourceInstallResult> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function installMarketplacePackageAsExtension(_options: {
+  ecosystem?: unknown;
+  packageType?: unknown;
+  source?: unknown;
+  target?: unknown;
+  sourceBaseDir?: unknown;
+  runtimeDir?: unknown;
+}): Promise<ImportedMarketplacePackageExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
