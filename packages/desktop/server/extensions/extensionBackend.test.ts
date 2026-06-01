@@ -427,6 +427,8 @@ describe('extension backend action invocation', () => {
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
         exportName === 'askUser'
           ? { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } }
+          : exportName === 'conversationInspect'
+            ? { content: [{ type: 'text', text: 'Listed conversations.' }], details: { action: 'list', conversations: [] } }
           : exportName === 'conversationTitle'
             ? { content: [{ type: 'text', text: 'Conversation title set.' }], details: { conversationId: 'conv-1', title: 'New Title' } }
             : { content: [{ type: 'text', text: 'scheduled' }], details: { text: 'scheduled', id: 'resume-1' } },
@@ -447,6 +449,15 @@ describe('extension backend action invocation', () => {
     ).resolves.toEqual({
       ok: true,
       result: { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationInspect', { action: 'list' }, undefined, {
+        conversationId: 'conv-1',
+        cwd: '/repo',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { content: [{ type: 'text', text: 'Listed conversations.' }], details: { action: 'list', conversations: [] } },
     });
     await expect(
       invokeExtensionAction('system-conversation-tools', 'conversationTitle', { title: 'New Title' }, undefined, { conversationId: 'conv-1' }),
@@ -475,6 +486,24 @@ describe('extension backend action invocation', () => {
       'askUser',
       { type: 'action', label: 'action askUser', target: 'askUser' },
       [{ question: 'Proceed?', options: ['Yes', 'No'] }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationInspect',
+      { type: 'action', label: 'action conversationInspect', target: 'conversationInspect' },
+      [{ action: 'list' }],
       {
         context: expect.objectContaining({
           type: 'backend',
@@ -1705,6 +1734,8 @@ describe('extension backend action invocation', () => {
           details:
             action === 'create'
               ? { id: 'conv-2', conversationId: 'conv-2' }
+              : action === 'inspect'
+                ? { action: 'list', conversations: [] }
               : action === 'ensure_live'
                 ? { id: 'conv-1', conversationId: 'conv-1' }
                 : action === 'send_message'
@@ -1740,6 +1771,21 @@ describe('extension backend action invocation', () => {
       result: {
         content: [{ type: 'text', text: 'create complete.' }],
         details: { id: 'conv-2', conversationId: 'conv-2' },
+      },
+    });
+    await expect(
+      invokeExtensionAction(
+        'system-conversation-tools',
+        'conversationTool',
+        { action: 'inspect', inspectAction: 'list' },
+        undefined,
+        { conversationId: 'conv-1', cwd: '/repo' },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'inspect complete.' }],
+        details: { action: 'list', conversations: [] },
       },
     });
     await expect(
@@ -1821,6 +1867,24 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'create', cwd: '/repo', title: 'Worker conversation', live: false }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'inspect', inspectAction: 'list' }],
       {
         context: expect.objectContaining({
           type: 'backend',

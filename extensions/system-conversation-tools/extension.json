@@ -590,6 +590,7 @@
         "worker": {
           "enabled": true,
           "inputActions": [
+            "inspect",
             "create",
             "set_title",
             "ensure_live",
@@ -617,7 +618,10 @@
       {
         "id": "conversationInspect",
         "handler": "conversationInspect",
-        "title": "Conversation inspect"
+        "title": "Conversation inspect",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "conversationTitle",
