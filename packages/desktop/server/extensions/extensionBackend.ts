@@ -698,6 +698,8 @@ async function runExtensionBackendActionInWorker(
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
   const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
+  const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir();
+  const runtimeSettingsFilePath = resolveLocalProfileSettingsFilePath();
   if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
     throw new ExtensionLoadError({
       extensionId,
@@ -716,6 +718,8 @@ async function runExtensionBackendActionInWorker(
         type: 'backend',
         runtimeScope: serverContext?.getRuntimeScope() ?? 'shared',
         repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
+        runtimeDir: resolvedPiAgentRuntimeDir,
+        runtimeSettingsFilePath,
         liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
         toolContext: workerBackendToolContext(toolContext),
       },

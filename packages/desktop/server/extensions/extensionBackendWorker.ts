@@ -55,6 +55,8 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
 function createWorkerBackendContext(extensionId: string, options: ExtensionBackendWorkerBackendContextOptions = {}): Record<string, unknown> {
   const runtimeScope = options.runtimeScope ?? 'shared';
   const repoRoot = options.repoRoot ?? process.cwd();
+  const runtimeDir = options.runtimeDir ?? process.cwd();
+  const runtimeSettingsFilePath = options.runtimeSettingsFilePath ?? '';
   const liveSessionResourceOptions = options.liveSessionResourceOptions ?? {
     additionalExtensionPaths: [],
     additionalSkillPaths: [],
@@ -65,6 +67,9 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     extensionId,
     runtimeScope,
     profile: runtimeScope,
+    runtimeDir,
+    runtimeSettingsFilePath,
+    profileSettingsFilePath: runtimeSettingsFilePath,
     ...(options.toolContext ? { toolContext: options.toolContext } : {}),
     runtime: {
       getRepoRoot: () => repoRoot,

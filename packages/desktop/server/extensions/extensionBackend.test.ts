@@ -245,6 +245,8 @@ describe('extension backend action invocation', () => {
           type: 'backend',
           runtimeScope: 'shared',
           repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
           liveSessionResourceOptions: expect.objectContaining({
             additionalExtensionPaths: expect.any(Array),
             additionalSkillPaths: expect.any(Array),
@@ -333,6 +335,8 @@ describe('extension backend action invocation', () => {
           type: 'backend',
           runtimeScope: 'shared',
           repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
           liveSessionResourceOptions: expect.objectContaining({
             additionalExtensionPaths: expect.any(Array),
             additionalSkillPaths: expect.any(Array),
@@ -390,6 +394,8 @@ describe('extension backend action invocation', () => {
           type: 'backend',
           runtimeScope: 'shared',
           repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
           liveSessionResourceOptions: expect.objectContaining({
             additionalExtensionPaths: expect.any(Array),
             additionalSkillPaths: expect.any(Array),

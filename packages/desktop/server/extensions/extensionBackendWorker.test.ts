@@ -92,6 +92,9 @@ export async function doThing(input, ctx) {
 export async function doThing(_input, ctx) {
   return {
     repoRoot: ctx.runtime.getRepoRoot(),
+    runtimeDir: ctx.runtimeDir,
+    runtimeSettingsFilePath: ctx.runtimeSettingsFilePath,
+    profileSettingsFilePath: ctx.profileSettingsFilePath,
     resources: ctx.runtime.getLiveSessionResourceOptions(),
   };
 }
@@ -110,6 +113,8 @@ export async function doThing(_input, ctx) {
         type: 'backend',
         runtimeScope: 'project',
         repoRoot: '/repo',
+        runtimeDir: '/runtime',
+        runtimeSettingsFilePath: '/runtime/settings.json',
         liveSessionResourceOptions: {
           additionalExtensionPaths: ['/ext'],
           additionalSkillPaths: ['/skills'],
@@ -124,6 +129,9 @@ export async function doThing(_input, ctx) {
       ok: true,
       result: {
         repoRoot: '/repo',
+        runtimeDir: '/runtime',
+        runtimeSettingsFilePath: '/runtime/settings.json',
+        profileSettingsFilePath: '/runtime/settings.json',
         resources: {
           additionalExtensionPaths: ['/ext'],
           additionalSkillPaths: ['/skills'],

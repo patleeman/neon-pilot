@@ -74,6 +74,8 @@ type ExtensionBackendWorkerExportOptions = {
         type: 'backend';
         runtimeScope?: string;
         repoRoot?: string;
+        runtimeDir?: string;
+        runtimeSettingsFilePath?: string;
         liveSessionResourceOptions?: Record<string, unknown>;
         toolContext?: Record<string, unknown>;
       };

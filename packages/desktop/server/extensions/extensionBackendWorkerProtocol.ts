@@ -3,6 +3,8 @@ import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
 export interface ExtensionBackendWorkerBackendContextOptions {
   runtimeScope?: string;
   repoRoot?: string;
+  runtimeDir?: string;
+  runtimeSettingsFilePath?: string;
   liveSessionResourceOptions?: Record<string, unknown>;
   toolContext?: {
     conversationId?: string;
