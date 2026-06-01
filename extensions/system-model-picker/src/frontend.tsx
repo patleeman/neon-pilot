@@ -3,8 +3,10 @@ import { cx } from '@neon-pilot/extensions/ui';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
-const SELECT_CLASS =
-  'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-1.5 pr-6 text-[11px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';
+const INLINE_TRIGGER_CLASS =
+  'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-1.5 text-[11px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';
+const MENU_TRIGGER_CLASS =
+  'h-9 w-full min-w-0 rounded-lg border border-border-subtle bg-surface/45 px-2.5 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40';
 
 type Model = ComposerControlContext['models'][number];
 
@@ -208,6 +210,13 @@ function describeDs4Health(health: ReturnType<typeof useDs4Health>, active: bool
   };
 }
 
+function closeOtherComposerMenus(current: HTMLDetailsElement) {
+  const root = current.parentElement?.parentElement ?? document;
+  for (const details of Array.from(root.querySelectorAll<HTMLDetailsElement>('details[data-model-picker-menu]'))) {
+    if (details !== current) details.removeAttribute('open');
+  }
+}
+
 function Ds4HealthIndicator({
   health,
   variant,
@@ -249,11 +258,15 @@ function Ds4HealthIndicator({
   );
   return (
     <details
+      data-model-picker-menu
       className={cx(
         'group relative flex min-w-0 items-center gap-1.5 text-[11px] text-dim',
         variant === 'menu' ? 'mt-1.5 justify-between' : 'max-w-[8.5rem]',
       )}
       title={description.title}
+      onToggle={(event) => {
+        if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
+      }}
     >
       <summary
         className="flex min-w-0 cursor-pointer list-none items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface/55 hover:text-primary [&::-webkit-details-marker]:hidden"
@@ -287,17 +300,33 @@ function Ds4HealthIndicator({
   );
 }
 
-function MenuButton({ children, disabled, onClick }: { children: React.ReactNode; disabled?: boolean; onClick: () => void }) {
+function MenuButton({
+  children,
+  checked,
+  disabled,
+  onClick,
+}: {
+  children: React.ReactNode;
+  checked?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
-      className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-[11px] text-secondary hover:bg-surface/65 hover:text-primary disabled:cursor-default disabled:opacity-40"
+      className={cx(
+        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] hover:bg-surface/65 hover:text-primary disabled:cursor-default disabled:opacity-40',
+        checked ? 'text-primary' : 'text-secondary',
+      )}
       disabled={disabled}
       onClick={(event) => {
         event.currentTarget.closest('details')?.removeAttribute('open');
         onClick();
       }}
     >
+      {checked !== undefined ? (
+        <span className="flex w-3 shrink-0 justify-center">{checked ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : null}</span>
+      ) : null}
       {children}
     </button>
   );
@@ -306,74 +335,105 @@ function MenuButton({ children, disabled, onClick }: { children: React.ReactNode
 function ModelSelect({
   context,
   variant,
-  health,
 }: {
   context: ComposerControlContext;
   variant: 'inline' | 'menu';
-  health: ReturnType<typeof useDs4Health>;
 }) {
-  const className =
-    variant === 'menu'
-      ? 'h-9 w-full min-w-0 appearance-none rounded-lg border border-border-subtle bg-surface/45 px-2.5 pr-7 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40'
-      : cx(SELECT_CLASS, 'max-w-[11.5rem] min-w-[8.25rem] appearance-none');
+  const selected = resolveModel(context.models, context.currentModel);
+  const disabled = context.savingPreference !== null || context.models.length === 0;
+  const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[11.5rem] min-w-[8.25rem]');
   return (
-    <div className={variant === 'menu' ? 'min-w-0' : 'inline-flex min-w-0 items-center gap-2'}>
-      <label className={variant === 'menu' ? 'relative flex min-w-0 items-center' : 'relative inline-flex min-w-0 items-center'}>
-        <span className="sr-only">Conversation model</span>
-        <select
-          value={context.currentModel}
-          onChange={(event) => context.selectModel(event.target.value)}
-          disabled={context.savingPreference !== null || context.models.length === 0}
-          className={className}
-          aria-label="Conversation model"
-        >
+    <details
+      data-model-picker-menu
+      className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
+      onToggle={(event) => {
+        if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
+      }}
+    >
+      <summary
+        className={cx(
+          'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
+          triggerClass,
+          disabled && 'pointer-events-none opacity-40',
+        )}
+        aria-label="Conversation model"
+        aria-disabled={disabled}
+      >
+        <span className="min-w-0 truncate">{selected?.name ?? 'Select model'}</span>
+        <Chevron className="static shrink-0" />
+      </summary>
+      <div
+        className={cx(
+          'absolute bottom-full z-50 mb-2 max-h-80 overflow-auto rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl',
+          variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64',
+        )}
+      >
           {groupModels(context.models).map(([provider, providerModels]) => (
-            <optgroup key={provider} label={provider}>
+            <div key={provider} className="py-1">
+              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">{provider}</div>
               {providerModels.map((model) => {
                 const value = modelSelectionValue(model, context.models);
+                const checked = selected?.provider === model.provider && selected.id === model.id;
                 return (
-                  <option key={value} value={value}>
-                    {model.name}
-                  </option>
+                  <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
+                    <span className="min-w-0 truncate">{model.name}</span>
+                  </MenuButton>
                 );
               })}
-            </optgroup>
+            </div>
           ))}
-        </select>
-        <Chevron />
-      </label>
-    </div>
+      </div>
+    </details>
   );
 }
 
 function ThinkingSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
   const model = resolveModel(context.models, context.currentModel);
-  const className =
-    variant === 'menu'
-      ? 'h-9 w-full min-w-0 appearance-none rounded-lg border border-border-subtle bg-surface/45 px-2.5 pr-7 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40'
-      : cx(SELECT_CLASS, 'max-w-[6.5rem] min-w-[5.75rem] appearance-none');
+  const options = thinkingOptions(model);
+  const selected = options.find((option) => option.value === context.currentThinkingLevel) ?? options[0];
+  const disabled = context.savingPreference !== null;
+  const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[6.5rem] min-w-[5.75rem]');
   return (
-    <label className={variant === 'menu' ? 'relative flex min-w-0 items-center' : 'relative inline-flex min-w-0 items-center'}>
-      <span className="sr-only">Conversation thinking level</span>
-      <select
-        value={context.currentThinkingLevel}
-        onChange={(event) => context.selectThinkingLevel(event.target.value)}
-        disabled={context.savingPreference !== null}
-        className={className}
+    <details
+      data-model-picker-menu
+      className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
+      onToggle={(event) => {
+        if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
+      }}
+    >
+      <summary
+        className={cx(
+          'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
+          triggerClass,
+          disabled && 'pointer-events-none opacity-40',
+        )}
         aria-label="Conversation thinking level"
+        aria-disabled={disabled}
       >
-        {thinkingOptions(model).map((option) => (
-          <option key={option.value || 'unset'} value={option.value}>
+        <span className="min-w-0 truncate">{selected?.label ?? 'Unset'}</span>
+        <Chevron className="static shrink-0" />
+      </summary>
+      <div
+        className={cx(
+          'absolute bottom-full z-50 mb-2 rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl',
+          variant === 'menu' ? 'left-0 w-full min-w-44' : 'left-0 w-40',
+        )}
+      >
+        {options.map((option) => (
+          <MenuButton
+            key={option.value || 'unset'}
+            onClick={() => context.selectThinkingLevel(option.value)}
+            checked={option.value === context.currentThinkingLevel}
+          >
             {option.label}
-          </option>
+          </MenuButton>
         ))}
-      </select>
-      <Chevron />
-    </label>
+      </div>
+    </details>
   );
 }
 
-function Chevron() {
+function Chevron({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
@@ -385,7 +445,7 @@ function Chevron() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="pointer-events-none absolute right-2.5 text-dim/70"
+      className={cx('pointer-events-none text-dim/70', className ?? 'absolute right-2.5')}
     >
       <path d="m6 9 6 6 6-6" />
     </svg>
@@ -413,7 +473,7 @@ export function ModelPreferencesComposerControl({
       <div className="flex flex-col gap-2">
         <div>
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">Model</p>
-          <ModelSelect context={context} variant="menu" health={ds4Health} />
+          <ModelSelect context={context} variant="menu" />
         </div>
         <div>
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">Thinking</p>
@@ -424,7 +484,7 @@ export function ModelPreferencesComposerControl({
   }
   return (
     <>
-      <ModelSelect context={context} variant="inline" health={ds4Health} />
+      <ModelSelect context={context} variant="inline" />
       <ThinkingSelect context={context} variant="inline" />
       <Ds4HealthIndicator health={ds4Health} variant="inline" active={ds4Health.isDs4 && context.streamIsStreaming} />
     </>
