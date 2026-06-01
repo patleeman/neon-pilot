@@ -46,7 +46,8 @@
       {
         "id": "localModelsMlxSearch",
         "handler": "mlxSearch",
-        "title": "Search MLX models"
+        "title": "Search MLX models",
+        "worker": { "enabled": true }
       },
       {
         "id": "localModelsSearch",
@@ -133,7 +134,8 @@
       {
         "id": "localModelsDiscover",
         "handler": "localModelsDiscover",
-        "title": "Discover local models"
+        "title": "Discover local models",
+        "worker": { "enabled": true }
       }
     ]
   },

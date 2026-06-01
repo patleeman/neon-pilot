@@ -882,15 +882,17 @@ describe('extension backend action invocation', () => {
         backend: {
           entry: 'dist/backend.mjs',
           actions: [
+            { id: 'localModelsMlxSearch', handler: 'mlxSearch', title: 'Search MLX models', worker: { enabled: true } },
             { id: 'localModelsSearch', handler: 'searchModels', title: 'Search local-compatible models', worker: { enabled: true } },
             { id: 'localModelsModelDetails', handler: 'modelDetails', title: 'Get Hugging Face model details', worker: { enabled: true } },
+            { id: 'localModelsDiscover', handler: 'localModelsDiscover', title: 'Discover local models', worker: { enabled: true } },
           ],
         },
       }),
     );
     writeFileSync(
       join(localModelsRoot, 'dist', 'backend.mjs'),
-      'export function searchModels() { return true; }\nexport function modelDetails() { return true; }\n',
+      'export function mlxSearch() { return true; }\nexport function searchModels() { return true; }\nexport function modelDetails() { return true; }\nexport function localModelsDiscover() { return true; }\n',
     );
     invalidateExtensionRegistryReadCaches(stateRoot);
 
@@ -909,9 +911,11 @@ describe('extension backend action invocation', () => {
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
-        exportName === 'searchModels'
-          ? { ok: true, models: [{ id: 'org/model', title: 'model' }] }
-          : { ok: true, model: { id: 'org/model', files: [] } },
+        exportName === 'localModelsDiscover'
+          ? { provider: 'local', models: [{ id: 'qwen-local' }] }
+          : exportName === 'modelDetails'
+            ? { ok: true, model: { id: 'org/model', files: [] } }
+            : { ok: true, models: [{ id: 'org/model', title: 'model' }] },
       ),
       run: vi.fn(),
     };
@@ -924,9 +928,17 @@ describe('extension backend action invocation', () => {
       ok: true,
       result: { ok: true, models: [{ id: 'org/model', title: 'model' }] },
     });
+    await expect(invokeExtensionAction('system-local-models', 'localModelsMlxSearch', { query: 'qwen' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, models: [{ id: 'org/model', title: 'model' }] },
+    });
     await expect(invokeExtensionAction('system-local-models', 'localModelsModelDetails', { modelId: 'org/model' })).resolves.toEqual({
       ok: true,
       result: { ok: true, model: { id: 'org/model', files: [] } },
+    });
+    await expect(invokeExtensionAction('system-local-models', 'localModelsDiscover', {})).resolves.toEqual({
+      ok: true,
+      result: { provider: 'local', models: [{ id: 'qwen-local' }] },
     });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -951,9 +963,43 @@ describe('extension backend action invocation', () => {
       expect.objectContaining({
         path: expect.stringContaining(join('extensions', 'system-local-models', 'dist', 'backend.mjs')),
       }),
+      'mlxSearch',
+      { type: 'action', label: 'action localModelsMlxSearch', target: 'localModelsMlxSearch' },
+      [{ query: 'qwen' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-local-models',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-local-models', 'dist', 'backend.mjs')),
+      }),
       'modelDetails',
       { type: 'action', label: 'action localModelsModelDetails', target: 'localModelsModelDetails' },
       [{ modelId: 'org/model' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-local-models',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-local-models', 'dist', 'backend.mjs')),
+      }),
+      'localModelsDiscover',
+      { type: 'action', label: 'action localModelsDiscover', target: 'localModelsDiscover' },
+      [{}],
       {
         context: expect.objectContaining({
           type: 'backend',
