@@ -70,6 +70,7 @@ interface ChatViewProps {
   resumeConversationLabel?: string;
   windowingHeaderContent?: React.ReactNode;
   anchorWindowingToTail?: boolean;
+  bottomPaddingPx?: number;
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
   remoteControlled?: boolean;
@@ -136,6 +137,7 @@ function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): bo
     (previous.resumeConversationLabel ?? 'continue') === (next.resumeConversationLabel ?? 'continue') &&
     previous.windowingHeaderContent === next.windowingHeaderContent &&
     (previous.anchorWindowingToTail ?? false) === (next.anchorWindowingToTail ?? false) &&
+    (previous.bottomPaddingPx ?? 96) === (next.bottomPaddingPx ?? 96) &&
     (previous.systemPrompt ?? null) === (next.systemPrompt ?? null) &&
     previous.toolDefinitions === next.toolDefinitions &&
     (previous.remoteControlled ?? false) === (next.remoteControlled ?? false) &&
@@ -176,6 +178,7 @@ export const ChatView = memo(function ChatView({
   resumeConversationLabel = 'continue',
   windowingHeaderContent,
   anchorWindowingToTail = false,
+  bottomPaddingPx = 96,
   systemPrompt = null,
   toolDefinitions = [],
   remoteControlled = false,
@@ -558,6 +561,7 @@ export const ChatView = memo(function ChatView({
           }
         }}
         className={layout === 'compact' ? 'px-2.5 py-3 sm:px-4 sm:py-4' : 'mx-auto w-full max-w-6xl px-10 pt-5 pb-24'}
+        style={layout === 'compact' ? undefined : { paddingBottom: `${Math.max(96, bottomPaddingPx)}px` }}
       >
         {/* Bottom padding (pb-24) keeps the last message clear of the input area
             when the user is scrolled to the bottom and the textarea grows

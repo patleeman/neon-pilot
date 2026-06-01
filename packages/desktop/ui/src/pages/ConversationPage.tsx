@@ -2030,6 +2030,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const composerShellRef = useRef<HTMLDivElement | null>(null);
   const [composerShellWidth, setComposerShellWidth] = useState<number | null>(null);
+  const [transcriptBottomPaddingPx, setTranscriptBottomPaddingPx] = useState(96);
   const composerSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const composerMenuStateRef = useRef<Pick<UseConversationComposerMenusState, 'resetMenus'> | null>(null);
   const composerResizeFrameRef = useRef<number | null>(null);
@@ -2057,18 +2058,21 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       return;
     }
 
-    const updateWidth = () => {
-      const nextWidth = Math.max(0, Math.floor(element.getBoundingClientRect().width));
+    const updateComposerMetrics = () => {
+      const rect = element.getBoundingClientRect();
+      const nextWidth = Math.max(0, Math.floor(rect.width));
+      const nextBottomPadding = Math.max(96, Math.ceil(rect.height + 48));
       setComposerShellWidth((current) => (current === nextWidth ? current : nextWidth));
+      setTranscriptBottomPaddingPx((current) => (current === nextBottomPadding ? current : nextBottomPadding));
     };
 
-    updateWidth();
+    updateComposerMetrics();
 
     if (typeof ResizeObserver === 'undefined') {
       return;
     }
 
-    const observer = new ResizeObserver(updateWidth);
+    const observer = new ResizeObserver(updateComposerMetrics);
     observer.observe(element);
     return () => {
       observer.disconnect();
@@ -6101,6 +6105,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   ) : undefined
                 }
                 anchorWindowingToTail={atBottom || autoAnchorTranscriptTail}
+                bottomPaddingPx={transcriptBottomPaddingPx}
               />
             </Suspense>
           ) : (
@@ -6228,6 +6233,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       title,
       titleDraft,
       titleSaving,
+      transcriptBottomPaddingPx,
       visibleTranscriptHasOlderBlocks,
       visibleTranscriptMessageIndexOffset,
       visibleTranscriptMessages,
