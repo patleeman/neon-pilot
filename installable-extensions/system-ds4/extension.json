@@ -6,6 +6,10 @@
   "defaultEnabled": false,
   "description": "DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4.",
   "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
   "backend": {
     "entry": "src/backend.ts",
     "agentExtension": "createDs4AgentExtension",
@@ -31,6 +35,14 @@
     ]
   },
   "contributes": {
+    "settingsComponent": {
+      "id": "ds4-runtime",
+      "component": "Ds4RuntimeSettings",
+      "sectionId": "settings-ds4",
+      "label": "DS4",
+      "description": "Install and manage the local ds4.c runtime.",
+      "order": 40
+    },
     "modelDiscovery": { "action": "ds4Discover" },
     "modelProfiles": [
       {
