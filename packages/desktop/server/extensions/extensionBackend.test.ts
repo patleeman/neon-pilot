@@ -3,10 +3,11 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { invokeExtensionAction, loadExtensionBackend } from './extensionBackend.js';
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
+import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
 import { isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
@@ -14,6 +15,7 @@ const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..
 const ORIGINAL_STATE_ROOT = process.env.NEON_PILOT_STATE_ROOT;
 
 afterEach(() => {
+  setExtensionBackendRunnerForTests(undefined);
   if (ORIGINAL_STATE_ROOT === undefined) delete process.env.NEON_PILOT_STATE_ROOT;
   else process.env.NEON_PILOT_STATE_ROOT = ORIGINAL_STATE_ROOT;
 });
@@ -117,6 +119,44 @@ describe('extension backend action invocation', () => {
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'process.exit(42); export function noop() { return true; }\n');
 
     await expect(loadExtensionBackend('exit-import-ext')).rejects.toThrow('attempted to terminate the application via process.exit');
+  });
+
+  it('loads and executes backend actions through the extension backend runner seam', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'runner-action-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'runner-action-ext',
+        name: 'Runner Action Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'doThing', handler: 'doThing' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+    const loadModule = vi.fn(async () => ({ doThing: vi.fn((input: unknown) => ({ input, via: 'runner' })) }));
+    const run = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
+    setExtensionBackendRunnerForTests({
+      loadModule,
+      clearModule: vi.fn(),
+      run,
+    });
+
+    await expect(invokeExtensionAction('runner-action-ext', 'doThing', { ok: true })).resolves.toEqual({
+      ok: true,
+      result: { input: { ok: true }, via: 'runner' },
+    });
+
+    expect(loadModule).toHaveBeenCalledWith(
+      'runner-action-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+    );
+    expect(run).toHaveBeenCalledWith('runner-action-ext', 'action doThing', expect.any(Function));
   });
 });
 

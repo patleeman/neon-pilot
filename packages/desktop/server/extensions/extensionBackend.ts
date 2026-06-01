@@ -1,5 +1,4 @@
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir, queryAppTelemetryEvents, resolveLocalProfileSettingsFilePath } from '@neon-pilot/core';
@@ -13,6 +12,7 @@ import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
+import { type ExtensionBackendLoadTarget, type ExtensionBackendModule,getExtensionBackendRunner } from './extensionBackendRunner.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
@@ -21,7 +21,7 @@ import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
-import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
+import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearBuildError,
   clearExtensionHealthError,
@@ -245,8 +245,6 @@ async function listExtensionRuntimes(
   return runtimes;
 }
 
-type ExtensionBackendModule = Record<string, unknown>;
-
 export interface ExtensionProtocolContext extends ExtensionBackendContext {
   protocolId: string;
   stdio: {
@@ -317,8 +315,6 @@ export function listExtensionActionTelemetry(extensionId?: string): ExtensionAct
   if (entries.length > 0) return entries;
   return actionTelemetry.filter((entry) => !extensionId || entry.extensionId === extensionId);
 }
-
-const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 
 export class ExtensionLoadError extends Error {
   readonly extensionId: string;
@@ -555,25 +551,8 @@ export function createProtocolContext(
   };
 }
 
-interface ExtensionBackendLoadTarget {
-  path: string;
-  hash: string;
-}
-
 function loadCompiledExtensionBackendModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<ExtensionBackendModule> {
-  const cacheKey = `${compiled.path}:${compiled.hash}`;
-  const cached = backendModuleCache.get(extensionId);
-  if (cached?.cacheKey === cacheKey) {
-    return cached.module;
-  }
-
-  const module = withExtensionProcessGuard(
-    extensionId,
-    'backend import',
-    () => import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>,
-  );
-  backendModuleCache.set(extensionId, { cacheKey, module });
-  return module;
+  return getExtensionBackendRunner().loadModule(extensionId, compiled);
 }
 
 function renderRequiredBackendArtifact(entry: { packageRoot: string }, backendEntry: string): string {
@@ -689,7 +668,7 @@ export async function invokeExtensionRoute(
   if (typeof handler !== 'function') {
     return { status: 500, body: { error: `Extension route handler not found: ${route.handler}` } };
   }
-  const result = await withExtensionProcessGuard(extensionId, `route ${method} ${routePath}`, () =>
+  const result = await getExtensionBackendRunner().run(extensionId, `route ${method} ${routePath}`, () =>
     Promise.resolve(
       (handler as (request: ExtensionRouteRequest, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
         request,
@@ -745,7 +724,7 @@ export async function invokeExtensionAction(
       });
     }
 
-    const result = await withExtensionProcessGuard(extensionId, `action ${actionId}`, () => {
+    const result = await getExtensionBackendRunner().run(extensionId, `action ${actionId}`, () => {
       actionHandlerStarted = true;
       return Promise.resolve(
         (handler as (input: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
@@ -829,7 +808,7 @@ export async function invokeExtensionProtocolEntrypoint(
     throw new Error(`Extension "${extensionId}" protocol handler not found: ${entrypoint.handler}`);
   }
 
-  await withExtensionProcessGuard(extensionId, `protocol ${protocolId}`, () =>
+  await getExtensionBackendRunner().run(extensionId, `protocol ${protocolId}`, () =>
     Promise.resolve(
       (handler as (entryInput: unknown, ctx: ExtensionProtocolContext) => unknown | Promise<unknown>)(
         input,
@@ -877,7 +856,7 @@ export async function runExtensionSelfTest(
         continue;
       }
       try {
-        const result = await withExtensionProcessGuard(extensionId, `self-test action ${actionId}`, () =>
+        const result = await getExtensionBackendRunner().run(extensionId, `self-test action ${actionId}`, () =>
           Promise.resolve(
             (handler as (actionInput: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
               input,
@@ -1012,7 +991,7 @@ export async function reloadExtensionBackend(extensionId: string): Promise<{ ok:
 
   const { stopExtensionServices, startExtensionServices } = await import('./extensionServices.js');
   await stopExtensionServices(extensionId);
-  backendModuleCache.delete(extensionId);
+  getExtensionBackendRunner().clearModule(extensionId);
   await loadCompiledExtensionBackendModule(extensionId, loadTarget);
   clearExtensionHealthError(extensionId);
   clearBuildError(extensionId);
