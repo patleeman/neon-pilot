@@ -17,17 +17,17 @@
       { "id": "ds4BootstrapRuntime", "handler": "bootstrapRuntime", "title": "Download and build DS4 runtime" },
       { "id": "ds4StartServer", "handler": "startServer", "title": "Start managed DS4 server" },
       { "id": "ds4StopServer", "handler": "stopServer", "title": "Stop managed DS4 server" },
-      { "id": "ds4GoogleSearch", "handler": "google_search", "title": "DS4 google_search" },
-      { "id": "ds4VisitPage", "handler": "visit_page", "title": "DS4 visit_page" },
-      { "id": "ds4Bash", "handler": "bash", "title": "DS4 bash" },
-      { "id": "ds4BashStatus", "handler": "bash_status", "title": "DS4 bash_status" },
-      { "id": "ds4BashStop", "handler": "bash_stop", "title": "DS4 bash_stop" },
-      { "id": "ds4Read", "handler": "read", "title": "DS4 read" },
-      { "id": "ds4More", "handler": "more", "title": "DS4 more" },
-      { "id": "ds4Write", "handler": "write", "title": "DS4 write" },
-      { "id": "ds4Edit", "handler": "edit", "title": "DS4 edit" },
-      { "id": "ds4Search", "handler": "search", "title": "DS4 search" },
-      { "id": "ds4List", "handler": "list", "title": "DS4 list" }
+      { "id": "ds4GoogleSearch", "handler": "google_search", "title": "DS4 google_search", "worker": { "enabled": true } },
+      { "id": "ds4VisitPage", "handler": "visit_page", "title": "DS4 visit_page", "worker": { "enabled": true } },
+      { "id": "ds4Bash", "handler": "bash", "title": "DS4 bash", "worker": { "enabled": true } },
+      { "id": "ds4BashStatus", "handler": "bash_status", "title": "DS4 bash_status", "worker": { "enabled": true } },
+      { "id": "ds4BashStop", "handler": "bash_stop", "title": "DS4 bash_stop", "worker": { "enabled": true } },
+      { "id": "ds4Read", "handler": "read", "title": "DS4 read", "worker": { "enabled": true } },
+      { "id": "ds4More", "handler": "more", "title": "DS4 more", "worker": { "enabled": true } },
+      { "id": "ds4Write", "handler": "write", "title": "DS4 write", "worker": { "enabled": true } },
+      { "id": "ds4Edit", "handler": "edit", "title": "DS4 edit", "worker": { "enabled": true } },
+      { "id": "ds4Search", "handler": "search", "title": "DS4 search", "worker": { "enabled": true } },
+      { "id": "ds4List", "handler": "list", "title": "DS4 list", "worker": { "enabled": true } }
     ]
   },
   "contributes": {

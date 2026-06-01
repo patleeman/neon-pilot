@@ -966,6 +966,89 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe installable DS4 tool actions through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const ds4Root = join(stateRoot, 'extensions', 'system-ds4');
+    mkdirSync(join(ds4Root, 'dist'), { recursive: true });
+    writeFileSync(
+      join(ds4Root, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-ds4',
+        name: 'DS4',
+        packageType: 'system',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [
+            { id: 'ds4GoogleSearch', handler: 'google_search', title: 'DS4 google_search', worker: { enabled: true } },
+            { id: 'ds4Read', handler: 'read', title: 'DS4 read', worker: { enabled: true } },
+            { id: 'ds4List', handler: 'list', title: 'DS4 list', worker: { enabled: true } },
+          ],
+        },
+      }),
+    );
+    writeFileSync(
+      join(ds4Root, 'dist', 'backend.mjs'),
+      'export function google_search() { return true; }\nexport function read() { return true; }\nexport function list() { return true; }\n',
+    );
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) => ({ ok: true, action: exportName })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-ds4', 'ds4GoogleSearch', { query: 'neon pilot' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, action: 'google_search' },
+    });
+    await expect(invokeExtensionAction('system-ds4', 'ds4Read', { path: 'README.md' }, undefined, { cwd: '/repo' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, action: 'read' },
+    });
+    await expect(invokeExtensionAction('system-ds4', 'ds4List', { path: '.' }, undefined, { cwd: '/repo' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, action: 'list' },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-ds4',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-ds4', 'dist', 'backend.mjs')),
+      }),
+      'read',
+      { type: 'action', label: 'action ds4Read', target: 'ds4Read' },
+      [{ path: 'README.md' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { cwd: '/repo' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledTimes(3);
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('runs worker-safe installable video probe actions through the worker runner', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

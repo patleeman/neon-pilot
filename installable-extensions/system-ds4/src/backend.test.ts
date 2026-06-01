@@ -1,11 +1,33 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const backend = await import('./backend.js');
 
 function ctx(overrides: Record<string, unknown> = {}) {
+  const defaultAppRoot = path.join(tmpdir(), 'ds4-extension-app');
+  const scopedRoot = (rootPath: string) => ({
+    root: { path: rootPath },
+    readText: async (target: string) => readFile(path.resolve(rootPath, target), 'utf8'),
+    writeText: async (target: string, content: string) => writeFile(path.resolve(rootPath, target), content, 'utf8'),
+    list: async (target: string) => {
+      const dir = path.resolve(rootPath, target);
+      const entries = await readdir(dir, { withFileTypes: true });
+      return Promise.all(
+        entries.map(async (entry) => {
+          const itemStat = await stat(path.join(dir, entry.name));
+          return {
+            name: entry.name,
+            path: entry.name,
+            type: entry.isDirectory() ? 'directory' : entry.isSymbolicLink() ? 'symlink' : 'file',
+            ...(entry.isFile() ? { size: itemStat.size } : {}),
+          };
+        }),
+      );
+    },
+  });
   return {
     runtimeScope: 'shared',
     runtime: {
@@ -29,7 +51,8 @@ function ctx(overrides: Record<string, unknown> = {}) {
       spawn: vi.fn(),
     },
     filesystem: {
-      app: vi.fn(async () => ({ root: { path: path.join(tmpdir(), 'ds4-extension-app') } })),
+      app: vi.fn(async () => scopedRoot(defaultAppRoot)),
+      workspace: vi.fn(async (input?: { cwd?: string }) => scopedRoot(input?.cwd ?? '/repo')),
     },
     ...overrides,
   } as never;

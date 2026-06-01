@@ -1,8 +1,9 @@
+import { access, chmod, mkdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { extractReadableHtml, parseDuckDuckGoHtml } from '@neon-pilot/extensions/backend/webContent';
-import { access, chmod, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 
 const PROVIDER = 'ds4';
 const MODEL_ID = 'deepseek-v4-flash';
@@ -170,10 +171,6 @@ function booleanValue(value: unknown): boolean {
 
 function cwdFor(ctx: ExtensionBackendContext): string {
   return ctx.toolContext?.cwd ?? ctx.runtime.getRepoRoot();
-}
-
-function resolveWorkspacePath(ctx: ExtensionBackendContext, target: string): string {
-  return path.isAbsolute(target) ? target : path.resolve(cwdFor(ctx), target);
 }
 
 function trimLargeText(text: string): { text: string; truncated: boolean } {
@@ -490,8 +487,8 @@ export async function read(
   const count = Math.floor(numeric(input.max_lines) ?? DEFAULT_READ_LINES);
   const whole = input.whole === true;
   if (booleanValue(input.raw)) {
-    const filePath = resolveWorkspacePath(ctx, path);
-    const raw = await readFile(filePath, 'utf8');
+    const root = await ctx.filesystem.workspace({ cwd: cwdFor(ctx), access: ['read'], reason: 'DS4 raw file read' });
+    const raw = await root.readText(path, { maxBytes: MAX_INLINE_TEXT_BYTES + 1 });
     const lines = raw.split(/\r?\n/);
     const selected = whole ? raw : lines.slice(Math.max(0, startLine - 1), Math.max(0, startLine - 1) + count).join('\n');
     const formatted = trimLargeText(selected);
@@ -534,8 +531,8 @@ export async function edit(input: { path?: unknown; old?: unknown; new?: unknown
   if (typeof input.old !== 'string') throw new Error('old is required.');
   if (typeof input.new !== 'string') throw new Error('new is required.');
   if (input.old.includes('[upto]')) {
-    const filePath = resolveWorkspacePath(ctx, path);
-    const original = await readFile(filePath, 'utf8');
+    const root = await ctx.filesystem.workspace({ cwd: cwdFor(ctx), access: ['read', 'write'], reason: 'DS4 anchor edit' });
+    const original = await root.readText(path, { maxBytes: MAX_INLINE_TEXT_BYTES + 1 });
     const parts = input.old.split('[upto]');
     if (parts.length !== 2 || !parts[0] || !parts[1]) {
       throw new Error('old with [upto] must include non-empty unique head and tail anchors.');
@@ -551,7 +548,7 @@ export async function edit(input: { path?: unknown; old?: unknown; new?: unknown
     }
     const endIndex = tailIndex + tail.length;
     const updated = `${original.slice(0, headIndex)}${input.new}${original.slice(endIndex)}`;
-    await writeFile(filePath, updated, 'utf8');
+    await root.writeText(path, updated);
     const text = `Edited ${path} with [upto] anchor replacement.`;
     return { text, content: [{ type: 'text' as const, text }], details: { path, replaced: true, upto: true } };
   }
@@ -607,17 +604,15 @@ export async function search(
 export async function list(input: { path?: unknown }, ctx: ExtensionBackendContext) {
   const target = stringValue(input.path);
   if (!target) throw new Error('path is required.');
-  const dir = resolveWorkspacePath(ctx, target);
-  const entries = await readdir(dir, { withFileTypes: true });
-  const rows = await Promise.all(
-    entries
-      .sort((left, right) => left.name.localeCompare(right.name))
-      .map(async (entry) => {
-        const kind = entry.isDirectory() ? 'dir ' : entry.isSymbolicLink() ? 'link' : 'file';
-        const size = entry.isFile() ? (await stat(path.join(dir, entry.name))).size : null;
-        return `${kind} ${size === null ? ''.padStart(9) : String(size).padStart(9)} ${entry.name}${entry.isDirectory() ? '/' : ''}`;
-      }),
-  );
+  const root = await ctx.filesystem.workspace({ cwd: cwdFor(ctx), access: ['list', 'metadata'], reason: 'DS4 directory list' });
+  const entries = await root.list(target, { depth: 0 });
+  const rows = entries
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((entry) => {
+      const kind = entry.type === 'directory' ? 'dir ' : entry.type === 'symlink' ? 'link' : 'file';
+      const size = entry.type === 'file' ? (entry.size ?? null) : null;
+      return `${kind} ${size === null ? ''.padStart(9) : String(size).padStart(9)} ${entry.name}${entry.type === 'directory' ? '/' : ''}`;
+    });
   const text = rows.length ? rows.join('\n') : '(empty directory)';
   return { text, content: [{ type: 'text' as const, text }], details: { path: target, count: rows.length } };
 }
