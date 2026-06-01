@@ -12,9 +12,9 @@
   "backend": {
     "entry": "src/backend.ts",
     "actions": [
-      { "id": "readSettings", "handler": "readSettings", "title": "Read dictation settings" },
-      { "id": "updateSettings", "handler": "updateSettings", "title": "Update dictation settings" },
-      { "id": "modelStatus", "handler": "modelStatus", "title": "Read dictation model status" },
+      { "id": "readSettings", "handler": "readSettings", "title": "Read dictation settings", "worker": { "enabled": true } },
+      { "id": "updateSettings", "handler": "updateSettings", "title": "Update dictation settings", "worker": { "enabled": true } },
+      { "id": "modelStatus", "handler": "modelStatus", "title": "Read dictation model status", "worker": { "enabled": true } },
       { "id": "installModel", "handler": "installModel", "title": "Install dictation model" },
       { "id": "transcribeFile", "handler": "transcribeFile", "title": "Transcribe dictation audio" }
     ]
