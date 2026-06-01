@@ -867,6 +867,105 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe installable local model lookup actions through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const localModelsRoot = join(stateRoot, 'extensions', 'system-local-models');
+    mkdirSync(join(localModelsRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(localModelsRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-local-models',
+        name: 'Local Models',
+        packageType: 'system',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [
+            { id: 'localModelsSearch', handler: 'searchModels', title: 'Search local-compatible models', worker: { enabled: true } },
+            { id: 'localModelsModelDetails', handler: 'modelDetails', title: 'Get Hugging Face model details', worker: { enabled: true } },
+          ],
+        },
+      }),
+    );
+    writeFileSync(
+      join(localModelsRoot, 'dist', 'backend.mjs'),
+      'export function searchModels() { return true; }\nexport function modelDetails() { return true; }\n',
+    );
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'searchModels'
+          ? { ok: true, models: [{ id: 'org/model', title: 'model' }] }
+          : { ok: true, model: { id: 'org/model', files: [] } },
+      ),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-local-models', 'localModelsSearch', { query: 'qwen', format: 'gguf', limit: 5 }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, models: [{ id: 'org/model', title: 'model' }] },
+    });
+    await expect(invokeExtensionAction('system-local-models', 'localModelsModelDetails', { modelId: 'org/model' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, model: { id: 'org/model', files: [] } },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-local-models',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-local-models', 'dist', 'backend.mjs')),
+      }),
+      'searchModels',
+      { type: 'action', label: 'action localModelsSearch', target: 'localModelsSearch' },
+      [{ query: 'qwen', format: 'gguf', limit: 5 }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-local-models',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-local-models', 'dist', 'backend.mjs')),
+      }),
+      'modelDetails',
+      { type: 'action', label: 'action localModelsModelDetails', target: 'localModelsModelDetails' },
+      [{ modelId: 'org/model' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('runs worker-safe installable video probe actions through the worker runner', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

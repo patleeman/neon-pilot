@@ -51,12 +51,14 @@
       {
         "id": "localModelsSearch",
         "handler": "searchModels",
-        "title": "Search local-compatible models"
+        "title": "Search local-compatible models",
+        "worker": { "enabled": true }
       },
       {
         "id": "localModelsModelDetails",
         "handler": "modelDetails",
-        "title": "Get Hugging Face model details"
+        "title": "Get Hugging Face model details",
+        "worker": { "enabled": true }
       },
       {
         "id": "localModelsGgufDownload",
