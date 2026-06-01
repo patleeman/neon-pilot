@@ -361,6 +361,38 @@ describe('DS4 managed runtime', () => {
     expect(saved.settings).toEqual({ shellCompression: 'off' });
     expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off' });
   });
+
+  it('installs RTK through the upstream installer and refreshes status', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+    const exec = vi.fn(async (input: { args?: string[] }) => {
+      const command = input.args?.join('\n') ?? '';
+      if (command.includes('install.sh')) return { stdout: 'Saved 100 tokens\n', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+      if (command.includes('command -v rtk')) {
+        return {
+          stdout: 'installed=yes\npath=/Users/patrick/.local/bin/rtk\nversion=rtk 0.28.2\ngain_exit=0\ngain=Saved 100 tokens\n',
+          stderr: '',
+          command: 'sh',
+          args: [],
+          executionWrappers: [],
+        };
+      }
+      return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+    });
+    const context = ctx({ shell: { exec, spawn: vi.fn() } });
+
+    const result = await backend.installRtk({}, context);
+
+    expect(exec).toHaveBeenCalledWith({
+      command: 'sh',
+      args: [
+        '-lc',
+        'curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh && export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH" && rtk gain',
+      ],
+    });
+    expect(result.status.runtime.rtk).toEqual(
+      expect.objectContaining({ installed: true, valid: true, path: '/Users/patrick/.local/bin/rtk' }),
+    );
+  });
 });
 
 describe('DS4 agent profile activation', () => {

@@ -100,7 +100,9 @@ function stepState(step: { id: string; progress: number }, status: Ds4Status | n
 
 export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
   const [status, setStatus] = useState<Ds4Status | null>(null);
-  const [busy, setBusy] = useState<'setup' | 'repair' | 'start' | 'stop' | 'restart' | 'refresh' | 'settings' | 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy' | null>(null);
+  const [busy, setBusy] = useState<
+    'setup' | 'repair' | 'start' | 'stop' | 'restart' | 'refresh' | 'settings' | 'install-rtk' | 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy' | null
+  >(null);
   const [error, setError] = useState('');
   const label = statusLabel(status);
 
@@ -237,12 +239,39 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     }
   };
 
+  const installRtk = async () => {
+    setBusy('install-rtk');
+    try {
+      const result = (await pa.extension.invoke('ds4InstallRtk', {})) as { status?: Ds4Status };
+      if (result.status) setStatus(result.status);
+      setError('');
+      pa.ui?.notify?.({ message: 'RTK installed and verified.', type: 'info', source: 'DS4' });
+      await refresh();
+    } catch (installError) {
+      const message = errorText(installError);
+      setError(message);
+      pa.ui?.notify?.({ message: 'RTK install failed.', details: message, type: 'error', source: 'DS4' });
+      await refresh();
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const runtimeInstalled = status?.runtime?.installed === true;
   const bootstrapRunning = status?.bootstrap?.running === true;
   const progress = setupProgress(status);
   const tools = status?.runtime?.tools ?? {};
   const rtk = status?.runtime?.rtk;
   const shellCompression = status?.settings?.shellCompression ?? 'off';
+  const localToolsReady = ['git', 'make', 'cc', 'curl'].every((tool) => tools[tool]);
+  const optimizations = [
+    { label: 'Runtime installed', ready: runtimeInstalled },
+    { label: 'Server alive', ready: status?.reachable === true },
+    { label: 'Local build tools', ready: localToolsReady },
+    { label: 'DS4 CLI available', ready: true },
+    { label: 'RTK installed', ready: rtk?.valid === true },
+    { label: 'RTK compression enabled', ready: shellCompression === 'rtk' && rtk?.valid === true },
+  ];
   const steps =
     status?.bootstrap?.steps ?? [
       { id: 'tools', title: 'Check tools', progress: 8 },
@@ -285,14 +314,35 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
 
       {error ? <div className="rounded-md border border-danger/30 bg-danger/10 p-3 text-[12px] text-danger">{error}</div> : null}
 
-      <div className="rounded-md border border-border-subtle bg-surface/40 p-3">
+      <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Setup progress</p>
-            <p className="mt-1 text-primary">{status?.bootstrap?.message ?? (runtimeInstalled ? 'DS4 runtime ready' : 'Waiting to start setup')}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Optimizations</p>
+            <p className="mt-1 text-primary">
+              {optimizations.every((item) => item.ready) ? 'All DS4 optimizations ready' : 'Some DS4 optimizations need attention'}
+            </p>
           </div>
-          <span className="font-mono text-[12px] text-dim">{Math.round(progress)}%</span>
+          <span className="text-[12px] text-dim">
+            {optimizations.filter((item) => item.ready).length}/{optimizations.length}
+          </span>
         </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          {optimizations.map((item) => (
+            <ReadyItem key={item.label} label={item.label} ready={item.ready} />
+          ))}
+        </div>
+      </div>
+
+      <details className="rounded-md border border-border-subtle bg-surface/40 p-3" open={!runtimeInstalled || bootstrapRunning}>
+        <summary className="cursor-pointer list-none">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Setup progress</p>
+              <p className="mt-1 text-primary">{status?.bootstrap?.message ?? (runtimeInstalled ? 'DS4 runtime ready' : 'Waiting to start setup')}</p>
+            </div>
+            <span className="font-mono text-[12px] text-dim">{Math.round(progress)}%</span>
+          </div>
+        </summary>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-base">
           <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${progress}%` }} />
         </div>
@@ -301,7 +351,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
             <Step key={step.id} title={step.title} state={stepState(step, status)} />
           ))}
         </div>
-      </div>
+      </details>
 
       <div className="grid gap-2 md:grid-cols-2">
         <Info label="Repository" value={status?.runtime?.repoInstalled ? 'Installed' : 'Missing'} />
@@ -340,23 +390,30 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
                   : 'Install rtk-ai/rtk to let DS4 use compact command output through bash.'}
             </p>
           </div>
-          <div className="flex rounded-md border border-border-subtle bg-base/50 p-0.5">
-            <button
-              type="button"
-              className={`rounded px-2.5 py-1.5 text-[12px] ${shellCompression === 'off' ? 'bg-surface text-primary' : 'text-secondary hover:text-primary'}`}
-              onClick={() => void saveShellCompression('off')}
-              disabled={busy !== null}
-            >
-              Off
-            </button>
-            <button
-              type="button"
-              className={`rounded px-2.5 py-1.5 text-[12px] ${shellCompression === 'rtk' ? 'bg-surface text-primary' : 'text-secondary hover:text-primary'}`}
-              onClick={() => void saveShellCompression('rtk')}
-              disabled={busy !== null || !rtk?.valid}
-            >
-              RTK
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {!rtk?.valid ? (
+              <button type="button" className={BUTTON_CLASS} onClick={() => void installRtk()} disabled={busy !== null}>
+                {busy === 'install-rtk' ? 'Installing' : 'Install RTK'}
+              </button>
+            ) : null}
+            <div className="flex rounded-md border border-border-subtle bg-base/50 p-0.5">
+              <button
+                type="button"
+                className={`rounded px-2.5 py-1.5 text-[12px] ${shellCompression === 'off' ? 'bg-surface text-primary' : 'text-secondary hover:text-primary'}`}
+                onClick={() => void saveShellCompression('off')}
+                disabled={busy !== null}
+              >
+                Off
+              </button>
+              <button
+                type="button"
+                className={`rounded px-2.5 py-1.5 text-[12px] ${shellCompression === 'rtk' ? 'bg-surface text-primary' : 'text-secondary hover:text-primary'}`}
+                onClick={() => void saveShellCompression('rtk')}
+                disabled={busy !== null || !rtk?.valid}
+              >
+                RTK
+              </button>
+            </div>
           </div>
         </div>
         {shellCompression === 'rtk' && rtk?.valid ? (
@@ -413,6 +470,19 @@ function Step({ title, state }: { title: string; state: 'done' | 'active' | 'pen
     <div className={`flex items-center gap-2 rounded-md border px-2.5 py-2 ${tone}`}>
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
       <span className="min-w-0 truncate text-[12px]">{title}</span>
+    </div>
+  );
+}
+
+function ReadyItem({ label, ready }: { label: string; ready: boolean }) {
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-md border px-2.5 py-2 ${
+        ready ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-300'
+      }`}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+      <span className="min-w-0 truncate text-[12px]">{label}</span>
     </div>
   );
 }

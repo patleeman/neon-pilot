@@ -230,6 +230,7 @@ async function readRtkAvailability(ctx: ExtensionBackendContext) {
       '-c',
       [
         'set +e',
+        'export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"',
         'path="$(command -v rtk 2>/dev/null)"',
         'if [ -z "$path" ]; then echo "installed=no"; exit 0; fi',
         'echo "installed=yes"',
@@ -683,6 +684,17 @@ export async function clearKvCache(_input: unknown, ctx: ExtensionBackendContext
   await rm(paths.kvDir, { recursive: true, force: true });
   await mkdir(paths.kvDir, { recursive: true });
   return { ok: true, path: paths.kvDir, status: await status({}, ctx) };
+}
+
+export async function installRtk(_input: unknown, ctx: ExtensionBackendContext) {
+  const result = await ctx.shell.exec({
+    command: 'sh',
+    args: [
+      '-lc',
+      'curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh && export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH" && rtk gain',
+    ],
+  });
+  return { ok: true, stdout: result.stdout, stderr: result.stderr, status: await status({}, ctx) };
 }
 
 function formatJobUpdate(job: ShellJob, options: { stopped?: boolean } = {}) {
