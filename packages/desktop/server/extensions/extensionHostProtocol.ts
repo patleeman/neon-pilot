@@ -143,9 +143,15 @@ export interface ExtensionHostSkillRegistration {
   packageRoot: string;
 }
 
+export interface ExtensionHostModelDiscoveryRegistration {
+  extensionId: string;
+  action: string;
+}
+
 export interface ExtensionHostStaticContributions {
   tools: ExtensionHostToolRegistration[];
   skills: ExtensionHostSkillRegistration[];
+  modelDiscovery: ExtensionHostModelDiscoveryRegistration[];
 }
 
 export interface ExtensionHostRegistryPresentation {

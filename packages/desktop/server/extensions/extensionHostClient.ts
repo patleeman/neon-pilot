@@ -326,12 +326,16 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
       };
     }
     if (request.type === 'listStaticContributions') {
-      const { listExtensionSkillRegistrations, listExtensionToolRegistrations } = await import('./extensionRegistry.js');
+      const { listEnabledExtensionEntries, listExtensionSkillRegistrations, listExtensionToolRegistrations } = await import('./extensionRegistry.js');
       return {
         ok: true,
         staticContributions: {
           tools: listExtensionToolRegistrations(),
           skills: listExtensionSkillRegistrations(),
+          modelDiscovery: listEnabledExtensionEntries().flatMap((entry) => {
+            const action = entry.manifest.contributes?.modelDiscovery?.action;
+            return typeof action === 'string' ? [{ extensionId: entry.manifest.id, action }] : [];
+          }),
         },
       };
     }

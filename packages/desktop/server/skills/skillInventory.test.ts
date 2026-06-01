@@ -49,6 +49,7 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
     listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
     listStaticContributions: async () => ({
       tools: [],
+      modelDiscovery: [],
       skills: [
         {
           extensionId: 'test-extension',

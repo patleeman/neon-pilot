@@ -26,6 +26,7 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionPromptContextProviderRegistrations: vi.fn(),
   listExtensionSkillRegistrations: vi.fn(),
   listExtensionToolRegistrations: vi.fn(),
+  listEnabledExtensionEntries: vi.fn(),
   listExtensionInstallSummaries: vi.fn(),
   listExtensionMentionRegistrations: vi.fn(),
   listExtensionSlashCommandRegistrations: vi.fn(),
@@ -197,10 +198,15 @@ describe('extension host client', () => {
     extensionRegistry.listExtensionSkillRegistrations.mockReturnValueOnce([
       { extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' },
     ]);
+    extensionRegistry.listEnabledExtensionEntries.mockReturnValueOnce([
+      { manifest: { id: 'ext', contributes: { modelDiscovery: { action: 'discoverModels' } } } },
+      { manifest: { id: 'ignored', contributes: { modelDiscovery: { action: 123 } } } },
+    ]);
 
     await expect(getExtensionHostClient().listStaticContributions()).resolves.toEqual({
       tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
       skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
+      modelDiscovery: [{ extensionId: 'ext', action: 'discoverModels' }],
     });
   });
 

@@ -98,6 +98,7 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
           inputSchema: { type: 'object' },
         },
       ],
+      modelDiscovery: [],
     }),
     listPromptAssemblyContributions: async () => ({
       assemblyProviders: [

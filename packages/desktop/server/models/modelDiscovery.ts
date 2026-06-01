@@ -12,7 +12,6 @@
  */
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { listEnabledExtensionEntries } from '../extensions/extensionRegistry.js';
 
 export interface DiscoveredModelEntry {
   id: string;
@@ -32,11 +31,7 @@ export interface DiscoveredProvider {
 
 /** Run all enabled extension model discovery actions and return live providers. */
 export async function runModelDiscovery(): Promise<DiscoveredProvider[]> {
-  const registrations = listEnabledExtensionEntries().flatMap((entry) => {
-    const action = entry.manifest.contributes?.modelDiscovery?.action;
-    if (!action || typeof action !== 'string') return [];
-    return [{ extensionId: entry.manifest.id, action }];
-  });
+  const { modelDiscovery: registrations } = await getExtensionHostClient().listStaticContributions();
 
   if (registrations.length === 0) return [];
 

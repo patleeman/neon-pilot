@@ -23,6 +23,7 @@ describe('tool gateway', () => {
 
     extensionHostClient.listStaticContributions.mockResolvedValue({
       skills: [],
+      modelDiscovery: [],
       tools: [
         {
           extensionId: 'ext',

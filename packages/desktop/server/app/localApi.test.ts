@@ -26,7 +26,7 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => ({
     listServices: async () => [],
     listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
-    listStaticContributions: async () => ({ skills: [], tools: [] }),
+    listStaticContributions: async () => ({ skills: [], tools: [], modelDiscovery: [] }),
     readRegistryPresentation: async () => {
       const registry = await import('../extensions/extensionRegistry.js');
       return {

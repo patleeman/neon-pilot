@@ -149,6 +149,7 @@ describe('extension host RPC client', () => {
           staticContributions: {
             tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
             skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
+            modelDiscovery: [{ extensionId: 'ext', action: 'discoverModels' }],
           },
         }),
       )
@@ -186,6 +187,7 @@ describe('extension host RPC client', () => {
     await expect(client.listStaticContributions()).resolves.toEqual({
       tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
       skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
+      modelDiscovery: [{ extensionId: 'ext', action: 'discoverModels' }],
     });
     await expect(client.readRegistryPresentation()).resolves.toEqual({
       installSummaries: [{ id: 'ext', name: 'Ext' }],
