@@ -173,7 +173,17 @@ describe('DS4 managed runtime', () => {
         '',
         'utf8',
       );
-      vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockRejectedValueOnce(new Error('offline'))
+          .mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: [{ id: 'deepseek-v4-flash' }] }),
+          }),
+      );
       const exec = vi.fn(async (input: { args?: string[] }) => {
         const command = input.args?.join(' ') ?? '';
         if (command.includes('kill -0')) return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
@@ -192,6 +202,34 @@ describe('DS4 managed runtime', () => {
       expect(launchScript).toContain('--ctx 100000');
       expect(launchScript).toContain('--kv-disk-space-mb 8192');
       expect(launchScript).toContain(path.join(dir, 'runtime'));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('fails startup when the managed server never becomes reachable', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-runtime-'));
+    try {
+      await mkdir(path.join(dir, 'runtime', 'ds4', 'gguf'), { recursive: true });
+      await writeFile(path.join(dir, 'runtime', 'ds4', 'ds4-server'), '#!/bin/sh\n', 'utf8');
+      await writeFile(
+        path.join(dir, 'runtime', 'ds4', 'gguf', 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf'),
+        '',
+        'utf8',
+      );
+      await writeFile(path.join(dir, 'runtime', 'server.log'), 'load failed\n', 'utf8');
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+      const exec = vi.fn(async (input: { args?: string[] }) => {
+        const command = input.args?.join(' ') ?? '';
+        if (command.includes('kill -0')) return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        return { stdout: '54321\n', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+      });
+      const context = ctx({
+        filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        shell: { exec, spawn: vi.fn() },
+      });
+
+      await expect(backend.startServer({ timeoutMs: 0 }, context)).rejects.toThrow(/did not become reachable[\s\S]*load failed/);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

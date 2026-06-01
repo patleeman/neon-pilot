@@ -360,7 +360,19 @@ export async function startServer(input: { timeoutMs?: unknown }, ctx: Extension
   const serverPid = Number(result.stdout.trim());
   await ctx.storage.put(SERVER_PID_KEY, serverPid);
   const timeoutMs = typeof input.timeoutMs === 'number' && Number.isFinite(input.timeoutMs) ? Math.max(0, Math.floor(input.timeoutMs)) : 60_000;
-  if (timeoutMs > 0) await waitForHealth(timeoutMs);
+  const nextHealth = timeoutMs > 0 ? await waitForHealth(timeoutMs) : await readServerHealth();
+  if (!nextHealth.reachable) {
+    const log = (await readTail(paths.serverLog, 4000)).trim();
+    throw new Error(
+      [
+        `DS4 server did not become reachable at ${BASE_URL}.`,
+        nextHealth.error ? `Health check: ${nextHealth.error}` : undefined,
+        log ? `Server log:\n${log}` : `Server log is empty at ${paths.serverLog}.`,
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+    );
+  }
   return { ok: true, started: true, pid: serverPid, status: await status({}, ctx) };
 }
 
