@@ -74,6 +74,9 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     shell: {
       exec: (input: unknown) => callHostCapability(extensionId, 'shell', 'exec', input),
     },
+    ui: {
+      invalidate: (topics: string | string[]) => callHostCapability(extensionId, 'ui', 'invalidate', { topics }),
+    },
   };
 }
 

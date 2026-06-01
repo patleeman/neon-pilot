@@ -258,7 +258,7 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(async (_extensionId, _compiled, _exportName, _operation, invoke) =>
-        invoke(() => ({ action: 'save', via: 'in-process' })),
+        invoke(() => ({ action: 'unknown', via: 'in-process' })),
       ),
       run: vi.fn(),
     };
@@ -275,11 +275,11 @@ describe('extension backend action invocation', () => {
     setWorkerImportBackendRunnerForTests(workerRunner);
 
     await expect(
-      invokeExtensionAction('system-diffs', 'checkpoint', { action: 'save', message: 'checkpoint', paths: ['README.md'] }, undefined, {
+      invokeExtensionAction('system-diffs', 'checkpoint', { action: 'unknown' }, undefined, {
         conversationId: 'conv-1',
         cwd: '/repo',
       }),
-    ).resolves.toEqual({ ok: true, result: { action: 'save', via: 'in-process' } });
+    ).resolves.toEqual({ ok: true, result: { action: 'unknown', via: 'in-process' } });
 
     expect(workerRunner.runWorkerExport).not.toHaveBeenCalled();
     expect(backendRunner.runExport).toHaveBeenCalled();

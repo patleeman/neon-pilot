@@ -1,3 +1,4 @@
+import { type AppEventTopic, invalidateAppTopics } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
 import { createExtensionShellCapability } from './extensionShell.js';
@@ -29,12 +30,17 @@ interface ExtensionBackendCapabilityShell {
   }): Promise<unknown> | unknown;
 }
 
+interface ExtensionBackendCapabilityUi {
+  invalidate(topics: string | string[]): unknown;
+}
+
 export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
   log?: ExtensionBackendCapabilityLogger;
   shell?: ExtensionBackendCapabilityShell;
   storage?: ExtensionBackendCapabilityStorage;
+  ui?: ExtensionBackendCapabilityUi;
 }
 
 function normalizeLogInput(input: unknown): { message: string; fields?: Record<string, unknown> } {
@@ -54,10 +60,7 @@ function normalizeLogInput(input: unknown): { message: string; fields?: Record<s
   };
 }
 
-function dispatchLogCapability(
-  logger: ExtensionBackendCapabilityLogger,
-  request: ExtensionBackendWorkerCapabilityRequest,
-): undefined {
+function dispatchLogCapability(logger: ExtensionBackendCapabilityLogger, request: ExtensionBackendWorkerCapabilityRequest): undefined {
   if (request.operation !== 'info' && request.operation !== 'warn' && request.operation !== 'error') {
     throw new Error(`Unsupported log capability operation: ${request.operation}`);
   }
@@ -81,10 +84,7 @@ function requireString(value: unknown, label: string): string {
   return value;
 }
 
-function dispatchStorageCapability(
-  storage: ExtensionBackendCapabilityStorage,
-  request: ExtensionBackendWorkerCapabilityRequest,
-): unknown {
+function dispatchStorageCapability(storage: ExtensionBackendCapabilityStorage, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   const input = normalizeRecordInput(request.input, 'Storage');
 
   if (request.operation === 'get') {
@@ -166,11 +166,29 @@ function dispatchShellCapability(shell: ExtensionBackendCapabilityShell, request
   });
 }
 
+function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation !== 'invalidate') {
+    throw new Error(`Unsupported ui capability operation: ${request.operation}`);
+  }
+  const input = normalizeRecordInput(request.input, 'UI');
+  const topics = input.topics;
+  if (typeof topics !== 'string' && (!Array.isArray(topics) || topics.some((topic) => typeof topic !== 'string'))) {
+    throw new Error('UI topics must be a string or array of strings.');
+  }
+  return ui.invalidate(topics);
+}
+
 export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const shell = options.shell ?? createExtensionShellCapability();
+  const ui = options.ui ?? {
+    invalidate: (topics: string | string[]) => {
+      const items = Array.isArray(topics) ? topics : [topics];
+      invalidateAppTopics(...(items as AppEventTopic[]));
+    },
+  };
   const storage = options.storage ?? {
     get: (extensionId: string, key: string) => readExtensionState(extensionId, key)?.value ?? null,
     put: (extensionId: string, key: string, value: unknown, storageOptions?: { expectedVersion?: number }) => {
@@ -190,6 +208,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'storage') {
       return dispatchStorageCapability(storage, request);
+    }
+    if (request.capability === 'ui') {
+      return dispatchUiCapability(ui, request);
     }
     throw new Error(`Unsupported extension backend capability: ${request.capability}`);
   };

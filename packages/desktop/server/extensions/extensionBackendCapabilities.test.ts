@@ -158,4 +158,39 @@ describe('extension backend capability dispatcher', () => {
       }),
     ).rejects.toThrow('Shell args must be an array of strings when provided.');
   });
+
+  it('dispatches UI invalidation capability calls', async () => {
+    const ui = { invalidate: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ ui });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'ui',
+          operation: 'invalidate',
+          input: { topics: ['sessions', 'checkpoints'] },
+        }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(ui.invalidate).toHaveBeenCalledWith(['sessions', 'checkpoints']);
+  });
+
+  it('rejects malformed UI invalidation inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({ ui: { invalidate: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'ui',
+        operation: 'invalidate',
+        input: { topics: ['sessions', 1] },
+      }),
+    ).rejects.toThrow('UI topics must be a string or array of strings.');
+  });
 });

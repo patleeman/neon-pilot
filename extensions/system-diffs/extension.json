@@ -18,7 +18,7 @@
         "title": "Checkpoint",
         "worker": {
           "enabled": true,
-          "inputActions": ["list", "get"]
+          "inputActions": ["list", "get", "save"]
         }
       }
     ]

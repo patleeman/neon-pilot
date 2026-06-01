@@ -247,4 +247,42 @@ export async function doThing(_input, ctx) {
       result: { command: 'git', args: ['status', '--short'], stdout: '', stderr: '', executionWrappers: [] },
     });
   });
+
+  it('runs backend exports with host-mediated UI invalidation', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  await ctx.ui.invalidate(['sessions', 'checkpoints']);
+  return { ok: true };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 50,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-5' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'ui',
+      operation: 'invalidate',
+      input: { topics: ['sessions', 'checkpoints'] },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true });
+
+    await waitForPostMessage({ id: 50, ok: true, result: { ok: true } });
+  });
 });
