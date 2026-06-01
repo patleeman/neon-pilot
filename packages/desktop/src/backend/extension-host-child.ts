@@ -1,13 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer as createNetServer, type Socket } from 'node:net';
+import { PassThrough, Writable } from 'node:stream';
 
 import { handleInProcessExtensionHostRequest } from '../../server/extensions/extensionHostClient.js';
 import type {
   ExtensionHostInvokeActionRequest,
+  ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostInvokeRouteRequest,
   ExtensionHostRequest,
   ExtensionHostRouteResponse,
 } from '../../server/extensions/extensionHostProtocol.js';
+import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from '../../server/extensions/extensionHostProtocolFrames.js';
 
 interface ExtensionHostReadyMessage {
   type: 'ready';
@@ -25,6 +29,10 @@ interface ExtensionHostRouteRequestBody {
 
 interface ExtensionHostActionRequestBody {
   request?: Omit<ExtensionHostInvokeActionRequest, 'type'>;
+}
+
+interface ExtensionHostProtocolRequestBody {
+  request?: Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type' | 'stdio' | 'signal'>;
 }
 
 let shuttingDown = false;
@@ -106,6 +114,87 @@ function writeSseEvent(response: ServerResponse, event: { event?: string; data?:
   const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data ?? null);
   for (const line of data.split(/\r?\n/)) response.write(`data: ${line}\n`);
   response.write('\n');
+}
+
+function writeProtocolFrame(socket: Socket, frame: Parameters<typeof encodeExtensionHostProtocolFrame>[0]): void {
+  socket.write(encodeExtensionHostProtocolFrame(frame));
+}
+
+async function createProtocolChannel(request: ExtensionHostProtocolRequestBody['request']): Promise<{ port: number; token: string }> {
+  if (!request) throw new Error('Missing extension host protocol request.');
+  const token = randomUUID();
+  const channelServer = createNetServer((socket) => {
+    clearTimeout(connectionTimeout);
+    const abort = new AbortController();
+    const stdin = new PassThrough();
+    const stdout = new Writable({
+      write(chunk, _encoding, callback) {
+        writeProtocolFrame(socket, { type: 'stdout', data: Buffer.from(chunk as Buffer).toString('base64') });
+        callback();
+      },
+    });
+    const stderr = new Writable({
+      write(chunk, _encoding, callback) {
+        writeProtocolFrame(socket, { type: 'stderr', data: Buffer.from(chunk as Buffer).toString('base64') });
+        callback();
+      },
+    });
+    let authenticated = false;
+    let buffer = '';
+
+    const closeChannel = () => {
+      abort.abort();
+      stdin.destroy();
+      channelServer.close();
+    };
+
+    socket.setEncoding('utf8');
+    socket.on('close', closeChannel);
+    socket.on('error', closeChannel);
+    socket.on('data', (chunk) => {
+      try {
+        buffer += chunk;
+        for (;;) {
+          const newline = buffer.indexOf('\n');
+          if (newline < 0) break;
+          const line = buffer.slice(0, newline);
+          buffer = buffer.slice(newline + 1);
+          if (!line.trim()) continue;
+          const frame = decodeExtensionHostProtocolFrame(line);
+          if (!authenticated) {
+            if (frame.type !== 'stdin' || Buffer.from(frame.data, 'base64').toString('utf8') !== token) {
+              socket.destroy(new Error('Unauthorized protocol channel.'));
+              return;
+            }
+            authenticated = true;
+            void handleInProcessExtensionHostRequest({
+              type: 'invokeProtocolEntrypoint',
+              ...request,
+              stdio: { stdin, stdout, stderr },
+              signal: abort.signal,
+            }).then((result) => {
+              if (result.ok) writeProtocolFrame(socket, { type: 'result' });
+              else writeProtocolFrame(socket, { type: 'error', error: result.error });
+              socket.end();
+            });
+            continue;
+          }
+          if (frame.type === 'stdin') stdin.write(Buffer.from(frame.data, 'base64'));
+          else if (frame.type === 'stdinEnd') stdin.end();
+          else if (frame.type === 'abort') abort.abort();
+        }
+      } catch (error) {
+        socket.destroy(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  });
+  const connectionTimeout = setTimeout(() => channelServer.close(), 30_000);
+  connectionTimeout.unref?.();
+  channelServer.maxConnections = 1;
+  await new Promise<void>((resolve) => channelServer.listen(0, '127.0.0.1', () => resolve()));
+  const address = channelServer.address();
+  if (!address || typeof address === 'string') throw new Error('Extension host protocol channel did not bind a TCP port.');
+  return { port: address.port, token };
 }
 
 async function shutdown(server: ReturnType<typeof createServer>): Promise<void> {
@@ -197,6 +286,12 @@ async function main(): Promise<void> {
           });
           writeSseEvent(response, result.ok && 'result' in result ? { event: 'result', data: result.result } : { event: 'error', data: result });
           response.end();
+          return;
+        }
+
+        if (request.method === 'POST' && url.pathname === '/protocol/start') {
+          const body = (await readRequestBody(request)) as ExtensionHostProtocolRequestBody;
+          writeJson(response, 200, { ok: true, channel: await createProtocolChannel(body.request) });
           return;
         }
 

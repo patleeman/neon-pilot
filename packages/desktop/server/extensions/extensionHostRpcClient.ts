@@ -1,11 +1,15 @@
+import { createConnection } from 'node:net';
+
 import type { ExtensionHostClient, ExtensionHostInvokeActionInput, ExtensionHostInvokeRouteInput } from './extensionHostClient.js';
 import type {
   ExtensionHostActionInvokeResult,
+  ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostRequest,
   ExtensionHostResponse,
   ExtensionHostRouteResponse,
   ExtensionHostRouteSseEvent,
 } from './extensionHostProtocol.js';
+import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from './extensionHostProtocolFrames.js';
 
 export interface ExtensionHostRpcClientOptions {
   baseUrl: string;
@@ -34,8 +38,6 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
   );
 }
 
-export type ExtensionHostFallbackReason = 'protocol:stdio-streams';
-
 function hasOnlyToolUpdateCallback(input: ExtensionHostInvokeActionInput): boolean {
   const toolContext = input.toolContext;
   if (!toolContext || typeof toolContext !== 'object') return false;
@@ -60,10 +62,6 @@ function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHost
 function isWireableExtensionHostStartStartupActionsInput(input: Parameters<ExtensionHostClient['startStartupActions']>[0]): boolean {
   if (!input) return true;
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot);
-}
-
-export function getExtensionHostProtocolEntrypointFallbackReason(): ExtensionHostFallbackReason {
-  return 'protocol:stdio-streams';
 }
 
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {
@@ -157,6 +155,7 @@ async function* parseSseEvents(response: Response): AsyncIterable<ExtensionHostR
 
 export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOptions): ExtensionHostClient {
   const baseUrl = options.baseUrl.replace(/\/$/, '');
+  const base = new URL(baseUrl);
   const fetchImpl = options.fetchImpl ?? fetch;
 
   async function send(request: ExtensionHostRequest, signal?: AbortSignal): Promise<ExtensionHostResponse> {
@@ -234,6 +233,81 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     return finalResult ?? { ok: false, error: 'Extension host action stream ended without a result.' };
   }
 
+  async function sendProtocolEntrypoint(input: Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>): Promise<void> {
+    const { signal, stdio, ...request } = input;
+    const response = await fetchImpl(`${baseUrl}/protocol/start`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${options.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ request }),
+      signal,
+    });
+    const body = (await response.json()) as { ok?: boolean; channel?: { port?: unknown; token?: unknown }; error?: string };
+    if (!response.ok || !body.ok) throw new Error(body.error ?? `Extension host protocol start failed: ${String(response.status)}`);
+    const port = body.channel?.port;
+    const token = body.channel?.token;
+    if (typeof port !== 'number' || typeof token !== 'string') throw new Error('Extension host returned an invalid protocol channel.');
+
+    await new Promise<void>((resolve, reject) => {
+      const socket = createConnection({ host: base.hostname, port });
+      let settled = false;
+      let buffer = '';
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        stdio.stdin.off('data', onStdinData);
+        stdio.stdin.off('end', onStdinEnd);
+        signal.removeEventListener('abort', onAbort);
+        socket.destroy();
+        if (error) reject(error);
+        else resolve();
+      };
+      const sendFrame = (frame: Parameters<typeof encodeExtensionHostProtocolFrame>[0]) => {
+        if (!socket.destroyed) socket.write(encodeExtensionHostProtocolFrame(frame));
+      };
+      const onStdinData = (chunk: Buffer | string) => {
+        sendFrame({ type: 'stdin', data: Buffer.from(chunk).toString('base64') });
+      };
+      const onStdinEnd = () => sendFrame({ type: 'stdinEnd' });
+      const onAbort = () => {
+        sendFrame({ type: 'abort' });
+        finish(new Error('Extension protocol entrypoint aborted.'));
+      };
+
+      socket.setEncoding('utf8');
+      socket.on('connect', () => {
+        sendFrame({ type: 'stdin', data: Buffer.from(token).toString('base64') });
+        stdio.stdin.on('data', onStdinData);
+        stdio.stdin.once('end', onStdinEnd);
+        if (signal.aborted) onAbort();
+        else signal.addEventListener('abort', onAbort, { once: true });
+      });
+      socket.on('data', (chunk) => {
+        try {
+          buffer += chunk;
+          for (;;) {
+            const newline = buffer.indexOf('\n');
+            if (newline < 0) break;
+            const line = buffer.slice(0, newline);
+            buffer = buffer.slice(newline + 1);
+            if (!line.trim()) continue;
+            const frame = decodeExtensionHostProtocolFrame(line);
+            if (frame.type === 'stdout') stdio.stdout.write(Buffer.from(frame.data, 'base64'));
+            else if (frame.type === 'stderr') stdio.stderr.write(Buffer.from(frame.data, 'base64'));
+            else if (frame.type === 'result') finish();
+            else if (frame.type === 'error') finish(new Error(frame.error));
+          }
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error(String(error)));
+        }
+      });
+      socket.on('error', (error) => finish(error));
+      socket.on('close', () => finish(new Error('Extension host protocol channel closed before completion.')));
+    });
+  }
+
   return {
     async health() {
       const response = await send({ type: 'health' });
@@ -259,8 +333,8 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('result' in response)) return { ok: false, error: 'Extension host returned an invalid action response.' };
       return response.result;
     },
-    async invokeProtocolEntrypoint() {
-      throw new Error('Extension host RPC cannot carry protocol stdio streams; use capability channels before enabling this call path.');
+    async invokeProtocolEntrypoint(input) {
+      return sendProtocolEntrypoint(input);
     },
     async invokeRoute(input) {
       assertWireableRouteInput(input);
@@ -301,7 +375,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
 
 export function createHybridExtensionHostClient(input: {
   rpcClient: ExtensionHostClient;
-  fallbackClient: ExtensionHostClient;
+  fallbackClient?: ExtensionHostClient;
 }): ExtensionHostClient {
   return {
     async health() {
@@ -314,7 +388,7 @@ export function createHybridExtensionHostClient(input: {
       return input.rpcClient.checkBackendHealth();
     },
     async invokeProtocolEntrypoint(protocolInput) {
-      return input.fallbackClient.invokeProtocolEntrypoint(protocolInput);
+      return input.rpcClient.invokeProtocolEntrypoint(protocolInput);
     },
     async invokeRoute(routeInput) {
       assertWireableRouteInput(routeInput);

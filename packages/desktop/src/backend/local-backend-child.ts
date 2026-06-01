@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 
-import { createInProcessExtensionHostClient, setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
+import { setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient, createHybridExtensionHostClient } from '../../server/extensions/extensionHostRpcClient.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
 
@@ -249,7 +249,6 @@ async function main(): Promise<void> {
     setExtensionHostClient(
       createHybridExtensionHostClient({
         rpcClient: createExtensionHostRpcClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken }),
-        fallbackClient: createInProcessExtensionHostClient(),
       }),
     );
   }

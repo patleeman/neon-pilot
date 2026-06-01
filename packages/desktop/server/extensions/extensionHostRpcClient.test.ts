@@ -1,9 +1,12 @@
+import { createServer } from 'node:net';
+import { PassThrough, Writable } from 'node:stream';
+
 import { describe, expect, it, vi } from 'vitest';
 
+import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from './extensionHostProtocolFrames.js';
 import {
   createExtensionHostRpcClient,
   createHybridExtensionHostClient,
-  getExtensionHostProtocolEntrypointFallbackReason,
   hasFunction,
   isWireableExtensionHostInvokeActionInput,
 } from './extensionHostRpcClient.js';
@@ -105,10 +108,6 @@ describe('extension host RPC client', () => {
       }),
     ).toBe(true);
     expect(hasFunction({ nested: [{ fn: () => undefined }] })).toBe(true);
-  });
-
-  it('names the remaining hybrid fallback reasons', () => {
-    expect(getExtensionHostProtocolEntrypointFallbackReason()).toBe('protocol:stdio-streams');
   });
 
   it('publishes events over RPC', async () => {
@@ -266,6 +265,80 @@ describe('extension host RPC client', () => {
     );
   });
 
+  it('bridges protocol stdio over the protocol channel', async () => {
+    const token = 'channel-secret';
+    const protocolServer = createServer((socket) => {
+      let buffer = '';
+      socket.setEncoding('utf8');
+      socket.on('data', (chunk) => {
+        buffer += chunk;
+        for (;;) {
+          const newline = buffer.indexOf('\n');
+          if (newline < 0) break;
+          const line = buffer.slice(0, newline);
+          buffer = buffer.slice(newline + 1);
+          if (!line.trim()) continue;
+          const frame = decodeExtensionHostProtocolFrame(line);
+          if (frame.type === 'stdin' && Buffer.from(frame.data, 'base64').toString('utf8') === token) {
+            socket.write(encodeExtensionHostProtocolFrame({ type: 'stdout', data: Buffer.from('hello out').toString('base64') }));
+            socket.write(encodeExtensionHostProtocolFrame({ type: 'stderr', data: Buffer.from('hello err').toString('base64') }));
+            socket.write(encodeExtensionHostProtocolFrame({ type: 'result' }));
+            socket.end();
+          }
+        }
+      });
+    });
+    await new Promise<void>((resolve) => protocolServer.listen(0, '127.0.0.1', () => resolve()));
+    const address = protocolServer.address();
+    if (!address || typeof address === 'string') throw new Error('test protocol server did not bind');
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ ok: true, channel: { port: address.port, token } }));
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://127.0.0.1:1234', token: 'secret', fetchImpl });
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+    const stdin = new PassThrough();
+    const stdout = new Writable({
+      write(chunk, _encoding, callback) {
+        stdoutChunks.push(Buffer.from(chunk as Buffer));
+        callback();
+      },
+    });
+    const stderr = new Writable({
+      write(chunk, _encoding, callback) {
+        stderrChunks.push(Buffer.from(chunk as Buffer));
+        callback();
+      },
+    });
+
+    try {
+      await expect(
+        client.invokeProtocolEntrypoint({
+          protocolId: 'acp',
+          input: { args: ['--stdio'] },
+          serverContextSnapshot: { runtimeScope: 'shared' },
+          stdio: { stdin, stdout, stderr },
+          signal: new AbortController().signal,
+        }),
+      ).resolves.toBeUndefined();
+    } finally {
+      protocolServer.close();
+    }
+
+    expect(Buffer.concat(stdoutChunks).toString('utf8')).toBe('hello out');
+    expect(Buffer.concat(stderrChunks).toString('utf8')).toBe('hello err');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://127.0.0.1:1234/protocol/start',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: {
+            protocolId: 'acp',
+            input: { args: ['--stdio'] },
+            serverContextSnapshot: { runtimeScope: 'shared' },
+          },
+        }),
+      }),
+    );
+  });
+
   it('uses RPC for wire-safe and streaming-update calls', async () => {
     const rpcClient = {
       checkBackendHealth: vi.fn().mockResolvedValue([]),
@@ -343,7 +416,7 @@ describe('extension host RPC client', () => {
     expect(fallbackClient.invokeAction).not.toHaveBeenCalled();
   });
 
-  it('keeps protocol entrypoints on fallback until stdio capability channels exist', async () => {
+  it('uses RPC protocol channels in the hybrid client', async () => {
     const rpcClient = {
       checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
@@ -374,8 +447,8 @@ describe('extension host RPC client', () => {
 
     await expect(client.invokeProtocolEntrypoint({ protocolId: 'acp', input: {}, stdio, signal })).resolves.toBeUndefined();
 
-    expect(rpcClient.invokeProtocolEntrypoint).not.toHaveBeenCalled();
-    expect(fallbackClient.invokeProtocolEntrypoint).toHaveBeenCalledWith({ protocolId: 'acp', input: {}, stdio, signal });
+    expect(rpcClient.invokeProtocolEntrypoint).toHaveBeenCalledWith({ protocolId: 'acp', input: {}, stdio, signal });
+    expect(fallbackClient.invokeProtocolEntrypoint).not.toHaveBeenCalled();
   });
 
   it('uses RPC route transport for wire-safe backend routes', async () => {
