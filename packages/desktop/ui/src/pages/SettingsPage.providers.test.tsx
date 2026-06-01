@@ -82,24 +82,18 @@ function queryInput(container: HTMLElement, selector: string): HTMLInputElement 
   return input;
 }
 
+function queryProviderPicker(container: HTMLElement): HTMLSelectElement {
+  const picker = Array.from(container.querySelectorAll('select')).find((select) => select.textContent?.includes('Choose provider…'));
+  if (!(picker instanceof HTMLSelectElement)) {
+    throw new Error('Expected provider picker');
+  }
+  return picker;
+}
+
 function click(button: HTMLButtonElement) {
   act(() => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
-}
-
-function queryProviderRowAction(container: HTMLElement, providerLabel: string, actionLabel: string, index = 0): HTMLButtonElement {
-  const rows = Array.from(container.querySelectorAll('.ui-list-row')).filter((row) => row.textContent?.includes(providerLabel));
-  const row = rows[index];
-  if (!(row instanceof HTMLElement)) {
-    throw new Error(`Expected provider row for ${providerLabel}`);
-  }
-
-  const button = Array.from(row.querySelectorAll('button')).find((node) => node.textContent?.trim() === actionLabel);
-  if (!(button instanceof HTMLButtonElement)) {
-    throw new Error(`Expected ${actionLabel} button for ${providerLabel}`);
-  }
-  return button;
 }
 
 function updateInputValue(input: HTMLInputElement, value: string) {
@@ -129,7 +123,6 @@ function updateSelectValue(select: HTMLSelectElement, value: string) {
 
 describe('SettingsPage provider model editor', () => {
   let saveModelProviderModelMock: ReturnType<typeof vi.spyOn>;
-  let deleteModelProviderMock: ReturnType<typeof vi.spyOn>;
   let updateModelPreferencesMock: ReturnType<typeof vi.spyOn>;
   let startProviderOAuthLoginMock: ReturnType<typeof vi.spyOn>;
   let removeProviderCredentialMock: ReturnType<typeof vi.spyOn>;
@@ -137,7 +130,6 @@ describe('SettingsPage provider model editor', () => {
 
   beforeEach(() => {
     saveModelProviderModelMock = vi.spyOn(api, 'saveModelProviderModel');
-    deleteModelProviderMock = vi.spyOn(api, 'deleteModelProvider');
     updateModelPreferencesMock = vi.spyOn(api, 'updateModelPreferences');
     startProviderOAuthLoginMock = vi.spyOn(api, 'startProviderOAuthLogin');
     removeProviderCredentialMock = vi.spyOn(api, 'removeProviderCredential');
@@ -419,16 +411,10 @@ describe('SettingsPage provider model editor', () => {
         },
       ],
     });
-    deleteModelProviderMock.mockResolvedValue({
-      profile: 'assistant',
-      filePath: '/tmp/assistant-models.json',
-      providers: [],
-    });
   });
 
   afterEach(() => {
     saveModelProviderModelMock.mockRestore();
-    deleteModelProviderMock.mockRestore();
     updateModelPreferencesMock.mockRestore();
     startProviderOAuthLoginMock.mockRestore();
     removeProviderCredentialMock.mockRestore();
@@ -446,9 +432,10 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    click(queryProviderRowAction(container, 'Anthropic', 'Connect'));
+    updateSelectValue(queryProviderPicker(container), 'anthropic');
+    click(queryButton(container, 'Continue'));
 
-    expect(container.textContent).toContain('Anthropic');
+    expect(container.textContent).toContain('Provider · anthropic');
     expect(container.textContent).toContain('Additional models');
 
     click(queryButton(container, 'Add model'));
@@ -531,7 +518,11 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    click(queryProviderRowAction(container, 'OpenAI Codex', 'Manage'));
+    const providerButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('openai-codex'));
+    if (!(providerButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected openai-codex provider button');
+    }
+    click(providerButton);
     await flushAsyncWork();
 
     const oauthButton = Array.from(container.querySelectorAll('button')).find((button) =>
@@ -572,7 +563,13 @@ describe('SettingsPage provider model editor', () => {
       const { container } = renderPage();
       await flushAsyncWork();
 
-      click(queryProviderRowAction(container, 'OpenAI Codex', 'Manage'));
+      const providerButton = Array.from(container.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('openai-codex'),
+      );
+      if (!(providerButton instanceof HTMLButtonElement)) {
+        throw new Error('Expected openai-codex provider button');
+      }
+      click(providerButton);
       await flushAsyncWork();
 
       const removeButton = queryButton(container, 'Remove stored credential');
@@ -587,33 +584,17 @@ describe('SettingsPage provider model editor', () => {
     }
   });
 
-  it('removes provider definitions directly from the connected provider row', async () => {
-    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-    try {
-      const { container } = renderPage();
-      await flushAsyncWork();
-
-      click(queryProviderRowAction(container, 'desktop', 'Remove'));
-      await flushAsyncWork();
-
-      expect(confirmMock).toHaveBeenCalledWith('Remove desktop and all of its model definitions?');
-      expect(deleteModelProviderMock).toHaveBeenCalledWith('desktop');
-    } finally {
-      confirmMock.mockRestore();
-    }
-  });
-
-  it('opens known providers from the recommended provider list', async () => {
+  it('opens known providers from the preconfigured provider picker', async () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    expect(container.textContent).toContain('Recommended providers');
+    expect(container.textContent).toContain('Add provider');
 
-    click(queryProviderRowAction(container, 'Anthropic', 'Connect'));
+    updateSelectValue(queryProviderPicker(container), 'anthropic');
+    click(queryButton(container, 'Continue'));
 
     expect(container.querySelector('#settings-model-provider-id')).toBeNull();
-    expect(container.textContent).toContain('Anthropic');
+    expect(container.textContent).toContain('Provider · anthropic');
   });
 
   it('runs telemetry database maintenance from settings', async () => {
