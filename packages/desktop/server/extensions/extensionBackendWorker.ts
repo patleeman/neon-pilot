@@ -4,6 +4,7 @@ import { parentPort } from 'node:worker_threads';
 import type { ExtensionBackendModule } from './extensionBackendRunner.js';
 import type {
   ExtensionBackendWorkerBackendContextOptions,
+  ExtensionBackendWorkerCapabilityEvent,
   ExtensionBackendWorkerCapabilityResponse,
   ExtensionBackendWorkerParentMessage,
   ExtensionBackendWorkerRequest,
@@ -13,6 +14,14 @@ import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 const pendingCapabilities = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+const shellHandleCallbacks = new Map<
+  string,
+  {
+    onStdout?: (chunk: string) => void;
+    onStderr?: (chunk: string) => void;
+    onExit?: (event: { code: number | null; signal: string | null }) => void;
+  }
+>();
 let nextCapabilityRequestId = 0;
 let nextShellHandleId = 0;
 
@@ -51,6 +60,30 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
 
   if (response.ok) pending.resolve(response.result);
   else pending.reject(new Error(response.error));
+}
+
+function handleCapabilityEvent(event: ExtensionBackendWorkerCapabilityEvent): void {
+  if (event.capability !== 'shell') return;
+  const input = event.input && typeof event.input === 'object' && !Array.isArray(event.input) ? (event.input as Record<string, unknown>) : null;
+  const handleId = typeof input?.handleId === 'string' ? input.handleId : '';
+  const callbacks = shellHandleCallbacks.get(handleId);
+  if (!callbacks) return;
+
+  if (event.operation === 'stdout' && typeof input?.chunk === 'string') {
+    callbacks.onStdout?.(input.chunk);
+    return;
+  }
+  if (event.operation === 'stderr' && typeof input?.chunk === 'string') {
+    callbacks.onStderr?.(input.chunk);
+    return;
+  }
+  if (event.operation === 'exit') {
+    shellHandleCallbacks.delete(handleId);
+    callbacks.onExit?.({
+      code: typeof input?.code === 'number' ? input.code : null,
+      signal: typeof input?.signal === 'string' ? input.signal : null,
+    });
+  }
 }
 
 function createWorkerBackendContext(extensionId: string, options: ExtensionBackendWorkerBackendContextOptions = {}): Record<string, unknown> {
@@ -157,10 +190,20 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
         onExit?: (event: { code: number | null; signal: string | null }) => void;
       }) => {
         const handleId = `worker-shell-${++nextShellHandleId}`;
-        const serializableInput = { ...(input ?? {}) };
+        const serializableInput: Record<string, unknown> = { ...(input ?? {}) };
         delete serializableInput.onStdout;
         delete serializableInput.onStderr;
         delete serializableInput.onExit;
+        if (input?.onStdout) serializableInput.onStdout = true;
+        if (input?.onStderr) serializableInput.onStderr = true;
+        if (input?.onExit) serializableInput.onExit = true;
+        if (input?.onStdout || input?.onStderr || input?.onExit) {
+          shellHandleCallbacks.set(handleId, {
+            ...(input.onStdout ? { onStdout: input.onStdout } : {}),
+            ...(input.onStderr ? { onStderr: input.onStderr } : {}),
+            ...(input.onExit ? { onExit: input.onExit } : {}),
+          });
+        }
         const result = (await callHostCapability(extensionId, 'shell', 'spawn', { handleId, ...serializableInput })) as {
           pid?: number | null;
           usingPty?: boolean;
@@ -170,7 +213,10 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
           pid: result.pid ?? null,
           usingPty: result.usingPty === true,
           executionWrappers: result.executionWrappers ?? [],
-          kill: () => callHostCapability(extensionId, 'shell', 'kill', { handleId }),
+          kill: () => {
+            shellHandleCallbacks.delete(handleId);
+            return callHostCapability(extensionId, 'shell', 'kill', { handleId });
+          },
           write: (data: string) => callHostCapability(extensionId, 'shell', 'write', { handleId, data }),
           resize: (cols: number, rows: number) => callHostCapability(extensionId, 'shell', 'resize', { handleId, cols, rows }),
         };
@@ -232,6 +278,10 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
 parentPort.on('message', (message: ExtensionBackendWorkerParentMessage) => {
   if ('kind' in message && message.kind === 'capabilityResponse') {
     handleCapabilityResponse(message);
+    return;
+  }
+  if ('kind' in message && message.kind === 'capabilityEvent') {
+    handleCapabilityEvent(message);
     return;
   }
 

@@ -79,6 +79,17 @@ export type ExtensionBackendWorkerCapabilityResponse =
       error: string;
     };
 
+export interface ExtensionBackendWorkerCapabilityEvent {
+  kind: 'capabilityEvent';
+  extensionId: string;
+  capability: string;
+  operation: string;
+  input?: unknown;
+}
+
 export type ExtensionBackendWorkerMessage = ExtensionBackendWorkerResponse | ExtensionBackendWorkerCapabilityRequest;
 
-export type ExtensionBackendWorkerParentMessage = ExtensionBackendWorkerRequest | ExtensionBackendWorkerCapabilityResponse;
+export type ExtensionBackendWorkerParentMessage =
+  | ExtensionBackendWorkerRequest
+  | ExtensionBackendWorkerCapabilityResponse
+  | ExtensionBackendWorkerCapabilityEvent;

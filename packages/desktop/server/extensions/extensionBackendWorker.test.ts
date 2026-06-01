@@ -825,11 +825,18 @@ export async function doThing(_input, ctx) {
       backendPath,
       `
 export async function doThing(_input, ctx) {
-  const handle = await ctx.shell.spawn({ command: 'caffeinate', args: ['-dimsu'], onExit: () => undefined });
+  const events = [];
+  const handle = await ctx.shell.spawn({
+    command: 'caffeinate',
+    args: ['-dimsu'],
+    onStdout: (chunk) => events.push(['stdout', chunk]),
+    onStderr: (chunk) => events.push(['stderr', chunk]),
+    onExit: (event) => events.push(['exit', event.code, event.signal]),
+  });
   await handle.write('ping');
   await handle.resize(80, 24);
   await handle.kill();
-  return { pid: handle.pid, usingPty: handle.usingPty, executionWrappers: handle.executionWrappers };
+  return { pid: handle.pid, usingPty: handle.usingPty, executionWrappers: handle.executionWrappers, events };
 }
 `,
     );
@@ -851,13 +858,27 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'shell',
       operation: 'spawn',
-      input: { handleId: 'worker-shell-1', command: 'caffeinate', args: ['-dimsu'] },
+      input: { handleId: 'worker-shell-1', command: 'caffeinate', args: ['-dimsu'], onStdout: true, onStderr: true, onExit: true },
     });
     workerThreads.messageHandler?.({
       id: 1,
       kind: 'capabilityResponse',
       ok: true,
       result: { pid: 123, usingPty: false, executionWrappers: [{ id: 'sandbox' }] },
+    });
+    workerThreads.messageHandler?.({
+      kind: 'capabilityEvent',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'stdout',
+      input: { handleId: 'worker-shell-1', chunk: 'out' },
+    });
+    workerThreads.messageHandler?.({
+      kind: 'capabilityEvent',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'stderr',
+      input: { handleId: 'worker-shell-1', chunk: 'err' },
     });
 
     await waitForPostMessage({
@@ -893,7 +914,15 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({
       id: 41,
       ok: true,
-      result: { pid: 123, usingPty: false, executionWrappers: [{ id: 'sandbox' }] },
+      result: {
+        pid: 123,
+        usingPty: false,
+        executionWrappers: [{ id: 'sandbox' }],
+        events: [
+          ['stdout', 'out'],
+          ['stderr', 'err'],
+        ],
+      },
     });
   });
 

@@ -806,24 +806,31 @@ describe('extension backend capability dispatcher', () => {
       spawn: vi.fn(async () => handle),
     };
     const dispatch = createExtensionBackendCapabilityDispatcher({ shell });
+    const emitted: unknown[] = [];
 
     await expect(
       Promise.resolve(
-        dispatch({
-          id: 1,
-          kind: 'capabilityRequest',
-          extensionId: 'ext',
-          capability: 'shell',
-          operation: 'spawn',
-          input: {
-            handleId: 'handle-1',
-            command: 'caffeinate',
-            args: ['-dimsu'],
-            cwd: '/repo',
-            env: { A: 'B' },
-            pty: { cols: 120, rows: 32 },
+        dispatch(
+          {
+            id: 1,
+            kind: 'capabilityRequest',
+            extensionId: 'ext',
+            capability: 'shell',
+            operation: 'spawn',
+            input: {
+              handleId: 'handle-1',
+              command: 'caffeinate',
+              args: ['-dimsu'],
+              cwd: '/repo',
+              env: { A: 'B' },
+              pty: { cols: 120, rows: 32 },
+              onStdout: true,
+              onStderr: true,
+              onExit: true,
+            },
           },
-        }),
+          (event) => emitted.push(event),
+        ),
       ),
     ).resolves.toEqual({ pid: 123, usingPty: false, executionWrappers: [{ id: 'sandbox', label: 'Sandbox' }] });
 
@@ -870,7 +877,37 @@ describe('extension backend capability dispatcher', () => {
       cwd: '/repo',
       env: { A: 'B' },
       pty: { cols: 120, rows: 32 },
+      onStdout: expect.any(Function),
+      onStderr: expect.any(Function),
+      onExit: expect.any(Function),
     });
+    const spawnInput = shell.spawn.mock.calls[0][0];
+    spawnInput.onStdout?.('out');
+    spawnInput.onStderr?.('err');
+    spawnInput.onExit?.({ code: 0, signal: null });
+    expect(emitted).toEqual([
+      {
+        kind: 'capabilityEvent',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'stdout',
+        input: { handleId: 'handle-1', chunk: 'out' },
+      },
+      {
+        kind: 'capabilityEvent',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'stderr',
+        input: { handleId: 'handle-1', chunk: 'err' },
+      },
+      {
+        kind: 'capabilityEvent',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'exit',
+        input: { handleId: 'handle-1', code: 0, signal: null },
+      },
+    ]);
     expect(handle.write).toHaveBeenCalledWith('hello');
     expect(handle.resize).toHaveBeenCalledWith(80, 24);
     expect(handle.kill).toHaveBeenCalledOnce();

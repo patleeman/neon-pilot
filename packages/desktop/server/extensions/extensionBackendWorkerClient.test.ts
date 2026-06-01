@@ -155,16 +155,62 @@ describe('ExtensionBackendWorkerClient', () => {
     });
     await flushPromises();
 
-    expect(capabilityDispatcher).toHaveBeenCalledWith({
-      id: 99,
-      kind: 'capabilityRequest',
-      extensionId: 'ext',
-      capability: 'log',
-      operation: 'info',
-      input: { message: 'hello' },
-    });
+    expect(capabilityDispatcher).toHaveBeenCalledWith(
+      {
+        id: 99,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'log',
+        operation: 'info',
+        input: { message: 'hello' },
+      },
+      expect.any(Function),
+    );
     expect(worker.postMessage).toHaveBeenLastCalledWith({
       id: 99,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { ok: true },
+    });
+  });
+
+  it('lets capability dispatchers emit host capability events back to the worker', async () => {
+    const capabilityDispatcher = vi.fn(async (_request, emit) => {
+      emit({
+        kind: 'capabilityEvent',
+        extensionId: 'ext',
+        capability: 'shell',
+        operation: 'stdout',
+        input: { handleId: 'handle-1', chunk: 'hello' },
+      });
+      return { ok: true };
+    });
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js'), capabilityDispatcher });
+
+    const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    const worker = workerThreads.instances[0]!;
+    worker.emit('message', { id: 1, ok: true });
+    await load;
+
+    worker.emit('message', {
+      id: 100,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'handle-1', command: 'echo' },
+    });
+    await flushPromises();
+
+    expect(worker.postMessage).toHaveBeenCalledWith({
+      kind: 'capabilityEvent',
+      extensionId: 'ext',
+      capability: 'shell',
+      operation: 'stdout',
+      input: { handleId: 'handle-1', chunk: 'hello' },
+    });
+    expect(worker.postMessage).toHaveBeenLastCalledWith({
+      id: 100,
       kind: 'capabilityResponse',
       ok: true,
       result: { ok: true },

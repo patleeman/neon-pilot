@@ -2,7 +2,10 @@ import { resolveSecret } from '../secrets/secretStore.js';
 import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
-import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
+import type {
+  ExtensionBackendWorkerCapabilityEvent,
+  ExtensionBackendWorkerCapabilityRequest,
+} from './extensionBackendWorkerProtocol.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
@@ -149,6 +152,9 @@ interface ExtensionBackendCapabilityShell {
     cwd?: string;
     env?: Record<string, string>;
     pty?: boolean | { cols?: number; rows?: number };
+    onStdout?: (chunk: string) => void;
+    onStderr?: (chunk: string) => void;
+    onExit?: (event: { code: number | null; signal: NodeJS.Signals | null }) => void;
   }): Promise<ExtensionBackendShellSpawnHandle> | ExtensionBackendShellSpawnHandle;
 }
 
@@ -166,7 +172,12 @@ interface ExtensionBackendCapabilityWorkspace {
   list(extensionId: string, input: { cwd: string; path?: string; depth?: number }): Promise<unknown> | unknown;
 }
 
-export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
+export type ExtensionBackendCapabilityEventEmitter = (event: ExtensionBackendWorkerCapabilityEvent) => void;
+
+export type ExtensionBackendCapabilityDispatcher = (
+  request: ExtensionBackendWorkerCapabilityRequest,
+  emit?: ExtensionBackendCapabilityEventEmitter,
+) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
   conversations?: ExtensionBackendCapabilityConversations;
@@ -604,6 +615,7 @@ async function dispatchShellCapability(
   shell: ExtensionBackendCapabilityShell,
   shellSpawnHandles: Map<string, ExtensionBackendShellSpawnHandle>,
   request: ExtensionBackendWorkerCapabilityRequest,
+  emit?: ExtensionBackendCapabilityEventEmitter,
 ): Promise<unknown> {
   const input = normalizeRecordInput(request.input, 'Shell');
 
@@ -629,6 +641,44 @@ async function dispatchShellCapability(
       ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Shell cwd') } : {}),
       ...(input.env !== undefined ? { env: optionalStringRecord(input.env, 'Shell env') } : {}),
       ...(input.pty !== undefined ? { pty: normalizePtyInput(input.pty) } : {}),
+      ...(input.onStdout === true
+        ? {
+            onStdout: (chunk: string) =>
+              emit?.({
+                kind: 'capabilityEvent',
+                extensionId: request.extensionId,
+                capability: 'shell',
+                operation: 'stdout',
+                input: { handleId, chunk },
+              }),
+          }
+        : {}),
+      ...(input.onStderr === true
+        ? {
+            onStderr: (chunk: string) =>
+              emit?.({
+                kind: 'capabilityEvent',
+                extensionId: request.extensionId,
+                capability: 'shell',
+                operation: 'stderr',
+                input: { handleId, chunk },
+              }),
+          }
+        : {}),
+      ...(input.onExit === true
+        ? {
+            onExit: (event: { code: number | null; signal: NodeJS.Signals | null }) => {
+              shellSpawnHandles.delete(`${request.extensionId}:${handleId}`);
+              emit?.({
+                kind: 'capabilityEvent',
+                extensionId: request.extensionId,
+                capability: 'shell',
+                operation: 'exit',
+                input: { handleId, code: event.code, signal: event.signal },
+              });
+            },
+          }
+        : {}),
     });
     shellSpawnHandles.set(`${request.extensionId}:${handleId}`, handle);
     return { pid: handle.pid, usingPty: handle.usingPty, executionWrappers: handle.executionWrappers };
@@ -809,7 +859,7 @@ export function createExtensionBackendCapabilityDispatcher(
     list: (extensionId: string, prefix = '') =>
       listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
   };
-  return (request) => {
+  return (request, emit) => {
     if (request.capability === 'conversations') {
       return dispatchConversationsCapability(conversations, request);
     }
@@ -832,7 +882,7 @@ export function createExtensionBackendCapabilityDispatcher(
       return dispatchNotifyCapability(notify, request);
     }
     if (request.capability === 'shell') {
-      return dispatchShellCapability(shell, shellSpawnHandles, request);
+      return dispatchShellCapability(shell, shellSpawnHandles, request, emit);
     }
     if (request.capability === 'secrets') {
       return dispatchSecretsCapability(secrets, request);

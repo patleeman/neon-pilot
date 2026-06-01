@@ -3,6 +3,7 @@ import { Worker } from 'node:worker_threads';
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
 import type {
   ExtensionBackendWorkerBackendContextOptions,
+  ExtensionBackendWorkerCapabilityEvent,
   ExtensionBackendWorkerCapabilityRequest,
   ExtensionBackendWorkerCapabilityResponse,
   ExtensionBackendWorkerMessage,
@@ -19,7 +20,10 @@ interface PendingRequest {
 export interface ExtensionBackendWorkerClientOptions {
   workerUrl?: URL;
   timeoutMs?: number;
-  capabilityDispatcher?: (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
+  capabilityDispatcher?: (
+    request: ExtensionBackendWorkerCapabilityRequest,
+    emit: (event: ExtensionBackendWorkerCapabilityEvent) => void,
+  ) => Promise<unknown> | unknown;
 }
 
 export class ExtensionBackendWorkerClient {
@@ -129,7 +133,7 @@ export class ExtensionBackendWorkerClient {
       if (!this.options.capabilityDispatcher) {
         throw new Error('No extension backend capability dispatcher configured.');
       }
-      const result = await this.options.capabilityDispatcher(request);
+      const result = await this.options.capabilityDispatcher(request, (event) => this.worker?.postMessage(event));
       return { id: request.id, kind: 'capabilityResponse', ok: true, result };
     } catch (error) {
       return {
