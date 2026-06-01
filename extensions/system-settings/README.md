@@ -143,7 +143,13 @@ The Providers section lists all configured API providers:
 | Google         | API key          | Configured / Not configured |
 | GitHub Copilot | OAuth            | Configured / Not configured |
 
-Add a new provider by selecting a known provider and adding credentials. Built-in providers (for example `anthropic`, `openai`, `opencode-go`) will auto-load known model rows after the key is saved; use custom model rows only for overrides and extras.
+The Providers section is organized around the common workflow:
+
+1. Connected providers show usable/configured providers with `Manage` and `Remove` actions.
+2. Recommended providers offer one-click setup entry points for common hosted and local providers.
+3. `Connect provider` opens a searchable dialog for the full provider catalog plus custom OpenAI-compatible endpoints.
+
+Provider setup should first make the provider usable through OAuth, API key, local runtime, or environment-backed credentials. Model definitions, built-in model overrides, headers, compat JSON, and custom model rows remain available from `Manage` as advanced configuration. OAuth flows always display the authorization URL while a login is running, even when Neon Pilot also tries to open the system browser automatically.
 
 ## Model Configuration
 
