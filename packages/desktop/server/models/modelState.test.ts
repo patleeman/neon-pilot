@@ -36,7 +36,7 @@ describe('modelState', () => {
     expect(runModelDiscovery).not.toHaveBeenCalled();
   });
 
-  it('returns an empty list immediately while refreshing registry models in the background', async () => {
+  it('awaits registry models on cold cache so first model picker load is populated', async () => {
     getAvailableModels.mockResolvedValue([
       { id: 'vision', provider: 'p', name: 'Vision', contextWindow: 42, input: ['text', 'image'], reasoning: true },
       { id: 'legacy-context', provider: 'p', name: 'Legacy', context: 99, input: ['audio'], reasoning: 'yes' },
@@ -45,11 +45,13 @@ describe('modelState', () => {
 
     const models = await listModelDefinitions();
 
-    expect(models).toEqual([]);
+    expect(models.map((model) => model.id)).toEqual(['vision', 'legacy-context', 'default-context']);
+    expect(models[0]).toMatchObject({ input: ['text', 'image'], reasoning: true, context: 42 });
+    expect(models[1]).toMatchObject({ input: ['text'], reasoning: undefined, context: 99 });
     expect(getAvailableModels).toHaveBeenCalledTimes(1);
   });
 
-  it('returns registry and discovered models after the background refresh completes', async () => {
+  it('returns registry and discovered models on first load', async () => {
     getAvailableModels.mockResolvedValue([{ id: 'same', provider: 'local', name: 'Registry', contextWindow: 100, input: ['text'] }]);
     runModelDiscovery.mockResolvedValue([
       {
@@ -65,11 +67,8 @@ describe('modelState', () => {
     ]);
 
     const models = await listModelDefinitions();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    const refreshed = await listModelDefinitions();
 
-    expect(models).toEqual([]);
-    expect(refreshed.map((model) => `${model.provider}/${model.id}`)).toEqual(['local/same', 'local/new']);
+    expect(models.map((model) => `${model.provider}/${model.id}`)).toEqual(['local/same', 'local/new']);
     expect(getAvailableModels).toHaveBeenCalledTimes(1);
   });
 
@@ -77,8 +76,6 @@ describe('modelState', () => {
     getAvailableModels.mockResolvedValue([{ id: 'registry', provider: 'p', name: 'Registry', contextWindow: 100, input: ['text'] }]);
     runModelDiscovery.mockRejectedValue(new Error('discovery failed'));
 
-    await expect(listModelDefinitions()).resolves.toEqual([]);
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await expect(listModelDefinitions()).resolves.toMatchObject([{ id: 'registry', provider: 'p' }]);
   });
 
@@ -95,12 +92,12 @@ describe('modelState', () => {
     const state = await readModelState('/settings.json');
 
     expect(state).toMatchObject({
-      currentModel: '',
+      currentModel: 'available',
       currentVisionModel: 'vision',
       currentThinkingLevel: 'high',
       currentServiceTier: '',
     });
-    expect(state.models).toEqual([]);
+    expect(state.models).toMatchObject([{ id: 'available', provider: 'p' }]);
     expect(normalizeSavedModelPreferences).toHaveBeenCalledWith('/settings.json', expect.any(Array));
   });
 
@@ -113,9 +110,6 @@ describe('modelState', () => {
       currentServiceTier: 'flex',
     });
     modelSupportsServiceTier.mockReturnValue(true);
-
-    await listModelDefinitions();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     await expect(readModelState('/settings.json')).resolves.toMatchObject({ currentModel: 'available', currentServiceTier: 'flex' });
   });
@@ -143,9 +137,6 @@ describe('modelState', () => {
       },
     ]);
     readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
-
-    await listModelDefinitions();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     const state = await readModelState('/settings.json');
 

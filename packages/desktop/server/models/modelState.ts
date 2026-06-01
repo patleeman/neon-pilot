@@ -167,8 +167,7 @@ export async function listModelDefinitions(): Promise<readonly ModelDefinition[]
     return modelDefinitionsInFlight;
   }
 
-  refreshModelDefinitionsInBackground();
-  return modelDefinitionsCache?.models ?? [];
+  return await refreshModelDefinitionsInBackground();
 }
 
 export async function readModelState(settingsFile: string): Promise<ModelState> {
