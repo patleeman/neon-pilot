@@ -1,0 +1,122 @@
+import type { ExtensionRouteRequest } from '@neon-pilot/extensions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const shellSpawn = vi.hoisted(() => vi.fn());
+
+vi.mock('./extensionShell.js', () => ({
+  createExtensionShellCapability: () => ({ spawn: shellSpawn }),
+}));
+
+function createMockSpawnHandle(overrides?: {
+  pid?: number | null;
+  usingPty?: boolean;
+  write?: (data: string) => void;
+  resize?: (cols: number, rows: number) => void;
+  kill?: () => void;
+}) {
+  return {
+    pid: overrides?.pid ?? 555,
+    usingPty: overrides?.usingPty ?? true,
+    executionWrappers: [] as Array<{ id: string }>,
+    write: vi.fn(),
+    resize: vi.fn(),
+    kill: vi.fn(),
+    ...overrides,
+  };
+}
+
+function routeRequest(id: string): ExtensionRouteRequest {
+  return {
+    method: 'GET',
+    path: '/stream',
+    query: { id },
+    params: {},
+    body: null,
+    signal: new AbortController().signal,
+  };
+}
+
+describe('terminal sessions', () => {
+  let mod: typeof import('./terminalSessions.js');
+
+  beforeEach(async () => {
+    vi.resetModules();
+    shellSpawn.mockReset();
+    shellSpawn.mockResolvedValue(createMockSpawnHandle());
+    mod = await import('./terminalSessions.js');
+    mod.clearTerminalSessionsForTests();
+  });
+
+  it('creates an interactive shell process', async () => {
+    const handlePty = createMockSpawnHandle({ pid: 777 });
+    shellSpawn.mockResolvedValue(handlePty);
+
+    const result = await mod.createTerminalSession({ cwd: '/workspace' });
+
+    expect(result.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(result.pid).toBe(777);
+    expect(result.usingPty).toBe(true);
+    expect(shellSpawn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: expect.any(String),
+        pty: { cols: 80, rows: 24 },
+        cwd: '/workspace',
+      }),
+    );
+  });
+
+  it('writes, resizes, drains, and closes an existing terminal', async () => {
+    const handlePty = createMockSpawnHandle();
+    shellSpawn.mockResolvedValue(handlePty);
+    const { id } = await mod.createTerminalSession({});
+    const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+
+    onStdout('one');
+    onStdout('two');
+
+    expect(mod.writeTerminalSession({ id, data: 'echo hello\n' })).toEqual({ ok: true });
+    expect(handlePty.write).toHaveBeenCalledWith('echo hello\n');
+    expect(mod.resizeTerminalSession({ id, cols: 120, rows: 40 })).toEqual({ ok: true });
+    expect(handlePty.resize).toHaveBeenCalledWith(120, 40);
+    expect(mod.drainTerminalSession({ id })).toEqual({ ok: true, output: 'onetwo', exited: false, exitCode: null });
+    expect(mod.drainTerminalSession({ id })).toEqual({ ok: true, output: '', exited: false, exitCode: null });
+    expect(mod.closeTerminalSession({ id })).toEqual({ ok: true });
+    expect(handlePty.kill).toHaveBeenCalled();
+    expect(mod.writeTerminalSession({ id, data: 'x' })).toEqual({ ok: false });
+  });
+
+  it('tracks exit state before close removes a session', async () => {
+    const { id } = await mod.createTerminalSession({});
+    const onExit = shellSpawn.mock.calls[0][0].onExit;
+
+    onExit({ code: 0, signal: null });
+
+    expect(mod.drainTerminalSession({ id })).toEqual({ ok: true, output: '', exited: true, exitCode: 0 });
+    expect(mod.writeTerminalSession({ id, data: 'x' })).toEqual({ ok: false });
+  });
+
+  it('streams replayed output and live exit events over SSE', async () => {
+    const { id } = await mod.createTerminalSession({});
+    const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+    const onExit = shellSpawn.mock.calls[0][0].onExit;
+    onStdout('prompt-before-stream');
+
+    const { events } = await mod.streamTerminalSession(routeRequest(id));
+    const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+
+    await expect(iter.next()).resolves.toMatchObject({
+      value: { data: { type: 'output', data: 'prompt-before-stream' } },
+      done: false,
+    });
+    const exitPromise = iter.next();
+    onExit({ code: 0, signal: null });
+    await expect(exitPromise).resolves.toMatchObject({ value: { data: { type: 'exit', code: 0 } } });
+  });
+
+  it('returns 404 for unknown terminal streams and false for unknown control actions', async () => {
+    await expect(mod.streamTerminalSession(routeRequest('missing'))).resolves.toMatchObject({ status: 404 });
+    expect(mod.writeTerminalSession({ id: 'missing', data: 'x' })).toEqual({ ok: false });
+    expect(mod.resizeTerminalSession({ id: 'missing', cols: 80, rows: 24 })).toEqual({ ok: false });
+    expect(mod.closeTerminalSession({ id: 'missing' })).toEqual({ ok: true });
+  });
+});

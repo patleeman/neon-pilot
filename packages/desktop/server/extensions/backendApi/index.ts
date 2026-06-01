@@ -25,5 +25,6 @@ export * from './runtime.js';
 export * from './settings.js';
 export * from './skills.js';
 export * from './telemetry.js';
+export * from './terminal.js';
 export * from './tools.js';
 export type { ExtensionBackendContext } from '@neon-pilot/extensions';

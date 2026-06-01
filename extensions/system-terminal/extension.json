@@ -12,11 +12,11 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "terminalCreate", "handler": "createTerminal", "title": "Create terminal" },
-      { "id": "terminalWrite", "handler": "writeTerminal", "title": "Write to terminal" },
-      { "id": "terminalDrain", "handler": "drainTerminal", "title": "Drain terminal output" },
-      { "id": "terminalResize", "handler": "resizeTerminal", "title": "Resize terminal" },
-      { "id": "terminalClose", "handler": "closeTerminal", "title": "Close terminal" }
+      { "id": "terminalCreate", "handler": "createTerminal", "title": "Create terminal", "worker": { "enabled": true } },
+      { "id": "terminalWrite", "handler": "writeTerminal", "title": "Write to terminal", "worker": { "enabled": true } },
+      { "id": "terminalDrain", "handler": "drainTerminal", "title": "Drain terminal output", "worker": { "enabled": true } },
+      { "id": "terminalResize", "handler": "resizeTerminal", "title": "Resize terminal", "worker": { "enabled": true } },
+      { "id": "terminalClose", "handler": "closeTerminal", "title": "Close terminal", "worker": { "enabled": true } }
     ],
     "routes": [{ "method": "GET", "path": "/stream", "handler": "streamTerminal", "title": "Terminal output stream", "stream": "sse" }]
   },

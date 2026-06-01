@@ -1,33 +1,21 @@
 import type { ExtensionBackendContext, ExtensionRouteRequest } from '@neon-pilot/extensions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Minimal mock for ExtensionBackendContext
-const shellSpawn = vi.fn();
-const logMock = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+const terminalApi = vi.hoisted(() => ({
+  closeTerminalSession: vi.fn(),
+  createTerminalSession: vi.fn(),
+  drainTerminalSession: vi.fn(),
+  resizeTerminalSession: vi.fn(),
+  streamTerminalSession: vi.fn(),
+  writeTerminalSession: vi.fn(),
+}));
 
-function createBackendContext(overrides?: Partial<ExtensionBackendContext>): ExtensionBackendContext {
-  return { shell: { spawn: shellSpawn }, log: logMock, ...overrides } as unknown as ExtensionBackendContext;
+vi.mock('@neon-pilot/extensions/backend/terminal', () => terminalApi);
+
+function createBackendContext(): ExtensionBackendContext {
+  return { log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } } as unknown as ExtensionBackendContext;
 }
 
-function createMockSpawnHandle(overrides?: {
-  pid?: number | null;
-  usingPty?: boolean;
-  write?: (data: string) => void;
-  resize?: (cols: number, rows: number) => void;
-  kill?: () => void;
-}) {
-  return {
-    pid: overrides?.pid ?? 555,
-    usingPty: overrides?.usingPty ?? true,
-    executionWrappers: [] as Array<{ id: string }>,
-    write: vi.fn(),
-    resize: vi.fn(),
-    kill: vi.fn(),
-    ...overrides,
-  };
-}
-
-// Fake EventSource-target route request
 function routeRequest(id: string): ExtensionRouteRequest {
   return {
     method: 'GET',
@@ -39,293 +27,52 @@ function routeRequest(id: string): ExtensionRouteRequest {
   };
 }
 
-const BACKEND_PATH = './backend.js';
-
-describe('terminal backend', () => {
+describe('terminal extension backend', () => {
   let mod: typeof import('./backend.js');
 
   beforeEach(async () => {
-    shellSpawn.mockReset();
-    shellSpawn.mockResolvedValue(createMockSpawnHandle());
-    logMock.info.mockReset();
-
-    mod = await import(BACKEND_PATH);
-    // Clear any terminal sessions left over from previous tests
-    mod._clearSessions?.();
+    vi.resetModules();
+    for (const mock of Object.values(terminalApi)) mock.mockReset();
+    mod = await import('./backend.js');
   });
 
-  describe('createTerminal', () => {
-    it('creates an interactive shell process', async () => {
-      const handlePty = createMockSpawnHandle({ pid: 777 });
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
+  it('creates terminals through the host-owned terminal API', async () => {
+    terminalApi.createTerminalSession.mockResolvedValue({ id: 'terminal-1', pid: 123, usingPty: true, initialOutput: '$ ' });
+    const ctx = createBackendContext();
 
-      const result = await mod.createTerminal({ cwd: '/workspace' }, ctx);
-
-      expect(result.id).toBeDefined();
-      expect(result.id).toMatch(/^[0-9a-f-]{36}$/);
-      expect(result.pid).toBe(777);
-      expect(result.usingPty).toBe(true);
-      expect(shellSpawn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          command: expect.any(String),
-          pty: { cols: 80, rows: 24 },
-          cwd: '/workspace',
-        }),
-      );
+    await expect(mod.createTerminal({ cwd: '/workspace' }, ctx)).resolves.toEqual({
+      id: 'terminal-1',
+      pid: 123,
+      usingPty: true,
+      initialOutput: '$ ',
     });
-
-    it('uses an executable shell from env or known system fallbacks', async () => {
-      const originalShell = process.env.SHELL;
-      delete process.env.SHELL;
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-
-      await mod.createTerminal({}, createBackendContext());
-
-      const callArgs = shellSpawn.mock.calls[0][0];
-      expect(['/bin/zsh', '/bin/bash', '/bin/sh']).toContain(callArgs.command);
-
-      process.env.SHELL = originalShell;
-    });
-
-    it('ignores non-executable SHELL values', async () => {
-      const originalShell = process.env.SHELL;
-      process.env.SHELL = '/definitely/not/a/shell';
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-
-      await mod.createTerminal({}, createBackendContext());
-
-      const callArgs = shellSpawn.mock.calls[0][0];
-      expect(callArgs.command).not.toBe('/definitely/not/a/shell');
-
-      process.env.SHELL = originalShell;
-    });
-
-    it('reports failure when shell spawn throws', async () => {
-      shellSpawn.mockRejectedValue(new Error('spawn failed'));
-      const ctx = createBackendContext();
-
-      await expect(mod.createTerminal({}, ctx)).rejects.toThrow('spawn failed');
-    });
+    expect(terminalApi.createTerminalSession).toHaveBeenCalledWith({ cwd: '/workspace' });
+    expect(ctx.log.info).toHaveBeenCalledWith('Terminal created', { id: 'terminal-1', pid: 123, cwd: '/workspace' });
   });
 
-  describe('writeTerminal', () => {
-    it('writes data to an existing terminal', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
+  it('delegates terminal control actions to the host-owned terminal API', async () => {
+    terminalApi.writeTerminalSession.mockResolvedValue({ ok: true });
+    terminalApi.drainTerminalSession.mockResolvedValue({ ok: true, output: 'out', exited: false, exitCode: null });
+    terminalApi.resizeTerminalSession.mockResolvedValue({ ok: true });
+    terminalApi.closeTerminalSession.mockResolvedValue({ ok: true });
 
-      const writeResult = await mod.writeTerminal({ id, data: 'echo hello\n' }, ctx);
-      expect(writeResult).toEqual({ ok: true });
-      expect(handlePty.write).toHaveBeenCalledWith('echo hello\n');
-    });
+    await expect(mod.writeTerminal({ id: 't', data: 'echo hi\n' })).resolves.toEqual({ ok: true });
+    await expect(mod.drainTerminal({ id: 't' })).resolves.toEqual({ ok: true, output: 'out', exited: false, exitCode: null });
+    await expect(mod.resizeTerminal({ id: 't', cols: 120, rows: 40 })).resolves.toEqual({ ok: true });
+    await expect(mod.closeTerminal({ id: 't' })).resolves.toEqual({ ok: true });
 
-    it('returns { ok: false } for unknown terminal id', async () => {
-      const result = await mod.writeTerminal({ id: 'nonexistent', data: 'x' }, createBackendContext());
-      expect(result).toEqual({ ok: false });
-    });
+    expect(terminalApi.writeTerminalSession).toHaveBeenCalledWith({ id: 't', data: 'echo hi\n' });
+    expect(terminalApi.drainTerminalSession).toHaveBeenCalledWith({ id: 't' });
+    expect(terminalApi.resizeTerminalSession).toHaveBeenCalledWith({ id: 't', cols: 120, rows: 40 });
+    expect(terminalApi.closeTerminalSession).toHaveBeenCalledWith({ id: 't' });
   });
 
-  describe('drainTerminal', () => {
-    it('returns buffered terminal output once', async () => {
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-      const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+  it('delegates the SSE stream route to the same terminal API', async () => {
+    const response = { stream: 'sse' as const, events: (async function* () {})() };
+    terminalApi.streamTerminalSession.mockResolvedValue(response);
+    const request = routeRequest('terminal-1');
 
-      onStdout('one');
-      onStdout('two');
-
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: 'onetwo', exited: false, exitCode: null });
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: false, exitCode: null });
-    });
-
-    it('includes output emitted while the PTY spawn promise is resolving', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockImplementation(async (options) => {
-        options.onStdout?.('prompt-during-spawn');
-        return handlePty;
-      });
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: false, exitCode: null });
-    });
-
-    it('reports exited sessions before close removes them', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      const onExit = shellSpawn.mock.calls[0][0].onExit;
-      onExit({ code: 0, signal: null });
-
-      await expect(mod.drainTerminal({ id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: true, exitCode: 0 });
-      await expect(mod.writeTerminal({ id, data: 'x' }, ctx)).resolves.toEqual({ ok: false });
-    });
-  });
-
-  describe('resizeTerminal', () => {
-    it('resizes an existing terminal', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      const result = await mod.resizeTerminal({ id, cols: 120, rows: 40 }, ctx);
-      expect(result).toEqual({ ok: true });
-      expect(handlePty.resize).toHaveBeenCalledWith(120, 40);
-    });
-
-    it('returns { ok: false } for unknown terminal id', async () => {
-      const result = await mod.resizeTerminal({ id: 'nonexistent', cols: 80, rows: 24 }, createBackendContext());
-      expect(result).toEqual({ ok: false });
-    });
-  });
-
-  describe('closeTerminal', () => {
-    it('kills the process and removes the session', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      const result = await mod.closeTerminal({ id }, ctx);
-      expect(result).toEqual({ ok: true });
-      expect(handlePty.kill).toHaveBeenCalled();
-
-      // Subsequent writes should fail
-      const writeResult = await mod.writeTerminal({ id, data: 'x' }, ctx);
-      expect(writeResult).toEqual({ ok: false });
-    });
-
-    it('returns { ok: true } even for unknown id (idempotent)', async () => {
-      const result = await mod.closeTerminal({ id: 'nonexistent' }, createBackendContext());
-      expect(result).toEqual({ ok: true });
-    });
-  });
-
-  describe('streamTerminal (SSE route)', () => {
-    it('returns 404 for unknown terminal', async () => {
-      const result = await mod.streamTerminal(routeRequest('nonexistent'), createBackendContext());
-      expect(result).toMatchObject({ status: 404 });
-    });
-
-    it('returns SSE stream for an active terminal', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      const result = await mod.streamTerminal(routeRequest(id), ctx);
-      expect(result).toMatchObject({ stream: 'sse' });
-      expect(result.events).toBeDefined();
-    });
-
-    it('replays output that arrived before the SSE stream connected', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      const onStdout = shellSpawn.mock.calls[0][0].onStdout;
-      onStdout('prompt-before-stream');
-
-      const { events } = await mod.streamTerminal(routeRequest(id), ctx);
-      const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
-
-      const event = await iter.next();
-      expect(event.value).toEqual({ data: { type: 'output', data: 'prompt-before-stream' } });
-      expect(event.done).toBe(false);
-    });
-
-    it('replays output emitted while the PTY spawn promise is resolving', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockImplementation(async (options) => {
-        options.onStdout?.('prompt-during-spawn');
-        return handlePty;
-      });
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      const { events } = await mod.streamTerminal(routeRequest(id), ctx);
-      const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
-
-      const event = await iter.next();
-      expect(event.value).toEqual({ data: { type: 'output', data: 'prompt-during-spawn' } });
-      expect(event.done).toBe(false);
-    });
-
-    it('returns startup output from terminalCreate', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockImplementation(async (options) => {
-        options.onStdout?.('startup-prompt');
-        return handlePty;
-      });
-      const ctx = createBackendContext();
-
-      const result = await mod.createTerminal({}, ctx);
-
-      expect(result.initialOutput).toBe('startup-prompt');
-      await expect(mod.drainTerminal({ id: result.id }, ctx)).resolves.toEqual({ ok: true, output: '', exited: false, exitCode: null });
-    });
-
-    it('SSE stream yields output events from the terminal', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      const { events } = await mod.streamTerminal(routeRequest(id), ctx);
-      const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
-
-      // The spawn was called with onStdout — simulate output arriving
-      const onStdout = shellSpawn.mock.calls[0][0].onStdout;
-      const nextPromise = iter.next();
-      onStdout('some terminal output\n');
-
-      const event = await nextPromise;
-      expect(event.value).toEqual({ data: { type: 'output', data: 'some terminal output\n' } });
-      expect(event.done).toBe(false);
-
-      // close the terminal → stream should get exit event
-      const onExit = shellSpawn.mock.calls[0][0].onExit;
-      const exitPromise = iter.next();
-      onExit({ code: 0, signal: null });
-
-      const exitEvent = await exitPromise;
-      expect(exitEvent.value).toEqual({ data: { type: 'exit', code: 0 } });
-    });
-  });
-
-  describe('session lifecycle', () => {
-    it('broadcasts exit to all SSE listeners when process exits', async () => {
-      const handlePty = createMockSpawnHandle();
-      shellSpawn.mockResolvedValue(handlePty);
-      const ctx = createBackendContext();
-      const { id } = await mod.createTerminal({}, ctx);
-
-      // Connect two SSE streams
-      const r1 = await mod.streamTerminal(routeRequest(id), ctx);
-      const r2 = await mod.streamTerminal(routeRequest(id), ctx);
-
-      const iter1 = (r1.events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
-      const iter2 = (r2.events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
-
-      const p1 = iter1.next();
-      const p2 = iter2.next();
-
-      // Simulate process exit
-      const onExit = shellSpawn.mock.calls[0][0].onExit;
-      onExit({ code: 1, signal: null });
-
-      const e1 = await p1;
-      const e2 = await p2;
-      expect(e1.value).toEqual({ data: { type: 'exit', code: 1 } });
-      expect(e2.value).toEqual({ data: { type: 'exit', code: 1 } });
-    });
+    await expect(mod.streamTerminal(request)).resolves.toBe(response);
+    expect(terminalApi.streamTerminalSession).toHaveBeenCalledWith(request);
   });
 });
