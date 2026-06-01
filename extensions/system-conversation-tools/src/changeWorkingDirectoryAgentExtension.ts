@@ -1,7 +1,5 @@
-import { existsSync, statSync } from 'node:fs';
-
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { resolveRequestedCwd } from '@neon-pilot/extensions/backend/conversations';
+import { resolveExistingConversationDirectory } from '@neon-pilot/extensions/backend/conversations';
 
 export const ChangeWorkingDirectoryToolParams = {
   type: 'object',
@@ -48,18 +46,7 @@ export async function executeChangeWorkingDirectory(
   ) => Promise<RequestConversationWorkingDirectoryChangeResult>,
 ) {
   const conversationId = readRequiredString(ctx.sessionManager.getSessionId(), 'conversationId');
-  const nextCwd = await resolveRequestedCwd(readRequiredString(params.cwd, 'cwd'), ctx.cwd);
-  if (!nextCwd) {
-    throw new Error('cwd is required.');
-  }
-
-  if (!existsSync(nextCwd)) {
-    throw new Error(`Directory does not exist: ${nextCwd}`);
-  }
-
-  if (!statSync(nextCwd).isDirectory()) {
-    throw new Error(`Not a directory: ${nextCwd}`);
-  }
+  const nextCwd = await resolveExistingConversationDirectory(readRequiredString(params.cwd, 'cwd'), ctx.cwd);
 
   const continuePrompt =
     typeof params.continuePrompt === 'string' && params.continuePrompt.trim().length > 0 ? params.continuePrompt.trim() : undefined;

@@ -15,6 +15,7 @@ export const CONVERSATION_INSPECT_SEARCH_MODE_VALUES: readonly string[] = [];
 
 export const normalizeGeneratedConversationTitle = (..._args: unknown[]): unknown => hostResolved();
 export const resolveRequestedCwd = (..._args: unknown[]): unknown => hostResolved();
+export const resolveExistingConversationDirectory = (..._args: unknown[]): unknown => hostResolved();
 export const executeConversationInspect = (..._args: unknown[]): unknown => hostResolved();
 export const readSessionDetailForRoute = (..._args: unknown[]): unknown => hostResolved();
 export const readConversationSessionMetaCapability = (..._args: unknown[]): unknown => hostResolved();

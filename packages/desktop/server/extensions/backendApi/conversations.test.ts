@@ -1,3 +1,7 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resolver = vi.hoisted(() => ({ callServerModuleExport: vi.fn() }));
@@ -42,6 +46,27 @@ describe('backendApi/conversations', () => {
       'searchIndexedConversationDocuments',
       { query: 'hello' },
     );
+  });
+
+  it('resolves and validates existing conversation directories through the host API', async () => {
+    const conversations = await import('./conversations.js');
+    const root = mkdtempSync(join(tmpdir(), 'np-conversation-cwd-'));
+    const target = join(root, 'repo');
+    mkdirSync(target);
+    const file = join(root, 'notes.txt');
+    writeFileSync(file, 'not a directory\n');
+    resolver.callServerModuleExport.mockResolvedValueOnce(target);
+
+    await expect(conversations.resolveExistingConversationDirectory('./repo', root)).resolves.toBe(target);
+    expect(resolver.callServerModuleExport).toHaveBeenLastCalledWith(
+      '../../conversations/conversationCwd.js',
+      'resolveRequestedCwd',
+      './repo',
+      root,
+    );
+
+    resolver.callServerModuleExport.mockResolvedValueOnce(file);
+    await expect(conversations.resolveExistingConversationDirectory('./notes.txt', root)).rejects.toThrow(`Not a directory: ${file}`);
   });
 
   it('wraps unavailable backend API export errors with conversation-specific context', async () => {

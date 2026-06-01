@@ -593,6 +593,7 @@
             "inspect",
             "create",
             "set_title",
+            "change_working_directory",
             "ensure_live",
             "send_message",
             "abort",
@@ -634,7 +635,10 @@
       {
         "id": "conversationCwd",
         "handler": "conversationCwd",
-        "title": "Conversation cwd"
+        "title": "Conversation cwd",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "deferredResume",

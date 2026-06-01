@@ -1,8 +1,19 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolve } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@neon-pilot/extensions/backend/conversations', () => ({
+  resolveExistingConversationDirectory: async (cwd: string, baseCwd?: string) => {
+    const path = cwd.startsWith('/') ? cwd : resolve(baseCwd ?? process.cwd(), cwd);
+    const { existsSync, statSync } = await import('node:fs');
+    if (!existsSync(path)) throw new Error(`Directory does not exist: ${path}`);
+    if (!statSync(path).isDirectory()) throw new Error(`Not a directory: ${path}`);
+    return path;
+  },
+}));
 
 import { createChangeWorkingDirectoryAgentExtension } from './changeWorkingDirectoryAgentExtension.js';
 

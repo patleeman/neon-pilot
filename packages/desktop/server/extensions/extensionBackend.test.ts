@@ -429,6 +429,8 @@ describe('extension backend action invocation', () => {
           ? { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } }
           : exportName === 'conversationInspect'
             ? { content: [{ type: 'text', text: 'Listed conversations.' }], details: { action: 'list', conversations: [] } }
+          : exportName === 'conversationCwd'
+            ? { content: [{ type: 'text', text: 'Queued working directory change to /next.' }], details: { action: 'queue', cwd: '/next' } }
           : exportName === 'conversationTitle'
             ? { content: [{ type: 'text', text: 'Conversation title set.' }], details: { conversationId: 'conv-1', title: 'New Title' } }
             : { content: [{ type: 'text', text: 'scheduled' }], details: { text: 'scheduled', id: 'resume-1' } },
@@ -464,6 +466,15 @@ describe('extension backend action invocation', () => {
     ).resolves.toEqual({
       ok: true,
       result: { content: [{ type: 'text', text: 'Conversation title set.' }], details: { conversationId: 'conv-1', title: 'New Title' } },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationCwd', { cwd: '/next' }, undefined, {
+        conversationId: 'conv-1',
+        cwd: '/repo',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { content: [{ type: 'text', text: 'Queued working directory change to /next.' }], details: { action: 'queue', cwd: '/next' } },
     });
     await expect(
       invokeExtensionAction(
@@ -529,6 +540,24 @@ describe('extension backend action invocation', () => {
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationCwd',
+      { type: 'action', label: 'action conversationCwd', target: 'conversationCwd' },
+      [{ cwd: '/next' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
       },
     );
@@ -1736,6 +1765,8 @@ describe('extension backend action invocation', () => {
               ? { id: 'conv-2', conversationId: 'conv-2' }
               : action === 'inspect'
                 ? { action: 'list', conversations: [] }
+              : action === 'change_working_directory'
+                ? { action: 'queue', cwd: '/next', queued: true }
               : action === 'ensure_live'
                 ? { id: 'conv-1', conversationId: 'conv-1' }
                 : action === 'send_message'
@@ -1795,6 +1826,21 @@ describe('extension backend action invocation', () => {
       result: {
         content: [{ type: 'text', text: 'workspace_get complete.' }],
         details: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
+      },
+    });
+    await expect(
+      invokeExtensionAction(
+        'system-conversation-tools',
+        'conversationTool',
+        { action: 'change_working_directory', cwd: '/next' },
+        undefined,
+        { conversationId: 'conv-1', cwd: '/repo' },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'change_working_directory complete.' }],
+        details: { action: 'queue', cwd: '/next', queued: true },
       },
     });
     await expect(
@@ -1885,6 +1931,24 @@ describe('extension backend action invocation', () => {
       'conversationTool',
       { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
       [{ action: 'inspect', inspectAction: 'list' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'change_working_directory', cwd: '/next' }],
       {
         context: expect.objectContaining({
           type: 'backend',

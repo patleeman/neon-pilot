@@ -1,3 +1,5 @@
+import { existsSync, statSync } from 'node:fs';
+
 import { callServerModuleExport } from './serverModuleResolver.js';
 
 export const CONVERSATION_INSPECT_SCOPE_VALUES = ['all', 'live', 'running', 'archived'] as const;
@@ -13,6 +15,22 @@ export async function normalizeGeneratedConversationTitle(...args: unknown[]) {
 
 export async function resolveRequestedCwd(...args: unknown[]) {
   return callModuleExport('../../conversations/conversationCwd.js', 'resolveRequestedCwd', ...args);
+}
+
+export async function resolveExistingConversationDirectory(cwd: unknown, baseCwd?: unknown): Promise<string> {
+  const requested = typeof cwd === 'string' ? cwd : '';
+  const base = typeof baseCwd === 'string' ? baseCwd : undefined;
+  const nextCwd = await callModuleExport<string | undefined>('../../conversations/conversationCwd.js', 'resolveRequestedCwd', requested, base);
+  if (!nextCwd) {
+    throw new Error('cwd is required.');
+  }
+  if (!existsSync(nextCwd)) {
+    throw new Error(`Directory does not exist: ${nextCwd}`);
+  }
+  if (!statSync(nextCwd).isDirectory()) {
+    throw new Error(`Not a directory: ${nextCwd}`);
+  }
+  return nextCwd;
 }
 
 export async function querySessionSuggestedPointerIds(...args: unknown[]) {
