@@ -4,7 +4,7 @@ const logError = vi.fn();
 const logInfo = vi.fn();
 const createBackendContext = vi.fn();
 const loadExtensionBackend = vi.fn();
-const runnerRun = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
+const runnerRun = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
 const publishExtensionEvent = vi.fn();
 const subscribeExtensionEvents = vi.fn();
 const findExtensionEntry = vi.fn();
@@ -19,7 +19,10 @@ let handlers: Array<{ extensionId: string; pattern: string; handler: (event: unk
 
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
 vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend }));
-vi.mock('./extensionBackendRunner.js', () => ({ getExtensionBackendRunner: () => ({ run: runnerRun }) }));
+vi.mock('./extensionBackendRunner.js', () => ({
+  extensionBackendOperation: (type: string, label: string, options: { target?: string } = {}) => ({ type, label, ...options }),
+  getExtensionBackendRunner: () => ({ run: runnerRun }),
+}));
 vi.mock('./extensionEventBus.js', () => ({
   publishExtensionEvent,
   subscribeExtensionEvents,
@@ -93,7 +96,7 @@ describe('extensionSubscriptions', () => {
 
     handlers[0]?.handler({ event: 'host:settings:changed', payload: { x: 1 }, sourceExtensionId: 'host' });
     await vi.waitFor(() => expect(handler).toHaveBeenCalledOnce());
-    expect(runnerRun).toHaveBeenCalledWith('ext', 'subscription sub', expect.any(Function));
+    expect(runnerRun).toHaveBeenCalledWith('ext', { type: 'subscription', label: 'subscription sub', target: 'sub' }, expect.any(Function));
     expect(handler).toHaveBeenCalledWith(
       { subscriptionId: 'sub', event: 'host:settings:changed', payload: { x: 1 }, sourceExtensionId: 'host' },
       { ctx: true },

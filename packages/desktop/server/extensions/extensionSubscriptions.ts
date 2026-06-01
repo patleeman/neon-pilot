@@ -1,7 +1,7 @@
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
-import { getExtensionBackendRunner } from './extensionBackendRunner.js';
+import { extensionBackendOperation, getExtensionBackendRunner } from './extensionBackendRunner.js';
 import { type ExtensionEvent, publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
@@ -68,13 +68,16 @@ export async function installSubscriptionsForExtension(extensionId: string, serv
         const backend = await loadExtensionBackend(extensionId);
         const handler = backend[subscription.handler];
         if (typeof handler !== 'function') throw new Error(`Missing subscription handler export "${subscription.handler}".`);
-        await getExtensionBackendRunner().run(extensionId, `subscription ${subscription.id}`, () =>
-          Promise.resolve(
-            (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-              { subscriptionId: subscription.id, event: event.event, payload: event.payload, sourceExtensionId: event.sourceExtensionId },
-              createBackendContext(extensionId, serverContext),
+        await getExtensionBackendRunner().run(
+          extensionId,
+          extensionBackendOperation('subscription', `subscription ${subscription.id}`, { target: subscription.id }),
+          () =>
+            Promise.resolve(
+              (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
+                { subscriptionId: subscription.id, event: event.event, payload: event.payload, sourceExtensionId: event.sourceExtensionId },
+                createBackendContext(extensionId, serverContext),
+              ),
             ),
-          ),
         );
       } catch (error) {
         if (error instanceof ExtensionProcessTerminationBlockedError) {

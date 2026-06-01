@@ -9,10 +9,39 @@ export interface ExtensionBackendLoadTarget {
   hash: string;
 }
 
+export type ExtensionBackendOperationType =
+  | 'action'
+  | 'agent-factory'
+  | 'agent-factory-builder'
+  | 'protocol'
+  | 'route'
+  | 'self-test-action'
+  | 'service-health-check'
+  | 'service-startup'
+  | 'subscription';
+
+export interface ExtensionBackendOperation {
+  type: ExtensionBackendOperationType;
+  label: string;
+  target?: string;
+}
+
 export interface ExtensionBackendRunner {
   loadModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<ExtensionBackendModule>;
   clearModule(extensionId: string): void;
-  run<T>(extensionId: string, operation: string, handler: () => Promise<T> | T): Promise<T>;
+  run<T>(extensionId: string, operation: ExtensionBackendOperation, handler: () => Promise<T> | T): Promise<T>;
+}
+
+export function extensionBackendOperation(
+  type: ExtensionBackendOperationType,
+  label: string,
+  options: { target?: string } = {},
+): ExtensionBackendOperation {
+  return {
+    type,
+    label,
+    ...(options.target ? { target: options.target } : {}),
+  };
 }
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
@@ -38,7 +67,7 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
       backendModuleCache.delete(extensionId);
     },
     run(extensionId, operation, handler) {
-      return withExtensionProcessGuard(extensionId, operation, () => Promise.resolve(handler()));
+      return withExtensionProcessGuard(extensionId, operation.label, () => Promise.resolve(handler()));
     },
   };
 }

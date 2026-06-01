@@ -2,7 +2,7 @@ import { publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
-import { getExtensionBackendRunner } from './extensionBackendRunner.js';
+import { extensionBackendOperation, getExtensionBackendRunner } from './extensionBackendRunner.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearExtensionFailureRecordsForOperation,
@@ -68,7 +68,7 @@ async function startOneExtensionService(
     if (typeof handler !== 'function') throw new Error(`Missing service handler export "${service.handler}".`);
     const SERVICE_STARTUP_TIMEOUT_MS = 30_000;
     const result = await Promise.race([
-      getExtensionBackendRunner().run(extensionId, `service ${service.id} startup`, () =>
+      getExtensionBackendRunner().run(extensionId, extensionBackendOperation('service-startup', `service ${service.id} startup`, { target: service.id }), () =>
         Promise.resolve(
           (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
             { serviceId: service.id },
@@ -130,13 +130,16 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         if (typeof healthCheck !== 'function') throw new Error(`Missing service healthCheck export "${service.healthCheck}".`);
         const HEALTH_CHECK_TIMEOUT_MS = 15_000;
         const result = await Promise.race([
-          getExtensionBackendRunner().run(summary.id, `service ${service.id} health check`, () =>
-            Promise.resolve(
-              (healthCheck as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
-                { serviceId: service.id },
-                createBackendContext(summary.id, serverContext),
+          getExtensionBackendRunner().run(
+            summary.id,
+            extensionBackendOperation('service-health-check', `service ${service.id} health check`, { target: service.id }),
+            () =>
+              Promise.resolve(
+                (healthCheck as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
+                  { serviceId: service.id },
+                  createBackendContext(summary.id, serverContext),
+                ),
               ),
-            ),
           ),
           new Promise<never>((_, reject) =>
             setTimeout(

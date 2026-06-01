@@ -26,9 +26,16 @@ for (const file of listExtensionFiles()) {
   if (!existsSync(absolute)) continue;
   const text = readFileSync(absolute, 'utf8');
   const match = /\bwithExtensionProcessGuard\s*\(/.exec(text);
-  if (!match) continue;
-  const line = text.slice(0, match.index).split('\n').length;
-  failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend execution must go through ExtensionBackendRunner`);
+  if (match) {
+    const line = text.slice(0, match.index).split('\n').length;
+    failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend execution must go through ExtensionBackendRunner`);
+  }
+
+  const rawRunnerOperation = /\bgetExtensionBackendRunner\(\)\.run\(\s*[^,\n]+,\s*(['`])/.exec(text);
+  if (rawRunnerOperation) {
+    const line = text.slice(0, rawRunnerOperation.index).split('\n').length;
+    failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend runner operations must use extensionBackendOperation(...)`);
+  }
 }
 
 const hostClientPath = resolve(repoRoot, extensionHostClientFile);

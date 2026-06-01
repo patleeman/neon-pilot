@@ -12,7 +12,12 @@ import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
-import { type ExtensionBackendLoadTarget, type ExtensionBackendModule, getExtensionBackendRunner } from './extensionBackendRunner.js';
+import {
+  type ExtensionBackendLoadTarget,
+  type ExtensionBackendModule,
+  extensionBackendOperation,
+  getExtensionBackendRunner,
+} from './extensionBackendRunner.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
@@ -616,7 +621,11 @@ export async function loadExtensionAgentFactory(extensionId: string, exportName 
   // - factory builder: export function createExtension(): (pi) => void { ... }
   // Normalize both so the SDK always receives the actual (pi) => void factory.
   if (candidate.length === 0) {
-    const built = await getExtensionBackendRunner().run(extensionId, 'agent extension factory builder', () => (candidate as () => unknown)());
+    const built = await getExtensionBackendRunner().run(
+      extensionId,
+      extensionBackendOperation('agent-factory-builder', 'agent extension factory builder', { target: exportName }),
+      () => (candidate as () => unknown)(),
+    );
     if (typeof built !== 'function') {
       throw new Error(`Extension agent factory builder did not return a function: ${exportName}`);
     }
@@ -668,7 +677,7 @@ export async function invokeExtensionRoute(
   if (typeof handler !== 'function') {
     return { status: 500, body: { error: `Extension route handler not found: ${route.handler}` } };
   }
-  const result = await getExtensionBackendRunner().run(extensionId, `route ${method} ${routePath}`, () =>
+  const result = await getExtensionBackendRunner().run(extensionId, extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }), () =>
     Promise.resolve(
       (handler as (request: ExtensionRouteRequest, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
         request,
@@ -724,7 +733,7 @@ export async function invokeExtensionAction(
       });
     }
 
-    const result = await getExtensionBackendRunner().run(extensionId, `action ${actionId}`, () => {
+    const result = await getExtensionBackendRunner().run(extensionId, extensionBackendOperation('action', `action ${actionId}`, { target: actionId }), () => {
       actionHandlerStarted = true;
       return Promise.resolve(
         (handler as (input: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
@@ -808,7 +817,7 @@ export async function invokeExtensionProtocolEntrypoint(
     throw new Error(`Extension "${extensionId}" protocol handler not found: ${entrypoint.handler}`);
   }
 
-  await getExtensionBackendRunner().run(extensionId, `protocol ${protocolId}`, () =>
+  await getExtensionBackendRunner().run(extensionId, extensionBackendOperation('protocol', `protocol ${protocolId}`, { target: protocolId }), () =>
     Promise.resolve(
       (handler as (entryInput: unknown, ctx: ExtensionProtocolContext) => unknown | Promise<unknown>)(
         input,
@@ -856,13 +865,16 @@ export async function runExtensionSelfTest(
         continue;
       }
       try {
-        const result = await getExtensionBackendRunner().run(extensionId, `self-test action ${actionId}`, () =>
-          Promise.resolve(
-            (handler as (actionInput: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
-              input,
-              createBackendContext(extensionId, undefined, { conversationId: 'extension-self-test', cwd: process.cwd() }),
+        const result = await getExtensionBackendRunner().run(
+          extensionId,
+          extensionBackendOperation('self-test-action', `self-test action ${actionId}`, { target: actionId }),
+          () =>
+            Promise.resolve(
+              (handler as (actionInput: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
+                input,
+                createBackendContext(extensionId, undefined, { conversationId: 'extension-self-test', cwd: process.cwd() }),
+              ),
             ),
-          ),
         );
         checks.push({
           name: `action smoke: ${actionId}`,

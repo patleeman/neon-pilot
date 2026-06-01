@@ -7,7 +7,7 @@ const logError = vi.fn();
 const logInfo = vi.fn();
 const createBackendContext = vi.fn();
 const loadExtensionBackend = vi.fn();
-const runnerRun = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
+const runnerRun = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
 const findExtensionEntry = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
 const recordExtensionFailure = vi.fn();
@@ -19,7 +19,10 @@ const setExtensionEnabled = vi.fn();
 vi.mock('../shared/appEvents.js', () => ({ publishAppEvent }));
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
 vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend }));
-vi.mock('./extensionBackendRunner.js', () => ({ getExtensionBackendRunner: () => ({ run: runnerRun }) }));
+vi.mock('./extensionBackendRunner.js', () => ({
+  extensionBackendOperation: (type: string, label: string, options: { target?: string } = {}) => ({ type, label, ...options }),
+  getExtensionBackendRunner: () => ({ run: runnerRun }),
+}));
 vi.mock('./extensionRegistry.js', () => ({
   findExtensionEntry,
   listExtensionInstallSummaries,
@@ -74,7 +77,11 @@ describe('extensionServices', () => {
 
     await expect(startExtensionServices({ server: true } as never)).resolves.toEqual([{ extensionId: 'ext', serviceId: 'sync', ok: true }]);
     expect(startSync).toHaveBeenCalledWith({ serviceId: 'sync' }, { ctx: true });
-    expect(runnerRun).toHaveBeenCalledWith('ext', 'service sync startup', expect.any(Function));
+    expect(runnerRun).toHaveBeenCalledWith(
+      'ext',
+      { type: 'service-startup', label: 'service sync startup', target: 'sync' },
+      expect.any(Function),
+    );
     expect(isExtensionServiceRunning('ext', 'sync')).toBe(true);
     expect(listRunningExtensionServices()[0]).toMatchObject({ extensionId: 'ext', serviceId: 'sync', startedAt: expect.any(String) });
     expect(clearExtensionHealthError).toHaveBeenCalledWith('ext');
@@ -133,7 +140,11 @@ describe('extensionServices', () => {
 
     expect(clearExtensionHealthError).toHaveBeenCalledWith('ext');
     expect(clearExtensionFailureRecordsForOperation).toHaveBeenCalledWith('ext', 'service sync health check');
-    expect(runnerRun).toHaveBeenCalledWith('ext', 'service sync health check', expect.any(Function));
+    expect(runnerRun).toHaveBeenCalledWith(
+      'ext',
+      { type: 'service-health-check', label: 'service sync health check', target: 'sync' },
+      expect.any(Function),
+    );
     expect(recordExtensionFailure).not.toHaveBeenCalled();
   });
 

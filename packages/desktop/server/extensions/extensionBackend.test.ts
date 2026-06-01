@@ -140,7 +140,7 @@ describe('extension backend action invocation', () => {
     );
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
     const loadModule = vi.fn(async () => ({ doThing: vi.fn((input: unknown) => ({ input, via: 'runner' })) }));
-    const run = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
+    const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
@@ -156,7 +156,11 @@ describe('extension backend action invocation', () => {
       'runner-action-ext',
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
     );
-    expect(run).toHaveBeenCalledWith('runner-action-ext', 'action doThing', expect.any(Function));
+    expect(run).toHaveBeenCalledWith(
+      'runner-action-ext',
+      { type: 'action', label: 'action doThing', target: 'doThing' },
+      expect.any(Function),
+    );
   });
 
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
@@ -179,7 +183,7 @@ describe('extension backend action invocation', () => {
     const factory = vi.fn();
     const create = vi.fn(() => factory);
     const loadModule = vi.fn(async () => ({ create }));
-    const run = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
+    const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
@@ -189,7 +193,11 @@ describe('extension backend action invocation', () => {
     await expect(loadExtensionAgentFactory('runner-agent-builder-ext', 'create')).resolves.toBe(factory);
 
     expect(create).toHaveBeenCalledOnce();
-    expect(run).toHaveBeenCalledWith('runner-agent-builder-ext', 'agent extension factory builder', expect.any(Function));
+    expect(run).toHaveBeenCalledWith(
+      'runner-agent-builder-ext',
+      { type: 'agent-factory-builder', label: 'agent extension factory builder', target: 'create' },
+      expect.any(Function),
+    );
   });
 });
 
