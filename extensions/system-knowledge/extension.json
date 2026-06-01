@@ -118,7 +118,10 @@
       {
         "id": "readMemory",
         "handler": "readMemory",
-        "title": "Read memory"
+        "title": "Read memory",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "resolvePromptReferences",
@@ -234,7 +237,10 @@
         "method": "GET",
         "path": "/memory",
         "handler": "memoryRoute",
-        "title": "Read memory context route"
+        "title": "Read memory context route",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },

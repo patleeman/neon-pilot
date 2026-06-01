@@ -2035,9 +2035,11 @@ describe('extension backend action invocation', () => {
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
-        exportName === 'knowledgeReadFile'
-          ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
-          : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
+        exportName === 'readMemory'
+          ? { agentsMd: [], skills: [], memoryDocs: [] }
+          : exportName === 'knowledgeReadFile'
+            ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
+            : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
       ),
       run: vi.fn(),
     };
@@ -2051,6 +2053,10 @@ describe('extension backend action invocation', () => {
     await expect(invokeExtensionAction('system-knowledge', 'knowledgeReadFile', { id: 'notes/a.md' })).resolves.toEqual({
       ok: true,
       result: { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' },
+    });
+    await expect(invokeExtensionAction('system-knowledge', 'readMemory', {})).resolves.toEqual({
+      ok: true,
+      result: { agentsMd: [], skills: [], memoryDocs: [] },
     });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -2089,6 +2095,24 @@ describe('extension backend action invocation', () => {
         context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')),
+      }),
+      'readMemory',
+      { type: 'action', label: 'action readMemory', target: 'readMemory' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
         }),
@@ -2335,7 +2359,11 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(async () => true),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
-      runWorkerExport: vi.fn(async () => ({ status: 200, body: { results: [{ id: 'notes/a.md' }] } })),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'memoryRoute'
+          ? { status: 200, body: { agentsMd: [], skills: [], memoryDocs: [] } }
+          : { status: 200, body: { results: [{ id: 'notes/a.md' }] } },
+      ),
       run: vi.fn(),
     };
     setExtensionBackendRunnerForTests(backendRunner);
@@ -2349,6 +2377,14 @@ describe('extension backend action invocation', () => {
         params: {},
       }),
     ).resolves.toEqual({ status: 200, body: { results: [{ id: 'notes/a.md' }] } });
+    await expect(
+      invokeExtensionRoute('system-knowledge', 'GET', '/memory', {
+        method: 'GET',
+        path: '/memory',
+        query: {},
+        params: {},
+      }),
+    ).resolves.toEqual({ status: 200, body: { agentsMd: [], skills: [], memoryDocs: [] } });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-knowledge',
@@ -2356,6 +2392,21 @@ describe('extension backend action invocation', () => {
       'knowledgeSearchRoute',
       { type: 'route', label: 'route GET /knowledge/search', target: '/knowledge/search' },
       [{ method: 'GET', path: '/knowledge/search', query: { q: 'alpha' }, params: {} }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')) }),
+      'memoryRoute',
+      { type: 'route', label: 'route GET /memory', target: '/memory' },
+      [{ method: 'GET', path: '/memory', query: {}, params: {} }],
       {
         context: expect.objectContaining({
           type: 'backend',
