@@ -19,8 +19,10 @@ DS4 is local DeepSeek V4 Flash served by `ds4-server`. It is optimized for codin
   - `ds4 help`
   - `ds4 tools`
   - `ds4 tools --json`
-  - `ds4 call web_search '{"query":"current docs","count":5}'`
-  - `printf '%s' '{"url":"https://example.com"}' | ds4 call web_fetch --stdin`
+  - `ds4 help web_search`
+  - `ds4 web_search --query "current docs" --count 5`
+  - `ds4 web_fetch --url https://example.com`
+  - `printf '%s' '{"query":"current docs"}' | ds4 web_search --stdin`
 - Prefer direct shell commands when they are shorter or more precise:
   - `rg -n --hidden --glob '!node_modules' --glob '!dist' 'pattern' path`
   - `git status --short && git diff --stat`

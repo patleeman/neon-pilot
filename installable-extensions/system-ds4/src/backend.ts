@@ -104,6 +104,14 @@ type Ds4ToolsApi = {
   invokeToolByName<T = unknown>(input: unknown): Promise<T>;
 };
 
+type ToolGatewaySummary = {
+  name: string;
+  title?: string;
+  description: string;
+  inputSchema?: Record<string, unknown>;
+  source?: { extensionId?: string; toolId?: string; action?: string };
+};
+
 let ds4ToolsApiOverride: Ds4ToolsApi | null = null;
 
 export function __setDs4ToolsApiForTest(api: Ds4ToolsApi | null): void {
@@ -115,13 +123,17 @@ const DS4_CLI_USAGE = `ds4 tool gateway
 Usage:
   ds4 help
   ds4 tools [--json]
-  ds4 call <tool-name> [json-input]
-  ds4 call <tool-name> --stdin
+  ds4 help <tool-name>
+  ds4 <tool-name> [--field value ...]
+  ds4 <tool-name> --json '{"field":"value"}'
+  ds4 call <tool-name> --json '{"field":"value"}'
 
 Examples:
   ds4 tools
-  ds4 call web_search '{"query":"neon pilot ds4","count":5}'
-  printf '%s' '{"url":"https://example.com"}' | ds4 call web_fetch --stdin
+  ds4 help web_search
+  ds4 web_search --query "neon pilot ds4" --count 5
+  ds4 web_fetch --url https://example.com
+  printf '%s' '{"query":"neon pilot ds4"}' | ds4 web_search --stdin
 
 DS4 exposes only core tools directly. This CLI lists and invokes extension tools
 that are active for the current runtime but intentionally absent from the DS4
@@ -405,17 +417,118 @@ function parseJsonInput(raw: string): unknown {
   return JSON.parse(trimmed);
 }
 
+async function listDs4CliTools(ctx: ExtensionBackendContext): Promise<ToolGatewaySummary[]> {
+  const { listInvocableExtensionTools } = ds4ToolsApiOverride ?? (await import('@neon-pilot/extensions/backend/tools'));
+  return listInvocableExtensionTools<ToolGatewaySummary[]>(toolRuntime(ctx));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function schemaProperties(tool: ToolGatewaySummary): Record<string, Record<string, unknown>> {
+  const properties = tool.inputSchema?.properties;
+  if (!isRecord(properties)) return {};
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    if (isRecord(value)) result[key] = value;
+  }
+  return result;
+}
+
+function schemaRequired(tool: ToolGatewaySummary): Set<string> {
+  const required = tool.inputSchema?.required;
+  return new Set(Array.isArray(required) ? required.filter((item): item is string => typeof item === 'string') : []);
+}
+
+function coerceCliValue(raw: string | boolean, schema?: Record<string, unknown>): unknown {
+  if (raw === true) return true;
+  const type = schema?.type;
+  if (type === 'number' || type === 'integer') {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) throw new Error(`Expected a number but received "${raw}".`);
+    return type === 'integer' ? Math.trunc(parsed) : parsed;
+  }
+  if (type === 'boolean') {
+    if (/^(1|true|yes|on)$/i.test(raw)) return true;
+    if (/^(0|false|no|off)$/i.test(raw)) return false;
+    throw new Error(`Expected a boolean but received "${raw}".`);
+  }
+  if (type === 'array') return raw.includes(',') ? raw.split(',').map((item) => item.trim()) : [raw];
+  if (type === 'object') return parseJsonInput(raw);
+  return raw;
+}
+
+function flagNameToProperty(flag: string, properties: Record<string, Record<string, unknown>>): string {
+  const normalized = flag.replace(/^-+/, '').replaceAll('-', '_');
+  if (properties[normalized]) return normalized;
+  const direct = Object.keys(properties).find((property) => property.toLowerCase() === normalized.toLowerCase());
+  if (direct) return direct;
+  return normalized;
+}
+
+function parseToolFlagInput(tool: ToolGatewaySummary, args: string[]): unknown {
+  const properties = schemaProperties(tool);
+  const input: Record<string, unknown> = {};
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? '';
+    if (!arg.startsWith('--')) {
+      positional.push(arg);
+      continue;
+    }
+    const eqIndex = arg.indexOf('=');
+    const rawFlag = eqIndex >= 0 ? arg.slice(0, eqIndex) : arg;
+    const property = flagNameToProperty(rawFlag, properties);
+    const schema = properties[property];
+    const rawValue = eqIndex >= 0 ? arg.slice(eqIndex + 1) : schema?.type === 'boolean' ? true : args[++index];
+    if (rawValue === undefined) throw new Error(`Missing value for ${rawFlag}.`);
+    input[property] = coerceCliValue(rawValue, schema);
+  }
+
+  if (positional.length > 0) {
+    const firstRequiredString = Array.from(schemaRequired(tool)).find((name) => properties[name]?.type === 'string' && input[name] === undefined);
+    if (firstRequiredString && positional.length === 1) input[firstRequiredString] = positional[0];
+    else if (positional.length > 0) input._args = positional;
+  }
+
+  return input;
+}
+
+function renderToolHelp(tool: ToolGatewaySummary): string {
+  const properties = schemaProperties(tool);
+  const required = schemaRequired(tool);
+  const flags = Object.entries(properties).map(([name, schema]) => {
+    const flag = `--${name.replaceAll('_', '-')}`;
+    const type = typeof schema.type === 'string' ? schema.type : 'value';
+    const description = typeof schema.description === 'string' ? `  ${schema.description}` : '';
+    return `  ${flag} <${type}>${required.has(name) ? ' required' : ''}${description}`;
+  });
+  const source = tool.source?.extensionId && tool.source?.toolId ? `\nSource: ${tool.source.extensionId}/${tool.source.toolId}` : '';
+  return [
+    `${tool.name}${tool.title ? ` - ${tool.title}` : ''}`,
+    tool.description,
+    source.trim(),
+    '',
+    `Usage: ds4 ${tool.name} ${flags.length ? '[flags]' : ''}`.trim(),
+    flags.length ? ['', 'Flags:', ...flags].join('\n') : '',
+    '',
+    `JSON fallback: ds4 ${tool.name} --json '${JSON.stringify(Object.fromEntries(Object.keys(properties).slice(0, 3).map((key) => [key, `<${key}>`])))}'`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export async function ds4ToolsCli(input: unknown, ctx: ExtensionBackendContext & { stdio?: { stdin?: NodeJS.ReadableStream; stdout?: NodeJS.WritableStream; stderr?: NodeJS.WritableStream } }) {
   const args = protocolArgs(input);
   const command = args.shift() ?? 'help';
-  if (command === 'help' || command === '--help' || command === '-h') {
+  if ((command === 'help' || command === '--help' || command === '-h') && args.length === 0) {
     writeProtocol(ctx, DS4_CLI_USAGE);
     return;
   }
 
   if (command === 'tools' || command === 'list-tools') {
-    const { listInvocableExtensionTools } = ds4ToolsApiOverride ?? (await import('@neon-pilot/extensions/backend/tools'));
-    const tools = await listInvocableExtensionTools<Array<{ name: string; description: string; source?: { extensionId?: string; toolId?: string } }>>(toolRuntime(ctx));
+    const tools = await listDs4CliTools(ctx);
     if (args.includes('--json')) {
       writeProtocol(ctx, JSON.stringify(tools, null, 2));
       return;
@@ -432,16 +545,25 @@ export async function ds4ToolsCli(input: unknown, ctx: ExtensionBackendContext &
     return;
   }
 
-  if (command === 'call' || command === 'invoke') {
-    const toolName = args.shift();
-    if (!toolName) throw new Error('tool name is required.');
-    const useStdin = args.includes('--stdin') || args.includes('-');
-    const rawInput = useStdin ? await readProtocolStdin(ctx) : args.join(' ');
-    const result = await callHostTool(toolName, parseJsonInput(rawInput), ctx);
-    writeProtocol(ctx, textFrom(result));
-    if (result.isError) process.exitCode = 1;
+  const tools = await listDs4CliTools(ctx);
+  const toolName = command === 'call' || command === 'invoke' ? args.shift() : command === 'help' ? args.shift() : command;
+  const tool = tools.find((candidate) => candidate.name === toolName);
+  if (!toolName) throw new Error('tool name is required.');
+  if (!tool) throw new Error(`Tool is not available: ${toolName}. Run "ds4 tools" to list available tools.`);
+  if (command === 'help') {
+    writeProtocol(ctx, renderToolHelp(tool));
     return;
   }
+
+  const jsonIndex = args.findIndex((arg) => arg === '--json');
+  const useStdin = args.includes('--stdin') || args.includes('-');
+  const rawInput =
+    useStdin ? await readProtocolStdin(ctx) : jsonIndex >= 0 ? (args[jsonIndex + 1] ?? '') : command === 'call' || command === 'invoke' ? args.join(' ') : '';
+  const toolInput = useStdin || jsonIndex >= 0 || ((command === 'call' || command === 'invoke') && rawInput.trim()) ? parseJsonInput(rawInput) : parseToolFlagInput(tool, args);
+  const result = await callHostTool(tool.name, toolInput, ctx);
+  writeProtocol(ctx, textFrom(result));
+  if (result.isError) process.exitCode = 1;
+  return;
 
   writeProtocolError(ctx, `Unknown ds4 command: ${command}\n\n${DS4_CLI_USAGE}`);
   process.exitCode = 1;

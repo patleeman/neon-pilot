@@ -74,6 +74,10 @@ function ctx(overrides: Record<string, unknown> = {}) {
 
 afterEach(() => {
   backend.__setDs4ToolsApiForTest(null);
+  backendTools.listInvocableExtensionTools.mockReset();
+  backendTools.invokeToolByName.mockReset();
+  backendTools.listInvocableExtensionTools.mockResolvedValue([]);
+  backendTools.invokeToolByName.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], details: { ok: true } });
   vi.unstubAllGlobals();
 });
 
@@ -507,6 +511,7 @@ describe('DS4 tool CLI gateway', () => {
       {
         name: 'web_search',
         description: 'Search the web',
+        inputSchema: { type: 'object', properties: { query: { type: 'string' }, count: { type: 'integer' } }, required: ['query'] },
         source: { extensionId: 'system-duckduckgo-search', toolId: 'search' },
       },
     ]);
@@ -524,6 +529,13 @@ describe('DS4 tool CLI gateway', () => {
 
   it('invokes a named extension tool with JSON input and DS4 session context', async () => {
     backend.__setDs4ToolsApiForTest(backendTools);
+    backendTools.listInvocableExtensionTools.mockResolvedValueOnce([
+      {
+        name: 'web_search',
+        description: 'Search the web',
+        inputSchema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+      },
+    ]);
     const stdout = { write: vi.fn() };
     const context = ctx({
       stdio: {
@@ -553,6 +565,60 @@ describe('DS4 tool CLI gateway', () => {
       }),
     );
     expect(stdout.write.mock.calls[0]?.[0]).toBe('ok\n');
+  });
+
+  it('converts tool schemas into CLI flags before invoking tools', async () => {
+    backend.__setDs4ToolsApiForTest(backendTools);
+    backendTools.listInvocableExtensionTools.mockResolvedValueOnce([
+      {
+        name: 'web_search',
+        description: 'Search the web',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query' },
+            count: { type: 'integer', description: 'Result count' },
+          },
+          required: ['query'],
+        },
+      },
+    ]);
+    const stdout = { write: vi.fn() };
+
+    await backend.ds4ToolsCli({ args: ['web_search', '--query', 'hello', '--count', '5'] }, ctx({ stdio: { stdout } }) as never);
+
+    expect(backendTools.invokeToolByName).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'web_search',
+        input: { query: 'hello', count: 5 },
+      }),
+    );
+  });
+
+  it('prints generated per-tool CLI help from the schema', async () => {
+    backend.__setDs4ToolsApiForTest(backendTools);
+    backendTools.listInvocableExtensionTools.mockResolvedValueOnce([
+      {
+        name: 'web_search',
+        description: 'Search the web',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query' },
+            count: { type: 'integer', description: 'Result count' },
+          },
+          required: ['query'],
+        },
+      },
+    ]);
+    const stdout = { write: vi.fn() };
+
+    await backend.ds4ToolsCli({ args: ['help', 'web_search'] }, ctx({ stdio: { stdout } }) as never);
+
+    const output = stdout.write.mock.calls[0]?.[0] as string;
+    expect(output).toContain('Usage: ds4 web_search [flags]');
+    expect(output).toContain('--query <string> required');
+    expect(output).toContain('--count <integer>');
   });
 });
 

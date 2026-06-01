@@ -11,13 +11,17 @@ function usage() {
 Usage:
   ds4 help
   ds4 tools [--json]
-  ds4 call <tool-name> [json-input]
-  ds4 call <tool-name> --stdin
+  ds4 help <tool-name>
+  ds4 <tool-name> [--field value ...]
+  ds4 <tool-name> --json '{"field":"value"}'
+  ds4 call <tool-name> --json '{"field":"value"}'
 
 Examples:
   ds4 tools
-  ds4 call web_search '{"query":"neon pilot ds4","count":5}'
-  printf '%s' '{"url":"https://example.com"}' | ds4 call web_fetch --stdin
+  ds4 help web_search
+  ds4 web_search --query "neon pilot ds4" --count 5
+  ds4 web_fetch --url https://example.com
+  printf '%s' '{"query":"neon pilot ds4"}' | ds4 web_search --stdin
 
 DS4 exposes only core tools directly. This CLI lists and invokes extension tools
 that are active for the current runtime but intentionally absent from the DS4
