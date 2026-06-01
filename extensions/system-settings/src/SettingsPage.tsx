@@ -2126,7 +2126,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     [editingModelId, editingProviderModel, builtInProviderModels],
   );
   const providerModelCount = selectedModelProvider?.models.length ?? 0;
-  const isProviderSetupFlow = providerEditorMode === 'provider' && selectedModelProviderId === NEW_MODEL_PROVIDER_ID;
 
   const selectedProvider = useMemo(() => {
     if (!providerAuthState || !selectedProviderId) {
@@ -3459,7 +3458,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             </div>
                           </div>
                           <div className="min-h-0 space-y-6 overflow-y-auto px-5 pb-5">
-                            {(providerEditorMode === 'custom' || selectedModelProvider) && !isProviderSetupFlow && (
+                            {(providerEditorMode === 'custom' || selectedModelProvider) && (
                               <div className="space-y-4 min-w-0">
                                 <div className="space-y-1">
                                   <h3 className="text-[14px] font-medium text-primary">Provider details</h3>
@@ -3696,13 +3695,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             )}
 
                             <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)]">
-                              <h3 className="text-[14px] font-medium text-primary">Model Overrides</h3>
+                              <h3 className="text-[14px] font-medium text-primary">Models</h3>
                               <div className="min-w-0 space-y-2">
                                 <p className="ui-card-meta">
                                   {providerModelCount > 0
                                     ? `${providerModelCount} configured ${providerModelCount === 1 ? 'model' : 'models'} available.`
                                     : selectedModelProviderId === NEW_MODEL_PROVIDER_ID
-                                      ? 'Optional. Add only when this provider needs custom model routing.'
+                                      ? 'Create this provider before adding models.'
                                       : 'No custom model configuration.'}
                                 </p>
                                 <button
@@ -3713,7 +3712,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   disabled={!editableModelProviderId || modelDraftAction !== null}
                                   className={ACTION_BUTTON_CLASS}
                                 >
-                                  {showProviderModelManagement ? 'Hide Model Editor' : 'Customize Models'}
+                                  {showProviderModelManagement ? 'Hide model editor' : 'Customize models'}
                                 </button>
                               </div>
                             </div>
@@ -3724,7 +3723,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   {providerModelCount > 0
                                     ? `${providerModelCount} model ${providerModelCount === 1 ? 'row' : 'rows'} loaded from defaults.`
                                     : selectedModelProviderId === NEW_MODEL_PROVIDER_ID
-                                      ? 'Default models are available from the provider catalog; add overrides only for custom entries.'
+                                      ? 'Save this provider to auto-load model defaults for this provider ID, when available.'
                                       : 'No model rows yet for this provider.'}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -4185,9 +4184,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             ) : null}
 
                             <div className="grid gap-3 min-w-0 md:grid-cols-[140px_minmax(0,1fr)]">
-                              <h3 className="text-[14px] font-medium text-primary">
-                                {isProviderSetupFlow ? 'Connect Method' : 'Credentials'}
-                              </h3>
+                              <h3 className="text-[14px] font-medium text-primary">Credentials</h3>
                               <div className="min-w-0 space-y-3">
                                 <div className="space-y-1">
                                   {modalProviderAuth ? (
@@ -4197,11 +4194,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                                 {modalProviderAuth ? (
                                   <div className="space-y-3">
-                                    {isProviderSetupFlow ? (
-                                      <p className="ui-card-meta">
-                                        Choose one way to connect. You can add model overrides later if this provider needs custom routing.
-                                      </p>
-                                    ) : null}
                                     <div className="flex flex-wrap gap-2">
                                       {canProviderUseApiKey(modalProviderAuth) && (
                                         <button
@@ -4213,7 +4205,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
                                           className={ACTION_BUTTON_CLASS}
                                         >
-                                          {modalProviderAuth.hasStoredCredential ? 'Replace API Key' : 'API Key'}
+                                          {modalProviderAuth.hasStoredCredential ? 'Replace API key' : 'Connect with API key'}
                                         </button>
                                       )}
                                       <button
@@ -4228,7 +4220,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         }
                                         className={ACTION_BUTTON_CLASS}
                                       >
-                                        {providerCredentialAction === 'remove' ? 'Removing…' : 'Remove Stored Credential'}
+                                        {providerCredentialAction === 'remove' ? 'Removing…' : 'Remove stored credential'}
                                       </button>
                                       {modalProviderAuth.oauthSupported && (
                                         <button
@@ -4243,7 +4235,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           }
                                           className={ACTION_BUTTON_CLASS}
                                         >
-                                          {oauthAction === 'start' ? 'Starting Login…' : 'OAuth Login'}
+                                          {oauthAction === 'start' ? 'Starting login…' : `Start OAuth login (${modalProviderAuth.id})`}
                                         </button>
                                       )}
                                     </div>

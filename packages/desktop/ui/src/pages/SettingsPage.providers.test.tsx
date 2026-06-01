@@ -454,7 +454,7 @@ describe('SettingsPage provider model editor', () => {
     click(anthropicButton);
 
     expect(container.textContent).toContain('Anthropic');
-    click(queryButton(container, 'Customize Models'));
+    click(queryButton(container, 'Customize models'));
     expect(container.textContent).toContain('Additional models');
 
     click(queryButton(container, 'Add model'));
@@ -540,7 +540,9 @@ describe('SettingsPage provider model editor', () => {
     click(queryProviderRowAction(container, 'OpenAI Codex', 'Manage'));
     await flushAsyncWork();
 
-    const oauthButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('OAuth Login'));
+    const oauthButton = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Start OAuth login'),
+    );
     if (!(oauthButton instanceof HTMLButtonElement)) {
       throw new Error('Expected OAuth login button');
     }
@@ -579,7 +581,7 @@ describe('SettingsPage provider model editor', () => {
       click(queryProviderRowAction(container, 'OpenAI Codex', 'Manage'));
       await flushAsyncWork();
 
-      const removeButton = queryButton(container, 'Remove Stored Credential');
+      const removeButton = queryButton(container, 'Remove stored credential');
       expect(removeButton.disabled).toBe(false);
       click(removeButton);
       await flushAsyncWork();
