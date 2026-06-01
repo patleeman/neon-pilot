@@ -4,11 +4,12 @@ import { basename, join, resolve } from 'node:path';
 
 import { importRuntimeExtensionBundle } from './extensionLifecycle.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
+import { INSTALLABLE_EXTENSION_CATALOG } from './installableExtensionCatalog.generated.js';
 
 const GITHUB_RELEASE_BASE_URL = 'https://github.com/patleeman/neon-pilot/releases/download';
 const MAX_EXTENSION_BUNDLE_BYTES = 80 * 1024 * 1024;
 
-interface CatalogSeed {
+export interface CatalogSeed {
   id: string;
   name: string;
   description: string;
@@ -53,54 +54,6 @@ const MARKETPLACE_SOURCES: MarketplaceSource[] = [
     description: 'Claude-style capability packages such as SKILL.md skill folders, instruction packs, templates, and agents.',
     supportedPackageTypes: ['skill', 'instruction-pack', 'agent', 'template'],
     installStatus: 'planned',
-  },
-];
-
-const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
-  {
-    id: 'system-alleycat',
-    name: 'Kitty Litter Mobile Pairing',
-    description: 'Mobile pairing bridge for Kitty Litter clients.',
-  },
-  {
-    id: 'system-browser',
-    name: 'Browser',
-    description: 'Browser automation tool and Workbench browser views.',
-  },
-  {
-    id: 'system-duckduckgo-search',
-    name: 'DuckDuckGo Search',
-    description: 'Agent web search tool backed by DuckDuckGo HTML results.',
-  },
-  {
-    id: 'system-ds4',
-    name: 'DS4',
-    description: 'DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4.',
-  },
-  {
-    id: 'system-exa-search',
-    name: 'Exa Search',
-    description: 'Agent tool for Exa web search.',
-  },
-  {
-    id: 'system-local-models',
-    name: 'Local Models',
-    description: 'Local MLX and GGUF model management UI.',
-  },
-  {
-    id: 'system-self-preservation',
-    name: 'Self Preservation',
-    description: 'Agent self-preservation instruction and context hooks.',
-  },
-  {
-    id: 'system-suggested-context',
-    name: 'Suggested Context',
-    description: 'Suggests related conversations as pointer context for new prompts.',
-  },
-  {
-    id: 'system-video-probe',
-    name: 'Video Probe',
-    description: 'Analyze UI recordings and videos with a video-capable model.',
   },
 ];
 

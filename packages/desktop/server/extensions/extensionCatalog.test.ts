@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -78,6 +79,20 @@ describe('extension catalog', () => {
         }),
       ]),
     );
+  });
+
+  it('keeps the generated catalog in sync with installable extension manifests', async () => {
+    const installableRoot = join(process.cwd(), 'installable-extensions');
+    const manifestIds = existsSync(installableRoot)
+      ? readdirSync(installableRoot, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name)
+          .filter((name) => existsSync(join(installableRoot, name, 'extension.json')))
+          .sort((left, right) => left.localeCompare(right))
+      : [];
+
+    const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    expect(listInstallableExtensionCatalog().extensions.map((extension) => extension.id)).toEqual(manifestIds);
   });
 
   it('rejects non-GitHub bundle URLs before downloading', async () => {
