@@ -2050,7 +2050,10 @@ describe('extension backend action invocation', () => {
                   : exportName === 'knowledgeWriteFile' ||
                       exportName === 'knowledgeCreateFolder' ||
                       exportName === 'knowledgeRename' ||
-                      exportName === 'knowledgeMove'
+                      exportName === 'knowledgeMove' ||
+                      exportName === 'knowledgeUploadImage' ||
+                      exportName === 'knowledgeImportUrl' ||
+                      exportName === 'knowledgeImportSharedItem'
                     ? { id: 'notes/a.md', kind: 'file' }
                     : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
       ),
@@ -2087,6 +2090,14 @@ describe('extension backend action invocation', () => {
       ['knowledgeDeleteFile', 'knowledgeDeleteFile', { id: 'notes/a.md' }, { ok: true }],
       ['knowledgeRename', 'knowledgeRename', { id: 'notes/a.md', newName: 'b.md' }, { id: 'notes/a.md', kind: 'file' }],
       ['knowledgeMove', 'knowledgeMove', { id: 'notes/a.md', targetDir: 'archive/' }, { id: 'notes/a.md', kind: 'file' }],
+      ['knowledgeUploadImage', 'knowledgeUploadImage', { filename: 'shot.png', dataUrl: 'data:image/png;base64,aW1n' }, { id: 'notes/a.md', kind: 'file' }],
+      ['knowledgeImportUrl', 'knowledgeImportUrl', { url: 'https://example.test', title: 'Example' }, { id: 'notes/a.md', kind: 'file' }],
+      [
+        'knowledgeImportSharedItem',
+        'knowledgeImportSharedItem',
+        { kind: 'text', text: 'hello', title: 'Shared text' },
+        { id: 'notes/a.md', kind: 'file' },
+      ],
     ];
     for (const [actionId, , input, result] of mutationActionInputs) {
       await expect(invokeExtensionAction('system-knowledge', actionId, input)).resolves.toEqual({ ok: true, result });
@@ -2478,7 +2489,9 @@ describe('extension backend action invocation', () => {
             : exportName === 'knowledgeWriteFileRoute' ||
                 exportName === 'knowledgeCreateFolderRoute' ||
                 exportName === 'knowledgeRenameRoute' ||
-                exportName === 'knowledgeMoveRoute'
+                exportName === 'knowledgeMoveRoute' ||
+                exportName === 'knowledgeUploadImageRoute' ||
+                exportName === 'knowledgeImportUrlRoute'
               ? { status: 200, body: { id: 'notes/a.md', kind: 'file' } }
           : { status: 200, body: { results: [{ id: 'notes/a.md' }] } },
       ),
@@ -2516,6 +2529,8 @@ describe('extension backend action invocation', () => {
       ['DELETE', '/knowledge/file', 'knowledgeDeleteFileRoute', { id: 'notes/a.md' }, undefined, { ok: true }],
       ['POST', '/knowledge/rename', 'knowledgeRenameRoute', {}, { id: 'notes/a.md', newName: 'b.md' }, { id: 'notes/a.md', kind: 'file' }],
       ['POST', '/knowledge/move', 'knowledgeMoveRoute', {}, { id: 'notes/a.md', targetDir: 'archive/' }, { id: 'notes/a.md', kind: 'file' }],
+      ['POST', '/knowledge/image', 'knowledgeUploadImageRoute', {}, { filename: 'shot.png', dataUrl: 'data:image/png;base64,aW1n' }, { id: 'notes/a.md', kind: 'file' }],
+      ['POST', '/knowledge/share-import', 'knowledgeImportUrlRoute', {}, { kind: 'text', text: 'hello', title: 'Shared text' }, { id: 'notes/a.md', kind: 'file' }],
     ];
     for (const [method, path, , query, body, result] of mutationRouteInputs) {
       await expect(

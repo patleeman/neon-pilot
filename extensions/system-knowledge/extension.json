@@ -127,17 +127,26 @@
       {
         "id": "knowledgeUploadImage",
         "handler": "knowledgeUploadImage",
-        "title": "Upload knowledge image"
+        "title": "Upload knowledge image",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeImportUrl",
         "handler": "knowledgeImportUrl",
-        "title": "Import URL into knowledge"
+        "title": "Import URL into knowledge",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeImportSharedItem",
         "handler": "knowledgeImportSharedItem",
-        "title": "Import shared item into knowledge"
+        "title": "Import shared item into knowledge",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "readMemory",
@@ -257,13 +266,19 @@
         "method": "POST",
         "path": "/knowledge/image",
         "handler": "knowledgeUploadImageRoute",
-        "title": "Upload knowledge image route"
+        "title": "Upload knowledge image route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "POST",
         "path": "/knowledge/share-import",
         "handler": "knowledgeImportUrlRoute",
-        "title": "Import item into knowledge route"
+        "title": "Import item into knowledge route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "GET",
