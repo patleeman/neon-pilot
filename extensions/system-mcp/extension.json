@@ -30,9 +30,30 @@
         }
       },
       { "id": "saveExplicitConfig", "handler": "saveExplicitMcpConfig", "title": "Save explicit MCP config" },
-      { "id": "testServer", "handler": "testMcpServer", "title": "Test MCP server" },
-      { "id": "authServer", "handler": "authMcpServer", "title": "Authenticate MCP server" },
-      { "id": "logoutServer", "handler": "logoutMcpServer", "title": "Logout MCP server" }
+      {
+        "id": "testServer",
+        "handler": "testMcpServer",
+        "title": "Test MCP server",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "authServer",
+        "handler": "authMcpServer",
+        "title": "Authenticate MCP server",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "logoutServer",
+        "handler": "logoutMcpServer",
+        "title": "Logout MCP server",
+        "worker": {
+          "enabled": true
+        }
+      }
     ]
   },
   "contributes": {
