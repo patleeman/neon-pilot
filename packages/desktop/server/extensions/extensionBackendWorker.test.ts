@@ -1182,6 +1182,56 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('adds extension bin directories to worker shell env', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    const extensionRoot = join(root, 'system-ds4');
+    const extensionBin = join(extensionRoot, 'bin');
+    mkdirSync(extensionBin, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  return await ctx.shell.exec({ command: 'sh', args: ['-lc', 'ds4 help'], cwd: '/repo', env: { PATH: '/usr/bin' } });
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 400,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-shell-env' },
+      exportName: 'doThing',
+      args: [{}],
+      context: {
+        type: 'backend',
+        repoRoot: '/repo',
+        liveSessionResourceOptions: {
+          additionalExtensionPaths: [extensionRoot],
+          additionalSkillPaths: [],
+          additionalPromptTemplatePaths: [],
+          additionalThemePaths: [],
+        },
+      },
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'exec',
+      input: {
+        command: 'sh',
+        args: ['-lc', 'ds4 help'],
+        cwd: '/repo',
+        env: { PATH: `${extensionBin}:/usr/bin` },
+      },
+    });
+  });
+
   it('runs backend exports with host-mediated shell spawn handles', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

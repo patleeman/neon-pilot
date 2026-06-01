@@ -1,4 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parentPort } from 'node:worker_threads';
 
@@ -120,6 +122,25 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     additionalSkillPaths: [],
     additionalPromptTemplatePaths: [],
     additionalThemePaths: [],
+  };
+  const extensionBinDirs =
+    Array.isArray(liveSessionResourceOptions.additionalExtensionPaths)
+      ? liveSessionResourceOptions.additionalExtensionPaths
+          .filter((extensionPath): extensionPath is string => typeof extensionPath === 'string')
+          .map((extensionPath) => path.join(extensionPath, 'bin'))
+          .filter((binDir) => existsSync(binDir))
+      : [];
+  const shellEnv = (inputEnv?: unknown): Record<string, string> | undefined => {
+    const env =
+      inputEnv && typeof inputEnv === 'object' && !Array.isArray(inputEnv)
+        ? Object.fromEntries(Object.entries(inputEnv).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
+        : {};
+    if (extensionBinDirs.length === 0) return Object.keys(env).length ? env : undefined;
+    const pathParts = (env.PATH ?? process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+    return {
+      ...env,
+      PATH: [...extensionBinDirs, ...pathParts.filter((part) => !extensionBinDirs.includes(part))].join(path.delimiter),
+    };
   };
   return {
     extensionId,
@@ -265,7 +286,15 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       list: (prefix?: string) => callHostCapability(extensionId, 'storage', 'list', { prefix }),
     },
     shell: {
-      exec: (input: unknown) => callHostCapability(extensionId, 'shell', 'exec', input),
+      exec: (input: unknown) => {
+        const serializableInput: unknown = input && typeof input === 'object' && !Array.isArray(input) ? { ...(input as Record<string, unknown>) } : input;
+        if (serializableInput && typeof serializableInput === 'object' && !Array.isArray(serializableInput)) {
+          const record = serializableInput as Record<string, unknown>;
+          const env = shellEnv(record.env);
+          if (env) record.env = env;
+        }
+        return callHostCapability(extensionId, 'shell', 'exec', serializableInput);
+      },
       spawn: async (input: {
         command?: unknown;
         args?: unknown;
@@ -291,6 +320,8 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
             ...(input.onExit ? { onExit: input.onExit } : {}),
           });
         }
+        const env = shellEnv(serializableInput.env);
+        if (env) serializableInput.env = env;
         const result = (await callHostCapability(extensionId, 'shell', 'spawn', { handleId, ...serializableInput })) as {
           pid?: number | null;
           usingPty?: boolean;
