@@ -20,6 +20,8 @@ The backend worker transport is bidirectional: host requests use `ExtensionBacke
 
 Worker execution is explicit. A backend action must declare `worker.enabled` in its manifest, and actions with mixed safe/unsafe code paths can declare `worker.inputActions` so only matching object inputs run in the worker. Backend routes can also declare `worker.enabled` for non-streaming routes whose request, response, and context usage are serializable; SSE routes remain on the host runner until streaming and abort handles are represented on the worker channel.
 
+Worker-backed action coverage now includes product-critical system surfaces for artifacts, code mode, conversation context-menu helpers, local dictation settings, telemetry aggregate reads, todos, web fetch, and background work (`system-runs`). Background work can cross the worker boundary for non-streaming action paths because it uses public backend subpaths, serialized tool context metadata, non-streaming shell execution, and `ctx.ui.invalidate`; live foreground streaming still stays on the host runner when a tool update callback or live agent abort context is present.
+
 ## Process Graph
 
 Allowed communication:

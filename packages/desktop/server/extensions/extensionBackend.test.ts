@@ -681,6 +681,78 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe background work actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({
+        text: 'Background commands (1):\n- run-1 [running] smoke',
+        details: { action: 'list', runCount: 1, runIds: ['run-1'] },
+      })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-runs', 'background_bash', { action: 'list' }, undefined, {
+        conversationId: 'conv-1',
+        cwd: '/repo',
+        sessionFile: '/tmp/session.json',
+        sessionId: 'sess-1',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        text: 'Background commands (1):\n- run-1 [running] smoke',
+        details: { action: 'list', runCount: 1, runIds: ['run-1'] },
+      },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-runs',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-runs', 'dist', 'backend.mjs')),
+      }),
+      'background_bash',
+      { type: 'action', label: 'action background_bash', target: 'background_bash' },
+      [{ action: 'list' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          liveSessionResourceOptions: expect.objectContaining({
+            additionalExtensionPaths: expect.any(Array),
+            additionalSkillPaths: expect.any(Array),
+            additionalPromptTemplatePaths: expect.any(Array),
+            additionalThemePaths: expect.any(Array),
+          }),
+          toolContext: {
+            conversationId: 'conv-1',
+            cwd: '/repo',
+            sessionFile: '/tmp/session.json',
+            sessionId: 'sess-1',
+          },
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

@@ -15,17 +15,26 @@
       {
         "id": "bash",
         "handler": "bash",
-        "title": "Bash"
+        "title": "Bash",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "background_bash",
         "handler": "background_bash",
-        "title": "Background Bash"
+        "title": "Background Bash",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "subagent",
         "handler": "subagent",
-        "title": "Subagent"
+        "title": "Subagent",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
