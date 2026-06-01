@@ -13,7 +13,6 @@ const allowedProcessGuardFiles = new Set([
 ]);
 const allowedBackendLoaderFiles = new Set(['packages/desktop/server/extensions/extensionBackend.ts']);
 const allowedBackendRunnerFiles = new Set([
-  'packages/desktop/server/extensions/extensionAgentExtensions.ts',
   'packages/desktop/server/extensions/extensionBackend.ts',
   'packages/desktop/server/extensions/extensionBackendRunner.ts',
 ]);

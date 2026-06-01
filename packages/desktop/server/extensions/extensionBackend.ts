@@ -653,6 +653,19 @@ export async function loadExtensionAgentFactory(extensionId: string, exportName 
   return candidate as ExtensionFactory;
 }
 
+export async function runExtensionAgentFactory(
+  extensionId: string,
+  exportName: string,
+  factory: ExtensionFactory,
+  pi: Parameters<ExtensionFactory>[0],
+): Promise<void> {
+  await getExtensionBackendRunner().run(
+    extensionId,
+    extensionBackendOperation('agent-factory', 'agent extension factory', { target: exportName }),
+    () => Promise.resolve(factory(pi)),
+  );
+}
+
 export interface ExtensionRouteRequest {
   method: string;
   path: string;
