@@ -409,6 +409,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('filePath' in response)) throw new Error('Extension host returned invalid file path resolution.');
       return response.filePath;
     },
+    async resolvePromptReferences(input) {
+      const response = await send({ type: 'resolvePromptReferences', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('promptReferences' in response)) throw new Error('Extension host returned invalid prompt reference resolution.');
+      return response.promptReferences;
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },

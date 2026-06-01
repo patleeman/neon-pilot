@@ -1,5 +1,6 @@
 import { resolve as resolvePath, sep } from 'node:path';
 
+import { extractMentionIds } from '../knowledge/promptReferences.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import type {
   ExtensionHostActionInvokeResult,
@@ -15,6 +16,7 @@ import type {
   ExtensionHostInvokeRouteRequest,
   ExtensionHostModelProfileResolution,
   ExtensionHostPromptAssemblyContributions,
+  ExtensionHostPromptReferenceResolution,
   ExtensionHostRegistryMaintenanceRequest,
   ExtensionHostRegistryPresentation,
   ExtensionHostReloadBackendRequest,
@@ -22,6 +24,7 @@ import type {
   ExtensionHostRequest,
   ExtensionHostResolveFilePathRequest,
   ExtensionHostResolveModelProfileRequest,
+  ExtensionHostResolvePromptReferencesRequest,
   ExtensionHostResponse,
   ExtensionHostRouteResponse,
   ExtensionHostRunningService,
@@ -51,6 +54,36 @@ function normalizeDependencyId(dependency: string | { id: string; optional?: boo
     : { id: dependency.id, optional: Boolean(dependency.optional) };
 }
 
+function normalizePromptReferenceResolution(value: unknown): ExtensionHostPromptReferenceResolution {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { contextBlocks: [], references: [] };
+  const record = value as Record<string, unknown>;
+  const contextBlocks = Array.isArray(record.contextBlocks)
+    ? record.contextBlocks.flatMap((block): string[] => {
+        if (typeof block === 'string' && block.trim()) return [block];
+        if (block && typeof block === 'object' && !Array.isArray(block) && typeof (block as { content?: unknown }).content === 'string') {
+          const content = (block as { content: string }).content;
+          return content.trim() ? [content] : [];
+        }
+        return [];
+      })
+    : [];
+  const references = Array.isArray(record.references)
+    ? record.references.flatMap((reference): ExtensionHostPromptReferenceResolution['references'] => {
+        if (!reference || typeof reference !== 'object' || Array.isArray(reference)) return [];
+        const candidate = reference as Record<string, unknown>;
+        if (typeof candidate.kind !== 'string' || typeof candidate.id !== 'string') return [];
+        return [
+          {
+            kind: candidate.kind,
+            id: candidate.id,
+            ...(typeof candidate.path === 'string' ? { path: candidate.path } : {}),
+          },
+        ];
+      })
+    : [];
+  return { contextBlocks, references };
+}
+
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
@@ -61,6 +94,7 @@ export type ExtensionHostRegistryMaintenanceInput = DistributiveOmit<ExtensionHo
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
 export type ExtensionHostResolveFilePathInput = Omit<ExtensionHostResolveFilePathRequest, 'type'>;
 export type ExtensionHostResolveModelProfileInput = Omit<ExtensionHostResolveModelProfileRequest, 'type'>;
+export type ExtensionHostResolvePromptReferencesInput = Omit<ExtensionHostResolvePromptReferencesRequest, 'type'>;
 export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
 export type ExtensionHostSetEnabledInput = Omit<ExtensionHostSetEnabledRequest, 'type'>;
 export type ExtensionHostSetKeybindingInput = Omit<ExtensionHostSetKeybindingRequest, 'type'>;
@@ -87,6 +121,7 @@ export interface ExtensionHostClient {
   readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
   resolveFilePath(input: ExtensionHostResolveFilePathInput): Promise<string>;
   resolveModelProfile(input: ExtensionHostResolveModelProfileInput): Promise<ExtensionHostModelProfileResolution>;
+  resolvePromptReferences(input: ExtensionHostResolvePromptReferencesInput): Promise<ExtensionHostPromptReferenceResolution>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -211,6 +246,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('filePath' in response)) throw new Error('Extension host returned invalid file path resolution.');
       return response.filePath;
+    },
+    async resolvePromptReferences(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'resolvePromptReferences', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('promptReferences' in response)) throw new Error('Extension host returned invalid prompt reference resolution.');
+      return response.promptReferences;
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -621,6 +662,23 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         throw new Error('Extension file path escapes package root.');
       }
       return { ok: true, filePath };
+    }
+    if (request.type === 'resolvePromptReferences') {
+      const mentionIds = extractMentionIds(request.text);
+      if (mentionIds.length === 0) {
+        return { ok: true, promptReferences: { contextBlocks: [], references: [] } };
+      }
+      const { listExtensionPromptReferenceRegistrations } = await import('./extensionRegistry.js');
+      const contextBlocks: string[] = [];
+      const references: ExtensionHostPromptReferenceResolution['references'] = [];
+      for (const resolver of listExtensionPromptReferenceRegistrations()) {
+        const result = await invokeExtensionAction(resolver.extensionId, resolver.handler, { text: request.text, mentionIds });
+        if (!result.ok) continue;
+        const normalized = normalizePromptReferenceResolution(result.result);
+        contextBlocks.push(...normalized.contextBlocks);
+        references.push(...normalized.references);
+      }
+      return { ok: true, promptReferences: { contextBlocks, references } };
     }
     if (request.type === 'beginStartupGuard') {
       const { beginExtensionStartupGuard } = await import('./extensionRegistry.js');

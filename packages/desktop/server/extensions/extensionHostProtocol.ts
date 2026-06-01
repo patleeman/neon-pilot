@@ -73,6 +73,17 @@ export interface ExtensionHostEventSubscription {
   pattern: string;
 }
 
+export interface ExtensionHostPromptReferenceItem {
+  kind: string;
+  id: string;
+  path?: string;
+}
+
+export interface ExtensionHostPromptReferenceResolution {
+  contextBlocks: string[];
+  references: ExtensionHostPromptReferenceItem[];
+}
+
 export interface ExtensionHostStateDocument {
   key: string;
   value: unknown;
@@ -318,6 +329,11 @@ export interface ExtensionHostResolveFilePathRequest {
   relativePath: string;
 }
 
+export interface ExtensionHostResolvePromptReferencesRequest {
+  type: 'resolvePromptReferences';
+  text: string;
+}
+
 export interface ExtensionHostInvokeProtocolEntrypointRequest {
   type: 'invokeProtocolEntrypoint';
   protocolId: string;
@@ -442,6 +458,7 @@ export type ExtensionHostRequest =
   | ExtensionHostReadRegistryPresentationRequest
   | ExtensionHostResolveModelProfileRequest
   | ExtensionHostResolveFilePathRequest
+  | ExtensionHostResolvePromptReferencesRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostBeginStartupGuardRequest
@@ -519,6 +536,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      promptReferences: ExtensionHostPromptReferenceResolution;
+    }
+  | {
+      ok: true;
       invoked: true;
     }
   | {
@@ -579,6 +600,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
   if (request.type === 'resolveModelProfile') return `resolveModelProfile:${request.provider}/${request.model}`;
   if (request.type === 'resolveFilePath') return `resolveFilePath:${request.extensionId}/${request.relativePath}`;
+  if (request.type === 'resolvePromptReferences') return 'resolvePromptReferences';
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'beginStartupGuard') return 'beginStartupGuard';
   if (request.type === 'completeStartupGuard') return 'completeStartupGuard';

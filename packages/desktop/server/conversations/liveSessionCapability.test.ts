@@ -30,8 +30,12 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
   withExtensionRegistryReadCache: (callback: () => unknown) => callback(),
 }));
 
-vi.mock('../extensions/promptReferenceResolvers.js', () => ({
-  resolveExtensionPromptReferences: vi.fn(async () => ({ contextBlocks: [], references: [] })),
+const extensionHostClient = vi.hoisted(() => ({
+  resolvePromptReferences: vi.fn(async () => ({ contextBlocks: [], references: [] })),
+}));
+
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => extensionHostClient,
 }));
 
 vi.mock('../knowledge/promptReferences.js', () => ({
@@ -135,6 +139,8 @@ beforeEach(() => {
   queuePromptContextMock.mockReset();
   submitLocalPromptSessionMock.mockReset();
   syncWebLiveConversationRunMock.mockReset();
+  extensionHostClient.resolvePromptReferences.mockReset();
+  extensionHostClient.resolvePromptReferences.mockResolvedValue({ contextBlocks: [], references: [] });
   syncWebLiveConversationRunMock.mockResolvedValue({ runId: 'run-1' });
   submitLocalPromptSessionMock.mockResolvedValue({ acceptedAs: 'started', completion: Promise.resolve() });
 });

@@ -10,8 +10,8 @@ import {
   resolveDurableRunsRoot,
 } from '@neon-pilot/daemon';
 
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { withExtensionRegistryReadCache } from '../extensions/extensionRegistry.js';
-import { resolveExtensionPromptReferences } from '../extensions/promptReferenceResolvers.js';
 import {
   buildReferencedMemoryDocsContext,
   buildReferencedTasksContext,
@@ -776,7 +776,7 @@ async function prepareLiveSessionPrompt(
   const referencedTasks = pickPromptReferencesInOrder(promptReferences.taskIds, tasks);
   const referencedMemoryDocs = pickPromptReferencesInOrder(expandedNodeReferences.memoryDocIds, memoryDocs);
   const extensionPromptReferences = hasPromptMentions
-    ? await resolveExtensionPromptReferences({ text })
+    ? await getExtensionHostClient().resolvePromptReferences({ text })
     : { contextBlocks: [], references: [] };
   const referencedKnowledgeFiles = extensionPromptReferences.references.filter(
     (reference): reference is { kind: string; id: string; path: string } =>

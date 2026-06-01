@@ -185,8 +185,12 @@ vi.mock('../knowledge/promptReferences.js', () => ({
   resolvePromptReferences: resolvePromptReferencesMock,
 }));
 
-vi.mock('../extensions/promptReferenceResolvers.js', () => ({
-  resolveExtensionPromptReferences: resolveExtensionPromptReferencesMock,
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => ({
+    invokeAction: vi.fn(),
+    listPromptAssemblyContributions: vi.fn(async () => ({ contextProviders: [], assemblyProviders: [], hooks: [] })),
+    resolvePromptReferences: resolveExtensionPromptReferencesMock,
+  }),
 }));
 
 vi.mock('../conversations/conversationRuns.js', () => ({

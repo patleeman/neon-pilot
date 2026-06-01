@@ -173,7 +173,16 @@ describe('extension host RPC client', () => {
         }),
       )
       .mockResolvedValueOnce(jsonResponse({ ok: true, modelProfile: { kind: 'resolved', profile: { extensionId: 'ext', id: 'gpt' } } }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, filePath: '/extensions/ext/dist/frontend.js' }));
+      .mockResolvedValueOnce(jsonResponse({ ok: true, filePath: '/extensions/ext/dist/frontend.js' }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          promptReferences: {
+            contextBlocks: ['Knowledge context'],
+            references: [{ kind: 'knowledgeFile', id: 'k1', path: '/knowledge/k1.md' }],
+          },
+        }),
+      );
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
@@ -223,6 +232,10 @@ describe('extension host RPC client', () => {
     await expect(client.resolveFilePath({ extensionId: 'ext', relativePath: 'dist/frontend.js' })).resolves.toBe(
       '/extensions/ext/dist/frontend.js',
     );
+    await expect(client.resolvePromptReferences({ text: '@note:k1' })).resolves.toEqual({
+      contextBlocks: ['Knowledge context'],
+      references: [{ kind: 'knowledgeFile', id: 'k1', path: '/knowledge/k1.md' }],
+    });
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       1,
@@ -314,6 +327,11 @@ describe('extension host RPC client', () => {
       expect.objectContaining({
         body: JSON.stringify({ request: { type: 'resolveFilePath', extensionId: 'ext', relativePath: 'dist/frontend.js' } }),
       }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      16,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'resolvePromptReferences', text: '@note:k1' } }) }),
     );
   });
 

@@ -41,6 +41,7 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionCommandRegistrations: vi.fn(),
   listExtensionKeybindingRegistrations: vi.fn(),
   listExtensionMentionRegistrations: vi.fn(),
+  listExtensionPromptReferenceRegistrations: vi.fn(),
   listExtensionQuickOpenRegistrations: vi.fn(),
   listExtensionSearchProviderRegistrations: vi.fn(),
   listExtensionSlashCommandRegistrations: vi.fn(),
@@ -343,6 +344,34 @@ describe('extension host client', () => {
     );
   });
 
+  it('routes prompt reference resolution through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.listExtensionPromptReferenceRegistrations.mockReturnValueOnce([
+      { extensionId: 'ext', id: 'resolver', handler: 'resolveReferences' },
+    ]);
+    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({
+      ok: true,
+      result: {
+        contextBlocks: ['From string', { content: 'From object' }, { content: ' ' }],
+        references: [
+          { kind: 'knowledgeFile', id: 'k1', path: '/knowledge/k1.md' },
+          { kind: 1, id: 'bad' },
+        ],
+      },
+    });
+
+    await expect(getExtensionHostClient().resolvePromptReferences({ text: 'Use @note:k1' })).resolves.toEqual({
+      contextBlocks: ['From string', 'From object'],
+      references: [{ kind: 'knowledgeFile', id: 'k1', path: '/knowledge/k1.md' }],
+    });
+
+    expect(extensionRegistry.listExtensionPromptReferenceRegistrations).toHaveBeenCalled();
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith('ext', 'resolveReferences', {
+      text: 'Use @note:k1',
+      mentionIds: expect.any(Array),
+    });
+  });
+
   it('routes extension state operations through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionStorage.listExtensionState.mockReturnValueOnce([{ key: 'tasks/one', value: { title: 'Ship' }, version: 1 }]);
@@ -553,5 +582,6 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'resolveModelProfile', provider: 'openai', model: 'gpt-5' })).toBe(
       'resolveModelProfile:openai/gpt-5',
     );
+    expect(extensionHostRequestName({ type: 'resolvePromptReferences', text: '@note:k1' })).toBe('resolvePromptReferences');
   });
 });

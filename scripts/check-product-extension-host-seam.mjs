@@ -164,6 +164,14 @@ const forbiddenPatterns = [
     message: 'product runtime code must perform extension registry maintenance through ExtensionHostClient',
   },
   {
+    pattern: /import\s+\{[^}]*\bresolveExtensionPromptReferences\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/promptReferenceResolvers\.js['"]/,
+    message: 'product runtime code must resolve extension prompt references through ExtensionHostClient',
+  },
+  {
+    pattern: /import\(\s*['"][^'"]*\/extensions\/promptReferenceResolvers\.js['"]\s*\)[\s\S]{0,300}\bresolveExtensionPromptReferences\b/,
+    message: 'product runtime code must resolve extension prompt references through ExtensionHostClient',
+  },
+  {
     files: [/^packages\/desktop\/server\/conversations\//],
     pattern: /import\s+\{[^}]*\bresolveExtensionModelProfile\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'conversation runtime code must resolve extension model profiles through ExtensionHostClient',
