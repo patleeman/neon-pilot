@@ -217,6 +217,33 @@ function closeOtherComposerMenus(current: HTMLDetailsElement) {
   }
 }
 
+function closeAllComposerMenus() {
+  for (const details of Array.from(document.querySelectorAll<HTMLDetailsElement>('details[data-model-picker-menu][open]'))) {
+    details.removeAttribute('open');
+  }
+}
+
+function useCloseComposerMenusOnOutsideInteraction() {
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (target.parentElement?.closest('details[data-model-picker-menu]')) return;
+      if (target instanceof Element && target.closest('details[data-model-picker-menu]')) return;
+      closeAllComposerMenus();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeAllComposerMenus();
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, []);
+}
+
 function Ds4HealthIndicator({
   health,
   variant,
@@ -465,6 +492,7 @@ export function ModelPreferencesComposerControl({
   buttonContext: ComposerControlContext;
 }) {
   const context = controlContext ?? buttonContext;
+  useCloseComposerMenusOnOutsideInteraction();
   const variant = context.renderMode;
   const selectedModel = resolveModel(context.models, context.currentModel);
   const ds4Health = useDs4Health(pa, selectedModel);
