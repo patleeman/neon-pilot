@@ -53,12 +53,14 @@ const forbiddenPatterns = [
     message: 'product runtime code must invoke extension protocol entrypoints through ExtensionHostClient',
   },
   {
-    pattern: /import\s+\{[^}]*\bpublishExtensionHostEvent\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionSubscriptions\.js['"]/,
-    message: 'product runtime code must publish extension events through ExtensionHostClient',
+    pattern:
+      /import\s+\{[^}]*\b(?:publishExtensionHostEvent|installExtensionSubscriptions|installSubscriptionsForExtension|uninstallExtensionSubscriptions)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionSubscriptions\.js['"]/,
+    message: 'product runtime code must manage extension subscriptions through ExtensionHostClient',
   },
   {
-    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionSubscriptions\.js['"]\s*\)[\s\S]{0,300}\bpublishExtensionHostEvent\b/,
-    message: 'product runtime code must publish extension events through ExtensionHostClient',
+    pattern:
+      /import\(\s*['"][^'"]*\/extensions\/extensionSubscriptions\.js['"]\s*\)[\s\S]{0,300}\b(?:publishExtensionHostEvent|installExtensionSubscriptions|installSubscriptionsForExtension|uninstallExtensionSubscriptions)\b/,
+    message: 'product runtime code must manage extension subscriptions through ExtensionHostClient',
   },
   {
     pattern: /\bcreateInProcessExtensionHostClient\b/,

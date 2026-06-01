@@ -84,6 +84,18 @@ export interface ExtensionHostPublishEventRequest {
   payload: unknown;
 }
 
+export interface ExtensionHostInstallSubscriptionsRequest {
+  type: 'installSubscriptions';
+  extensionId: string;
+  serverContext?: ExtensionHostBackendServerContext;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
+}
+
+export interface ExtensionHostUninstallSubscriptionsRequest {
+  type: 'uninstallSubscriptions';
+  extensionId: string;
+}
+
 export interface ExtensionHostInvokeProtocolEntrypointRequest {
   type: 'invokeProtocolEntrypoint';
   protocolId: string;
@@ -151,6 +163,8 @@ export type ExtensionHostRequest =
   | ExtensionHostHealthRequest
   | ExtensionHostInvokeActionRequest
   | ExtensionHostPublishEventRequest
+  | ExtensionHostInstallSubscriptionsRequest
+  | ExtensionHostUninstallSubscriptionsRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostStartStartupActionsRequest
@@ -173,6 +187,10 @@ export type ExtensionHostResponse =
   | {
       ok: true;
       published: true;
+    }
+  | {
+      ok: true;
+      subscriptionsUpdated: true;
     }
   | {
       ok: true;
@@ -207,6 +225,8 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'invokeAction') return `invokeAction:${request.extensionId}/${request.actionId}`;
   if (request.type === 'invokeProtocolEntrypoint') return `invokeProtocolEntrypoint:${request.protocolId}`;
   if (request.type === 'publishEvent') return `publishEvent:${request.source}`;
+  if (request.type === 'installSubscriptions') return `installSubscriptions:${request.extensionId}`;
+  if (request.type === 'uninstallSubscriptions') return `uninstallSubscriptions:${request.extensionId}`;
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;

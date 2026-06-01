@@ -127,13 +127,19 @@ describe('extension host RPC client', () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'ext', ok: true }] }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'startup-ext', ok: true }] }));
+      .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'startup-ext', ok: true }] }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }));
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
     await expect(client.startStartupActions({ serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } })).resolves.toEqual([
       { extensionId: 'startup-ext', ok: true },
     ]);
+    await expect(
+      client.installSubscriptions({ extensionId: 'ext', serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } }),
+    ).resolves.toBeUndefined();
+    await expect(client.uninstallSubscriptions('ext')).resolves.toBeUndefined();
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       1,
@@ -148,6 +154,20 @@ describe('extension host RPC client', () => {
           request: { type: 'startStartupActions', serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } },
         }),
       }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      3,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: { type: 'installSubscriptions', extensionId: 'ext', serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } },
+        }),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      4,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'uninstallSubscriptions', extensionId: 'ext' } }) }),
     );
   });
 

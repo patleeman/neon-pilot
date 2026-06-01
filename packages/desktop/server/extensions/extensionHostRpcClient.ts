@@ -333,6 +333,17 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('result' in response)) return { ok: false, error: 'Extension host returned an invalid action response.' };
       return response.result;
     },
+    async installSubscriptions(input) {
+      assertWireableStartupActionsInput(input);
+      const response = await send({ type: 'installSubscriptions', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('subscriptionsUpdated' in response)) throw new Error('Extension host returned an invalid subscription response.');
+    },
+    async uninstallSubscriptions(extensionId) {
+      const response = await send({ type: 'uninstallSubscriptions', extensionId });
+      if (!response.ok) throw new Error(response.error);
+      if (!('subscriptionsUpdated' in response)) throw new Error('Extension host returned an invalid subscription response.');
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },

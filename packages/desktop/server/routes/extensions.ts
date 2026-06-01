@@ -762,8 +762,7 @@ export function registerExtensionRoutes(
         await stopExtensionServices(entry.manifest.id);
         const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
         unregisterBashProcessWrapper(entry.manifest.id);
-        const { uninstallExtensionSubscriptions } = await import('../extensions/extensionSubscriptions.js');
-        uninstallExtensionSubscriptions(entry.manifest.id);
+        await getExtensionHostClient().uninstallSubscriptions(entry.manifest.id);
         const onDisableAction = entry.manifest.backend?.onDisableAction;
         actionResult = onDisableAction
           ? await getExtensionHostClient().invokeAction({
@@ -778,8 +777,10 @@ export function registerExtensionRoutes(
       }
       if (enabled) {
         // Install subscriptions before starting services so any service startup events are received.
-        const { installSubscriptionsForExtension } = await import('../extensions/extensionSubscriptions.js');
-        await installSubscriptionsForExtension(entry.manifest.id, context);
+        await getExtensionHostClient().installSubscriptions({
+          extensionId: entry.manifest.id,
+          serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+        });
         const { startExtensionServices } = await import('../extensions/extensionServices.js');
         await startExtensionServices(context);
       }

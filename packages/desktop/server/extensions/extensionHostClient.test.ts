@@ -10,7 +10,11 @@ const extensionBackend = vi.hoisted(() => ({
   runExtensionSelfTest: vi.fn(),
   startExtensionStartupActions: vi.fn(),
 }));
-const extensionSubscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }));
+const extensionSubscriptions = vi.hoisted(() => ({
+  installSubscriptionsForExtension: vi.fn(),
+  publishExtensionHostEvent: vi.fn(),
+  uninstallExtensionSubscriptions: vi.fn(),
+}));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
 vi.mock('./extensionSubscriptions.js', () => extensionSubscriptions);
@@ -111,6 +115,25 @@ describe('extension host client', () => {
     await expect(getExtensionHostClient().publishEvent('settings', { type: 'changed' })).resolves.toBeUndefined();
 
     expect(extensionSubscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('settings', { type: 'changed' });
+  });
+
+  it('routes subscription lifecycle through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionSubscriptions.installSubscriptionsForExtension.mockResolvedValueOnce(undefined);
+
+    await expect(
+      getExtensionHostClient().installSubscriptions({
+        extensionId: 'ext',
+        serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' },
+      }),
+    ).resolves.toBeUndefined();
+    await expect(getExtensionHostClient().uninstallSubscriptions('ext')).resolves.toBeUndefined();
+
+    expect(extensionSubscriptions.installSubscriptionsForExtension).toHaveBeenCalledWith(
+      'ext',
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
+    expect(extensionSubscriptions.uninstallExtensionSubscriptions).toHaveBeenCalledWith('ext');
   });
 
   it('routes backend health checks through the extension host request envelope', async () => {
@@ -237,5 +260,7 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'runSelfTest', extensionId: 'ext' })).toBe('runSelfTest:ext');
     expect(extensionHostRequestName({ type: 'reloadBackend', extensionId: 'ext' })).toBe('reloadBackend:ext');
     expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
+    expect(extensionHostRequestName({ type: 'installSubscriptions', extensionId: 'ext' })).toBe('installSubscriptions:ext');
+    expect(extensionHostRequestName({ type: 'uninstallSubscriptions', extensionId: 'ext' })).toBe('uninstallSubscriptions:ext');
   });
 });

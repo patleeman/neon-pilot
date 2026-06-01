@@ -4,6 +4,7 @@ import type {
   ExtensionHostActionTelemetryEntry,
   ExtensionHostBackendOperationResult,
   ExtensionHostBackendServerContext,
+  ExtensionHostInstallSubscriptionsRequest,
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostInvokeRouteRequest,
@@ -24,6 +25,7 @@ function asExtensionBackendServerContext(
 }
 
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
+export type ExtensionHostInstallSubscriptionsInput = Omit<ExtensionHostInstallSubscriptionsRequest, 'type'>;
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
 export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
@@ -34,6 +36,8 @@ export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
   checkBackendHealth(): Promise<ExtensionHostBackendOperationResult[]>;
   invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionHostActionInvokeResult>;
+  installSubscriptions(input: ExtensionHostInstallSubscriptionsInput): Promise<void>;
+  uninstallSubscriptions(extensionId: string): Promise<void>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -80,6 +84,16 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       const response = await handleInProcessExtensionHostRequest({ type: 'publishEvent', source, payload });
       if (!response.ok) throw new Error(response.error);
       if (!('published' in response)) throw new Error('Extension host returned an invalid publish response.');
+    },
+    async installSubscriptions(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'installSubscriptions', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('subscriptionsUpdated' in response)) throw new Error('Extension host returned an invalid subscription response.');
+    },
+    async uninstallSubscriptions(extensionId) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'uninstallSubscriptions', extensionId });
+      if (!response.ok) throw new Error(response.error);
+      if (!('subscriptionsUpdated' in response)) throw new Error('Extension host returned an invalid subscription response.');
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -210,8 +224,24 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
       };
     }
     const { publishExtensionHostEvent } = await import('./extensionSubscriptions.js');
-    await publishExtensionHostEvent(request.source, request.payload);
-    return { ok: true, published: true };
+    if (request.type === 'publishEvent') {
+      await publishExtensionHostEvent(request.source, request.payload);
+      return { ok: true, published: true };
+    }
+    if (request.type === 'installSubscriptions') {
+      const [{ installSubscriptionsForExtension }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
+        import('./extensionSubscriptions.js'),
+        import('./extensionHostServerContext.js'),
+      ]);
+      await installSubscriptionsForExtension(
+        request.extensionId,
+        asExtensionBackendServerContext(request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot)),
+      );
+      return { ok: true, subscriptionsUpdated: true };
+    }
+    const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
+    uninstallExtensionSubscriptions(request.extensionId);
+    return { ok: true, subscriptionsUpdated: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

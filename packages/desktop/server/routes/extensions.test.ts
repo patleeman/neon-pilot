@@ -4,8 +4,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createInProcessExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionRequestAbortSignal, registerExtensionRoutes } from './extensions.js';
 
 const originalResourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
@@ -61,7 +62,12 @@ function setPackagedResourcesPath(value = '/Applications/Neon Pilot.app/Contents
   });
 }
 
+beforeEach(() => {
+  setExtensionHostClient(createInProcessExtensionHostClient());
+});
+
 afterEach(() => {
+  setExtensionHostClient(undefined);
   delete process.env.NEON_PILOT_STATE_ROOT;
   delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
   if (originalResourcesPathDescriptor) {
