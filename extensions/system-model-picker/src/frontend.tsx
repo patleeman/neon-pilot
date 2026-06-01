@@ -136,8 +136,9 @@ function thinkingOptions(model: Model | null): Array<{ value: string; label: str
   return model?.reasoning ? all : all.filter((option) => option.value === '' || option.value === 'off');
 }
 
-function describeDs4Health(health: ReturnType<typeof useDs4Health>) {
+function describeDs4Health(health: ReturnType<typeof useDs4Health>, active: boolean) {
   if (!health.isDs4) return null;
+  if (active) return { tone: 'active', label: 'DS4 active', title: 'DS4 is handling the current run.', canStart: false };
   if (health.error) return { tone: 'danger', label: 'DS4 error', title: health.error, canStart: true };
   if (health.status?.reachable) return { tone: 'ok', label: 'DS4 alive', title: 'DS4 server is reachable.', canStart: false };
   if (health.status?.bootstrap?.running) return { tone: 'warn', label: 'DS4 setup', title: 'DS4 bootstrap is running.', canStart: false };
@@ -161,11 +162,23 @@ function describeDs4Health(health: ReturnType<typeof useDs4Health>) {
   };
 }
 
-function Ds4HealthIndicator({ health, variant }: { health: ReturnType<typeof useDs4Health>; variant: 'inline' | 'menu' }) {
-  const description = describeDs4Health(health);
+function Ds4HealthIndicator({
+  health,
+  variant,
+  active,
+}: {
+  health: ReturnType<typeof useDs4Health>;
+  variant: 'inline' | 'menu';
+  active: boolean;
+}) {
+  const description = describeDs4Health(health, active);
   if (!description) return null;
+  const needsLabel =
+    variant === 'menu' || active || description.tone === 'danger' || description.tone === 'warn' || 'canSetup' in description || description.canStart;
   const dotClass =
-    description.tone === 'ok'
+    description.tone === 'active'
+      ? 'bg-accent shadow-[0_0_10px_rgba(96,165,250,0.65)] animate-pulse'
+      : description.tone === 'ok'
       ? 'bg-emerald-400'
       : description.tone === 'danger'
         ? 'bg-danger'
@@ -179,9 +192,13 @@ function Ds4HealthIndicator({ health, variant }: { health: ReturnType<typeof use
         variant === 'menu' ? 'mt-1.5 justify-between' : 'max-w-[8.5rem]',
       )}
       title={description.title}
+      aria-label={description.label}
     >
-      <span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', dotClass)} />
-      <span className="min-w-0 truncate">{description.label}</span>
+      <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
+        {active ? <span className="absolute h-3 w-3 rounded-full bg-accent/25 animate-ping" /> : null}
+        <span className={cx('relative h-1.5 w-1.5 rounded-full', dotClass)} />
+      </span>
+      {needsLabel ? <span className="min-w-0 truncate">{description.label}</span> : null}
       {description.canStart ? (
         <button
           type="button"
@@ -245,7 +262,7 @@ function ModelSelect({
         </select>
         <Chevron />
       </label>
-      <Ds4HealthIndicator health={health} variant={variant} />
+      <Ds4HealthIndicator health={health} variant={variant} active={health.isDs4 && context.streamIsStreaming} />
     </div>
   );
 }
