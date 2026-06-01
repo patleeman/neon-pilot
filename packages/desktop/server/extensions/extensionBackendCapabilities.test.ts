@@ -92,6 +92,105 @@ describe('extension backend capability dispatcher', () => {
     expect(log.error).not.toHaveBeenCalled();
   });
 
+  it('dispatches extension-scoped notify capability calls', async () => {
+    const notify = {
+      toast: vi.fn(),
+      system: vi.fn(() => true),
+      setBadge: vi.fn(() => ({ badge: 3, aggregated: 5 })),
+      clearBadge: vi.fn(),
+      isSystemAvailable: vi.fn(() => true),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ notify });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'notify',
+          operation: 'toast',
+          input: { message: 'Saved', type: 'warning' },
+        }),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'notify',
+          operation: 'system',
+          input: { title: 'Title', message: 'Body', subtitle: 'Sub', persistent: true, actionPayload: { route: '/x' } },
+        }),
+      ),
+    ).resolves.toBe(true);
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'notify',
+          operation: 'setBadge',
+          input: { count: 3 },
+        }),
+      ),
+    ).resolves.toEqual({ badge: 3, aggregated: 5 });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 4,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'notify',
+          operation: 'clearBadge',
+        }),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 5,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'notify',
+          operation: 'isSystemAvailable',
+        }),
+      ),
+    ).resolves.toBe(true);
+
+    expect(notify.toast).toHaveBeenCalledWith('ext', 'Saved', 'warning');
+    expect(notify.system).toHaveBeenCalledWith('ext', {
+      message: 'Body',
+      title: 'Title',
+      subtitle: 'Sub',
+      persistent: true,
+      actionPayload: { route: '/x' },
+    });
+    expect(notify.setBadge).toHaveBeenCalledWith('ext', 3);
+    expect(notify.clearBadge).toHaveBeenCalledWith('ext');
+    expect(notify.isSystemAvailable).toHaveBeenCalled();
+  });
+
+  it('rejects malformed notify capability inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({
+      notify: { toast: vi.fn(), system: vi.fn(), setBadge: vi.fn(), clearBadge: vi.fn(), isSystemAvailable: vi.fn() },
+    });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'notify',
+        operation: 'toast',
+        input: { message: 'Saved', type: 'success' },
+      }),
+    ).rejects.toThrow('Notify type must be info, warning, or error when provided.');
+  });
+
   it('rejects unsupported capabilities and malformed log inputs', async () => {
     const dispatch = createExtensionBackendCapabilityDispatcher({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
 

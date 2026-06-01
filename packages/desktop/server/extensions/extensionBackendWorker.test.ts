@@ -118,6 +118,90 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({ id: 20, ok: true, result: { porcelain: '## main' } });
   });
 
+  it('runs backend exports with host-mediated notification capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  await ctx.notify.toast('Saved', 'info');
+  const badge = await ctx.notify.setBadge(2);
+  await ctx.notify.clearBadge();
+  const available = await ctx.notify.isSystemAvailable();
+  const delivered = await ctx.notify.system({ title: 'Title', message: 'Body' });
+  return { badge, available, delivered };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 25,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-notify' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'notify',
+      operation: 'toast',
+      input: { message: 'Saved', type: 'info' },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'notify',
+      operation: 'setBadge',
+      input: { count: 2 },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { badge: 2, aggregated: 2 } });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'notify',
+      operation: 'clearBadge',
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true });
+
+    await waitForPostMessage({
+      id: 4,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'notify',
+      operation: 'isSystemAvailable',
+    });
+    workerThreads.messageHandler?.({ id: 4, kind: 'capabilityResponse', ok: true, result: true });
+
+    await waitForPostMessage({
+      id: 5,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'notify',
+      operation: 'system',
+      input: { title: 'Title', message: 'Body' },
+    });
+    workerThreads.messageHandler?.({ id: 5, kind: 'capabilityResponse', ok: true, result: true });
+
+    await waitForPostMessage({
+      id: 25,
+      ok: true,
+      result: { badge: { badge: 2, aggregated: 2 }, available: true, delivered: true },
+    });
+  });
+
   it('returns export execution errors when host capabilities fail', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

@@ -1,7 +1,12 @@
 import { resolveSecret } from '../secrets/secretStore.js';
-import { type AppEventTopic, invalidateAppTopics } from '../shared/appEvents.js';
+import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
+import {
+  isSystemNotificationAvailable,
+  sendNotifyAsSystemNotification,
+  setExtensionBadge,
+} from './extensionNotifications.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 
@@ -17,6 +22,20 @@ interface ExtensionBackendCapabilityGit {
   status(input: { cwd: string }): Promise<unknown> | unknown;
   diff(input: { cwd: string; path?: string; staged?: boolean }): Promise<unknown> | unknown;
   log(input: { cwd: string; maxCount?: number }): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityNotify {
+  toast(extensionId: string, message: string, type: 'info' | 'warning' | 'error'): unknown;
+  system(extensionId: string, input: {
+    message: string;
+    title?: string;
+    subtitle?: string;
+    persistent?: boolean;
+    actionPayload?: unknown;
+  }): unknown;
+  setBadge(extensionId: string, count: number): unknown;
+  clearBadge(extensionId: string): unknown;
+  isSystemAvailable(): unknown;
 }
 
 interface ExtensionBackendCapabilityStorage {
@@ -50,6 +69,7 @@ export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWor
 export interface ExtensionBackendCapabilityDispatcherOptions {
   git?: ExtensionBackendCapabilityGit;
   log?: ExtensionBackendCapabilityLogger;
+  notify?: ExtensionBackendCapabilityNotify;
   secrets?: ExtensionBackendCapabilitySecrets;
   shell?: ExtensionBackendCapabilityShell;
   storage?: ExtensionBackendCapabilityStorage;
@@ -111,6 +131,45 @@ function dispatchGitCapability(git: ExtensionBackendCapabilityGit, request: Exte
   }
 
   throw new Error(`Unsupported git capability operation: ${request.operation}`);
+}
+
+function normalizeNotificationType(value: unknown): 'info' | 'warning' | 'error' {
+  if (value === undefined) return 'info';
+  if (value === 'info' || value === 'warning' || value === 'error') return value;
+  throw new Error('Notify type must be info, warning, or error when provided.');
+}
+
+function dispatchNotifyCapability(notify: ExtensionBackendCapabilityNotify, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation === 'isSystemAvailable') {
+    return notify.isSystemAvailable();
+  }
+
+  if (request.operation === 'clearBadge') {
+    return notify.clearBadge(request.extensionId);
+  }
+
+  const input = normalizeRecordInput(request.input, 'Notify');
+
+  if (request.operation === 'toast') {
+    return notify.toast(request.extensionId, requireString(input.message, 'Notify message'), normalizeNotificationType(input.type));
+  }
+
+  if (request.operation === 'system') {
+    const message = requireString(input.message, 'Notify message');
+    return notify.system(request.extensionId, {
+      message,
+      title: optionalString(input.title, 'Notify title'),
+      subtitle: optionalString(input.subtitle, 'Notify subtitle'),
+      persistent: optionalBoolean(input.persistent, 'Notify persistent'),
+      actionPayload: input.actionPayload,
+    });
+  }
+
+  if (request.operation === 'setBadge') {
+    return notify.setBadge(request.extensionId, requireNumber(input.count, 'Notify badge count'));
+  }
+
+  throw new Error(`Unsupported notify capability operation: ${request.operation}`);
 }
 
 function normalizeRecordInput(input: unknown, capability: string): Record<string, unknown> {
@@ -194,6 +253,21 @@ function optionalNumber(value: unknown, label: string): number | undefined {
   return value;
 }
 
+function requireNumber(value: unknown, label: string): number {
+  if (typeof value !== 'number') {
+    throw new Error(`${label} must be a number.`);
+  }
+  return value;
+}
+
+function optionalBoolean(value: unknown, label: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'boolean') {
+    throw new Error(`${label} must be a boolean when provided.`);
+  }
+  return value;
+}
+
 function optionalString(value: unknown, label: string): string | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') {
@@ -234,6 +308,17 @@ export function createExtensionBackendCapabilityDispatcher(
 ): ExtensionBackendCapabilityDispatcher {
   const git = options.git ?? createExtensionGitCapability();
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
+  const notify = options.notify ?? {
+    toast: (extensionId: string, message: string, type: 'info' | 'warning' | 'error') => {
+      logInfo('extension notification', { extensionId, type, message });
+      invalidateAppTopics('notifications');
+      publishAppEvent({ type: 'notification', extensionId, message, severity: type });
+    },
+    system: (extensionId: string, input: { message: string }) => sendNotifyAsSystemNotification(extensionId, input),
+    setBadge: (extensionId: string, count: number) => setExtensionBadge(extensionId, count),
+    clearBadge: (extensionId: string) => setExtensionBadge(extensionId, 0),
+    isSystemAvailable: () => isSystemNotificationAvailable(),
+  };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const shell = options.shell ?? createExtensionShellCapability();
   const ui = options.ui ?? {
@@ -258,6 +343,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'log') {
       return dispatchLogCapability(logger, request);
+    }
+    if (request.capability === 'notify') {
+      return dispatchNotifyCapability(notify, request);
     }
     if (request.capability === 'shell') {
       return dispatchShellCapability(shell, request);

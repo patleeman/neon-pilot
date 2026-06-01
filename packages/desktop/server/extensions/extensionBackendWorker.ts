@@ -69,6 +69,13 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       diff: (input: unknown) => callHostCapability(extensionId, 'git', 'diff', input),
       log: (input: unknown) => callHostCapability(extensionId, 'git', 'log', input),
     },
+    notify: {
+      toast: (message: string, type?: 'info' | 'warning' | 'error') => callHostCapability(extensionId, 'notify', 'toast', { message, type }),
+      system: (input: unknown) => callHostCapability(extensionId, 'notify', 'system', input),
+      setBadge: (count: number) => callHostCapability(extensionId, 'notify', 'setBadge', { count }),
+      clearBadge: () => callHostCapability(extensionId, 'notify', 'clearBadge'),
+      isSystemAvailable: () => callHostCapability(extensionId, 'notify', 'isSystemAvailable'),
+    },
     storage: {
       get: (key: string) => callHostCapability(extensionId, 'storage', 'get', { key }),
       put: (key: string, value: unknown, options?: { expectedVersion?: number }) =>
