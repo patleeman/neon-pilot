@@ -139,7 +139,7 @@ describe('machine config', () => {
     });
 
     writeMachineSystemPromptTemplate('', { configRoot: configDir });
-    expect(readMachineSystemPromptTemplate({ configRoot: configDir })).toContain('# Neon Pilot defaults');
+    expect(readMachineSystemPromptTemplate({ configRoot: configDir })).toContain('# Agent Instructions');
     expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({});
   });
 });

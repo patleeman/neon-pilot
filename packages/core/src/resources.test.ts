@@ -287,7 +287,7 @@ description: Commit and push the agent's current work.
     expect(result.writtenFiles.some((path) => path.endsWith('/APPEND_SYSTEM.md'))).toBe(true);
     expect(result.writtenFiles.some((path) => path.endsWith('/settings.json'))).toBe(true);
     expect(result.writtenFiles.some((path) => path.endsWith('/models.json'))).toBe(true);
-    expect(runtimePrompt).toContain('# Neon Pilot defaults');
+    expect(runtimePrompt).toContain('# Agent Instructions');
     expect(runtimePrompt).not.toContain(`Docs index: ${join(repo, 'docs', 'README.md')}`);
     expect(runtimePrompt).not.toContain(`Extension authoring docs: ${join(repo, 'docs', 'extensions.md')}`);
     expect(runtimePrompt).toContain('shared append');
