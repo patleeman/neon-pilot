@@ -53,10 +53,11 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
 }
 
 function createWorkerBackendContext(extensionId: string, options: ExtensionBackendWorkerBackendContextOptions = {}): Record<string, unknown> {
+  const runtimeScope = options.runtimeScope ?? 'shared';
   return {
     extensionId,
-    runtimeScope: 'shared',
-    profile: 'shared',
+    runtimeScope,
+    profile: runtimeScope,
     ...(options.toolContext ? { toolContext: options.toolContext } : {}),
     log: {
       info: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'info', { message, fields }),

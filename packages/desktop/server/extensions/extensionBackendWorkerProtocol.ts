@@ -1,6 +1,7 @@
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
 
 export interface ExtensionBackendWorkerBackendContextOptions {
+  runtimeScope?: string;
   toolContext?: {
     conversationId?: string;
     cwd?: string;

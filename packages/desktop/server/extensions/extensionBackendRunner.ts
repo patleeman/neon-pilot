@@ -67,7 +67,9 @@ interface ExtensionBackendWorkerImportClient {
   ): Promise<unknown>;
 }
 
-type ExtensionBackendWorkerExportOptions = { context?: 'backend' | { type: 'backend'; toolContext?: Record<string, unknown> } };
+type ExtensionBackendWorkerExportOptions = {
+  context?: 'backend' | { type: 'backend'; runtimeScope?: string; toolContext?: Record<string, unknown> };
+};
 
 export interface ExtensionBackendWorkerExportRunner extends ExtensionBackendRunner {
   runWorkerExport<T>(

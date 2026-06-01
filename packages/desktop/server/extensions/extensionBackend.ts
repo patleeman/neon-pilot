@@ -646,6 +646,70 @@ function runExtensionBackendExportForSelfTest(extensionId: string, exportName: s
   );
 }
 
+function isSystemDiffsCheckpointRead(input: unknown): boolean {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+  const action = (input as { action?: unknown }).action;
+  return action === 'list' || action === 'get';
+}
+
+function canRunActionInBackendWorker(
+  extensionId: string,
+  actionId: string,
+  input: unknown,
+  toolContext?: ExtensionBackendContext['toolContext'],
+  agentToolContext?: unknown,
+): boolean {
+  if (agentToolContext !== undefined) return false;
+  if (toolContext?.onUpdate) return false;
+  return extensionId === 'system-diffs' && actionId === 'checkpoint' && isSystemDiffsCheckpointRead(input);
+}
+
+function workerBackendToolContext(
+  toolContext?: ExtensionBackendContext['toolContext'],
+): { conversationId?: string; cwd?: string; sessionFile?: string; sessionId?: string; preferredVisionModel?: string } | undefined {
+  if (!toolContext) return undefined;
+  return {
+    ...(toolContext.conversationId ? { conversationId: toolContext.conversationId } : {}),
+    ...(toolContext.cwd ? { cwd: toolContext.cwd } : {}),
+    ...(toolContext.sessionFile ? { sessionFile: toolContext.sessionFile } : {}),
+    ...(toolContext.sessionId ? { sessionId: toolContext.sessionId } : {}),
+    ...(toolContext.preferredVisionModel ? { preferredVisionModel: toolContext.preferredVisionModel } : {}),
+  };
+}
+
+async function runExtensionBackendActionInWorker(
+  extensionId: string,
+  actionId: string,
+  exportName: string,
+  input: unknown,
+  serverContext?: ExtensionBackendServerContext,
+  toolContext?: ExtensionBackendContext['toolContext'],
+): Promise<unknown> {
+  const runner = getWorkerImportBackendRunner();
+  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
+  if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
+    throw new ExtensionLoadError({
+      extensionId,
+      code: 'handler_not_found',
+      message: `Extension "${extensionId}" backend does not export action handler "${exportName}".`,
+    });
+  }
+  return runner.runWorkerExport(
+    extensionId,
+    loadTarget,
+    exportName,
+    extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
+    [input],
+    {
+      context: {
+        type: 'backend',
+        runtimeScope: serverContext?.getRuntimeScope() ?? 'shared',
+        toolContext: workerBackendToolContext(toolContext),
+      },
+    },
+  );
+}
+
 function clearWorkerImportBackend(extensionId: string): void {
   workerImportBackendRunner?.clearModule(extensionId);
 }
@@ -806,23 +870,29 @@ export async function invokeExtensionAction(
     }
     const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
     const handlerName = action?.handler ?? actionId;
-    const result = await runExtensionBackendExport(
-      extensionId,
-      handlerName,
-      extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
-      (handler) => {
-        actionHandlerStarted = true;
-        return Promise.resolve(handler(input, createBackendContext(extensionId, serverContext, toolContext, agentToolContext)));
-      },
-      {
-        createMissingExportError: () =>
-          new ExtensionLoadError({
-            extensionId,
-            code: 'handler_not_found',
-            message: `Extension "${extensionId}" backend does not export action handler "${handlerName}".`,
-          }),
-      },
-    );
+    let result: unknown;
+    if (canRunActionInBackendWorker(extensionId, actionId, input, toolContext, agentToolContext)) {
+      actionHandlerStarted = true;
+      result = await runExtensionBackendActionInWorker(extensionId, actionId, handlerName, input, serverContext, toolContext);
+    } else {
+      result = await runExtensionBackendExport(
+        extensionId,
+        handlerName,
+        extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
+        (handler) => {
+          actionHandlerStarted = true;
+          return Promise.resolve(handler(input, createBackendContext(extensionId, serverContext, toolContext, agentToolContext)));
+        },
+        {
+          createMissingExportError: () =>
+            new ExtensionLoadError({
+              extensionId,
+              code: 'handler_not_found',
+              message: `Extension "${extensionId}" backend does not export action handler "${handlerName}".`,
+            }),
+        },
+      );
+    }
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };
   } catch (error) {

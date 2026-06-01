@@ -197,6 +197,60 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('runs explicitly worker-safe backend actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ text: 'No commit checkpoints saved for conversation conv-1.', action: 'list' })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-diffs', 'checkpoint', { action: 'list' }, undefined, {
+        conversationId: 'conv-1',
+        cwd: '/repo',
+        onUpdate: undefined,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { text: 'No commit checkpoints saved for conversation conv-1.', action: 'list' },
+    });
+
+    expect(workerRunner.hasExport).toHaveBeenCalledWith(
+      'system-diffs',
+      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-diffs', 'dist', 'backend.mjs')) }),
+      'checkpoint',
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-diffs',
+      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-diffs', 'dist', 'backend.mjs')) }),
+      'checkpoint',
+      { type: 'action', label: 'action checkpoint', target: 'checkpoint' },
+      [{ action: 'list' }],
+      {
+        context: {
+          type: 'backend',
+          runtimeScope: 'shared',
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        },
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
