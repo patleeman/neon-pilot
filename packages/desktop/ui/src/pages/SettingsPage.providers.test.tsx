@@ -446,12 +446,7 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    click(queryButton(container, 'Connect provider'));
-    const anthropicButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('Anthropic'));
-    if (!(anthropicButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected Anthropic provider button');
-    }
-    click(anthropicButton);
+    click(queryProviderRowAction(container, 'Anthropic', 'Connect'));
 
     expect(container.textContent).toContain('Anthropic');
     expect(container.textContent).toContain('Additional models');
@@ -609,18 +604,13 @@ describe('SettingsPage provider model editor', () => {
     }
   });
 
-  it('opens known providers from the connect provider dialog', async () => {
+  it('opens known providers from the recommended provider list', async () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    click(queryButton(container, 'Connect provider'));
-    expect(container.textContent).toContain('Connect provider');
+    expect(container.textContent).toContain('Recommended providers');
 
-    const anthropicButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('Anthropic'));
-    if (!(anthropicButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected Anthropic provider button');
-    }
-    click(anthropicButton);
+    click(queryProviderRowAction(container, 'Anthropic', 'Connect'));
 
     expect(container.querySelector('#settings-model-provider-id')).toBeNull();
     expect(container.textContent).toContain('Anthropic');

@@ -1892,7 +1892,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [modelDraftError, setModelDraftError] = useState<string | null>(null);
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [providerApiKey, setProviderApiKey] = useState('');
-  const [providerApiKeyEditorOpen, setProviderApiKeyEditorOpen] = useState(false);
   const [providerCredentialAction, setProviderCredentialAction] = useState<'saveKey' | 'remove' | null>(null);
   const [providerCredentialError, setProviderCredentialError] = useState<string | null>(null);
   const [providerCredentialNotice, setProviderCredentialNotice] = useState<string | null>(null);
@@ -2237,7 +2236,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
   useEffect(() => {
     setProviderApiKey('');
-    setProviderApiKeyEditorOpen(false);
     setProviderCredentialError(null);
     setProviderCredentialNotice(null);
     setOauthError(null);
@@ -2477,7 +2475,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setModelDraftMessage(null);
     setProviderCredentialError(null);
     setProviderCredentialNotice(null);
-    setProviderApiKeyEditorOpen(mode === 'provider' && Boolean(initialId));
     setProviderEditorMode(mode);
   }
 
@@ -2501,7 +2498,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setModelDraftMessage(null);
     setProviderCredentialError(null);
     setProviderCredentialNotice(null);
-    setProviderApiKeyEditorOpen(false);
     setProviderEditorMode('custom');
   }
 
@@ -2522,7 +2518,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setModelDraftMessage(null);
     setProviderCredentialError(null);
     setProviderCredentialNotice(null);
-    setProviderApiKeyEditorOpen(false);
   }
 
   function startEditingProviderModel(modelId: string) {
@@ -2844,7 +2839,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     try {
       await api.setProviderApiKey(selectedProvider.id, apiKey);
       setProviderApiKey('');
-      setProviderApiKeyEditorOpen(false);
       setOauthLoginState(null);
       setProviderCredentialNotice(`Saved API key for ${selectedProvider.id}.`);
       await Promise.all([refetchProviderAuth({ resetLoading: false }), refetchModels({ resetLoading: false })]);
@@ -3378,6 +3372,52 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                               )}
                             </div>
 
+                            <div className="space-y-3 border-t border-border-subtle pt-5">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="space-y-1">
+                                  <h3 className="text-[15px] font-medium text-primary">Recommended providers</h3>
+                                  <p className="ui-card-meta">Common hosted and local providers with guided setup.</p>
+                                </div>
+                              </div>
+                              <div className="space-y-px">
+                                {connectProviderIds.slice(0, 6).map((providerId) => (
+                                  <div key={providerId} className="ui-list-row ui-list-row-hover w-full justify-between gap-3 px-3 py-3">
+                                    <div className="min-w-0">
+                                      <div className="flex min-w-0 items-center gap-2">
+                                        <span className="truncate text-[13px] font-medium text-primary">
+                                          {formatProviderDisplayName(providerId)}
+                                        </span>
+                                        {PROVIDER_CATALOG[providerId]?.badge ? (
+                                          <span className="shrink-0 rounded-sm border border-border-subtle bg-elevated px-1.5 py-0.5 text-[10px] text-secondary">
+                                            {PROVIDER_CATALOG[providerId]?.badge}
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                      <p className="ui-card-meta mt-1 truncate">{formatProviderDescription(providerId)}</p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        startNewModelProvider(providerId, 'provider');
+                                      }}
+                                      className={ACTION_BUTTON_CLASS}
+                                    >
+                                      Connect
+                                    </button>
+                                  </div>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setProviderConnectOpen(true);
+                                    setProviderConnectSearch('');
+                                  }}
+                                  className="ui-list-row ui-list-row-hover w-full justify-center px-3 py-3 text-[13px] text-accent"
+                                >
+                                  Browse all providers
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </>
                       ) : null}
@@ -3489,7 +3529,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                     )}
 
                     {selectedModelProviderId !== '' && (
-                      <div className="space-y-5 border-t border-border-subtle pt-5">
+                      <div className="space-y-5 rounded-xl border border-border-subtle bg-surface/50 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
                             <p className="text-[10px] font-semibold uppercase text-dim">Manage provider</p>
@@ -4256,29 +4296,50 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           </details>
 
                           <div className="space-y-3 border-t border-border-subtle pt-4 min-w-0">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div className="space-y-1">
-                                <h3 className="text-[15px] font-medium text-primary">Credentials</h3>
-                                {modalProviderAuth ? (
-                                  <p className="text-[12px] text-secondary">{formatProviderAuthStatus(modalProviderAuth)}</p>
-                                ) : null}
-                              </div>
+                            <div>
+                              <h3 className="text-[15px] font-medium text-primary">Credentials</h3>
                             </div>
 
                             {modalProviderAuth ? (
-                              <div className="space-y-3">
+                              <div className="space-y-2.5">
+                                <p className="text-[12px] text-secondary">{formatProviderAuthStatus(modalProviderAuth)}</p>
+
+                                {canProviderUseApiKey(modalProviderAuth) ? (
+                                  <div className="space-y-2">
+                                    <label className="ui-card-meta" htmlFor="settings-provider-api-key-modal">
+                                      API key
+                                    </label>
+                                    <input
+                                      id="settings-provider-api-key-modal"
+                                      type="password"
+                                      value={providerApiKey}
+                                      onChange={(event) => {
+                                        setProviderApiKey(event.target.value);
+                                      }}
+                                      className={INPUT_CLASS}
+                                      placeholder="sk-... or op://Private/API key/password"
+                                      autoComplete="off"
+                                      spellCheck={false}
+                                      disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
+                                    />
+                                  </div>
+                                ) : null}
+
                                 <div className="flex flex-wrap gap-2">
                                   {canProviderUseApiKey(modalProviderAuth) && (
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setProviderApiKeyEditorOpen(true);
-                                        setProviderCredentialError(null);
+                                        void handleSaveProviderApiKey();
                                       }}
-                                      disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
+                                      disabled={
+                                        providerCredentialAction !== null ||
+                                        oauthLoginState?.status === 'running' ||
+                                        providerApiKey.trim().length === 0
+                                      }
                                       className={ACTION_BUTTON_CLASS}
                                     >
-                                      {modalProviderAuth.hasStoredCredential ? 'Replace API key' : 'Connect with API key'}
+                                      {providerCredentialAction === 'saveKey' ? 'Saving key…' : 'Save API key'}
                                     </button>
                                   )}
                                   <button
@@ -4312,58 +4373,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     </button>
                                   )}
                                 </div>
-
-                                {providerApiKeyEditorOpen && canProviderUseApiKey(modalProviderAuth) ? (
-                                  <div className="space-y-3 rounded-md border border-border-subtle bg-elevated/40 p-3">
-                                    <div className="space-y-2">
-                                      <label className="ui-card-meta" htmlFor="settings-provider-api-key-modal">
-                                        API key
-                                      </label>
-                                      <input
-                                        id="settings-provider-api-key-modal"
-                                        type="password"
-                                        value={providerApiKey}
-                                        onChange={(event) => {
-                                          setProviderApiKey(event.target.value);
-                                        }}
-                                        className={INPUT_CLASS}
-                                        placeholder="sk-... or op://Private/API key/password"
-                                        autoComplete="off"
-                                        spellCheck={false}
-                                        disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
-                                        autoFocus
-                                      />
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          void handleSaveProviderApiKey();
-                                        }}
-                                        disabled={
-                                          providerCredentialAction !== null ||
-                                          oauthLoginState?.status === 'running' ||
-                                          providerApiKey.trim().length === 0
-                                        }
-                                        className={ACTION_BUTTON_CLASS}
-                                      >
-                                        {providerCredentialAction === 'saveKey' ? 'Saving key…' : 'Save API key'}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setProviderApiKey('');
-                                          setProviderApiKeyEditorOpen(false);
-                                          setProviderCredentialError(null);
-                                        }}
-                                        disabled={providerCredentialAction !== null}
-                                        className={ACTION_BUTTON_CLASS}
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : null}
 
                                 {selectedProviderLogin?.status === 'running' && (
                                   <div className="space-y-2 border-t border-border-subtle pt-3">
