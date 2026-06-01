@@ -868,7 +868,7 @@ describe('registerExtensionRoutes', () => {
   it('accepts explicit reload calls for runtime manifests', async () => {
     const harness = createHarness();
     const reloadAllRes = createResponse();
-    harness.postHandler('/api/extensions/reload')({}, reloadAllRes);
+    await harness.postHandler('/api/extensions/reload')({}, reloadAllRes);
     expect(reloadAllRes.json).toHaveBeenCalledWith({ ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' });
 
     const reloadOneRes = createResponse();

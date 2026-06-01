@@ -154,6 +154,16 @@ const forbiddenPatterns = [
     message: 'product runtime code must access extension state through ExtensionHostClient',
   },
   {
+    pattern:
+      /import\s+\{[^}]*\b(?:clearBuildError|invalidateExtensionRegistryReadCaches|setBuildError)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'product runtime code must perform extension registry maintenance through ExtensionHostClient',
+  },
+  {
+    pattern:
+      /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\b(?:clearBuildError|invalidateExtensionRegistryReadCaches|setBuildError)\b/,
+    message: 'product runtime code must perform extension registry maintenance through ExtensionHostClient',
+  },
+  {
     files: [/^packages\/desktop\/server\/conversations\//],
     pattern: /import\s+\{[^}]*\bresolveExtensionModelProfile\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'conversation runtime code must resolve extension model profiles through ExtensionHostClient',

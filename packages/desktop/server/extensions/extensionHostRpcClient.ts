@@ -386,6 +386,11 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('state' in response)) throw new Error('Extension host returned invalid state operation response.');
       return response.state;
     },
+    async registryMaintenance(input) {
+      const response = await send({ type: 'registryMaintenance', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('registryMaintained' in response)) throw new Error('Extension host returned invalid registry maintenance response.');
+    },
     async readRegistryPresentation() {
       const response = await send({ type: 'readRegistryPresentation' });
       if (!response.ok) throw new Error(response.error);

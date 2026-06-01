@@ -115,6 +115,23 @@ export type ExtensionHostStateOperationResult =
   | { operation: 'write'; document: ExtensionHostStateDocument }
   | { operation: 'delete'; deleted: boolean };
 
+export type ExtensionHostRegistryMaintenanceRequest =
+  | {
+      type: 'registryMaintenance';
+      operation: 'invalidateReadCaches';
+    }
+  | {
+      type: 'registryMaintenance';
+      operation: 'clearBuildError';
+      extensionId: string;
+    }
+  | {
+      type: 'registryMaintenance';
+      operation: 'setBuildError';
+      extensionId: string;
+      error: string;
+    };
+
 export interface ExtensionHostServiceOperationResult {
   extensionId: string;
   serviceId: string;
@@ -421,6 +438,7 @@ export type ExtensionHostRequest =
   | ExtensionHostListStaticContributionsRequest
   | ExtensionHostListEventSubscriptionsRequest
   | ExtensionHostStateOperationRequest
+  | ExtensionHostRegistryMaintenanceRequest
   | ExtensionHostReadRegistryPresentationRequest
   | ExtensionHostResolveModelProfileRequest
   | ExtensionHostResolveFilePathRequest
@@ -482,6 +500,10 @@ export type ExtensionHostResponse =
   | {
       ok: true;
       state: ExtensionHostStateOperationResult;
+    }
+  | {
+      ok: true;
+      registryMaintained: true;
     }
   | {
       ok: true;
@@ -553,6 +575,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'listStaticContributions') return 'listStaticContributions';
   if (request.type === 'listEventSubscriptions') return 'listEventSubscriptions';
   if (request.type === 'stateOperation') return `stateOperation:${request.operation}:${request.extensionId}`;
+  if (request.type === 'registryMaintenance') return `registryMaintenance:${request.operation}`;
   if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
   if (request.type === 'resolveModelProfile') return `resolveModelProfile:${request.provider}/${request.model}`;
   if (request.type === 'resolveFilePath') return `resolveFilePath:${request.extensionId}/${request.relativePath}`;

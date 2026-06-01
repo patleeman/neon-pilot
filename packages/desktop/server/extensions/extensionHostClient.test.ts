@@ -47,10 +47,13 @@ const extensionRegistry = vi.hoisted(() => ({
   readExtensionSchema: vi.fn(),
   readExtensionRegistrySnapshot: vi.fn(),
   resolveExtensionModelProfile: vi.fn(),
+  clearBuildError: vi.fn(),
   beginExtensionStartupGuard: vi.fn(),
   completeExtensionStartupGuard: vi.fn(),
+  invalidateExtensionRegistryReadCaches: vi.fn(),
   setExtensionEnabled: vi.fn(),
   setExtensionKeybinding: vi.fn(),
+  setBuildError: vi.fn(),
 }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
@@ -378,6 +381,20 @@ describe('extension host client', () => {
     expect(extensionStorage.deleteExtensionState).toHaveBeenCalledWith('ext', 'tasks/one');
   });
 
+  it('routes registry maintenance through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+
+    await expect(getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' })).resolves.toBeUndefined();
+    await expect(getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: 'ext' })).resolves.toBeUndefined();
+    await expect(
+      getExtensionHostClient().registryMaintenance({ operation: 'setBuildError', extensionId: 'ext', error: 'Build failed' }),
+    ).resolves.toBeUndefined();
+
+    expect(extensionRegistry.invalidateExtensionRegistryReadCaches).toHaveBeenCalled();
+    expect(extensionRegistry.clearBuildError).toHaveBeenCalledWith('ext');
+    expect(extensionRegistry.setBuildError).toHaveBeenCalledWith('ext', 'Build failed');
+  });
+
   it('routes startup guard lifecycle through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.beginExtensionStartupGuard.mockReturnValueOnce({ safeMode: true, disabledIds: ['ext'] });
@@ -526,6 +543,9 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'listStaticContributions' })).toBe('listStaticContributions');
     expect(extensionHostRequestName({ type: 'listEventSubscriptions' })).toBe('listEventSubscriptions');
     expect(extensionHostRequestName({ type: 'stateOperation', operation: 'list', extensionId: 'ext' })).toBe('stateOperation:list:ext');
+    expect(extensionHostRequestName({ type: 'registryMaintenance', operation: 'invalidateReadCaches' })).toBe(
+      'registryMaintenance:invalidateReadCaches',
+    );
     expect(extensionHostRequestName({ type: 'readRegistryPresentation' })).toBe('readRegistryPresentation');
     expect(extensionHostRequestName({ type: 'resolveFilePath', extensionId: 'ext', relativePath: 'dist/frontend.js' })).toBe(
       'resolveFilePath:ext/dist/frontend.js',

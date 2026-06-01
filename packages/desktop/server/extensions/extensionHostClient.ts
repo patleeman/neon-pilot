@@ -15,6 +15,7 @@ import type {
   ExtensionHostInvokeRouteRequest,
   ExtensionHostModelProfileResolution,
   ExtensionHostPromptAssemblyContributions,
+  ExtensionHostRegistryMaintenanceRequest,
   ExtensionHostRegistryPresentation,
   ExtensionHostReloadBackendRequest,
   ExtensionHostReloadBackendResult,
@@ -56,6 +57,7 @@ export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionReque
 export type ExtensionHostInstallSubscriptionsInput = Omit<ExtensionHostInstallSubscriptionsRequest, 'type'>;
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
 export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
+export type ExtensionHostRegistryMaintenanceInput = DistributiveOmit<ExtensionHostRegistryMaintenanceRequest, 'type'>;
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
 export type ExtensionHostResolveFilePathInput = Omit<ExtensionHostResolveFilePathRequest, 'type'>;
 export type ExtensionHostResolveModelProfileInput = Omit<ExtensionHostResolveModelProfileRequest, 'type'>;
@@ -81,6 +83,7 @@ export interface ExtensionHostClient {
   listStaticContributions(): Promise<ExtensionHostStaticContributions>;
   listEventSubscriptions(): Promise<ExtensionHostEventSubscription[]>;
   stateOperation(input: ExtensionHostStateOperationInput): Promise<ExtensionHostStateOperationResult>;
+  registryMaintenance(input: ExtensionHostRegistryMaintenanceInput): Promise<void>;
   readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
   resolveFilePath(input: ExtensionHostResolveFilePathInput): Promise<string>;
   resolveModelProfile(input: ExtensionHostResolveModelProfileInput): Promise<ExtensionHostModelProfileResolution>;
@@ -185,6 +188,11 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('state' in response)) throw new Error('Extension host returned invalid state operation response.');
       return response.state;
+    },
+    async registryMaintenance(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'registryMaintenance', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('registryMaintained' in response)) throw new Error('Extension host returned invalid registry maintenance response.');
     },
     async readRegistryPresentation() {
       const response = await handleInProcessExtensionHostRequest({ type: 'readRegistryPresentation' });
@@ -555,6 +563,17 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         ok: true,
         state: { operation: 'delete', deleted: deleteExtensionState(request.extensionId, request.key).deleted },
       };
+    }
+    if (request.type === 'registryMaintenance') {
+      const { clearBuildError, invalidateExtensionRegistryReadCaches, setBuildError } = await import('./extensionRegistry.js');
+      if (request.operation === 'invalidateReadCaches') {
+        invalidateExtensionRegistryReadCaches();
+      } else if (request.operation === 'clearBuildError') {
+        clearBuildError(request.extensionId);
+      } else {
+        setBuildError(request.extensionId, request.error);
+      }
+      return { ok: true, registryMaintained: true };
     }
     if (request.type === 'readRegistryPresentation') {
       const {

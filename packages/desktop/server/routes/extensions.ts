@@ -18,11 +18,6 @@ import {
 } from '../extensions/extensionLifecycle.js';
 import type { ExtensionManifest } from '../extensions/extensionManifest.js';
 import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js';
-import {
-  clearBuildError,
-  invalidateExtensionRegistryReadCaches,
-  setBuildError,
-} from '../extensions/extensionRegistry.js';
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
@@ -789,19 +784,23 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.post('/api/extensions/reload', (_req, res) => {
-    invalidateExtensionRegistryReadCaches();
-    res.json({ ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' });
+  router.post('/api/extensions/reload', async (_req, res) => {
+    try {
+      await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
+      res.json({ ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' });
+    } catch (err) {
+      sendRouteError(res, 'extension reload error', err);
+    }
   });
 
   router.post('/api/extensions/:id/build', async (req, res) => {
     try {
       const result = await buildRuntimeExtension(req.params.id);
-      clearBuildError(req.params.id);
+      await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
       res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setBuildError(req.params.id, message);
+      await getExtensionHostClient().registryMaintenance({ operation: 'setBuildError', extensionId: req.params.id, error: message });
       const status = /not found/i.test(message)
         ? 404
         : /package root|schemaVersion|manifest|contributes|frontend|backend|surfaces|permissions|no longer builds|outside the app|compile extensions at runtime|prebuild dist\/frontend\.js and dist\/backend\.mjs/i.test(
@@ -845,8 +844,8 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/reload', async (req, res) => {
     try {
-      invalidateExtensionRegistryReadCaches();
-      clearBuildError(req.params.id);
+      await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
+      await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
       const summary = await readExtensionInstallSummaryFromHost(req.params.id);
       if (summary?.status === 'invalid') {
         const errors = Array.isArray(summary.errors) ? summary.errors.filter((error): error is string => typeof error === 'string') : [];
