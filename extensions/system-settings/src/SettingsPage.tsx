@@ -174,48 +174,34 @@ const MODEL_PROVIDER_API_OPTIONS: Array<{ value: ModelProviderApi; label: string
   { value: 'google-generative-ai', label: 'Google Generative AI' },
 ];
 const COMMON_PROVIDER_IDS = ['anthropic', 'openai', 'opencode-go', 'google'];
-const PROVIDER_CATALOG: Record<string, { name: string; description: string; badge?: string; popular?: boolean }> = {
+const PROVIDER_CATALOG: Record<string, { name: string; description: string }> = {
   'openai-codex': {
     name: 'OpenAI Codex',
     description: 'ChatGPT/Codex subscription login for coding conversations.',
-    badge: 'OAuth',
-    popular: true,
   },
   anthropic: {
     name: 'Anthropic',
     description: 'Claude models, including subscription and API-key access.',
-    badge: 'Claude',
-    popular: true,
   },
   openai: {
     name: 'OpenAI',
     description: 'GPT models through API-key based OpenAI access.',
-    badge: 'API key',
-    popular: true,
   },
   google: {
     name: 'Google',
     description: 'Gemini models for fast, structured responses.',
-    badge: 'Gemini',
-    popular: true,
   },
   openrouter: {
     name: 'OpenRouter',
     description: 'One API key for many hosted model families.',
-    badge: 'Many models',
-    popular: true,
   },
   'opencode-go': {
     name: 'OpenCode Go',
     description: 'OpenCode Go provider with API-key authentication.',
-    badge: 'API key',
-    popular: true,
   },
   ds4: {
     name: 'DS4 local',
     description: 'Local DeepSeek V4 Flash runtime served from your machine.',
-    badge: 'Local',
-    popular: true,
   },
 };
 
@@ -252,13 +238,6 @@ function formatProviderDisplayName(providerId: string): string {
 
 function formatProviderDescription(providerId: string): string {
   return PROVIDER_CATALOG[providerId]?.description ?? 'Custom provider or model override.';
-}
-
-function formatProviderBadge(provider: ProviderAuthSummary | null, fallbackId: string): string {
-  if (provider?.oauthSupported) return 'OAuth';
-  if (provider?.apiKeySupported || provider?.authType === 'api_key') return 'API key';
-  if (provider?.authType === 'environment') return 'Env';
-  return PROVIDER_CATALOG[fallbackId]?.badge ?? 'Provider';
 }
 
 function listKnownModelProviderIds(
@@ -2076,12 +2055,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     return [...ids]
       .filter((providerId) => !configured.has(providerId))
       .filter((providerId) => !query || providerId.toLowerCase().includes(query) || formatProviderDisplayName(providerId).toLowerCase().includes(query))
-      .sort((left, right) => {
-        const leftPopular = PROVIDER_CATALOG[left]?.popular ? 0 : 1;
-        const rightPopular = PROVIDER_CATALOG[right]?.popular ? 0 : 1;
-        if (leftPopular !== rightPopular) return leftPopular - rightPopular;
-        return formatProviderDisplayName(left).localeCompare(formatProviderDisplayName(right));
-      });
+      .sort((left, right) => formatProviderDisplayName(left).localeCompare(formatProviderDisplayName(right)));
   }, [modelProviderState?.providers, providerAuthState?.providers, providerConnectSearch, unconfiguredModelProviderIds]);
   const configuredProviderSummaries = useMemo(() => {
     const summaries = new Map<string, { id: string; modelProvider: ModelProviderConfig | null; auth: ProviderAuthSummary | null }>();
@@ -3296,7 +3270,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 <div className="space-y-px">
                                   {configuredProviderSummaries.map((provider) => {
                                     const selected = provider.id === selectedModelProviderId || provider.id === selectedProviderId;
-                                    const badge = formatProviderBadge(provider.auth, provider.id);
                                     const description = provider.modelProvider?.baseUrl
                                       ? provider.modelProvider.baseUrl
                                       : provider.auth
@@ -3322,18 +3295,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           className="min-w-0 flex-1 text-left focus-visible:outline-none"
                                           aria-pressed={selected}
                                         >
-                                          <span className="flex min-w-0 items-center gap-2">
-                                            <span className="truncate text-[13px] font-medium text-primary">
-                                              {formatProviderDisplayName(provider.id)}
-                                            </span>
-                                            <span className="shrink-0 rounded-sm border border-border-subtle bg-elevated px-1.5 py-0.5 text-[10px] text-secondary">
-                                              {badge}
-                                            </span>
-                                            {provider.auth?.hasStoredCredential ? (
-                                              <span className="shrink-0 rounded-sm border border-success/30 px-1.5 py-0.5 text-[10px] text-success">
-                                                Connected
-                                              </span>
-                                            ) : null}
+                                          <span className="block truncate text-[13px] font-medium text-primary">
+                                            {formatProviderDisplayName(provider.id)}
                                           </span>
                                           <span className="ui-card-meta mt-1 block truncate">{description}</span>
                                           <span className="ui-card-meta mt-0.5 block truncate text-dim">
@@ -3385,9 +3348,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                     {providerConnectOpen && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6">
-                        <div className="flex max-h-[min(720px,calc(100vh-48px))] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl">
-                          <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-4">
-                            <h3 className="text-[16px] font-medium text-primary">Connect provider</h3>
+                        <div className="flex max-h-[min(640px,calc(100vh-48px))] w-full max-w-xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-2xl">
+                          <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-3">
+                            <h3 className="text-[15px] font-medium text-primary">Connect provider</h3>
                             <button
                               type="button"
                               onClick={() => {
@@ -3398,7 +3361,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                               Close
                             </button>
                           </div>
-                          <div className="min-h-0 overflow-y-auto px-5 py-4">
+                          <div className="min-h-0 overflow-y-auto px-4 py-3">
                             <label className="sr-only" htmlFor="settings-provider-connect-search">
                               Search providers
                             </label>
@@ -3413,74 +3376,39 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                               autoComplete="off"
                             />
 
-                            <div className="mt-5 space-y-2">
-                              <p className="ui-card-meta">Popular</p>
-                              {connectProviderIds
-                                .filter((providerId) => PROVIDER_CATALOG[providerId]?.popular)
-                                .map((providerId) => (
-                                  <button
-                                    key={providerId}
-                                    type="button"
-                                    onClick={() => {
-                                      setProviderConnectOpen(false);
-                                      startNewModelProvider(providerId, 'provider');
-                                    }}
-                                    className="ui-list-row ui-list-row-hover w-full justify-between gap-3 px-3 py-3 text-left"
-                                  >
-                                    <span className="min-w-0">
-                                      <span className="flex min-w-0 items-center gap-2">
-                                        <span className="truncate text-[13px] font-medium text-primary">
-                                          {formatProviderDisplayName(providerId)}
-                                        </span>
-                                        {PROVIDER_CATALOG[providerId]?.badge ? (
-                                          <span className="shrink-0 rounded-sm border border-border-subtle bg-elevated px-1.5 py-0.5 text-[10px] text-secondary">
-                                            {PROVIDER_CATALOG[providerId]?.badge}
-                                          </span>
-                                        ) : null}
-                                      </span>
-                                      <span className="ui-card-meta mt-1 block truncate">{formatProviderDescription(providerId)}</span>
+                            <div className="mt-3 space-y-px">
+                              {connectProviderIds.map((providerId) => (
+                                <button
+                                  key={providerId}
+                                  type="button"
+                                  onClick={() => {
+                                    setProviderConnectOpen(false);
+                                    startNewModelProvider(providerId, 'provider');
+                                  }}
+                                  className="ui-list-row ui-list-row-hover w-full justify-between gap-3 px-2 py-2 text-left"
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-[13px] font-medium text-primary">
+                                      {formatProviderDisplayName(providerId)}
                                     </span>
-                                    <span className="text-[18px] text-dim">+</span>
-                                  </button>
-                                ))}
-                            </div>
-
-                            <div className="mt-5 space-y-2">
-                              <p className="ui-card-meta">Other</p>
-                              {connectProviderIds
-                                .filter((providerId) => !PROVIDER_CATALOG[providerId]?.popular)
-                                .map((providerId) => (
-                                  <button
-                                    key={providerId}
-                                    type="button"
-                                    onClick={() => {
-                                      setProviderConnectOpen(false);
-                                      startNewModelProvider(providerId, 'provider');
-                                    }}
-                                    className="ui-list-row ui-list-row-hover w-full justify-between gap-3 px-3 py-3 text-left"
-                                  >
-                                    <span className="min-w-0">
-                                      <span className="block truncate text-[13px] font-medium text-primary">
-                                        {formatProviderDisplayName(providerId)}
-                                      </span>
-                                      <span className="ui-card-meta mt-1 block truncate">{formatProviderDescription(providerId)}</span>
-                                    </span>
-                                    <span className="text-[18px] text-dim">+</span>
-                                  </button>
-                                ))}
+                                    <span className="ui-card-meta mt-0.5 block truncate">{formatProviderDescription(providerId)}</span>
+                                  </span>
+                                  <span className="text-[16px] text-dim">+</span>
+                                </button>
+                              ))}
                               <button
                                 type="button"
                                 onClick={() => {
                                   setProviderConnectOpen(false);
                                   startNewModelProvider('', 'custom');
                                 }}
-                                className="ui-list-row ui-list-row-hover w-full justify-between gap-3 px-3 py-3 text-left"
+                                className="ui-list-row ui-list-row-hover w-full justify-between gap-3 px-2 py-2 text-left"
                               >
                                 <span>
                                   <span className="block text-[13px] font-medium text-primary">Custom OpenAI-compatible</span>
-                                  <span className="ui-card-meta mt-1 block">Bring your own base URL and model definitions.</span>
+                                  <span className="ui-card-meta mt-0.5 block">Bring your own base URL and model definitions.</span>
                                 </span>
-                                <span className="text-[18px] text-dim">+</span>
+                                <span className="text-[16px] text-dim">+</span>
                               </button>
                             </div>
                           </div>

@@ -261,23 +261,6 @@
         white-space: nowrap;
       }
 
-      .badge {
-        display: inline-flex;
-        height: 20px;
-        align-items: center;
-        border: 1px solid #303846;
-        border-radius: 4px;
-        background: #20252d;
-        color: var(--muted);
-        font-size: 11px;
-        padding: 0 6px;
-      }
-
-      .badge.good {
-        border-color: rgb(121 213 138 / 0.35);
-        color: var(--good);
-      }
-
       .details {
         margin-top: 26px;
         border-top: 1px solid var(--border-soft);
@@ -380,13 +363,6 @@
         border: 0;
         background: transparent;
         padding: 0;
-      }
-
-      .modal-section-title {
-        margin: 24px 0 8px;
-        color: var(--dim);
-        font-size: 12px;
-        font-weight: 620;
       }
 
       .compact-row {
@@ -492,7 +468,6 @@
                 <div class="provider-main">
                   <div class="provider-title">
                     <span>OpenAI Codex</span>
-                    <span class="badge good">OAuth</span>
                   </div>
                   <div class="provider-desc">Logged in with OAuth credentials saved in auth.json · 1 model</div>
                 </div>
@@ -503,7 +478,6 @@
                 <div class="provider-main">
                   <div class="provider-title">
                     <span>DS4 local</span>
-                    <span class="badge">Local</span>
                   </div>
                   <div class="provider-desc">http://127.0.0.1:8000/v1 · 1 model</div>
                 </div>
@@ -514,7 +488,6 @@
                 <div class="provider-main">
                   <div class="provider-title">
                     <span>OpenCode Go</span>
-                    <span class="badge">API key</span>
                   </div>
                   <div class="provider-desc">Stored provider key · 13 models</div>
                 </div>
@@ -534,7 +507,6 @@
                 <div class="quiet-panel">
                   <div class="provider-title">
                     <span>Credentials</span>
-                    <span class="badge good">Connected</span>
                   </div>
                   <p class="provider-desc">OAuth credentials are saved in auth.json. New conversations can use openai-codex models.</p>
                   <div class="footer-actions">
@@ -578,36 +550,31 @@
             <input value="" placeholder="Search providers" aria-label="Search providers" />
           </div>
 
-          <p class="modal-section-title">Popular</p>
-          <div class="compact-row selected">
-            <span class="glyph">C</span>
-            <span>OpenAI Codex</span>
-            <span class="badge">OAuth</span>
-          </div>
           <div class="compact-row">
-            <span class="glyph">A</span>
             <span>Anthropic</span>
             <span>+</span>
           </div>
           <div class="compact-row">
-            <span class="glyph">R</span>
+            <span>Google</span>
+            <span>+</span>
+          </div>
+          <div class="compact-row">
+            <span>OpenAI</span>
+            <span>+</span>
+          </div>
+          <div class="compact-row">
+            <span>OpenAI Codex</span>
+            <span>+</span>
+          </div>
+          <div class="compact-row">
             <span>OpenRouter</span>
             <span>+</span>
           </div>
           <div class="compact-row">
-            <span class="glyph">G</span>
-            <span>Google</span>
+            <span>DS4 local</span>
             <span>+</span>
           </div>
-
-          <p class="modal-section-title">Custom and local</p>
           <div class="compact-row">
-            <span class="glyph">D</span>
-            <span>DS4 local</span>
-            <span class="badge">Local</span>
-          </div>
-          <div class="compact-row">
-            <span class="glyph">◇</span>
             <span>Custom OpenAI-compatible</span>
             <span>+</span>
           </div>
@@ -616,7 +583,6 @@
             <div class="back">←</div>
             <div class="provider-title" style="margin-top: 18px">
               <span>Connect OpenAI Codex</span>
-              <span class="badge">OAuth</span>
             </div>
             <p class="copy">
               Use ChatGPT/Codex subscription credentials for coding conversations. The login opens in your browser and Neon Pilot stores the resulting runtime credential.
