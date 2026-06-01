@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { invokeExtensionAction, loadExtensionAgentFactory, loadExtensionBackend } from './extensionBackend.js';
+import { invokeExtensionAction, invokeExtensionRoute, loadExtensionAgentFactory, loadExtensionBackend } from './extensionBackend.js';
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
 import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
 import { isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
@@ -198,6 +198,63 @@ describe('extension backend action invocation', () => {
       { type: 'agent-factory-builder', label: 'agent extension factory builder', target: 'create' },
       expect.any(Function),
     );
+  });
+
+  it('loads and executes backend routes through the extension backend runner seam', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'runner-route-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'runner-route-ext',
+        name: 'Runner Route Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'GET', path: '/ping', handler: 'ping' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+    const loadModule = vi.fn(async () => ({ ping: vi.fn(() => ({ status: 201, body: { via: 'runner' } })) }));
+    const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
+    setExtensionBackendRunnerForTests({
+      loadModule,
+      clearModule: vi.fn(),
+      run,
+    });
+
+    await expect(
+      invokeExtensionRoute('runner-route-ext', 'GET', '/ping', { method: 'GET', path: '/ping', query: {}, params: {} }),
+    ).resolves.toEqual({ status: 201, body: { via: 'runner' } });
+
+    expect(run).toHaveBeenCalledWith('runner-route-ext', { type: 'route', label: 'route GET /ping', target: '/ping' }, expect.any(Function));
+  });
+
+  it('returns HTTP 500 when a backend route export is missing', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'missing-route-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'missing-route-ext',
+        name: 'Missing Route Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'GET', path: '/ping', handler: 'missing' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+
+    await expect(
+      invokeExtensionRoute('missing-route-ext', 'GET', '/ping', { method: 'GET', path: '/ping', query: {}, params: {} }),
+    ).resolves.toEqual({ status: 500, body: { error: 'Extension route handler not found: missing' } });
   });
 });
 

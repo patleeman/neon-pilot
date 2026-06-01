@@ -690,19 +690,28 @@ export async function invokeExtensionRoute(
   }
   const route = entry.manifest.backend?.routes?.find((candidate) => candidate.method === method && candidate.path === routePath);
   if (!route) return { status: 404, body: { error: 'Extension route not found.' } };
-  const backend = await loadExtensionBackend(extensionId);
-  const handler = backend[route.handler];
-  if (typeof handler !== 'function') {
-    return { status: 500, body: { error: `Extension route handler not found: ${route.handler}` } };
+  let result: unknown;
+  try {
+    result = await runExtensionBackendExport(
+      extensionId,
+      route.handler,
+      extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }),
+      (handler) => Promise.resolve(handler(request, createBackendContext(extensionId, serverContext))),
+      {
+        createMissingExportError: () =>
+          new ExtensionLoadError({
+            extensionId,
+            code: 'handler_not_found',
+            message: `Extension route handler not found: ${route.handler}`,
+          }),
+      },
+    );
+  } catch (error) {
+    if (error instanceof ExtensionLoadError && error.code === 'handler_not_found') {
+      return { status: 500, body: { error: error.message } };
+    }
+    throw error;
   }
-  const result = await getExtensionBackendRunner().run(extensionId, extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }), () =>
-    Promise.resolve(
-      (handler as (request: ExtensionRouteRequest, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
-        request,
-        createBackendContext(extensionId, serverContext),
-      ),
-    ),
-  );
   if (
     result &&
     typeof result === 'object' &&
