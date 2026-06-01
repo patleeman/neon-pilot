@@ -12,7 +12,7 @@ import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
-import { type ExtensionBackendLoadTarget, type ExtensionBackendModule,getExtensionBackendRunner } from './extensionBackendRunner.js';
+import { type ExtensionBackendLoadTarget, type ExtensionBackendModule, getExtensionBackendRunner } from './extensionBackendRunner.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
@@ -616,7 +616,7 @@ export async function loadExtensionAgentFactory(extensionId: string, exportName 
   // - factory builder: export function createExtension(): (pi) => void { ... }
   // Normalize both so the SDK always receives the actual (pi) => void factory.
   if (candidate.length === 0) {
-    const built = (candidate as () => unknown)();
+    const built = await getExtensionBackendRunner().run(extensionId, 'agent extension factory builder', () => (candidate as () => unknown)());
     if (typeof built !== 'function') {
       throw new Error(`Extension agent factory builder did not return a function: ${exportName}`);
     }

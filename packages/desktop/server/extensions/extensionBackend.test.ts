@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { invokeExtensionAction, loadExtensionBackend } from './extensionBackend.js';
+import { invokeExtensionAction, loadExtensionAgentFactory, loadExtensionBackend } from './extensionBackend.js';
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
 import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
 import { isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
@@ -157,6 +157,39 @@ describe('extension backend action invocation', () => {
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
     );
     expect(run).toHaveBeenCalledWith('runner-action-ext', 'action doThing', expect.any(Function));
+  });
+
+  it('normalizes agent factory builders through the extension backend runner seam', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'runner-agent-builder-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'runner-agent-builder-ext',
+        name: 'Runner Agent Builder Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+    const factory = vi.fn();
+    const create = vi.fn(() => factory);
+    const loadModule = vi.fn(async () => ({ create }));
+    const run = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
+    setExtensionBackendRunnerForTests({
+      loadModule,
+      clearModule: vi.fn(),
+      run,
+    });
+
+    await expect(loadExtensionAgentFactory('runner-agent-builder-ext', 'create')).resolves.toBe(factory);
+
+    expect(create).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledWith('runner-agent-builder-ext', 'agent extension factory builder', expect.any(Function));
   });
 });
 
