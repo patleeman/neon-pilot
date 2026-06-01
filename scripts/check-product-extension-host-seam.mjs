@@ -93,12 +93,12 @@ const forbiddenPatterns = [
   },
   {
     pattern:
-      /import(?:\s+type)?\s+\{[^}]*\b(?:readExtensionSchema|readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSearchProviderRegistrations|listExtensionSlashCommandRegistrations)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+      /import(?:\s+type)?\s+\{[^}]*\b(?:findExtensionCommandRegistration|readExtensionSchema|readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSearchProviderRegistrations|listExtensionSlashCommandRegistrations)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'product runtime presentation code must read extension registry presentation through ExtensionHostClient',
   },
   {
     pattern:
-      /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\b(?:readExtensionSchema|readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSearchProviderRegistrations|listExtensionSlashCommandRegistrations)\b/,
+      /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\b(?:findExtensionCommandRegistration|readExtensionSchema|readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSearchProviderRegistrations|listExtensionSlashCommandRegistrations)\b/,
     message: 'product runtime presentation code must read extension registry presentation through ExtensionHostClient',
   },
   {

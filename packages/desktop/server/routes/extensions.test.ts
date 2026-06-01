@@ -358,6 +358,13 @@ describe('registerExtensionRoutes', () => {
       ]),
     );
 
+    const commandRes = createResponse();
+    await harness.postHandler('/api/extensions/commands/:commandId/execute')(
+      { params: { commandId: 'agent-board.plan' }, body: { sprint: 'next' } },
+      commandRes,
+    );
+    expect(commandRes.json).toHaveBeenCalledWith({ ok: true, result: { ok: false, error: expect.stringContaining('backend entry') } });
+
     const slashRes = createResponse();
     await harness.getHandler('/api/extensions/slash-commands')({}, slashRes);
     expect(slashRes.json).toHaveBeenCalledWith(

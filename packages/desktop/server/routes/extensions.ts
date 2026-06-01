@@ -6,6 +6,7 @@ import type { Express, Request, Response } from 'express';
 import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtensionRegistryPresentation.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
+import { findExtensionCommandRegistration } from '../extensions/extensionCommandLookup.js';
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import type { ExtensionHostActionInvokeResult } from '../extensions/extensionHostProtocol.js';
@@ -21,7 +22,6 @@ import type { ExtensionManifest } from '../extensions/extensionManifest.js';
 import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js';
 import {
   clearBuildError,
-  findExtensionCommandRegistration,
   findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
@@ -57,6 +57,20 @@ async function readExtensionManifestFromHost(extensionId: string): Promise<Exten
   const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
   const manifest = snapshot.extensions.find((extension) => extension.id === extensionId);
   return (manifest ?? null) as ExtensionManifest | null;
+}
+
+async function findExtensionCommandRegistrationFromHost(commandId: string) {
+  const { commandRegistrations } = await getExtensionHostClient().readRegistryPresentation();
+  const commands = commandRegistrations
+    .map((command) => ({
+      ...command,
+      extensionId: typeof command.extensionId === 'string' ? command.extensionId : '',
+      surfaceId: typeof command.surfaceId === 'string' ? command.surfaceId : '',
+      action: typeof command.action === 'string' ? command.action : '',
+      args: (command as { args?: unknown }).args,
+    }))
+    .filter((command) => command.extensionId && command.surfaceId && command.action);
+  return findExtensionCommandRegistration(commands, commandId);
 }
 
 function isHostCommandAction(action: string): boolean {
@@ -484,7 +498,7 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/commands/:commandId/execute', async (req, res) => {
     const signal = createExtensionRequestAbortSignal(req, res);
     try {
-      const command = findExtensionCommandRegistration(req.params.commandId);
+      const command = await findExtensionCommandRegistrationFromHost(req.params.commandId);
       if (!command) {
         const handled = await executeHostCommandInRenderer({ command: req.params.commandId, args: req.body ?? {} });
         res.json({ ok: true, result: handled });
