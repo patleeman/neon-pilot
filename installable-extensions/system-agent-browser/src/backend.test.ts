@@ -4,7 +4,7 @@ import { runAgentBrowser } from './backend.js';
 
 describe('system-agent-browser backend', () => {
   const exec = vi.fn();
-  const ctx = { shell: { exec }, agentToolContext: { signal: new AbortController().signal, conversationId: 'conversation/1' } } as never;
+  const ctx = { shell: { exec }, toolContext: { conversationId: 'conversation/1' } } as never;
 
   beforeEach(() => {
     exec.mockReset().mockResolvedValue({ stdout: 'ok\n', stderr: '', executionWrappers: [{ id: 'sandbox' }] });
@@ -28,7 +28,6 @@ describe('system-agent-browser backend', () => {
       command: 'agent-browser',
       args: ['--native', '--headed', '--session', 's1', '-p', 'chrome', 'open', 'https://example.com'],
       timeoutMs: 2_000,
-      signal: expect.any(AbortSignal),
     });
   });
 

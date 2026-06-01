@@ -11,7 +11,8 @@
       {
         "id": "run",
         "handler": "runAgentBrowser",
-        "title": "Run agent-browser"
+        "title": "Run agent-browser",
+        "worker": { "enabled": true, "ignoreLiveContext": true }
       }
     ]
   },

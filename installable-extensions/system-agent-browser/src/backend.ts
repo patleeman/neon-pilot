@@ -79,7 +79,7 @@ async function cleanupStaleAgentBrowserSessions(ctx: ExtensionBackendContext, tt
       }
 
       await ctx.shell
-        .exec({ command: 'agent-browser', args: ['--session', session, 'close'], timeoutMs: 5_000, signal: ctx.agentToolContext?.signal })
+        .exec({ command: 'agent-browser', args: ['--session', session, 'close'], timeoutMs: 5_000 })
         .catch(() => undefined);
       if (isPidAlive(pid)) process.kill(pid, 'SIGTERM');
       await removeIfPresent(pidPath);
@@ -89,11 +89,7 @@ async function cleanupStaleAgentBrowserSessions(ctx: ExtensionBackendContext, tt
 }
 
 function resolveDefaultSession(ctx: ExtensionBackendContext): string {
-  const rawContext = ctx.agentToolContext;
-  const record = rawContext && typeof rawContext === 'object' && !Array.isArray(rawContext) ? (rawContext as Record<string, unknown>) : {};
-  const toolContext =
-    record.toolContext && typeof record.toolContext === 'object' ? (record.toolContext as Record<string, unknown>) : record;
-  const conversationId = typeof toolContext.conversationId === 'string' ? toolContext.conversationId : '';
+  const conversationId = ctx.toolContext?.conversationId ?? ctx.toolContext?.sessionId ?? '';
   const suffix = conversationId.trim() ? conversationId.replace(/[^a-z0-9._-]/gi, '-').slice(0, 48) : 'default';
   return `neon-pilot-${suffix}`;
 }
@@ -124,7 +120,6 @@ export async function runAgentBrowser(input: unknown, ctx: ExtensionBackendConte
       command: 'agent-browser',
       args,
       timeoutMs,
-      signal: ctx.agentToolContext?.signal,
     });
     const combined = [result.stdout?.trimEnd(), result.stderr?.trimEnd()].filter(Boolean).join('\n');
     const formatted = truncateOutput(combined || '(no output)');
