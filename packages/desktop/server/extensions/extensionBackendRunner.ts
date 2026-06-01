@@ -216,7 +216,6 @@ export function createWorkerImportExtensionBackendRunner(
   client: ExtensionBackendWorkerImportClient = new ExtensionBackendWorkerPool({
     capabilityDispatcher: createExtensionBackendCapabilityDispatcher(),
   }),
-  fallback: ExtensionBackendRunner = createInProcessExtensionBackendRunner(),
 ): ExtensionBackendWorkerExportRunner {
   return {
     async loadModule(extensionId, compiled) {
@@ -227,22 +226,25 @@ export function createWorkerImportExtensionBackendRunner(
     },
     clearModule(extensionId) {
       void client.clearModule(extensionId).catch(() => {
-        // Clearing the in-process fallback below is enough for immediate correctness;
-        // worker clear failures surface on the next worker operation.
+        // Worker clear failures surface on the next worker operation.
       });
-      fallback.clearModule(extensionId);
     },
     hasExport(extensionId, compiled, exportName) {
       return client.hasExport(extensionId, compiled, exportName);
     },
     loadAgentFactory(extensionId, compiled, exportName) {
-      return fallback.loadAgentFactory(extensionId, compiled, exportName);
+      void compiled;
+      return Promise.reject(new Error(`Extension backend agent factory "${extensionId}:${exportName}" must run in a backend worker.`));
     },
     runExport(extensionId, compiled, exportName, operation, invoke) {
-      return fallback.runExport(extensionId, compiled, exportName, operation, invoke);
+      void compiled;
+      void operation;
+      void invoke;
+      return Promise.reject(new Error(`Extension backend export "${extensionId}:${exportName}" must run in a backend worker.`));
     },
     run(extensionId, operation, handler) {
-      return fallback.run(extensionId, operation, handler);
+      void handler;
+      return Promise.reject(new Error(`Extension backend operation "${extensionId}:${operation.label}" must run in a backend worker.`));
     },
     runWorkerExport<T>(
       extensionId: string,

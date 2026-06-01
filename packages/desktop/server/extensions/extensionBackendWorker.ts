@@ -25,6 +25,7 @@ const shellHandleCallbacks = new Map<
 >();
 let nextCapabilityRequestId = 0;
 let nextShellHandleId = 0;
+let nextRouteStreamHandleId = 0;
 const extensionCapabilityScope = new AsyncLocalStorage<string>();
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 
@@ -127,7 +128,22 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     runtimeDir,
     runtimeSettingsFilePath,
     profileSettingsFilePath: runtimeSettingsFilePath,
-    ...(options.toolContext ? { toolContext: options.toolContext } : {}),
+    ...(options.toolContext
+      ? {
+          toolContext: {
+            ...options.toolContext,
+            ...(options.toolContext.updateHandleId
+              ? {
+                  onUpdate: (update: unknown) =>
+                    callHostCapability(extensionId, 'toolContext', 'update', {
+                      handleId: options.toolContext?.updateHandleId,
+                      update,
+                    }),
+                }
+              : {}),
+          },
+        }
+      : {}),
     runtime: {
       getRepoRoot: () => repoRoot,
       getLiveSessionResourceOptions: () => liveSessionResourceOptions,
@@ -320,6 +336,39 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
   };
 }
 
+function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+  return Boolean(value && typeof value === 'object' && Symbol.asyncIterator in value);
+}
+
+function serializeRouteStreamResult(result: unknown): unknown {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return result;
+  const candidate = result as { stream?: unknown; events?: unknown };
+  if (candidate.stream !== 'sse' || !isAsyncIterable(candidate.events)) return result;
+
+  const handleId = `route-sse-${++nextRouteStreamHandleId}`;
+  const { events, ...serializable } = candidate as Record<string, unknown>;
+  void (async () => {
+    try {
+      for await (const event of events as AsyncIterable<unknown>) {
+        parentPort!.postMessage({ kind: 'routeStreamEvent', handleId, event });
+      }
+      parentPort!.postMessage({ kind: 'routeStreamEvent', handleId, done: true });
+    } catch (error) {
+      parentPort!.postMessage({
+        kind: 'routeStreamEvent',
+        handleId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  })();
+
+  return {
+    ...serializable,
+    stream: 'sse',
+    events: { __extensionWorkerRouteStream: true, handleId },
+  };
+}
+
 async function createWorkerFilesystemRoot(
   extensionId: string,
   input: { kind?: string; cwd?: string; access?: string[]; reason?: string; prefix?: string },
@@ -381,7 +430,7 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
       const contextOptions = typeof request.context === 'object' ? request.context : undefined;
       const args = request.context ? [...request.args, createWorkerBackendContext(request.extensionId, contextOptions)] : request.args;
       const result = await extensionCapabilityScope.run(request.extensionId, () => (handler as (...args: unknown[]) => unknown)(...args));
-      return { id: request.id, ok: true, result };
+      return { id: request.id, ok: true, result: serializeRouteStreamResult(result) };
     }
 
     if (request.type === 'clearModule') {

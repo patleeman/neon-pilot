@@ -882,6 +882,9 @@ export interface ExtensionBackendRoute {
   title?: string;
   description?: string;
   stream?: 'sse';
+  worker?: {
+    enabled?: boolean;
+  };
 }
 
 export interface ExtensionRouteRequest {

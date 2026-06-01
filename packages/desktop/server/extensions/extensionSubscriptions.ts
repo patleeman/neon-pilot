@@ -1,6 +1,6 @@
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
-import { createBackendContext, runExtensionBackendExport } from './extensionBackend.js';
+import { runExtensionBackendExportInWorker } from './extensionBackend.js';
 import { extensionBackendOperation } from './extensionBackendRunner.js';
 import { type ExtensionEvent, publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
@@ -65,23 +65,19 @@ export async function installSubscriptionsForExtension(extensionId: string, serv
       // Skip if the extension was disabled after the subscription was installed.
       if (!isExtensionEnabled(extensionId)) return;
       try {
-        await runExtensionBackendExport(
+        await runExtensionBackendExportInWorker(
           extensionId,
           subscription.handler,
           extensionBackendOperation('subscription', `subscription ${subscription.id}`, { target: subscription.id }),
-          (handler) =>
-            Promise.resolve(
-              handler(
-                {
-                  subscriptionId: subscription.id,
-                  event: event.event,
-                  payload: event.payload,
-                  sourceExtensionId: event.sourceExtensionId,
-                },
-                createBackendContext(extensionId, serverContext),
-              ),
-            ),
-          { missingExportMessage: `Missing subscription handler export "${subscription.handler}".` },
+          [
+            {
+              subscriptionId: subscription.id,
+              event: event.event,
+              payload: event.payload,
+              sourceExtensionId: event.sourceExtensionId,
+            },
+          ],
+          serverContext,
         );
       } catch (error) {
         if (error instanceof ExtensionProcessTerminationBlockedError) {

@@ -21,6 +21,10 @@ import {
   extensionBackendOperation,
   getExtensionBackendRunner,
 } from './extensionBackendRunner.js';
+import {
+  registerExtensionToolUpdateHandle,
+  unregisterExtensionToolUpdateHandle,
+} from './extensionBackendLiveHandles.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
@@ -328,7 +332,13 @@ export function listExtensionActionTelemetry(extensionId?: string): ExtensionAct
 
 export class ExtensionLoadError extends Error {
   readonly extensionId: string;
-  readonly code: 'build_failure' | 'load_failure' | 'handler_not_found' | 'module_not_found' | 'extension_disabled';
+  readonly code:
+    | 'build_failure'
+    | 'load_failure'
+    | 'handler_not_found'
+    | 'module_not_found'
+    | 'extension_disabled'
+    | 'worker_required';
 
   constructor(opts: { extensionId: string; code: ExtensionLoadError['code']; message: string; cause?: unknown }) {
     super(opts.message);
@@ -657,14 +667,8 @@ function runExtensionBackendExportForSelfTest(extensionId: string, exportName: s
 function canRunActionInBackendWorker(
   action: { worker?: { enabled?: boolean; inputActions?: string[]; ignoreLiveContext?: boolean } } | undefined,
   input: unknown,
-  toolContext?: ExtensionBackendContext['toolContext'],
-  agentToolContext?: unknown,
 ): boolean {
   if (!action?.worker?.enabled) return false;
-  if (!action.worker.ignoreLiveContext) {
-    if (agentToolContext !== undefined) return false;
-    if (toolContext?.onUpdate) return false;
-  }
   if (action.worker.inputActions && action.worker.inputActions.length > 0) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
     const inputAction = (input as { action?: unknown }).action;
@@ -675,7 +679,17 @@ function canRunActionInBackendWorker(
 
 function workerBackendToolContext(
   toolContext?: ExtensionBackendContext['toolContext'],
-): { conversationId?: string; cwd?: string; sessionFile?: string; sessionId?: string; preferredVisionModel?: string } | undefined {
+  updateHandleId?: string,
+):
+  | {
+      conversationId?: string;
+      cwd?: string;
+      sessionFile?: string;
+      sessionId?: string;
+      preferredVisionModel?: string;
+      updateHandleId?: string;
+    }
+  | undefined {
   if (!toolContext) return undefined;
   return {
     ...(toolContext.conversationId ? { conversationId: toolContext.conversationId } : {}),
@@ -683,6 +697,7 @@ function workerBackendToolContext(
     ...(toolContext.sessionFile ? { sessionFile: toolContext.sessionFile } : {}),
     ...(toolContext.sessionId ? { sessionId: toolContext.sessionId } : {}),
     ...(toolContext.preferredVisionModel ? { preferredVisionModel: toolContext.preferredVisionModel } : {}),
+    ...(updateHandleId ? { updateHandleId } : {}),
   };
 }
 
@@ -701,6 +716,7 @@ function workerLiveSessionResourceOptions(serverContext?: ExtensionBackendServer
 function workerBackendContextOptions(
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
+  updateHandleId?: string,
 ) {
   return {
     type: 'backend' as const,
@@ -711,7 +727,7 @@ function workerBackendContextOptions(
     authFile: serverContext?.getAuthFile?.(),
     stateRoot: serverContext?.getStateRoot?.(),
     liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
-    toolContext: workerBackendToolContext(toolContext),
+    toolContext: workerBackendToolContext(toolContext, updateHandleId),
   };
 }
 
@@ -732,16 +748,21 @@ async function runExtensionBackendActionInWorker(
       message: `Extension "${extensionId}" backend does not export action handler "${exportName}".`,
     });
   }
-  return runner.runWorkerExport(
-    extensionId,
-    loadTarget,
-    exportName,
-    extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
-    [input],
-    {
-      context: workerBackendContextOptions(serverContext, toolContext),
-    },
-  );
+  const updateHandleId = registerExtensionToolUpdateHandle(toolContext?.onUpdate);
+  try {
+    return await runner.runWorkerExport(
+      extensionId,
+      loadTarget,
+      exportName,
+      extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
+      [input],
+      {
+        context: workerBackendContextOptions(serverContext, toolContext, updateHandleId),
+      },
+    );
+  } finally {
+    unregisterExtensionToolUpdateHandle(updateHandleId);
+  }
 }
 
 export async function runExtensionBackendExportInWorker(
@@ -767,7 +788,7 @@ export async function runExtensionBackendExportInWorker(
 }
 
 function canRunRouteInBackendWorker(route: { stream?: 'sse'; worker?: { enabled?: boolean } } | undefined): boolean {
-  return route?.worker?.enabled === true && route.stream === undefined;
+  return route?.worker?.enabled === true;
 }
 
 function workerRouteRequest(request: ExtensionRouteRequest): Omit<ExtensionRouteRequest, 'signal'> {
@@ -912,20 +933,11 @@ export async function invokeExtensionRoute(
     if (canRunRouteInBackendWorker(route)) {
       result = await runExtensionBackendRouteInWorker(extensionId, method, routePath, route.handler, request, serverContext);
     } else {
-      result = await runExtensionBackendExport(
+      throw new ExtensionLoadError({
         extensionId,
-        route.handler,
-        extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }),
-        (handler) => Promise.resolve(handler(request, createBackendContext(extensionId, serverContext))),
-        {
-          createMissingExportError: () =>
-            new ExtensionLoadError({
-              extensionId,
-              code: 'handler_not_found',
-              message: `Extension route handler not found: ${route.handler}`,
-            }),
-        },
-      );
+        code: 'worker_required',
+        message: `Extension route "${method} ${routePath}" must declare worker.enabled before it can run.`,
+      });
     }
   } catch (error) {
     if (error instanceof ExtensionLoadError && error.code === 'handler_not_found') {
@@ -949,7 +961,7 @@ export async function invokeExtensionAction(
   input: unknown,
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
-  agentToolContext?: unknown,
+  _agentToolContext?: unknown,
 ): Promise<ExtensionActionInvokeResult> {
   const started = Date.now();
   let actionHandlerStarted = false;
@@ -972,28 +984,15 @@ export async function invokeExtensionAction(
     const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
     const handlerName = action?.handler ?? actionId;
     let result: unknown;
-    if (canRunActionInBackendWorker(action, input, toolContext, agentToolContext)) {
-      actionHandlerStarted = true;
-      result = await runExtensionBackendActionInWorker(extensionId, actionId, handlerName, input, serverContext, toolContext);
-    } else {
-      result = await runExtensionBackendExport(
+    if (!canRunActionInBackendWorker(action, input)) {
+      throw new ExtensionLoadError({
         extensionId,
-        handlerName,
-        extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
-        (handler) => {
-          actionHandlerStarted = true;
-          return Promise.resolve(handler(input, createBackendContext(extensionId, serverContext, toolContext, agentToolContext)));
-        },
-        {
-          createMissingExportError: () =>
-            new ExtensionLoadError({
-              extensionId,
-              code: 'handler_not_found',
-              message: `Extension "${extensionId}" backend does not export action handler "${handlerName}".`,
-            }),
-        },
-      );
+        code: 'worker_required',
+        message: `Extension "${extensionId}" action "${actionId}" must declare worker.enabled before it can run.`,
+      });
     }
+    actionHandlerStarted = true;
+    result = await runExtensionBackendActionInWorker(extensionId, actionId, handlerName, input, serverContext, toolContext);
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };
   } catch (error) {

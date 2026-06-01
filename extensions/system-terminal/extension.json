@@ -18,7 +18,16 @@
       { "id": "terminalResize", "handler": "resizeTerminal", "title": "Resize terminal", "worker": { "enabled": true } },
       { "id": "terminalClose", "handler": "closeTerminal", "title": "Close terminal", "worker": { "enabled": true } }
     ],
-    "routes": [{ "method": "GET", "path": "/stream", "handler": "streamTerminal", "title": "Terminal output stream", "stream": "sse" }]
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/stream",
+        "handler": "streamTerminal",
+        "title": "Terminal output stream",
+        "stream": "sse",
+        "worker": { "enabled": true }
+      }
+    ]
   },
   "contributes": {
     "views": [

@@ -288,7 +288,10 @@
         "path": "/knowledge/events",
         "handler": "knowledgeEventsRoute",
         "title": "Watch knowledge events",
-        "stream": "sse"
+        "stream": "sse",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "GET",

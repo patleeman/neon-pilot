@@ -11,10 +11,11 @@ export interface ExtensionBackendWorkerBackendContextOptions {
   toolContext?: {
     conversationId?: string;
     cwd?: string;
-    sessionFile?: string;
-    sessionId?: string;
-    preferredVisionModel?: string;
-  };
+        sessionFile?: string;
+        sessionId?: string;
+        preferredVisionModel?: string;
+        updateHandleId?: string;
+      };
 }
 
 export type ExtensionBackendWorkerRequest =
@@ -89,7 +90,27 @@ export interface ExtensionBackendWorkerCapabilityEvent {
   input?: unknown;
 }
 
-export type ExtensionBackendWorkerMessage = ExtensionBackendWorkerResponse | ExtensionBackendWorkerCapabilityRequest;
+export type ExtensionBackendWorkerRouteStreamEvent =
+  | {
+      kind: 'routeStreamEvent';
+      handleId: string;
+      event: unknown;
+    }
+  | {
+      kind: 'routeStreamEvent';
+      handleId: string;
+      done: true;
+    }
+  | {
+      kind: 'routeStreamEvent';
+      handleId: string;
+      error: string;
+    };
+
+export type ExtensionBackendWorkerMessage =
+  | ExtensionBackendWorkerResponse
+  | ExtensionBackendWorkerCapabilityRequest
+  | ExtensionBackendWorkerRouteStreamEvent;
 
 export type ExtensionBackendWorkerParentMessage =
   | ExtensionBackendWorkerRequest

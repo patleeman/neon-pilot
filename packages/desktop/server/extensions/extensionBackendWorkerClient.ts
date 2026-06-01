@@ -9,6 +9,7 @@ import type {
   ExtensionBackendWorkerMessage,
   ExtensionBackendWorkerRequest,
   ExtensionBackendWorkerResponse,
+  ExtensionBackendWorkerRouteStreamEvent,
 } from './extensionBackendWorkerProtocol.js';
 
 interface PendingRequest {
@@ -52,6 +53,7 @@ export class ExtensionBackendWorkerClient {
   private workerError: Error | undefined;
   private nextRequestId = 0;
   private readonly pending = new Map<number, PendingRequest>();
+  private readonly routeStreams = new Map<string, RouteStreamState>();
 
   constructor(private readonly options: ExtensionBackendWorkerClientOptions = {}) {}
 
@@ -72,7 +74,7 @@ export class ExtensionBackendWorkerClient {
     options: { context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
   ): Promise<unknown> {
     const response = await this.send({ id: 0, type: 'runExport', extensionId, compiled, exportName, args, ...options });
-    return response.result;
+    return this.deserializeWorkerResult(response.result);
   }
 
   async clearModule(extensionId: string): Promise<void> {
@@ -128,6 +130,10 @@ export class ExtensionBackendWorkerClient {
   private handleMessage(message: ExtensionBackendWorkerMessage): void {
     if ('kind' in message && message.kind === 'capabilityRequest') {
       void this.handleCapabilityRequest(message);
+      return;
+    }
+    if ('kind' in message && message.kind === 'routeStreamEvent') {
+      this.handleRouteStreamEvent(message);
       return;
     }
 
@@ -186,7 +192,67 @@ export class ExtensionBackendWorkerClient {
       pending.reject(error);
     }
     this.pending.clear();
+    for (const [handleId, stream] of this.routeStreams) {
+      this.routeStreams.delete(handleId);
+      stream.error = error;
+      stream.resolve?.();
+    }
   }
+
+  private deserializeWorkerResult(result: unknown): unknown {
+    if (!result || typeof result !== 'object' || Array.isArray(result)) return result;
+    const candidate = result as { stream?: unknown; events?: unknown };
+    if (candidate.stream !== 'sse' || !candidate.events || typeof candidate.events !== 'object') return result;
+    const eventMarker = candidate.events as { __extensionWorkerRouteStream?: unknown; handleId?: unknown };
+    if (eventMarker.__extensionWorkerRouteStream !== true || typeof eventMarker.handleId !== 'string') return result;
+    return {
+      ...(result as Record<string, unknown>),
+      events: this.createRouteStreamIterable(eventMarker.handleId),
+    };
+  }
+
+  private createRouteStreamIterable(handleId: string): AsyncIterable<unknown> {
+    const stream: RouteStreamState = { queue: [] };
+    this.routeStreams.set(handleId, stream);
+    return {
+      [Symbol.asyncIterator]: () => ({
+        next: async () => {
+          for (;;) {
+            if (stream.queue.length > 0) return { value: stream.queue.shift(), done: false };
+            if (stream.error) throw stream.error;
+            if (stream.done) {
+              this.routeStreams.delete(handleId);
+              return { value: undefined, done: true };
+            }
+            await new Promise<void>((resolve) => {
+              stream.resolve = resolve;
+            });
+            stream.resolve = undefined;
+          }
+        },
+      }),
+    };
+  }
+
+  private handleRouteStreamEvent(event: ExtensionBackendWorkerRouteStreamEvent): void {
+    const stream = this.routeStreams.get(event.handleId);
+    if (!stream) return;
+    if ('event' in event) {
+      stream.queue.push(event.event);
+    } else if ('error' in event) {
+      stream.error = new Error(event.error);
+    } else {
+      stream.done = true;
+    }
+    stream.resolve?.();
+  }
+}
+
+interface RouteStreamState {
+  queue: unknown[];
+  done?: boolean;
+  error?: Error;
+  resolve?: () => void;
 }
 
 export class ExtensionBackendWorkerPool {

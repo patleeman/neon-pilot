@@ -14,6 +14,7 @@ import type {
   ExtensionBackendWorkerCapabilityEvent,
   ExtensionBackendWorkerCapabilityRequest,
 } from './extensionBackendWorkerProtocol.js';
+import { emitExtensionToolUpdate } from './extensionBackendLiveHandles.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
@@ -1544,6 +1545,15 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'terminal') {
       return dispatchTerminalCapability(request);
+    }
+    if (request.capability === 'toolContext') {
+      const input = request.input && typeof request.input === 'object' && !Array.isArray(request.input) ? request.input as Record<string, unknown> : {};
+      const handleId = typeof input.handleId === 'string' ? input.handleId : '';
+      if (!handleId) throw new Error('Missing tool context update handle.');
+      if (request.operation === 'update') {
+        emitExtensionToolUpdate(handleId, input.update as never);
+        return { ok: true };
+      }
     }
     if (request.capability === 'ui') {
       return dispatchUiCapability(ui, request);
