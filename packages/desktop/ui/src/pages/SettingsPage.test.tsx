@@ -331,10 +331,11 @@ describe('SettingsPage', () => {
 
     expect(html).toContain('>Settings</h1>');
     expect(html).toContain('aria-label="Settings sections"');
-    expect(html.indexOf('href="#settings-appearance"')).toBeLessThan(html.indexOf('href="#settings-conversation"'));
+    expect(html.indexOf('href="#settings-appearance"')).toBeLessThan(html.indexOf('href="#settings-providers"'));
+    expect(html.indexOf('href="#settings-providers"')).toBeLessThan(html.indexOf('href="#settings-conversation"'));
     expect(html.indexOf('href="#settings-conversation"')).toBeLessThan(html.indexOf('href="#settings-workspace"'));
     expect(html.indexOf('href="#settings-workspace"')).toBeLessThan(html.indexOf('href="#settings-commands"'));
-    expect(html.indexOf('href="#settings-commands"')).toBeLessThan(html.indexOf('href="#settings-providers"'));
+    expect(html.indexOf('href="#settings-commands"')).toBeLessThan(html.indexOf('href="#settings-security"'));
     expect(html).toContain('Theme');
     expect(html).not.toContain('href="#settings-extensions"');
     expect(html).not.toContain('AGENTS.md files');
