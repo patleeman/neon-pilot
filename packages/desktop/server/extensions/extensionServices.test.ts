@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
+
 const publishAppEvent = vi.fn();
 const logError = vi.fn();
 const logInfo = vi.fn();
 const createBackendContext = vi.fn();
 const loadExtensionBackend = vi.fn();
+const runnerRun = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
 const findExtensionEntry = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
 const recordExtensionFailure = vi.fn();
@@ -16,6 +19,7 @@ const setExtensionEnabled = vi.fn();
 vi.mock('../shared/appEvents.js', () => ({ publishAppEvent }));
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
 vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend }));
+vi.mock('./extensionBackendRunner.js', () => ({ getExtensionBackendRunner: () => ({ run: runnerRun }) }));
 vi.mock('./extensionRegistry.js', () => ({
   findExtensionEntry,
   listExtensionInstallSummaries,
@@ -44,6 +48,7 @@ describe('extensionServices', () => {
       logInfo,
       createBackendContext,
       loadExtensionBackend,
+      runnerRun,
       findExtensionEntry,
       listExtensionInstallSummaries,
       recordExtensionFailure,
@@ -69,6 +74,7 @@ describe('extensionServices', () => {
 
     await expect(startExtensionServices({ server: true } as never)).resolves.toEqual([{ extensionId: 'ext', serviceId: 'sync', ok: true }]);
     expect(startSync).toHaveBeenCalledWith({ serviceId: 'sync' }, { ctx: true });
+    expect(runnerRun).toHaveBeenCalledWith('ext', 'service sync startup', expect.any(Function));
     expect(isExtensionServiceRunning('ext', 'sync')).toBe(true);
     expect(listRunningExtensionServices()[0]).toMatchObject({ extensionId: 'ext', serviceId: 'sync', startedAt: expect.any(String) });
     expect(clearExtensionHealthError).toHaveBeenCalledWith('ext');
@@ -127,6 +133,7 @@ describe('extensionServices', () => {
 
     expect(clearExtensionHealthError).toHaveBeenCalledWith('ext');
     expect(clearExtensionFailureRecordsForOperation).toHaveBeenCalledWith('ext', 'service sync health check');
+    expect(runnerRun).toHaveBeenCalledWith('ext', 'service sync health check', expect.any(Function));
     expect(recordExtensionFailure).not.toHaveBeenCalled();
   });
 
@@ -163,6 +170,11 @@ describe('extensionServices', () => {
       startSync: vi.fn().mockResolvedValue(stop),
       checkSync: vi.fn(() => process.exit(1)),
     });
+    runnerRun
+      .mockImplementationOnce(async (_extensionId: string, _operation: string, handler: () => unknown) => handler())
+      .mockRejectedValueOnce(
+        new ExtensionProcessTerminationBlockedError('ext', 'service sync health check', 'Extension attempted to terminate the application.'),
+      );
 
     await startExtensionServices();
     await runExtensionServiceHealthChecks();

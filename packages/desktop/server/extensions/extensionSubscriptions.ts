@@ -1,8 +1,9 @@
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
+import { getExtensionBackendRunner } from './extensionBackendRunner.js';
 import { type ExtensionEvent, publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
-import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
+import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   findExtensionEntry,
   isExtensionEnabled,
@@ -67,7 +68,7 @@ export async function installSubscriptionsForExtension(extensionId: string, serv
         const backend = await loadExtensionBackend(extensionId);
         const handler = backend[subscription.handler];
         if (typeof handler !== 'function') throw new Error(`Missing subscription handler export "${subscription.handler}".`);
-        await withExtensionProcessGuard(extensionId, `subscription ${subscription.id}`, () =>
+        await getExtensionBackendRunner().run(extensionId, `subscription ${subscription.id}`, () =>
           Promise.resolve(
             (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
               { subscriptionId: subscription.id, event: event.event, payload: event.payload, sourceExtensionId: event.sourceExtensionId },

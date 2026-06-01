@@ -2,7 +2,8 @@ import { publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { createBackendContext, loadExtensionBackend } from './extensionBackend.js';
-import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
+import { getExtensionBackendRunner } from './extensionBackendRunner.js';
+import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearExtensionFailureRecordsForOperation,
   clearExtensionHealthError,
@@ -67,7 +68,7 @@ async function startOneExtensionService(
     if (typeof handler !== 'function') throw new Error(`Missing service handler export "${service.handler}".`);
     const SERVICE_STARTUP_TIMEOUT_MS = 30_000;
     const result = await Promise.race([
-      withExtensionProcessGuard(extensionId, `service ${service.id} startup`, () =>
+      getExtensionBackendRunner().run(extensionId, `service ${service.id} startup`, () =>
         Promise.resolve(
           (handler as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
             { serviceId: service.id },
@@ -129,7 +130,7 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         if (typeof healthCheck !== 'function') throw new Error(`Missing service healthCheck export "${service.healthCheck}".`);
         const HEALTH_CHECK_TIMEOUT_MS = 15_000;
         const result = await Promise.race([
-          withExtensionProcessGuard(summary.id, `service ${service.id} health check`, () =>
+          getExtensionBackendRunner().run(summary.id, `service ${service.id} health check`, () =>
             Promise.resolve(
               (healthCheck as (input: unknown, ctx: unknown) => unknown | Promise<unknown>)(
                 { serviceId: service.id },
