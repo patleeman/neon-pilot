@@ -721,6 +721,40 @@ describe('registerExtensionRoutes', () => {
     }
   });
 
+  it('lists extension actions and status through the extension host registry presentation', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', description: 'Ping board' }] },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export async function ping() { return { ok: true }; }');
+
+    const harness = createHarness();
+    const actionsRes = createResponse();
+    await harness.getHandler('/api/extensions/actions')({}, actionsRes);
+    expect(actionsRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        {
+          extensionId: 'agent-board',
+          extensionName: 'Agent Board',
+          actions: [{ id: 'ping', title: 'Ping', description: 'Ping board' }],
+        },
+      ]),
+    );
+
+    const statusRes = createResponse();
+    await harness.getHandler('/api/extensions/:id/status')({ params: { id: 'agent-board' } }, statusRes);
+    expect(statusRes.json).toHaveBeenCalledWith({ enabled: true, healthy: true });
+  });
+
   it('rejects runtime extension builds', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

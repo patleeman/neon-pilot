@@ -919,19 +919,24 @@ export function registerExtensionRoutes(
 
   // ── Inter-extension action listing ───────────────────────────────────
 
-  router.get('/api/extensions/actions', (_req, res) => {
+  router.get('/api/extensions/actions', async (_req, res) => {
     try {
-      const summaries = listExtensionInstallSummaries()
-        .filter((extension) => extension.status === 'enabled' && (extension.backendActions?.length ?? 0) > 0)
+      const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
+      const summaries = installSummaries
+        .filter((extension) => extension.status === 'enabled' && Array.isArray(extension.backendActions) && extension.backendActions.length > 0)
         .map((extension) => ({
-          extensionId: extension.id,
-          extensionName: extension.name,
-          actions: (extension.backendActions ?? []).map((action) => ({
-            id: action.id,
-            title: action.title,
-            description: action.description,
+          extensionId: typeof extension.id === 'string' ? extension.id : '',
+          extensionName: typeof extension.name === 'string' ? extension.name : '',
+          actions: (Array.isArray(extension.backendActions) ? extension.backendActions : []).map((action) => ({
+            id: typeof (action as { id?: unknown }).id === 'string' ? (action as { id: string }).id : '',
+            title: typeof (action as { title?: unknown }).title === 'string' ? (action as { title: string }).title : undefined,
+            description:
+              typeof (action as { description?: unknown }).description === 'string'
+                ? (action as { description: string }).description
+                : undefined,
           })),
-        }));
+        }))
+        .filter((extension) => extension.extensionId);
       res.json(summaries);
     } catch (err) {
       sendRouteError(res, 'extension actions list error', err);
@@ -940,19 +945,19 @@ export function registerExtensionRoutes(
 
   // ── Extension status check ──────────────────────────────────────────
 
-  router.get('/api/extensions/:id/status', (req, res) => {
+  router.get('/api/extensions/:id/status', async (req, res) => {
     try {
-      const entry = findExtensionEntry(req.params.id);
-      const summary = listExtensionInstallSummaries().find((e) => e.id === req.params.id);
-      if (!entry && !summary) {
+      const summary = (await getExtensionHostClient().readRegistryPresentation()).installSummaries.find((e) => e.id === req.params.id);
+      if (!summary) {
         res.json({ enabled: false, healthy: false, error: 'Extension not found.' });
         return;
       }
-      const enabled = summary?.status === 'enabled' || (summary?.enabled === true && summary?.status !== 'disabled');
+      const errors = Array.isArray(summary.errors) ? summary.errors.filter((error): error is string => typeof error === 'string') : [];
+      const enabled = summary.status === 'enabled' || (summary.enabled === true && summary.status !== 'disabled');
       res.json({
         enabled,
-        healthy: enabled && (!summary?.errors || summary.errors.length === 0),
-        ...(summary?.errors?.length ? { errors: summary.errors } : {}),
+        healthy: enabled && errors.length === 0,
+        ...(errors.length ? { errors } : {}),
       });
     } catch (err) {
       sendRouteError(res, 'extension status error', err);
