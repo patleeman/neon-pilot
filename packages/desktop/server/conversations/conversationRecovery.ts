@@ -4,7 +4,6 @@ import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { parsePendingOperation } from '@neon-pilot/daemon';
 
 import { getDurableRun } from '../automation/durableRuns.js';
-import { withExtensionRegistryReadCache } from '../extensions/extensionRegistry.js';
 import { logError } from '../middleware/index.js';
 import { LIVE_SESSION_RESOURCE_OPTIONS_PERF } from '../routes/context.js';
 import {
@@ -53,36 +52,34 @@ async function buildRecoveryLoaderOptions(
   options: RecoveryLoaderOptions;
   perf: Record<string, number>;
 }> {
-  return withExtensionRegistryReadCache(async () => {
-    const startedAtMs = performance.now();
-    const resourceOptionsPromise = context.buildLiveSessionResourceOptionsAsync
-      ? context.buildLiveSessionResourceOptionsAsync(profile)
-      : Promise.resolve(context.buildLiveSessionResourceOptions(profile));
-    const resourceOptionsDispatchedAtMs = performance.now();
-    const extensionFactories = context.buildLiveSessionExtensionFactories();
-    const extensionFactoriesAtMs = performance.now();
-    const resourceOptions = await resourceOptionsPromise;
-    const resourceOptionsAtMs = performance.now();
-    const resourceOptionsPerf =
-      resourceOptions && typeof resourceOptions === 'object'
-        ? ((resourceOptions as Record<symbol, unknown>)[LIVE_SESSION_RESOURCE_OPTIONS_PERF] as Record<string, number> | undefined)
-        : undefined;
-    return {
-      options: {
-        ...resourceOptions,
-        extensionFactories,
-      },
-      perf: {
-        recoveryResourceOptionsMs: Math.round(resourceOptionsAtMs - startedAtMs),
-        recoveryResourceOptionsDispatchMs: Math.round(resourceOptionsDispatchedAtMs - startedAtMs),
-        recoveryResourceOptionsWaitMs: Math.round(resourceOptionsAtMs - extensionFactoriesAtMs),
-        recoveryExtensionFactoriesMs: Math.round(extensionFactoriesAtMs - resourceOptionsDispatchedAtMs),
-        ...(resourceOptionsPerf
-          ? Object.fromEntries(Object.entries(resourceOptionsPerf).map(([key, value]) => [`recoveryResourceOptions.${key}`, value]))
-          : {}),
-      },
-    };
-  });
+  const startedAtMs = performance.now();
+  const resourceOptionsPromise = context.buildLiveSessionResourceOptionsAsync
+    ? context.buildLiveSessionResourceOptionsAsync(profile)
+    : Promise.resolve(context.buildLiveSessionResourceOptions(profile));
+  const resourceOptionsDispatchedAtMs = performance.now();
+  const extensionFactories = context.buildLiveSessionExtensionFactories();
+  const extensionFactoriesAtMs = performance.now();
+  const resourceOptions = await resourceOptionsPromise;
+  const resourceOptionsAtMs = performance.now();
+  const resourceOptionsPerf =
+    resourceOptions && typeof resourceOptions === 'object'
+      ? ((resourceOptions as Record<symbol, unknown>)[LIVE_SESSION_RESOURCE_OPTIONS_PERF] as Record<string, number> | undefined)
+      : undefined;
+  return {
+    options: {
+      ...resourceOptions,
+      extensionFactories,
+    },
+    perf: {
+      recoveryResourceOptionsMs: Math.round(resourceOptionsAtMs - startedAtMs),
+      recoveryResourceOptionsDispatchMs: Math.round(resourceOptionsDispatchedAtMs - startedAtMs),
+      recoveryResourceOptionsWaitMs: Math.round(resourceOptionsAtMs - extensionFactoriesAtMs),
+      recoveryExtensionFactoriesMs: Math.round(extensionFactoriesAtMs - resourceOptionsDispatchedAtMs),
+      ...(resourceOptionsPerf
+        ? Object.fromEntries(Object.entries(resourceOptionsPerf).map(([key, value]) => [`recoveryResourceOptions.${key}`, value]))
+        : {}),
+    },
+  };
 }
 
 function readCheckpointString(payload: Record<string, unknown>, key: string): string | undefined {

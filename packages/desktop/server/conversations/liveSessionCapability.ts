@@ -11,7 +11,6 @@ import {
 } from '@neon-pilot/daemon';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { withExtensionRegistryReadCache } from '../extensions/extensionRegistry.js';
 import {
   buildReferencedMemoryDocsContext,
   buildReferencedTasksContext,
@@ -221,40 +220,38 @@ async function buildLiveSessionOptionsWithPerf(
   context: LiveSessionCapabilityContext,
   overrides: Record<string, unknown> = {},
 ): Promise<{ options: Record<string, unknown>; perf: Record<string, number> }> {
-  return withExtensionRegistryReadCache(async () => {
-    const startedAtMs = performance.now();
-    const resourceOptionsStartedAtMs = performance.now();
-    const resourceOptionsPromise = context.buildLiveSessionResourceOptionsAsync
-      ? context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope())
-      : Promise.resolve(context.buildLiveSessionResourceOptions(context.getRuntimeScope()));
-    const resourceOptionsDispatchedAtMs = performance.now();
-    const extensionFactoriesStartedAtMs = performance.now();
-    const extensionFactories = context.buildLiveSessionExtensionFactories();
-    const extensionFactoriesAtMs = performance.now();
-    const resourceOptions = await resourceOptionsPromise;
-    const resourceOptionsAtMs = performance.now();
-    const resourceOptionsPerf =
-      resourceOptions && typeof resourceOptions === 'object'
-        ? ((resourceOptions as Record<symbol, unknown>)[LIVE_SESSION_RESOURCE_OPTIONS_PERF] as Record<string, number> | undefined)
-        : undefined;
-    return {
-      options: {
-        ...resourceOptions,
-        extensionFactories,
-        ...overrides,
-      },
-      perf: {
-        capabilityResourceOptionsMs: Math.round(resourceOptionsAtMs - startedAtMs),
-        capabilityResourceOptionsDispatchMs: Math.round(resourceOptionsDispatchedAtMs - resourceOptionsStartedAtMs),
-        capabilityResourceOptionsWaitMs: Math.round(resourceOptionsAtMs - extensionFactoriesAtMs),
-        capabilityExtensionFactoriesMs: Math.round(extensionFactoriesAtMs - extensionFactoriesStartedAtMs),
-        capabilityOptionsMergeMs: Math.round(performance.now() - resourceOptionsAtMs),
-        ...(resourceOptionsPerf
-          ? Object.fromEntries(Object.entries(resourceOptionsPerf).map(([key, value]) => [`resourceOptions.${key}`, value]))
-          : {}),
-      },
-    };
-  });
+  const startedAtMs = performance.now();
+  const resourceOptionsStartedAtMs = performance.now();
+  const resourceOptionsPromise = context.buildLiveSessionResourceOptionsAsync
+    ? context.buildLiveSessionResourceOptionsAsync(context.getRuntimeScope())
+    : Promise.resolve(context.buildLiveSessionResourceOptions(context.getRuntimeScope()));
+  const resourceOptionsDispatchedAtMs = performance.now();
+  const extensionFactoriesStartedAtMs = performance.now();
+  const extensionFactories = context.buildLiveSessionExtensionFactories();
+  const extensionFactoriesAtMs = performance.now();
+  const resourceOptions = await resourceOptionsPromise;
+  const resourceOptionsAtMs = performance.now();
+  const resourceOptionsPerf =
+    resourceOptions && typeof resourceOptions === 'object'
+      ? ((resourceOptions as Record<symbol, unknown>)[LIVE_SESSION_RESOURCE_OPTIONS_PERF] as Record<string, number> | undefined)
+      : undefined;
+  return {
+    options: {
+      ...resourceOptions,
+      extensionFactories,
+      ...overrides,
+    },
+    perf: {
+      capabilityResourceOptionsMs: Math.round(resourceOptionsAtMs - startedAtMs),
+      capabilityResourceOptionsDispatchMs: Math.round(resourceOptionsDispatchedAtMs - resourceOptionsStartedAtMs),
+      capabilityResourceOptionsWaitMs: Math.round(resourceOptionsAtMs - extensionFactoriesAtMs),
+      capabilityExtensionFactoriesMs: Math.round(extensionFactoriesAtMs - extensionFactoriesStartedAtMs),
+      capabilityOptionsMergeMs: Math.round(performance.now() - resourceOptionsAtMs),
+      ...(resourceOptionsPerf
+        ? Object.fromEntries(Object.entries(resourceOptionsPerf).map(([key, value]) => [`resourceOptions.${key}`, value]))
+        : {}),
+    },
+  };
 }
 
 function buildBackgroundRunInternalContext(entries: Array<{ prompt: string }>): string {

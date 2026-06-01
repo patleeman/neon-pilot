@@ -164,6 +164,14 @@ const forbiddenPatterns = [
     message: 'product runtime code must perform extension registry maintenance through ExtensionHostClient',
   },
   {
+    pattern: /import\s+\{[^}]*\bwithExtensionRegistryReadCache\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'product runtime code must not depend on extension registry read-cache internals',
+  },
+  {
+    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\bwithExtensionRegistryReadCache\b/,
+    message: 'product runtime code must not depend on extension registry read-cache internals',
+  },
+  {
     pattern: /import\s+\{[^}]*\bresolveExtensionPromptReferences\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/promptReferenceResolvers\.js['"]/,
     message: 'product runtime code must resolve extension prompt references through ExtensionHostClient',
   },

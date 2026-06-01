@@ -26,10 +26,6 @@ vi.mock('@neon-pilot/core', async (importOriginal) => {
   };
 });
 
-vi.mock('../extensions/extensionRegistry.js', () => ({
-  withExtensionRegistryReadCache: (callback: () => unknown) => callback(),
-}));
-
 const extensionHostClient = vi.hoisted(() => ({
   resolvePromptReferences: vi.fn(async () => ({ contextBlocks: [], references: [] })),
 }));
