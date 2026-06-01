@@ -851,6 +851,10 @@ export interface ExtensionBackendAction {
   handler: string;
   title?: string;
   description?: string;
+  worker?: {
+    enabled?: boolean;
+    inputActions?: string[];
+  };
 }
 
 export interface ExtensionBackendProtocolEntrypoint {

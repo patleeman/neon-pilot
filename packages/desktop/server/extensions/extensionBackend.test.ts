@@ -251,6 +251,40 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('keeps manifest worker actions in-process when the input is not allowlisted', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(async (_extensionId, _compiled, _exportName, _operation, invoke) =>
+        invoke(() => ({ action: 'save', via: 'in-process' })),
+      ),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-diffs', 'checkpoint', { action: 'save', message: 'checkpoint', paths: ['README.md'] }, undefined, {
+        conversationId: 'conv-1',
+        cwd: '/repo',
+      }),
+    ).resolves.toEqual({ ok: true, result: { action: 'save', via: 'in-process' } });
+
+    expect(workerRunner.runWorkerExport).not.toHaveBeenCalled();
+    expect(backendRunner.runExport).toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

@@ -18,6 +18,8 @@ The extension backend worker entrypoint starts with wire-safe import, clear, and
 
 The backend worker transport is bidirectional: host requests use `ExtensionBackendWorkerRequest`, and worker-to-host capability calls use `ExtensionBackendWorkerCapabilityRequest` with `capability`, `operation`, and serializable `input` fields. The host dispatches those capability calls through narrow adapters and returns `ExtensionBackendWorkerCapabilityResponse`; workers must not import product runtime or Electron modules directly. The first worker-safe backend context capabilities are extension-scoped `log`, `storage`, and non-streaming `shell.exec`.
 
+Worker action execution is explicit. A backend action must declare `worker.enabled` in its manifest, and actions with mixed safe/unsafe code paths can declare `worker.inputActions` so only matching object inputs run in the worker.
+
 ## Process Graph
 
 Allowed communication:

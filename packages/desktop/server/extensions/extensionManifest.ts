@@ -720,6 +720,15 @@ export interface ExtensionBackendAction {
   handler: string;
   title?: string;
   description?: string;
+  /**
+   * Opt into backend worker execution for actions whose backend context usage is
+   * covered by worker-safe capability handles.
+   */
+  worker?: {
+    enabled?: boolean;
+    /** Optional allowlist for object inputs with a string `action` field. */
+    inputActions?: string[];
+  };
 }
 
 export interface ExtensionBackendProtocolEntrypoint {

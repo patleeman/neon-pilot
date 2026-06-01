@@ -646,22 +646,21 @@ function runExtensionBackendExportForSelfTest(extensionId: string, exportName: s
   );
 }
 
-function isSystemDiffsCheckpointRead(input: unknown): boolean {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
-  const action = (input as { action?: unknown }).action;
-  return action === 'list' || action === 'get';
-}
-
 function canRunActionInBackendWorker(
-  extensionId: string,
-  actionId: string,
+  action: { worker?: { enabled?: boolean; inputActions?: string[] } } | undefined,
   input: unknown,
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
 ): boolean {
+  if (!action?.worker?.enabled) return false;
   if (agentToolContext !== undefined) return false;
   if (toolContext?.onUpdate) return false;
-  return extensionId === 'system-diffs' && actionId === 'checkpoint' && isSystemDiffsCheckpointRead(input);
+  if (action.worker.inputActions && action.worker.inputActions.length > 0) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+    const inputAction = (input as { action?: unknown }).action;
+    return typeof inputAction === 'string' && action.worker.inputActions.includes(inputAction);
+  }
+  return true;
 }
 
 function workerBackendToolContext(
@@ -871,7 +870,7 @@ export async function invokeExtensionAction(
     const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
     const handlerName = action?.handler ?? actionId;
     let result: unknown;
-    if (canRunActionInBackendWorker(extensionId, actionId, input, toolContext, agentToolContext)) {
+    if (canRunActionInBackendWorker(action, input, toolContext, agentToolContext)) {
       actionHandlerStarted = true;
       result = await runExtensionBackendActionInWorker(extensionId, actionId, handlerName, input, serverContext, toolContext);
     } else {

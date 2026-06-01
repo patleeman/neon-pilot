@@ -15,7 +15,11 @@
       {
         "id": "checkpoint",
         "handler": "checkpoint",
-        "title": "Checkpoint"
+        "title": "Checkpoint",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["list", "get"]
+        }
       }
     ]
   },
