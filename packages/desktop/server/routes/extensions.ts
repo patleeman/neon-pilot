@@ -25,13 +25,8 @@ import {
   findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
-  listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
-  listExtensionKeybindingRegistrations,
-  listExtensionMentionRegistrations,
-  listExtensionQuickOpenRegistrations,
   listExtensionSearchProviderRegistrations,
-  listExtensionSlashCommandRegistrations,
   readExtensionRegistrySnapshot,
   readExtensionSchema,
   setBuildError,
@@ -45,14 +40,18 @@ import { createSettingsStore } from '../settings/settingsStore.js';
 import type { ServerRouteContext } from './context.js';
 
 async function readExtensionInstallSummariesWithRuntimeState() {
-  const summaries = listExtensionInstallSummaries();
-  const runningServices = await getExtensionHostClient().listServices();
+  const [{ installSummaries }, runningServices] = await Promise.all([
+    getExtensionHostClient().readRegistryPresentation(),
+    getExtensionHostClient().listServices(),
+  ]);
   const running = new Map(runningServices.map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
-  return summaries.map((summary) => ({
+  return installSummaries.map((summary) => ({
     ...summary,
-    serviceStatuses: (summary.services ?? []).map((service) => {
-      const status = running.get(`${summary.id}:${service.id}`);
-      return { id: service.id, running: Boolean(status), startedAt: status?.startedAt ?? null };
+    serviceStatuses: (Array.isArray(summary.services) ? summary.services : []).map((service) => {
+      const extensionId = typeof summary.id === 'string' ? summary.id : '';
+      const serviceId = typeof (service as { id?: unknown }).id === 'string' ? (service as { id: string }).id : '';
+      const status = running.get(`${extensionId}:${serviceId}`);
+      return { id: serviceId, running: Boolean(status), startedAt: status?.startedAt ?? null };
     }),
   }));
 }
@@ -271,11 +270,12 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/registry', async (_req, res) => {
     try {
-      const [extensions, snapshot, settings] = await Promise.all([
+      const [extensions, registryPresentation, settings] = await Promise.all([
         readExtensionInstallSummariesWithRuntimeState(),
-        Promise.resolve(readExtensionRegistrySnapshot()),
+        getExtensionHostClient().readRegistryPresentation(),
         Promise.resolve(createSettingsStore().read()),
       ]);
+      const snapshot = registryPresentation.snapshot;
       res.json({
         extensions,
         routes: snapshot.routes,
@@ -287,17 +287,23 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/registry/critical', (_req, res) => {
+  router.get('/api/extensions/registry/critical', async (_req, res) => {
     try {
-      res.json(buildCriticalExtensionRegistryResponse(readExtensionRegistrySnapshot()));
+      res.json(
+        buildCriticalExtensionRegistryResponse(
+          (await getExtensionHostClient().readRegistryPresentation()).snapshot as unknown as Parameters<
+            typeof buildCriticalExtensionRegistryResponse
+          >[0],
+        ),
+      );
     } catch (err) {
       sendRouteError(res, 'extensions critical registry error', err);
     }
   });
 
-  router.get('/api/extensions', (_req, res) => {
+  router.get('/api/extensions', async (_req, res) => {
     try {
-      res.json(readExtensionRegistrySnapshot().extensions);
+      res.json((await getExtensionHostClient().readRegistryPresentation()).snapshot.extensions);
     } catch (err) {
       sendRouteError(res, 'extensions list error', err);
     }
@@ -455,18 +461,18 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/surfaces', (_req, res) => {
+  router.get('/api/extensions/surfaces', async (_req, res) => {
     try {
-      const snapshot = readExtensionRegistrySnapshot();
+      const snapshot = (await getExtensionHostClient().readRegistryPresentation()).snapshot;
       res.json([...snapshot.surfaces, ...snapshot.views]);
     } catch (err) {
       sendRouteError(res, 'extensions surfaces error', err);
     }
   });
 
-  router.get('/api/extensions/commands', (_req, res) => {
+  router.get('/api/extensions/commands', async (_req, res) => {
     try {
-      res.json(listExtensionCommandRegistrations());
+      res.json((await getExtensionHostClient().readRegistryPresentation()).commandRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions commands error', err);
     }
@@ -508,9 +514,9 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/keybindings', (_req, res) => {
+  router.get('/api/extensions/keybindings', async (_req, res) => {
     try {
-      res.json(listExtensionKeybindingRegistrations());
+      res.json((await getExtensionHostClient().readRegistryPresentation()).keybindingRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions keybindings error', err);
     }
@@ -536,33 +542,33 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/slash-commands', (_req, res) => {
+  router.get('/api/extensions/slash-commands', async (_req, res) => {
     try {
-      res.json(listExtensionSlashCommandRegistrations());
+      res.json((await getExtensionHostClient().readRegistryPresentation()).slashCommandRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions slash commands error', err);
     }
   });
 
-  router.get('/api/extensions/mentions', (_req, res) => {
+  router.get('/api/extensions/mentions', async (_req, res) => {
     try {
-      res.json(listExtensionMentionRegistrations());
+      res.json((await getExtensionHostClient().readRegistryPresentation()).mentionRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions mentions error', err);
     }
   });
 
-  router.get('/api/extensions/quick-open', (_req, res) => {
+  router.get('/api/extensions/quick-open', async (_req, res) => {
     try {
-      res.json(listExtensionQuickOpenRegistrations());
+      res.json((await getExtensionHostClient().readRegistryPresentation()).quickOpenRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions quick-open error', err);
     }
   });
 
-  router.get('/api/extensions/search-providers', (_req, res) => {
+  router.get('/api/extensions/search-providers', async (_req, res) => {
     try {
-      res.json(listExtensionSearchProviderRegistrations());
+      res.json((await getExtensionHostClient().readRegistryPresentation()).searchProviderRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions search providers error', err);
     }

@@ -342,7 +342,11 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
     if (request.type === 'readRegistryPresentation') {
       const {
         listExtensionInstallSummaries,
+        listExtensionCommandRegistrations,
+        listExtensionKeybindingRegistrations,
         listExtensionMentionRegistrations,
+        listExtensionQuickOpenRegistrations,
+        listExtensionSearchProviderRegistrations,
         listExtensionSlashCommandRegistrations,
         readExtensionRegistrySnapshot,
       } = await import('./extensionRegistry.js');
@@ -350,8 +354,12 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         ok: true,
         registryPresentation: {
           installSummaries: listExtensionInstallSummaries() as unknown as Array<Record<string, unknown>>,
+          commandRegistrations: listExtensionCommandRegistrations() as unknown as Array<Record<string, unknown>>,
+          keybindingRegistrations: listExtensionKeybindingRegistrations() as unknown as Array<Record<string, unknown>>,
           slashCommandRegistrations: listExtensionSlashCommandRegistrations() as unknown as Array<Record<string, unknown>>,
           mentionRegistrations: listExtensionMentionRegistrations() as unknown as Array<Record<string, unknown>>,
+          quickOpenRegistrations: listExtensionQuickOpenRegistrations() as unknown as Array<Record<string, unknown>>,
+          searchProviderRegistrations: listExtensionSearchProviderRegistrations() as unknown as Array<Record<string, unknown>>,
           snapshot: readExtensionRegistrySnapshot() as unknown as ExtensionHostRegistryPresentation['snapshot'],
         },
       };

@@ -101,7 +101,7 @@ describe('registerExtensionRoutes', () => {
     expect(schemaRes.json).toHaveBeenCalledWith(expect.objectContaining({ placements: expect.arrayContaining(['main', 'right']) }));
 
     const listRes = createResponse();
-    harness.getHandler('/api/extensions')({}, listRes);
+    await harness.getHandler('/api/extensions')({}, listRes);
     expect(listRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ id: 'system-automations', packageType: 'system' }),
@@ -140,7 +140,7 @@ describe('registerExtensionRoutes', () => {
     );
 
     const criticalRegistryRes = createResponse();
-    harness.getHandler('/api/extensions/registry/critical')({}, criticalRegistryRes);
+    await harness.getHandler('/api/extensions/registry/critical')({}, criticalRegistryRes);
     expect(criticalRegistryRes.json).toHaveBeenCalledWith(
       expect.objectContaining({
         extensions: expect.arrayContaining([expect.objectContaining({ id: 'system-automations', packageType: 'system' })]),
@@ -164,7 +164,7 @@ describe('registerExtensionRoutes', () => {
     );
 
     const surfacesRes = createResponse();
-    harness.getHandler('/api/extensions/surfaces')({}, surfacesRes);
+    await harness.getHandler('/api/extensions/surfaces')({}, surfacesRes);
     expect(surfacesRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ extensionId: 'system-automations', location: 'main', component: 'AutomationsPage' }),
@@ -302,7 +302,7 @@ describe('registerExtensionRoutes', () => {
     expect(res.json).toHaveBeenCalledWith({ error: 'Extension file path escapes package root.' });
   });
 
-  it('serves command and slash command registrations for enabled extensions', () => {
+  it('serves command and slash command registrations for enabled extensions', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
@@ -324,7 +324,7 @@ describe('registerExtensionRoutes', () => {
 
     const harness = createHarness();
     const commandsRes = createResponse();
-    harness.getHandler('/api/extensions/commands')({}, commandsRes);
+    await harness.getHandler('/api/extensions/commands')({}, commandsRes);
     expect(commandsRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         {
@@ -359,7 +359,7 @@ describe('registerExtensionRoutes', () => {
     );
 
     const slashRes = createResponse();
-    harness.getHandler('/api/extensions/slash-commands')({}, slashRes);
+    await harness.getHandler('/api/extensions/slash-commands')({}, slashRes);
     expect(slashRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         {

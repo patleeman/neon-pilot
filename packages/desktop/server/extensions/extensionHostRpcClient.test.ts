@@ -158,8 +158,12 @@ describe('extension host RPC client', () => {
           ok: true,
           registryPresentation: {
             installSummaries: [{ id: 'ext', name: 'Ext' }],
+            commandRegistrations: [{ id: 'command' }],
+            keybindingRegistrations: [{ id: 'keybinding' }],
             slashCommandRegistrations: [{ name: 'run' }],
             mentionRegistrations: [{ id: 'mention' }],
+            quickOpenRegistrations: [{ id: 'quick' }],
+            searchProviderRegistrations: [{ id: 'search' }],
             snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
           },
         }),
@@ -191,8 +195,12 @@ describe('extension host RPC client', () => {
     });
     await expect(client.readRegistryPresentation()).resolves.toEqual({
       installSummaries: [{ id: 'ext', name: 'Ext' }],
+      commandRegistrations: [{ id: 'command' }],
+      keybindingRegistrations: [{ id: 'keybinding' }],
       slashCommandRegistrations: [{ name: 'run' }],
       mentionRegistrations: [{ id: 'mention' }],
+      quickOpenRegistrations: [{ id: 'quick' }],
+      searchProviderRegistrations: [{ id: 'search' }],
       snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
     });
 

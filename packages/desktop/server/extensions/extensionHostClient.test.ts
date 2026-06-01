@@ -28,7 +28,11 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionToolRegistrations: vi.fn(),
   listEnabledExtensionEntries: vi.fn(),
   listExtensionInstallSummaries: vi.fn(),
+  listExtensionCommandRegistrations: vi.fn(),
+  listExtensionKeybindingRegistrations: vi.fn(),
   listExtensionMentionRegistrations: vi.fn(),
+  listExtensionQuickOpenRegistrations: vi.fn(),
+  listExtensionSearchProviderRegistrations: vi.fn(),
   listExtensionSlashCommandRegistrations: vi.fn(),
   readExtensionRegistrySnapshot: vi.fn(),
 }));
@@ -213,8 +217,12 @@ describe('extension host client', () => {
   it('routes registry presentation reads through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.listExtensionInstallSummaries.mockReturnValueOnce([{ id: 'ext', name: 'Ext' }]);
+    extensionRegistry.listExtensionCommandRegistrations.mockReturnValueOnce([{ id: 'command' }]);
+    extensionRegistry.listExtensionKeybindingRegistrations.mockReturnValueOnce([{ id: 'keybinding' }]);
     extensionRegistry.listExtensionSlashCommandRegistrations.mockReturnValueOnce([{ name: 'run' }]);
     extensionRegistry.listExtensionMentionRegistrations.mockReturnValueOnce([{ id: 'mention' }]);
+    extensionRegistry.listExtensionQuickOpenRegistrations.mockReturnValueOnce([{ id: 'quick' }]);
+    extensionRegistry.listExtensionSearchProviderRegistrations.mockReturnValueOnce([{ id: 'search' }]);
     extensionRegistry.readExtensionRegistrySnapshot.mockReturnValueOnce({
       extensions: [{ id: 'ext' }],
       routes: [],
@@ -224,8 +232,12 @@ describe('extension host client', () => {
 
     await expect(getExtensionHostClient().readRegistryPresentation()).resolves.toEqual({
       installSummaries: [{ id: 'ext', name: 'Ext' }],
+      commandRegistrations: [{ id: 'command' }],
+      keybindingRegistrations: [{ id: 'keybinding' }],
       slashCommandRegistrations: [{ name: 'run' }],
       mentionRegistrations: [{ id: 'mention' }],
+      quickOpenRegistrations: [{ id: 'quick' }],
+      searchProviderRegistrations: [{ id: 'search' }],
       snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
     });
   });

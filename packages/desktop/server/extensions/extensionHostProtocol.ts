@@ -156,8 +156,12 @@ export interface ExtensionHostStaticContributions {
 
 export interface ExtensionHostRegistryPresentation {
   installSummaries: Array<Record<string, unknown>>;
+  commandRegistrations: Array<Record<string, unknown>>;
+  keybindingRegistrations: Array<Record<string, unknown>>;
   slashCommandRegistrations: Array<Record<string, unknown>>;
   mentionRegistrations: Array<Record<string, unknown>>;
+  quickOpenRegistrations: Array<Record<string, unknown>>;
+  searchProviderRegistrations: Array<Record<string, unknown>>;
   snapshot: {
     extensions: Array<Record<string, unknown>>;
     routes: Array<Record<string, unknown>>;

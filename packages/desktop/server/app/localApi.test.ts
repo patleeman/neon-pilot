@@ -31,8 +31,12 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
       const registry = await import('../extensions/extensionRegistry.js');
       return {
         installSummaries: registry.listExtensionInstallSummaries(),
+        commandRegistrations: registry.listExtensionCommandRegistrations(),
+        keybindingRegistrations: registry.listExtensionKeybindingRegistrations(),
         slashCommandRegistrations: registry.listExtensionSlashCommandRegistrations(),
         mentionRegistrations: registry.listExtensionMentionRegistrations(),
+        quickOpenRegistrations: registry.listExtensionQuickOpenRegistrations(),
+        searchProviderRegistrations: registry.listExtensionSearchProviderRegistrations(),
         snapshot: registry.readExtensionRegistrySnapshot(),
       };
     },
