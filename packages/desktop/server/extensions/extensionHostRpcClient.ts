@@ -374,6 +374,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('staticContributions' in response)) throw new Error('Extension host returned invalid static contributions.');
       return response.staticContributions;
     },
+    async listEventSubscriptions() {
+      const response = await send({ type: 'listEventSubscriptions' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('eventSubscriptions' in response)) throw new Error('Extension host returned invalid event subscriptions.');
+      return response.eventSubscriptions;
+    },
     async readRegistryPresentation() {
       const response = await send({ type: 'readRegistryPresentation' });
       if (!response.ok) throw new Error(response.error);

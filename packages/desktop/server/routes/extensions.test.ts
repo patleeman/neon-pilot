@@ -707,6 +707,20 @@ describe('registerExtensionRoutes', () => {
     });
   });
 
+  it('lists extension event subscriptions through the extension host client', async () => {
+    const { subscribeExtensionEvents, unsubscribeExtensionEvents } = await import('../extensions/extensionEventBus.js');
+    subscribeExtensionEvents('agent-board', 'host:*', () => undefined);
+    try {
+      const harness = createHarness();
+      const res = createResponse();
+      await harness.getHandler('/api/extensions/events/subscriptions')({}, res);
+
+      expect(res.json).toHaveBeenCalledWith([{ extensionId: 'agent-board', pattern: 'host:*' }]);
+    } finally {
+      unsubscribeExtensionEvents('agent-board');
+    }
+  });
+
   it('rejects runtime extension builds', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

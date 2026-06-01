@@ -68,6 +68,11 @@ export interface ExtensionHostRunningService {
   lastError?: string;
 }
 
+export interface ExtensionHostEventSubscription {
+  extensionId: string;
+  pattern: string;
+}
+
 export interface ExtensionHostServiceOperationResult {
   extensionId: string;
   serviceId: string;
@@ -228,6 +233,10 @@ export interface ExtensionHostListStaticContributionsRequest {
   type: 'listStaticContributions';
 }
 
+export interface ExtensionHostListEventSubscriptionsRequest {
+  type: 'listEventSubscriptions';
+}
+
 export interface ExtensionHostReadRegistryPresentationRequest {
   type: 'readRegistryPresentation';
 }
@@ -306,6 +315,7 @@ export type ExtensionHostRequest =
   | ExtensionHostStopServicesRequest
   | ExtensionHostListPromptAssemblyContributionsRequest
   | ExtensionHostListStaticContributionsRequest
+  | ExtensionHostListEventSubscriptionsRequest
   | ExtensionHostReadRegistryPresentationRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
@@ -356,6 +366,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      eventSubscriptions: ExtensionHostEventSubscription[];
+    }
+  | {
+      ok: true;
       registryPresentation: ExtensionHostRegistryPresentation;
     }
   | {
@@ -398,6 +412,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'stopServices') return `stopServices:${request.extensionId}`;
   if (request.type === 'listPromptAssemblyContributions') return 'listPromptAssemblyContributions';
   if (request.type === 'listStaticContributions') return 'listStaticContributions';
+  if (request.type === 'listEventSubscriptions') return 'listEventSubscriptions';
   if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'startStartupActions') return 'startStartupActions';

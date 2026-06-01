@@ -4,6 +4,7 @@ import type {
   ExtensionHostActionTelemetryEntry,
   ExtensionHostBackendOperationResult,
   ExtensionHostBackendServerContext,
+  ExtensionHostEventSubscription,
   ExtensionHostInstallSubscriptionsRequest,
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
@@ -50,6 +51,7 @@ export interface ExtensionHostClient {
   stopServices(extensionId: string): Promise<void>;
   listPromptAssemblyContributions(): Promise<ExtensionHostPromptAssemblyContributions>;
   listStaticContributions(): Promise<ExtensionHostStaticContributions>;
+  listEventSubscriptions(): Promise<ExtensionHostEventSubscription[]>;
   readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
@@ -136,6 +138,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('staticContributions' in response)) throw new Error('Extension host returned invalid static contributions.');
       return response.staticContributions;
+    },
+    async listEventSubscriptions() {
+      const response = await handleInProcessExtensionHostRequest({ type: 'listEventSubscriptions' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('eventSubscriptions' in response)) throw new Error('Extension host returned invalid event subscriptions.');
+      return response.eventSubscriptions;
     },
     async readRegistryPresentation() {
       const response = await handleInProcessExtensionHostRequest({ type: 'readRegistryPresentation' });
@@ -338,6 +346,10 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
           }),
         },
       };
+    }
+    if (request.type === 'listEventSubscriptions') {
+      const { listExtensionEventSubscriptions } = await import('./extensionEventBus.js');
+      return { ok: true, eventSubscriptions: listExtensionEventSubscriptions() };
     }
     if (request.type === 'readRegistryPresentation') {
       const {

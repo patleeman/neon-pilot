@@ -153,6 +153,7 @@ describe('extension host RPC client', () => {
           },
         }),
       )
+      .mockResolvedValueOnce(jsonResponse({ ok: true, eventSubscriptions: [{ extensionId: 'ext', pattern: 'host:*' }] }))
       .mockResolvedValueOnce(
         jsonResponse({
           ok: true,
@@ -193,6 +194,7 @@ describe('extension host RPC client', () => {
       skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
       modelDiscovery: [{ extensionId: 'ext', action: 'discoverModels' }],
     });
+    await expect(client.listEventSubscriptions()).resolves.toEqual([{ extensionId: 'ext', pattern: 'host:*' }]);
     await expect(client.readRegistryPresentation()).resolves.toEqual({
       installSummaries: [{ id: 'ext', name: 'Ext' }],
       commandRegistrations: [{ id: 'command' }],
@@ -263,6 +265,11 @@ describe('extension host RPC client', () => {
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       10,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'listEventSubscriptions' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      11,
       'http://host/rpc',
       expect.objectContaining({ body: JSON.stringify({ request: { type: 'readRegistryPresentation' } }) }),
     );

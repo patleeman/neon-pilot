@@ -20,6 +20,9 @@ const extensionServices = vi.hoisted(() => ({
   startExtensionServices: vi.fn(),
   stopExtensionServices: vi.fn(),
 }));
+const extensionEventBus = vi.hoisted(() => ({
+  listExtensionEventSubscriptions: vi.fn(),
+}));
 const extensionRegistry = vi.hoisted(() => ({
   listExtensionAssemblyProviderRegistrations: vi.fn(),
   listExtensionPromptAssemblyHookRegistrations: vi.fn(),
@@ -40,6 +43,7 @@ const extensionRegistry = vi.hoisted(() => ({
 vi.mock('./extensionBackend.js', () => extensionBackend);
 vi.mock('./extensionSubscriptions.js', () => extensionSubscriptions);
 vi.mock('./extensionServices.js', () => extensionServices);
+vi.mock('./extensionEventBus.js', () => extensionEventBus);
 vi.mock('./extensionRegistry.js', () => extensionRegistry);
 
 import {
@@ -242,6 +246,13 @@ describe('extension host client', () => {
     });
   });
 
+  it('routes event subscription listing through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionEventBus.listExtensionEventSubscriptions.mockReturnValueOnce([{ extensionId: 'ext', pattern: 'host:*' }]);
+
+    await expect(getExtensionHostClient().listEventSubscriptions()).resolves.toEqual([{ extensionId: 'ext', pattern: 'host:*' }]);
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -373,6 +384,7 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'stopServices', extensionId: 'ext' })).toBe('stopServices:ext');
     expect(extensionHostRequestName({ type: 'listPromptAssemblyContributions' })).toBe('listPromptAssemblyContributions');
     expect(extensionHostRequestName({ type: 'listStaticContributions' })).toBe('listStaticContributions');
+    expect(extensionHostRequestName({ type: 'listEventSubscriptions' })).toBe('listEventSubscriptions');
     expect(extensionHostRequestName({ type: 'readRegistryPresentation' })).toBe('readRegistryPresentation');
   });
 });

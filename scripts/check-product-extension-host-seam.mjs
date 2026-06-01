@@ -64,6 +64,15 @@ const forbiddenPatterns = [
   },
   {
     pattern:
+      /import\s+\{[^}]*\blistExtensionEventSubscriptions\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionEventBus\.js['"]/,
+    message: 'product runtime code must list extension event subscriptions through ExtensionHostClient',
+  },
+  {
+    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionEventBus\.js['"]\s*\)[\s\S]{0,300}\blistExtensionEventSubscriptions\b/,
+    message: 'product runtime code must list extension event subscriptions through ExtensionHostClient',
+  },
+  {
+    pattern:
       /import\s+\{[^}]*\b(?:listRunningExtensionServices|startExtensionServices|stopExtensionServices|stopAllExtensionServices|runExtensionServiceHealthChecks)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionServices\.js['"]/,
     message: 'product runtime code must manage extension services through ExtensionHostClient',
   },

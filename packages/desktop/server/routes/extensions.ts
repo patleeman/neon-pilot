@@ -7,7 +7,6 @@ import { buildCriticalExtensionRegistryResponse } from '../app/localApiExtension
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
-import { listExtensionEventSubscriptions } from '../extensions/extensionEventBus.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import type { ExtensionHostActionInvokeResult } from '../extensions/extensionHostProtocol.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
@@ -910,9 +909,9 @@ export function registerExtensionRoutes(
 
   // ── Inter-extension event bus ────────────────────────────────────────
 
-  router.get('/api/extensions/events/subscriptions', (_req, res) => {
+  router.get('/api/extensions/events/subscriptions', async (_req, res) => {
     try {
-      res.json(listExtensionEventSubscriptions());
+      res.json(await getExtensionHostClient().listEventSubscriptions());
     } catch (err) {
       sendRouteError(res, 'extension event subscriptions error', err);
     }
