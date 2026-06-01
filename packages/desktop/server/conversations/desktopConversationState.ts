@@ -624,7 +624,7 @@ export async function readDesktopConversationState(input: {
     profile: input.profile,
   });
   const metadataNamespacesAtMs = performance.now();
-  const liveSession = sessionMeta?.isLive ? readLiveSessionStateSnapshot(conversationId, tailBlocks) : null;
+  const liveSession = sessionMeta?.isLive ? await readLiveSessionStateSnapshot(conversationId, tailBlocks) : null;
   const liveSnapshotAtMs = performance.now();
 
   if (liveSession && sessionMeta) {

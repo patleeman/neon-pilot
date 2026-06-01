@@ -2,9 +2,8 @@ import { existsSync, statSync } from 'node:fs';
 
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
-import type { ExtensionModelProfileResolution } from '../extensions/extensionModelProfileResolution.js';
-import type { ExtensionModelProfileRegistration } from '../extensions/extensionRegistry.js';
-import { resolveExtensionModelProfile } from '../extensions/extensionRegistry.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import type { ExtensionHostModelProfileResolution } from '../extensions/extensionHostProtocol.js';
 import { readTranscriptBackedConversationDetailByFile } from './conversationTranscriptOps.js';
 import type { ThreadGoal } from './conversationTypes.js';
 import type { DisplayBlock } from './conversationTypes.js';
@@ -52,7 +51,7 @@ export interface LiveSessionStateSnapshot {
   goalState: ThreadGoal | null;
   systemPrompt: string | null;
   toolDefinitions: LiveSessionToolDefinition[];
-  modelProfile: ExtensionModelProfileResolution<ExtensionModelProfileRegistration> & { modelRef: string | null };
+  modelProfile: ExtensionHostModelProfileResolution & { modelRef: string | null };
   presence: LiveSessionPresenceState;
   cwdChange: { newConversationId: string; cwd: string; autoContinued: boolean } | null;
 }
@@ -70,12 +69,12 @@ export interface LiveSessionSnapshot {
   isStreaming: boolean;
 }
 
-function readSessionModelProfile(session: AgentSession): LiveSessionStateSnapshot['modelProfile'] {
+async function readSessionModelProfile(session: AgentSession): Promise<LiveSessionStateSnapshot['modelProfile']> {
   const model = session.model;
   const provider = typeof model?.provider === 'string' ? model.provider : '';
   const modelId = typeof model?.id === 'string' ? model.id : '';
   if (!provider || !modelId) return { kind: 'none', modelRef: null };
-  return { ...resolveExtensionModelProfile({ provider, model: modelId }), modelRef: `${provider}/${modelId}` };
+  return { ...(await getExtensionHostClient().resolveModelProfile({ provider, model: modelId })), modelRef: `${provider}/${modelId}` };
 }
 
 function hasNoLiveSessionEntries(session: AgentSession): boolean {
@@ -165,12 +164,13 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
   };
 }
 
-export function readLiveSessionStateSnapshotFromEntry(
+export async function readLiveSessionStateSnapshotFromEntry(
   entry: LiveSessionStateSnapshotHost,
   title: string,
   tailBlocks?: number,
-): LiveSessionStateSnapshot {
+): Promise<LiveSessionStateSnapshot> {
   const snapshot = buildLiveSessionSnapshot(entry, tailBlocks);
+  const modelProfile = await readSessionModelProfile(entry.session);
   if (
     snapshot.blocks.length === 0 &&
     snapshot.totalBlocks === 0 &&
@@ -188,7 +188,7 @@ export function readLiveSessionStateSnapshotFromEntry(
       goalState: null,
       systemPrompt: null,
       toolDefinitions: [],
-      modelProfile: readSessionModelProfile(entry.session),
+      modelProfile,
       error: null,
       title,
       tokens: null,
@@ -225,7 +225,7 @@ export function readLiveSessionStateSnapshotFromEntry(
       description: tool.description,
       parameters: tool.parameters as Record<string, unknown>,
     })),
-    modelProfile: readSessionModelProfile(entry.session),
+    modelProfile,
     error: entry.currentTurnError ?? null,
     title,
     tokens,

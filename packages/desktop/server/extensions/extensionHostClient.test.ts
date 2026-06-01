@@ -40,6 +40,7 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionSlashCommandRegistrations: vi.fn(),
   readExtensionSchema: vi.fn(),
   readExtensionRegistrySnapshot: vi.fn(),
+  resolveExtensionModelProfile: vi.fn(),
   setExtensionEnabled: vi.fn(),
   setExtensionKeybinding: vi.fn(),
 }));
@@ -306,6 +307,17 @@ describe('extension host client', () => {
     });
   });
 
+  it('routes model profile resolution through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.resolveExtensionModelProfile.mockReturnValueOnce({ kind: 'resolved', profile: { extensionId: 'ext', id: 'gpt' } });
+
+    await expect(getExtensionHostClient().resolveModelProfile({ provider: 'openai', model: 'gpt-5' })).resolves.toEqual({
+      kind: 'resolved',
+      profile: { extensionId: 'ext', id: 'gpt' },
+    });
+    expect(extensionRegistry.resolveExtensionModelProfile).toHaveBeenCalledWith({ provider: 'openai', model: 'gpt-5' });
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -441,5 +453,8 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'listStaticContributions' })).toBe('listStaticContributions');
     expect(extensionHostRequestName({ type: 'listEventSubscriptions' })).toBe('listEventSubscriptions');
     expect(extensionHostRequestName({ type: 'readRegistryPresentation' })).toBe('readRegistryPresentation');
+    expect(extensionHostRequestName({ type: 'resolveModelProfile', provider: 'openai', model: 'gpt-5' })).toBe(
+      'resolveModelProfile:openai/gpt-5',
+    );
   });
 });

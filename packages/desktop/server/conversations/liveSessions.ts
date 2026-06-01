@@ -269,7 +269,7 @@ function syncPromptRunningState(entry: LiveEntry): void {
   publishRunningChange(target);
 }
 
-export function readLiveSessionStateSnapshot(sessionId: string, tailBlocks?: number): LiveSessionStateSnapshot {
+export async function readLiveSessionStateSnapshot(sessionId: string, tailBlocks?: number): Promise<LiveSessionStateSnapshot> {
   const entry = registry.get(sessionId);
   if (!entry) {
     throw new Error(`Session ${sessionId} is not live`);

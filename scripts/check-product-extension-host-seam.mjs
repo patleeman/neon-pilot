@@ -127,6 +127,16 @@ const forbiddenPatterns = [
     message: 'product runtime code must update extension keybindings through ExtensionHostClient',
   },
   {
+    files: [/^packages\/desktop\/server\/conversations\//],
+    pattern: /import\s+\{[^}]*\bresolveExtensionModelProfile\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'conversation runtime code must resolve extension model profiles through ExtensionHostClient',
+  },
+  {
+    files: [/^packages\/desktop\/server\/conversations\//],
+    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\bresolveExtensionModelProfile\b/,
+    message: 'conversation runtime code must resolve extension model profiles through ExtensionHostClient',
+  },
+  {
     pattern: /\bcreateInProcessExtensionHostClient\b/,
     message: 'product runtime code must not construct the in-process extension host; use the RPC extension host client',
   },
@@ -153,7 +163,8 @@ for (const file of listFiles()) {
   const absolute = resolve(repoRoot, file);
   if (!existsSync(absolute)) continue;
   const text = readFileSync(absolute, 'utf8');
-  for (const { pattern, message } of forbiddenPatterns) {
+  for (const { files, pattern, message } of forbiddenPatterns) {
+    if (files && !files.some((filePattern) => filePattern.test(file))) continue;
     const match = pattern.exec(text);
     if (!match) continue;
     const line = text.slice(0, match.index).split('\n').length;

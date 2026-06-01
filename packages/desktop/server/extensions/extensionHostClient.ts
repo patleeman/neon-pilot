@@ -9,11 +9,13 @@ import type {
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostInvokeRouteRequest,
+  ExtensionHostModelProfileResolution,
   ExtensionHostPromptAssemblyContributions,
   ExtensionHostRegistryPresentation,
   ExtensionHostReloadBackendRequest,
   ExtensionHostReloadBackendResult,
   ExtensionHostRequest,
+  ExtensionHostResolveModelProfileRequest,
   ExtensionHostResponse,
   ExtensionHostRouteResponse,
   ExtensionHostRunningService,
@@ -45,6 +47,7 @@ export type ExtensionHostInstallSubscriptionsInput = Omit<ExtensionHostInstallSu
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
 export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
+export type ExtensionHostResolveModelProfileInput = Omit<ExtensionHostResolveModelProfileRequest, 'type'>;
 export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
 export type ExtensionHostSetEnabledInput = Omit<ExtensionHostSetEnabledRequest, 'type'>;
 export type ExtensionHostSetKeybindingInput = Omit<ExtensionHostSetKeybindingRequest, 'type'>;
@@ -64,6 +67,7 @@ export interface ExtensionHostClient {
   listStaticContributions(): Promise<ExtensionHostStaticContributions>;
   listEventSubscriptions(): Promise<ExtensionHostEventSubscription[]>;
   readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
+  resolveModelProfile(input: ExtensionHostResolveModelProfileInput): Promise<ExtensionHostModelProfileResolution>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -163,6 +167,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('registryPresentation' in response)) throw new Error('Extension host returned invalid registry presentation.');
       return response.registryPresentation;
+    },
+    async resolveModelProfile(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'resolveModelProfile', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('modelProfile' in response)) throw new Error('Extension host returned invalid model profile resolution.');
+      return response.modelProfile;
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -504,9 +514,19 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         },
       };
     }
-    const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
-    uninstallExtensionSubscriptions(request.extensionId);
-    return { ok: true, subscriptionsUpdated: true };
+    if (request.type === 'resolveModelProfile') {
+      const { resolveExtensionModelProfile } = await import('./extensionRegistry.js');
+      return {
+        ok: true,
+        modelProfile: resolveExtensionModelProfile({ provider: request.provider, model: request.model }) as ExtensionHostModelProfileResolution,
+      };
+    }
+    if (request.type === 'uninstallSubscriptions') {
+      const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
+      uninstallExtensionSubscriptions(request.extensionId);
+      return { ok: true, subscriptionsUpdated: true };
+    }
+    return { ok: false, error: 'Unsupported extension host request.' };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

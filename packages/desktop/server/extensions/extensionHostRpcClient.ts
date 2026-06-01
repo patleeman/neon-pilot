@@ -386,6 +386,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('registryPresentation' in response)) throw new Error('Extension host returned invalid registry presentation.');
       return response.registryPresentation;
     },
+    async resolveModelProfile(input) {
+      const response = await send({ type: 'resolveModelProfile', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('modelProfile' in response)) throw new Error('Extension host returned invalid model profile resolution.');
+      return response.modelProfile;
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },

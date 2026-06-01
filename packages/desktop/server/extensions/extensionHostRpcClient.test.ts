@@ -169,7 +169,8 @@ describe('extension host RPC client', () => {
             snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
           },
         }),
-      );
+      )
+      .mockResolvedValueOnce(jsonResponse({ ok: true, modelProfile: { kind: 'resolved', profile: { extensionId: 'ext', id: 'gpt' } } }));
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
@@ -206,6 +207,10 @@ describe('extension host RPC client', () => {
       quickOpenRegistrations: [{ id: 'quick' }],
       searchProviderRegistrations: [{ id: 'search' }],
       snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
+    });
+    await expect(client.resolveModelProfile({ provider: 'openai', model: 'gpt-5' })).resolves.toEqual({
+      kind: 'resolved',
+      profile: { extensionId: 'ext', id: 'gpt' },
     });
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
@@ -274,6 +279,11 @@ describe('extension host RPC client', () => {
       11,
       'http://host/rpc',
       expect.objectContaining({ body: JSON.stringify({ request: { type: 'readRegistryPresentation' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      12,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'resolveModelProfile', provider: 'openai', model: 'gpt-5' } }) }),
     );
   });
 

@@ -8,6 +8,9 @@ const readSessionBlocksByFileMock = vi.fn(() => ({
   totalBlocks: 0,
   contextUsage: null,
 }));
+const extensionHostClient = vi.hoisted(() => ({
+  resolveModelProfile: vi.fn(async () => ({ kind: 'none' })),
+}));
 
 vi.mock('node:fs', () => ({
   existsSync: existsSyncMock,
@@ -19,9 +22,14 @@ vi.mock('./sessions.js', () => ({
   readSessionBlocksByFile: readSessionBlocksByFileMock,
 }));
 
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => extensionHostClient,
+}));
+
 describe('liveSessionStateSnapshot', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    extensionHostClient.resolveModelProfile.mockResolvedValue({ kind: 'none' });
     existsSyncMock.mockReturnValue(true);
     statSyncMock.mockReturnValue({ size: 100, isDirectory: () => false });
   });
@@ -134,7 +142,9 @@ describe('liveSessionStateSnapshot', () => {
   it('builds minimal state snapshots for empty idle live sessions', async () => {
     const { readLiveSessionStateSnapshotFromEntry } = await import('./liveSessionStateSnapshot.js');
 
-    const snapshot = readLiveSessionStateSnapshotFromEntry(
+    extensionHostClient.resolveModelProfile.mockResolvedValue({ kind: 'resolved', profile: { extensionId: 'model-ext', id: 'gpt' } });
+
+    const snapshot = await readLiveSessionStateSnapshotFromEntry(
       {
         session: {
           sessionFile: '/tmp/session.jsonl',
@@ -162,7 +172,9 @@ describe('liveSessionStateSnapshot', () => {
       toolDefinitions: [],
       tokens: null,
       cost: null,
+      modelProfile: { kind: 'resolved', modelRef: 'openai/gpt-5.5' },
     });
+    expect(extensionHostClient.resolveModelProfile).toHaveBeenCalledWith({ provider: 'openai', model: 'gpt-5.5' });
     expect(readSessionBlocksByFileMock).not.toHaveBeenCalled();
   });
 });

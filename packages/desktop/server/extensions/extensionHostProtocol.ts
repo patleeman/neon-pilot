@@ -153,6 +153,11 @@ export interface ExtensionHostModelDiscoveryRegistration {
   action: string;
 }
 
+export type ExtensionHostModelProfileResolution =
+  | { kind: 'none' }
+  | { kind: 'resolved'; profile: Record<string, unknown> }
+  | { kind: 'ambiguous'; profiles: Array<Record<string, unknown>> };
+
 export interface ExtensionHostStaticContributions {
   tools: ExtensionHostToolRegistration[];
   skills: ExtensionHostSkillRegistration[];
@@ -240,6 +245,12 @@ export interface ExtensionHostListEventSubscriptionsRequest {
 
 export interface ExtensionHostReadRegistryPresentationRequest {
   type: 'readRegistryPresentation';
+}
+
+export interface ExtensionHostResolveModelProfileRequest {
+  type: 'resolveModelProfile';
+  provider: string;
+  model: string;
 }
 
 export interface ExtensionHostInvokeProtocolEntrypointRequest {
@@ -349,6 +360,7 @@ export type ExtensionHostRequest =
   | ExtensionHostListStaticContributionsRequest
   | ExtensionHostListEventSubscriptionsRequest
   | ExtensionHostReadRegistryPresentationRequest
+  | ExtensionHostResolveModelProfileRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostStartStartupActionsRequest
@@ -408,6 +420,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      modelProfile: ExtensionHostModelProfileResolution;
+    }
+  | {
+      ok: true;
       invoked: true;
     }
   | {
@@ -456,6 +472,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'listStaticContributions') return 'listStaticContributions';
   if (request.type === 'listEventSubscriptions') return 'listEventSubscriptions';
   if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
+  if (request.type === 'resolveModelProfile') return `resolveModelProfile:${request.provider}/${request.model}`;
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;
