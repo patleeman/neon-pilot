@@ -24,4 +24,20 @@ describe('system-exa-search backend', () => {
     expect(result.source).toBe('exa');
     expect(result.text).toContain('Exa Title');
   });
+
+  it('accepts secrets resolved through an async worker bridge', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ results: [{ title: 'Async Exa Title', url: 'https://example.org/exa', text: 'Exa snippet' }] }),
+    } as unknown as Response);
+
+    const result = await exaSearch({ query: 'test query' }, { secrets: { get: () => Promise.resolve('worker-key') } } as never);
+    expect(result.source).toBe('exa');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://api.exa.ai/search',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer worker-key' }),
+      }),
+    );
+  });
 });

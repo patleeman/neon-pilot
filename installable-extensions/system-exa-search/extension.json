@@ -7,7 +7,7 @@
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
-    "actions": [{ "id": "exaSearch", "handler": "exaSearch", "title": "Search with Exa" }]
+    "actions": [{ "id": "exaSearch", "handler": "exaSearch", "title": "Search with Exa", "worker": { "enabled": true } }]
   },
   "contributes": {
     "secrets": {

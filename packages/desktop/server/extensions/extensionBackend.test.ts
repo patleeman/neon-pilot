@@ -16,7 +16,7 @@ import {
 } from './extensionBackend.js';
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
 import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
-import { isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
+import { invalidateExtensionRegistryReadCaches, isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
 
@@ -746,6 +746,115 @@ describe('extension backend action invocation', () => {
       'webFetch',
       { type: 'action', label: 'action webFetch', target: 'webFetch' },
       [{ url: 'https://example.com' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
+  it('runs worker-safe installable web search actions through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const duckDuckGoRoot = join(stateRoot, 'extensions', 'system-duckduckgo-search');
+    const exaRoot = join(stateRoot, 'extensions', 'system-exa-search');
+    mkdirSync(join(duckDuckGoRoot, 'dist'), { recursive: true });
+    mkdirSync(join(exaRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(duckDuckGoRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-duckduckgo-search',
+        name: 'DuckDuckGo Search',
+        packageType: 'system',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [
+            { id: 'duckDuckGoSearch', handler: 'duckDuckGoSearch', title: 'Search with DuckDuckGo', worker: { enabled: true } },
+          ],
+        },
+      }),
+    );
+    writeFileSync(join(duckDuckGoRoot, 'dist', 'backend.mjs'), 'export function duckDuckGoSearch() { return true; }\n');
+    writeFileSync(
+      join(exaRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-exa-search',
+        name: 'Exa Search',
+        packageType: 'system',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'exaSearch', handler: 'exaSearch', title: 'Search with Exa', worker: { enabled: true } }],
+        },
+      }),
+    );
+    writeFileSync(join(exaRoot, 'dist', 'backend.mjs'), 'export function exaSearch() { return true; }\n');
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (extensionId) =>
+        extensionId === 'system-duckduckgo-search'
+          ? { text: 'DuckDuckGo results', query: 'neon pilot', page: 1, count: 1, source: 'duckduckgo' }
+          : { text: 'Exa results', query: 'neon pilot', page: 1, count: 1, source: 'exa' },
+      ),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-duckduckgo-search', 'duckDuckGoSearch', { query: 'neon pilot' })).resolves.toEqual({
+      ok: true,
+      result: { text: 'DuckDuckGo results', query: 'neon pilot', page: 1, count: 1, source: 'duckduckgo' },
+    });
+    await expect(invokeExtensionAction('system-exa-search', 'exaSearch', { query: 'neon pilot', count: 3 })).resolves.toEqual({
+      ok: true,
+      result: { text: 'Exa results', query: 'neon pilot', page: 1, count: 1, source: 'exa' },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-duckduckgo-search',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-duckduckgo-search', 'dist', 'backend.mjs')),
+      }),
+      'duckDuckGoSearch',
+      { type: 'action', label: 'action duckDuckGoSearch', target: 'duckDuckGoSearch' },
+      [{ query: 'neon pilot' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-exa-search',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-exa-search', 'dist', 'backend.mjs')),
+      }),
+      'exaSearch',
+      { type: 'action', label: 'action exaSearch', target: 'exaSearch' },
+      [{ query: 'neon pilot', count: 3 }],
       {
         context: expect.objectContaining({
           type: 'backend',

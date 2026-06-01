@@ -7,7 +7,9 @@
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
-    "actions": [{ "id": "duckDuckGoSearch", "handler": "duckDuckGoSearch", "title": "Search with DuckDuckGo" }]
+    "actions": [
+      { "id": "duckDuckGoSearch", "handler": "duckDuckGoSearch", "title": "Search with DuckDuckGo", "worker": { "enabled": true } }
+    ]
   },
   "contributes": {
     "tools": [

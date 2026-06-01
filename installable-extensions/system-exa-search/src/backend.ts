@@ -16,8 +16,9 @@ function createRequestSignal(timeoutMs: number): AbortSignal {
   return AbortSignal.timeout(timeoutMs);
 }
 
-function getExaApiKey(ctx?: ExtensionBackendContext): string | undefined {
-  return ctx?.secrets.get('exaApiKey');
+async function getExaApiKey(ctx?: ExtensionBackendContext): Promise<string | undefined> {
+  const secret = ctx?.secrets.get('exaApiKey');
+  return Promise.resolve(secret);
 }
 
 function normalizeResultCount(count: number): number {
@@ -34,7 +35,7 @@ export async function exaSearch(input: { query: string; count?: number; page?: n
   const page = normalizePage(input.page ?? 1);
   const maxResults = normalizeResultCount(input.count ?? 5);
   const offset = (page - 1) * 20;
-  const exaApiKey = getExaApiKey(ctx);
+  const exaApiKey = await getExaApiKey(ctx);
   if (!exaApiKey) throw new Error('Exa API key is not configured. Set Exa Search → Exa API key or EXA_API_KEY.');
 
   const requestedResults = Math.min(offset + maxResults, 100);
