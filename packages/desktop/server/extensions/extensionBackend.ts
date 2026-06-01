@@ -13,6 +13,7 @@ import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
 import {
+  createWorkerImportExtensionBackendRunner,
   ExtensionBackendExportNotFoundError,
   type ExtensionBackendLoadTarget,
   type ExtensionBackendModule,
@@ -619,6 +620,13 @@ function hasExtensionBackendExport(extensionId: string, exportName: string): Pro
   return getExtensionBackendRunner().hasExport(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId), exportName);
 }
 
+let workerImportBackendRunner: ReturnType<typeof createWorkerImportExtensionBackendRunner> | undefined;
+
+function loadExtensionBackendForHealthCheck(extensionId: string): Promise<ExtensionBackendModule> {
+  workerImportBackendRunner ??= createWorkerImportExtensionBackendRunner();
+  return workerImportBackendRunner.loadModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
+}
+
 export type ExtensionBackendExportHandler = (...args: unknown[]) => unknown;
 
 export async function runExtensionBackendExport<T>(
@@ -954,7 +962,7 @@ export async function checkEnabledExtensionBackendHealth(): Promise<Array<{ exte
   const results = await Promise.all(
     enabledWithBackend.map(async (summary): Promise<{ extensionId: string; ok: boolean; error?: string }> => {
       try {
-        await loadExtensionBackend(summary.id);
+        await loadExtensionBackendForHealthCheck(summary.id);
         clearExtensionHealthError(summary.id);
         return { extensionId: summary.id, ok: true };
       } catch (error) {

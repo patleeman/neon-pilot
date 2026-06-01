@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const extensionRoot = 'packages/desktop/server/extensions';
 const allowedProcessGuardFiles = new Set([
+  'packages/desktop/server/extensions/extensionBackendWorker.ts',
   'packages/desktop/server/extensions/extensionBackendRunner.ts',
   'packages/desktop/server/extensions/extensionProcessGuard.ts',
 ]);
@@ -16,7 +17,10 @@ const allowedBackendRunnerFiles = new Set([
   'packages/desktop/server/extensions/extensionBackend.ts',
   'packages/desktop/server/extensions/extensionBackendRunner.ts',
 ]);
-const allowedBackendExportInspectionFiles = new Set(['packages/desktop/server/extensions/extensionBackendRunner.ts']);
+const allowedBackendExportInspectionFiles = new Set([
+  'packages/desktop/server/extensions/extensionBackendRunner.ts',
+  'packages/desktop/server/extensions/extensionBackendWorker.ts',
+]);
 const extensionHostClientFile = 'packages/desktop/server/extensions/extensionHostClient.ts';
 
 function listExtensionFiles() {

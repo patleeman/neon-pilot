@@ -3,9 +3,14 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createInProcessExtensionBackendRunner, extensionBackendOperation, serializeExtensionBackendOperation } from './extensionBackendRunner.js';
+import {
+  createInProcessExtensionBackendRunner,
+  createWorkerImportExtensionBackendRunner,
+  extensionBackendOperation,
+  serializeExtensionBackendOperation,
+} from './extensionBackendRunner.js';
 import { clearExtensionHostAuditEvents, listExtensionHostAuditEvents } from './extensionHostAudit.js';
 
 describe('extensionBackendRunner', () => {
@@ -65,6 +70,33 @@ describe('extensionBackendRunner', () => {
       expect.objectContaining({
         requestType: 'backend',
         requestName: 'ext-import-audit:backend import',
+        ok: true,
+      }),
+    ]);
+  });
+
+  it('can load backend imports through the worker import runner', async () => {
+    const client = {
+      loadModule: vi.fn(async () => undefined),
+      clearModule: vi.fn(async () => undefined),
+      hasExport: vi.fn(async () => true),
+    };
+    const fallback = createInProcessExtensionBackendRunner();
+    const fallbackClear = vi.spyOn(fallback, 'clearModule');
+    const runner = createWorkerImportExtensionBackendRunner(client, fallback);
+
+    await expect(runner.loadModule('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' })).resolves.toEqual({});
+    await expect(runner.hasExport('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing')).resolves.toBe(true);
+    runner.clearModule('ext-worker-import');
+
+    expect(client.loadModule).toHaveBeenCalledWith('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    expect(client.hasExport).toHaveBeenCalledWith('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing');
+    expect(client.clearModule).toHaveBeenCalledWith('ext-worker-import');
+    expect(fallbackClear).toHaveBeenCalledWith('ext-worker-import');
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-worker-import:backend import',
         ok: true,
       }),
     ]);

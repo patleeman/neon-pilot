@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
+import { ExtensionBackendWorkerClient } from './extensionBackendWorkerClient.js';
 import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 
@@ -50,6 +51,12 @@ export class ExtensionBackendExportNotFoundError extends Error {
     super(`Extension backend export not found: ${exportName}`);
     this.name = 'ExtensionBackendExportNotFoundError';
   }
+}
+
+interface ExtensionBackendWorkerImportClient {
+  loadModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<void>;
+  clearModule(extensionId: string): Promise<void>;
+  hasExport(extensionId: string, compiled: ExtensionBackendLoadTarget, exportName: string): Promise<boolean>;
 }
 
 export function extensionBackendOperation(
@@ -167,6 +174,39 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
     },
   };
   return runner;
+}
+
+export function createWorkerImportExtensionBackendRunner(
+  client: ExtensionBackendWorkerImportClient = new ExtensionBackendWorkerClient(),
+  fallback: ExtensionBackendRunner = createInProcessExtensionBackendRunner(),
+): ExtensionBackendRunner {
+  return {
+    async loadModule(extensionId, compiled) {
+      await auditBackendOperation(extensionId, extensionBackendOperation('backend-import', 'backend import', { target: compiled.path }), () =>
+        client.loadModule(extensionId, compiled),
+      );
+      return {};
+    },
+    clearModule(extensionId) {
+      void client.clearModule(extensionId).catch(() => {
+        // Clearing the in-process fallback below is enough for immediate correctness;
+        // worker clear failures surface on the next worker operation.
+      });
+      fallback.clearModule(extensionId);
+    },
+    hasExport(extensionId, compiled, exportName) {
+      return client.hasExport(extensionId, compiled, exportName);
+    },
+    loadAgentFactory(extensionId, compiled, exportName) {
+      return fallback.loadAgentFactory(extensionId, compiled, exportName);
+    },
+    runExport(extensionId, compiled, exportName, operation, invoke) {
+      return fallback.runExport(extensionId, compiled, exportName, operation, invoke);
+    },
+    run(extensionId, operation, handler) {
+      return fallback.run(extensionId, operation, handler);
+    },
+  };
 }
 
 let extensionBackendRunner: ExtensionBackendRunner = createInProcessExtensionBackendRunner();
