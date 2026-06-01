@@ -16,6 +16,8 @@ Backend module import, export lookup, and handler execution go through the host-
 
 The extension backend worker entrypoint starts with wire-safe import, clear, and export-availability operations. The worker import runner allocates a backend worker per extension for those operations, while handler execution remains in-process until backend contexts and live host capabilities are represented by serializable capability channels.
 
+The backend worker transport is bidirectional: host requests use `ExtensionBackendWorkerRequest`, and worker-to-host capability calls use `ExtensionBackendWorkerCapabilityRequest` with `capability`, `operation`, and serializable `input` fields. The host must dispatch those capability calls through narrow adapters and return `ExtensionBackendWorkerCapabilityResponse`; workers must not import product runtime or Electron modules directly.
+
 ## Process Graph
 
 Allowed communication:

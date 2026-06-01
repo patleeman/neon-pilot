@@ -1,7 +1,13 @@
 import { Worker } from 'node:worker_threads';
 
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
-import type { ExtensionBackendWorkerRequest, ExtensionBackendWorkerResponse } from './extensionBackendWorkerProtocol.js';
+import type {
+  ExtensionBackendWorkerCapabilityRequest,
+  ExtensionBackendWorkerCapabilityResponse,
+  ExtensionBackendWorkerMessage,
+  ExtensionBackendWorkerRequest,
+  ExtensionBackendWorkerResponse,
+} from './extensionBackendWorkerProtocol.js';
 
 interface PendingRequest {
   resolve: (response: ExtensionBackendWorkerResponse & { ok: true }) => void;
@@ -12,6 +18,7 @@ interface PendingRequest {
 export interface ExtensionBackendWorkerClientOptions {
   workerUrl?: URL;
   timeoutMs?: number;
+  capabilityDispatcher?: (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
 }
 
 export class ExtensionBackendWorkerClient {
@@ -52,7 +59,7 @@ export class ExtensionBackendWorkerClient {
 
     this.workerError = undefined;
     const worker = new Worker(this.options.workerUrl ?? new URL('./extensionBackendWorker.js', import.meta.url), { execArgv: [] });
-    worker.on('message', (response: ExtensionBackendWorkerResponse) => this.handleMessage(response));
+    worker.on('message', (message: ExtensionBackendWorkerMessage) => this.handleMessage(message));
     worker.on('error', (error) => this.handleError(error));
     worker.on('exit', (code) => this.handleExit(code));
     this.worker = worker;
@@ -81,7 +88,14 @@ export class ExtensionBackendWorkerClient {
     });
   }
 
-  private handleMessage(response: ExtensionBackendWorkerResponse): void {
+  private handleMessage(message: ExtensionBackendWorkerMessage): void {
+    if ('kind' in message && message.kind === 'capabilityRequest') {
+      void this.handleCapabilityRequest(message);
+      return;
+    }
+
+    if (!('ok' in message)) return;
+    const response = message;
     const pending = this.pending.get(response.id);
     if (!pending) return;
     this.pending.delete(response.id);
@@ -89,6 +103,30 @@ export class ExtensionBackendWorkerClient {
 
     if (response.ok) pending.resolve(response);
     else pending.reject(new Error(response.error));
+  }
+
+  private async handleCapabilityRequest(request: ExtensionBackendWorkerCapabilityRequest): Promise<void> {
+    const response = await this.dispatchCapabilityRequest(request);
+    this.worker?.postMessage(response);
+  }
+
+  private async dispatchCapabilityRequest(
+    request: ExtensionBackendWorkerCapabilityRequest,
+  ): Promise<ExtensionBackendWorkerCapabilityResponse> {
+    try {
+      if (!this.options.capabilityDispatcher) {
+        throw new Error('No extension backend capability dispatcher configured.');
+      }
+      const result = await this.options.capabilityDispatcher(request);
+      return { id: request.id, kind: 'capabilityResponse', ok: true, result };
+    } catch (error) {
+      return {
+        id: request.id,
+        kind: 'capabilityResponse',
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   private handleError(error: Error): void {

@@ -31,3 +31,28 @@ export type ExtensionBackendWorkerResponse =
       ok: false;
       error: string;
     };
+
+export interface ExtensionBackendWorkerCapabilityRequest {
+  id: number;
+  kind: 'capabilityRequest';
+  extensionId: string;
+  capability: string;
+  operation: string;
+  input?: unknown;
+}
+
+export type ExtensionBackendWorkerCapabilityResponse =
+  | {
+      id: number;
+      kind: 'capabilityResponse';
+      ok: true;
+      result?: unknown;
+    }
+  | {
+      id: number;
+      kind: 'capabilityResponse';
+      ok: false;
+      error: string;
+    };
+
+export type ExtensionBackendWorkerMessage = ExtensionBackendWorkerResponse | ExtensionBackendWorkerCapabilityRequest;

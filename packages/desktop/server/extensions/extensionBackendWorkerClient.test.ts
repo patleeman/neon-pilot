@@ -40,6 +40,10 @@ vi.mock('node:worker_threads', () => ({ Worker: workerThreads.Worker }));
 
 import { ExtensionBackendWorkerClient, ExtensionBackendWorkerPool } from './extensionBackendWorkerClient.js';
 
+async function flushPromises(): Promise<void> {
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
 describe('ExtensionBackendWorkerClient', () => {
   beforeEach(() => {
     workerThreads.Worker.mockClear();
@@ -87,6 +91,96 @@ describe('ExtensionBackendWorkerClient', () => {
     worker.emit('error', new Error('worker exploded'));
 
     await expect(load).rejects.toThrow('worker exploded');
+  });
+
+  it('dispatches worker capability requests through the host dispatcher', async () => {
+    const capabilityDispatcher = vi.fn(async () => ({ ok: true }));
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js'), capabilityDispatcher });
+
+    const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    const worker = workerThreads.instances[0]!;
+    worker.emit('message', { id: 1, ok: true });
+    await load;
+
+    worker.emit('message', {
+      id: 99,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'log',
+      operation: 'info',
+      input: { message: 'hello' },
+    });
+    await flushPromises();
+
+    expect(capabilityDispatcher).toHaveBeenCalledWith({
+      id: 99,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'log',
+      operation: 'info',
+      input: { message: 'hello' },
+    });
+    expect(worker.postMessage).toHaveBeenLastCalledWith({
+      id: 99,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { ok: true },
+    });
+  });
+
+  it('returns capability dispatcher errors to the worker', async () => {
+    const capabilityDispatcher = vi.fn(async () => {
+      throw new Error('capability denied');
+    });
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js'), capabilityDispatcher });
+
+    const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    const worker = workerThreads.instances[0]!;
+    worker.emit('message', { id: 1, ok: true });
+    await load;
+
+    worker.emit('message', {
+      id: 100,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'storage',
+      operation: 'get',
+      input: { key: 'missing' },
+    });
+    await flushPromises();
+
+    expect(worker.postMessage).toHaveBeenLastCalledWith({
+      id: 100,
+      kind: 'capabilityResponse',
+      ok: false,
+      error: 'capability denied',
+    });
+  });
+
+  it('fails closed when a worker requests a host capability without a dispatcher', async () => {
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js') });
+
+    const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    const worker = workerThreads.instances[0]!;
+    worker.emit('message', { id: 1, ok: true });
+    await load;
+
+    worker.emit('message', {
+      id: 101,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'storage',
+      operation: 'get',
+      input: { key: 'missing' },
+    });
+    await flushPromises();
+
+    expect(worker.postMessage).toHaveBeenLastCalledWith({
+      id: 101,
+      kind: 'capabilityResponse',
+      ok: false,
+      error: 'No extension backend capability dispatcher configured.',
+    });
   });
 
   it('uses a separate backend worker per extension in the worker pool', async () => {
