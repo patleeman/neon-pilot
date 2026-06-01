@@ -1,7 +1,8 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 
 import { loadExtensionAgentFactory } from './extensionBackend.js';
-import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } from './extensionProcessGuard.js';
+import { getExtensionBackendRunner } from './extensionBackendRunner.js';
+import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   listExtensionAgentRegistrations,
   recordExtensionFailure,
@@ -53,7 +54,7 @@ export function createManifestAgentExtensions(options: { onError?: (message: str
           // await factory(api) in the SDK will still await the returned
           // promise, which resolves on the next microtask.
           try {
-            await withExtensionProcessGuard(reg.extensionId, 'agent extension factory', () => Promise.resolve(factory(pi)));
+            await getExtensionBackendRunner().run(reg.extensionId, 'agent extension factory', () => Promise.resolve(factory(pi)));
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             quarantineExtensionFatalError(reg.extensionId, error);
@@ -71,7 +72,7 @@ export function createManifestAgentExtensions(options: { onError?: (message: str
           // Edge case: session starts before preload finishes.
           try {
             const f = await loadExtensionAgentFactory(reg.extensionId, reg.exportName);
-            await withExtensionProcessGuard(reg.extensionId, 'agent extension factory', () => Promise.resolve(f(pi)));
+            await getExtensionBackendRunner().run(reg.extensionId, 'agent extension factory', () => Promise.resolve(f(pi)));
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             quarantineExtensionFatalError(reg.extensionId, error);

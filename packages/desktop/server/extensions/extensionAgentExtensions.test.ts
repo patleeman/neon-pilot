@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
+
 const loadExtensionAgentFactory = vi.fn();
 const listExtensionAgentRegistrations = vi.fn();
 const recordExtensionFailure = vi.fn();
 const setExtensionEnabled = vi.fn();
 const setExtensionHealthError = vi.fn();
+const runnerRun = vi.fn(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
 
 vi.mock('./extensionBackend.js', () => ({ loadExtensionAgentFactory }));
+vi.mock('./extensionBackendRunner.js', () => ({ getExtensionBackendRunner: () => ({ run: runnerRun }) }));
 vi.mock('./extensionRegistry.js', () => ({
   listExtensionAgentRegistrations,
   recordExtensionFailure,
@@ -23,6 +27,7 @@ describe('extensionAgentExtensions', () => {
     recordExtensionFailure.mockReset();
     setExtensionEnabled.mockReset();
     setExtensionHealthError.mockReset();
+    runnerRun.mockReset().mockImplementation(async (_extensionId: string, _operation: string, handler: () => unknown) => handler());
   });
 
   it('preloads and runs manifest agent factories', async () => {
@@ -35,6 +40,7 @@ describe('extensionAgentExtensions', () => {
     await result.factories[0]?.({ registerTool: vi.fn() } as never);
 
     expect(factory).toHaveBeenCalledOnce();
+    expect(runnerRun).toHaveBeenCalledWith('ext', 'agent extension factory', expect.any(Function));
     expect(result.errors).toEqual([]);
   });
 
@@ -99,6 +105,9 @@ describe('extensionAgentExtensions', () => {
     loadExtensionAgentFactory.mockResolvedValue(() => {
       process.exit(1);
     });
+    runnerRun.mockRejectedValueOnce(
+      new ExtensionProcessTerminationBlockedError({ extensionId: 'ext', operation: 'agent extension factory' }, 'process.exit'),
+    );
 
     const result = createManifestAgentExtensions();
     await Promise.resolve();
