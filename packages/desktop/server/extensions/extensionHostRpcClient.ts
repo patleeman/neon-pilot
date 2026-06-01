@@ -411,6 +411,13 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('selfTest' in response)) throw new Error('Extension host returned an invalid self-test response.');
       return response.selfTest;
     },
+    async setEnabled(input) {
+      assertWireableStartupActionsInput(input);
+      const response = await send({ type: 'setEnabled', ...input }, input.signal);
+      if (!response.ok) throw new Error(response.error);
+      if (!('enabledResult' in response)) throw new Error('Extension host returned an invalid extension enablement response.');
+      return response.enabledResult;
+    },
     async startStartupActions(input) {
       assertWireableStartupActionsInput(input);
       const response = await send({ type: 'startStartupActions', ...(input ?? {}) });

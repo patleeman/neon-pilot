@@ -20,6 +20,8 @@ import type {
   ExtensionHostRunSelfTestRequest,
   ExtensionHostSelfTestResult,
   ExtensionHostServiceOperationResult,
+  ExtensionHostSetEnabledRequest,
+  ExtensionHostSetEnabledResult,
   ExtensionHostStartServicesRequest,
   ExtensionHostStartStartupActionsRequest,
   ExtensionHostStaticContributions,
@@ -31,12 +33,19 @@ function asExtensionBackendServerContext(
   return context as ExtensionBackendServerContext | undefined;
 }
 
+function normalizeDependencyId(dependency: string | { id: string; optional?: boolean }): { id: string; optional: boolean } {
+  return typeof dependency === 'string'
+    ? { id: dependency, optional: false }
+    : { id: dependency.id, optional: Boolean(dependency.optional) };
+}
+
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
 export type ExtensionHostInstallSubscriptionsInput = Omit<ExtensionHostInstallSubscriptionsRequest, 'type'>;
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
 export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
 export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
+export type ExtensionHostSetEnabledInput = Omit<ExtensionHostSetEnabledRequest, 'type'>;
 export type ExtensionHostStartServicesInput = Omit<ExtensionHostStartServicesRequest, 'type'>;
 export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
 
@@ -58,6 +67,7 @@ export interface ExtensionHostClient {
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
   reloadBackend(input: ExtensionHostReloadBackendInput): Promise<ExtensionHostReloadBackendResult>;
   runSelfTest(input: ExtensionHostRunSelfTestInput): Promise<ExtensionHostSelfTestResult>;
+  setEnabled(input: ExtensionHostSetEnabledInput): Promise<ExtensionHostSetEnabledResult>;
   startStartupActions(input?: ExtensionHostStartStartupActionsInput): Promise<ExtensionHostBackendOperationResult[]>;
   publishEvent(source: string, payload: unknown): Promise<void>;
 }
@@ -183,6 +193,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!('selfTest' in response)) throw new Error('Extension host returned an invalid self-test response.');
       return response.selfTest;
     },
+    async setEnabled(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'setEnabled', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('enabledResult' in response)) throw new Error('Extension host returned an invalid extension enablement response.');
+      return response.enabledResult;
+    },
     async startStartupActions(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'startStartupActions', ...(input ?? {}) });
       if (!response.ok) throw new Error(response.error);
@@ -264,6 +280,92 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
     if (request.type === 'runSelfTest') {
       const { runExtensionSelfTest } = await import('./extensionBackend.js');
       return { ok: true, selfTest: await runExtensionSelfTest(request.extensionId) };
+    }
+    if (request.type === 'setEnabled') {
+      const [
+        {
+          findExtensionEntry,
+          listExtensionInstallSummaries,
+          setExtensionEnabled,
+        },
+        { createExtensionBackendServerContextFromSnapshot },
+      ] = await Promise.all([import('./extensionRegistry.js'), import('./extensionHostServerContext.js')]);
+      const entry = findExtensionEntry(request.extensionId);
+      const summary = listExtensionInstallSummaries().find((extension) => extension.id === request.extensionId);
+      if (!entry && summary?.status === 'invalid') {
+        return { ok: true, enabledResult: { ok: false, status: 400, error: summary.errors?.[0] ?? 'Extension manifest is invalid.' } };
+      }
+      if (!entry) {
+        return { ok: true, enabledResult: { ok: false, status: 404, error: 'Extension not found.' } };
+      }
+      if (!request.enabled && entry.manifest.id === 'system-extension-manager') {
+        return {
+          ok: true,
+          enabledResult: {
+            ok: false,
+            status: 400,
+            error: 'Cannot disable the Extension Manager: this extension is required by the application.',
+          },
+        };
+      }
+      if (request.enabled) {
+        const installed = new Set(listExtensionInstallSummaries().map((extension) => extension.id));
+        const missingDependencies = (entry.manifest.dependsOn ?? [])
+          .map(normalizeDependencyId)
+          .filter((dependency) => !dependency.optional && !installed.has(dependency.id))
+          .map((dependency) => dependency.id);
+        if (missingDependencies.length > 0) {
+          return {
+            ok: true,
+            enabledResult: {
+              ok: false,
+              status: 400,
+              error: `Missing required extension dependencies: ${missingDependencies.join(', ')}`,
+            },
+          };
+        }
+      }
+      const serverContext = asExtensionBackendServerContext(
+        request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+      );
+      let actionResult: ExtensionHostActionInvokeResult | undefined;
+      if (request.enabled) {
+        setExtensionEnabled(entry.manifest.id, true);
+        const onEnableAction = entry.manifest.backend?.onEnableAction;
+        actionResult = onEnableAction
+          ? await invokeExtensionAction(entry.manifest.id, onEnableAction, {}, serverContext, undefined, undefined)
+          : undefined;
+      } else {
+        const [{ stopExtensionServices }, { uninstallExtensionSubscriptions }, { unregisterBashProcessWrapper }] = await Promise.all([
+          import('./extensionServices.js'),
+          import('./extensionSubscriptions.js'),
+          import('../conversations/processWrappers.js'),
+        ]);
+        await stopExtensionServices(entry.manifest.id);
+        unregisterBashProcessWrapper(entry.manifest.id);
+        await uninstallExtensionSubscriptions(entry.manifest.id);
+        const onDisableAction = entry.manifest.backend?.onDisableAction;
+        actionResult = onDisableAction
+          ? await invokeExtensionAction(entry.manifest.id, onDisableAction, {}, serverContext, undefined, undefined)
+          : undefined;
+        setExtensionEnabled(entry.manifest.id, false);
+      }
+      if (request.enabled) {
+        const [{ installSubscriptionsForExtension }, { startExtensionServices }] = await Promise.all([
+          import('./extensionSubscriptions.js'),
+          import('./extensionServices.js'),
+        ]);
+        await installSubscriptionsForExtension(entry.manifest.id, serverContext);
+        await startExtensionServices(serverContext);
+      }
+      return {
+        ok: true,
+        enabledResult: {
+          ok: true,
+          extension: listExtensionInstallSummaries().find((extension) => extension.id === entry.manifest.id) as unknown as Record<string, unknown>,
+          ...(actionResult ? { actionResult } : {}),
+        },
+      };
     }
     if (request.type === 'startStartupActions') {
       const [{ startExtensionStartupActions }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([

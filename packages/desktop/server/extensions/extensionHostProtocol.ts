@@ -293,6 +293,15 @@ export interface ExtensionHostReloadBackendRequest {
   extensionId: string;
 }
 
+export interface ExtensionHostSetEnabledRequest {
+  type: 'setEnabled';
+  extensionId: string;
+  enabled: boolean;
+  serverContext?: ExtensionHostBackendServerContext;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
+  signal?: AbortSignal;
+}
+
 export interface ExtensionHostSelfTestResult {
   ok: boolean;
   extensionId: string;
@@ -303,6 +312,14 @@ export interface ExtensionHostReloadBackendResult {
   ok: true;
   extensionId: string;
   rebuilt: boolean;
+}
+
+export interface ExtensionHostSetEnabledResult {
+  ok: boolean;
+  extension?: Record<string, unknown>;
+  actionResult?: ExtensionHostActionInvokeResult;
+  error?: string;
+  status?: number;
 }
 
 export type ExtensionHostRequest =
@@ -324,7 +341,8 @@ export type ExtensionHostRequest =
   | ExtensionHostInvokeRouteRequest
   | ExtensionHostListActionTelemetryRequest
   | ExtensionHostRunSelfTestRequest
-  | ExtensionHostReloadBackendRequest;
+  | ExtensionHostReloadBackendRequest
+  | ExtensionHostSetEnabledRequest;
 
 export interface ExtensionHostHealthResponse {
   ok: true;
@@ -398,6 +416,10 @@ export type ExtensionHostResponse =
       reload: ExtensionHostReloadBackendResult;
     }
   | {
+      ok: true;
+      enabledResult: ExtensionHostSetEnabledResult;
+    }
+  | {
       ok: false;
       error: string;
     };
@@ -421,5 +443,6 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'listActionTelemetry') return 'listActionTelemetry';
   if (request.type === 'runSelfTest') return `runSelfTest:${request.extensionId}`;
   if (request.type === 'reloadBackend') return `reloadBackend:${request.extensionId}`;
+  if (request.type === 'setEnabled') return `setEnabled:${request.extensionId}:${request.enabled ? 'enable' : 'disable'}`;
   return request.type;
 }

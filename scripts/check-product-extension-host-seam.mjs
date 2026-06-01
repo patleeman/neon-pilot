@@ -111,6 +111,14 @@ const forbiddenPatterns = [
     message: 'product runtime code must read model discovery registrations through ExtensionHostClient',
   },
   {
+    pattern: /import\s+\{[^}]*\bsetExtensionEnabled\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'product runtime code must update extension enablement through ExtensionHostClient',
+  },
+  {
+    pattern: /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\bsetExtensionEnabled\b/,
+    message: 'product runtime code must update extension enablement through ExtensionHostClient',
+  },
+  {
     pattern: /\bcreateInProcessExtensionHostClient\b/,
     message: 'product runtime code must not construct the in-process extension host; use the RPC extension host client',
   },

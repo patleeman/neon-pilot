@@ -283,12 +283,17 @@ describe('extension host RPC client', () => {
       .mockResolvedValueOnce(jsonResponse({ ok: true, telemetry: [{ extensionId: 'ext', actionId: 'run', ok: true }] }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, selfTest: { ok: true, extensionId: 'ext', checks: [] } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, reload: { ok: true, extensionId: 'ext', rebuilt: false } }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, enabledResult: { ok: true, extension: { id: 'ext', enabled: true } } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, route: { status: 200, body: { ok: true } } }));
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.listActionTelemetry('ext')).resolves.toEqual([{ extensionId: 'ext', actionId: 'run', ok: true }]);
     await expect(client.runSelfTest({ extensionId: 'ext' })).resolves.toEqual({ ok: true, extensionId: 'ext', checks: [] });
     await expect(client.reloadBackend({ extensionId: 'ext' })).resolves.toEqual({ ok: true, extensionId: 'ext', rebuilt: false });
+    await expect(client.setEnabled({ extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } })).resolves.toEqual({
+      ok: true,
+      extension: { id: 'ext', enabled: true },
+    });
     await expect(
       client.invokeRoute({
         extensionId: 'ext',
@@ -315,6 +320,15 @@ describe('extension host RPC client', () => {
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       4,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: { type: 'setEnabled', extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } },
+        }),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      5,
       'http://host/route',
       expect.objectContaining({
         body: JSON.stringify({

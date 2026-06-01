@@ -601,7 +601,7 @@ describe('registerExtensionRoutes', () => {
 
     const harness = createHarness();
     const toggleRes = createResponse();
-    harness.patchHandler('/api/extensions/:id')({ params: { id: 'bad-board' }, body: { enabled: false } }, toggleRes);
+    await harness.patchHandler('/api/extensions/:id')({ params: { id: 'bad-board' }, body: { enabled: false } }, toggleRes);
     expect(toggleRes.status).toHaveBeenCalledWith(400);
     expect(toggleRes.json).toHaveBeenCalledWith({ error: expect.stringContaining('contributes.views[0].location') });
 

@@ -24,6 +24,7 @@ const extensionEventBus = vi.hoisted(() => ({
   listExtensionEventSubscriptions: vi.fn(),
 }));
 const extensionRegistry = vi.hoisted(() => ({
+  findExtensionEntry: vi.fn(),
   listExtensionAssemblyProviderRegistrations: vi.fn(),
   listExtensionPromptAssemblyHookRegistrations: vi.fn(),
   listExtensionPromptContextProviderRegistrations: vi.fn(),
@@ -39,6 +40,7 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionSlashCommandRegistrations: vi.fn(),
   readExtensionSchema: vi.fn(),
   readExtensionRegistrySnapshot: vi.fn(),
+  setExtensionEnabled: vi.fn(),
 }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
@@ -256,6 +258,31 @@ describe('extension host client', () => {
     await expect(getExtensionHostClient().listEventSubscriptions()).resolves.toEqual([{ extensionId: 'ext', pattern: 'host:*' }]);
   });
 
+  it('routes extension enablement through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.findExtensionEntry.mockReturnValueOnce({
+      manifest: { id: 'ext', name: 'Ext', backend: { onEnableAction: 'enabled' } },
+    });
+    extensionRegistry.listExtensionInstallSummaries
+      .mockReturnValueOnce([{ id: 'ext', status: 'disabled' }])
+      .mockReturnValueOnce([{ id: 'ext', status: 'disabled' }])
+      .mockReturnValueOnce([{ id: 'ext', status: 'enabled', enabled: true }]);
+    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { enabled: true } });
+    extensionSubscriptions.installSubscriptionsForExtension.mockResolvedValueOnce(undefined);
+    extensionServices.startExtensionServices.mockResolvedValueOnce([]);
+
+    await expect(
+      getExtensionHostClient().setEnabled({ extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } }),
+    ).resolves.toEqual({
+      ok: true,
+      extension: { id: 'ext', status: 'enabled', enabled: true },
+      actionResult: { ok: true, result: { enabled: true } },
+    });
+    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('ext', true);
+    expect(extensionSubscriptions.installSubscriptionsForExtension).toHaveBeenCalledWith('ext', expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
+    expect(extensionServices.startExtensionServices).toHaveBeenCalledWith(expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -379,6 +406,7 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'listActionTelemetry', extensionId: 'ext' })).toBe('listActionTelemetry');
     expect(extensionHostRequestName({ type: 'runSelfTest', extensionId: 'ext' })).toBe('runSelfTest:ext');
     expect(extensionHostRequestName({ type: 'reloadBackend', extensionId: 'ext' })).toBe('reloadBackend:ext');
+    expect(extensionHostRequestName({ type: 'setEnabled', extensionId: 'ext', enabled: true })).toBe('setEnabled:ext:enable');
     expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
     expect(extensionHostRequestName({ type: 'installSubscriptions', extensionId: 'ext' })).toBe('installSubscriptions:ext');
     expect(extensionHostRequestName({ type: 'uninstallSubscriptions', extensionId: 'ext' })).toBe('uninstallSubscriptions:ext');

@@ -9,7 +9,6 @@ import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensi
 import { findExtensionCommandRegistration } from '../extensions/extensionCommandLookup.js';
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import type { ExtensionHostActionInvokeResult } from '../extensions/extensionHostProtocol.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import {
   buildRuntimeExtension,
@@ -24,9 +23,7 @@ import {
   clearBuildError,
   findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
-  listExtensionInstallSummaries,
   setBuildError,
-  setExtensionEnabled,
   setExtensionKeybinding,
 } from '../extensions/extensionRegistry.js';
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
@@ -116,12 +113,6 @@ function sendRouteError(res: Response, label: string, err: unknown): void {
   res.status(500).json({ error: String(err) });
 }
 
-function normalizeDependencyId(dependency: string | { id: string; optional?: boolean }): { id: string; optional: boolean } {
-  return typeof dependency === 'string'
-    ? { id: dependency, optional: false }
-    : { id: dependency.id, optional: Boolean(dependency.optional) };
-}
-
 function normalizeRouteQuery(query: Request['query']): Record<string, string | string[]> {
   const normalized: Record<string, string | string[]> = {};
   for (const [key, value] of Object.entries(query)) {
@@ -201,15 +192,6 @@ async function sendExtensionSseResponse(
   } finally {
     res.end();
   }
-}
-
-function findMissingRequiredDependencies(extensionId: string): string[] {
-  const installed = new Set(listExtensionInstallSummaries().map((extension) => extension.id));
-  const entry = findExtensionEntry(extensionId);
-  return (entry?.manifest.dependsOn ?? [])
-    .map(normalizeDependencyId)
-    .filter((dependency) => !dependency.optional && !installed.has(dependency.id))
-    .map((dependency) => dependency.id);
 }
 
 function resolveExtensionFilePath(extensionId: string, relativePath: string): string {
@@ -771,75 +753,22 @@ export function registerExtensionRoutes(
   router.patch('/api/extensions/:id', async (req, res) => {
     const signal = createExtensionRequestAbortSignal(req, res);
     try {
-      const entry = findExtensionEntry(req.params.id);
-      const summary = listExtensionInstallSummaries().find((extension) => extension.id === req.params.id);
-      if (!entry && summary?.status === 'invalid') {
-        res.status(400).json({ error: summary.errors?.[0] ?? 'Extension manifest is invalid.' });
-        return;
-      }
-      if (!entry) {
-        res.status(404).json({ error: 'Extension not found.' });
-        return;
-      }
       const enabled = (req.body as { enabled?: unknown }).enabled;
       if (typeof enabled !== 'boolean') {
         res.status(400).json({ error: 'enabled must be a boolean.' });
         return;
       }
-      if (!enabled && entry.manifest.id === 'system-extension-manager') {
-        res.status(400).json({ error: 'Cannot disable the Extension Manager: this extension is required by the application.' });
+      const result = await getExtensionHostClient().setEnabled({
+        extensionId: req.params.id,
+        enabled,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+        signal,
+      });
+      if (!result.ok) {
+        res.status(result.status ?? 400).json({ error: result.error ?? 'Extension update failed.' });
         return;
       }
-      if (enabled) {
-        const missingDependencies = findMissingRequiredDependencies(entry.manifest.id);
-        if (missingDependencies.length > 0) {
-          res.status(400).json({ error: `Missing required extension dependencies: ${missingDependencies.join(', ')}` });
-          return;
-        }
-      }
-      let actionResult: ExtensionHostActionInvokeResult | undefined;
-      if (enabled) {
-        setExtensionEnabled(entry.manifest.id, true);
-        const onEnableAction = entry.manifest.backend?.onEnableAction;
-        actionResult = onEnableAction
-          ? await getExtensionHostClient().invokeAction({
-              extensionId: entry.manifest.id,
-              actionId: onEnableAction,
-              input: {},
-              serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
-              signal,
-            })
-          : undefined;
-      } else {
-        await getExtensionHostClient().stopServices(entry.manifest.id);
-        const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
-        unregisterBashProcessWrapper(entry.manifest.id);
-        await getExtensionHostClient().uninstallSubscriptions(entry.manifest.id);
-        const onDisableAction = entry.manifest.backend?.onDisableAction;
-        actionResult = onDisableAction
-          ? await getExtensionHostClient().invokeAction({
-              extensionId: entry.manifest.id,
-              actionId: onDisableAction,
-              input: {},
-              serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
-              signal,
-            })
-          : undefined;
-        setExtensionEnabled(entry.manifest.id, false);
-      }
-      if (enabled) {
-        // Install subscriptions before starting services so any service startup events are received.
-        await getExtensionHostClient().installSubscriptions({
-          extensionId: entry.manifest.id,
-          serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
-        });
-        await getExtensionHostClient().startServices({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) });
-      }
-      res.json({
-        ok: true,
-        extension: listExtensionInstallSummaries().find((extension) => extension.id === entry.manifest.id),
-        ...(actionResult ? { actionResult } : {}),
-      });
+      res.json({ ok: true, extension: result.extension, ...(result.actionResult ? { actionResult: result.actionResult } : {}) });
     } catch (err) {
       sendRouteError(res, 'extension update error', err);
     }
