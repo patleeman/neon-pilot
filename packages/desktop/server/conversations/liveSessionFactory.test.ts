@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 
 const agent = vi.hoisted(() => ({
   AuthStorage: { create: vi.fn((path: string) => ({ path })) },
@@ -50,6 +52,9 @@ vi.mock('./liveSessionPersistence.js', () => persistence);
 import { createPreparedLiveAgentSession, makeAuth, makeRegistry, warmLiveSessionToolSelection } from './liveSessionFactory.js';
 
 describe('live session factory', () => {
+  const originalPath = process.env.PATH;
+  const originalDs4CliBin = process.env.DS4_CLI_BIN;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -67,6 +72,9 @@ describe('live session factory', () => {
     process.env.PERSONAL_AGENT_ACTIVE_PROFILE = '';
     process.env.PERSONAL_AGENT_PROFILE = '';
     process.env.PERSONAL_AGENT_REPO_ROOT = '/repo';
+    process.env.PATH = originalPath;
+    if (originalDs4CliBin === undefined) delete process.env.DS4_CLI_BIN;
+    else process.env.DS4_CLI_BIN = originalDs4CliBin;
     extensionRegistry.resolveModelProfile.mockResolvedValue({ kind: 'none' });
     modelPrefs.readSavedModelRef.mockReturnValue('provider/model');
   });
@@ -179,6 +187,46 @@ describe('live session factory', () => {
     );
     expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit', 'subagent'] }));
     expect(s.setActiveTools).not.toHaveBeenCalled();
+  });
+
+  it('publishes the DS4 CLI path into host and bash environments for DS4 sessions', async () => {
+    const tempRoot = path.join('/tmp', `neon-pilot-ds4-cli-${process.pid}`);
+    const extensionPath = path.join(tempRoot, 'system-ds4');
+    const cliBinDir = path.join(extensionPath, 'bin');
+    rmSync(tempRoot, { recursive: true, force: true });
+    mkdirSync(cliBinDir, { recursive: true });
+    writeFileSync(path.join(cliBinDir, 'ds4'), '#!/bin/sh\n');
+
+    const s = session();
+    modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+    extensionRegistry.resolveModelProfile.mockResolvedValue({
+      kind: 'resolved',
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash'] },
+    });
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    try {
+      await createPreparedLiveAgentSession({
+        cwd: '/repo',
+        agentDir: '/agent',
+        settingsFile: '/settings.json',
+        sessionManager: {} as never,
+        options: { additionalExtensionPaths: [extensionPath] },
+      });
+
+      expect(process.env.PATH?.split(path.delimiter)[0]).toBe(cliBinDir);
+      expect(process.env.DS4_CLI_BIN).toBe(path.join(cliBinDir, 'ds4'));
+
+      const spawnHook = s._baseToolRegistry.get('bash').options.spawnHook;
+      expect(spawnHook({ command: 'ds4 status', cwd: '/repo', env: { PATH: '/usr/bin' } })).toMatchObject({
+        env: expect.objectContaining({
+          PATH: `${cliBinDir}${path.delimiter}/usr/bin`,
+          DS4_CLI_BIN: path.join(cliBinDir, 'ds4'),
+        }),
+      });
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 
   it('does not re-expand tools after a lifecycle hook has selected a single extension tool mode', async () => {

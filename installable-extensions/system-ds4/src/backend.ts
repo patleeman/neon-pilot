@@ -60,8 +60,9 @@ function resolveDs4CliBinDir(): string {
 function publishDs4CliToProcessPath(cliBinDir = resolveDs4CliBinDir()): void {
   const currentPath = process.env.PATH ?? '';
   const parts = currentPath.split(path.delimiter).filter(Boolean);
-  if (parts[0] === cliBinDir) return;
-  process.env.PATH = [cliBinDir, ...parts.filter((part) => part !== cliBinDir)].join(path.delimiter);
+  if (parts[0] !== cliBinDir) {
+    process.env.PATH = [cliBinDir, ...parts.filter((part) => part !== cliBinDir)].join(path.delimiter);
+  }
   process.env.DS4_CLI_BIN = path.join(cliBinDir, 'ds4');
 }
 const BOOTSTRAP_STEPS = [
@@ -466,6 +467,7 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
   publishDs4CliToProcessPath();
+  const cliPath = process.env.DS4_CLI_BIN ?? path.join(resolveDs4CliBinDir(), 'ds4');
   const paths = await runtimePaths(ctx);
   const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, server, tools, settings, rtk] = await Promise.all([
     exists(path.join(paths.repoDir, '.git')),
@@ -499,6 +501,8 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
       installed: serverInstalled && modelInstalled,
       tools,
       rtk,
+      cliPath,
+      cliAvailable: existsSync(cliPath),
     },
     settings,
     bootstrap,

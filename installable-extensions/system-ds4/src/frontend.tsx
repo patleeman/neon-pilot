@@ -27,6 +27,8 @@ type Ds4Status = {
     serverPath?: string;
     modelBytes?: number | null;
     tools?: Record<string, boolean>;
+    cliAvailable?: boolean;
+    cliPath?: string;
     rtk?: {
       installed?: boolean;
       valid?: boolean;
@@ -268,7 +270,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     { label: 'Runtime installed', ready: runtimeInstalled },
     { label: 'Server alive', ready: status?.reachable === true },
     { label: 'Local build tools', ready: localToolsReady },
-    { label: 'DS4 CLI available', ready: true },
+    { label: 'DS4 CLI available', ready: status?.runtime?.cliAvailable === true },
     { label: 'RTK installed', ready: rtk?.valid === true },
     { label: 'RTK compression enabled', ready: shellCompression === 'rtk' && rtk?.valid === true },
   ];

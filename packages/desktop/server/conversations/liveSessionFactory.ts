@@ -8,6 +8,8 @@ import {
   type SessionManager,
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { resolveChildProcessEnv } from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
@@ -39,6 +41,7 @@ let cachedToolSelection: {
 interface ResolvedModelProfileSessionPolicy {
   activeTools: string[] | null;
   progressiveSkillDiscovery: boolean;
+  ds4Profile: boolean;
 }
 
 function parseModelRef(modelRef: string): { provider: string; model: string } | null {
@@ -49,16 +52,18 @@ function parseModelRef(modelRef: string): { provider: string; model: string } | 
 
 async function resolveModelProfileSessionPolicy(modelRef: string): Promise<ResolvedModelProfileSessionPolicy> {
   const parsed = parseModelRef(modelRef);
-  if (!parsed) return { activeTools: null, progressiveSkillDiscovery: false };
+  if (!parsed) return { activeTools: null, progressiveSkillDiscovery: false, ds4Profile: false };
   const profile = await getExtensionHostClient().resolveModelProfile(parsed);
-  if (profile.kind !== 'resolved') return { activeTools: null, progressiveSkillDiscovery: false };
+  if (profile.kind !== 'resolved') return { activeTools: null, progressiveSkillDiscovery: false, ds4Profile: false };
   const activeTools = profile.profile.activeTools;
+  const ds4Profile = profile.profile.extensionId === 'system-ds4' && profile.profile.id === 'ds4-compatible';
   return {
     activeTools:
       Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length
         ? activeTools
         : null,
-    progressiveSkillDiscovery: profile.profile.extensionId === 'system-ds4' && profile.profile.id === 'ds4-compatible',
+    progressiveSkillDiscovery: ds4Profile,
+    ds4Profile,
   };
 }
 
@@ -82,7 +87,38 @@ function createDesktopConversationSettingsManager(cwd: string, agentDir: string)
   return settingsManager;
 }
 
-function patchConversationBashTool(session: AgentSession, cwd: string, conversationId: string, sessionFile?: string): void {
+function prependPath(env: NodeJS.ProcessEnv, dir: string): NodeJS.ProcessEnv {
+  const currentPath = env.PATH ?? '';
+  const parts = currentPath.split(path.delimiter).filter(Boolean);
+  return {
+    ...env,
+    PATH: [dir, ...parts.filter((part) => part !== dir)].join(path.delimiter),
+  };
+}
+
+function ds4CliCandidates(options: LiveSessionLoaderOptions): string[] {
+  const candidates = (options.additionalExtensionPaths ?? []).map((extensionPath) => path.join(extensionPath, 'bin'));
+  if (process.env.NEON_PILOT_STATE_ROOT) {
+    candidates.push(path.join(process.env.NEON_PILOT_STATE_ROOT, 'extensions', 'system-ds4', 'bin'));
+  }
+  if (process.env.NEON_PILOT_REPO_ROOT) {
+    candidates.push(path.join(process.env.NEON_PILOT_REPO_ROOT, 'installable-extensions', 'system-ds4', 'bin'));
+  }
+  candidates.push(path.join(process.cwd(), 'installable-extensions', 'system-ds4', 'bin'));
+  return candidates;
+}
+
+function resolveDs4CliBinDir(options: LiveSessionLoaderOptions): string | null {
+  return ds4CliCandidates(options).find((candidate) => existsSync(path.join(candidate, 'ds4'))) ?? null;
+}
+
+function publishDs4CliToHostPath(cliBinDir: string | null): void {
+  if (!cliBinDir) return;
+  process.env.PATH = prependPath(process.env, cliBinDir).PATH;
+  process.env.DS4_CLI_BIN = path.join(cliBinDir, 'ds4');
+}
+
+function patchConversationBashTool(session: AgentSession, cwd: string, conversationId: string, sessionFile?: string, ds4CliBinDir?: string | null): void {
   const patchableSession = session as unknown as ToolPatchableSessionInternals;
   if (!(patchableSession._baseToolRegistry instanceof Map) || typeof patchableSession._refreshToolRegistry !== 'function') {
     return;
@@ -100,7 +136,8 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
           },
           context.env,
         );
-        const launch = resolveProcessLaunch({ command: 'sh', args: ['-lc', context.command], cwd: context.cwd, env });
+        const launchEnv = ds4CliBinDir ? { ...prependPath(env, ds4CliBinDir), DS4_CLI_BIN: path.join(ds4CliBinDir, 'ds4') } : env;
+        const launch = resolveProcessLaunch({ command: 'sh', args: ['-lc', context.command], cwd: context.cwd, env: launchEnv });
         return {
           ...context,
           command: formatProcessLaunchShellCommand(launch),
@@ -166,6 +203,8 @@ export async function createPreparedLiveAgentSession(input: {
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const settingsAtMs = performance.now();
   const modelProfilePolicy = await resolveModelProfileSessionPolicy(readSavedModelRef(input.settingsFile, modelRegistry.getAvailable()));
+  const ds4CliBinDir = modelProfilePolicy.ds4Profile ? resolveDs4CliBinDir(options) : null;
+  publishDs4CliToHostPath(ds4CliBinDir);
   const resourceLoader = await makeLoader(
     input.cwd,
     modelProfilePolicy.progressiveSkillDiscovery
@@ -191,7 +230,7 @@ export async function createPreparedLiveAgentSession(input: {
   });
   const agentSessionAtMs = performance.now();
 
-  patchConversationBashTool(session, input.cwd, session.sessionId, resolveLiveSessionFile(session));
+  patchConversationBashTool(session, input.cwd, session.sessionId, resolveLiveSessionFile(session), ds4CliBinDir);
   patchSessionManagerPersistence(session.sessionManager);
   if (input.ensureSessionFile !== false) {
     ensureSessionFileExists(session.sessionManager);
