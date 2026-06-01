@@ -753,6 +753,67 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe codex profile apply patch actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({
+        text: 'Applied patch to 1 file.',
+        details: { fileChanges: [{ path: 'README.md', status: 'modified' }] },
+      })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'system-codex-profile',
+        'applyPatch',
+        { patch: '*** Begin Patch\n*** Update File: README.md\n@@\n-old\n+new\n*** End Patch' },
+        undefined,
+        { cwd: '/repo' },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        text: 'Applied patch to 1 file.',
+        details: { fileChanges: [{ path: 'README.md', status: 'modified' }] },
+      },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-codex-profile',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-codex-profile', 'dist', 'backend.mjs')),
+      }),
+      'applyPatch',
+      { type: 'action', label: 'action applyPatch', target: 'applyPatch' },
+      [{ patch: '*** Begin Patch\n*** Update File: README.md\n@@\n-old\n+new\n*** End Patch' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { cwd: '/repo' },
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

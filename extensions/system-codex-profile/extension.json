@@ -13,7 +13,10 @@
       {
         "id": "applyPatch",
         "handler": "applyPatch",
-        "title": "Apply Patch"
+        "title": "Apply Patch",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "image",
