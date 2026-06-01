@@ -277,6 +277,74 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({ id: 20, ok: true, result: { porcelain: '## main' } });
   });
 
+  it('runs backend exports with host-mediated workspace capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const file = await ctx.workspace.readText({ cwd: '/repo', path: 'README.md', maxBytes: 100 });
+  const written = await ctx.workspace.writeText({ cwd: '/repo', path: 'README.md', content: 'hello' });
+  const entries = await ctx.workspace.list({ cwd: '/repo', path: '.', depth: 2 });
+  return { file, written, entries };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 22,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-workspace' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'workspace',
+      operation: 'readText',
+      input: { cwd: '/repo', path: 'README.md', maxBytes: 100 },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { path: 'README.md', content: 'hello', sha256: 'abc' } });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'workspace',
+      operation: 'writeText',
+      input: { cwd: '/repo', path: 'README.md', content: 'hello' },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { path: 'README.md', bytes: 5 } });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'workspace',
+      operation: 'list',
+      input: { cwd: '/repo', path: '.', depth: 2 },
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: [{ path: 'src', type: 'directory' }] });
+
+    await waitForPostMessage({
+      id: 22,
+      ok: true,
+      result: {
+        file: { path: 'README.md', content: 'hello', sha256: 'abc' },
+        written: { path: 'README.md', bytes: 5 },
+        entries: [{ path: 'src', type: 'directory' }],
+      },
+    });
+  });
+
   it('runs backend exports with host-mediated notification capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

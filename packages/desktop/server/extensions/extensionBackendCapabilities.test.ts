@@ -172,6 +172,72 @@ describe('extension backend capability dispatcher', () => {
     ).rejects.toThrow('Git staged must be a boolean when provided.');
   });
 
+  it('dispatches extension-scoped workspace capability calls', async () => {
+    const workspace = {
+      readText: vi.fn(async () => ({ path: 'README.md', content: 'hello', sha256: 'abc' })),
+      writeText: vi.fn(async () => ({ path: 'README.md', bytes: 5 })),
+      list: vi.fn(async () => [{ path: 'src', type: 'directory' }]),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ workspace });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'workspace',
+          operation: 'readText',
+          input: { cwd: '/repo', path: 'README.md', maxBytes: 100 },
+        }),
+      ),
+    ).resolves.toEqual({ path: 'README.md', content: 'hello', sha256: 'abc' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'workspace',
+          operation: 'writeText',
+          input: { cwd: '/repo', path: 'README.md', content: 'hello' },
+        }),
+      ),
+    ).resolves.toEqual({ path: 'README.md', bytes: 5 });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'workspace',
+          operation: 'list',
+          input: { cwd: '/repo', path: '.', depth: 2 },
+        }),
+      ),
+    ).resolves.toEqual([{ path: 'src', type: 'directory' }]);
+
+    expect(workspace.readText).toHaveBeenCalledWith('ext', { cwd: '/repo', path: 'README.md', maxBytes: 100 });
+    expect(workspace.writeText).toHaveBeenCalledWith('ext', { cwd: '/repo', path: 'README.md', content: 'hello' });
+    expect(workspace.list).toHaveBeenCalledWith('ext', { cwd: '/repo', path: '.', depth: 2 });
+  });
+
+  it('rejects malformed workspace capability inputs', async () => {
+    const workspace = { readText: vi.fn(), writeText: vi.fn(), list: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ workspace });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'workspace',
+        operation: 'readText',
+        input: { cwd: '/repo', path: 1 },
+      }),
+    ).rejects.toThrow('Workspace path must be a string.');
+  });
+
   it('dispatches extension-scoped log capability calls', async () => {
     const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ log });

@@ -119,6 +119,11 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     ui: {
       invalidate: (topics: string | string[]) => callHostCapability(extensionId, 'ui', 'invalidate', { topics }),
     },
+    workspace: {
+      readText: (input: unknown) => callHostCapability(extensionId, 'workspace', 'readText', input),
+      writeText: (input: unknown) => callHostCapability(extensionId, 'workspace', 'writeText', input),
+      list: (input: unknown) => callHostCapability(extensionId, 'workspace', 'list', input),
+    },
   };
 }
 

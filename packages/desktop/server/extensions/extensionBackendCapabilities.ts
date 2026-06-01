@@ -13,6 +13,7 @@ import {
 import { listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
+import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
 type ExtensionTelemetrySource = 'server' | 'renderer' | 'agent' | 'system';
@@ -101,6 +102,12 @@ interface ExtensionBackendCapabilityUi {
   invalidate(topics: string | string[]): unknown;
 }
 
+interface ExtensionBackendCapabilityWorkspace {
+  readText(extensionId: string, input: { cwd: string; path: string; maxBytes?: number }): Promise<unknown> | unknown;
+  writeText(extensionId: string, input: { cwd: string; path: string; content: string }): Promise<unknown> | unknown;
+  list(extensionId: string, input: { cwd: string; path?: string; depth?: number }): Promise<unknown> | unknown;
+}
+
 export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
@@ -115,6 +122,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   storage?: ExtensionBackendCapabilityStorage;
   telemetry?: ExtensionBackendCapabilityTelemetry;
   ui?: ExtensionBackendCapabilityUi;
+  workspace?: ExtensionBackendCapabilityWorkspace;
 }
 
 function normalizeLogInput(input: unknown): { message: string; fields?: Record<string, unknown> } {
@@ -422,6 +430,37 @@ function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: Extensi
   return ui.invalidate(topics);
 }
 
+function dispatchWorkspaceCapability(workspace: ExtensionBackendCapabilityWorkspace, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  const input = normalizeRecordInput(request.input, 'Workspace');
+  const cwd = requireString(input.cwd, 'Workspace cwd');
+
+  if (request.operation === 'readText') {
+    return workspace.readText(request.extensionId, {
+      cwd,
+      path: requireString(input.path, 'Workspace path'),
+      ...(input.maxBytes !== undefined ? { maxBytes: optionalNumber(input.maxBytes, 'Workspace maxBytes') } : {}),
+    });
+  }
+
+  if (request.operation === 'writeText') {
+    return workspace.writeText(request.extensionId, {
+      cwd,
+      path: requireString(input.path, 'Workspace path'),
+      content: requireString(input.content, 'Workspace content'),
+    });
+  }
+
+  if (request.operation === 'list') {
+    return workspace.list(request.extensionId, {
+      cwd,
+      ...(input.path !== undefined ? { path: optionalString(input.path, 'Workspace path') } : {}),
+      ...(input.depth !== undefined ? { depth: optionalNumber(input.depth, 'Workspace depth') } : {}),
+    });
+  }
+
+  throw new Error(`Unsupported workspace capability operation: ${request.operation}`);
+}
+
 export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
@@ -482,6 +521,14 @@ export function createExtensionBackendCapabilityDispatcher(
       invalidateAppTopics(...(items as AppEventTopic[]));
     },
   };
+  const workspace = options.workspace ?? {
+    readText: (extensionId: string, input: { cwd: string; path: string; maxBytes?: number }) =>
+      createExtensionWorkspaceCapability(extensionId).readText(input),
+    writeText: (extensionId: string, input: { cwd: string; path: string; content: string }) =>
+      createExtensionWorkspaceCapability(extensionId).writeText(input),
+    list: (extensionId: string, input: { cwd: string; path?: string; depth?: number }) =>
+      createExtensionWorkspaceCapability(extensionId).list(input),
+  };
   const storage = options.storage ?? {
     get: (extensionId: string, key: string) => readExtensionState(extensionId, key)?.value ?? null,
     put: (extensionId: string, key: string, value: unknown, storageOptions?: { expectedVersion?: number }) => {
@@ -525,6 +572,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'ui') {
       return dispatchUiCapability(ui, request);
+    }
+    if (request.capability === 'workspace') {
+      return dispatchWorkspaceCapability(workspace, request);
     }
     throw new Error(`Unsupported extension backend capability: ${request.capability}`);
   };
