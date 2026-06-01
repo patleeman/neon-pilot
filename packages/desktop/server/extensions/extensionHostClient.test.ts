@@ -64,6 +64,7 @@ vi.mock('./extensionEventBus.js', () => extensionEventBus);
 vi.mock('./extensionStorage.js', () => extensionStorage);
 vi.mock('./extensionRegistry.js', () => extensionRegistry);
 
+import { clearExtensionHostAuditEvents, listExtensionHostAuditEvents } from './extensionHostAudit.js';
 import {
   createInProcessExtensionHostClient,
   getExtensionHostClient,
@@ -146,11 +147,40 @@ describe('extension host client', () => {
   });
 
   it('converts request handler throws into protocol errors', async () => {
+    clearExtensionHostAuditEvents();
     extensionBackend.invokeExtensionAction.mockRejectedValueOnce(new Error('boom'));
 
     await expect(
       handleInProcessExtensionHostRequest({ type: 'invokeAction', extensionId: 'ext', actionId: 'explode', input: null }),
     ).resolves.toEqual({ ok: false, error: 'boom' });
+
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        id: 1,
+        requestType: 'invokeAction',
+        requestName: 'invokeAction:ext/explode',
+        ok: false,
+        error: 'boom',
+      }),
+    ]);
+    expect(listExtensionHostAuditEvents()[0]?.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('records successful extension host request audit metadata without payloads', async () => {
+    clearExtensionHostAuditEvents();
+
+    await expect(handleInProcessExtensionHostRequest({ type: 'health' })).resolves.toEqual({ ok: true, status: 'ready' });
+
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        id: 1,
+        requestType: 'health',
+        requestName: 'health',
+        ok: true,
+      }),
+    ]);
+    expect(listExtensionHostAuditEvents()[0]).not.toHaveProperty('payload');
+    expect(listExtensionHostAuditEvents()[0]).not.toHaveProperty('body');
   });
 
   it('routes publishEvent through the extension host request envelope', async () => {

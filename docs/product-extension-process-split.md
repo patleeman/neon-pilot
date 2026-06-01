@@ -75,6 +75,12 @@ Product runtime modules must depend on `ExtensionHostClient` and the public host
 
 Manifest-declared tools also invoke backend actions through `ExtensionHostClient`; they pass serializable agent metadata and tool context snapshots through the host action transport. Richer live agent capabilities must use explicit handles before they can cross the process boundary.
 
+## Extension Host Audit
+
+Extension host request handling records metadata-only audit events at the host boundary. These events include request type, stable request name, success/failure, duration, timestamp, and error text for failed requests. They must not record request bodies, route bodies, action inputs, prompt text, or extension payloads.
+
+Action telemetry is still the action-level diagnostic stream. Host audit events are the process-boundary diagnostic stream and should stay close to the host protocol rather than being scattered through product runtime call sites.
+
 ## Current Product Fallbacks
 
 The product runtime no longer routes extension-host calls to the in-process fallback. Keeping this true is part of the product-runtime/extension-host seam: new product callers should use snapshots, serializable inputs, dedicated transports, or explicit capability channels instead of live function-bearing host objects.

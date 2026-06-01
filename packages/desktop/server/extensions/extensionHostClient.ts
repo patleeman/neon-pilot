@@ -2,6 +2,7 @@ import { resolve as resolvePath, sep } from 'node:path';
 
 import { extractMentionIds } from '../knowledge/promptReferences.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
+import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import type {
   ExtensionHostActionInvokeResult,
   ExtensionHostActionTelemetryEntry,
@@ -41,6 +42,7 @@ import type {
   ExtensionHostStateOperationResult,
   ExtensionHostStaticContributions,
 } from './extensionHostProtocol.js';
+import { extensionHostRequestName } from './extensionHostProtocol.js';
 
 function asExtensionBackendServerContext(
   context: ExtensionHostBackendServerContext | undefined,
@@ -317,6 +319,19 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
 }
 
 export async function handleInProcessExtensionHostRequest(request: ExtensionHostRequest): Promise<ExtensionHostResponse> {
+  const startedAt = performance.now();
+  const response = await handleInProcessExtensionHostRequestUnchecked(request);
+  recordExtensionHostAuditEvent({
+    requestType: request.type,
+    requestName: extensionHostRequestName(request),
+    ok: response.ok,
+    durationMs: performance.now() - startedAt,
+    ...(!response.ok ? { error: response.error } : {}),
+  });
+  return response;
+}
+
+async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHostRequest): Promise<ExtensionHostResponse> {
   try {
     if (request.type === 'health') {
       return { ok: true, status: 'ready' };
