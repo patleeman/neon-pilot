@@ -36,8 +36,7 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
 
 export type ExtensionHostFallbackReason =
   | 'action:function-bearing-context'
-  | 'protocol:stdio-streams'
-  | 'route:function-bearing-context';
+  | 'protocol:stdio-streams';
 
 export function getExtensionHostInvokeActionFallbackReason(
   input: ExtensionHostInvokeActionInput,
@@ -67,12 +66,6 @@ function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHost
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(stripRouteSignal(input).request);
 }
 
-export function getExtensionHostInvokeRouteFallbackReason(
-  input: Parameters<ExtensionHostClient['invokeRoute']>[0],
-): ExtensionHostFallbackReason | null {
-  return isWireableExtensionHostInvokeRouteInput(input) ? null : 'route:function-bearing-context';
-}
-
 function isWireableExtensionHostStartStartupActionsInput(input: Parameters<ExtensionHostClient['startStartupActions']>[0]): boolean {
   if (!input) return true;
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot);
@@ -91,6 +84,12 @@ function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput):
 function assertWireableStartupActionsInput(input: Parameters<ExtensionHostClient['startStartupActions']>[0]): void {
   if (!isWireableExtensionHostStartStartupActionsInput(input)) {
     throw new Error('Extension host RPC cannot carry function-bearing startup contexts; pass a server context snapshot.');
+  }
+}
+
+function assertWireableRouteInput(input: Parameters<ExtensionHostClient['invokeRoute']>[0]): void {
+  if (!isWireableExtensionHostInvokeRouteInput(input)) {
+    throw new Error('Extension host RPC cannot carry function-bearing route contexts; pass serializable route data.');
   }
 }
 
@@ -273,9 +272,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       throw new Error('Extension host RPC cannot carry protocol stdio streams; use capability channels before enabling this call path.');
     },
     async invokeRoute(input) {
-      if (hasFunction(input.serverContext) || hasFunction(input.serverContextSnapshot) || hasFunction(input.request)) {
-        throw new Error('Extension host RPC cannot carry function-bearing route contexts; use capability channels before enabling this call path.');
-      }
+      assertWireableRouteInput(input);
       return sendRoute(input);
     },
     async listActionTelemetry(extensionId) {
@@ -332,9 +329,7 @@ export function createHybridExtensionHostClient(input: {
       return input.fallbackClient.invokeProtocolEntrypoint(protocolInput);
     },
     async invokeRoute(routeInput) {
-      if (getExtensionHostInvokeRouteFallbackReason(routeInput)) {
-        return input.fallbackClient.invokeRoute(routeInput);
-      }
+      assertWireableRouteInput(routeInput);
       return input.rpcClient.invokeRoute(routeInput);
     },
     async listActionTelemetry(extensionId) {

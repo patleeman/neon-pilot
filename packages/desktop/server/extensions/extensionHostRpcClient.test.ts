@@ -4,7 +4,6 @@ import {
   createExtensionHostRpcClient,
   createHybridExtensionHostClient,
   getExtensionHostInvokeActionFallbackReason,
-  getExtensionHostInvokeRouteFallbackReason,
   getExtensionHostProtocolEntrypointFallbackReason,
   hasFunction,
   isWireableExtensionHostInvokeActionInput,
@@ -128,22 +127,6 @@ describe('extension host RPC client', () => {
         agentToolContext: { run: () => undefined },
       }),
     ).toBe('action:function-bearing-context');
-    expect(
-      getExtensionHostInvokeRouteFallbackReason({
-        extensionId: 'ext',
-        method: 'GET',
-        routePath: '/unsafe',
-        request: { method: 'GET', path: '/unsafe', query: {}, params: {}, signal: new AbortController().signal },
-      }),
-    ).toBeNull();
-    expect(
-      getExtensionHostInvokeRouteFallbackReason({
-        extensionId: 'ext',
-        method: 'GET',
-        routePath: '/unsafe',
-        request: { method: 'GET', path: '/unsafe', query: {}, params: {}, body: { callback: () => undefined } },
-      }),
-    ).toBe('route:function-bearing-context');
     expect(getExtensionHostProtocolEntrypointFallbackReason()).toBe('protocol:stdio-streams');
   });
 
@@ -419,6 +402,46 @@ describe('extension host RPC client', () => {
     ).resolves.toEqual({ status: 200, body: 'rpc' });
 
     expect(rpcClient.invokeRoute).toHaveBeenCalled();
+    expect(fallbackClient.invokeRoute).not.toHaveBeenCalled();
+  });
+
+  it('rejects function-bearing backend routes in the hybrid client', async () => {
+    const rpcClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      invokeRoute: vi.fn().mockResolvedValue({ status: 200, body: 'rpc' }),
+      listActionTelemetry: vi.fn().mockResolvedValue([]),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      reloadBackend: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', rebuilt: false }),
+      runSelfTest: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', checks: [] }),
+      startStartupActions: vi.fn().mockResolvedValue([]),
+    };
+    const fallbackClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      invokeRoute: vi.fn().mockResolvedValue({ status: 200, body: 'fallback' }),
+      listActionTelemetry: vi.fn().mockResolvedValue([]),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      reloadBackend: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', rebuilt: false }),
+      runSelfTest: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', checks: [] }),
+      startStartupActions: vi.fn().mockResolvedValue([]),
+    };
+    const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
+
+    await expect(
+      client.invokeRoute({
+        extensionId: 'ext',
+        method: 'GET',
+        routePath: '/unsafe',
+        request: { method: 'GET', path: '/unsafe', query: {}, params: {}, body: { callback: () => undefined } },
+      }),
+    ).rejects.toThrow('pass serializable route data');
+
+    expect(rpcClient.invokeRoute).not.toHaveBeenCalled();
     expect(fallbackClient.invokeRoute).not.toHaveBeenCalled();
   });
 
