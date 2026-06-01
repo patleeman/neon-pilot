@@ -15,12 +15,18 @@
       {
         "id": "scheduledTask",
         "handler": "scheduledTask",
-        "title": "Scheduled task"
+        "title": "Scheduled task",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "deferredResume",
         "handler": "deferredResume",
-        "title": "Deferred resume"
+        "title": "Deferred resume",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
