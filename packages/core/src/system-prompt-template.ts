@@ -31,8 +31,8 @@ You are Patrick Lee's personal AI agent. Use the knowledge base, skills, notes, 
 - Skills directory: {{ skills_dir }}
 - Scheduled tasks directory: {{ tasks_dir }}
 - Never store secrets in durable notes, skills, or project files.
-- Load only relevant knowledge: AGENTS.md for standing context, skills for procedures, notes/projects for reference.
-- When a task matches an available skill, read that SKILL.md before using the workflow.
+- Runtime AGENTS.md contains pointers to instruction files. Read only the relevant source file before relying on it.
+- Discover skills on demand under the skills directory or extension skills folders, then read the matching SKILL.md before using that workflow.
 
 `;
 

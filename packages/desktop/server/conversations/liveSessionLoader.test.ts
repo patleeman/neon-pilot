@@ -57,8 +57,15 @@ describe('live session loader cache', () => {
       additionalSkillPaths: [' /skills '],
       additionalPromptTemplatePaths: [' /prompts '],
       additionalThemePaths: [' /themes '],
+      systemPrompt: expect.stringContaining('Neon Pilot'),
+      noSkills: true,
       noThemes: true,
     });
+    expect(agent.DefaultResourceLoader.instances[0].options).not.toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining('Pi documentation'),
+      }),
+    );
     expect(agent.DefaultResourceLoader.instances[0].reload).toHaveBeenCalledOnce();
   });
 

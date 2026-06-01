@@ -292,10 +292,12 @@ description: Commit and push the agent's current work.
     expect(runtimePrompt).not.toContain(`Extension authoring docs: ${join(repo, 'docs', 'extensions.md')}`);
     expect(runtimePrompt).toContain('shared append');
     expect(runtimePrompt).not.toContain('<available_skills>');
-    expect(runtimePrompt).not.toContain(join(syncRoot, 'skills', 'checkpoint', 'SKILL.md'));
     expect(runtimePrompt).not.toContain("Commit and push the agent's current work.");
     expect(runtimePrompt).toContain(`Primary knowledge path: ${syncRoot}`);
-    expect(readFileSync(join(runtime, 'AGENTS.md'), 'utf-8')).toContain('# Durable shared');
+    const agentsContent = readFileSync(join(runtime, 'AGENTS.md'), 'utf-8');
+    expect(agentsContent).toContain('# Runtime instruction pointers');
+    expect(agentsContent).toContain(join(syncRoot, 'AGENTS.md'));
+    expect(agentsContent).not.toContain('# Durable shared');
     expect(runtimeSettings.defaultModel).toBe('gpt-5.4');
     expect(runtimeSettings.defaultProvider).toBe('openai-codex');
     expect(runtimeSettings.defaultThinkingLevel).toBe('high');
@@ -324,7 +326,9 @@ description: Commit and push the agent's current work.
     const agentsContent = readFileSync(join(runtime, 'AGENTS.md'), 'utf-8');
     const appendContent = readFileSync(join(runtime, 'APPEND_SYSTEM.md'), 'utf-8');
     expect(result.writtenFiles.some((path) => path.endsWith('/AGENTS.md'))).toBe(true);
-    expect(agentsContent).toContain('# Shared');
+    expect(agentsContent).toContain('# Runtime instruction pointers');
+    expect(agentsContent).toContain(join(repo, 'defaults/agent/AGENTS.md'));
+    expect(agentsContent).not.toContain('# Shared');
     expect(agentsContent).not.toContain('Stale materialized copy');
     expect(appendContent).toContain('shared append');
     expect(appendContent).not.toContain('stale append');

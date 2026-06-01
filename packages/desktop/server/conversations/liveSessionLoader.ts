@@ -6,6 +6,16 @@ import { logWarn } from '../shared/logging.js';
 const AGENT_DIR = getPiAgentRuntimeDir();
 const PREWARMED_LIVE_SESSION_LOADERS_MAX = 4;
 const PREWARMED_LIVE_SESSION_LOADERS_TTL_MS = 10 * 60_000;
+const NEON_LIVE_SESSION_SYSTEM_PROMPT = `You are an expert coding assistant operating inside Neon Pilot, Patrick Lee's extension-based agent runtime.
+
+Help users by reading files, running commands, editing code, and writing new files.
+
+Guidelines:
+- Be concise in your responses.
+- Show file paths clearly when working with files.
+- Use available tools deliberately and prefer small, verifiable changes.
+- Runtime AGENTS.md files are pointers to instruction sources. Read only the relevant source file before relying on it.
+- Discover skills on demand from the skills directory or extension skill folders, then read the matching SKILL.md before using that workflow.`;
 
 export interface LiveSessionLoaderOptions {
   agentDir?: string;
@@ -56,6 +66,8 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
     additionalSkillPaths: options.additionalSkillPaths,
     additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
     additionalThemePaths: options.additionalThemePaths,
+    systemPrompt: NEON_LIVE_SESSION_SYSTEM_PROMPT,
+    noSkills: true,
     noThemes: true,
   });
 }

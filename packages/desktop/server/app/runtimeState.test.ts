@@ -177,7 +177,7 @@ describe('createRuntimeState', () => {
 
     expect(state.buildLiveSessionResourceOptions()).toEqual({
       additionalExtensionPaths: ['/ext/shared'],
-      additionalSkillPaths: expect.any(Array),
+      additionalSkillPaths: [],
       additionalPromptTemplatePaths: expect.any(Array),
       additionalThemePaths: ['/themes/shared.json'],
     });
@@ -268,7 +268,7 @@ describe('createRuntimeState', () => {
     expect(pi.setActiveTools).toHaveBeenNthCalledWith(2, ['read', 'apply_patch']);
   });
 
-  it('adds extension skill directories to live session resources', () => {
+  it('keeps skill directories out of live session resources for progressive discovery', () => {
     listExtensionSkillRegistrationsMock.mockReturnValue([
       { path: '/repo-root/extensions/system-runs/skills/runs/SKILL.md' },
       { path: '/repo-root/extensions/system-runs/skills/runs/SKILL.md' },
@@ -281,7 +281,7 @@ describe('createRuntimeState', () => {
       logger: createLogger(),
     });
 
-    expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual(expect.any(Array));
+    expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual([]);
   });
 
   it('caches live session extension factories until registrations change', () => {
@@ -319,13 +319,13 @@ describe('createRuntimeState', () => {
     ).resolves.toEqual([
       {
         additionalExtensionPaths: ['/ext/shared'],
-        additionalSkillPaths: ['/skills/async'],
+        additionalSkillPaths: [],
         additionalPromptTemplatePaths: ['/prompts/async.md'],
         additionalThemePaths: ['/themes/shared.json'],
       },
       {
         additionalExtensionPaths: ['/ext/shared'],
-        additionalSkillPaths: ['/skills/async'],
+        additionalSkillPaths: [],
         additionalPromptTemplatePaths: ['/prompts/async.md'],
         additionalThemePaths: ['/themes/shared.json'],
       },
@@ -334,7 +334,7 @@ describe('createRuntimeState', () => {
     expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
 
     await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
-      additionalSkillPaths: ['/skills/async'],
+      additionalSkillPaths: [],
     });
     expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
     expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
@@ -351,7 +351,7 @@ describe('createRuntimeState', () => {
 
     await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toEqual({
       additionalExtensionPaths: ['/ext/shared'],
-      additionalSkillPaths: ['/skills/sync'],
+      additionalSkillPaths: [],
       additionalPromptTemplatePaths: ['/prompts/sync.md'],
       additionalThemePaths: ['/themes/shared.json'],
     });
