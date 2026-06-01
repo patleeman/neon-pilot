@@ -46,7 +46,7 @@ See [Getting Started](getting-started.md) for the full setup.
 
 Neon Pilot product features live in extensions. The normal way to create one is to ask your agent to build it; start with [Build an extension with your agent](build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
 
-System extensions are bundled under `extensions/system-*`. Installable extensions live under `installable-extensions/*` in the repo, are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`. Users install released optional extensions from **Settings → Extensions → Available**; after installing, check the main extension registry to enable and inspect the extension.
+System extensions are bundled under `extensions/system-*`. Installable extensions live under `installable-extensions/*` in the repo, are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`. Users install released optional extensions from **Settings → Extensions → Install**; after installing, check the main extension registry to enable and inspect the extension.
 
 Feature-specific documentation lives beside the owning extension package:
 

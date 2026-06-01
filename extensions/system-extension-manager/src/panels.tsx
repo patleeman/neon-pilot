@@ -55,7 +55,7 @@ interface InstallableExtensionCatalogResponse {
 
 type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | 'template';
 type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
-type ExtensionFilter = 'add-ons' | 'built-in' | 'available' | 'attention';
+type ExtensionFilter = 'all' | 'attention';
 
 interface LogicalSurfaceSummary {
   id: string;
@@ -322,6 +322,22 @@ function DetailsIcon() {
   );
 }
 
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="8" cy="8" r="2.3" />
+      <path d="M8 1.8v2" />
+      <path d="M8 12.2v2" />
+      <path d="m3.6 3.6 1.4 1.4" />
+      <path d="m11 11 1.4 1.4" />
+      <path d="M1.8 8h2" />
+      <path d="M12.2 8h2" />
+      <path d="m3.6 12.4 1.4-1.4" />
+      <path d="m11 5 1.4-1.4" />
+    </svg>
+  );
+}
+
 function RefreshIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -502,7 +518,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<ExtensionFilter>('add-ons');
+  const [activeFilter, setActiveFilter] = useState<ExtensionFilter>('all');
   const location = useLocation();
   const navigate = useNavigate();
   const [detailsExtensionId, setDetailsExtensionId] = useState<string | null>(null);
@@ -579,7 +595,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           setNotice(`Installed ${item.name} as an extension-backed package.`);
         } else {
           await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
-          setNotice(`Installed ${item.name}. Enable it from Installed Extensions when you're ready.`);
+          setNotice(`Installed ${item.name}. Enable it from the extensions list when you're ready.`);
         }
         notifyExtensionRegistryChanged();
         await load();
@@ -741,8 +757,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     return extensions.filter((extension) => {
       const unavailableCatalogItem =
         extension.packageType !== 'system' && extension.id.startsWith('system-') && catalog && !catalogIds.has(extension.id);
-      if (activeFilter === 'add-ons' && extension.packageType === 'system') return false;
-      if (activeFilter === 'built-in' && extension.packageType !== 'system') return false;
       if (
         activeFilter === 'attention' &&
         !(
@@ -755,7 +769,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       ) {
         return false;
       }
-      if (activeFilter === 'available') return false;
       if (!normalizedQuery) return true;
       return `${extension.name} ${extension.id} ${extension.description ?? ''} ${(extension.skills ?? [])
         .map((skill) => `${skill.name} ${skill.description ?? ''}`)
@@ -778,10 +791,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     });
   }, [catalog, extensions, query]);
 
-  const sectionSummary =
-    activeFilter === 'available'
-      ? `${visibleCatalogExtensions.length} available`
-      : `${visibleExtensions.length} installed · ${visibleExtensions.filter((extension) => extension.enabled).length} enabled`;
+  const sectionSummary = `${visibleExtensions.length} installed · ${visibleExtensions.filter((extension) => extension.enabled).length} enabled`;
 
   const renderExtensionRows = (items: ExtensionInstallSummary[]) =>
     items.map((extension) => {
@@ -854,6 +864,20 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   <OpenIcon />
                 </Link>
               ) : null}
+              {hasExtensionSettings(extension) ? (
+                <button
+                  type="button"
+                  className="ui-icon-button ui-icon-button-compact"
+                  title={`Settings for ${extension.name}`}
+                  aria-label={`Settings for ${extension.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(settingsSectionTarget(extension));
+                  }}
+                >
+                  <GearIcon />
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="ui-icon-button ui-icon-button-compact"
@@ -893,37 +917,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         </thead>
         <tbody>{renderExtensionRows(items)}</tbody>
       </table>
-    </section>
-  );
-
-  const renderCatalogList = (items: InstallableExtensionCatalogItem[]) => (
-    <section className="min-w-0 border-y border-border-subtle/70">
-      <div className="divide-y divide-border-subtle/70">
-        {items.map((item) => {
-          const busy = busyId === item.id;
-          return (
-            <div key={`catalog:${item.id}`} className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_auto]">
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="truncate text-[14px] font-semibold text-primary">{item.name}</div>
-                  <span className="shrink-0 text-[11px] text-dim">{packageKindLabel(item)}</span>
-                </div>
-                <div className="mt-0.5 max-w-[42rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
-                  {item.description || 'No description provided.'}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="self-center rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={busy || Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource)}
-                onClick={() => void installCatalogExtension(item)}
-              >
-                {busy ? 'Installing…' : item.packageType && item.packageType !== 'extension' && !item.packageSource ? 'Planned' : 'Install'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
     </section>
   );
 
@@ -983,9 +976,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <div className="flex flex-wrap items-center gap-5 border-b border-border-subtle/70 text-[12px]">
               {(
                 [
-                  ['add-ons', 'Installed'],
-                  ['built-in', 'Built-in'],
-                  ['available', 'Available'],
+                  ['all', 'All'],
                   ['attention', 'Attention'],
                 ] as const
               ).map(([id, label]) => (
@@ -1048,27 +1039,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <h2 className="text-[24px] font-semibold leading-tight text-primary">
-                    {activeFilter === 'available'
-                      ? 'Available'
-                      : activeFilter === 'built-in'
-                        ? 'Built-in Extensions'
-                        : activeFilter === 'attention'
-                          ? 'Needs Attention'
-                          : 'Installed Extensions'}
+                    {activeFilter === 'attention' ? 'Needs Attention' : 'Extensions'}
                   </h2>
                   <p className="mt-1 text-[12px] text-secondary">{sectionSummary}</p>
                 </div>
               </div>
-              {activeFilter === 'available' ? (
-                visibleCatalogExtensions.length === 0 ? (
-                  <EmptyState
-                    title="No available extensions"
-                    body="Installed extensions and marketplace packages are hidden from this list."
-                  />
-                ) : (
-                  renderCatalogList(visibleCatalogExtensions)
-                )
-              ) : extensions.length === 0 ? (
+              {extensions.length === 0 ? (
                 <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
               ) : visibleExtensions.length === 0 ? (
                 <EmptyState title="No matching extensions" body="Clear search to show all installed extensions." />
@@ -1098,7 +1074,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         <ExtensionDetailsModal
           extensionId={selectedExtension.id}
           onClose={() => setDetailsExtensionId(null)}
-          onOpenSettings={(extension) => navigate(settingsSectionTarget(extension))}
         />
       ) : null}
     </>
@@ -1489,11 +1464,9 @@ function renderExtensionSettingControl(entry: UnifiedSettingsEntry, value: unkno
 function ExtensionDetailsModal({
   extensionId,
   onClose,
-  onOpenSettings,
 }: {
   extensionId: string;
   onClose: () => void;
-  onOpenSettings?: (extension: ExtensionInstallSummary) => void;
 }) {
   const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1591,7 +1564,6 @@ function ExtensionDetailsModal({
               notice={notice}
               onCopyDiagnostics={copyExtensionDiagnostics}
               onOpenPath={openPath}
-              onOpenSettings={onOpenSettings}
             />
           )}
         </div>
@@ -1606,14 +1578,12 @@ function ExtensionDetailsContent({
   compact = false,
   onCopyDiagnostics,
   onOpenPath,
-  onOpenSettings,
 }: {
   extension: ExtensionInstallSummary;
   notice: string | null;
   compact?: boolean;
   onCopyDiagnostics: (extension: ExtensionInstallSummary) => Promise<void>;
   onOpenPath: (path: string) => void;
-  onOpenSettings?: (extension: ExtensionInstallSummary) => void;
 }) {
   const surfaces = getLogicalSurfaces(extension);
   const hasSettings = hasExtensionSettings(extension);
@@ -1687,25 +1657,12 @@ function ExtensionDetailsContent({
       </header>
 
       {hasSettings ? (
-        <DetailBlock
-          title="Settings"
-          action={
-            !hasInlineRailSettings(extension) && onOpenSettings ? (
-              <button
-                type="button"
-                className="text-[11px] text-secondary transition-colors hover:text-primary"
-                onClick={() => onOpenSettings(extension)}
-              >
-                Open Settings
-              </button>
-            ) : undefined
-          }
-        >
+        <DetailBlock title="Settings">
           {hasInlineRailSettings(extension) || !compact ? (
             <ExtensionSettingsBlock extension={extension} />
           ) : (
             <div className="rounded-xl border border-border-subtle/70 px-3 py-3 text-[12px] leading-5 text-secondary">
-              This extension has a full settings surface. Open Settings to configure it without losing this list.
+              This extension has a full settings surface.
             </div>
           )}
         </DetailBlock>

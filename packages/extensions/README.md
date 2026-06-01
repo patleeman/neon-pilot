@@ -99,7 +99,7 @@ Optional first-party extensions under `installable-extensions/` use the release 
 pnpm run extension:pack:installable
 ```
 
-Those bundles are named `{extension-id}.neon-extension.zip` and are uploaded to the matching GitHub release tag for Settings → Extensions → Available.
+Those bundles are named `{extension-id}.neon-extension.zip` and are uploaded to the matching GitHub release tag for Settings → Extensions → Install.
 
 ## Manifest contract
 

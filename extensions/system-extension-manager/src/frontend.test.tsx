@@ -64,6 +64,26 @@ function createExtension() {
   } as never;
 }
 
+function createConfigurableExtension() {
+  return {
+    ...createExtension(),
+    id: 'configurable-test',
+    name: 'Configurable Test',
+    manifest: {
+      contributes: {
+        views: [],
+        settings: {
+          'configurableTest.enabled': {
+            type: 'boolean',
+            default: true,
+            description: 'Toggle a test setting.',
+          },
+        },
+      },
+    },
+  } as never;
+}
+
 function createSystemExtension() {
   return {
     ...createExtension(),
@@ -129,30 +149,35 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 
-  it('shows installed add-ons with source labels and no command category buttons', async () => {
+  it('shows a single extensions list with source labels and no catalog tab', async () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'Installed' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Built-in' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Available' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'All' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Installed' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Built-in' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Available' })).toBeNull();
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 
-  it('scopes installed and enabled counts to the selected extension tab', async () => {
+  it('combines installed add-ons and built-ins in the all extensions count', async () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension(), createSystemExtension()]);
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Built-in' }));
-
     expect(screen.getByText('System Menu Test')).toBeTruthy();
-    expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
-    expect(screen.queryByText('2 installed · 2 enabled')).toBeNull();
+    expect(screen.getByText('2 installed · 2 enabled')).toBeTruthy();
+  });
+
+  it('shows settings actions only for configurable extensions', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createExtension(), createConfigurableExtension()]);
+    renderPage();
+
+    expect(await screen.findByText('Configurable Test')).toBeTruthy();
+    expect(screen.getByLabelText('Settings for Configurable Test')).toBeTruthy();
+    expect(screen.queryByLabelText('Settings for Menu Test')).toBeNull();
   });
 
   it('shows catalog-only extensions in the install modal instead of the installed table', async () => {

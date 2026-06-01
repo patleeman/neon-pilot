@@ -19,7 +19,7 @@ Extension frontends must use the native PA client/action bridge for app-internal
 Settings → Extensions should make that loop boring. It should be a single scrollable management page with Settings-style section anchors rather than a tabbed catalog:
 
 - create a starter native extension package
-- list installed built-in extensions and installed extensions
+- list built-in and installed extensions together
 - list imported plugin/package wrappers as extensions
 - show manifest, surfaces, routes, protocol entrypoints, build status, and permissions
 - show contributed skills, tools, MCP servers, app views, instructions, diagnostics, and developer details as sections on the same page
@@ -45,7 +45,7 @@ Built-in first-party extensions live in the repo/app bundle under `extensions/` 
 
 Optional first-party extensions live under `installable-extensions/` in the repo. The loader does not auto-discover that directory. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as installed extensions. The Available Extensions catalog is generated from `installable-extensions/*/extension.json` into `packages/desktop/server/extensions/installableExtensionCatalog.generated.ts`; run `pnpm run extension:catalog` after adding, removing, or renaming an installable first-party extension.
 
-The Settings → Extensions surface includes an **Available Extensions** section for normal users. It lists installable capability packages across supported ecosystems. First-party Neon Pilot extension bundles (`.neon-extension.zip`) install from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. Codex and Claude behavior packages can be installed from a package source URL or local path as skills, instruction packs, agents, templates, or plugin packages; installing one should register a local extension wrapper so prompt assembly and the extension registry can discover its behavior files without mixing them into Knowledge Base. After installing an extension package, tell users to check **Installed Extensions** in Settings → Extensions to enable, disable, inspect, validate, or reload the extension.
+The Settings → Extensions surface includes an **Install** dialog for normal users. It lists installable capability packages across supported ecosystems. First-party Neon Pilot extension bundles (`.neon-extension.zip`) install from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. Codex and Claude behavior packages can be installed from a package source URL or local path as skills, instruction packs, agents, templates, or plugin packages; installing one should register a local extension wrapper so prompt assembly and the extension registry can discover its behavior files without mixing them into Knowledge Base. After installing an extension package, tell users to check the unified extension list in Settings → Extensions to enable, disable, inspect, validate, or reload the extension.
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 

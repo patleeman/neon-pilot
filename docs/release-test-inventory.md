@@ -177,7 +177,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Installable new-conversation suggested context UI and prompt context provider.
 - Action: `warmPointers`.
-- Test install from Available add-ons, enable/disable, pointer warming, suggestions list, accept/remove suggestion, stale/missing files, prompt injection.
+- Test install from the Settings → Extensions install dialog, enable/disable, pointer warming, suggestions list, accept/remove suggestion, stale/missing files, prompt injection.
 
 ### Reply Actions (`system-reply-actions`)
 
