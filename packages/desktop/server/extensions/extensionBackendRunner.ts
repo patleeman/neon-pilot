@@ -4,6 +4,7 @@ import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 export type ExtensionBackendModule = Record<string, unknown>;
+export type ExtensionBackendFunction = (...args: unknown[]) => unknown;
 
 export interface ExtensionBackendLoadTarget {
   path: string;
@@ -33,6 +34,7 @@ export interface ExtensionBackendRunner {
   loadModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<ExtensionBackendModule>;
   clearModule(extensionId: string): void;
   hasExport(extensionId: string, compiled: ExtensionBackendLoadTarget, exportName: string): Promise<boolean>;
+  loadAgentFactory(extensionId: string, compiled: ExtensionBackendLoadTarget, exportName: string): Promise<ExtensionBackendFunction>;
   runExport<T>(
     extensionId: string,
     compiled: ExtensionBackendLoadTarget,
@@ -126,6 +128,27 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
     async hasExport(extensionId, compiled, exportName) {
       const backend = await runner.loadModule(extensionId, compiled);
       return typeof backend[exportName] === 'function';
+    },
+    async loadAgentFactory(extensionId, compiled, exportName) {
+      const backend = await runner.loadModule(extensionId, compiled);
+      const candidate = exportName === 'default' ? backend.default : backend[exportName];
+      if (typeof candidate !== 'function') {
+        throw new ExtensionBackendExportNotFoundError(exportName);
+      }
+
+      if (candidate.length === 0) {
+        const built = await runner.run(
+          extensionId,
+          extensionBackendOperation('agent-factory-builder', 'agent extension factory builder', { exportName, target: exportName }),
+          () => (candidate as () => unknown)(),
+        );
+        if (typeof built !== 'function') {
+          throw new Error(`Extension agent factory builder did not return a function: ${exportName}`);
+        }
+        return built as ExtensionBackendFunction;
+      }
+
+      return candidate as ExtensionBackendFunction;
     },
     async runExport(extensionId, compiled, exportName, operation, invoke) {
       const backend = await runner.loadModule(extensionId, compiled);

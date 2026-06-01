@@ -645,29 +645,18 @@ export async function runExtensionBackendExport<T>(
 }
 
 export async function loadExtensionAgentFactory(extensionId: string, exportName = 'default'): Promise<ExtensionFactory> {
-  const backend = await loadExtensionBackend(extensionId);
-  const candidate = exportName === 'default' ? backend.default : backend[exportName];
-  if (typeof candidate !== 'function') {
-    throw new Error(`Extension agent factory export not found: ${exportName}`);
-  }
-
-  // Agent extensions in manifests use two shapes in practice:
-  // - direct ExtensionFactory: export default function extension(pi) { ... }
-  // - factory builder: export function createExtension(): (pi) => void { ... }
-  // Normalize both so the SDK always receives the actual (pi) => void factory.
-  if (candidate.length === 0) {
-    const built = await getExtensionBackendRunner().run(
+  try {
+    return (await getExtensionBackendRunner().loadAgentFactory(
       extensionId,
-      extensionBackendOperation('agent-factory-builder', 'agent extension factory builder', { exportName, target: exportName }),
-      () => (candidate as () => unknown)(),
-    );
-    if (typeof built !== 'function') {
-      throw new Error(`Extension agent factory builder did not return a function: ${exportName}`);
+      resolveInstalledExtensionBackendLoadTarget(extensionId),
+      exportName,
+    )) as ExtensionFactory;
+  } catch (error) {
+    if (error instanceof ExtensionBackendExportNotFoundError) {
+      throw new Error(`Extension agent factory export not found: ${exportName}`);
     }
-    return built as ExtensionFactory;
+    throw error;
   }
-
-  return candidate as ExtensionFactory;
 }
 
 export async function runExtensionAgentFactory(

@@ -157,6 +157,7 @@ describe('extension backend action invocation', () => {
       loadModule,
       clearModule: vi.fn(),
       hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
       run,
       runExport,
     });
@@ -199,17 +200,31 @@ describe('extension backend action invocation', () => {
     const factory = vi.fn();
     const create = vi.fn(() => factory);
     const loadModule = vi.fn(async () => ({ create }));
+    const loadAgentFactory = vi.fn(async () => {
+      const backend = await loadModule('runner-agent-builder-ext', { path: join(extensionRoot, 'dist', 'backend.mjs'), hash: 'test' });
+      return run(
+        'runner-agent-builder-ext',
+        { type: 'agent-factory-builder', label: 'agent extension factory builder', exportName: 'create', target: 'create' },
+        () => (backend.create as () => unknown)(),
+      );
+    });
     const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
       hasExport: vi.fn(),
+      loadAgentFactory,
       runExport: vi.fn(),
       run,
     });
 
     await expect(loadExtensionAgentFactory('runner-agent-builder-ext', 'create')).resolves.toBe(factory);
 
+    expect(loadAgentFactory).toHaveBeenCalledWith(
+      'runner-agent-builder-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+      'create',
+    );
     expect(create).toHaveBeenCalledOnce();
     expect(run).toHaveBeenCalledWith(
       'runner-agent-builder-ext',
@@ -254,6 +269,7 @@ describe('extension backend action invocation', () => {
       loadModule,
       clearModule: vi.fn(),
       hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
       run,
       runExport,
     });

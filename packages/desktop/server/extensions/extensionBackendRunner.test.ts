@@ -115,6 +115,36 @@ describe('extensionBackendRunner', () => {
     await expect(runner.hasExport('ext-has-export', { path: backendPath, hash: 'test-1' }, 'missing')).resolves.toBe(false);
   });
 
+  it('normalizes agent factory builders at the runner boundary', async () => {
+    const runner = createInProcessExtensionBackendRunner();
+    const packageRoot = await mkdtemp(join(tmpdir(), 'pa-ext-runner-agent-factory-'));
+    const dist = join(packageRoot, 'dist');
+    mkdirSync(dist);
+    const backendPath = join(dist, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      'export function create() { return function agentFactory(pi) { pi.registered = true; }; }\n',
+    );
+
+    const factory = await runner.loadAgentFactory('ext-agent-factory', { path: backendPath, hash: 'test-1' }, 'create');
+    const pi = {};
+    factory(pi);
+
+    expect(pi).toEqual({ registered: true });
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-agent-factory:backend import',
+        ok: true,
+      }),
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-agent-factory:agent extension factory builder',
+        ok: true,
+      }),
+    ]);
+  });
+
   it('serializes operation descriptors to wire-safe metadata only', () => {
     const operation = {
       ...extensionBackendOperation('action', 'action doThing', { exportName: 'doThing', target: 'doThing' }),
