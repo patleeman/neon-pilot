@@ -58,6 +58,13 @@ function createWorkerBackendContext(extensionId: string): Record<string, unknown
       warn: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'warn', { message, fields }),
       error: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'error', { message, fields }),
     },
+    storage: {
+      get: (key: string) => callHostCapability(extensionId, 'storage', 'get', { key }),
+      put: (key: string, value: unknown, options?: { expectedVersion?: number }) =>
+        callHostCapability(extensionId, 'storage', 'put', { key, value, expectedVersion: options?.expectedVersion }),
+      delete: (key: string) => callHostCapability(extensionId, 'storage', 'delete', { key }),
+      list: (prefix?: string) => callHostCapability(extensionId, 'storage', 'list', { prefix }),
+    },
   };
 }
 

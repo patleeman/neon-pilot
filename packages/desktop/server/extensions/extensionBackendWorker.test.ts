@@ -117,4 +117,88 @@ export async function doThing(_input, ctx) {
     workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: false, error: 'capability denied' });
     await waitForPostMessage({ id: 20, ok: false, error: 'capability denied' });
   });
+
+  it('runs backend exports with host-mediated storage capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  await ctx.storage.put('tasks/one', { done: false }, { expectedVersion: 1 });
+  const value = await ctx.storage.get('tasks/one');
+  const list = await ctx.storage.list('tasks/');
+  const deleted = await ctx.storage.delete('tasks/one');
+  return { value, list, deleted };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 30,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-3' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'storage',
+      operation: 'put',
+      input: { key: 'tasks/one', value: { done: false }, expectedVersion: 1 },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'storage',
+      operation: 'get',
+      input: { key: 'tasks/one' },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { done: false } });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'storage',
+      operation: 'list',
+      input: { prefix: 'tasks/' },
+    });
+    workerThreads.messageHandler?.({
+      id: 3,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: [{ key: 'tasks/one', value: { done: false } }],
+    });
+
+    await waitForPostMessage({
+      id: 4,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'storage',
+      operation: 'delete',
+      input: { key: 'tasks/one' },
+    });
+    workerThreads.messageHandler?.({ id: 4, kind: 'capabilityResponse', ok: true, result: { ok: true, deleted: true } });
+
+    await waitForPostMessage({
+      id: 30,
+      ok: true,
+      result: {
+        value: { done: false },
+        list: [{ key: 'tasks/one', value: { done: false } }],
+        deleted: { ok: true, deleted: true },
+      },
+    });
+  });
 });
