@@ -825,8 +825,8 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
 
 async function readExtensionInstallSummariesWithRuntimeStateForLocalApi() {
   const summaries = listExtensionInstallSummaries();
-  const { listRunningExtensionServices } = await import('../extensions/extensionServices.js');
-  const running = new Map(listRunningExtensionServices().map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
+  const runningServices = await getExtensionHostClient().listServices();
+  const running = new Map(runningServices.map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
   return summaries.map((summary) => ({
     ...summary,
     serviceStatuses: (summary.services ?? []).map((service) => {

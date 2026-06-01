@@ -15,9 +15,15 @@ const extensionSubscriptions = vi.hoisted(() => ({
   publishExtensionHostEvent: vi.fn(),
   uninstallExtensionSubscriptions: vi.fn(),
 }));
+const extensionServices = vi.hoisted(() => ({
+  listRunningExtensionServices: vi.fn(),
+  startExtensionServices: vi.fn(),
+  stopExtensionServices: vi.fn(),
+}));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
 vi.mock('./extensionSubscriptions.js', () => extensionSubscriptions);
+vi.mock('./extensionServices.js', () => extensionServices);
 
 import {
   createInProcessExtensionHostClient,
@@ -134,6 +140,26 @@ describe('extension host client', () => {
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
     );
     expect(extensionSubscriptions.uninstallExtensionSubscriptions).toHaveBeenCalledWith('ext');
+  });
+
+  it('routes service lifecycle through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionServices.listRunningExtensionServices.mockReturnValueOnce([
+      { extensionId: 'ext', serviceId: 'svc', startedAt: '2026-01-01T00:00:00.000Z', stop: () => undefined },
+    ]);
+    extensionServices.startExtensionServices.mockResolvedValueOnce([{ extensionId: 'ext', serviceId: 'svc', ok: true }]);
+    extensionServices.stopExtensionServices.mockResolvedValueOnce(undefined);
+
+    await expect(getExtensionHostClient().listServices()).resolves.toEqual([
+      { extensionId: 'ext', serviceId: 'svc', startedAt: '2026-01-01T00:00:00.000Z', lastError: undefined },
+    ]);
+    await expect(
+      getExtensionHostClient().startServices({ serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } }),
+    ).resolves.toEqual([{ extensionId: 'ext', serviceId: 'svc', ok: true }]);
+    await expect(getExtensionHostClient().stopServices('ext')).resolves.toBeUndefined();
+
+    expect(extensionServices.startExtensionServices).toHaveBeenCalledWith(expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
+    expect(extensionServices.stopExtensionServices).toHaveBeenCalledWith('ext');
   });
 
   it('routes backend health checks through the extension host request envelope', async () => {
@@ -262,5 +288,8 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
     expect(extensionHostRequestName({ type: 'installSubscriptions', extensionId: 'ext' })).toBe('installSubscriptions:ext');
     expect(extensionHostRequestName({ type: 'uninstallSubscriptions', extensionId: 'ext' })).toBe('uninstallSubscriptions:ext');
+    expect(extensionHostRequestName({ type: 'listServices' })).toBe('listServices');
+    expect(extensionHostRequestName({ type: 'startServices' })).toBe('startServices');
+    expect(extensionHostRequestName({ type: 'stopServices', extensionId: 'ext' })).toBe('stopServices:ext');
   });
 });

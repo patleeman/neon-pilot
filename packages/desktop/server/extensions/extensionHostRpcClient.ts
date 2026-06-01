@@ -344,6 +344,24 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!response.ok) throw new Error(response.error);
       if (!('subscriptionsUpdated' in response)) throw new Error('Extension host returned an invalid subscription response.');
     },
+    async listServices() {
+      const response = await send({ type: 'listServices' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('services' in response)) throw new Error('Extension host returned an invalid service list response.');
+      return response.services;
+    },
+    async startServices(input) {
+      assertWireableStartupActionsInput(input);
+      const response = await send({ type: 'startServices', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('serviceResults' in response)) throw new Error('Extension host returned an invalid service start response.');
+      return response.serviceResults;
+    },
+    async stopServices(extensionId) {
+      const response = await send({ type: 'stopServices', extensionId });
+      if (!response.ok) throw new Error(response.error);
+      if (!('servicesStopped' in response)) throw new Error('Extension host returned an invalid service stop response.');
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },

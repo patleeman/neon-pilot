@@ -46,8 +46,8 @@ import type { ServerRouteContext } from './context.js';
 
 async function readExtensionInstallSummariesWithRuntimeState() {
   const summaries = listExtensionInstallSummaries();
-  const { listRunningExtensionServices } = await import('../extensions/extensionServices.js');
-  const running = new Map(listRunningExtensionServices().map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
+  const runningServices = await getExtensionHostClient().listServices();
+  const running = new Map(runningServices.map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
   return summaries.map((summary) => ({
     ...summary,
     serviceStatuses: (summary.services ?? []).map((service) => {
@@ -758,8 +758,7 @@ export function registerExtensionRoutes(
             })
           : undefined;
       } else {
-        const { stopExtensionServices } = await import('../extensions/extensionServices.js');
-        await stopExtensionServices(entry.manifest.id);
+        await getExtensionHostClient().stopServices(entry.manifest.id);
         const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
         unregisterBashProcessWrapper(entry.manifest.id);
         await getExtensionHostClient().uninstallSubscriptions(entry.manifest.id);
@@ -781,8 +780,7 @@ export function registerExtensionRoutes(
           extensionId: entry.manifest.id,
           serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
         });
-        const { startExtensionServices } = await import('../extensions/extensionServices.js');
-        await startExtensionServices(context);
+        await getExtensionHostClient().startServices({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) });
       }
       res.json({
         ok: true,

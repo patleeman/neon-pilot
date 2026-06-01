@@ -61,6 +61,20 @@ export interface ExtensionHostActionTelemetryEntry {
   error?: string;
 }
 
+export interface ExtensionHostRunningService {
+  extensionId: string;
+  serviceId: string;
+  startedAt: string;
+  lastError?: string;
+}
+
+export interface ExtensionHostServiceOperationResult {
+  extensionId: string;
+  serviceId: string;
+  ok: boolean;
+  error?: string;
+}
+
 export interface ExtensionHostHealthRequest {
   type: 'health';
 }
@@ -93,6 +107,21 @@ export interface ExtensionHostInstallSubscriptionsRequest {
 
 export interface ExtensionHostUninstallSubscriptionsRequest {
   type: 'uninstallSubscriptions';
+  extensionId: string;
+}
+
+export interface ExtensionHostListServicesRequest {
+  type: 'listServices';
+}
+
+export interface ExtensionHostStartServicesRequest {
+  type: 'startServices';
+  serverContext?: ExtensionHostBackendServerContext;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
+}
+
+export interface ExtensionHostStopServicesRequest {
+  type: 'stopServices';
   extensionId: string;
 }
 
@@ -165,6 +194,9 @@ export type ExtensionHostRequest =
   | ExtensionHostPublishEventRequest
   | ExtensionHostInstallSubscriptionsRequest
   | ExtensionHostUninstallSubscriptionsRequest
+  | ExtensionHostListServicesRequest
+  | ExtensionHostStartServicesRequest
+  | ExtensionHostStopServicesRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostStartStartupActionsRequest
@@ -191,6 +223,18 @@ export type ExtensionHostResponse =
   | {
       ok: true;
       subscriptionsUpdated: true;
+    }
+  | {
+      ok: true;
+      services: ExtensionHostRunningService[];
+    }
+  | {
+      ok: true;
+      serviceResults: ExtensionHostServiceOperationResult[];
+    }
+  | {
+      ok: true;
+      servicesStopped: true;
     }
   | {
       ok: true;
@@ -227,6 +271,9 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'publishEvent') return `publishEvent:${request.source}`;
   if (request.type === 'installSubscriptions') return `installSubscriptions:${request.extensionId}`;
   if (request.type === 'uninstallSubscriptions') return `uninstallSubscriptions:${request.extensionId}`;
+  if (request.type === 'listServices') return 'listServices';
+  if (request.type === 'startServices') return 'startServices';
+  if (request.type === 'stopServices') return `stopServices:${request.extensionId}`;
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;

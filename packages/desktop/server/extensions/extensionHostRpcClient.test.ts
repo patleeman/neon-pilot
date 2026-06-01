@@ -129,7 +129,10 @@ describe('extension host RPC client', () => {
       .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'ext', ok: true }] }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'startup-ext', ok: true }] }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }));
+      .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, services: [{ extensionId: 'ext', serviceId: 'svc', startedAt: '2026-01-01T00:00:00.000Z' }] }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, serviceResults: [{ extensionId: 'ext', serviceId: 'svc', ok: true }] }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, servicesStopped: true }));
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.checkBackendHealth()).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
@@ -140,6 +143,11 @@ describe('extension host RPC client', () => {
       client.installSubscriptions({ extensionId: 'ext', serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } }),
     ).resolves.toBeUndefined();
     await expect(client.uninstallSubscriptions('ext')).resolves.toBeUndefined();
+    await expect(client.listServices()).resolves.toEqual([{ extensionId: 'ext', serviceId: 'svc', startedAt: '2026-01-01T00:00:00.000Z' }]);
+    await expect(client.startServices({ serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } })).resolves.toEqual([
+      { extensionId: 'ext', serviceId: 'svc', ok: true },
+    ]);
+    await expect(client.stopServices('ext')).resolves.toBeUndefined();
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       1,
@@ -168,6 +176,25 @@ describe('extension host RPC client', () => {
       4,
       'http://host/rpc',
       expect.objectContaining({ body: JSON.stringify({ request: { type: 'uninstallSubscriptions', extensionId: 'ext' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      5,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'listServices' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      6,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: { type: 'startServices', serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } },
+        }),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      7,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'stopServices', extensionId: 'ext' } }) }),
     );
   });
 

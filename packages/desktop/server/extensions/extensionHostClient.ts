@@ -13,8 +13,11 @@ import type {
   ExtensionHostRequest,
   ExtensionHostResponse,
   ExtensionHostRouteResponse,
+  ExtensionHostRunningService,
   ExtensionHostRunSelfTestRequest,
   ExtensionHostSelfTestResult,
+  ExtensionHostServiceOperationResult,
+  ExtensionHostStartServicesRequest,
   ExtensionHostStartStartupActionsRequest,
 } from './extensionHostProtocol.js';
 
@@ -30,6 +33,7 @@ export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvok
 export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
 export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
+export type ExtensionHostStartServicesInput = Omit<ExtensionHostStartServicesRequest, 'type'>;
 export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
 
 export interface ExtensionHostClient {
@@ -38,6 +42,9 @@ export interface ExtensionHostClient {
   invokeAction(input: ExtensionHostInvokeActionInput): Promise<ExtensionHostActionInvokeResult>;
   installSubscriptions(input: ExtensionHostInstallSubscriptionsInput): Promise<void>;
   uninstallSubscriptions(extensionId: string): Promise<void>;
+  listServices(): Promise<ExtensionHostRunningService[]>;
+  startServices(input?: ExtensionHostStartServicesInput): Promise<ExtensionHostServiceOperationResult[]>;
+  stopServices(extensionId: string): Promise<void>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -94,6 +101,23 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       const response = await handleInProcessExtensionHostRequest({ type: 'uninstallSubscriptions', extensionId });
       if (!response.ok) throw new Error(response.error);
       if (!('subscriptionsUpdated' in response)) throw new Error('Extension host returned an invalid subscription response.');
+    },
+    async listServices() {
+      const response = await handleInProcessExtensionHostRequest({ type: 'listServices' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('services' in response)) throw new Error('Extension host returned an invalid service list response.');
+      return response.services;
+    },
+    async startServices(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'startServices', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('serviceResults' in response)) throw new Error('Extension host returned an invalid service start response.');
+      return response.serviceResults;
+    },
+    async stopServices(extensionId) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'stopServices', extensionId });
+      if (!response.ok) throw new Error(response.error);
+      if (!('servicesStopped' in response)) throw new Error('Extension host returned an invalid service stop response.');
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -238,6 +262,29 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         asExtensionBackendServerContext(request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot)),
       );
       return { ok: true, subscriptionsUpdated: true };
+    }
+    if (request.type === 'listServices') {
+      const { listRunningExtensionServices } = await import('./extensionServices.js');
+      return { ok: true, services: listRunningExtensionServices().map(({ extensionId, serviceId, startedAt, lastError }) => ({ extensionId, serviceId, startedAt, lastError })) };
+    }
+    if (request.type === 'startServices') {
+      const [{ startExtensionServices }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([
+        import('./extensionServices.js'),
+        import('./extensionHostServerContext.js'),
+      ]);
+      return {
+        ok: true,
+        serviceResults: await startExtensionServices(
+          asExtensionBackendServerContext(
+            request.serverContext ?? createExtensionBackendServerContextFromSnapshot(request.serverContextSnapshot),
+          ),
+        ),
+      };
+    }
+    if (request.type === 'stopServices') {
+      const { stopExtensionServices } = await import('./extensionServices.js');
+      await stopExtensionServices(request.extensionId);
+      return { ok: true, servicesStopped: true };
     }
     const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
     uninstallExtensionSubscriptions(request.extensionId);

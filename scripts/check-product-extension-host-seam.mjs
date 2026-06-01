@@ -63,6 +63,16 @@ const forbiddenPatterns = [
     message: 'product runtime code must manage extension subscriptions through ExtensionHostClient',
   },
   {
+    pattern:
+      /import\s+\{[^}]*\b(?:listRunningExtensionServices|startExtensionServices|stopExtensionServices|stopAllExtensionServices|runExtensionServiceHealthChecks)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionServices\.js['"]/,
+    message: 'product runtime code must manage extension services through ExtensionHostClient',
+  },
+  {
+    pattern:
+      /import\(\s*['"][^'"]*\/extensions\/extensionServices\.js['"]\s*\)[\s\S]{0,300}\b(?:listRunningExtensionServices|startExtensionServices|stopExtensionServices|stopAllExtensionServices|runExtensionServiceHealthChecks)\b/,
+    message: 'product runtime code must manage extension services through ExtensionHostClient',
+  },
+  {
     pattern: /\bcreateInProcessExtensionHostClient\b/,
     message: 'product runtime code must not construct the in-process extension host; use the RPC extension host client',
   },
