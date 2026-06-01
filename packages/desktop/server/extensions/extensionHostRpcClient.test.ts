@@ -414,4 +414,38 @@ describe('extension host RPC client', () => {
     expect(fallbackClient.runSelfTest).not.toHaveBeenCalled();
     expect(fallbackClient.reloadBackend).not.toHaveBeenCalled();
   });
+
+  it('falls back for live startup action server contexts in the hybrid client', async () => {
+    const rpcClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'rpc' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      invokeRoute: vi.fn().mockResolvedValue({ status: 200, body: 'rpc' }),
+      listActionTelemetry: vi.fn().mockResolvedValue([]),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      reloadBackend: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', rebuilt: false }),
+      runSelfTest: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', checks: [] }),
+      startStartupActions: vi.fn().mockResolvedValue([{ extensionId: 'startup-ext', ok: true }]),
+    };
+    const fallbackClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      invokeRoute: vi.fn().mockResolvedValue({ status: 200, body: 'fallback' }),
+      listActionTelemetry: vi.fn().mockResolvedValue([]),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      reloadBackend: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', rebuilt: false }),
+      runSelfTest: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', checks: [] }),
+      startStartupActions: vi.fn().mockResolvedValue([{ extensionId: 'fallback-startup-ext', ok: true }]),
+    };
+    const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
+    const serverContext = { getRuntimeScope: () => 'shared' };
+
+    await expect(client.startStartupActions({ serverContext })).resolves.toEqual([{ extensionId: 'fallback-startup-ext', ok: true }]);
+
+    expect(rpcClient.startStartupActions).not.toHaveBeenCalled();
+    expect(fallbackClient.startStartupActions).toHaveBeenCalledWith({ serverContext });
+  });
 });

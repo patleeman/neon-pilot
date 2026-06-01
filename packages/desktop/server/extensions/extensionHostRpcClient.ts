@@ -55,6 +55,11 @@ function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHost
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(stripRouteSignal(input).request);
 }
 
+function isWireableExtensionHostStartStartupActionsInput(input: Parameters<ExtensionHostClient['startStartupActions']>[0]): boolean {
+  if (!input) return true;
+  return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot);
+}
+
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {
   if (!isWireableExtensionHostInvokeActionInput(input)) {
     throw new Error('Extension host RPC cannot carry function-bearing contexts; use capability channels before enabling this call path.');
@@ -313,6 +318,9 @@ export function createHybridExtensionHostClient(input: {
       return input.rpcClient.runSelfTest(selfTestInput);
     },
     async startStartupActions(startupInput) {
+      if (!isWireableExtensionHostStartStartupActionsInput(startupInput)) {
+        return input.fallbackClient.startStartupActions(startupInput);
+      }
       return input.rpcClient.startStartupActions(startupInput);
     },
     async publishEvent(source, payload) {
