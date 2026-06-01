@@ -664,6 +664,49 @@ describe('registerExtensionRoutes', () => {
     });
   }, 30000);
 
+  it('searches extension providers through the extension host registry presentation', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'searchTasks', handler: 'searchTasks' }] },
+        contributes: { searchProviders: [{ id: 'tasks', title: 'Tasks', action: 'searchTasks' }] },
+      }),
+    );
+    writeFileSync(
+      join(extensionRoot, 'dist', 'backend.mjs'),
+      `export function searchTasks(input) { return [{ title: input.query, limit: input.limit, providerId: input.providerId }]; }`,
+    );
+
+    const harness = createHarness();
+    const res = createResponse();
+    await harness.postHandler('/api/extensions/search')({ body: { query: 'ship', providerId: 'tasks', limit: 5 } }, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      providers: [
+        expect.objectContaining({
+          extensionId: 'agent-board',
+          id: 'tasks',
+          action: 'searchTasks',
+        }),
+      ],
+      items: [
+        {
+          providerId: 'tasks',
+          extensionId: 'agent-board',
+          title: 'ship',
+          limit: 5,
+        },
+      ],
+    });
+  });
+
   it('rejects runtime extension builds', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

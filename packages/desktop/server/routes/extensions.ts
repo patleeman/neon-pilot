@@ -26,7 +26,6 @@ import {
   invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
   listExtensionInstallSummaries,
-  listExtensionSearchProviderRegistrations,
   readExtensionSchema,
   setBuildError,
   setExtensionEnabled,
@@ -579,7 +578,14 @@ export function registerExtensionRoutes(
       const query = typeof req.body?.query === 'string' ? req.body.query : '';
       const limit = Number.isInteger(req.body?.limit) ? Math.max(1, Math.min(100, req.body.limit)) : 50;
       const providerId = typeof req.body?.providerId === 'string' ? req.body.providerId : null;
-      const providers = listExtensionSearchProviderRegistrations().filter((provider) => !providerId || provider.id === providerId);
+      const providers = (await getExtensionHostClient().readRegistryPresentation()).searchProviderRegistrations
+        .map((provider) => ({
+          ...provider,
+          id: typeof provider.id === 'string' ? provider.id : '',
+          extensionId: typeof provider.extensionId === 'string' ? provider.extensionId : '',
+          action: typeof provider.action === 'string' ? provider.action : '',
+        }))
+        .filter((provider) => provider.id && provider.extensionId && provider.action && (!providerId || provider.id === providerId));
       const groups = await Promise.all(
         providers.map(async (provider) => {
           const result = await getExtensionHostClient().invokeAction({
