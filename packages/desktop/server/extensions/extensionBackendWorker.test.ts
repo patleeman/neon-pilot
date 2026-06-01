@@ -817,6 +817,86 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('runs backend exports with host-mediated shell spawn handles', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const handle = await ctx.shell.spawn({ command: 'caffeinate', args: ['-dimsu'], onExit: () => undefined });
+  await handle.write('ping');
+  await handle.resize(80, 24);
+  await handle.kill();
+  return { pid: handle.pid, usingPty: handle.usingPty, executionWrappers: handle.executionWrappers };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 41,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-shell-spawn' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'spawn',
+      input: { handleId: 'worker-shell-1', command: 'caffeinate', args: ['-dimsu'] },
+    });
+    workerThreads.messageHandler?.({
+      id: 1,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { pid: 123, usingPty: false, executionWrappers: [{ id: 'sandbox' }] },
+    });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'write',
+      input: { handleId: 'worker-shell-1', data: 'ping' },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'resize',
+      input: { handleId: 'worker-shell-1', cols: 80, rows: 24 },
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 4,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'shell',
+      operation: 'kill',
+      input: { handleId: 'worker-shell-1' },
+    });
+    workerThreads.messageHandler?.({ id: 4, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 41,
+      ok: true,
+      result: { pid: 123, usingPty: false, executionWrappers: [{ id: 'sandbox' }] },
+    });
+  });
+
   it('runs backend exports with host-mediated secrets reads', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

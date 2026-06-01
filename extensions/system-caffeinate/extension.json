@@ -14,11 +14,11 @@
     "startupAction": "caffeinateStartup",
     "onDisableAction": "caffeinateStop",
     "actions": [
-      { "id": "caffeinateStatus", "handler": "status", "title": "Caffeinate status" },
-      { "id": "caffeinateStartup", "handler": "startup", "title": "Caffeinate startup" },
-      { "id": "caffeinateStart", "handler": "start", "title": "Start caffeinate" },
-      { "id": "caffeinateStop", "handler": "stop", "title": "Stop caffeinate" },
-      { "id": "caffeinateToggle", "handler": "toggle", "title": "Toggle caffeinate" }
+      { "id": "caffeinateStatus", "handler": "status", "title": "Caffeinate status", "worker": { "enabled": true } },
+      { "id": "caffeinateStartup", "handler": "startup", "title": "Caffeinate startup", "worker": { "enabled": true } },
+      { "id": "caffeinateStart", "handler": "start", "title": "Start caffeinate", "worker": { "enabled": true } },
+      { "id": "caffeinateStop", "handler": "stop", "title": "Stop caffeinate", "worker": { "enabled": true } },
+      { "id": "caffeinateToggle", "handler": "toggle", "title": "Toggle caffeinate", "worker": { "enabled": true } }
     ]
   },
   "contributes": {

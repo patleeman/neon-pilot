@@ -125,6 +125,15 @@ interface ExtensionBackendCapabilityTelemetry {
   record(extensionId: string, event: ExtensionBackendCapabilityTelemetryEvent): unknown;
 }
 
+interface ExtensionBackendShellSpawnHandle {
+  pid: number | null;
+  usingPty: boolean;
+  executionWrappers: Array<{ id: string; label?: string }>;
+  kill: () => void;
+  write: (data: string) => void;
+  resize: (cols: number, rows: number) => void;
+}
+
 interface ExtensionBackendCapabilityShell {
   exec(input: {
     command: string;
@@ -134,6 +143,13 @@ interface ExtensionBackendCapabilityShell {
     maxBuffer?: number;
     env?: Record<string, string>;
   }): Promise<unknown> | unknown;
+  spawn?(input: {
+    command: string;
+    args?: string[];
+    cwd?: string;
+    env?: Record<string, string>;
+    pty?: boolean | { cols?: number; rows?: number };
+  }): Promise<ExtensionBackendShellSpawnHandle> | ExtensionBackendShellSpawnHandle;
 }
 
 interface ExtensionBackendCapabilitySecrets {
@@ -573,19 +589,74 @@ function optionalString(value: unknown, label: string): string | undefined {
   return value;
 }
 
-function dispatchShellCapability(shell: ExtensionBackendCapabilityShell, request: ExtensionBackendWorkerCapabilityRequest): unknown {
-  if (request.operation !== 'exec') {
-    throw new Error(`Unsupported shell capability operation: ${request.operation}`);
-  }
+function normalizePtyInput(value: unknown): boolean | { cols?: number; rows?: number } | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  const record = optionalRecord(value, 'Shell pty');
+  if (!record) return undefined;
+  return {
+    ...(record.cols !== undefined ? { cols: requireNumber(record.cols, 'Shell pty cols') } : {}),
+    ...(record.rows !== undefined ? { rows: requireNumber(record.rows, 'Shell pty rows') } : {}),
+  };
+}
+
+async function dispatchShellCapability(
+  shell: ExtensionBackendCapabilityShell,
+  shellSpawnHandles: Map<string, ExtensionBackendShellSpawnHandle>,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): Promise<unknown> {
   const input = normalizeRecordInput(request.input, 'Shell');
-  return shell.exec({
-    command: requireString(input.command, 'Shell command'),
-    ...(input.args !== undefined ? { args: optionalStringArray(input.args, 'Shell args') } : {}),
-    ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Shell cwd') } : {}),
-    ...(input.timeoutMs !== undefined ? { timeoutMs: optionalNumber(input.timeoutMs, 'Shell timeoutMs') } : {}),
-    ...(input.maxBuffer !== undefined ? { maxBuffer: optionalNumber(input.maxBuffer, 'Shell maxBuffer') } : {}),
-    ...(input.env !== undefined ? { env: optionalStringRecord(input.env, 'Shell env') } : {}),
-  });
+
+  if (request.operation === 'exec') {
+    return shell.exec({
+      command: requireString(input.command, 'Shell command'),
+      ...(input.args !== undefined ? { args: optionalStringArray(input.args, 'Shell args') } : {}),
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Shell cwd') } : {}),
+      ...(input.timeoutMs !== undefined ? { timeoutMs: optionalNumber(input.timeoutMs, 'Shell timeoutMs') } : {}),
+      ...(input.maxBuffer !== undefined ? { maxBuffer: optionalNumber(input.maxBuffer, 'Shell maxBuffer') } : {}),
+      ...(input.env !== undefined ? { env: optionalStringRecord(input.env, 'Shell env') } : {}),
+    });
+  }
+
+  if (request.operation === 'spawn') {
+    if (!shell.spawn) {
+      throw new Error('Shell spawn capability is unavailable.');
+    }
+    const handleId = requireString(input.handleId, 'Shell handleId');
+    const handle = await shell.spawn({
+      command: requireString(input.command, 'Shell command'),
+      ...(input.args !== undefined ? { args: optionalStringArray(input.args, 'Shell args') } : {}),
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Shell cwd') } : {}),
+      ...(input.env !== undefined ? { env: optionalStringRecord(input.env, 'Shell env') } : {}),
+      ...(input.pty !== undefined ? { pty: normalizePtyInput(input.pty) } : {}),
+    });
+    shellSpawnHandles.set(`${request.extensionId}:${handleId}`, handle);
+    return { pid: handle.pid, usingPty: handle.usingPty, executionWrappers: handle.executionWrappers };
+  }
+
+  const handleId = requireString(input.handleId, 'Shell handleId');
+  const handle = shellSpawnHandles.get(`${request.extensionId}:${handleId}`);
+  if (!handle) {
+    throw new Error(`Shell handle not found: ${handleId}`);
+  }
+
+  if (request.operation === 'kill') {
+    shellSpawnHandles.delete(`${request.extensionId}:${handleId}`);
+    handle.kill();
+    return { ok: true };
+  }
+
+  if (request.operation === 'write') {
+    handle.write(requireString(input.data, 'Shell write data'));
+    return { ok: true };
+  }
+
+  if (request.operation === 'resize') {
+    handle.resize(requireNumber(input.cols, 'Shell resize cols'), requireNumber(input.rows, 'Shell resize rows'));
+    return { ok: true };
+  }
+
+  throw new Error(`Unsupported shell capability operation: ${request.operation}`);
 }
 
 function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -704,6 +775,7 @@ export function createExtensionBackendCapabilityDispatcher(
   };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const shell = options.shell ?? createExtensionShellCapability();
+  const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnHandle>();
   const telemetry = options.telemetry ?? {
     record: (extensionId: string, event: ExtensionBackendCapabilityTelemetryEvent) => {
       persistAppTelemetryEvent({
@@ -760,7 +832,7 @@ export function createExtensionBackendCapabilityDispatcher(
       return dispatchNotifyCapability(notify, request);
     }
     if (request.capability === 'shell') {
-      return dispatchShellCapability(shell, request);
+      return dispatchShellCapability(shell, shellSpawnHandles, request);
     }
     if (request.capability === 'secrets') {
       return dispatchSecretsCapability(secrets, request);

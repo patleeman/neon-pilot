@@ -14,6 +14,7 @@ import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 const pendingCapabilities = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
 let nextCapabilityRequestId = 0;
+let nextShellHandleId = 0;
 
 if (!parentPort) {
   throw new Error('extensionBackendWorker must run as a worker thread.');
@@ -145,6 +146,35 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     },
     shell: {
       exec: (input: unknown) => callHostCapability(extensionId, 'shell', 'exec', input),
+      spawn: async (input: {
+        command?: unknown;
+        args?: unknown;
+        cwd?: unknown;
+        env?: unknown;
+        pty?: unknown;
+        onStdout?: (chunk: string) => void;
+        onStderr?: (chunk: string) => void;
+        onExit?: (event: { code: number | null; signal: string | null }) => void;
+      }) => {
+        const handleId = `worker-shell-${++nextShellHandleId}`;
+        const serializableInput = { ...(input ?? {}) };
+        delete serializableInput.onStdout;
+        delete serializableInput.onStderr;
+        delete serializableInput.onExit;
+        const result = (await callHostCapability(extensionId, 'shell', 'spawn', { handleId, ...serializableInput })) as {
+          pid?: number | null;
+          usingPty?: boolean;
+          executionWrappers?: Array<{ id: string; label?: string }>;
+        };
+        return {
+          pid: result.pid ?? null,
+          usingPty: result.usingPty === true,
+          executionWrappers: result.executionWrappers ?? [],
+          kill: () => callHostCapability(extensionId, 'shell', 'kill', { handleId }),
+          write: (data: string) => callHostCapability(extensionId, 'shell', 'write', { handleId, data }),
+          resize: (cols: number, rows: number) => callHostCapability(extensionId, 'shell', 'resize', { handleId, cols, rows }),
+        };
+      },
     },
     secrets: {
       get: (secretId: string) => callHostCapability(extensionId, 'secrets', 'get', { secretId }),

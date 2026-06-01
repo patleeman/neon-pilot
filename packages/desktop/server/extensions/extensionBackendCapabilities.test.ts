@@ -792,6 +792,90 @@ describe('extension backend capability dispatcher', () => {
     });
   });
 
+  it('dispatches host-owned shell spawn handle capability calls', async () => {
+    const handle = {
+      pid: 123,
+      usingPty: false,
+      executionWrappers: [{ id: 'sandbox', label: 'Sandbox' }],
+      kill: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+    };
+    const shell = {
+      exec: vi.fn(),
+      spawn: vi.fn(async () => handle),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ shell });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'shell',
+          operation: 'spawn',
+          input: {
+            handleId: 'handle-1',
+            command: 'caffeinate',
+            args: ['-dimsu'],
+            cwd: '/repo',
+            env: { A: 'B' },
+            pty: { cols: 120, rows: 32 },
+          },
+        }),
+      ),
+    ).resolves.toEqual({ pid: 123, usingPty: false, executionWrappers: [{ id: 'sandbox', label: 'Sandbox' }] });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'shell',
+          operation: 'write',
+          input: { handleId: 'handle-1', data: 'hello' },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'shell',
+          operation: 'resize',
+          input: { handleId: 'handle-1', cols: 80, rows: 24 },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 4,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'shell',
+          operation: 'kill',
+          input: { handleId: 'handle-1' },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+
+    expect(shell.spawn).toHaveBeenCalledWith({
+      command: 'caffeinate',
+      args: ['-dimsu'],
+      cwd: '/repo',
+      env: { A: 'B' },
+      pty: { cols: 120, rows: 32 },
+    });
+    expect(handle.write).toHaveBeenCalledWith('hello');
+    expect(handle.resize).toHaveBeenCalledWith(80, 24);
+    expect(handle.kill).toHaveBeenCalledOnce();
+  });
+
   it('rejects malformed shell capability inputs', async () => {
     const dispatch = createExtensionBackendCapabilityDispatcher({ shell: { exec: vi.fn() } });
 
