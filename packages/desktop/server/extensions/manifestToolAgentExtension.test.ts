@@ -88,7 +88,20 @@ describe('manifestToolAgentExtension', () => {
         sessionFile: '/session.json',
         preferredVisionModel: 'vision-model',
       },
-      agentToolContext: { onUpdate, signal, toolContext: ctx },
+      signal,
+      agentToolContext: {
+        conversationId: 'conversation-1',
+        sessionId: 'conversation-1',
+        cwd: '/repo',
+        sessionFile: '/session.json',
+        toolContext: {
+          conversationId: 'conversation-1',
+          sessionId: 'conversation-1',
+          cwd: '/repo',
+          sessionFile: '/session.json',
+          preferredVisionModel: 'vision-model',
+        },
+      },
     });
   });
 

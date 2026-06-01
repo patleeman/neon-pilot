@@ -110,9 +110,14 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
               serverContextSnapshot: createExtensionHostServerContextSnapshot(options.serverContext),
               toolContextSnapshot: createExtensionHostToolContextSnapshot(toolContext),
               toolContext: { onUpdate: toolContext.onUpdate },
-              // Keep the live agent context available until agent capability
-              // handles replace this in-process fallback path.
-              agentToolContext: { onUpdate, signal, toolContext: ctx },
+              signal,
+              agentToolContext: {
+                conversationId: toolContext.conversationId,
+                sessionId: toolContext.sessionId,
+                cwd: toolContext.cwd,
+                sessionFile: toolContext.sessionFile,
+                toolContext: createExtensionHostToolContextSnapshot(toolContext),
+              },
             });
             // Handle backend invocation error (build failure, not found, etc.)
             if (!invokeResult.ok) {

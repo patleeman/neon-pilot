@@ -67,13 +67,13 @@ Product runtime caller
   -> extension host process
 ```
 
-The RPC adapter must only carry wire-safe data. Product action paths pass serializable server and tool context snapshots where possible. Existing action paths that depend on function-bearing `serverContext`, streaming `onUpdate` callbacks, abort signals, stdio protocol entrypoints, or live agent objects must first move those operations behind capability channels.
+The RPC adapter must only carry wire-safe data. Product action paths pass serializable server and tool context snapshots where possible. Existing action paths that depend on function-bearing `serverContext`, stdio protocol entrypoints, or richer live agent objects must first move those operations behind capability channels.
 
-The desktop build already emits an `extension-host-child.js` entrypoint for this lane. The local backend configures a hybrid client: wire-safe product runtime traffic goes to the extension host child process. Extension backend routes use a dedicated host route transport so abort signals and SSE responses can cross the process boundary without being squeezed through JSON RPC. Streaming tool actions use a dedicated host action transport that forwards `toolContext.onUpdate` over SSE. Stdio protocol entrypoints and live agent contexts remain on the in-process fallback until capability channels exist.
+The desktop build already emits an `extension-host-child.js` entrypoint for this lane. The local backend configures a hybrid client: wire-safe product runtime traffic goes to the extension host child process. Extension backend routes use a dedicated host route transport so abort signals and SSE responses can cross the process boundary without being squeezed through JSON RPC. Streaming tool actions use a dedicated host action transport that forwards `toolContext.onUpdate` over SSE and recreates action abort signals inside the child process. Stdio protocol entrypoints and richer live agent capability handles remain on the in-process fallback until capability channels exist.
 
 Product runtime modules must depend on `ExtensionHostClient` and the public host protocol/context types. They must not import `extensionBackend` directly, including for route, action, telemetry, reload, startup, self-test, or protocol-entrypoint operations.
 
-Manifest-declared tools also invoke backend actions through `ExtensionHostClient`; live agent context is still passed as an explicit fallback dependency until agent capability handles replace it.
+Manifest-declared tools also invoke backend actions through `ExtensionHostClient`; they pass serializable agent metadata and tool context snapshots through the host action transport. Richer live agent capabilities still need explicit handles before they can leave the in-process fallback.
 
 ## Migration Phases
 

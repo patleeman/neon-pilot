@@ -23,12 +23,14 @@ export function hasFunction(value: unknown, seen = new WeakSet<object>()): boole
 }
 
 export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInvokeActionInput): boolean {
+  const withoutSignal = { ...input };
+  delete withoutSignal.signal;
   return (
-    !hasFunction(input.serverContext) &&
-    !hasFunction(input.serverContextSnapshot) &&
-    !hasFunction(input.toolContext) &&
-    !hasFunction(input.toolContextSnapshot) &&
-    !hasFunction(input.agentToolContext)
+    !hasFunction(withoutSignal.serverContext) &&
+    !hasFunction(withoutSignal.serverContextSnapshot) &&
+    !hasFunction(withoutSignal.toolContext) &&
+    !hasFunction(withoutSignal.toolContextSnapshot) &&
+    !hasFunction(withoutSignal.agentToolContext)
   );
 }
 
@@ -68,6 +70,7 @@ function stripRouteSignal(input: ExtensionHostInvokeRouteInput): ExtensionHostIn
 function stripActionUpdateCallback(input: ExtensionHostInvokeActionInput): ExtensionHostInvokeActionInput {
   const request = { ...input };
   delete request.toolContext;
+  delete request.signal;
   return request;
 }
 
@@ -185,6 +188,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ request: stripActionUpdateCallback(input) }),
+      signal: input.signal,
     });
     if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
       const body = (await response.json()) as ExtensionHostResponse;

@@ -75,6 +75,7 @@ export interface ExtensionHostInvokeActionRequest {
   toolContext?: ExtensionHostToolContext;
   toolContextSnapshot?: ExtensionHostToolContextSnapshot;
   agentToolContext?: unknown;
+  signal?: AbortSignal;
 }
 
 export interface ExtensionHostPublishEventRequest {
