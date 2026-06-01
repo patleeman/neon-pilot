@@ -316,6 +316,7 @@ describe('DS4 agent profile activation', () => {
     const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
     backend.createDs4AgentExtension()({
       on: (event: string, handler: (event: unknown, ctx: unknown) => void) => handlers.set(event, handler),
+      registerBashProcessWrapper: vi.fn(),
     } as never);
     const calls: string[][] = [];
 
@@ -329,6 +330,27 @@ describe('DS4 agent profile activation', () => {
     );
 
     expect(calls).toEqual([['artifact', 'bash', 'read', 'edit']]);
+  });
+
+  it('adds the DS4 CLI to bash PATH for DS4 sessions', () => {
+    const registerBashProcessWrapper = vi.fn();
+
+    backend.createDs4AgentExtension()({
+      on: vi.fn(),
+      registerBashProcessWrapper,
+    } as never);
+
+    expect(registerBashProcessWrapper).toHaveBeenCalledWith('system-ds4-cli', expect.any(Function), { label: 'DS4 CLI' });
+    const wrap = registerBashProcessWrapper.mock.calls[0]?.[1] as (context: {
+      command: string;
+      args: string[];
+      env: NodeJS.ProcessEnv;
+      wrappers: Array<{ id: string }>;
+    }) => { env: NodeJS.ProcessEnv };
+    const result = wrap({ command: 'sh', args: ['-lc', 'ds4 help'], env: { PATH: '/usr/bin' }, wrappers: [] });
+    expect(result.env.PATH).toContain('/usr/bin');
+    expect(result.env.PATH).toContain('bin');
+    expect(result.env.DS4_CLI_BIN).toContain('ds4');
   });
 
   it('compacts prompt assembly for DS4 only', async () => {

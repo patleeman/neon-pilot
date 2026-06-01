@@ -1,5 +1,6 @@
 import { access, chmod, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
@@ -883,6 +884,41 @@ export async function optimizePromptAssembly(input: { plan?: unknown; context?: 
 
 export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
+    const cliBinDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'bin');
+    const maybeWrapperApi = pi as ExtensionAPI & {
+      registerBashProcessWrapper?: (
+        id: string,
+        wrap: (context: {
+          command: string;
+          args: string[];
+          cwd?: string;
+          env: NodeJS.ProcessEnv;
+          shell?: boolean;
+          wrappers: Array<{ id: string; label?: string }>;
+        }) => {
+          command: string;
+          args: string[];
+          cwd?: string;
+          env: NodeJS.ProcessEnv;
+          shell?: boolean;
+          wrappers: Array<{ id: string; label?: string }>;
+        },
+        options?: { label?: string },
+      ) => void;
+    };
+    maybeWrapperApi.registerBashProcessWrapper?.(
+      'system-ds4-cli',
+      (context) => ({
+        ...context,
+        env: {
+          ...context.env,
+          PATH: `${cliBinDir}${path.delimiter}${context.env.PATH ?? ''}`,
+          DS4_CLI_BIN: path.join(cliBinDir, 'ds4'),
+        },
+      }),
+      { label: 'DS4 CLI' },
+    );
+
     const activate = (ctx: {
       modelProfile?: { kind?: string; profile?: { id?: string; extensionId?: string } };
       getActiveTools?: () => string[];
