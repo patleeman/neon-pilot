@@ -4,10 +4,10 @@ import type { ExtensionHostClient, ExtensionHostInvokeActionInput, ExtensionHost
 import type {
   ExtensionHostActionInvokeResult,
   ExtensionHostInvokeProtocolEntrypointRequest,
-  ExtensionHostRequest,
   ExtensionHostResponse,
   ExtensionHostRouteResponse,
   ExtensionHostRouteSseEvent,
+  ExtensionHostWireRequest,
 } from './extensionHostProtocol.js';
 import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from './extensionHostProtocolFrames.js';
 
@@ -156,7 +156,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
   const base = new URL(baseUrl);
   const fetchImpl = options.fetchImpl ?? fetch;
 
-  async function send(request: ExtensionHostRequest, signal?: AbortSignal): Promise<ExtensionHostResponse> {
+  async function send(request: ExtensionHostWireRequest, signal?: AbortSignal): Promise<ExtensionHostResponse> {
     const response = await fetchImpl(`${baseUrl}/rpc`, {
       method: 'POST',
       headers: {

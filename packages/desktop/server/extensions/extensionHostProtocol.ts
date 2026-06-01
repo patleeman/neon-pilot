@@ -486,6 +486,10 @@ export type ExtensionHostRequest =
   | ExtensionHostSetKeybindingRequest
   | ExtensionHostSetEnabledRequest;
 
+type ExtensionHostRequestWithoutLiveServerContext<T> = T extends unknown ? Omit<T, 'serverContext'> : never;
+
+export type ExtensionHostWireRequest = ExtensionHostRequestWithoutLiveServerContext<ExtensionHostRequest>;
+
 export interface ExtensionHostHealthResponse {
   ok: true;
   status: 'ready';
