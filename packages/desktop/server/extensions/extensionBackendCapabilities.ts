@@ -9,6 +9,7 @@ import {
   sendNotifyAsSystemNotification,
   setExtensionBadge,
 } from './extensionNotifications.js';
+import { listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 
@@ -29,6 +30,12 @@ interface ExtensionBackendCapabilityGit {
 
 interface ExtensionBackendCapabilityEvents {
   publish(extensionId: string, event: string, payload: unknown): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityExtensions {
+  listActions(): unknown;
+  getStatus(extensionId: string): unknown;
+  setEnabled(extensionId: string, enabled: boolean): unknown;
 }
 
 interface ExtensionBackendCapabilityNotify {
@@ -93,6 +100,7 @@ export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWor
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
   events?: ExtensionBackendCapabilityEvents;
+  extensions?: ExtensionBackendCapabilityExtensions;
   git?: ExtensionBackendCapabilityGit;
   log?: ExtensionBackendCapabilityLogger;
   notify?: ExtensionBackendCapabilityNotify;
@@ -136,6 +144,28 @@ function dispatchEventsCapability(events: ExtensionBackendCapabilityEvents, requ
   }
   const input = normalizeRecordInput(request.input, 'Events');
   return events.publish(request.extensionId, requireString(input.event, 'Event name'), input.payload);
+}
+
+function dispatchExtensionsCapability(extensions: ExtensionBackendCapabilityExtensions, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation === 'listActions') {
+    return extensions.listActions();
+  }
+
+  const input = normalizeRecordInput(request.input, 'Extensions');
+
+  if (request.operation === 'getStatus') {
+    return extensions.getStatus(requireString(input.extensionId, 'Extension id'));
+  }
+
+  if (request.operation === 'setEnabled') {
+    const enabled = input.enabled;
+    if (typeof enabled !== 'boolean') {
+      throw new Error('Extension enabled must be a boolean.');
+    }
+    return extensions.setEnabled(requireString(input.extensionId, 'Extension id'), enabled);
+  }
+
+  throw new Error(`Unsupported extensions capability operation: ${request.operation}`);
 }
 
 function dispatchGitCapability(git: ExtensionBackendCapabilityGit, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -383,6 +413,31 @@ export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const events = options.events ?? { publish: publishExtensionEvent };
+  const extensions = options.extensions ?? {
+    listActions: () =>
+      listExtensionInstallSummaries()
+        .filter((summary) => summary.status === 'enabled' && (summary.backendActions?.length ?? 0) > 0)
+        .map((summary) => ({
+          extensionId: summary.id,
+          extensionName: summary.name,
+          actions: (summary.backendActions ?? []).map((action) => ({
+            id: action.id,
+            title: action.title,
+            description: action.description,
+          })),
+        })),
+    getStatus: (extensionId: string) => {
+      const summary = listExtensionInstallSummaries().find((item) => item.id === extensionId);
+      if (!summary) return { enabled: false, healthy: false };
+      const enabled = summary.status === 'enabled';
+      return {
+        enabled,
+        healthy: enabled && (!summary.errors || summary.errors.length === 0),
+        ...(summary.errors?.length ? { errors: summary.errors } : {}),
+      };
+    },
+    setEnabled: (extensionId: string, enabled: boolean) => setExtensionEnabled(extensionId, enabled),
+  };
   const git = options.git ?? createExtensionGitCapability();
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const notify = options.notify ?? {
@@ -426,6 +481,9 @@ export function createExtensionBackendCapabilityDispatcher(
   return (request) => {
     if (request.capability === 'events') {
       return dispatchEventsCapability(events, request);
+    }
+    if (request.capability === 'extensions') {
+      return dispatchExtensionsCapability(extensions, request);
     }
     if (request.capability === 'git') {
       return dispatchGitCapability(git, request);

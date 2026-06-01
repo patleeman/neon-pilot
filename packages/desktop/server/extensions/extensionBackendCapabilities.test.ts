@@ -40,6 +40,71 @@ describe('extension backend capability dispatcher', () => {
     ).rejects.toThrow('Event name must be a string.');
   });
 
+  it('dispatches extension registry capability calls', async () => {
+    const extensions = {
+      listActions: vi.fn(() => [{ extensionId: 'ext-a', extensionName: 'Ext A', actions: [{ id: 'run' }] }]),
+      getStatus: vi.fn(() => ({ enabled: true, healthy: true })),
+      setEnabled: vi.fn(() => undefined),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'extensions',
+          operation: 'listActions',
+        }),
+      ),
+    ).resolves.toEqual([{ extensionId: 'ext-a', extensionName: 'Ext A', actions: [{ id: 'run' }] }]);
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'extensions',
+          operation: 'getStatus',
+          input: { extensionId: 'ext-a' },
+        }),
+      ),
+    ).resolves.toEqual({ enabled: true, healthy: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'extensions',
+          operation: 'setEnabled',
+          input: { extensionId: 'ext-a', enabled: false },
+        }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(extensions.listActions).toHaveBeenCalled();
+    expect(extensions.getStatus).toHaveBeenCalledWith('ext-a');
+    expect(extensions.setEnabled).toHaveBeenCalledWith('ext-a', false);
+  });
+
+  it('rejects malformed extension registry capability inputs', async () => {
+    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'extensions',
+        operation: 'setEnabled',
+        input: { extensionId: 'ext-a', enabled: 'false' },
+      }),
+    ).rejects.toThrow('Extension enabled must be a boolean.');
+  });
+
   it('dispatches extension-scoped git capability calls', async () => {
     const git = {
       status: vi.fn(() => ({ porcelain: '## main' })),

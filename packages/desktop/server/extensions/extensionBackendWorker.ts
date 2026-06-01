@@ -67,6 +67,13 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     events: {
       publish: (input: { event: string; payload: unknown }) => callHostCapability(extensionId, 'events', 'publish', input),
     },
+    extensions: {
+      listActions: () => callHostCapability(extensionId, 'extensions', 'listActions'),
+      getStatus: (targetExtensionId: string) =>
+        callHostCapability(extensionId, 'extensions', 'getStatus', { extensionId: targetExtensionId }),
+      setEnabled: (targetExtensionId: string, enabled: boolean) =>
+        callHostCapability(extensionId, 'extensions', 'setEnabled', { extensionId: targetExtensionId, enabled }),
+    },
     git: {
       status: (input: unknown) => callHostCapability(extensionId, 'git', 'status', input),
       diff: (input: unknown) => callHostCapability(extensionId, 'git', 'diff', input),

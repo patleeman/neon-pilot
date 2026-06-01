@@ -119,6 +119,76 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({ id: 15, ok: true, result: { ok: true } });
   });
 
+  it('runs backend exports with host-mediated extension registry capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const actions = await ctx.extensions.listActions();
+  const status = await ctx.extensions.getStatus('target-ext');
+  await ctx.extensions.setEnabled('target-ext', false);
+  return { actions, status };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 18,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-extensions' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'extensions',
+      operation: 'listActions',
+    });
+    workerThreads.messageHandler?.({
+      id: 1,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: [{ extensionId: 'target-ext', extensionName: 'Target', actions: [{ id: 'run' }] }],
+    });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'extensions',
+      operation: 'getStatus',
+      input: { extensionId: 'target-ext' },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { enabled: true, healthy: true } });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'extensions',
+      operation: 'setEnabled',
+      input: { extensionId: 'target-ext', enabled: false },
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true });
+
+    await waitForPostMessage({
+      id: 18,
+      ok: true,
+      result: {
+        actions: [{ extensionId: 'target-ext', extensionName: 'Target', actions: [{ id: 'run' }] }],
+        status: { enabled: true, healthy: true },
+      },
+    });
+  });
+
   it('runs backend exports with host-mediated git capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });
