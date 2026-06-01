@@ -1313,10 +1313,20 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(async () => true),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
-      runWorkerExport: vi.fn(async () => ({
-        content: [{ type: 'text', text: 'create complete.' }],
-        details: { id: 'conv-2', conversationId: 'conv-2' },
-      })),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, _exportName, _operation, args) => {
+        const action = (args[0] as { action?: string }).action ?? 'create';
+        return {
+          content: [{ type: 'text', text: `${action} complete.` }],
+          details:
+            action === 'create'
+              ? { id: 'conv-2', conversationId: 'conv-2' }
+              : action === 'workspace_get'
+                ? { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' }
+                : action === 'rollback'
+                  ? { rolledBackTo: 'entry-1' }
+                  : { blockId: 'block-1' },
+        };
+      }),
       run: vi.fn(),
     };
     setExtensionBackendRunnerForTests(backendRunner);
@@ -1337,6 +1347,39 @@ describe('extension backend action invocation', () => {
         details: { id: 'conv-2', conversationId: 'conv-2' },
       },
     });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'workspace_get' }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'workspace_get complete.' }],
+        details: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
+      },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', {
+        action: 'update_transcript_block',
+        conversationId: 'conv-1',
+        blockType: 'note',
+        blockId: 'block-1',
+        data: { ok: true },
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'update_transcript_block complete.' }],
+        details: { blockId: 'block-1' },
+      },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'rollback', conversationId: 'conv-1', count: 2 }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'rollback complete.' }],
+        details: { rolledBackTo: 'entry-1' },
+      },
+    });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-conversation-tools',
@@ -1353,6 +1396,40 @@ describe('extension backend action invocation', () => {
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'workspace_get' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'rollback', conversationId: 'conv-1', count: 2 }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
         }),
       },
     );

@@ -589,7 +589,15 @@
         "title": "Conversation",
         "worker": {
           "enabled": true,
-          "inputActions": ["create", "set_active_tools", "append_transcript_block"]
+          "inputActions": [
+            "create",
+            "set_active_tools",
+            "workspace_get",
+            "workspace_update",
+            "append_transcript_block",
+            "update_transcript_block",
+            "rollback"
+          ]
         }
       },
       {

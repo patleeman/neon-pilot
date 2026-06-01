@@ -61,6 +61,25 @@ interface ExtensionBackendCapabilityConversations {
     extensionId: string,
     input: { conversationId: string; blockType: string; data: unknown; title?: string; blockId?: string },
   ): Promise<unknown> | unknown;
+  updateTranscriptBlock?(
+    extensionId: string,
+    input: { conversationId: string; blockType: string; blockId: string; data: unknown; title?: string },
+  ): Promise<unknown> | unknown;
+  getWorkspace?(extensionId: string, input?: { runtimeScope?: string; runtimeSettingsFilePath?: string }): Promise<unknown> | unknown;
+  updateWorkspace?(
+    extensionId: string,
+    input: {
+      runtimeScope?: string;
+      runtimeSettingsFilePath?: string;
+      openConversationIds?: string[] | null;
+      pinnedConversationIds?: string[] | null;
+      archivedConversationIds?: string[] | null;
+      activeConversationId?: string | null;
+      workspacePaths?: string[] | null;
+      remoteControlledConversationIds?: string[] | null;
+    },
+  ): Promise<unknown> | unknown;
+  rollback?(extensionId: string, conversationId: string, count: number): Promise<unknown> | unknown;
   metadata: {
     get(extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }): Promise<unknown> | unknown;
     set(
@@ -318,6 +337,77 @@ function dispatchConversationsCapability(
     });
   }
 
+  if (request.operation === 'updateTranscriptBlock') {
+    if (!conversations.updateTranscriptBlock) {
+      throw new Error('Conversation updateTranscriptBlock capability is unavailable.');
+    }
+    return conversations.updateTranscriptBlock(request.extensionId, {
+      conversationId: requireString(input.conversationId, 'Conversation id'),
+      blockType: requireString(input.blockType, 'Conversation transcript block type'),
+      blockId: requireString(input.blockId, 'Conversation transcript block id'),
+      data: input.data,
+      ...(input.title !== undefined ? { title: optionalString(input.title, 'Conversation transcript title') } : {}),
+    });
+  }
+
+  if (request.operation === 'getWorkspace') {
+    if (!conversations.getWorkspace) {
+      throw new Error('Conversation getWorkspace capability is unavailable.');
+    }
+    return conversations.getWorkspace(request.extensionId, {
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation runtime scope') } : {}),
+      ...(input.runtimeSettingsFilePath !== undefined
+        ? { runtimeSettingsFilePath: optionalString(input.runtimeSettingsFilePath, 'Conversation runtime settings file path') }
+        : {}),
+    });
+  }
+
+  if (request.operation === 'updateWorkspace') {
+    if (!conversations.updateWorkspace) {
+      throw new Error('Conversation updateWorkspace capability is unavailable.');
+    }
+    return conversations.updateWorkspace(request.extensionId, {
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation runtime scope') } : {}),
+      ...(input.runtimeSettingsFilePath !== undefined
+        ? { runtimeSettingsFilePath: optionalString(input.runtimeSettingsFilePath, 'Conversation runtime settings file path') }
+        : {}),
+      ...(input.openConversationIds !== undefined
+        ? { openConversationIds: optionalNullableStringArray(input.openConversationIds, 'Conversation workspace open ids') }
+        : {}),
+      ...(input.pinnedConversationIds !== undefined
+        ? { pinnedConversationIds: optionalNullableStringArray(input.pinnedConversationIds, 'Conversation workspace pinned ids') }
+        : {}),
+      ...(input.archivedConversationIds !== undefined
+        ? { archivedConversationIds: optionalNullableStringArray(input.archivedConversationIds, 'Conversation workspace archived ids') }
+        : {}),
+      ...(input.activeConversationId !== undefined
+        ? { activeConversationId: optionalNullableString(input.activeConversationId, 'Conversation workspace active id') }
+        : {}),
+      ...(input.workspacePaths !== undefined
+        ? { workspacePaths: optionalNullableStringArray(input.workspacePaths, 'Conversation workspace paths') }
+        : {}),
+      ...(input.remoteControlledConversationIds !== undefined
+        ? {
+            remoteControlledConversationIds: optionalNullableStringArray(
+              input.remoteControlledConversationIds,
+              'Conversation workspace remote-controlled ids',
+            ),
+          }
+        : {}),
+    });
+  }
+
+  if (request.operation === 'rollback') {
+    if (!conversations.rollback) {
+      throw new Error('Conversation rollback capability is unavailable.');
+    }
+    return conversations.rollback(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      requireNumber(input.count, 'Conversation rollback count'),
+    );
+  }
+
   if (request.operation === 'metadata.get') {
     const metadataInput = {
       conversationId: requireString(input.conversationId, 'Conversation id'),
@@ -557,6 +647,16 @@ function optionalStringArray(value: unknown, label: string): string[] | undefine
   return value;
 }
 
+function optionalNullableString(value: unknown, label: string): string | null {
+  if (value === null) return null;
+  return optionalString(value, label) ?? null;
+}
+
+function optionalNullableStringArray(value: unknown, label: string): string[] | null {
+  if (value === null) return null;
+  return optionalStringArray(value, label) ?? null;
+}
+
 function optionalStringRecord(value: unknown, label: string): Record<string, string> | undefined {
   if (value === undefined) return undefined;
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -767,6 +867,36 @@ export function createExtensionBackendCapabilityDispatcher(
       _extensionId: string,
       input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['appendTranscriptBlock']>[0],
     ) => createExtensionConversationsCapability().appendTranscriptBlock(input),
+    updateTranscriptBlock: (
+      _extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['updateTranscriptBlock']>[0],
+    ) => createExtensionConversationsCapability().updateTranscriptBlock(input),
+    getWorkspace: (_extensionId: string, input?: { runtimeScope?: string; runtimeSettingsFilePath?: string }) =>
+      createExtensionConversationsCapability(
+        input?.runtimeSettingsFilePath
+          ? {
+              getRuntimeScope: () => input.runtimeScope ?? 'shared',
+              getSettingsFile: () => input.runtimeSettingsFilePath!,
+            }
+          : undefined,
+      ).getWorkspace(),
+    updateWorkspace: (
+      _extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['updateWorkspace']>[0] & {
+        runtimeScope?: string;
+        runtimeSettingsFilePath?: string;
+      },
+    ) =>
+      createExtensionConversationsCapability(
+        input.runtimeSettingsFilePath
+          ? {
+              getRuntimeScope: () => input.runtimeScope ?? 'shared',
+              getSettingsFile: () => input.runtimeSettingsFilePath!,
+            }
+          : undefined,
+      ).updateWorkspace(input),
+    rollback: (_extensionId: string, conversationId: string, count: number) =>
+      createExtensionConversationsCapability().rollback(conversationId, count),
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
         readConversationMetadata({ ...input, extensionId }),

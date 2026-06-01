@@ -10,6 +10,10 @@ describe('extension backend capability dispatcher', () => {
       setActiveTools: vi.fn(async () => ({ conversationId: 'conv-1', toolNames: ['exec_code'] })),
       appendCustomEntry: vi.fn(async () => ({ ok: true })),
       appendTranscriptBlock: vi.fn(async () => ({ blockId: 'block-1' })),
+      updateTranscriptBlock: vi.fn(async () => ({ blockId: 'block-1' })),
+      getWorkspace: vi.fn(async () => ({ openConversationIds: ['conv-1'], activeConversationId: 'conv-1' })),
+      updateWorkspace: vi.fn(async () => ({ openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' })),
+      rollback: vi.fn(async () => ({ rolledBackTo: 'entry-1' })),
       metadata: {
         get: vi.fn(),
         set: vi.fn(),
@@ -78,6 +82,54 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toEqual({ blockId: 'block-1' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 6,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'updateTranscriptBlock',
+          input: { conversationId: 'conv-2', blockType: 'note', blockId: 'block-1', title: 'Note', data: { ok: false } },
+        }),
+      ),
+    ).resolves.toEqual({ blockId: 'block-1' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 7,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'getWorkspace',
+          input: {},
+        }),
+      ),
+    ).resolves.toEqual({ openConversationIds: ['conv-1'], activeConversationId: 'conv-1' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 8,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'updateWorkspace',
+          input: { openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' },
+        }),
+      ),
+    ).resolves.toEqual({ openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 9,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'rollback',
+          input: { conversationId: 'conv-1', count: 2 },
+        }),
+      ),
+    ).resolves.toEqual({ rolledBackTo: 'entry-1' });
 
     expect(conversations.get).toHaveBeenCalledWith('system-code-mode', 'conv-1');
     expect(conversations.setActiveTools).toHaveBeenCalledWith('system-code-mode', 'conv-1', ['exec_code']);
@@ -89,6 +141,19 @@ describe('extension backend capability dispatcher', () => {
       title: 'Welcome',
       data: { source: 'system-onboarding' },
     });
+    expect(conversations.updateTranscriptBlock).toHaveBeenCalledWith('system-conversation-tools', {
+      conversationId: 'conv-2',
+      blockType: 'note',
+      blockId: 'block-1',
+      title: 'Note',
+      data: { ok: false },
+    });
+    expect(conversations.getWorkspace).toHaveBeenCalledWith('system-conversation-tools', {});
+    expect(conversations.updateWorkspace).toHaveBeenCalledWith('system-conversation-tools', {
+      openConversationIds: ['conv-1', 'conv-2'],
+      activeConversationId: 'conv-2',
+    });
+    expect(conversations.rollback).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 2);
   });
 
   it('rejects malformed live conversation capability inputs', async () => {

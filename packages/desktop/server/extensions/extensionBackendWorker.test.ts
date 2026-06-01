@@ -269,7 +269,17 @@ export async function doThing(_input, ctx) {
     title: 'Welcome',
     data: { source: 'worker-ext' },
   });
-  return { before, created, tools, entry, block };
+  const updated = await ctx.conversations.updateTranscriptBlock({
+    conversationId: created.conversationId,
+    blockType: 'onboarding_intro',
+    blockId: block.blockId,
+    title: 'Updated',
+    data: { source: 'worker-ext', updated: true },
+  });
+  const workspaceBefore = await ctx.conversations.getWorkspace();
+  const workspaceAfter = await ctx.conversations.updateWorkspace({ openConversationIds: ['conv-1', created.conversationId] });
+  const rollback = await ctx.conversations.rollback('conv-1', 2);
+  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback };
 }
 `,
     );
@@ -340,6 +350,62 @@ export async function doThing(_input, ctx) {
     workerThreads.messageHandler?.({ id: 5, kind: 'capabilityResponse', ok: true, result: { blockId: 'block-1' } });
 
     await waitForPostMessage({
+      id: 6,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'updateTranscriptBlock',
+      input: {
+        conversationId: 'conv-2',
+        blockType: 'onboarding_intro',
+        blockId: 'block-1',
+        title: 'Updated',
+        data: { source: 'worker-ext', updated: true },
+      },
+    });
+    workerThreads.messageHandler?.({ id: 6, kind: 'capabilityResponse', ok: true, result: { blockId: 'block-1' } });
+
+    await waitForPostMessage({
+      id: 7,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'getWorkspace',
+      input: { runtimeScope: 'shared', runtimeSettingsFilePath: '' },
+    });
+    workerThreads.messageHandler?.({
+      id: 7,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
+    });
+
+    await waitForPostMessage({
+      id: 8,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'updateWorkspace',
+      input: { openConversationIds: ['conv-1', 'conv-2'], runtimeScope: 'shared', runtimeSettingsFilePath: '' },
+    });
+    workerThreads.messageHandler?.({
+      id: 8,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' },
+    });
+
+    await waitForPostMessage({
+      id: 9,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'rollback',
+      input: { conversationId: 'conv-1', count: 2 },
+    });
+    workerThreads.messageHandler?.({ id: 9, kind: 'capabilityResponse', ok: true, result: { rolledBackTo: 'entry-1' } });
+
+    await waitForPostMessage({
       id: 17,
       ok: true,
       result: {
@@ -348,6 +414,10 @@ export async function doThing(_input, ctx) {
         tools: { conversationId: 'conv-1', toolNames: ['exec_code'] },
         entry: { ok: true },
         block: { blockId: 'block-1' },
+        updated: { blockId: 'block-1' },
+        workspaceBefore: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
+        workspaceAfter: { openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' },
+        rollback: { rolledBackTo: 'entry-1' },
       },
     });
   });

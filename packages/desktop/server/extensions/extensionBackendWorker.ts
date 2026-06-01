@@ -136,6 +136,23 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
         callHostCapability(extensionId, 'conversations', 'appendCustomEntry', { conversationId, customType, data }),
       appendTranscriptBlock: (input: { conversationId: string; blockType: string; data: unknown; title?: string; blockId?: string }) =>
         callHostCapability(extensionId, 'conversations', 'appendTranscriptBlock', input),
+      updateTranscriptBlock: (input: { conversationId: string; blockType: string; blockId: string; data: unknown; title?: string }) =>
+        callHostCapability(extensionId, 'conversations', 'updateTranscriptBlock', input),
+      getWorkspace: () =>
+        callHostCapability(extensionId, 'conversations', 'getWorkspace', {
+          runtimeScope,
+          runtimeSettingsFilePath,
+        }),
+      updateWorkspace: (input: {
+        openConversationIds?: string[] | null;
+        pinnedConversationIds?: string[] | null;
+        archivedConversationIds?: string[] | null;
+        activeConversationId?: string | null;
+        workspacePaths?: string[] | null;
+        remoteControlledConversationIds?: string[] | null;
+      }) => callHostCapability(extensionId, 'conversations', 'updateWorkspace', { ...input, runtimeScope, runtimeSettingsFilePath }),
+      rollback: (conversationId: string, count: number) =>
+        callHostCapability(extensionId, 'conversations', 'rollback', { conversationId, count }),
       metadata: {
         get: (input: { conversationId: string; namespace?: string }) =>
           callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, profile: runtimeScope }),
