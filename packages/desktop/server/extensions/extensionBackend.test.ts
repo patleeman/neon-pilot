@@ -868,6 +868,67 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs allowlisted conversation tool actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({
+        content: [{ type: 'text', text: 'create complete.' }],
+        details: { id: 'conv-2', conversationId: 'conv-2' },
+      })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'system-conversation-tools',
+        'conversationTool',
+        { action: 'create', cwd: '/repo', title: 'Worker conversation', live: false },
+        undefined,
+        { conversationId: 'conv-1', cwd: '/repo' },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'create complete.' }],
+        details: { id: 'conv-2', conversationId: 'conv-2' },
+      },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'create', cwd: '/repo', title: 'Worker conversation', live: false }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

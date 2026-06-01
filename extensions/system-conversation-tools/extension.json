@@ -586,7 +586,11 @@
       {
         "id": "conversationTool",
         "handler": "conversationTool",
-        "title": "Conversation"
+        "title": "Conversation",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["create", "set_active_tools", "append_transcript_block"]
+        }
       },
       {
         "id": "askUser",
