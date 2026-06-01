@@ -90,6 +90,9 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       diff: (input: unknown) => callHostCapability(extensionId, 'git', 'diff', input),
       log: (input: unknown) => callHostCapability(extensionId, 'git', 'log', input),
     },
+    models: {
+      list: () => callHostCapability(extensionId, 'models', 'list'),
+    },
     notify: {
       toast: (message: string, type?: 'info' | 'warning' | 'error') => callHostCapability(extensionId, 'notify', 'toast', { message, type }),
       system: (input: unknown) => callHostCapability(extensionId, 'notify', 'system', input),

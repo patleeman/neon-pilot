@@ -194,6 +194,42 @@ describe('extension backend capability dispatcher', () => {
     expect(log.error).not.toHaveBeenCalled();
   });
 
+  it('dispatches read-only model capability calls', async () => {
+    const models = {
+      list: vi.fn(async () => [{ id: 'model-1', provider: 'provider-a' }]),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ models });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'models',
+          operation: 'list',
+        }),
+      ),
+    ).resolves.toEqual([{ id: 'model-1', provider: 'provider-a' }]);
+
+    expect(models.list).toHaveBeenCalled();
+  });
+
+  it('rejects unsupported model capability operations', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({ models: { list: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'models',
+        operation: 'saveProvider',
+        input: {},
+      }),
+    ).rejects.toThrow('Unsupported models capability operation: saveProvider');
+  });
+
   it('dispatches extension-scoped notify capability calls', async () => {
     const notify = {
       toast: vi.fn(),

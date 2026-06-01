@@ -4,6 +4,7 @@ import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
+import { createExtensionModelsCapability } from './extensionModels.js';
 import {
   isSystemNotificationAvailable,
   sendNotifyAsSystemNotification,
@@ -36,6 +37,10 @@ interface ExtensionBackendCapabilityExtensions {
   listActions(): unknown;
   getStatus(extensionId: string): unknown;
   setEnabled(extensionId: string, enabled: boolean): unknown;
+}
+
+interface ExtensionBackendCapabilityModels {
+  list(): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityNotify {
@@ -103,6 +108,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   extensions?: ExtensionBackendCapabilityExtensions;
   git?: ExtensionBackendCapabilityGit;
   log?: ExtensionBackendCapabilityLogger;
+  models?: ExtensionBackendCapabilityModels;
   notify?: ExtensionBackendCapabilityNotify;
   secrets?: ExtensionBackendCapabilitySecrets;
   shell?: ExtensionBackendCapabilityShell;
@@ -166,6 +172,13 @@ function dispatchExtensionsCapability(extensions: ExtensionBackendCapabilityExte
   }
 
   throw new Error(`Unsupported extensions capability operation: ${request.operation}`);
+}
+
+function dispatchModelsCapability(models: ExtensionBackendCapabilityModels, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation !== 'list') {
+    throw new Error(`Unsupported models capability operation: ${request.operation}`);
+  }
+  return models.list();
 }
 
 function dispatchGitCapability(git: ExtensionBackendCapabilityGit, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -440,6 +453,7 @@ export function createExtensionBackendCapabilityDispatcher(
   };
   const git = options.git ?? createExtensionGitCapability();
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
+  const models = options.models ?? { list: () => createExtensionModelsCapability().list() };
   const notify = options.notify ?? {
     toast: (extensionId: string, message: string, type: 'info' | 'warning' | 'error') => {
       logInfo('extension notification', { extensionId, type, message });
@@ -490,6 +504,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'log') {
       return dispatchLogCapability(logger, request);
+    }
+    if (request.capability === 'models') {
+      return dispatchModelsCapability(models, request);
     }
     if (request.capability === 'notify') {
       return dispatchNotifyCapability(notify, request);
