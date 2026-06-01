@@ -16,131 +16,201 @@
       {
         "id": "localModelsStatus",
         "handler": "status",
-        "title": "Local models status"
+        "title": "Local models status",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsMlxSetModel",
         "handler": "mlxSetModel",
-        "title": "Set MLX model"
+        "title": "Set MLX model",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsMlxSetup",
         "handler": "mlxSetup",
-        "title": "Set up MLX model"
+        "title": "Set up MLX model",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsMlxUpdateRuntime",
         "handler": "mlxUpdateRuntime",
-        "title": "Update MLX runtime"
+        "title": "Update MLX runtime",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsMlxStart",
         "handler": "mlxStart",
-        "title": "Start MLX runtime"
+        "title": "Start MLX runtime",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsMlxStop",
         "handler": "mlxStop",
-        "title": "Stop MLX runtime"
+        "title": "Stop MLX runtime",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsMlxSearch",
         "handler": "mlxSearch",
         "title": "Search MLX models",
-        "worker": { "enabled": true }
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsSearch",
         "handler": "searchModels",
         "title": "Search local-compatible models",
-        "worker": { "enabled": true }
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsModelDetails",
         "handler": "modelDetails",
         "title": "Get Hugging Face model details",
-        "worker": { "enabled": true }
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufDownload",
         "handler": "ggufDownload",
-        "title": "Download GGUF model"
+        "title": "Download GGUF model",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufCancelDownload",
         "handler": "ggufCancelDownload",
-        "title": "Cancel GGUF download"
+        "title": "Cancel GGUF download",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufSaveSettings",
         "handler": "ggufSaveSettings",
-        "title": "Save GGUF serving settings"
+        "title": "Save GGUF serving settings",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufSetModel",
         "handler": "ggufSetModel",
-        "title": "Set GGUF model"
+        "title": "Set GGUF model",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufReveal",
         "handler": "ggufReveal",
-        "title": "Reveal GGUF model"
+        "title": "Reveal GGUF model",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsMlxDelete",
         "handler": "mlxDelete",
-        "title": "Delete MLX model"
+        "title": "Delete MLX model",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufDelete",
         "handler": "ggufDelete",
-        "title": "Delete GGUF model"
+        "title": "Delete GGUF model",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufInstallRuntime",
         "handler": "ggufInstallRuntime",
-        "title": "Install llama.cpp runtime"
+        "title": "Install llama.cpp runtime",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufStart",
         "handler": "ggufStart",
-        "title": "Start llama.cpp server"
+        "title": "Start llama.cpp server",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufStop",
         "handler": "ggufStop",
-        "title": "Stop llama.cpp server"
+        "title": "Stop llama.cpp server",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsStopAll",
         "handler": "stopAll",
-        "title": "Stop all local model runtimes"
+        "title": "Stop all local model runtimes",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsToggleServer",
         "handler": "toggleServer",
-        "title": "Toggle local model server"
+        "title": "Toggle local model server",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufSetServerEnabled",
         "handler": "ggufSetServerEnabled",
-        "title": "Enable or disable GGUF server"
+        "title": "Enable or disable GGUF server",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsGgufRunPrompt",
         "handler": "ggufRunPrompt",
-        "title": "Run GGUF prompt"
+        "title": "Run GGUF prompt",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "localModelsDiscover",
         "handler": "localModelsDiscover",
         "title": "Discover local models",
-        "worker": { "enabled": true }
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
   "contributes": {
-    "modelDiscovery": { "action": "localModelsDiscover" },
+    "modelDiscovery": {
+      "action": "localModelsDiscover"
+    },
     "views": [
       {
         "id": "main",
@@ -167,5 +237,9 @@
     ],
     "tools": []
   },
-  "permissions": ["network:read", "network:write", "network:listen"]
+  "permissions": [
+    "network:read",
+    "network:write",
+    "network:listen"
+  ]
 }
