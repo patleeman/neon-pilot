@@ -986,6 +986,85 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe installable suggested context warming through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const suggestedContextRoot = join(stateRoot, 'extensions', 'system-suggested-context');
+    mkdirSync(join(suggestedContextRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(suggestedContextRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-suggested-context',
+        name: 'Suggested Context',
+        packageType: 'system',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [
+            {
+              id: 'warmPointers',
+              handler: 'warmPointers',
+              title: 'Warm suggested context pointer cache',
+              worker: { enabled: true },
+            },
+          ],
+        },
+      }),
+    );
+    writeFileSync(join(suggestedContextRoot, 'dist', 'backend.mjs'), 'export function warmPointers() { return true; }\n');
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true, pointerCount: 2 })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-suggested-context', 'warmPointers', {
+        prompt: 'architecture process split',
+        currentConversationId: 'conv-1',
+        currentCwd: '/repo',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, pointerCount: 2 },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-suggested-context',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-suggested-context', 'dist', 'backend.mjs')),
+      }),
+      'warmPointers',
+      { type: 'action', label: 'action warmPointers', target: 'warmPointers' },
+      [{ prompt: 'architecture process split', currentConversationId: 'conv-1', currentCwd: '/repo' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('runs worker-safe telemetry aggregate actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),

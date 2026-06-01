@@ -14,7 +14,8 @@
       {
         "id": "warmPointers",
         "handler": "warmPointers",
-        "title": "Warm suggested context pointer cache"
+        "title": "Warm suggested context pointer cache",
+        "worker": { "enabled": true }
       }
     ]
   },
