@@ -2037,11 +2037,15 @@ describe('extension backend action invocation', () => {
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
         exportName === 'readState'
           ? { configured: false, effectiveRoot: '/knowledge', effectiveRoots: ['/knowledge'] }
-          : exportName === 'readMemory'
-            ? { agentsMd: [], skills: [], memoryDocs: [] }
-            : exportName === 'knowledgeReadFile'
-              ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
-            : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
+          : exportName === 'updateState'
+            ? { configured: true, repoUrl: 'https://example.test/kb.git', branch: 'main', effectiveRoots: ['/knowledge'] }
+            : exportName === 'sync'
+              ? { configured: true, syncStatus: 'idle', lastSyncAt: '2026-01-01T00:00:00.000Z' }
+              : exportName === 'readMemory'
+                ? { agentsMd: [], skills: [], memoryDocs: [] }
+                : exportName === 'knowledgeReadFile'
+                  ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
+                  : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
       ),
       run: vi.fn(),
     };
@@ -2055,6 +2059,16 @@ describe('extension backend action invocation', () => {
     await expect(invokeExtensionAction('system-knowledge', 'readState', {})).resolves.toEqual({
       ok: true,
       result: { configured: false, effectiveRoot: '/knowledge', effectiveRoots: ['/knowledge'] },
+    });
+    await expect(
+      invokeExtensionAction('system-knowledge', 'updateState', { repoUrl: 'https://example.test/kb.git', branch: 'main' }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { configured: true, repoUrl: 'https://example.test/kb.git', branch: 'main', effectiveRoots: ['/knowledge'] },
+    });
+    await expect(invokeExtensionAction('system-knowledge', 'sync', {})).resolves.toEqual({
+      ok: true,
+      result: { configured: true, syncStatus: 'idle', lastSyncAt: '2026-01-01T00:00:00.000Z' },
     });
     await expect(invokeExtensionAction('system-knowledge', 'knowledgeReadFile', { id: 'notes/a.md' })).resolves.toEqual({
       ok: true,
@@ -2096,6 +2110,42 @@ describe('extension backend action invocation', () => {
       }),
       'readState',
       { type: 'action', label: 'action readState', target: 'readState' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')),
+      }),
+      'updateState',
+      { type: 'action', label: 'action updateState', target: 'updateState' },
+      [{ repoUrl: 'https://example.test/kb.git', branch: 'main' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')),
+      }),
+      'sync',
+      { type: 'action', label: 'action sync', target: 'sync' },
       [{}],
       {
         context: expect.objectContaining({

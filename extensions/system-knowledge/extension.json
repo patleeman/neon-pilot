@@ -23,12 +23,18 @@
       {
         "id": "updateState",
         "handler": "updateState",
-        "title": "Update knowledge state"
+        "title": "Update knowledge state",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "sync",
         "handler": "sync",
-        "title": "Sync knowledge base"
+        "title": "Sync knowledge base",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "provideKnowledgeInstructions",
