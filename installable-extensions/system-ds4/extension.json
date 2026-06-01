@@ -85,7 +85,7 @@
           "type": "object",
           "properties": {
             "action": { "type": "string", "enum": ["list", "enable"] },
-            "groups": { "type": "array", "items": { "type": "string", "enum": ["web", "files", "async_shell", "all"] } },
+            "groups": { "type": "array", "items": { "type": "string", "enum": ["inspect", "web", "files", "async_shell", "all"] } },
             "tools": { "type": "array", "items": { "type": "string" } }
           },
           "required": ["action"],
@@ -93,7 +93,7 @@
         },
         "promptGuidelines": [
           "DS4 starts with a compact tool set. Use ds4_capabilities to list or enable extra groups only when needed.",
-          "Enable web before external/current web research, files before whole-file writes or continuing reads, and async_shell before background shell jobs."
+          "Enable inspect before specialized list/search helpers, web before external research, files before whole-file writes or continuing reads, and async_shell before background shell jobs."
         ]
       },
       {

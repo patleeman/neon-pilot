@@ -14,12 +14,13 @@ const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
 const MODEL_NAME = 'DeepSeek V4 Flash';
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
-const DS4_CORE_TOOLS = ['ds4_capabilities', 'bash', 'read', 'list', 'search', 'edit'];
+const DS4_CORE_TOOLS = ['ds4_capabilities', 'bash', 'read', 'edit'];
 const DS4_PROGRESSIVE_TOOL_GROUPS = {
+  inspect: ['list', 'search'],
   web: ['google_search', 'visit_page'],
   files: ['write', 'more'],
   async_shell: ['bash_status', 'bash_stop'],
-  all: ['google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'],
+  all: ['list', 'search', 'google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'],
 } as const;
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
@@ -849,12 +850,13 @@ export async function capabilities(input: { action?: unknown; groups?: unknown; 
       `- core: ${DS4_CORE_TOOLS.join(', ')}`,
       '',
       'Progressive tool groups are available on request:',
+      `- inspect: ${DS4_PROGRESSIVE_TOOL_GROUPS.inspect.join(', ')}`,
       `- web: ${DS4_PROGRESSIVE_TOOL_GROUPS.web.join(', ')}`,
       `- files: ${DS4_PROGRESSIVE_TOOL_GROUPS.files.join(', ')}`,
       `- async_shell: ${DS4_PROGRESSIVE_TOOL_GROUPS.async_shell.join(', ')}`,
       `- all: ${DS4_PROGRESSIVE_TOOL_GROUPS.all.join(', ')}`,
       '',
-      'Call ds4_capabilities with action="enable" and groups=["web"] or tools=["write"] when the task needs more surface.',
+      'Call ds4_capabilities with action="enable" and groups=["inspect"] or tools=["write"] when the task needs more surface.',
     ].join('\n');
     return { text, content: [{ type: 'text' as const, text }], details: { core: DS4_CORE_TOOLS, groups: DS4_PROGRESSIVE_TOOL_GROUPS } };
   }
@@ -940,7 +942,7 @@ export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
         return;
       }
       const active = ctx.getActiveTools?.() ?? [];
-      const keep = active.filter((tool) => !['google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'].includes(tool));
+      const keep = active.filter((tool) => !['list', 'search', 'google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'].includes(tool));
       ctx.setActiveTools?.([...new Set([...keep, ...DS4_CORE_TOOLS])]);
     };
 

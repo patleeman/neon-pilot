@@ -328,21 +328,21 @@ describe('DS4 agent profile activation', () => {
       },
     );
 
-    expect(calls).toEqual([['artifact', 'ds4_capabilities', 'bash', 'read', 'list', 'search', 'edit']]);
+    expect(calls).toEqual([['artifact', 'ds4_capabilities', 'bash', 'read', 'edit']]);
   });
 
   it('enables progressive DS4 tool groups for the active conversation', async () => {
     const context = ctx();
 
-    const result = await backend.capabilities({ action: 'enable', groups: ['web', 'async_shell', 'nope'], tools: ['write'] }, context);
+    const result = await backend.capabilities({ action: 'enable', groups: ['inspect', 'web', 'async_shell', 'nope'], tools: ['write'] }, context);
 
     expect(context.conversations.setActiveTools).toHaveBeenCalledWith('conversation-1', [
       'ds4_capabilities',
       'bash',
       'read',
+      'edit',
       'list',
       'search',
-      'edit',
       'google_search',
       'visit_page',
       'bash_status',
@@ -356,7 +356,7 @@ describe('DS4 agent profile activation', () => {
   it('compacts prompt assembly for DS4 only', async () => {
     const plan = {
       skills: { skillPaths: ['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent'], inlineSkills: [{ id: 'x' }] },
-      tools: { activeToolNames: ['bash', 'write', 'google_search', 'ds4_capabilities'] },
+      tools: { activeToolNames: ['bash', 'write', 'google_search', 'list', 'ds4_capabilities'] },
       instructions: {
         layers: [
           { id: 'agents:/Users/patrick/AGENTS.md', title: 'AGENTS.md', content: 'very long global instructions', source: { label: '/Users/patrick/AGENTS.md' } },
