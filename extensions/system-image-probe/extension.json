@@ -11,7 +11,10 @@
       {
         "id": "probeImage",
         "handler": "probeImage",
-        "title": "Probe image"
+        "title": "Probe image",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
