@@ -206,9 +206,24 @@
   "backend": {
     "entry": "src/backend.ts",
     "actions": [
-      { "id": "browserSnapshot", "handler": "browserSnapshot", "title": "Browser snapshot" },
-      { "id": "browserCdp", "handler": "browserCdp", "title": "Browser CDP" },
-      { "id": "browserScreenshot", "handler": "browserScreenshot", "title": "Browser screenshot" }
+      {
+        "id": "browserSnapshot",
+        "handler": "browserSnapshot",
+        "title": "Browser snapshot",
+        "worker": { "enabled": true, "ignoreLiveContext": true }
+      },
+      {
+        "id": "browserCdp",
+        "handler": "browserCdp",
+        "title": "Browser CDP",
+        "worker": { "enabled": true, "ignoreLiveContext": true }
+      },
+      {
+        "id": "browserScreenshot",
+        "handler": "browserScreenshot",
+        "title": "Browser screenshot",
+        "worker": { "enabled": true, "ignoreLiveContext": true }
+      }
     ]
   }
 }

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { pathToFileURL } from 'node:url';
 import { parentPort } from 'node:worker_threads';
 
@@ -24,10 +25,24 @@ const shellHandleCallbacks = new Map<
 >();
 let nextCapabilityRequestId = 0;
 let nextShellHandleId = 0;
+const extensionCapabilityScope = new AsyncLocalStorage<string>();
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+
+type ExtensionBackendWorkerGlobal = typeof globalThis & {
+  [EXTENSION_HOST_CAPABILITY_BRIDGE]?: (capability: string, operation: string, input?: unknown) => Promise<unknown>;
+};
 
 if (!parentPort) {
   throw new Error('extensionBackendWorker must run as a worker thread.');
 }
+
+(globalThis as ExtensionBackendWorkerGlobal)[EXTENSION_HOST_CAPABILITY_BRIDGE] = (capability, operation, input) => {
+  const extensionId = extensionCapabilityScope.getStore();
+  if (!extensionId) {
+    throw new Error('Extension host capability bridge is unavailable outside an active extension backend worker request.');
+  }
+  return callHostCapability(extensionId, capability, operation, input);
+};
 
 function loadModule(extensionId: string, compiled: { path: string; hash: string }): Promise<ExtensionBackendModule> {
   const cacheKey = `${compiled.path}:${compiled.hash}`;
@@ -365,7 +380,7 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
       }
       const contextOptions = typeof request.context === 'object' ? request.context : undefined;
       const args = request.context ? [...request.args, createWorkerBackendContext(request.extensionId, contextOptions)] : request.args;
-      const result = await (handler as (...args: unknown[]) => unknown)(...args);
+      const result = await extensionCapabilityScope.run(request.extensionId, () => (handler as (...args: unknown[]) => unknown)(...args));
       return { id: request.id, ok: true, result };
     }
 

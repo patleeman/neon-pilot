@@ -25,6 +25,14 @@ import { createExtensionGitCapability, createExtensionShellCapability } from './
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 import { refreshHostSkillMcpConfig, type ExtensionRuntimeRefreshSkillMcpConfigInput } from './extensionRuntimeCapability.js';
+import {
+  closeTerminalSession,
+  createTerminalSession,
+  drainTerminalSession,
+  resizeTerminalSession,
+  writeTerminalSession,
+} from './terminalSessions.js';
+import { getWorkbenchBrowserToolHost } from './workbenchBrowserToolHost.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
 type ExtensionTelemetrySource = 'server' | 'renderer' | 'agent' | 'system';
@@ -1008,6 +1016,70 @@ async function dispatchShellCapability(
   throw new Error(`Unsupported shell capability operation: ${request.operation}`);
 }
 
+async function dispatchTerminalCapability(request: ExtensionBackendWorkerCapabilityRequest): Promise<unknown> {
+  const input = normalizeRecordInput(request.input, 'Terminal');
+  if (request.operation === 'create') {
+    return createTerminalSession({
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Terminal cwd') } : {}),
+    });
+  }
+  if (request.operation === 'write') {
+    return writeTerminalSession({
+      id: requireString(input.id, 'Terminal id'),
+      data: requireString(input.data, 'Terminal data'),
+    });
+  }
+  if (request.operation === 'drain') {
+    return drainTerminalSession({ id: requireString(input.id, 'Terminal id') });
+  }
+  if (request.operation === 'resize') {
+    return resizeTerminalSession({
+      id: requireString(input.id, 'Terminal id'),
+      cols: requireNumber(input.cols, 'Terminal cols'),
+      rows: requireNumber(input.rows, 'Terminal rows'),
+    });
+  }
+  if (request.operation === 'close') {
+    return closeTerminalSession({ id: requireString(input.id, 'Terminal id') });
+  }
+  throw new Error(`Unsupported terminal capability operation: ${request.operation}`);
+}
+
+async function dispatchBrowserCapability(request: ExtensionBackendWorkerCapabilityRequest): Promise<unknown> {
+  const host = getWorkbenchBrowserToolHost();
+  if (!host) {
+    throw new Error('Workbench Browser tools are only available in the desktop app.');
+  }
+  const input = normalizeRecordInput(request.input, 'Browser');
+  if (request.operation === 'isActive') {
+    return host.isActive(requireString(input.conversationId, 'Browser conversationId'));
+  }
+  if (request.operation === 'listTabs') {
+    return host.listTabs();
+  }
+  if (request.operation === 'snapshot') {
+    return host.snapshot(
+      requireString(input.conversationId, 'Browser conversationId'),
+      input.tabId !== undefined ? optionalString(input.tabId, 'Browser tabId') : undefined,
+    );
+  }
+  if (request.operation === 'screenshot') {
+    return host.screenshot(
+      requireString(input.conversationId, 'Browser conversationId'),
+      input.tabId !== undefined ? optionalString(input.tabId, 'Browser tabId') : undefined,
+    );
+  }
+  if (request.operation === 'cdp') {
+    return host.cdp({
+      conversationId: requireString(input.conversationId, 'Browser conversationId'),
+      command: input.command,
+      ...(input.continueOnError !== undefined ? { continueOnError: Boolean(input.continueOnError) } : {}),
+      ...(input.tabId !== undefined ? { tabId: optionalString(input.tabId, 'Browser tabId') } : {}),
+    });
+  }
+  throw new Error(`Unsupported browser capability operation: ${request.operation}`);
+}
+
 function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   if (request.operation !== 'invalidate') {
     throw new Error(`Unsupported ui capability operation: ${request.operation}`);
@@ -1358,6 +1430,9 @@ export function createExtensionBackendCapabilityDispatcher(
       listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
   };
   return (request, emit) => {
+    if (request.capability === 'browser') {
+      return dispatchBrowserCapability(request);
+    }
     if (request.capability === 'conversations') {
       return dispatchConversationsCapability(conversations, request);
     }
@@ -1396,6 +1471,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'telemetry') {
       return dispatchTelemetryCapability(telemetry, request);
+    }
+    if (request.capability === 'terminal') {
+      return dispatchTerminalCapability(request);
     }
     if (request.capability === 'ui') {
       return dispatchUiCapability(ui, request);

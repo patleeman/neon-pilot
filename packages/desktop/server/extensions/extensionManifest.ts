@@ -728,6 +728,11 @@ export interface ExtensionBackendAction {
     enabled?: boolean;
     /** Optional allowlist for object inputs with a string `action` field. */
     inputActions?: string[];
+    /**
+     * Allow worker execution for manifest tool calls that carry live-only agent
+     * context or progress callbacks when the action does not consume them.
+     */
+    ignoreLiveContext?: boolean;
   };
 }
 

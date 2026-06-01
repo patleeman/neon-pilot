@@ -2950,6 +2950,61 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('can run declared live-context-independent actions in the worker despite manifest tool live context', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'live-context-worker-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'live-context-worker-ext',
+        name: 'Live Context Worker Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'doThing', handler: 'doThing', worker: { enabled: true, ignoreLiveContext: true } }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function doThing() { return true; }\n');
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'live-context-worker-ext',
+        'doThing',
+        {},
+        undefined,
+        { conversationId: 'conv-1', onUpdate: vi.fn() },
+        { signal: new AbortController().signal },
+      ),
+    ).resolves.toEqual({ ok: true, result: { ok: true } });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalled();
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('loads and executes backend routes through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

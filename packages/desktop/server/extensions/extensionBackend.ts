@@ -655,14 +655,16 @@ function runExtensionBackendExportForSelfTest(extensionId: string, exportName: s
 }
 
 function canRunActionInBackendWorker(
-  action: { worker?: { enabled?: boolean; inputActions?: string[] } } | undefined,
+  action: { worker?: { enabled?: boolean; inputActions?: string[]; ignoreLiveContext?: boolean } } | undefined,
   input: unknown,
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
 ): boolean {
   if (!action?.worker?.enabled) return false;
-  if (agentToolContext !== undefined) return false;
-  if (toolContext?.onUpdate) return false;
+  if (!action.worker.ignoreLiveContext) {
+    if (agentToolContext !== undefined) return false;
+    if (toolContext?.onUpdate) return false;
+  }
   if (action.worker.inputActions && action.worker.inputActions.length > 0) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
     const inputAction = (input as { action?: unknown }).action;

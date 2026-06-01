@@ -854,6 +854,13 @@ export interface ExtensionBackendAction {
   worker?: {
     enabled?: boolean;
     inputActions?: string[];
+    /**
+     * Allow worker execution even when the action is invoked from an agent tool
+     * with live-only context such as an abort signal or progress callback. Use
+     * only for actions whose implementation depends on serializable toolContext
+     * fields and host capabilities, not the live agent context itself.
+     */
+    ignoreLiveContext?: boolean;
   };
 }
 
