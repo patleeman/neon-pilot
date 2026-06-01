@@ -1782,7 +1782,7 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('runs worker-safe prompt assembly inspection actions through the worker runner', async () => {
+  it('runs worker-safe prompt assembly actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),
       clearModule: vi.fn(),
@@ -1797,7 +1797,11 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(async () => true),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
-      runWorkerExport: vi.fn(async () => ({ ok: true, runtimeScope: 'shared', capabilities: [], counts: {} })),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'inspectAgentRuntime'
+          ? { ok: true, runtimeScope: 'shared', capabilities: [], counts: {} }
+          : { ok: true, id: 'skill-a', kind: exportName === 'updateRuntimeCapability' ? 'skill' : undefined, enabled: false },
+      ),
       run: vi.fn(),
     };
     setExtensionBackendRunnerForTests(backendRunner);
@@ -1806,6 +1810,18 @@ describe('extension backend action invocation', () => {
     await expect(invokeExtensionAction('system-prompt-assembly', 'inspectAgentRuntime', { cwd: '/repo' })).resolves.toEqual({
       ok: true,
       result: { ok: true, runtimeScope: 'shared', capabilities: [], counts: {} },
+    });
+    await expect(
+      invokeExtensionAction('system-prompt-assembly', 'updatePromptAssemblySkillEnabled', { id: 'skill-a', enabled: false }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, id: 'skill-a', kind: undefined, enabled: false },
+    });
+    await expect(
+      invokeExtensionAction('system-prompt-assembly', 'updateRuntimeCapability', { id: 'skill-a', kind: 'skill', enabled: false }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, id: 'skill-a', kind: 'skill', enabled: false },
     });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -1832,6 +1848,43 @@ describe('extension backend action invocation', () => {
         }),
       },
     );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-prompt-assembly',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-prompt-assembly', 'dist', 'backend.mjs')),
+      }),
+      'updateSkillEnabled',
+      { type: 'action', label: 'action updatePromptAssemblySkillEnabled', target: 'updatePromptAssemblySkillEnabled' },
+      [{ id: 'skill-a', enabled: false }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-prompt-assembly',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-prompt-assembly', 'dist', 'backend.mjs')),
+      }),
+      'updateRuntimeCapability',
+      { type: 'action', label: 'action updateRuntimeCapability', target: 'updateRuntimeCapability' },
+      [{ id: 'skill-a', kind: 'skill', enabled: false }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledTimes(3);
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
