@@ -71,7 +71,7 @@ if (args.length === 0 || args[0] === 'help' || args[0] === '--help' || args[0] =
 const repoRoot = findRepoRoot(process.cwd());
 if (repoRoot) {
   const cliPath = join(repoRoot, 'scripts', 'neon-pilot-cli.mjs');
-  run(process.execPath, [cliPath, 'protocol', 'ds4-tools', ...args]);
+  run(process.env.NEON_PILOT_NODE_PATH?.trim() || 'node', [cliPath, 'protocol', 'ds4-tools', ...args]);
 } else if (!run('neon-pilot', ['protocol', 'ds4-tools', ...args])) {
   console.error('Unable to find the Neon Pilot CLI. Run ds4 from a Neon Pilot workspace or ensure neon-pilot is on PATH.');
   process.exitCode = 127;

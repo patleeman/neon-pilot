@@ -4,7 +4,11 @@ import { createServer as createNetServer, type Socket } from 'node:net';
 import { PassThrough, Writable } from 'node:stream';
 
 import { setDefaultExtensionBackendWorkerUrl } from '../../server/extensions/extensionBackendWorkerClient.js';
-import { handleInProcessExtensionHostRequest } from '../../server/extensions/extensionHostClient.js';
+import {
+  createInProcessExtensionHostClient,
+  handleInProcessExtensionHostRequest,
+  setExtensionHostClient,
+} from '../../server/extensions/extensionHostClient.js';
 import type {
   ExtensionHostInvokeActionRequest,
   ExtensionHostInvokeProtocolEntrypointRequest,
@@ -207,6 +211,7 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
 
 async function main(): Promise<void> {
   setDefaultExtensionBackendWorkerUrl(new URL('../../server/dist/extensions/extensionBackendWorker.js', import.meta.url));
+  setExtensionHostClient(createInProcessExtensionHostClient());
 
   const token = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim() || randomUUID();
   const server = createServer((request, response) => {
@@ -315,6 +320,8 @@ async function main(): Promise<void> {
     throw new Error('Extension host child did not bind a TCP port.');
   }
 
+  process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = `http://127.0.0.1:${String(address.port)}`;
+  process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = token;
   sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {

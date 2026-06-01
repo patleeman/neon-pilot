@@ -680,12 +680,16 @@ export class LocalBackendProcesses {
     if (ready.type === 'ready') {
       this.extensionHostToken = ready.token || token;
       this.extensionHostBaseUrl = `http://127.0.0.1:${String(ready.port)}`;
+      process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = this.extensionHostBaseUrl;
+      process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = this.extensionHostToken;
     }
     child.once('exit', () => {
       if (this.extensionHostChild === child) {
         this.extensionHostChild = undefined;
         this.extensionHostBaseUrl = undefined;
         this.extensionHostToken = undefined;
+        delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
+        delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
       }
     });
     return ready;

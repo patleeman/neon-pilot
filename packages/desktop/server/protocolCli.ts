@@ -3,7 +3,8 @@ import { pathToFileURL } from 'node:url';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
-import { getExtensionHostClient } from './extensions/extensionHostClient.js';
+import { getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
+import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 
 export const PROTOCOL_CLI_EXIT_CODES = {
@@ -39,6 +40,13 @@ function usage(): string {
   return ['Usage: neon-pilot protocol <protocol-id>', '', 'Example: neon-pilot protocol acp'].join('\n');
 }
 
+function createExtensionHostClientFromEnv(): ExtensionHostClient | null {
+  const baseUrl = process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL?.trim();
+  const token = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim();
+  if (!baseUrl || !token) return null;
+  return createExtensionHostRpcClient({ baseUrl, token });
+}
+
 function classifyError(error: unknown): number {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('No enabled extension provides protocol entrypoint')) return PROTOCOL_CLI_EXIT_CODES.notFound;
@@ -56,16 +64,11 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
     return PROTOCOL_CLI_EXIT_CODES.usage;
   }
 
-  const stdinCloseController = new AbortController();
-  const signal = options?.signal ?? stdinCloseController.signal;
-  const abortOnStdinClose = () => stdinCloseController.abort();
-  if (!options?.signal) {
-    process.stdin.once('close', abortOnStdinClose);
-    process.stdin.once('end', abortOnStdinClose);
-  }
+  const signal = options?.signal ?? new AbortController().signal;
 
   try {
-    await getExtensionHostClient().invokeProtocolEntrypoint({
+    const extensionHostClient = createExtensionHostClientFromEnv() ?? getExtensionHostClient();
+    await extensionHostClient.invokeProtocolEntrypoint({
       protocolId,
       input: { args: protocolArgs },
       serverContextSnapshot: buildServerContextSnapshot(),
@@ -81,11 +84,6 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${message}\n`);
     return classifyError(error);
-  } finally {
-    if (!options?.signal) {
-      process.stdin.off('close', abortOnStdinClose);
-      process.stdin.off('end', abortOnStdinClose);
-    }
   }
 }
 

@@ -3,12 +3,14 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const cliDistPath = resolve(process.cwd(), 'packages/desktop/dist/server/protocolCli.js');
-const cliSourcePath = resolve(process.cwd(), 'packages/desktop/server/protocolCli.ts');
-const tsxPath = resolve(process.cwd(), 'node_modules/.bin/tsx');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const cliDistPath = resolve(repoRoot, 'packages/desktop/dist/server/protocolCli.js');
+const cliSourcePath = resolve(repoRoot, 'packages/desktop/server/protocolCli.ts');
+const tsxPath = resolve(repoRoot, 'node_modules/.bin/tsx');
 
 function canUseBuiltCli() {
   if (!existsSync(cliDistPath)) return false;
@@ -28,7 +30,7 @@ const args = canUseBuiltCli() ? [cliDistPath, ...process.argv.slice(2)] : [cliSo
 
 const child = spawn(command, args, {
   stdio: 'inherit',
-  cwd: process.cwd(),
+  cwd: repoRoot,
   env: process.env,
 });
 
@@ -52,4 +54,12 @@ child.on('exit', (code, signal) => {
     return;
   }
   process.exit(code ?? 1);
+});
+
+child.on('error', (error) => {
+  process.off('SIGINT', forwardSignal);
+  process.off('SIGTERM', forwardSignal);
+  process.off('exit', killChildOnExit);
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(127);
 });

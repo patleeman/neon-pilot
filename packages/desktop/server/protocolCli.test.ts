@@ -8,10 +8,17 @@ const runtime = vi.hoisted(() => ({
   })),
 }));
 const extensionHostClient = vi.hoisted(() => ({ invokeProtocolEntrypoint: vi.fn(async () => undefined) }));
+const extensionHostRpcClient = vi.hoisted(() => ({
+  createExtensionHostRpcClient: vi.fn(() => extensionHostClient),
+}));
 
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('./app/runtimeState.js', () => runtime);
-vi.mock('./extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
+vi.mock('./extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => extensionHostClient,
+  setExtensionHostClient: vi.fn(),
+}));
+vi.mock('./extensions/extensionHostRpcClient.js', () => extensionHostRpcClient);
 
 import { main, PROTOCOL_CLI_EXIT_CODES, runProtocolCli } from './protocolCli.js';
 
@@ -20,6 +27,8 @@ describe('protocol CLI', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
+    delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
     stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     process.exitCode = undefined;
   });
@@ -55,6 +64,21 @@ describe('protocol CLI', () => {
       }),
     );
     expect(extensionHostClient.invokeProtocolEntrypoint.mock.calls[0][0]).not.toHaveProperty('serverContext');
+  });
+
+  it('configures an RPC extension host client from app process environment', async () => {
+    process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = 'http://127.0.0.1:4321';
+    process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = 'secret';
+
+    await expect(runProtocolCli(['protocol', 'ds4-tools', 'tools'])).resolves.toBe(0);
+
+    expect(extensionHostRpcClient.createExtensionHostRpcClient).toHaveBeenCalledWith({
+      baseUrl: 'http://127.0.0.1:4321',
+      token: 'secret',
+    });
+    expect(extensionHostClient.invokeProtocolEntrypoint).toHaveBeenCalledWith(
+      expect.objectContaining({ protocolId: 'ds4-tools', input: { args: ['tools'] } }),
+    );
   });
 
   it('maps extension protocol errors to specific exit codes', async () => {
