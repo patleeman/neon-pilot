@@ -49,17 +49,7 @@ Renderer product code -> Electron IPC product methods
 
 Extensions contribute capabilities. The product runtime composes those capabilities into agent runs. Only the product runtime owns the effective prompt, conversation lifecycle, transcript/session persistence, and Pi/Codex execution.
 
-The extension host interface starts in-process and then becomes an RPC adapter:
-
-```text
-Product runtime caller
-  -> ExtensionHostClient
-  -> ExtensionHostRequest
-  -> InProcessExtensionHostClient
-  -> existing extension backend implementation
-```
-
-The later adapter swaps only the final hop:
+The extension host interface is now a product-runtime client boundary. Product code talks to the host through `ExtensionHostClient` request objects:
 
 ```text
 Product runtime caller
@@ -67,6 +57,14 @@ Product runtime caller
   -> ExtensionHostRequest
   -> RpcExtensionHostClient
   -> extension host process
+```
+
+The in-process request handler remains an implementation and test harness for extension-host code, not a product runtime fallback:
+
+```text
+Extension host implementation/test
+  -> In-process request handler
+  -> extension backend implementation
 ```
 
 The RPC adapter must only carry wire-safe data. Product action paths pass serializable server and tool context snapshots where possible. Existing action paths that depend on function-bearing `serverContext` or richer live agent objects must first move those operations behind capability channels.
@@ -88,9 +86,9 @@ Startup actions, backend routes, and backend actions are no longer allowed to fa
 ## Migration Phases
 
 1. Add the product runtime / extension host terminology and the `ExtensionHostClient` seam.
-2. Route narrow product runtime call sites through the in-process client.
+2. Route narrow product runtime call sites through the host client boundary.
 3. Add an extension host child process and RPC adapter.
-4. Move extension backend execution into the extension host process.
+4. Move product runtime dispatch onto the extension host process.
 5. Replace direct backend API shims with capability adapters.
 6. Add permission and audit enforcement at the extension host.
 7. Move user extension backend execution into per-extension workers.

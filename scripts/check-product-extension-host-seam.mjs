@@ -256,6 +256,11 @@ if (existsSync(architectureDocPath)) {
     const line = text.slice(0, staleHybridFallback.index).split('\n').length;
     failures.push(`${architectureDoc}:${line}: architecture doc must not describe a hybrid in-process extension-host fallback`);
   }
+  const staleInProcessStart = /\bextension host interface starts in-process\b/i.exec(text);
+  if (staleInProcessStart) {
+    const line = text.slice(0, staleInProcessStart.index).split('\n').length;
+    failures.push(`${architectureDoc}:${line}: architecture doc must describe the RPC extension-host client boundary as current product behavior`);
+  }
 }
 
 if (failures.length > 0) {
