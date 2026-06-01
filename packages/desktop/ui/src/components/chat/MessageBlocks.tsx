@@ -67,7 +67,9 @@ const QUIET_LIFECYCLE_CONTEXT_TYPES = new Set([...AUTO_RESUME_CONTEXT_TYPES, 'co
 const contextShelfItemClassName = 'group/item w-full text-[12px] text-secondary';
 const contextShelfSummaryClassName =
   'grid w-full cursor-pointer list-none grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden';
-const contextShelfBodyClassName = 'mx-auto mt-3 w-[78%] max-h-[min(34rem,52vh)] overflow-auto text-[12px] leading-relaxed text-primary/90';
+const contextShelfBodyClassName = 'mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary';
+const contextShelfSystemPromptBodyClassName =
+  'mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary/80';
 
 function isAutoResumeLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
   return block.type === 'context' && AUTO_RESUME_CONTEXT_TYPES.has(block.customType ?? '');
@@ -331,7 +333,7 @@ export const ContextShelf = memo(function ContextShelf({
           </span>
           <span className="h-px bg-border-subtle" aria-hidden="true" />
         </summary>
-        <div className="mx-auto mt-3 w-[78%] space-y-1.5">
+        <div className="mt-3 w-full max-w-[72rem] space-y-1.5 pl-5 pr-2">
           {hasSystemPrompt ? (
             <LazyDetails
               className={contextShelfItemClassName}
@@ -353,7 +355,7 @@ export const ContextShelf = memo(function ContextShelf({
                 </summary>
               }
             >
-              <div className={contextShelfBodyClassName}>
+              <div className={contextShelfSystemPromptBodyClassName}>
                 {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
                 {toolDefinitions.length > 0 ? (
                   <div className={normalizedSystemPrompt ? 'mt-4' : undefined}>
