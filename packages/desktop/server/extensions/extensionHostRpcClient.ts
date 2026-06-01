@@ -34,16 +34,7 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
   );
 }
 
-export type ExtensionHostFallbackReason =
-  | 'action:function-bearing-context'
-  | 'protocol:stdio-streams';
-
-export function getExtensionHostInvokeActionFallbackReason(
-  input: ExtensionHostInvokeActionInput,
-): ExtensionHostFallbackReason | null {
-  if (isWireableExtensionHostStreamingActionInput(input)) return null;
-  return isWireableExtensionHostInvokeActionInput(input) ? null : 'action:function-bearing-context';
-}
+export type ExtensionHostFallbackReason = 'protocol:stdio-streams';
 
 function hasOnlyToolUpdateCallback(input: ExtensionHostInvokeActionInput): boolean {
   const toolContext = input.toolContext;
@@ -317,9 +308,6 @@ export function createHybridExtensionHostClient(input: {
       return input.rpcClient.health();
     },
     async invokeAction(actionInput) {
-      if (getExtensionHostInvokeActionFallbackReason(actionInput)) {
-        return input.fallbackClient.invokeAction(actionInput);
-      }
       return input.rpcClient.invokeAction(actionInput);
     },
     async checkBackendHealth() {

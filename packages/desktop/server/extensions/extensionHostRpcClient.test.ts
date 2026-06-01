@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createExtensionHostRpcClient,
   createHybridExtensionHostClient,
-  getExtensionHostInvokeActionFallbackReason,
   getExtensionHostProtocolEntrypointFallbackReason,
   hasFunction,
   isWireableExtensionHostInvokeActionInput,
@@ -109,24 +108,6 @@ describe('extension host RPC client', () => {
   });
 
   it('names the remaining hybrid fallback reasons', () => {
-    expect(getExtensionHostInvokeActionFallbackReason({ extensionId: 'ext', actionId: 'safe', input: {} })).toBeNull();
-    expect(
-      getExtensionHostInvokeActionFallbackReason({
-        extensionId: 'ext',
-        actionId: 'streaming-safe',
-        input: {},
-        toolContext: { onUpdate: () => undefined },
-        toolContextSnapshot: { cwd: '/repo' },
-      }),
-    ).toBeNull();
-    expect(
-      getExtensionHostInvokeActionFallbackReason({
-        extensionId: 'ext',
-        actionId: 'unsafe',
-        input: {},
-        agentToolContext: { run: () => undefined },
-      }),
-    ).toBe('action:function-bearing-context');
     expect(getExtensionHostProtocolEntrypointFallbackReason()).toBe('protocol:stdio-streams');
   });
 
@@ -285,7 +266,7 @@ describe('extension host RPC client', () => {
     );
   });
 
-  it('uses RPC for wire-safe and streaming-update calls, with fallback for non-wireable callbacks', async () => {
+  it('uses RPC for wire-safe and streaming-update calls', async () => {
     const rpcClient = {
       checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
@@ -322,12 +303,44 @@ describe('extension host RPC client', () => {
         toolContextSnapshot: { cwd: '/repo' },
       }),
     ).resolves.toEqual({ ok: true, result: 'rpc' });
-    await expect(
-      client.invokeAction({ extensionId: 'ext', actionId: 'unsafe', input: {}, agentToolContext: { run: () => undefined } }),
-    ).resolves.toEqual({ ok: true, result: 'fallback' });
 
     expect(rpcClient.invokeAction).toHaveBeenCalledTimes(2);
-    expect(fallbackClient.invokeAction).toHaveBeenCalledTimes(1);
+    expect(fallbackClient.invokeAction).not.toHaveBeenCalled();
+  });
+
+  it('rejects function-bearing action contexts in the hybrid client', async () => {
+    const rpcClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockRejectedValue(new Error('Extension host RPC cannot carry function-bearing contexts')),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      invokeRoute: vi.fn().mockResolvedValue({ status: 200, body: 'rpc' }),
+      listActionTelemetry: vi.fn().mockResolvedValue([]),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      reloadBackend: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', rebuilt: false }),
+      runSelfTest: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', checks: [] }),
+      startStartupActions: vi.fn().mockResolvedValue([]),
+    };
+    const fallbackClient = {
+      checkBackendHealth: vi.fn().mockResolvedValue([]),
+      health: vi.fn().mockResolvedValue({ status: 'ready' }),
+      invokeAction: vi.fn().mockResolvedValue({ ok: true, result: 'fallback' }),
+      invokeProtocolEntrypoint: vi.fn().mockResolvedValue(undefined),
+      invokeRoute: vi.fn().mockResolvedValue({ status: 200, body: 'fallback' }),
+      listActionTelemetry: vi.fn().mockResolvedValue([]),
+      publishEvent: vi.fn().mockResolvedValue(undefined),
+      reloadBackend: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', rebuilt: false }),
+      runSelfTest: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext', checks: [] }),
+      startStartupActions: vi.fn().mockResolvedValue([]),
+    };
+    const client = createHybridExtensionHostClient({ rpcClient, fallbackClient });
+
+    await expect(
+      client.invokeAction({ extensionId: 'ext', actionId: 'unsafe', input: {}, agentToolContext: { run: () => undefined } }),
+    ).rejects.toThrow('function-bearing contexts');
+
+    expect(rpcClient.invokeAction).toHaveBeenCalledTimes(1);
+    expect(fallbackClient.invokeAction).not.toHaveBeenCalled();
   });
 
   it('keeps protocol entrypoints on fallback until stdio capability channels exist', async () => {
