@@ -609,7 +609,10 @@
       {
         "id": "askUser",
         "handler": "askUser",
-        "title": "Ask user"
+        "title": "Ask user",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "conversationInspect",
@@ -619,7 +622,10 @@
       {
         "id": "conversationTitle",
         "handler": "conversationTitle",
-        "title": "Conversation title"
+        "title": "Conversation title",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "conversationCwd",
@@ -629,7 +635,10 @@
       {
         "id": "deferredResume",
         "handler": "deferredResumeTool",
-        "title": "Deferred resume"
+        "title": "Deferred resume",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "duplicateConversation",

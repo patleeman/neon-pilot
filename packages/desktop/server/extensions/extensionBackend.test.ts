@@ -409,6 +409,121 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe split conversation tool actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'askUser'
+          ? { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } }
+          : exportName === 'conversationTitle'
+            ? { content: [{ type: 'text', text: 'Conversation title set.' }], details: { conversationId: 'conv-1', title: 'New Title' } }
+            : { content: [{ type: 'text', text: 'scheduled' }], details: { text: 'scheduled', id: 'resume-1' } },
+      ),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'system-conversation-tools',
+        'askUser',
+        { question: 'Proceed?', options: ['Yes', 'No'] },
+        undefined,
+        { conversationId: 'conv-1', cwd: '/repo' },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      result: { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTitle', { title: 'New Title' }, undefined, { conversationId: 'conv-1' }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { content: [{ type: 'text', text: 'Conversation title set.' }], details: { conversationId: 'conv-1', title: 'New Title' } },
+    });
+    await expect(
+      invokeExtensionAction(
+        'system-conversation-tools',
+        'deferredResume',
+        { action: 'add', trigger: 'delay', delay: '10m' },
+        undefined,
+        { conversationId: 'conv-1', sessionFile: '/session.json', cwd: '/repo' },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      result: { content: [{ type: 'text', text: 'scheduled' }], details: { text: 'scheduled', id: 'resume-1' } },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'askUser',
+      { type: 'action', label: 'action askUser', target: 'askUser' },
+      [{ question: 'Proceed?', options: ['Yes', 'No'] }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTitle',
+      { type: 'action', label: 'action conversationTitle', target: 'conversationTitle' },
+      [{ title: 'New Title' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'deferredResumeTool',
+      { type: 'action', label: 'action deferredResume', target: 'deferredResume' },
+      [{ action: 'add', trigger: 'delay', delay: '10m' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', sessionFile: '/session.json', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('runs worker-safe local dictation settings actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),
