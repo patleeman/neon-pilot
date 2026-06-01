@@ -301,6 +301,35 @@ description: Commit and push the agent's current work.
     expect(runtimeSettings.defaultThinkingLevel).toBe('high');
   });
 
+  it('does not feed materialized runtime files back into themselves', () => {
+    const repo = createTempRepo();
+    const runtime = mkdtempSync(join(tmpdir(), 'neon-pilot-runtime-'));
+    tempDirs.push(runtime);
+
+    writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
+    writeFile(join(repo, 'defaults/agent/APPEND_SYSTEM.md'), 'shared append\n');
+    writeFile(join(runtime, 'AGENTS.md'), '# Stale materialized copy\n');
+    writeFile(join(runtime, 'APPEND_SYSTEM.md'), 'stale append\n');
+
+    const resolved = resolveRuntimeResources('shared', { repoRoot: repo });
+    const result = materializeRuntimeResourcesToAgentDir(
+      {
+        ...resolved,
+        agentsFiles: [join(runtime, 'AGENTS.md'), ...resolved.agentsFiles],
+        appendSystemFiles: [join(runtime, 'APPEND_SYSTEM.md'), ...resolved.appendSystemFiles],
+      },
+      runtime,
+    );
+
+    const agentsContent = readFileSync(join(runtime, 'AGENTS.md'), 'utf-8');
+    const appendContent = readFileSync(join(runtime, 'APPEND_SYSTEM.md'), 'utf-8');
+    expect(result.writtenFiles.some((path) => path.endsWith('/AGENTS.md'))).toBe(true);
+    expect(agentsContent).toContain('# Shared');
+    expect(agentsContent).not.toContain('Stale materialized copy');
+    expect(appendContent).toContain('shared append');
+    expect(appendContent).not.toContain('stale append');
+  });
+
   it('installs package sources into local settings', () => {
     const repo = createTempRepo();
     const local = mkdtempSync(join(tmpdir(), 'neon-pilot-local-'));

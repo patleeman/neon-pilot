@@ -230,6 +230,7 @@ export interface ExtensionModelProfileRegistration {
   match: string[];
   priority: number;
   startupAction?: string;
+  activeTools?: string[];
 }
 
 export interface ExtensionAgentRegistration {

@@ -602,6 +602,7 @@ export interface ExtensionModelProfileContribution {
   match: string[];
   priority?: number;
   startupAction?: string;
+  activeTools?: string[];
 }
 
 export type ExtensionSurface =

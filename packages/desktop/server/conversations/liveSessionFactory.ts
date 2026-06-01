@@ -10,6 +10,7 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { resolveChildProcessEnv } from '@neon-pilot/core';
 
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { formatProcessLaunchShellCommand, resolveProcessLaunch } from '../shared/processLauncher.js';
@@ -34,6 +35,21 @@ let cachedToolSelection: {
   activeToolNames: string[];
   cachedAtMs: number;
 } | null = null;
+
+function parseModelRef(modelRef: string): { provider: string; model: string } | null {
+  const separator = modelRef.indexOf('/');
+  if (separator <= 0 || separator >= modelRef.length - 1) return null;
+  return { provider: modelRef.slice(0, separator), model: modelRef.slice(separator + 1) };
+}
+
+async function resolveModelProfileActiveTools(modelRef: string): Promise<string[] | null> {
+  const parsed = parseModelRef(modelRef);
+  if (!parsed) return null;
+  const profile = await getExtensionHostClient().resolveModelProfile(parsed);
+  if (profile.kind !== 'resolved') return null;
+  const activeTools = profile.profile.activeTools;
+  return Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length ? activeTools : null;
+}
 
 export function makeAuth(agentDir: string): AuthStorage {
   return AuthStorage.create(`${agentDir}/auth.json`);
@@ -140,6 +156,7 @@ export async function createPreparedLiveAgentSession(input: {
   const settingsAtMs = performance.now();
   const resourceLoader = await makeLoader(input.cwd, options);
   const loaderAtMs = performance.now();
+  const modelProfileActiveTools = await resolveModelProfileActiveTools(readSavedModelRef(input.settingsFile, modelRegistry.getAvailable()));
   const { session } = await createAgentSession({
     cwd: input.cwd,
     agentDir,
@@ -148,7 +165,7 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
-    ...(options.allowedToolNames ? { tools: options.allowedToolNames } : {}),
+    ...(modelProfileActiveTools ?? options.allowedToolNames ? { tools: modelProfileActiveTools ?? options.allowedToolNames } : {}),
   });
   const agentSessionAtMs = performance.now();
 
@@ -188,7 +205,9 @@ export async function createPreparedLiveAgentSession(input: {
     resolveConversationPreferenceStateForSession(input.settingsFile, session.sessionManager, availableModels).currentServiceTier,
   );
 
-  await applyExtensionToolSelection(session, input.settingsFile);
+  if (!modelProfileActiveTools) {
+    await applyExtensionToolSelection(session, input.settingsFile);
+  }
   const doneAtMs = performance.now();
 
   return {

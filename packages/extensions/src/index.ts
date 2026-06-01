@@ -366,6 +366,7 @@ export interface ExtensionModelProfileContribution {
   description?: string;
   match: string[];
   priority?: number;
+  activeTools?: string[];
 }
 
 export type ExtensionModelProfileRuntimeContext =
@@ -373,7 +374,7 @@ export type ExtensionModelProfileRuntimeContext =
   | {
       kind: 'resolved';
       modelRef: string;
-      profile: { id: string; extensionId: string; title?: string; match: string[]; priority: number };
+      profile: { id: string; extensionId: string; title?: string; match: string[]; priority: number; activeTools?: string[] };
     }
   | {
       kind: 'ambiguous';

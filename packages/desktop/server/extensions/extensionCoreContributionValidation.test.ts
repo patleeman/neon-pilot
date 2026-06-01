@@ -14,7 +14,7 @@ describe('extensionCoreContributionValidation', () => {
         { id: 'tool', description: 'Tool', when: { providers: ['openai'], models: ['gpt'] }, promptGuidelines: ['Use it'] },
       ]),
     ).toBeUndefined();
-    expect(validateModelProfileContributions([{ id: 'profile', match: ['gpt-*'], priority: 1 }])).toBeUndefined();
+    expect(validateModelProfileContributions([{ id: 'profile', match: ['gpt-*'], priority: 1, activeTools: ['bash'] }])).toBeUndefined();
   });
 
   it('preserves validation errors', () => {
@@ -28,6 +28,9 @@ describe('extensionCoreContributionValidation', () => {
     );
     expect(() => validateModelProfileContributions([{ id: 'profile', match: ['gpt-*'], priority: 'high' }])).toThrow(
       'Extension manifest contributes.modelProfiles[0].priority must be a number.',
+    );
+    expect(() => validateModelProfileContributions([{ id: 'profile', match: ['gpt-*'], activeTools: [1] }])).toThrow(
+      'Extension manifest contributes.modelProfiles[0].activeTools must be an array of non-empty strings.',
     );
   });
 });

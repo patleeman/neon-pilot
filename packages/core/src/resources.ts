@@ -866,6 +866,11 @@ export function materializeRuntimeResourcesToAgentDir(
   agentDir: string,
 ): MaterializeRuntimeResourcesResult {
   const targetDir = resolve(agentDir);
+  const targetPath = (fileName: string) => resolve(targetDir, fileName);
+  const excludeTargetFile = (paths: string[], fileName: string) => {
+    const target = targetPath(fileName);
+    return paths.filter((path) => resolve(path) !== target);
+  };
   mkdirSync(targetDir, { recursive: true });
 
   const writtenFiles: string[] = [];
@@ -900,15 +905,18 @@ export function materializeRuntimeResourcesToAgentDir(
     writeOrRemove('models.json', undefined);
   }
 
-  if (resources.agentsFiles.length > 0) {
-    const agentsContent = combineMarkdownFiles(resources.agentsFiles);
+  const sourceAgentsFiles = excludeTargetFile(resources.agentsFiles, 'AGENTS.md');
+  if (sourceAgentsFiles.length > 0) {
+    const agentsContent = combineMarkdownFiles(sourceAgentsFiles);
     writeOrRemove('AGENTS.md', `${agentsContent}\n`);
   } else {
     writeOrRemove('AGENTS.md', undefined);
   }
 
-  if (resources.systemPromptFile) {
-    const systemContent = readFileSync(resources.systemPromptFile, 'utf-8');
+  const sourceSystemPromptFile =
+    resources.systemPromptFile && resolve(resources.systemPromptFile) !== targetPath('SYSTEM.md') ? resources.systemPromptFile : undefined;
+  if (sourceSystemPromptFile) {
+    const systemContent = readFileSync(sourceSystemPromptFile, 'utf-8');
     writeOrRemove('SYSTEM.md', systemContent);
   } else {
     writeOrRemove('SYSTEM.md', undefined);
@@ -926,7 +934,8 @@ export function materializeRuntimeResourcesToAgentDir(
   };
 
   const generatedAppendContent = renderSystemPromptTemplate(templateVariables, readMachineSystemPromptTemplate());
-  const fileAppendContent = resources.appendSystemFiles.length > 0 ? combineMarkdownFiles(resources.appendSystemFiles) : undefined;
+  const sourceAppendSystemFiles = excludeTargetFile(resources.appendSystemFiles, 'APPEND_SYSTEM.md');
+  const fileAppendContent = sourceAppendSystemFiles.length > 0 ? combineMarkdownFiles(sourceAppendSystemFiles) : undefined;
   const appendContent = combineMarkdownChunks([generatedAppendContent ?? '', fileAppendContent ?? '']);
 
   if (appendContent.length > 0) {

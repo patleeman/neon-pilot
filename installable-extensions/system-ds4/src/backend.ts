@@ -927,9 +927,7 @@ export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
       if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'ds4-compatible') {
         return;
       }
-      const active = ctx.getActiveTools?.() ?? [];
-      const keep = active.filter((tool) => !['ds4_capabilities', 'list', 'search', 'google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'].includes(tool));
-      ctx.setActiveTools?.([...new Set([...keep, ...DS4_CORE_TOOLS])]);
+      ctx.setActiveTools?.(DS4_CORE_TOOLS);
     };
 
     pi.on('session_start', (_event, ctx) => activate(ctx));

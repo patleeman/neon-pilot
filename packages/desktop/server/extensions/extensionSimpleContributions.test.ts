@@ -52,7 +52,7 @@ describe('extensionSimpleContributions', () => {
       buildExtensionModelProfileRegistrations({
         extensionId: 'models-board',
         profiles: [
-          { id: ' fast ', title: 'Fast', description: 'Fast models', match: [' gpt-* ', '', 'claude-*'], priority: 7 },
+          { id: ' fast ', title: 'Fast', description: 'Fast models', match: [' gpt-* ', '', 'claude-*'], priority: 7, activeTools: [' bash ', '', 'read'] },
           { id: 'empty-match', match: [' '] },
           { id: ' ', match: ['gpt-*'] },
           { id: 'default-priority', match: ['gemini-*'], priority: Number.NaN },
@@ -67,6 +67,7 @@ describe('extensionSimpleContributions', () => {
         description: 'Fast models',
         match: ['gpt-*', 'claude-*'],
         priority: 7,
+        activeTools: ['bash', 'read'],
       },
       {
         extensionId: 'models-board',

@@ -11,6 +11,9 @@ const modelPrefs = vi.hoisted(() => ({
   readSavedModelPreferences: vi.fn(() => ({ currentServiceTier: 'auto' })),
   readSavedModelRef: vi.fn(() => 'provider/model'),
 }));
+const extensionRegistry = vi.hoisted(() => ({
+  resolveModelProfile: vi.fn(async () => ({ kind: 'none' })),
+}));
 const modelRegistry = vi.hoisted(() => ({
   createRuntimeModelRegistry: vi.fn(() => ({ getAvailable: vi.fn(() => [{ id: 'model-1', provider: 'provider' }]) })),
 }));
@@ -34,6 +37,7 @@ const persistence = vi.hoisted(() => ({
 
 vi.mock('@earendil-works/pi-coding-agent', () => agent);
 vi.mock('@neon-pilot/core', () => core);
+vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionRegistry }));
 vi.mock('../models/modelPreferences.js', () => modelPrefs);
 vi.mock('../models/modelRegistry.js', () => modelRegistry);
 vi.mock('../shared/processLauncher.js', () => launcher);
@@ -63,6 +67,8 @@ describe('live session factory', () => {
     process.env.PERSONAL_AGENT_ACTIVE_PROFILE = '';
     process.env.PERSONAL_AGENT_PROFILE = '';
     process.env.PERSONAL_AGENT_REPO_ROOT = '/repo';
+    extensionRegistry.resolveModelProfile.mockResolvedValue({ kind: 'none' });
+    modelPrefs.readSavedModelRef.mockReturnValue('provider/model');
   });
 
   function session() {
@@ -147,6 +153,28 @@ describe('live session factory', () => {
     );
     expect(liveModels.applyLiveSessionServiceTier).toHaveBeenCalledWith(s, 'flex');
     expect(s.setActiveTools).toHaveBeenCalledWith(['bash', 'web_search', 'artifact']);
+  });
+
+  it('uses exact active tools declared by the selected model profile at session creation', async () => {
+    const s = session();
+    modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+    extensionRegistry.resolveModelProfile.mockResolvedValue({
+      kind: 'resolved',
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit'] },
+    });
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    await createPreparedLiveAgentSession({
+      cwd: '/repo',
+      agentDir: '/agent',
+      settingsFile: '/settings.json',
+      sessionManager: {} as never,
+      options: { allowedToolNames: ['artifact'] },
+    });
+
+    expect(extensionRegistry.resolveModelProfile).toHaveBeenCalledWith({ provider: 'ds4', model: 'deepseek-v4-flash' });
+    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit'] }));
+    expect(s.setActiveTools).not.toHaveBeenCalled();
   });
 
   it('does not re-expand tools after a lifecycle hook has selected a single extension tool mode', async () => {

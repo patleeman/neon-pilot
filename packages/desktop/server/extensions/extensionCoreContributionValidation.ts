@@ -47,6 +47,9 @@ export function validateModelProfileContributions(value: unknown): void {
     validateOptionalString(profile.title, `contributes.modelProfiles[${index}].title`);
     validateOptionalString(profile.description, `contributes.modelProfiles[${index}].description`);
     validateOptionalString(profile.startupAction, `contributes.modelProfiles[${index}].startupAction`);
+    if (profile.activeTools !== undefined) {
+      requireStringArray(profile.activeTools, `contributes.modelProfiles[${index}].activeTools`);
+    }
     if (profile.priority !== undefined && typeof profile.priority !== 'number') {
       throw new Error(`Extension manifest contributes.modelProfiles[${index}].priority must be a number.`);
     }

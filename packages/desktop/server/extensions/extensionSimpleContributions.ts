@@ -19,6 +19,7 @@ export interface ExtensionModelProfileRegistration {
   match: string[];
   priority: number;
   startupAction?: string;
+  activeTools?: string[];
 }
 
 export function buildExtensionMentionRegistrations(input: {
@@ -69,6 +70,7 @@ export function buildExtensionModelProfileRegistrations(input: {
         match,
         priority: Number.isFinite(profile.priority) ? Number(profile.priority) : 0,
         ...(profile.startupAction ? { startupAction: profile.startupAction } : {}),
+        ...(Array.isArray(profile.activeTools) ? { activeTools: profile.activeTools.map((tool) => tool.trim()).filter(Boolean) } : {}),
       },
     ];
   });

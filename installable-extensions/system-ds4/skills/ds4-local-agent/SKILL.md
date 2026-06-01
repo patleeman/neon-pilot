@@ -22,7 +22,8 @@ DS4 is local DeepSeek V4 Flash served by `ds4-server`. It is optimized for codin
   - `rg -n --hidden --glob '!node_modules' --glob '!dist' 'pattern' path`
   - `git status --short && git diff --stat`
 - Use `read` with `start_line` and `max_lines` for focused file windows.
-- Use `edit` for exact targeted replacements after reading the surrounding anchor text. For large replacements, use `old` with `[upto]` between unique head and tail anchors.
+- Use `edit` for exact targeted replacements after reading the surrounding anchor text.
+- For large replacements, write old/new snippets to temp files and use `ds4 edit path --old-file /tmp/old --new-file /tmp/new`.
 - Use shell redirection or scripts through `bash` for new files or deliberate whole-file replacement when `edit` is not the right fit.
 - Keep long commands bounded with `timeout_sec`.
 - Do not paste large file contents into assistant text when a tool result already captured them.
