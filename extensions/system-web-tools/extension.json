@@ -7,7 +7,7 @@
   "version": "0.1.0",
   "backend": {
     "entry": "src/backend.ts",
-    "actions": [{ "id": "webFetch", "handler": "webFetch", "title": "Fetch URL" }]
+    "actions": [{ "id": "webFetch", "handler": "webFetch", "title": "Fetch URL", "worker": { "enabled": true } }]
   },
   "contributes": {
     "tools": [
