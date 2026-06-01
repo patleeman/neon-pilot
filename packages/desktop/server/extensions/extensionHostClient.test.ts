@@ -183,6 +183,21 @@ describe('extension host client', () => {
     expect(listExtensionHostAuditEvents()[0]).not.toHaveProperty('body');
   });
 
+  it('routes host audit event reads through the extension host request envelope', async () => {
+    clearExtensionHostAuditEvents();
+    setExtensionHostClient(createInProcessExtensionHostClient());
+
+    await handleInProcessExtensionHostRequest({ type: 'health' });
+
+    await expect(getExtensionHostClient().listAuditEvents()).resolves.toEqual([
+      expect.objectContaining({
+        requestType: 'health',
+        requestName: 'health',
+        ok: true,
+      }),
+    ]);
+  });
+
   it('routes publishEvent through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionSubscriptions.publishExtensionHostEvent.mockResolvedValueOnce(undefined);
@@ -588,6 +603,7 @@ describe('extension host client', () => {
       }),
     ).toBe('invokeRoute:ext:GET:/status');
     expect(extensionHostRequestName({ type: 'listActionTelemetry', extensionId: 'ext' })).toBe('listActionTelemetry');
+    expect(extensionHostRequestName({ type: 'listAuditEvents' })).toBe('listAuditEvents');
     expect(extensionHostRequestName({ type: 'runSelfTest', extensionId: 'ext' })).toBe('runSelfTest:ext');
     expect(extensionHostRequestName({ type: 'reloadBackend', extensionId: 'ext' })).toBe('reloadBackend:ext');
     expect(extensionHostRequestName({ type: 'setKeybinding', extensionId: 'ext', keybindingId: 'open' })).toBe('setKeybinding:ext/open');

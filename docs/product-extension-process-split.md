@@ -79,7 +79,7 @@ Manifest-declared tools also invoke backend actions through `ExtensionHostClient
 
 Extension host request handling records metadata-only audit events at the host boundary. These events include request type, stable request name, success/failure, duration, timestamp, and error text for failed requests. They must not record request bodies, route bodies, action inputs, prompt text, or extension payloads.
 
-Action telemetry is still the action-level diagnostic stream. Host audit events are the process-boundary diagnostic stream and should stay close to the host protocol rather than being scattered through product runtime call sites.
+Action telemetry is still the action-level diagnostic stream. Host audit events are the process-boundary diagnostic stream and are read through `ExtensionHostClient`, so diagnostics do not import extension-host implementation modules or scatter audit logic through product runtime call sites.
 
 ## Current Product Fallbacks
 

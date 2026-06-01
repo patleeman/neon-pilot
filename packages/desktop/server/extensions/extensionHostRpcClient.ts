@@ -428,6 +428,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('telemetry' in response)) throw new Error('Extension host returned an invalid telemetry response.');
       return response.telemetry;
     },
+    async listAuditEvents() {
+      const response = await send({ type: 'listAuditEvents' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('auditEvents' in response)) throw new Error('Extension host returned an invalid audit event response.');
+      return response.auditEvents;
+    },
     async reloadBackend(input) {
       const response = await send({ type: 'reloadBackend', ...input });
       if (!response.ok) throw new Error(response.error);

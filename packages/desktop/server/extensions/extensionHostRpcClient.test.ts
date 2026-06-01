@@ -339,6 +339,7 @@ describe('extension host RPC client', () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ ok: true, telemetry: [{ extensionId: 'ext', actionId: 'run', ok: true }] }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, auditEvents: [{ id: 1, requestType: 'health', requestName: 'health', ok: true, durationMs: 1, at: '2026-01-01T00:00:00.000Z' }] }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, selfTest: { ok: true, extensionId: 'ext', checks: [] } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, reload: { ok: true, extensionId: 'ext', rebuilt: false } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, enabledResult: { ok: true, extension: { id: 'ext', enabled: true } } }))
@@ -349,6 +350,9 @@ describe('extension host RPC client', () => {
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
     await expect(client.listActionTelemetry('ext')).resolves.toEqual([{ extensionId: 'ext', actionId: 'run', ok: true }]);
+    await expect(client.listAuditEvents()).resolves.toEqual([
+      { id: 1, requestType: 'health', requestName: 'health', ok: true, durationMs: 1, at: '2026-01-01T00:00:00.000Z' },
+    ]);
     await expect(client.runSelfTest({ extensionId: 'ext' })).resolves.toEqual({ ok: true, extensionId: 'ext', checks: [] });
     await expect(client.reloadBackend({ extensionId: 'ext' })).resolves.toEqual({ ok: true, extensionId: 'ext', rebuilt: false });
     await expect(client.setEnabled({ extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } })).resolves.toEqual({
@@ -375,15 +379,20 @@ describe('extension host RPC client', () => {
     expect(fetchImpl).toHaveBeenNthCalledWith(
       2,
       'http://host/rpc',
-      expect.objectContaining({ body: JSON.stringify({ request: { type: 'runSelfTest', extensionId: 'ext' } }) }),
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'listAuditEvents' } }) }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       3,
       'http://host/rpc',
-      expect.objectContaining({ body: JSON.stringify({ request: { type: 'reloadBackend', extensionId: 'ext' } }) }),
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'runSelfTest', extensionId: 'ext' } }) }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       4,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'reloadBackend', extensionId: 'ext' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      5,
       'http://host/rpc',
       expect.objectContaining({
         body: JSON.stringify({
@@ -392,28 +401,28 @@ describe('extension host RPC client', () => {
       }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
-      5,
+      6,
       'http://host/rpc',
       expect.objectContaining({
         body: JSON.stringify({ request: { type: 'setKeybinding', extensionId: 'ext', keybindingId: 'open', keys: ['Meta+O'] } }),
       }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
-      6,
+      7,
       'http://host/rpc',
       expect.objectContaining({
         body: JSON.stringify({ request: { type: 'beginStartupGuard' } }),
       }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
-      7,
+      8,
       'http://host/rpc',
       expect.objectContaining({
         body: JSON.stringify({ request: { type: 'completeStartupGuard' } }),
       }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
-      8,
+      9,
       'http://host/route',
       expect.objectContaining({
         body: JSON.stringify({

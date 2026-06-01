@@ -1,12 +1,4 @@
-export interface ExtensionHostAuditEvent {
-  id: number;
-  requestType: string;
-  requestName: string;
-  ok: boolean;
-  durationMs: number;
-  at: string;
-  error?: string;
-}
+import type { ExtensionHostAuditEvent } from './extensionHostProtocol.js';
 
 const maxExtensionHostAuditEvents = 500;
 

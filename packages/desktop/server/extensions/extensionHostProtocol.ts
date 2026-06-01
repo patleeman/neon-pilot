@@ -61,6 +61,16 @@ export interface ExtensionHostActionTelemetryEntry {
   error?: string;
 }
 
+export interface ExtensionHostAuditEvent {
+  id: number;
+  requestType: string;
+  requestName: string;
+  ok: boolean;
+  durationMs: number;
+  at: string;
+  error?: string;
+}
+
 export interface ExtensionHostRunningService {
   extensionId: string;
   serviceId: string;
@@ -383,6 +393,10 @@ export interface ExtensionHostListActionTelemetryRequest {
   extensionId?: string;
 }
 
+export interface ExtensionHostListAuditEventsRequest {
+  type: 'listAuditEvents';
+}
+
 export interface ExtensionHostRunSelfTestRequest {
   type: 'runSelfTest';
   extensionId: string;
@@ -466,6 +480,7 @@ export type ExtensionHostRequest =
   | ExtensionHostStartStartupActionsRequest
   | ExtensionHostInvokeRouteRequest
   | ExtensionHostListActionTelemetryRequest
+  | ExtensionHostListAuditEventsRequest
   | ExtensionHostRunSelfTestRequest
   | ExtensionHostReloadBackendRequest
   | ExtensionHostSetKeybindingRequest
@@ -564,6 +579,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      auditEvents: ExtensionHostAuditEvent[];
+    }
+  | {
+      ok: true;
       selfTest: ExtensionHostSelfTestResult;
     }
   | {
@@ -607,6 +626,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;
   if (request.type === 'listActionTelemetry') return 'listActionTelemetry';
+  if (request.type === 'listAuditEvents') return 'listAuditEvents';
   if (request.type === 'runSelfTest') return `runSelfTest:${request.extensionId}`;
   if (request.type === 'reloadBackend') return `reloadBackend:${request.extensionId}`;
   if (request.type === 'setKeybinding') return `setKeybinding:${request.extensionId}/${request.keybindingId}`;

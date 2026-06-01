@@ -6,6 +6,7 @@ import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import type {
   ExtensionHostActionInvokeResult,
   ExtensionHostActionTelemetryEntry,
+  ExtensionHostAuditEvent,
   ExtensionHostBackendOperationResult,
   ExtensionHostBackendServerContext,
   ExtensionHostBeginStartupGuardRequest,
@@ -127,6 +128,7 @@ export interface ExtensionHostClient {
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
+  listAuditEvents(): Promise<ExtensionHostAuditEvent[]>;
   reloadBackend(input: ExtensionHostReloadBackendInput): Promise<ExtensionHostReloadBackendResult>;
   runSelfTest(input: ExtensionHostRunSelfTestInput): Promise<ExtensionHostSelfTestResult>;
   setEnabled(input: ExtensionHostSetEnabledInput): Promise<ExtensionHostSetEnabledResult>;
@@ -275,6 +277,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!('telemetry' in response)) throw new Error('Extension host returned an invalid telemetry response.');
       return response.telemetry;
     },
+    async listAuditEvents() {
+      const response = await handleInProcessExtensionHostRequest({ type: 'listAuditEvents' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('auditEvents' in response)) throw new Error('Extension host returned an invalid audit event response.');
+      return response.auditEvents;
+    },
     async reloadBackend(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'reloadBackend', ...input });
       if (!response.ok) throw new Error(response.error);
@@ -395,6 +403,10 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     if (request.type === 'listActionTelemetry') {
       const { listExtensionActionTelemetry } = await import('./extensionBackend.js');
       return { ok: true, telemetry: listExtensionActionTelemetry(request.extensionId) };
+    }
+    if (request.type === 'listAuditEvents') {
+      const { listExtensionHostAuditEvents } = await import('./extensionHostAudit.js');
+      return { ok: true, auditEvents: listExtensionHostAuditEvents() };
     }
     if (request.type === 'reloadBackend') {
       const { reloadExtensionBackend } = await import('./extensionBackend.js');
