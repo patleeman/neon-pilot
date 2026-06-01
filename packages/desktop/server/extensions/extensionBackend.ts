@@ -616,15 +616,29 @@ export async function loadExtensionBackend(extensionId: string): Promise<Extensi
   return loadCompiledExtensionBackendModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
 }
 
-function hasExtensionBackendExport(extensionId: string, exportName: string): Promise<boolean> {
-  return getExtensionBackendRunner().hasExport(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId), exportName);
-}
-
 let workerImportBackendRunner: ReturnType<typeof createWorkerImportExtensionBackendRunner> | undefined;
 
-function loadExtensionBackendForHealthCheck(extensionId: string): Promise<ExtensionBackendModule> {
+function getWorkerImportBackendRunner(): ReturnType<typeof createWorkerImportExtensionBackendRunner> {
   workerImportBackendRunner ??= createWorkerImportExtensionBackendRunner();
-  return workerImportBackendRunner.loadModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
+  return workerImportBackendRunner;
+}
+
+function loadExtensionBackendForHealthCheck(extensionId: string): Promise<ExtensionBackendModule> {
+  return getWorkerImportBackendRunner().loadModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
+}
+
+function loadExtensionBackendForSelfTest(extensionId: string): Promise<ExtensionBackendModule> {
+  return getWorkerImportBackendRunner().loadModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
+}
+
+function hasExtensionBackendExportForSelfTest(extensionId: string, exportName: string): Promise<boolean> {
+  return getWorkerImportBackendRunner().hasExport(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId), exportName);
+}
+
+export function setWorkerImportBackendRunnerForTests(
+  runner: ReturnType<typeof createWorkerImportExtensionBackendRunner> | undefined,
+): void {
+  workerImportBackendRunner = runner;
 }
 
 export type ExtensionBackendExportHandler = (...args: unknown[]) => unknown;
@@ -893,13 +907,13 @@ export async function runExtensionSelfTest(
   if (!entry.manifest.backend?.entry) return { ok: true, extensionId, checks: [{ name: 'backend', ok: true }] };
 
   try {
-    await loadExtensionBackend(extensionId);
+    await loadExtensionBackendForSelfTest(extensionId);
     clearExtensionHealthError(extensionId);
     checks.push({ name: 'backend import', ok: true });
     const actionEntries = entry.manifest.backend.actions ?? [];
     for (const action of actionEntries) {
       const handlerName = action.handler ?? action.id;
-      const hasExport = await hasExtensionBackendExport(extensionId, handlerName);
+      const hasExport = await hasExtensionBackendExportForSelfTest(extensionId, handlerName);
       checks.push({
         name: `action export: ${action.id}`,
         ok: hasExport,
@@ -911,7 +925,7 @@ export async function runExtensionSelfTest(
     for (const [actionId, input] of Object.entries(actionInputs)) {
       const action = actionEntries.find((candidate) => candidate.id === actionId);
       const handlerName = action?.handler ?? actionId;
-      if (!(await hasExtensionBackendExport(extensionId, handlerName))) {
+      if (!(await hasExtensionBackendExportForSelfTest(extensionId, handlerName))) {
         checks.push({ name: `action smoke: ${actionId}`, ok: false, error: `Missing export ${handlerName}` });
         continue;
       }

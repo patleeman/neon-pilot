@@ -5,7 +5,14 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { invokeExtensionAction, invokeExtensionRoute, loadExtensionAgentFactory, loadExtensionBackend } from './extensionBackend.js';
+import {
+  invokeExtensionAction,
+  invokeExtensionRoute,
+  loadExtensionAgentFactory,
+  loadExtensionBackend,
+  runExtensionSelfTest,
+  setWorkerImportBackendRunnerForTests,
+} from './extensionBackend.js';
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
 import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
 import { isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
@@ -16,6 +23,7 @@ const ORIGINAL_STATE_ROOT = process.env.NEON_PILOT_STATE_ROOT;
 
 afterEach(() => {
   setExtensionBackendRunnerForTests(undefined);
+  setWorkerImportBackendRunnerForTests(undefined);
   if (ORIGINAL_STATE_ROOT === undefined) delete process.env.NEON_PILOT_STATE_ROOT;
   else process.env.NEON_PILOT_STATE_ROOT = ORIGINAL_STATE_ROOT;
 });
@@ -309,6 +317,54 @@ describe('extension backend action invocation', () => {
     await expect(
       invokeExtensionRoute('missing-route-ext', 'GET', '/ping', { method: 'GET', path: '/ping', query: {}, params: {} }),
     ).resolves.toEqual({ status: 500, body: { error: 'Extension route handler not found: missing' } });
+  });
+
+  it('probes self-test backend imports and exports through the worker import runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'self-test-worker-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'self-test-worker-ext',
+        name: 'Self Test Worker Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'doThing', handler: 'doThing' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => false),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(runExtensionSelfTest('self-test-worker-ext')).resolves.toEqual({
+      ok: false,
+      extensionId: 'self-test-worker-ext',
+      checks: [
+        { name: 'backend import', ok: true },
+        { name: 'action export: doThing', ok: false, error: 'Missing export doThing' },
+      ],
+    });
+
+    expect(workerRunner.loadModule).toHaveBeenCalledWith(
+      'self-test-worker-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+    );
+    expect(workerRunner.hasExport).toHaveBeenCalledWith(
+      'self-test-worker-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+      'doThing',
+    );
   });
 });
 
