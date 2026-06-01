@@ -617,12 +617,12 @@ export async function runExtensionBackendExport<T>(
   exportName: string,
   operation: ExtensionBackendOperation,
   invoke: (handler: ExtensionBackendExportHandler) => Promise<T> | T,
-  options: { missingExportMessage?: string } = {},
+  options: { createMissingExportError?: () => Error; missingExportMessage?: string } = {},
 ): Promise<T> {
   const backend = await loadExtensionBackend(extensionId);
   const handler = backend[exportName];
   if (typeof handler !== 'function') {
-    throw new Error(options.missingExportMessage ?? `Extension backend export not found: ${exportName}`);
+    throw options.createMissingExportError?.() ?? new Error(options.missingExportMessage ?? `Extension backend export not found: ${exportName}`);
   }
   return getExtensionBackendRunner().run(extensionId, operation, () => invoke(handler as ExtensionBackendExportHandler));
 }
@@ -741,25 +741,23 @@ export async function invokeExtensionAction(
     }
     const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
     const handlerName = action?.handler ?? actionId;
-    const backend = await loadExtensionBackend(extensionId);
-    const handler = backend[handlerName];
-    if (typeof handler !== 'function') {
-      throw new ExtensionLoadError({
-        extensionId,
-        code: 'handler_not_found',
-        message: `Extension "${extensionId}" backend does not export action handler "${handlerName}".`,
-      });
-    }
-
-    const result = await getExtensionBackendRunner().run(extensionId, extensionBackendOperation('action', `action ${actionId}`, { target: actionId }), () => {
-      actionHandlerStarted = true;
-      return Promise.resolve(
-        (handler as (input: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
-          input,
-          createBackendContext(extensionId, serverContext, toolContext, agentToolContext),
-        ),
-      );
-    });
+    const result = await runExtensionBackendExport(
+      extensionId,
+      handlerName,
+      extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
+      (handler) => {
+        actionHandlerStarted = true;
+        return Promise.resolve(handler(input, createBackendContext(extensionId, serverContext, toolContext, agentToolContext)));
+      },
+      {
+        createMissingExportError: () =>
+          new ExtensionLoadError({
+            extensionId,
+            code: 'handler_not_found',
+            message: `Extension "${extensionId}" backend does not export action handler "${handlerName}".`,
+          }),
+      },
+    );
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };
   } catch (error) {
@@ -829,19 +827,18 @@ export async function invokeExtensionProtocolEntrypoint(
   }
 
   const [{ extensionId, entrypoint }] = matches;
-  const backend = await loadExtensionBackend(extensionId);
-  const handler = backend[entrypoint.handler];
-  if (typeof handler !== 'function') {
-    throw new Error(`Extension "${extensionId}" protocol handler not found: ${entrypoint.handler}`);
-  }
-
-  await getExtensionBackendRunner().run(extensionId, extensionBackendOperation('protocol', `protocol ${protocolId}`, { target: protocolId }), () =>
-    Promise.resolve(
-      (handler as (entryInput: unknown, ctx: ExtensionProtocolContext) => unknown | Promise<unknown>)(
-        input,
-        createProtocolContext(extensionId, protocolId, options.stdio, options.signal, options.serverContext),
+  await runExtensionBackendExport(
+    extensionId,
+    entrypoint.handler,
+    extensionBackendOperation('protocol', `protocol ${protocolId}`, { target: protocolId }),
+    (handler) =>
+      Promise.resolve(
+        handler(
+          input,
+          createProtocolContext(extensionId, protocolId, options.stdio, options.signal, options.serverContext),
+        ),
       ),
-    ),
+    { missingExportMessage: `Extension "${extensionId}" protocol handler not found: ${entrypoint.handler}` },
   );
 }
 
@@ -883,12 +880,13 @@ export async function runExtensionSelfTest(
         continue;
       }
       try {
-        const result = await getExtensionBackendRunner().run(
+        const result = await runExtensionBackendExport(
           extensionId,
+          handlerName,
           extensionBackendOperation('self-test-action', `self-test action ${actionId}`, { target: actionId }),
-          () =>
+          (smokeHandler) =>
             Promise.resolve(
-              (handler as (actionInput: unknown, ctx: ExtensionBackendContext) => unknown | Promise<unknown>)(
+              smokeHandler(
                 input,
                 createBackendContext(extensionId, undefined, { conversationId: 'extension-self-test', cwd: process.cwd() }),
               ),
