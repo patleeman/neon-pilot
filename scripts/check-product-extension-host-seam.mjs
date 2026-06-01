@@ -84,6 +84,16 @@ const forbiddenPatterns = [
   },
   {
     pattern:
+      /import(?:\s+type)?\s+\{[^}]*\b(?:readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSlashCommandRegistrations)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    message: 'product runtime presentation code must read extension registry presentation through ExtensionHostClient',
+  },
+  {
+    pattern:
+      /import\(\s*['"][^'"]*\/extensions\/extensionRegistry\.js['"]\s*\)[\s\S]{0,300}\b(?:readExtensionRegistrySnapshot|listExtensionCommandRegistrations|listExtensionKeybindingRegistrations|listExtensionMentionRegistrations|listExtensionQuickOpenRegistrations|listExtensionSlashCommandRegistrations)\b/,
+    message: 'product runtime presentation code must read extension registry presentation through ExtensionHostClient',
+  },
+  {
+    pattern:
       /import\s+\{[^}]*\blistEnabledExtensionEntries\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'product runtime code must read model discovery registrations through ExtensionHostClient',
   },

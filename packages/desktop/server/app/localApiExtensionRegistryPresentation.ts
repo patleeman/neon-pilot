@@ -1,7 +1,5 @@
 import type { ExtensionContributions } from '../extensions/extensionManifest.js';
-import type { ExtensionInstallSummary, readExtensionRegistrySnapshot } from '../extensions/extensionRegistry.js';
-
-type ExtensionRegistrySnapshot = ReturnType<typeof readExtensionRegistrySnapshot>;
+import type { ExtensionInstallSummary, ExtensionRegistrySnapshot } from '../extensions/extensionRegistry.js';
 type CriticalExtensionContributionKey = keyof Pick<
   ExtensionContributions,
   | 'views'
