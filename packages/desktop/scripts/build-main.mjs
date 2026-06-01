@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /* eslint-env node */
-import { build } from 'esbuild';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { build } from 'esbuild';
 
 const dir = resolve(fileURLToPath(import.meta.url), '..', '..');
 const packageNodeModules = resolve(dir, 'node_modules');
@@ -94,6 +95,24 @@ await build({
   target: 'node20',
   banner: {
     js: `import { createRequire as __paExtensionHostCreateRequire } from 'node:module';var require=__paExtensionHostCreateRequire(import.meta.url);`,
+  },
+  external: ['electron', 'fsevents', 'node-pty'],
+  logLevel: 'info',
+  nodePaths,
+});
+
+// Build extension backend worker. The extension host will use this lane for
+// per-extension backend imports first, then grow it toward handler execution
+// as live host capabilities move behind serializable channels.
+await build({
+  entryPoints: [resolve(dir, 'server', 'extensions', 'extensionBackendWorker.ts')],
+  outfile: resolve(dir, 'server', 'dist', 'extensions', 'extensionBackendWorker.js'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node20',
+  banner: {
+    js: `import { createRequire as __paExtensionBackendWorkerCreateRequire } from 'node:module';var require=__paExtensionBackendWorkerCreateRequire(import.meta.url);`,
   },
   external: ['electron', 'fsevents', 'node-pty'],
   logLevel: 'info',

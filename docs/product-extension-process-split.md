@@ -14,6 +14,8 @@ Extension workers are a later isolation layer. A worker runs one extension backe
 
 Backend module import, export lookup, and handler execution go through the host-owned `ExtensionBackendRunner` seam. The current runner executes in the extension host process under the existing process guard; future per-extension workers should replace this runner instead of changing product runtime callers or extension capability adapters.
 
+The extension backend worker entrypoint starts with wire-safe import, clear, and export-availability operations. Handler execution remains in-process until backend contexts and live host capabilities are represented by serializable capability channels.
+
 ## Process Graph
 
 Allowed communication:
