@@ -757,6 +757,132 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('runs worker-safe backend routes through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'worker-route-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'worker-route-ext',
+        name: 'Worker Route Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'POST', path: '/ping', handler: 'ping', worker: { enabled: true } }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ status: 202, body: { via: 'worker' } })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+    const controller = new AbortController();
+
+    await expect(
+      invokeExtensionRoute('worker-route-ext', 'POST', '/ping', {
+        method: 'POST',
+        path: '/ping',
+        query: { q: '1' },
+        params: {},
+        body: { ok: true },
+        signal: controller.signal,
+      }),
+    ).resolves.toEqual({ status: 202, body: { via: 'worker' } });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'worker-route-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+      'ping',
+      { type: 'route', label: 'route POST /ping', target: '/ping' },
+      [{ method: 'POST', path: '/ping', query: { q: '1' }, params: {}, body: { ok: true } }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
+  it('keeps SSE backend routes in-process even when worker-declared', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'sse-route-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'sse-route-ext',
+        name: 'SSE Route Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'GET', path: '/stream', handler: 'stream', stream: 'sse', worker: { enabled: true } }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
+    const loadModule = vi.fn(async () => ({ stream: vi.fn(() => ({ stream: 'sse', events: [] })) }));
+    const runExport = vi.fn(
+      async (
+        extensionId: string,
+        compiled: { path: string; hash: string },
+        exportName: string,
+        _operation: unknown,
+        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
+      ) => {
+        const backend = await loadModule(extensionId, compiled);
+        return invoke(backend[exportName] as (...args: unknown[]) => unknown);
+      },
+    );
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests({
+      loadModule,
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport,
+      run: vi.fn(),
+    });
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionRoute('sse-route-ext', 'GET', '/stream', { method: 'GET', path: '/stream', query: {}, params: {} }),
+    ).resolves.toEqual({ stream: 'sse', events: [] });
+
+    expect(runExport).toHaveBeenCalled();
+    expect(workerRunner.runWorkerExport).not.toHaveBeenCalled();
+  });
+
   it('returns HTTP 500 when a backend route export is missing', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

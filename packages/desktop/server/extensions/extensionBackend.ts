@@ -688,6 +688,21 @@ function workerLiveSessionResourceOptions(serverContext?: ExtensionBackendServer
   };
 }
 
+function workerBackendContextOptions(
+  serverContext?: ExtensionBackendServerContext,
+  toolContext?: ExtensionBackendContext['toolContext'],
+) {
+  return {
+    type: 'backend' as const,
+    runtimeScope: serverContext?.getRuntimeScope() ?? 'shared',
+    repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
+    runtimeDir: getPiAgentRuntimeDir(),
+    runtimeSettingsFilePath: resolveLocalProfileSettingsFilePath(),
+    liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
+    toolContext: workerBackendToolContext(toolContext),
+  };
+}
+
 async function runExtensionBackendActionInWorker(
   extensionId: string,
   actionId: string,
@@ -698,8 +713,6 @@ async function runExtensionBackendActionInWorker(
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
   const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
-  const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir();
-  const runtimeSettingsFilePath = resolveLocalProfileSettingsFilePath();
   if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
     throw new ExtensionLoadError({
       extensionId,
@@ -714,16 +727,49 @@ async function runExtensionBackendActionInWorker(
     extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
     [input],
     {
-      context: {
-        type: 'backend',
-        runtimeScope: serverContext?.getRuntimeScope() ?? 'shared',
-        repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
-        runtimeDir: resolvedPiAgentRuntimeDir,
-        runtimeSettingsFilePath,
-        liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
-        toolContext: workerBackendToolContext(toolContext),
-      },
+      context: workerBackendContextOptions(serverContext, toolContext),
     },
+  );
+}
+
+function canRunRouteInBackendWorker(route: { stream?: 'sse'; worker?: { enabled?: boolean } } | undefined): boolean {
+  return route?.worker?.enabled === true && route.stream === undefined;
+}
+
+function workerRouteRequest(request: ExtensionRouteRequest): Omit<ExtensionRouteRequest, 'signal'> {
+  return {
+    method: request.method,
+    path: request.path,
+    query: request.query,
+    params: request.params,
+    ...(request.body === undefined ? {} : { body: request.body }),
+  };
+}
+
+async function runExtensionBackendRouteInWorker(
+  extensionId: string,
+  method: string,
+  routePath: string,
+  exportName: string,
+  request: ExtensionRouteRequest,
+  serverContext?: ExtensionBackendServerContext,
+): Promise<unknown> {
+  const runner = getWorkerImportBackendRunner();
+  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
+  if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
+    throw new ExtensionLoadError({
+      extensionId,
+      code: 'handler_not_found',
+      message: `Extension route handler not found: ${exportName}`,
+    });
+  }
+  return runner.runWorkerExport(
+    extensionId,
+    loadTarget,
+    exportName,
+    extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }),
+    [workerRouteRequest(request)],
+    { context: workerBackendContextOptions(serverContext) },
   );
 }
 
@@ -829,20 +875,24 @@ export async function invokeExtensionRoute(
   if (!route) return { status: 404, body: { error: 'Extension route not found.' } };
   let result: unknown;
   try {
-    result = await runExtensionBackendExport(
-      extensionId,
-      route.handler,
-      extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }),
-      (handler) => Promise.resolve(handler(request, createBackendContext(extensionId, serverContext))),
-      {
-        createMissingExportError: () =>
-          new ExtensionLoadError({
-            extensionId,
-            code: 'handler_not_found',
-            message: `Extension route handler not found: ${route.handler}`,
-          }),
-      },
-    );
+    if (canRunRouteInBackendWorker(route)) {
+      result = await runExtensionBackendRouteInWorker(extensionId, method, routePath, route.handler, request, serverContext);
+    } else {
+      result = await runExtensionBackendExport(
+        extensionId,
+        route.handler,
+        extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }),
+        (handler) => Promise.resolve(handler(request, createBackendContext(extensionId, serverContext))),
+        {
+          createMissingExportError: () =>
+            new ExtensionLoadError({
+              extensionId,
+              code: 'handler_not_found',
+              message: `Extension route handler not found: ${route.handler}`,
+            }),
+        },
+      );
+    }
   } catch (error) {
     if (error instanceof ExtensionLoadError && error.code === 'handler_not_found') {
       return { status: 500, body: { error: error.message } };

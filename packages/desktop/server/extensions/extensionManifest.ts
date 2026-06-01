@@ -745,6 +745,13 @@ export interface ExtensionBackendRoute {
   title?: string;
   description?: string;
   stream?: 'sse';
+  /**
+   * Opt into backend worker execution for routes whose request/response shape
+   * and backend context usage are covered by worker-safe capability handles.
+   */
+  worker?: {
+    enabled?: boolean;
+  };
 }
 
 export function isExtensionPlacement(value: string): value is ExtensionPlacement {

@@ -10,7 +10,7 @@ describe('extensionBackendValidation', () => {
         services: [{ id: 'svc', handler: 'serve', restart: 'on-failure' }],
         actions: [{ id: 'act', handler: 'run' }],
         protocolEntrypoints: [{ id: 'proto', handler: 'handle' }],
-        routes: [{ method: 'POST', path: '/api/run', handler: 'route' }],
+        routes: [{ method: 'POST', path: '/api/run', handler: 'route', worker: { enabled: true } }],
       }),
     ).toBeUndefined();
   });
@@ -29,5 +29,11 @@ describe('extensionBackendValidation', () => {
     expect(() =>
       validateExtensionBackendContribution({ entry: './backend.js', routes: [{ method: 'GET', path: '/../api', handler: 'route' }] }),
     ).toThrow('backend.routes[0].path must not contain ..');
+    expect(() =>
+      validateExtensionBackendContribution({
+        entry: './backend.js',
+        routes: [{ method: 'GET', path: '/api', handler: 'route', worker: { enabled: 'yes' } }],
+      }),
+    ).toThrow('backend.routes[0].worker.enabled must be a boolean.');
   });
 });

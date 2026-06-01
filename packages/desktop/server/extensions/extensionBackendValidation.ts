@@ -1,4 +1,13 @@
 import { assertRecordArray, requireString, validateEnum, validateOptionalString } from './extensionManifestValidation.js';
+import { isRecord } from './extensionRegistryConfig.js';
+
+function validateOptionalWorker(value: unknown, path: string): void {
+  if (value === undefined) return;
+  if (!isRecord(value)) throw new Error(`Extension manifest ${path} must be an object.`);
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
+    throw new Error(`Extension manifest ${path}.enabled must be a boolean.`);
+  }
+}
 
 export function validateExtensionBackendContribution(backend: Record<string, unknown>): void {
   requireString(backend.entry, 'backend.entry');
@@ -42,6 +51,7 @@ export function validateExtensionBackendContribution(backend: Record<string, unk
       requireString(route.handler, `backend.routes[${index}].handler`);
       validateOptionalString(route.title, `backend.routes[${index}].title`);
       validateOptionalString(route.description, `backend.routes[${index}].description`);
+      validateOptionalWorker(route.worker, `backend.routes[${index}].worker`);
       if (route.stream !== undefined) validateEnum(route.stream, ['sse'], `backend.routes[${index}].stream`);
       if (!(route.path as string).startsWith('/')) throw new Error(`backend.routes[${index}].path must start with /.`);
       if ((route.path as string).includes('..')) throw new Error(`backend.routes[${index}].path must not contain ..`);
