@@ -16,6 +16,7 @@ const allowedBackendRunnerFiles = new Set([
   'packages/desktop/server/extensions/extensionBackend.ts',
   'packages/desktop/server/extensions/extensionBackendRunner.ts',
 ]);
+const allowedBackendExportInspectionFiles = new Set(['packages/desktop/server/extensions/extensionBackendRunner.ts']);
 const extensionHostClientFile = 'packages/desktop/server/extensions/extensionHostClient.ts';
 
 function listExtensionFiles() {
@@ -55,6 +56,14 @@ for (const file of listExtensionFiles()) {
     if (directBackendRunner) {
       const line = text.slice(0, directBackendRunner.index).split('\n').length;
       failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend execution must go through extensionBackend.ts helpers`);
+    }
+  }
+
+  if (!allowedBackendExportInspectionFiles.has(file)) {
+    const backendExportInspection = /\bbackend\s*(?:\.\s*default|\[[^\]]+\])/.exec(text);
+    if (backendExportInspection) {
+      const line = text.slice(0, backendExportInspection.index).split('\n').length;
+      failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend export lookup must stay inside ExtensionBackendRunner`);
     }
   }
 }
