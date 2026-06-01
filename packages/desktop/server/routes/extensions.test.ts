@@ -1,11 +1,12 @@
 import { execFileSync } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { registerExtensionRoutes } from './extensions.js';
+import { createExtensionRequestAbortSignal, registerExtensionRoutes } from './extensions.js';
 
 const originalResourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
 
@@ -71,6 +72,21 @@ afterEach(() => {
 });
 
 describe('registerExtensionRoutes', () => {
+  it('creates abort signals from extension request lifecycle events', () => {
+    const request = new EventEmitter();
+    const response = new EventEmitter();
+    const signal = createExtensionRequestAbortSignal(request as never, response as never);
+
+    expect(signal.aborted).toBe(false);
+    response.emit('close');
+    expect(signal.aborted).toBe(true);
+
+    const abortedRequest = new EventEmitter();
+    const secondSignal = createExtensionRequestAbortSignal(abortedRequest as never, new EventEmitter() as never);
+    abortedRequest.emit('aborted');
+    expect(secondSignal.aborted).toBe(true);
+  });
+
   it('serves extension schema, registry, routes, and surfaces', async () => {
     const harness = createHarness();
 

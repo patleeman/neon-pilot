@@ -45,6 +45,25 @@ describe('extension host RPC client', () => {
     );
   });
 
+  it('uses action abort signals for RPC fetch without serializing them', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ ok: true, result: { ok: true, result: { done: true } } }));
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
+    const signal = new AbortController().signal;
+
+    await expect(client.invokeAction({ extensionId: 'ext', actionId: 'doThing', input: { x: 1 }, signal })).resolves.toEqual({
+      ok: true,
+      result: { done: true },
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({ request: { type: 'invokeAction', extensionId: 'ext', actionId: 'doThing', input: { x: 1 } } }),
+        signal,
+      }),
+    );
+  });
+
   it('refuses function-bearing invoke contexts until capability channels exist', async () => {
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl: vi.fn() });
 

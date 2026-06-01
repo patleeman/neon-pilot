@@ -99,13 +99,19 @@ function normalizeRouteQuery(query: Request['query']): Record<string, string | s
   return normalized;
 }
 
+export function createExtensionRequestAbortSignal(req: Request, res: Response): AbortSignal {
+  const abort = new AbortController();
+  req.on?.('aborted', () => abort.abort());
+  res.on?.('close', () => abort.abort());
+  return abort.signal;
+}
+
 async function dispatchExtensionBackendRoute(
   req: Request,
   res: Response,
   context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
 ): Promise<void> {
-  const abort = new AbortController();
-  req.on?.('close', () => abort.abort());
+  const signal = createExtensionRequestAbortSignal(req, res);
   try {
     const extensionId = req.params.id;
     const routePath = `/${req.params[0] ?? ''}`;
@@ -119,14 +125,14 @@ async function dispatchExtensionBackendRoute(
         query: normalizeRouteQuery(req.query),
         params: {},
         body: req.body,
-        signal: abort.signal,
+        signal,
       },
       serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
     });
     for (const [key, value] of Object.entries(result.headers ?? {})) res.setHeader(key, value);
     const status = result.status ?? 200;
     if (result.stream === 'sse' && result.events) {
-      await sendExtensionSseResponse(res, status, result.events, abort.signal);
+      await sendExtensionSseResponse(res, status, result.events, signal);
       return;
     }
     if (Buffer.isBuffer(result.body) || result.body instanceof Uint8Array) {
@@ -467,6 +473,7 @@ export function registerExtensionRoutes(
   });
 
   router.post('/api/extensions/commands/:commandId/execute', async (req, res) => {
+    const signal = createExtensionRequestAbortSignal(req, res);
     try {
       const command = findExtensionCommandRegistration(req.params.commandId);
       if (!command) {
@@ -484,6 +491,7 @@ export function registerExtensionRoutes(
         actionId: command.action,
         input: req.body ?? command.args ?? {},
         serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+        signal,
       });
       res.json({ ok: true, result });
     } catch (err) {
@@ -561,6 +569,7 @@ export function registerExtensionRoutes(
   });
 
   router.post('/api/extensions/search', async (req, res) => {
+    const signal = createExtensionRequestAbortSignal(req, res);
     try {
       const query = typeof req.body?.query === 'string' ? req.body.query : '';
       const limit = Number.isInteger(req.body?.limit) ? Math.max(1, Math.min(100, req.body.limit)) : 50;
@@ -572,6 +581,7 @@ export function registerExtensionRoutes(
             extensionId: provider.extensionId,
             actionId: provider.action,
             input: { query, limit, providerId: provider.id },
+            signal,
           });
           return { provider, result };
         }),
@@ -654,6 +664,7 @@ export function registerExtensionRoutes(
   router.get('/api/extensions/:id/files/*', readExtensionFile);
 
   router.post('/api/extensions/:id/actions/:actionId', async (req, res) => {
+    const signal = createExtensionRequestAbortSignal(req, res);
     try {
       const entry = findExtensionEntry(req.params.id);
       if (!entry || !isExtensionEnabled(req.params.id)) {
@@ -671,6 +682,7 @@ export function registerExtensionRoutes(
           actionId: req.params.actionId,
           input: req.body,
           serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+          signal,
         }),
       );
     } catch (err) {
@@ -704,6 +716,7 @@ export function registerExtensionRoutes(
   });
 
   router.patch('/api/extensions/:id', async (req, res) => {
+    const signal = createExtensionRequestAbortSignal(req, res);
     try {
       const entry = findExtensionEntry(req.params.id);
       const summary = listExtensionInstallSummaries().find((extension) => extension.id === req.params.id);
@@ -741,6 +754,7 @@ export function registerExtensionRoutes(
               actionId: onEnableAction,
               input: {},
               serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+              signal,
             })
           : undefined;
       } else {
@@ -757,6 +771,7 @@ export function registerExtensionRoutes(
               actionId: onDisableAction,
               input: {},
               serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+              signal,
             })
           : undefined;
         setExtensionEnabled(entry.manifest.id, false);

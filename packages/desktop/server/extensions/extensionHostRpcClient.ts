@@ -141,7 +141,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
   const baseUrl = options.baseUrl.replace(/\/$/, '');
   const fetchImpl = options.fetchImpl ?? fetch;
 
-  async function send(request: ExtensionHostRequest): Promise<ExtensionHostResponse> {
+  async function send(request: ExtensionHostRequest, signal?: AbortSignal): Promise<ExtensionHostResponse> {
     const response = await fetchImpl(`${baseUrl}/rpc`, {
       method: 'POST',
       headers: {
@@ -149,6 +149,7 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ request }),
+      signal,
     });
     const body = (await response.json()) as ExtensionHostResponse;
     if (!response.ok) {
@@ -233,7 +234,9 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
         return sendStreamingAction(input);
       }
       assertWireableInvokeActionInput(input);
-      const response = await send({ type: 'invokeAction', ...input });
+      const request = { ...input };
+      delete request.signal;
+      const response = await send({ type: 'invokeAction', ...request }, input.signal);
       if (!response.ok) return { ok: false, error: response.error };
       if (!('result' in response)) return { ok: false, error: 'Extension host returned an invalid action response.' };
       return response.result;
