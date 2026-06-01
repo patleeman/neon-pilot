@@ -256,6 +256,16 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
         };
       },
     },
+    filesystem: {
+      requestRoot: (input?: { kind?: string; cwd?: string; access?: string[]; reason?: string; prefix?: string }) =>
+        createWorkerFilesystemRoot(extensionId, input ?? {}),
+      workspace: (input?: { cwd?: string; access?: string[]; reason?: string }) =>
+        createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'workspace' }),
+      app: (input?: { access?: string[]; reason?: string }) => createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'app' }),
+      cache: (input?: { access?: string[]; reason?: string }) => createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'cache' }),
+      temp: (input?: { access?: string[]; reason?: string; prefix?: string }) =>
+        createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'temp' }),
+    },
     secrets: {
       get: (secretId: string) => callHostCapability(extensionId, 'secrets', 'get', { secretId }),
     },
@@ -269,6 +279,46 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       readText: (input: unknown) => callHostCapability(extensionId, 'workspace', 'readText', input),
       writeText: (input: unknown) => callHostCapability(extensionId, 'workspace', 'writeText', input),
       list: (input: unknown) => callHostCapability(extensionId, 'workspace', 'list', input),
+    },
+  };
+}
+
+async function createWorkerFilesystemRoot(
+  extensionId: string,
+  input: { kind?: string; cwd?: string; access?: string[]; reason?: string; prefix?: string },
+): Promise<Record<string, unknown>> {
+  const result = (await callHostCapability(extensionId, 'filesystem', 'requestRoot', input)) as {
+    handleId?: string;
+    root?: unknown;
+  };
+  const handleId = result.handleId;
+  if (!handleId) throw new Error('Filesystem root response missing handle id.');
+  return workerFilesystemRoot(extensionId, handleId, result.root);
+}
+
+function workerFilesystemRoot(extensionId: string, handleId: string, root: unknown): Record<string, unknown> {
+  const call = (operation: string, input: Record<string, unknown> = {}) =>
+    callHostCapability(extensionId, 'filesystem', operation, { handleId, ...input });
+  return {
+    root,
+    readBytes: (path: string, options?: { maxBytes?: number }) => call('readBytes', { path, ...(options ?? {}) }),
+    readText: (path: string, options?: { maxBytes?: number }) => call('readText', { path, ...(options ?? {}) }),
+    writeBytes: (path: string, data: Uint8Array, options?: { atomic?: boolean }) => call('writeBytes', { path, data, ...(options ?? {}) }),
+    writeText: (path: string, data: string, options?: { atomic?: boolean }) => call('writeText', { path, data, ...(options ?? {}) }),
+    readJson: (path: string, options?: { maxBytes?: number }) => call('readJson', { path, ...(options ?? {}) }),
+    writeJson: (path: string, value: unknown, options?: { atomic?: boolean }) => call('writeJson', { path, value, ...(options ?? {}) }),
+    list: (path?: string, options?: { depth?: number; excludeNames?: string[] }) =>
+      call('list', { ...(path !== undefined ? { path } : {}), ...(options ?? {}) }),
+    stat: (path: string) => call('stat', { path }),
+    exists: (path: string) => call('exists', { path }),
+    createDirectory: (path: string) => call('createDirectory', { path }),
+    move: (from: string, to: string, options?: { overwrite?: boolean }) => call('move', { from, to, ...(options ?? {}) }),
+    copyIn: (to: string, absoluteSource: string) => call('copyIn', { to, absoluteSource }),
+    remove: (path: string, options?: { recursive?: boolean; force?: boolean }) => call('remove', { path, ...(options ?? {}) }),
+    createTempWorkspace: async (options?: { prefix?: string }) => {
+      const result = (await call('createTempWorkspace', options ?? {})) as { handleId?: string; root?: unknown };
+      if (!result.handleId) throw new Error('Filesystem temp root response missing handle id.');
+      return workerFilesystemRoot(extensionId, result.handleId, result.root);
     },
   };
 }

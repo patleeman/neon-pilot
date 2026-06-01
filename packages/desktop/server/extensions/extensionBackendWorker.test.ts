@@ -668,6 +668,112 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('runs backend exports with host-mediated filesystem root handles', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const appRoot = await ctx.filesystem.app({ access: ['read', 'write', 'list'], reason: 'test app root' });
+  await appRoot.writeText('state.json', '{"ok":true}');
+  const text = await appRoot.readText('state.json', { maxBytes: 100 });
+  const entries = await appRoot.list('.', { depth: 1, excludeNames: ['tmp'] });
+  const temp = await appRoot.createTempWorkspace({ prefix: 'worker-' });
+  return { root: appRoot.root, text, entries, tempRoot: temp.root };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 23,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-filesystem' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'filesystem',
+      operation: 'requestRoot',
+      input: { kind: 'app', access: ['read', 'write', 'list'], reason: 'test app root' },
+    });
+    workerThreads.messageHandler?.({
+      id: 1,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { handleId: 'fs-1', root: { kind: 'extension-storage', id: 'worker-ext:app', path: '/state/files' } },
+    });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'filesystem',
+      operation: 'writeText',
+      input: { handleId: 'fs-1', path: 'state.json', data: '{"ok":true}' },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'filesystem',
+      operation: 'readText',
+      input: { handleId: 'fs-1', path: 'state.json', maxBytes: 100 },
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: '{"ok":true}' });
+
+    await waitForPostMessage({
+      id: 4,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'filesystem',
+      operation: 'list',
+      input: { handleId: 'fs-1', path: '.', depth: 1, excludeNames: ['tmp'] },
+    });
+    workerThreads.messageHandler?.({
+      id: 4,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: [{ name: 'state.json', path: 'state.json', type: 'file', size: 11 }],
+    });
+
+    await waitForPostMessage({
+      id: 5,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'filesystem',
+      operation: 'createTempWorkspace',
+      input: { handleId: 'fs-1', prefix: 'worker-' },
+    });
+    workerThreads.messageHandler?.({
+      id: 5,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { handleId: 'fs-2', root: { kind: 'temp', id: '/tmp/worker-1', path: '/tmp/worker-1' } },
+    });
+
+    await waitForPostMessage({
+      id: 23,
+      ok: true,
+      result: {
+        root: { kind: 'extension-storage', id: 'worker-ext:app', path: '/state/files' },
+        text: '{"ok":true}',
+        entries: [{ name: 'state.json', path: 'state.json', type: 'file', size: 11 }],
+        tempRoot: { kind: 'temp', id: '/tmp/worker-1', path: '/tmp/worker-1' },
+      },
+    });
+  });
+
   it('runs backend exports with host-mediated notification capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

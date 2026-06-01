@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+
+import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { resolveSecret } from '../secrets/secretStore.js';
 import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
@@ -9,6 +12,7 @@ import type {
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
+import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import {
   isSystemNotificationAvailable,
@@ -205,6 +209,15 @@ interface ExtensionBackendCapabilityWorkspace {
   list(extensionId: string, input: { cwd: string; path?: string; depth?: number }): Promise<unknown> | unknown;
 }
 
+type ExtensionFilesystemRootKind = 'workspace' | 'app' | 'cache' | 'temp';
+
+interface ExtensionBackendCapabilityFilesystem {
+  requestRoot(
+    extensionId: string,
+    input: { kind?: ExtensionFilesystemRootKind; cwd?: string; access?: FileAccess[]; reason?: string; prefix?: string },
+  ): Promise<ScopedFileSystem> | ScopedFileSystem;
+}
+
 export type ExtensionBackendCapabilityEventEmitter = (event: ExtensionBackendWorkerCapabilityEvent) => void;
 
 export type ExtensionBackendCapabilityDispatcher = (
@@ -216,6 +229,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   conversations?: ExtensionBackendCapabilityConversations;
   events?: ExtensionBackendCapabilityEvents;
   extensions?: ExtensionBackendCapabilityExtensions;
+  filesystem?: ExtensionBackendCapabilityFilesystem;
   git?: ExtensionBackendCapabilityGit;
   log?: ExtensionBackendCapabilityLogger;
   models?: ExtensionBackendCapabilityModels;
@@ -957,9 +971,144 @@ function dispatchWorkspaceCapability(workspace: ExtensionBackendCapabilityWorksp
   throw new Error(`Unsupported workspace capability operation: ${request.operation}`);
 }
 
+function serializeFilesystemRoot(root: ScopedFileSystem): {
+  handleId: string;
+  root: { kind: string; id: string; path: string; displayName?: string; labels?: Record<string, string> };
+} {
+  return {
+    handleId: `fs-${randomUUID()}`,
+    root: {
+      kind: root.root.kind,
+      id: root.root.id,
+      path: root.root.path,
+      ...(root.root.displayName !== undefined ? { displayName: root.root.displayName } : {}),
+      ...(root.root.labels !== undefined ? { labels: root.root.labels } : {}),
+    },
+  };
+}
+
+function normalizeFilesystemAccess(value: unknown): FileAccess[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+    throw new Error('Filesystem access must be an array of strings when provided.');
+  }
+  return value as FileAccess[];
+}
+
+function normalizeFilesystemRootKind(value: unknown): ExtensionFilesystemRootKind | undefined {
+  if (value === undefined) return undefined;
+  if (value !== 'workspace' && value !== 'app' && value !== 'cache' && value !== 'temp') {
+    throw new Error('Filesystem root kind must be workspace, app, cache, or temp when provided.');
+  }
+  return value;
+}
+
+function dispatchFilesystemCapability(
+  filesystem: ExtensionBackendCapabilityFilesystem,
+  handles: Map<string, ScopedFileSystem>,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
+  const input = normalizeRecordInput(request.input, 'Filesystem');
+
+  if (request.operation === 'requestRoot') {
+    const root = filesystem.requestRoot(request.extensionId, {
+      ...(input.kind !== undefined ? { kind: normalizeFilesystemRootKind(input.kind) } : {}),
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Filesystem cwd') } : {}),
+      ...(input.access !== undefined ? { access: normalizeFilesystemAccess(input.access) } : {}),
+      ...(input.reason !== undefined ? { reason: optionalString(input.reason, 'Filesystem reason') } : {}),
+      ...(input.prefix !== undefined ? { prefix: optionalString(input.prefix, 'Filesystem prefix') } : {}),
+    });
+    return Promise.resolve(root).then((scopedRoot) => {
+      const serialized = serializeFilesystemRoot(scopedRoot);
+      handles.set(serialized.handleId, scopedRoot);
+      return serialized;
+    });
+  }
+
+  const handleId = requireString(input.handleId, 'Filesystem handle id');
+  const root = handles.get(handleId);
+  if (!root) throw new Error('Filesystem handle not found.');
+
+  if (request.operation === 'readBytes') {
+    return root.readBytes(requireString(input.path, 'Filesystem path'), {
+      ...(input.maxBytes !== undefined ? { maxBytes: optionalNumber(input.maxBytes, 'Filesystem maxBytes') } : {}),
+    });
+  }
+
+  if (request.operation === 'readText') {
+    return root.readText(requireString(input.path, 'Filesystem path'), {
+      ...(input.maxBytes !== undefined ? { maxBytes: optionalNumber(input.maxBytes, 'Filesystem maxBytes') } : {}),
+    });
+  }
+
+  if (request.operation === 'writeBytes') {
+    const data = input.data;
+    if (!(data instanceof Uint8Array) && !Array.isArray(data)) throw new Error('Filesystem data must be bytes.');
+    return root.writeBytes(requireString(input.path, 'Filesystem path'), data instanceof Uint8Array ? data : Uint8Array.from(data), {
+      ...(input.atomic !== undefined ? { atomic: optionalBoolean(input.atomic, 'Filesystem atomic') } : {}),
+    });
+  }
+
+  if (request.operation === 'writeText') {
+    return root.writeText(requireString(input.path, 'Filesystem path'), requireString(input.data, 'Filesystem text'), {
+      ...(input.atomic !== undefined ? { atomic: optionalBoolean(input.atomic, 'Filesystem atomic') } : {}),
+    });
+  }
+
+  if (request.operation === 'readJson') {
+    return root.readJson(requireString(input.path, 'Filesystem path'), {
+      ...(input.maxBytes !== undefined ? { maxBytes: optionalNumber(input.maxBytes, 'Filesystem maxBytes') } : {}),
+    });
+  }
+
+  if (request.operation === 'writeJson') {
+    return root.writeJson(requireString(input.path, 'Filesystem path'), input.value, {
+      ...(input.atomic !== undefined ? { atomic: optionalBoolean(input.atomic, 'Filesystem atomic') } : {}),
+    });
+  }
+
+  if (request.operation === 'list') {
+    return root.list(input.path !== undefined ? optionalString(input.path, 'Filesystem path') : undefined, {
+      ...(input.depth !== undefined ? { depth: optionalNumber(input.depth, 'Filesystem depth') } : {}),
+      ...(input.excludeNames !== undefined ? { excludeNames: optionalStringArray(input.excludeNames, 'Filesystem excludeNames') ?? [] } : {}),
+    });
+  }
+
+  if (request.operation === 'stat') return root.stat(requireString(input.path, 'Filesystem path'));
+  if (request.operation === 'exists') return root.exists(requireString(input.path, 'Filesystem path'));
+  if (request.operation === 'createDirectory') return root.createDirectory(requireString(input.path, 'Filesystem path'));
+  if (request.operation === 'move') {
+    return root.move(requireString(input.from, 'Filesystem move source'), requireString(input.to, 'Filesystem move destination'), {
+      ...(input.overwrite !== undefined ? { overwrite: optionalBoolean(input.overwrite, 'Filesystem overwrite') } : {}),
+    });
+  }
+  if (request.operation === 'copyIn') {
+    return root.copyIn(requireString(input.to, 'Filesystem copy destination'), requireString(input.absoluteSource, 'Filesystem copy source'));
+  }
+  if (request.operation === 'remove') {
+    return root.remove(requireString(input.path, 'Filesystem path'), {
+      ...(input.recursive !== undefined ? { recursive: optionalBoolean(input.recursive, 'Filesystem recursive') } : {}),
+      ...(input.force !== undefined ? { force: optionalBoolean(input.force, 'Filesystem force') } : {}),
+    });
+  }
+  if (request.operation === 'createTempWorkspace') {
+    const tempRoot = root.createTempWorkspace({
+      ...(input.prefix !== undefined ? { prefix: optionalString(input.prefix, 'Filesystem prefix') } : {}),
+    });
+    return Promise.resolve(tempRoot).then((scopedRoot) => {
+      const serialized = serializeFilesystemRoot(scopedRoot);
+      handles.set(serialized.handleId, scopedRoot);
+      return serialized;
+    });
+  }
+
+  throw new Error(`Unsupported filesystem capability operation: ${request.operation}`);
+}
+
 export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
+  const filesystemHandles = new Map<string, ScopedFileSystem>();
   const conversations = options.conversations ?? {
     get: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().get(conversationId),
     create: (_extensionId: string, input?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['create']>[0]) =>
@@ -1099,6 +1248,12 @@ export function createExtensionBackendCapabilityDispatcher(
     list: (extensionId: string, input: { cwd: string; path?: string; depth?: number }) =>
       createExtensionWorkspaceCapability(extensionId).list(input),
   };
+  const filesystem = options.filesystem ?? {
+    requestRoot: (
+      extensionId: string,
+      input: { kind?: ExtensionFilesystemRootKind; cwd?: string; access?: FileAccess[]; reason?: string; prefix?: string },
+    ) => createExtensionFilesystemCapability(extensionId, input.cwd ? { cwd: input.cwd } : undefined).requestRoot(input),
+  };
   const storage = options.storage ?? {
     get: (extensionId: string, key: string) => readExtensionState(extensionId, key)?.value ?? null,
     put: (extensionId: string, key: string, value: unknown, storageOptions?: { expectedVersion?: number }) => {
@@ -1118,6 +1273,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'extensions') {
       return dispatchExtensionsCapability(extensions, request);
+    }
+    if (request.capability === 'filesystem') {
+      return dispatchFilesystemCapability(filesystem, filesystemHandles, request);
     }
     if (request.capability === 'git') {
       return dispatchGitCapability(git, request);

@@ -571,6 +571,91 @@ describe('extension backend capability dispatcher', () => {
     expect(workspace.list).toHaveBeenCalledWith('ext', { cwd: '/repo', path: '.', depth: 2 });
   });
 
+  it('dispatches host-owned filesystem root handles', async () => {
+    const root = {
+      root: { kind: 'extension-storage', id: 'ext:app', path: '/state/ext/files', displayName: 'ext app files' },
+      subject: { type: 'extension', extensionId: 'ext' },
+      readBytes: vi.fn(async () => Uint8Array.from([1, 2, 3])),
+      readText: vi.fn(async () => 'hello'),
+      writeBytes: vi.fn(async () => undefined),
+      writeText: vi.fn(async () => undefined),
+      readJson: vi.fn(async () => ({ ok: true })),
+      writeJson: vi.fn(async () => undefined),
+      list: vi.fn(async () => [{ name: 'file.txt', path: 'file.txt', type: 'file', size: 5 }]),
+      stat: vi.fn(async () => ({ type: 'file', size: 5, modifiedAt: '2026-06-01T00:00:00.000Z' })),
+      exists: vi.fn(async () => true),
+      createDirectory: vi.fn(async () => undefined),
+      move: vi.fn(async () => undefined),
+      copyIn: vi.fn(async () => undefined),
+      remove: vi.fn(async () => undefined),
+      createTempWorkspace: vi.fn(async () => ({
+        ...root,
+        root: { kind: 'temp', id: 'tmp', path: '/tmp/fs' },
+      })),
+    };
+    const filesystem = {
+      requestRoot: vi.fn(async () => root),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ filesystem });
+
+    const requested = (await dispatch({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'filesystem',
+      operation: 'requestRoot',
+      input: { kind: 'app', access: ['read', 'write'], reason: 'test app files' },
+    })) as { handleId: string; root: unknown };
+
+    expect(requested.handleId).toMatch(/^fs-/);
+    expect(requested.root).toEqual({ kind: 'extension-storage', id: 'ext:app', path: '/state/ext/files', displayName: 'ext app files' });
+    expect(filesystem.requestRoot).toHaveBeenCalledWith('ext', { kind: 'app', access: ['read', 'write'], reason: 'test app files' });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'filesystem',
+          operation: 'writeText',
+          input: { handleId: requested.handleId, path: 'file.txt', data: 'hello', atomic: false },
+        }),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'filesystem',
+          operation: 'list',
+          input: { handleId: requested.handleId, path: '.', depth: 1, excludeNames: ['node_modules'] },
+        }),
+      ),
+    ).resolves.toEqual([{ name: 'file.txt', path: 'file.txt', type: 'file', size: 5 }]);
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 4,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'filesystem',
+          operation: 'createTempWorkspace',
+          input: { handleId: requested.handleId, prefix: 'worker-' },
+        }),
+      ),
+    ).resolves.toEqual({
+      handleId: expect.stringMatching(/^fs-/),
+      root: { kind: 'temp', id: 'tmp', path: '/tmp/fs' },
+    });
+
+    expect(root.writeText).toHaveBeenCalledWith('file.txt', 'hello', { atomic: false });
+    expect(root.list).toHaveBeenCalledWith('.', { depth: 1, excludeNames: ['node_modules'] });
+    expect(root.createTempWorkspace).toHaveBeenCalledWith({ prefix: 'worker-' });
+  });
+
   it('rejects malformed workspace capability inputs', async () => {
     const workspace = { readText: vi.fn(), writeText: vi.fn(), list: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ workspace });
