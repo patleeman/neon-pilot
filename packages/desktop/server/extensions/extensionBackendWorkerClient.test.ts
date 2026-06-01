@@ -83,6 +83,49 @@ describe('ExtensionBackendWorkerClient', () => {
     await expect(hasExport).resolves.toBe(true);
   });
 
+  it('sends backend export execution requests to the worker', async () => {
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js') });
+    const run = client.runExport(
+      'ext',
+      { path: '/tmp/backend.mjs', hash: 'hash-1' },
+      'doThing',
+      [{ ok: true }],
+      { context: 'backend' },
+    );
+    const worker = workerThreads.instances[0]!;
+
+    expect(worker.postMessage).toHaveBeenCalledWith({
+      id: 1,
+      type: 'runExport',
+      extensionId: 'ext',
+      compiled: { path: '/tmp/backend.mjs', hash: 'hash-1' },
+      exportName: 'doThing',
+      args: [{ ok: true }],
+      context: 'backend',
+    });
+
+    worker.emit('message', { id: 1, ok: true, result: { ran: true } });
+    await expect(run).resolves.toEqual({ ran: true });
+  });
+
+  it('routes backend export execution through the extension worker pool', async () => {
+    const pool = new ExtensionBackendWorkerPool({ workerUrl: new URL('file:///worker.js') });
+    const run = pool.runExport('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing', []);
+    const worker = workerThreads.instances[0]!;
+
+    expect(worker.postMessage).toHaveBeenCalledWith({
+      id: 1,
+      type: 'runExport',
+      extensionId: 'ext',
+      compiled: { path: '/tmp/backend.mjs', hash: 'hash-1' },
+      exportName: 'doThing',
+      args: [],
+    });
+
+    worker.emit('message', { id: 1, ok: true, result: 'ok' });
+    await expect(run).resolves.toBe('ok');
+  });
+
   it('rejects pending requests when the worker fails', async () => {
     const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js') });
     const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });

@@ -16,6 +16,15 @@ export type ExtensionBackendWorkerRequest =
     }
   | {
       id: number;
+      type: 'runExport';
+      extensionId: string;
+      compiled: ExtensionBackendLoadTarget;
+      exportName: string;
+      args: unknown[];
+      context?: 'backend';
+    }
+  | {
+      id: number;
       type: 'clearModule';
       extensionId: string;
     };
@@ -56,3 +65,5 @@ export type ExtensionBackendWorkerCapabilityResponse =
     };
 
 export type ExtensionBackendWorkerMessage = ExtensionBackendWorkerResponse | ExtensionBackendWorkerCapabilityRequest;
+
+export type ExtensionBackendWorkerParentMessage = ExtensionBackendWorkerRequest | ExtensionBackendWorkerCapabilityResponse;

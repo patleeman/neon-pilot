@@ -38,6 +38,17 @@ export class ExtensionBackendWorkerClient {
     return response.result === true;
   }
 
+  async runExport(
+    extensionId: string,
+    compiled: ExtensionBackendLoadTarget,
+    exportName: string,
+    args: unknown[],
+    options: { context?: 'backend' } = {},
+  ): Promise<unknown> {
+    const response = await this.send({ id: 0, type: 'runExport', extensionId, compiled, exportName, args, ...options });
+    return response.result;
+  }
+
   async clearModule(extensionId: string): Promise<void> {
     await this.send({ id: 0, type: 'clearModule', extensionId });
   }
@@ -163,6 +174,16 @@ export class ExtensionBackendWorkerPool {
 
   async hasExport(extensionId: string, compiled: ExtensionBackendLoadTarget, exportName: string): Promise<boolean> {
     return this.getClient(extensionId).hasExport(extensionId, compiled, exportName);
+  }
+
+  async runExport(
+    extensionId: string,
+    compiled: ExtensionBackendLoadTarget,
+    exportName: string,
+    args: unknown[],
+    options: { context?: 'backend' } = {},
+  ): Promise<unknown> {
+    return this.getClient(extensionId).runExport(extensionId, compiled, exportName, args, options);
   }
 
   async clearModule(extensionId: string): Promise<void> {

@@ -2,10 +2,17 @@ import { pathToFileURL } from 'node:url';
 import { parentPort } from 'node:worker_threads';
 
 import type { ExtensionBackendModule } from './extensionBackendRunner.js';
-import type { ExtensionBackendWorkerRequest, ExtensionBackendWorkerResponse } from './extensionBackendWorkerProtocol.js';
+import type {
+  ExtensionBackendWorkerCapabilityResponse,
+  ExtensionBackendWorkerParentMessage,
+  ExtensionBackendWorkerRequest,
+  ExtensionBackendWorkerResponse,
+} from './extensionBackendWorkerProtocol.js';
 import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
+const pendingCapabilities = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+let nextCapabilityRequestId = 0;
 
 if (!parentPort) {
   throw new Error('extensionBackendWorker must run as a worker thread.');
@@ -27,6 +34,33 @@ function loadModule(extensionId: string, compiled: { path: string; hash: string 
   return module;
 }
 
+function callHostCapability(extensionId: string, capability: string, operation: string, input?: unknown): Promise<unknown> {
+  const id = ++nextCapabilityRequestId;
+  return new Promise((resolve, reject) => {
+    pendingCapabilities.set(id, { resolve, reject });
+    parentPort!.postMessage({ id, kind: 'capabilityRequest', extensionId, capability, operation, input });
+  });
+}
+
+function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResponse): void {
+  const pending = pendingCapabilities.get(response.id);
+  if (!pending) return;
+  pendingCapabilities.delete(response.id);
+
+  if (response.ok) pending.resolve(response.result);
+  else pending.reject(new Error(response.error));
+}
+
+function createWorkerBackendContext(extensionId: string): Record<string, unknown> {
+  return {
+    log: {
+      info: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'info', { message, fields }),
+      warn: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'warn', { message, fields }),
+      error: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'error', { message, fields }),
+    },
+  };
+}
+
 async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<ExtensionBackendWorkerResponse> {
   try {
     if (request.type === 'loadModule') {
@@ -37,6 +71,17 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
     if (request.type === 'hasExport') {
       const backend = await loadModule(request.extensionId, request.compiled);
       return { id: request.id, ok: true, result: typeof backend[request.exportName] === 'function' };
+    }
+
+    if (request.type === 'runExport') {
+      const backend = await loadModule(request.extensionId, request.compiled);
+      const handler = backend[request.exportName];
+      if (typeof handler !== 'function') {
+        throw new Error(`Extension backend export not found: ${request.exportName}`);
+      }
+      const args = request.context === 'backend' ? [...request.args, createWorkerBackendContext(request.extensionId)] : request.args;
+      const result = await (handler as (...args: unknown[]) => unknown)(...args);
+      return { id: request.id, ok: true, result };
     }
 
     if (request.type === 'clearModule') {
@@ -51,7 +96,14 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
   }
 }
 
-parentPort.on('message', (request: ExtensionBackendWorkerRequest) => {
+parentPort.on('message', (message: ExtensionBackendWorkerParentMessage) => {
+  if ('kind' in message && message.kind === 'capabilityResponse') {
+    handleCapabilityResponse(message);
+    return;
+  }
+
+  if (!('type' in message)) return;
+  const request = message;
   void handleRequest(request).then((response) => {
     parentPort!.postMessage(response);
   });
