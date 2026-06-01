@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buildToolInjectionPlan = vi.fn();
-const invokeExtensionAction = vi.fn();
+const extensionHostClient = { invokeAction: vi.fn() };
 const listExtensionToolRegistrations = vi.fn();
 vi.mock('../tools/toolInventory.js', () => ({ buildToolInjectionPlan }));
-vi.mock('./extensionBackend.js', () => ({ invokeExtensionAction }));
+vi.mock('./extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient }));
 vi.mock('./extensionRegistry.js', () => ({ listExtensionToolRegistrations }));
 
 const { createManifestToolAgentExtensions } = await import('./manifestToolAgentExtension.js');
@@ -47,7 +47,7 @@ function registerTools() {
 describe('manifestToolAgentExtension', () => {
   beforeEach(() => {
     buildToolInjectionPlan.mockReset().mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
-    invokeExtensionAction.mockReset().mockResolvedValue({ ok: true, result: { text: 'done', details: { ok: true } } });
+    extensionHostClient.invokeAction.mockReset().mockResolvedValue({ ok: true, result: { text: 'done', details: { ok: true } } });
     listExtensionToolRegistrations.mockReset().mockReturnValue([tool()]);
   });
 
@@ -75,21 +75,21 @@ describe('manifestToolAgentExtension', () => {
       promptSnippet: 'Tool description',
       parameters: { type: 'object' },
     });
-    expect(invokeExtensionAction).toHaveBeenCalledWith(
-      'ext',
-      'doThing',
-      { x: 1 },
-      { getRuntimeScope: expect.any(Function) },
-      expect.objectContaining({
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith({
+      extensionId: 'ext',
+      actionId: 'doThing',
+      input: { x: 1 },
+      serverContextSnapshot: { runtimeScope: 'shared' },
+      toolContext: { onUpdate: expect.any(Function) },
+      toolContextSnapshot: {
         conversationId: 'conversation-1',
         sessionId: 'conversation-1',
         cwd: '/repo',
         sessionFile: '/session.json',
         preferredVisionModel: 'vision-model',
-        onUpdate: expect.any(Function),
-      }),
-      { onUpdate, signal, toolContext: ctx },
-    );
+      },
+      agentToolContext: { onUpdate, signal, toolContext: ctx },
+    });
   });
 
   it('filters inactive, native, and model-condition-mismatched tools', () => {
@@ -127,7 +127,7 @@ describe('manifestToolAgentExtension', () => {
   });
 
   it('returns backend invocation errors as tool errors', async () => {
-    invokeExtensionAction.mockResolvedValue({ ok: false, error: 'boom' });
+    extensionHostClient.invokeAction.mockResolvedValue({ ok: false, error: 'boom' });
     const registered = registerTools();
 
     await expect(
@@ -140,8 +140,8 @@ describe('manifestToolAgentExtension', () => {
   });
 
   it('preserves extension content arrays, isError, terminate, and streaming updates', async () => {
-    invokeExtensionAction.mockImplementation(async (_extensionId, _action, _params, _serverContext, callbackContext) => {
-      callbackContext.onUpdate({
+    extensionHostClient.invokeAction.mockImplementation(async (request) => {
+      request.toolContext.onUpdate({
         content: [
           { type: 'text', text: 'progress' },
           { type: 'image', text: 'ignored' },

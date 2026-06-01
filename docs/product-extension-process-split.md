@@ -75,6 +75,8 @@ The desktop build already emits an `extension-host-child.js` entrypoint for this
 
 Product runtime modules must depend on `ExtensionHostClient` and the public host protocol/context types. They must not import `extensionBackend` directly, including for route, action, telemetry, reload, startup, self-test, or protocol-entrypoint operations.
 
+Manifest-declared tools also invoke backend actions through `ExtensionHostClient`; live agent context is still passed as an explicit fallback dependency until agent capability handles replace it.
+
 ## Migration Phases
 
 1. Add the product runtime / extension host terminology and the `ExtensionHostClient` seam.

@@ -2,7 +2,9 @@ import type { AgentToolResult, ExtensionAPI } from '@earendil-works/pi-coding-ag
 
 import type { ServerRouteContext } from '../routes/context.js';
 import { buildToolInjectionPlan } from '../tools/toolInventory.js';
-import { invokeExtensionAction } from './extensionBackend.js';
+import { getExtensionHostClient } from './extensionHostClient.js';
+import { createExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
+import { createExtensionHostToolContextSnapshot } from './extensionHostToolContext.js';
 import { listExtensionToolRegistrations } from './extensionRegistry.js';
 
 export interface ManifestToolFactoryOptions {
@@ -86,31 +88,32 @@ export function createManifestToolAgentExtensions(options: ManifestToolFactoryOp
               : {}),
           parameters: tool.inputSchema,
           async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<ManifestToolResult> {
-            const invokeResult = await invokeExtensionAction(
-              tool.extensionId,
-              tool.action,
-              params,
-              options.serverContext,
-              {
-                conversationId: ctx.sessionManager.getSessionId(),
-                sessionId: ctx.sessionManager.getSessionId(),
-                cwd: ctx.sessionManager.getCwd?.(),
-                sessionFile: ctx.sessionManager.getSessionFile?.(),
-                preferredVisionModel: options.getPreferredVisionModel?.(),
-                // Forward the streaming update callback so backend handlers can
-                // send progress updates during long-running tool execution.
-                onUpdate: (update) => {
-                  onUpdate?.({
-                    content: normalizeUpdateContent(update.content),
-                    details: undefined,
-                  });
-                },
+            const toolContext = {
+              conversationId: ctx.sessionManager.getSessionId(),
+              sessionId: ctx.sessionManager.getSessionId(),
+              cwd: ctx.sessionManager.getCwd?.(),
+              sessionFile: ctx.sessionManager.getSessionFile?.(),
+              preferredVisionModel: options.getPreferredVisionModel?.(),
+              // Forward the streaming update callback so backend handlers can
+              // send progress updates during long-running tool execution.
+              onUpdate: (update: { content?: Array<{ type: string; text: string }>; isError?: boolean }) => {
+                onUpdate?.({
+                  content: normalizeUpdateContent(update.content),
+                  details: undefined,
+                });
               },
-              // Forward the streaming callback so backend handlers can
-              // send progress updates during tool execution.
-              { onUpdate, signal, toolContext: ctx },
-            );
-
+            };
+            const invokeResult = await getExtensionHostClient().invokeAction({
+              extensionId: tool.extensionId,
+              actionId: tool.action,
+              input: params,
+              serverContextSnapshot: createExtensionHostServerContextSnapshot(options.serverContext),
+              toolContextSnapshot: createExtensionHostToolContextSnapshot(toolContext),
+              toolContext: { onUpdate: toolContext.onUpdate },
+              // Keep the live agent context available until agent capability
+              // handles replace this in-process fallback path.
+              agentToolContext: { onUpdate, signal, toolContext: ctx },
+            });
             // Handle backend invocation error (build failure, not found, etc.)
             if (!invokeResult.ok) {
               return {
