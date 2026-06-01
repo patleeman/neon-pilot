@@ -134,7 +134,7 @@ The runtime may materialize both generated prompt defaults and discovered instru
 | Global system defaults   | `<state-root>/neon-pilot-runtime/APPEND_SYSTEM.md` | Built-in/runtime system prompt template plus configured append-system material              | Always-on personal defaults such as behavior, execution guidance, and knowledge pointers |
 | Agent instruction files  | `<state-root>/neon-pilot-runtime/AGENTS.md`        | Knowledge root, machine-local, configured, repo, ancestor, and local `AGENTS.md` files      | Durable user, machine, repo, and directory-scoped standing instructions                  |
 
-Treat `APPEND_SYSTEM.md` as generated runtime context, not as a repo instruction file. Treat `AGENTS.md` files as editable instruction sources with explicit scope. Model profiles that need smaller prompts, such as local/constrained model extensions, may replace either layer with file pointers while keeping the normal model path fully hydrated.
+Treat `APPEND_SYSTEM.md` as generated runtime context, not as a repo instruction file. Treat `AGENTS.md` files as editable instruction sources with explicit scope. Model profiles that need smaller prompts, such as local/constrained model extensions, may replace instruction files or skills with file pointers while keeping generated global system defaults embedded.
 
 ## Desktop, daemon, and local UI state
 

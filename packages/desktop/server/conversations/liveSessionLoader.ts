@@ -50,12 +50,6 @@ function renderAgentsPointerContent(filePath: string, agentDir: string): string 
 For DS4, this file is a pointer only. Read it only when the task depends on these preferences.`;
 }
 
-function renderAppendSystemPointer(filePath: string): string {
-  return `Global user agent defaults: ${filePath}
-
-For DS4, this file is a pointer only. Read it only when the task depends on global user defaults.`;
-}
-
 export interface LiveSessionLoaderOptions {
   agentDir?: string;
   extensionFactories?: ExtensionFactory[];
@@ -121,7 +115,6 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
     noThemes: true,
     ...(options.progressiveDisclosure
       ? {
-          appendSystemPromptOverride: (base: string[]) => base.map((_content, index) => renderAppendSystemPointer(resolve(agentDir, 'APPEND_SYSTEM.md'))),
           agentsFilesOverride: (base: { agentsFiles: Array<{ path: string; content: string }> }) => ({
             agentsFiles: base.agentsFiles.map((file) => ({
               ...file,

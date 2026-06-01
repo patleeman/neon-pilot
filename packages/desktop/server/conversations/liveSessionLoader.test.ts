@@ -81,7 +81,7 @@ describe('live session loader cache', () => {
     const options = agent.DefaultResourceLoader.instances[0].options as {
       systemPrompt: string;
       noSkills: boolean;
-      appendSystemPromptOverride: (base: string[]) => string[];
+      appendSystemPromptOverride?: (base: string[]) => string[];
       agentsFilesOverride: (base: { agentsFiles: Array<{ path: string; content: string }> }) => {
         agentsFiles: Array<{ path: string; content: string }>;
       };
@@ -90,10 +90,7 @@ describe('live session loader cache', () => {
     expect(options.systemPrompt).toContain('DS4 local model mode');
     expect(options.systemPrompt).toContain('ds4 help');
     expect(options.systemPrompt).toContain('/skills/ds4/SKILL.md');
-
-    const append = options.appendSystemPromptOverride(['full Neon Pilot defaults']);
-    expect(append[0]).toContain('Global user agent defaults: /agent-runtime/APPEND_SYSTEM.md');
-    expect(append[0]).not.toContain('full Neon Pilot defaults');
+    expect(options.appendSystemPromptOverride).toBeUndefined();
 
     const result = options.agentsFilesOverride({
       agentsFiles: [
