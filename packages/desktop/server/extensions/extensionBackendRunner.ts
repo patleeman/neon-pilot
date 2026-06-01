@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
-import { ExtensionBackendWorkerClient } from './extensionBackendWorkerClient.js';
+import { ExtensionBackendWorkerPool } from './extensionBackendWorkerClient.js';
 import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 
@@ -177,7 +177,7 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
 }
 
 export function createWorkerImportExtensionBackendRunner(
-  client: ExtensionBackendWorkerImportClient = new ExtensionBackendWorkerClient(),
+  client: ExtensionBackendWorkerImportClient = new ExtensionBackendWorkerPool(),
   fallback: ExtensionBackendRunner = createInProcessExtensionBackendRunner(),
 ): ExtensionBackendRunner {
   return {

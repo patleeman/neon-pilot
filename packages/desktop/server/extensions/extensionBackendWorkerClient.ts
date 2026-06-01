@@ -113,3 +113,43 @@ export class ExtensionBackendWorkerClient {
     this.pending.clear();
   }
 }
+
+export class ExtensionBackendWorkerPool {
+  private readonly clients = new Map<string, ExtensionBackendWorkerClient>();
+
+  constructor(private readonly options: ExtensionBackendWorkerClientOptions = {}) {}
+
+  async loadModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<void> {
+    await this.getClient(extensionId).loadModule(extensionId, compiled);
+  }
+
+  async hasExport(extensionId: string, compiled: ExtensionBackendLoadTarget, exportName: string): Promise<boolean> {
+    return this.getClient(extensionId).hasExport(extensionId, compiled, exportName);
+  }
+
+  async clearModule(extensionId: string): Promise<void> {
+    await this.getClient(extensionId).clearModule(extensionId);
+  }
+
+  async disposeExtension(extensionId: string): Promise<void> {
+    const client = this.clients.get(extensionId);
+    if (!client) return;
+    this.clients.delete(extensionId);
+    await client.dispose();
+  }
+
+  async dispose(): Promise<void> {
+    const clients = [...this.clients.values()];
+    this.clients.clear();
+    await Promise.all(clients.map((client) => client.dispose()));
+  }
+
+  private getClient(extensionId: string): ExtensionBackendWorkerClient {
+    let client = this.clients.get(extensionId);
+    if (!client) {
+      client = new ExtensionBackendWorkerClient(this.options);
+      this.clients.set(extensionId, client);
+    }
+    return client;
+  }
+}

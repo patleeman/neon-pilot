@@ -1048,7 +1048,7 @@ Desktop extension UI should use the PA client/action bridge (`pa.extension.invok
 
 Backend extensions share the host process today, but backend module import, export lookup, and handler execution are host-owned through the `ExtensionBackendRunner` boundary. The current runner is in-process and applies the process-termination guard around imports, actions, services, subscriptions, protocol handlers, self-test smoke actions, and agent lifecycle factories. Future per-extension workers should replace this runner instead of changing product runtime callers or extension capability adapters.
 
-The extension backend worker entrypoint currently supports wire-safe backend import/cache invalidation and export-availability checks. Backend handler execution still runs through the in-process runner until host contexts and live capabilities have serializable channel handles.
+The extension backend worker entrypoint currently supports wire-safe backend import/cache invalidation and export-availability checks. The worker import runner uses a separate backend worker per extension for those operations. Backend handler execution still runs through the in-process runner until host contexts and live capabilities have serializable channel handles.
 
 Host implementation code should not call extension backend handlers under one-off process guards. Add the needed operation to the runner boundary, then call it from the host-facing orchestrator. If guarded extension code calls `process.exit(...)`, `process.abort()`, or `process.kill(process.pid, ...)`, the call is blocked, surfaced as an extension health error, and runtime action paths disable the extension to prevent startup boot loops.
 

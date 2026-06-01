@@ -38,7 +38,7 @@ const workerThreads = vi.hoisted(() => {
 
 vi.mock('node:worker_threads', () => ({ Worker: workerThreads.Worker }));
 
-import { ExtensionBackendWorkerClient } from './extensionBackendWorkerClient.js';
+import { ExtensionBackendWorkerClient, ExtensionBackendWorkerPool } from './extensionBackendWorkerClient.js';
 
 describe('ExtensionBackendWorkerClient', () => {
   beforeEach(() => {
@@ -87,5 +87,43 @@ describe('ExtensionBackendWorkerClient', () => {
     worker.emit('error', new Error('worker exploded'));
 
     await expect(load).rejects.toThrow('worker exploded');
+  });
+
+  it('uses a separate backend worker per extension in the worker pool', async () => {
+    const pool = new ExtensionBackendWorkerPool({ workerUrl: new URL('file:///worker.js') });
+    const first = pool.loadModule('ext-a', { path: '/tmp/a.mjs', hash: 'hash-a' });
+    const firstWorker = workerThreads.instances[0]!;
+    firstWorker.emit('message', { id: 1, ok: true });
+    await first;
+
+    const second = pool.loadModule('ext-b', { path: '/tmp/b.mjs', hash: 'hash-b' });
+    const secondWorker = workerThreads.instances[1]!;
+    secondWorker.emit('message', { id: 1, ok: true });
+    await second;
+
+    const firstAgain = pool.hasExport('ext-a', { path: '/tmp/a.mjs', hash: 'hash-a' }, 'doThing');
+    firstWorker.emit('message', { id: 2, ok: true, result: true });
+    await expect(firstAgain).resolves.toBe(true);
+
+    expect(workerThreads.instances).toHaveLength(2);
+    expect(firstWorker.postMessage).toHaveBeenNthCalledWith(1, {
+      id: 1,
+      type: 'loadModule',
+      extensionId: 'ext-a',
+      compiled: { path: '/tmp/a.mjs', hash: 'hash-a' },
+    });
+    expect(secondWorker.postMessage).toHaveBeenCalledWith({
+      id: 1,
+      type: 'loadModule',
+      extensionId: 'ext-b',
+      compiled: { path: '/tmp/b.mjs', hash: 'hash-b' },
+    });
+    expect(firstWorker.postMessage).toHaveBeenNthCalledWith(2, {
+      id: 2,
+      type: 'hasExport',
+      extensionId: 'ext-a',
+      compiled: { path: '/tmp/a.mjs', hash: 'hash-a' },
+      exportName: 'doThing',
+    });
   });
 });
