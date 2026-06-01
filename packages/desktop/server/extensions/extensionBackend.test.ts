@@ -2035,10 +2035,12 @@ describe('extension backend action invocation', () => {
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
-        exportName === 'readMemory'
-          ? { agentsMd: [], skills: [], memoryDocs: [] }
-          : exportName === 'knowledgeReadFile'
-            ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
+        exportName === 'readState'
+          ? { configured: false, effectiveRoot: '/knowledge', effectiveRoots: ['/knowledge'] }
+          : exportName === 'readMemory'
+            ? { agentsMd: [], skills: [], memoryDocs: [] }
+            : exportName === 'knowledgeReadFile'
+              ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
             : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
       ),
       run: vi.fn(),
@@ -2049,6 +2051,10 @@ describe('extension backend action invocation', () => {
     await expect(invokeExtensionAction('system-knowledge', 'knowledgeListFiles', {})).resolves.toEqual({
       ok: true,
       result: { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
+    });
+    await expect(invokeExtensionAction('system-knowledge', 'readState', {})).resolves.toEqual({
+      ok: true,
+      result: { configured: false, effectiveRoot: '/knowledge', effectiveRoots: ['/knowledge'] },
     });
     await expect(invokeExtensionAction('system-knowledge', 'knowledgeReadFile', { id: 'notes/a.md' })).resolves.toEqual({
       ok: true,
@@ -2080,6 +2086,24 @@ describe('extension backend action invocation', () => {
             additionalPromptTemplatePaths: expect.any(Array),
             additionalThemePaths: expect.any(Array),
           }),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')),
+      }),
+      'readState',
+      { type: 'action', label: 'action readState', target: 'readState' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
         }),
       },
     );

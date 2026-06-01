@@ -15,7 +15,10 @@
       {
         "id": "readState",
         "handler": "readState",
-        "title": "Read knowledge state"
+        "title": "Read knowledge state",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "updateState",
