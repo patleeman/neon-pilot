@@ -1,3 +1,7 @@
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resolverMocks = vi.hoisted(() => ({
@@ -97,5 +101,30 @@ describe('backendApi/extensions', () => {
     await expect(installMarketplacePackageSource({ source: '/packages/review', target: 'workspace' })).rejects.toThrow(
       'marketplace package target must be local',
     );
+  });
+
+  it('writes additional extension search paths to profile and state-root settings files', async () => {
+    const { writeAdditionalExtensionSearchPaths } = await import('./extensions.js');
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-ext-search-paths-'));
+    const runtimeDir = join(stateRoot, 'profiles', 'shared');
+    const runtimeSettingsFilePath = join(runtimeDir, 'settings.json');
+
+    await expect(
+      writeAdditionalExtensionSearchPaths({
+        runtimeDir,
+        runtimeSettingsFilePath,
+        paths: ['/extensions/one', '/extensions/two'],
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(JSON.parse(readFileSync(runtimeSettingsFilePath, 'utf-8'))).toEqual({
+      'extensions.additionalPaths': '/extensions/one\n/extensions/two',
+    });
+    expect(JSON.parse(readFileSync(join(runtimeDir, 'settings.json'), 'utf-8'))).toEqual({
+      'extensions.additionalPaths': '/extensions/one\n/extensions/two',
+    });
+    expect(JSON.parse(readFileSync(join(stateRoot, 'profiles', 'settings.json'), 'utf-8'))).toEqual({
+      'extensions.additionalPaths': '/extensions/one\n/extensions/two',
+    });
   });
 });

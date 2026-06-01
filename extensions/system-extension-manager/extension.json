@@ -86,7 +86,14 @@
           "enabled": true
         }
       },
-      { "id": "updateSearchPaths", "handler": "updateSearchPaths", "title": "Update extension search paths" },
+      {
+        "id": "updateSearchPaths",
+        "handler": "updateSearchPaths",
+        "title": "Update extension search paths",
+        "worker": {
+          "enabled": true
+        }
+      },
       {
         "id": "reloadExtensions",
         "handler": "reloadExtensions",
@@ -111,6 +118,7 @@
             "installCatalog",
             "installFromUrl",
             "readSearchPaths",
+            "updateSearchPaths",
             "reloadExtensions"
           ]
         }

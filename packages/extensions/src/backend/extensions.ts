@@ -13,6 +13,12 @@ export interface ExtensionInstallSummary {
   [key: string]: unknown;
 }
 
+export interface ExtensionSearchPathWriteOptions {
+  runtimeDir?: string;
+  runtimeSettingsFilePath?: string;
+  paths?: string[];
+}
+
 export type ExtensionDoctorSeverity = 'error' | 'warning' | 'info';
 
 export interface ExtensionDoctorFinding {
@@ -72,5 +78,9 @@ export async function snapshotRuntimeExtension(_extensionId: string): Promise<Ru
 }
 
 export async function validateExtensionPackage(_options: { extensionId?: string; packageRoot?: string }): Promise<ExtensionDoctorReport> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function writeAdditionalExtensionSearchPaths(_options: ExtensionSearchPathWriteOptions): Promise<{ ok: true }> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }

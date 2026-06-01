@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
@@ -12,6 +12,7 @@ import {
   reloadExtensionBackend,
   snapshotRuntimeExtension,
   validateExtensionPackage,
+  writeAdditionalExtensionSearchPaths,
 } from '@neon-pilot/extensions/backend/extensions';
 import { HOST_VIEW_COMPONENT_DEFINITIONS } from '@neon-pilot/extensions/host-view-components';
 
@@ -129,13 +130,7 @@ export async function updateSearchPaths(input: unknown, ctx: ExtensionBackendCon
         .filter((path): path is string => Boolean(path))
         .map((path) => resolve(path))
     : [];
-  const pathsJoined = paths.join('\n');
-  writeSettingsValue(ctx.runtimeSettingsFilePath, pathsJoined);
-  writeSettingsValue(join(ctx.runtimeDir, 'settings.json'), pathsJoined);
-  // Also write to the canonical state-root settings file that the extension
-  // loader reads from (readConfiguredExtensionPaths). Without this, saved
-  // search paths appear to be persisted but have no effect.
-  writeSettingsValue(join(resolve(ctx.runtimeDir, '..'), 'settings.json'), pathsJoined);
+  await writeAdditionalExtensionSearchPaths({ runtimeDir: ctx.runtimeDir, runtimeSettingsFilePath: ctx.runtimeSettingsFilePath, paths });
   return readSearchPaths(input, ctx);
 }
 
@@ -176,13 +171,6 @@ function readSettingsFile(path: string): SettingsRecord {
   } catch {
     return {};
   }
-}
-
-function writeSettingsValue(path: string, value: string): void {
-  const settings = readSettingsFile(path);
-  settings[ADDITIONAL_EXTENSION_PATHS_SETTING] = value;
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
 function readConfiguredSearchPaths(ctx: ExtensionBackendContext): string[] {

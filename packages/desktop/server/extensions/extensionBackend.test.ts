@@ -2294,10 +2294,13 @@ describe('extension backend action invocation', () => {
         if (exportName === 'validateExtension') return { ok: true, valid: true, findings: [] };
         if (exportName === 'installCatalogExtension') return { ok: true, id: 'system-browser', installed: true };
         if (exportName === 'installExtensionFromUrl') return { ok: true, id: 'remote-extension', installed: true };
+        if (exportName === 'updateSearchPaths') return { ok: true, configuredPaths: ['/extensions/one'] };
         if (exportName === 'manageExtension') {
           const action = (args[0] as { action?: string }).action;
           return action === 'create'
             ? { ok: true, id: 'managed-extension' }
+            : action === 'updateSearchPaths'
+              ? { ok: true, configuredPaths: ['/extensions/one'] }
             : { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' };
         }
         return { ok: true, extensions: [{ id: 'system-todo' }] };
@@ -2352,6 +2355,19 @@ describe('extension backend action invocation', () => {
     ).resolves.toEqual({
       ok: true,
       result: { ok: true, id: 'managed-extension' },
+    });
+    await expect(invokeExtensionAction('system-extension-manager', 'updateSearchPaths', { paths: ['/extensions/one'] })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, configuredPaths: ['/extensions/one'] },
+    });
+    await expect(
+      invokeExtensionAction('system-extension-manager', 'manageExtension', {
+        action: 'updateSearchPaths',
+        paths: ['/extensions/one'],
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, configuredPaths: ['/extensions/one'] },
     });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -2420,6 +2436,40 @@ describe('extension backend action invocation', () => {
       'manageExtension',
       { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
       [{ action: 'create', id: 'managed-extension' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'updateSearchPaths',
+      { type: 'action', label: 'action updateSearchPaths', target: 'updateSearchPaths' },
+      [{ paths: ['/extensions/one'] }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'manageExtension',
+      { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
+      [{ action: 'updateSearchPaths', paths: ['/extensions/one'] }],
       {
         context: expect.objectContaining({
           type: 'backend',
