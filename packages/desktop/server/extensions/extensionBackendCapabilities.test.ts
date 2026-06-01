@@ -29,8 +29,8 @@ describe('extension backend capability dispatcher', () => {
     const dispatch = createExtensionBackendCapabilityDispatcher({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
 
     await expect(async () =>
-      dispatch({ id: 1, kind: 'capabilityRequest', extensionId: 'ext', capability: 'secrets', operation: 'get' }),
-    ).rejects.toThrow('Unsupported extension backend capability: secrets');
+      dispatch({ id: 1, kind: 'capabilityRequest', extensionId: 'ext', capability: 'database', operation: 'query' }),
+    ).rejects.toThrow('Unsupported extension backend capability: database');
 
     await expect(async () =>
       dispatch({
@@ -106,6 +106,43 @@ describe('extension backend capability dispatcher', () => {
     expect(storage.put).toHaveBeenCalledWith('ext', 'tasks/one', { done: true }, { expectedVersion: 3 });
     expect(storage.delete).toHaveBeenCalledWith('ext', 'tasks/one');
     expect(storage.list).toHaveBeenCalledWith('ext', 'tasks/');
+  });
+
+  it('dispatches extension-scoped secrets capability calls', async () => {
+    const secrets = {
+      get: vi.fn(() => 'stored-secret'),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ secrets });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'secrets',
+          operation: 'get',
+          input: { secretId: 'apiKey' },
+        }),
+      ),
+    ).resolves.toBe('stored-secret');
+
+    expect(secrets.get).toHaveBeenCalledWith('ext', 'apiKey');
+  });
+
+  it('rejects malformed secrets capability inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({ secrets: { get: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'secrets',
+        operation: 'get',
+        input: { secretId: 1 },
+      }),
+    ).rejects.toThrow('Secret id must be a string.');
   });
 
   it('dispatches shell exec capability calls', async () => {

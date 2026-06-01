@@ -1,3 +1,4 @@
+import { resolveSecret } from '../secrets/secretStore.js';
 import { type AppEventTopic, invalidateAppTopics } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
@@ -30,6 +31,10 @@ interface ExtensionBackendCapabilityShell {
   }): Promise<unknown> | unknown;
 }
 
+interface ExtensionBackendCapabilitySecrets {
+  get(extensionId: string, secretId: string): string | undefined;
+}
+
 interface ExtensionBackendCapabilityUi {
   invalidate(topics: string | string[]): unknown;
 }
@@ -38,6 +43,7 @@ export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWor
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
   log?: ExtensionBackendCapabilityLogger;
+  secrets?: ExtensionBackendCapabilitySecrets;
   shell?: ExtensionBackendCapabilityShell;
   storage?: ExtensionBackendCapabilityStorage;
   ui?: ExtensionBackendCapabilityUi;
@@ -115,6 +121,14 @@ function dispatchStorageCapability(storage: ExtensionBackendCapabilityStorage, r
   throw new Error(`Unsupported storage capability operation: ${request.operation}`);
 }
 
+function dispatchSecretsCapability(secrets: ExtensionBackendCapabilitySecrets, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation !== 'get') {
+    throw new Error(`Unsupported secrets capability operation: ${request.operation}`);
+  }
+  const input = normalizeRecordInput(request.input, 'Secrets');
+  return secrets.get(request.extensionId, requireString(input.secretId, 'Secret id'));
+}
+
 function optionalStringArray(value: unknown, label: string): string[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
@@ -182,6 +196,7 @@ export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
+  const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const shell = options.shell ?? createExtensionShellCapability();
   const ui = options.ui ?? {
     invalidate: (topics: string | string[]) => {
@@ -205,6 +220,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'shell') {
       return dispatchShellCapability(shell, request);
+    }
+    if (request.capability === 'secrets') {
+      return dispatchSecretsCapability(secrets, request);
     }
     if (request.capability === 'storage') {
       return dispatchStorageCapability(storage, request);

@@ -248,7 +248,7 @@ export async function doThing(_input, ctx) {
     });
   });
 
-  it('runs backend exports with host-mediated UI invalidation', async () => {
+  it('runs backend exports with host-mediated secrets reads', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });
     const backendPath = join(root, 'backend.mjs');
@@ -256,8 +256,7 @@ export async function doThing(_input, ctx) {
       backendPath,
       `
 export async function doThing(_input, ctx) {
-  await ctx.ui.invalidate(['sessions', 'checkpoints']);
-  return { ok: true };
+  return { secret: await ctx.secrets.get('apiKey') };
 }
 `,
     );
@@ -277,12 +276,50 @@ export async function doThing(_input, ctx) {
       id: 1,
       kind: 'capabilityRequest',
       extensionId: 'worker-ext',
+      capability: 'secrets',
+      operation: 'get',
+      input: { secretId: 'apiKey' },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: 'stored-secret' });
+
+    await waitForPostMessage({ id: 50, ok: true, result: { secret: 'stored-secret' } });
+  });
+
+  it('runs backend exports with host-mediated UI invalidation', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  await ctx.ui.invalidate(['sessions', 'checkpoints']);
+  return { ok: true };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 60,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-6' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
       capability: 'ui',
       operation: 'invalidate',
       input: { topics: ['sessions', 'checkpoints'] },
     });
     workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true });
 
-    await waitForPostMessage({ id: 50, ok: true, result: { ok: true } });
+    await waitForPostMessage({ id: 60, ok: true, result: { ok: true } });
   });
 });
