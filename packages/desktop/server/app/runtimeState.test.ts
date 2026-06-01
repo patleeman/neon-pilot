@@ -330,6 +330,7 @@ describe('createRuntimeState', () => {
         additionalThemePaths: ['/themes/shared.json'],
       },
     ]);
+    expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, '/agent-dir');
     expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
     expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
 

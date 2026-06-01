@@ -345,6 +345,8 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       extensionEntries,
     });
     const resourcesAtMs = performance.now();
+    materializeRuntimeResourcesToAgentDir(resolved, agentDir);
+    const materializeAtMs = performance.now();
 
     const assemblyContext = {
       runtimeScope,
@@ -369,7 +371,8 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         modelRefMs: Math.round(modelRefAtMs - extensionEntriesAtMs),
         cacheKeyMs: Math.round(cacheKeyAtMs - modelRefAtMs),
         resourcesMs: Math.round(resourcesAtMs - cacheKeyAtMs),
-        skillsMs: Math.round(skillsAtMs - resourcesAtMs),
+        materializeMs: Math.round(materializeAtMs - resourcesAtMs),
+        skillsMs: Math.round(skillsAtMs - materializeAtMs),
         promptTemplatesMs: Math.round(promptTemplatesAtMs - skillsAtMs),
         totalMs: Math.round(promptTemplatesAtMs - startedAtMs),
       },
@@ -406,6 +409,8 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         extensionEntries,
       });
       const resourcesAtMs = performance.now();
+      materializeRuntimeResourcesToAgentDir(resolved, agentDir);
+      const materializeAtMs = performance.now();
       const assemblyContext = {
         runtimeScope,
         repoRoot,
@@ -431,7 +436,8 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
           modelRefMs: Math.round(modelRefAtMs - extensionEntriesAtMs),
           cacheKeyMs: Math.round(cacheKeyAtMs - modelRefAtMs),
           resourcesMs: Math.round(resourcesAtMs - cacheKeyAtMs),
-          skillDispatchMs: Math.round(skillsDispatchedAtMs - resourcesAtMs),
+          materializeMs: Math.round(materializeAtMs - resourcesAtMs),
+          skillDispatchMs: Math.round(skillsDispatchedAtMs - materializeAtMs),
           promptTemplateDispatchMs: Math.round(promptTemplatesDispatchedAtMs - skillsDispatchedAtMs),
           planWaitMs: Math.round(plansAtMs - promptTemplatesDispatchedAtMs),
           totalMs: Math.round(plansAtMs - startedAtMs),
