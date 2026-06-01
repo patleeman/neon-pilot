@@ -50,6 +50,7 @@ function useDs4Health(pa: { extensions: { callAction(extensionId: string, action
   const [status, setStatus] = useState<Ds4Status | null>(null);
   const [checking, setChecking] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [settingUp, setSettingUp] = useState(false);
   const [error, setError] = useState('');
 
   const refresh = useCallback(
@@ -104,7 +105,23 @@ function useDs4Health(pa: { extensions: { callAction(extensionId: string, action
     }
   };
 
-  return { isDs4, status, checking, starting, error, refresh, start };
+  const setup = async () => {
+    if (!isDs4 || settingUp) return;
+    setSettingUp(true);
+    try {
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4BootstrapRuntime', {})) as { status?: Ds4Status };
+      setStatus(result.status ?? null);
+      setError('');
+      await refresh();
+    } catch (setupError) {
+      setError(setupError instanceof Error ? setupError.message : String(setupError));
+      await refresh();
+    } finally {
+      setSettingUp(false);
+    }
+  };
+
+  return { isDs4, status, checking, starting, settingUp, error, refresh, start, setup };
 }
 
 function thinkingOptions(model: Model | null): Array<{ value: string; label: string }> {
@@ -125,7 +142,13 @@ function describeDs4Health(health: ReturnType<typeof useDs4Health>) {
   if (health.status?.reachable) return { tone: 'ok', label: 'DS4 alive', title: 'DS4 server is reachable.', canStart: false };
   if (health.status?.bootstrap?.running) return { tone: 'warn', label: 'DS4 setup', title: 'DS4 bootstrap is running.', canStart: false };
   if (health.status?.runtime?.installed === false) {
-    return { tone: 'muted', label: 'DS4 setup needed', title: 'DS4 runtime is not installed. Run ds4BootstrapRuntime first.', canStart: false };
+    return {
+      tone: 'muted',
+      label: 'DS4 setup needed',
+      title: 'DS4 runtime is not installed. Setup clones ds4, builds ds4-server, and downloads the model.',
+      canSetup: true,
+      canStart: false,
+    };
   }
   if (health.status?.server?.managedRunning) {
     return { tone: 'warn', label: 'DS4 starting', title: 'DS4 server process is running but not reachable yet.', canStart: false };
@@ -167,6 +190,16 @@ function Ds4HealthIndicator({ health, variant }: { health: ReturnType<typeof use
           disabled={health.starting}
         >
           {health.starting ? 'Starting' : 'Start'}
+        </button>
+      ) : null}
+      {'canSetup' in description && description.canSetup ? (
+        <button
+          type="button"
+          className="shrink-0 rounded border border-border-subtle px-1.5 py-0.5 text-[10px] font-medium text-secondary hover:bg-surface/55 hover:text-primary disabled:opacity-50"
+          onClick={() => void health.setup()}
+          disabled={health.settingUp}
+        >
+          {health.settingUp ? 'Setting up' : 'Setup'}
         </button>
       ) : null}
     </div>
