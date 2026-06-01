@@ -9,8 +9,22 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "inspectAgentRuntime", "handler": "inspectAgentRuntime", "title": "Inspect agent runtime" },
-      { "id": "inspectPromptAssembly", "handler": "inspectPromptAssembly", "title": "Inspect prompt assembly" },
+      {
+        "id": "inspectAgentRuntime",
+        "handler": "inspectAgentRuntime",
+        "title": "Inspect agent runtime",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "inspectPromptAssembly",
+        "handler": "inspectPromptAssembly",
+        "title": "Inspect prompt assembly",
+        "worker": {
+          "enabled": true
+        }
+      },
       { "id": "updatePromptAssemblySkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" },
       { "id": "updateRuntimeCapability", "handler": "updateRuntimeCapability", "title": "Enable or disable a runtime capability" }
     ]
