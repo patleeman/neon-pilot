@@ -141,10 +141,23 @@ describe('extension backend action invocation', () => {
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
     const loadModule = vi.fn(async () => ({ doThing: vi.fn((input: unknown) => ({ input, via: 'runner' })) }));
     const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
+    const runExport = vi.fn(
+      async (
+        extensionId: string,
+        compiled: { path: string; hash: string },
+        exportName: string,
+        operation: unknown,
+        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
+      ) => {
+        const backend = await loadModule(extensionId, compiled);
+        return run(extensionId, operation, () => invoke(backend[exportName] as (...args: unknown[]) => unknown));
+      },
+    );
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
       run,
+      runExport,
     });
 
     await expect(invokeExtensionAction('runner-action-ext', 'doThing', { ok: true })).resolves.toEqual({
@@ -156,8 +169,10 @@ describe('extension backend action invocation', () => {
       'runner-action-ext',
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
     );
-    expect(run).toHaveBeenCalledWith(
+    expect(runExport).toHaveBeenCalledWith(
       'runner-action-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+      'doThing',
       { type: 'action', label: 'action doThing', exportName: 'doThing', target: 'doThing' },
       expect.any(Function),
     );
@@ -187,6 +202,7 @@ describe('extension backend action invocation', () => {
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
+      runExport: vi.fn(),
       run,
     });
 
@@ -220,18 +236,33 @@ describe('extension backend action invocation', () => {
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
     const loadModule = vi.fn(async () => ({ ping: vi.fn(() => ({ status: 201, body: { via: 'runner' } })) }));
     const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
+    const runExport = vi.fn(
+      async (
+        extensionId: string,
+        compiled: { path: string; hash: string },
+        exportName: string,
+        operation: unknown,
+        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
+      ) => {
+        const backend = await loadModule(extensionId, compiled);
+        return run(extensionId, operation, () => invoke(backend[exportName] as (...args: unknown[]) => unknown));
+      },
+    );
     setExtensionBackendRunnerForTests({
       loadModule,
       clearModule: vi.fn(),
       run,
+      runExport,
     });
 
     await expect(
       invokeExtensionRoute('runner-route-ext', 'GET', '/ping', { method: 'GET', path: '/ping', query: {}, params: {} }),
     ).resolves.toEqual({ status: 201, body: { via: 'runner' } });
 
-    expect(run).toHaveBeenCalledWith(
+    expect(runExport).toHaveBeenCalledWith(
       'runner-route-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+      'ping',
       { type: 'route', label: 'route GET /ping', exportName: 'ping', target: '/ping' },
       expect.any(Function),
     );

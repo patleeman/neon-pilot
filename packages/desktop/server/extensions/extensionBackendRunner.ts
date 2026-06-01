@@ -32,7 +32,21 @@ export interface ExtensionBackendOperation {
 export interface ExtensionBackendRunner {
   loadModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<ExtensionBackendModule>;
   clearModule(extensionId: string): void;
+  runExport<T>(
+    extensionId: string,
+    compiled: ExtensionBackendLoadTarget,
+    exportName: string,
+    operation: ExtensionBackendOperation,
+    invoke: (handler: (...args: unknown[]) => unknown) => Promise<T> | T,
+  ): Promise<T>;
   run<T>(extensionId: string, operation: ExtensionBackendOperation, handler: () => Promise<T> | T): Promise<T>;
+}
+
+export class ExtensionBackendExportNotFoundError extends Error {
+  constructor(readonly exportName: string) {
+    super(`Extension backend export not found: ${exportName}`);
+    this.name = 'ExtensionBackendExportNotFoundError';
+  }
 }
 
 export function extensionBackendOperation(
@@ -84,7 +98,7 @@ async function auditBackendOperation<T>(extensionId: string, operation: Extensio
 }
 
 export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner {
-  return {
+  const runner: ExtensionBackendRunner = {
     loadModule(extensionId, compiled) {
       const cacheKey = `${compiled.path}:${compiled.hash}`;
       const cached = backendModuleCache.get(extensionId);
@@ -108,12 +122,23 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
     clearModule(extensionId) {
       backendModuleCache.delete(extensionId);
     },
+    async runExport(extensionId, compiled, exportName, operation, invoke) {
+      const backend = await runner.loadModule(extensionId, compiled);
+      const handler = backend[exportName];
+      if (typeof handler !== 'function') {
+        throw new ExtensionBackendExportNotFoundError(exportName);
+      }
+      return runner.run(extensionId, { ...operation, exportName: operation.exportName ?? exportName }, () =>
+        invoke(handler as (...args: unknown[]) => unknown),
+      );
+    },
     run(extensionId, operation, handler) {
       return auditBackendOperation(extensionId, operation, () =>
         withExtensionProcessGuard(extensionId, operation.label, () => Promise.resolve(handler())),
       );
     },
   };
+  return runner;
 }
 
 let extensionBackendRunner: ExtensionBackendRunner = createInProcessExtensionBackendRunner();

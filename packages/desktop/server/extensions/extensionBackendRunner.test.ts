@@ -70,6 +70,38 @@ describe('extensionBackendRunner', () => {
     ]);
   });
 
+  it('loads, resolves, and executes backend exports at the runner boundary', async () => {
+    const runner = createInProcessExtensionBackendRunner();
+    const packageRoot = await mkdtemp(join(tmpdir(), 'pa-ext-runner-export-'));
+    const dist = join(packageRoot, 'dist');
+    mkdirSync(dist);
+    const backendPath = join(dist, 'backend.mjs');
+    writeFileSync(backendPath, 'export function doThing(input) { return { input, via: "runExport" }; }\n');
+
+    await expect(
+      runner.runExport(
+        'ext-export-audit',
+        { path: backendPath, hash: 'test-1' },
+        'doThing',
+        extensionBackendOperation('action', 'action doThing', { exportName: 'doThing', target: 'doThing' }),
+        (handler) => handler({ ok: true }),
+      ),
+    ).resolves.toEqual({ input: { ok: true }, via: 'runExport' });
+
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-export-audit:backend import',
+        ok: true,
+      }),
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-export-audit:action doThing',
+        ok: true,
+      }),
+    ]);
+  });
+
   it('serializes operation descriptors to wire-safe metadata only', () => {
     const operation = {
       ...extensionBackendOperation('action', 'action doThing', { exportName: 'doThing', target: 'doThing' }),

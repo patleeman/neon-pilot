@@ -12,7 +12,7 @@ The extension host owns extension registry loading, backend extension execution,
 
 Extension workers are a later isolation layer. A worker runs one extension backend, or one trusted extension group, and talks only to the extension host.
 
-Backend module import and handler execution go through the host-owned `ExtensionBackendRunner` seam. The current runner executes in the extension host process under the existing process guard; future per-extension workers should replace this runner instead of changing product runtime callers or extension capability adapters.
+Backend module import, export lookup, and handler execution go through the host-owned `ExtensionBackendRunner` seam. The current runner executes in the extension host process under the existing process guard; future per-extension workers should replace this runner instead of changing product runtime callers or extension capability adapters.
 
 ## Process Graph
 
