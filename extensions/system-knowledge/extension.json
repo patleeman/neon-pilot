@@ -71,27 +71,42 @@
       {
         "id": "knowledgeWriteFile",
         "handler": "knowledgeWriteFile",
-        "title": "Write knowledge file"
+        "title": "Write knowledge file",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeCreateFolder",
         "handler": "knowledgeCreateFolder",
-        "title": "Create knowledge folder"
+        "title": "Create knowledge folder",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeDeleteFile",
         "handler": "knowledgeDeleteFile",
-        "title": "Delete knowledge entry"
+        "title": "Delete knowledge entry",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeRename",
         "handler": "knowledgeRename",
-        "title": "Rename knowledge entry"
+        "title": "Rename knowledge entry",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeMove",
         "handler": "knowledgeMove",
-        "title": "Move knowledge entry"
+        "title": "Move knowledge entry",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "knowledgeBacklinks",
@@ -170,31 +185,46 @@
         "method": "PUT",
         "path": "/knowledge/file",
         "handler": "knowledgeWriteFileRoute",
-        "title": "Write knowledge file route"
+        "title": "Write knowledge file route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "DELETE",
         "path": "/knowledge/file",
         "handler": "knowledgeDeleteFileRoute",
-        "title": "Delete knowledge file route"
+        "title": "Delete knowledge file route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "POST",
         "path": "/knowledge/folder",
         "handler": "knowledgeCreateFolderRoute",
-        "title": "Create knowledge folder route"
+        "title": "Create knowledge folder route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "POST",
         "path": "/knowledge/rename",
         "handler": "knowledgeRenameRoute",
-        "title": "Rename knowledge entry route"
+        "title": "Rename knowledge entry route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "POST",
         "path": "/knowledge/move",
         "handler": "knowledgeMoveRoute",
-        "title": "Move knowledge entry route"
+        "title": "Move knowledge entry route",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "GET",

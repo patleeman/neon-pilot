@@ -2043,9 +2043,16 @@ describe('extension backend action invocation', () => {
               ? { configured: true, syncStatus: 'idle', lastSyncAt: '2026-01-01T00:00:00.000Z' }
               : exportName === 'readMemory'
                 ? { agentsMd: [], skills: [], memoryDocs: [] }
+                : exportName === 'knowledgeDeleteFile'
+                  ? { ok: true }
                 : exportName === 'knowledgeReadFile'
                   ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
-                  : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
+                  : exportName === 'knowledgeWriteFile' ||
+                      exportName === 'knowledgeCreateFolder' ||
+                      exportName === 'knowledgeRename' ||
+                      exportName === 'knowledgeMove'
+                    ? { id: 'notes/a.md', kind: 'file' }
+                    : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
       ),
       run: vi.fn(),
     };
@@ -2074,6 +2081,16 @@ describe('extension backend action invocation', () => {
       ok: true,
       result: { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' },
     });
+    const mutationActionInputs: Array<[string, string, Record<string, unknown>, unknown]> = [
+      ['knowledgeWriteFile', 'knowledgeWriteFile', { id: 'notes/a.md', content: '# B' }, { id: 'notes/a.md', kind: 'file' }],
+      ['knowledgeCreateFolder', 'knowledgeCreateFolder', { id: 'notes/new/' }, { id: 'notes/a.md', kind: 'file' }],
+      ['knowledgeDeleteFile', 'knowledgeDeleteFile', { id: 'notes/a.md' }, { ok: true }],
+      ['knowledgeRename', 'knowledgeRename', { id: 'notes/a.md', newName: 'b.md' }, { id: 'notes/a.md', kind: 'file' }],
+      ['knowledgeMove', 'knowledgeMove', { id: 'notes/a.md', targetDir: 'archive/' }, { id: 'notes/a.md', kind: 'file' }],
+    ];
+    for (const [actionId, , input, result] of mutationActionInputs) {
+      await expect(invokeExtensionAction('system-knowledge', actionId, input)).resolves.toEqual({ ok: true, result });
+    }
     await expect(invokeExtensionAction('system-knowledge', 'readMemory', {})).resolves.toEqual({
       ok: true,
       result: { agentsMd: [], skills: [], memoryDocs: [] },
@@ -2103,6 +2120,26 @@ describe('extension backend action invocation', () => {
         }),
       },
     );
+    for (const [actionId, exportName, input] of mutationActionInputs) {
+      expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+        'system-knowledge',
+        expect.objectContaining({
+          path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')),
+        }),
+        exportName,
+        { type: 'action', label: `action ${actionId}`, target: actionId },
+        [input],
+        {
+          context: expect.objectContaining({
+            type: 'backend',
+            runtimeScope: 'shared',
+            repoRoot: expect.any(String),
+            runtimeDir: expect.any(String),
+            runtimeSettingsFilePath: expect.any(String),
+          }),
+        },
+      );
+    }
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-knowledge',
       expect.objectContaining({
@@ -2436,6 +2473,13 @@ describe('extension backend action invocation', () => {
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
         exportName === 'memoryRoute'
           ? { status: 200, body: { agentsMd: [], skills: [], memoryDocs: [] } }
+          : exportName === 'knowledgeDeleteFileRoute'
+            ? { status: 200, body: { ok: true } }
+            : exportName === 'knowledgeWriteFileRoute' ||
+                exportName === 'knowledgeCreateFolderRoute' ||
+                exportName === 'knowledgeRenameRoute' ||
+                exportName === 'knowledgeMoveRoute'
+              ? { status: 200, body: { id: 'notes/a.md', kind: 'file' } }
           : { status: 200, body: { results: [{ id: 'notes/a.md' }] } },
       ),
       run: vi.fn(),
@@ -2459,6 +2503,31 @@ describe('extension backend action invocation', () => {
         params: {},
       }),
     ).resolves.toEqual({ status: 200, body: { agentsMd: [], skills: [], memoryDocs: [] } });
+    const mutationRouteInputs: Array<[
+      'PUT' | 'POST' | 'DELETE',
+      string,
+      string,
+      Record<string, string | string[]>,
+      Record<string, unknown> | undefined,
+      unknown,
+    ]> = [
+      ['PUT', '/knowledge/file', 'knowledgeWriteFileRoute', {}, { id: 'notes/a.md', content: '# B' }, { id: 'notes/a.md', kind: 'file' }],
+      ['POST', '/knowledge/folder', 'knowledgeCreateFolderRoute', {}, { id: 'notes/new/' }, { id: 'notes/a.md', kind: 'file' }],
+      ['DELETE', '/knowledge/file', 'knowledgeDeleteFileRoute', { id: 'notes/a.md' }, undefined, { ok: true }],
+      ['POST', '/knowledge/rename', 'knowledgeRenameRoute', {}, { id: 'notes/a.md', newName: 'b.md' }, { id: 'notes/a.md', kind: 'file' }],
+      ['POST', '/knowledge/move', 'knowledgeMoveRoute', {}, { id: 'notes/a.md', targetDir: 'archive/' }, { id: 'notes/a.md', kind: 'file' }],
+    ];
+    for (const [method, path, , query, body, result] of mutationRouteInputs) {
+      await expect(
+        invokeExtensionRoute('system-knowledge', method, path, {
+          method,
+          path,
+          query,
+          params: {},
+          ...(body ? { body } : {}),
+        }),
+      ).resolves.toEqual({ status: 200, body: result });
+    }
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-knowledge',
@@ -2490,6 +2559,23 @@ describe('extension backend action invocation', () => {
         }),
       },
     );
+    for (const [method, path, exportName, query, body] of mutationRouteInputs) {
+      expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+        'system-knowledge',
+        expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')) }),
+        exportName,
+        { type: 'route', label: `route ${method} ${path}`, target: path },
+        [{ method, path, query, params: {}, ...(body ? { body } : {}) }],
+        {
+          context: expect.objectContaining({
+            type: 'backend',
+            runtimeScope: 'shared',
+            runtimeDir: expect.any(String),
+            runtimeSettingsFilePath: expect.any(String),
+          }),
+        },
+      );
+    }
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
