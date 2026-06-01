@@ -41,6 +41,7 @@ const extensionRegistry = vi.hoisted(() => ({
   readExtensionSchema: vi.fn(),
   readExtensionRegistrySnapshot: vi.fn(),
   setExtensionEnabled: vi.fn(),
+  setExtensionKeybinding: vi.fn(),
 }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
@@ -283,6 +284,28 @@ describe('extension host client', () => {
     expect(extensionServices.startExtensionServices).toHaveBeenCalledWith(expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
   });
 
+  it('routes keybinding updates through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+
+    await expect(
+      getExtensionHostClient().setKeybinding({
+        extensionId: 'ext',
+        keybindingId: 'open',
+        command: 'ext.open',
+        keys: ['Meta+O'],
+        enabled: true,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(extensionRegistry.setExtensionKeybinding).toHaveBeenCalledWith({
+      extensionId: 'ext',
+      keybindingId: 'open',
+      command: 'ext.open',
+      keys: ['Meta+O'],
+      enabled: true,
+    });
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -406,6 +429,7 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'listActionTelemetry', extensionId: 'ext' })).toBe('listActionTelemetry');
     expect(extensionHostRequestName({ type: 'runSelfTest', extensionId: 'ext' })).toBe('runSelfTest:ext');
     expect(extensionHostRequestName({ type: 'reloadBackend', extensionId: 'ext' })).toBe('reloadBackend:ext');
+    expect(extensionHostRequestName({ type: 'setKeybinding', extensionId: 'ext', keybindingId: 'open' })).toBe('setKeybinding:ext/open');
     expect(extensionHostRequestName({ type: 'setEnabled', extensionId: 'ext', enabled: true })).toBe('setEnabled:ext:enable');
     expect(extensionHostRequestName({ type: 'publishEvent', source: 'settings', payload: null })).toBe('publishEvent:settings');
     expect(extensionHostRequestName({ type: 'installSubscriptions', extensionId: 'ext' })).toBe('installSubscriptions:ext');

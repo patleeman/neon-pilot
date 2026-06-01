@@ -293,6 +293,20 @@ export interface ExtensionHostReloadBackendRequest {
   extensionId: string;
 }
 
+export interface ExtensionHostSetKeybindingRequest {
+  type: 'setKeybinding';
+  extensionId: string;
+  keybindingId: string;
+  title?: string;
+  command?: string;
+  args?: unknown;
+  scope?: 'global' | 'surface';
+  packageType?: 'system' | 'user';
+  keys?: string[];
+  enabled?: boolean;
+  reset?: boolean;
+}
+
 export interface ExtensionHostSetEnabledRequest {
   type: 'setEnabled';
   extensionId: string;
@@ -342,6 +356,7 @@ export type ExtensionHostRequest =
   | ExtensionHostListActionTelemetryRequest
   | ExtensionHostRunSelfTestRequest
   | ExtensionHostReloadBackendRequest
+  | ExtensionHostSetKeybindingRequest
   | ExtensionHostSetEnabledRequest;
 
 export interface ExtensionHostHealthResponse {
@@ -417,6 +432,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      keybindingUpdated: true;
+    }
+  | {
+      ok: true;
       enabledResult: ExtensionHostSetEnabledResult;
     }
   | {
@@ -443,6 +462,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'listActionTelemetry') return 'listActionTelemetry';
   if (request.type === 'runSelfTest') return `runSelfTest:${request.extensionId}`;
   if (request.type === 'reloadBackend') return `reloadBackend:${request.extensionId}`;
+  if (request.type === 'setKeybinding') return `setKeybinding:${request.extensionId}/${request.keybindingId}`;
   if (request.type === 'setEnabled') return `setEnabled:${request.extensionId}:${request.enabled ? 'enable' : 'disable'}`;
   return request.type;
 }

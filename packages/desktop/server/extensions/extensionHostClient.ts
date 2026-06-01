@@ -22,6 +22,7 @@ import type {
   ExtensionHostServiceOperationResult,
   ExtensionHostSetEnabledRequest,
   ExtensionHostSetEnabledResult,
+  ExtensionHostSetKeybindingRequest,
   ExtensionHostStartServicesRequest,
   ExtensionHostStartStartupActionsRequest,
   ExtensionHostStaticContributions,
@@ -46,6 +47,7 @@ export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
 export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
 export type ExtensionHostSetEnabledInput = Omit<ExtensionHostSetEnabledRequest, 'type'>;
+export type ExtensionHostSetKeybindingInput = Omit<ExtensionHostSetKeybindingRequest, 'type'>;
 export type ExtensionHostStartServicesInput = Omit<ExtensionHostStartServicesRequest, 'type'>;
 export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
 
@@ -68,6 +70,7 @@ export interface ExtensionHostClient {
   reloadBackend(input: ExtensionHostReloadBackendInput): Promise<ExtensionHostReloadBackendResult>;
   runSelfTest(input: ExtensionHostRunSelfTestInput): Promise<ExtensionHostSelfTestResult>;
   setEnabled(input: ExtensionHostSetEnabledInput): Promise<ExtensionHostSetEnabledResult>;
+  setKeybinding(input: ExtensionHostSetKeybindingInput): Promise<void>;
   startStartupActions(input?: ExtensionHostStartStartupActionsInput): Promise<ExtensionHostBackendOperationResult[]>;
   publishEvent(source: string, payload: unknown): Promise<void>;
 }
@@ -198,6 +201,11 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('enabledResult' in response)) throw new Error('Extension host returned an invalid extension enablement response.');
       return response.enabledResult;
+    },
+    async setKeybinding(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'setKeybinding', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('keybindingUpdated' in response)) throw new Error('Extension host returned an invalid keybinding update response.');
     },
     async startStartupActions(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'startStartupActions', ...(input ?? {}) });
@@ -366,6 +374,22 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
           ...(actionResult ? { actionResult } : {}),
         },
       };
+    }
+    if (request.type === 'setKeybinding') {
+      const { setExtensionKeybinding } = await import('./extensionRegistry.js');
+      setExtensionKeybinding({
+        extensionId: request.extensionId,
+        keybindingId: request.keybindingId,
+        ...(request.title !== undefined ? { title: request.title } : {}),
+        ...(request.command !== undefined ? { command: request.command } : {}),
+        ...(request.args !== undefined ? { args: request.args } : {}),
+        ...(request.scope !== undefined ? { scope: request.scope } : {}),
+        ...(request.packageType !== undefined ? { packageType: request.packageType } : {}),
+        ...(request.keys !== undefined ? { keys: request.keys } : {}),
+        ...(request.enabled !== undefined ? { enabled: request.enabled } : {}),
+        ...(request.reset !== undefined ? { reset: request.reset } : {}),
+      });
+      return { ok: true, keybindingUpdated: true };
     }
     if (request.type === 'startStartupActions') {
       const [{ startExtensionStartupActions }, { createExtensionBackendServerContextFromSnapshot }] = await Promise.all([

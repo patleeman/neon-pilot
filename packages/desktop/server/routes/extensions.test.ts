@@ -584,6 +584,51 @@ describe('registerExtensionRoutes', () => {
     expect(res.json).toHaveBeenCalledWith({ ok: true, extension: expect.objectContaining({ id: 'agent-board', enabled: false }) });
   });
 
+  it('updates extension keybindings through the extension host client', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        contributes: {
+          commands: [{ id: 'plan', title: 'Plan board sprint', action: 'planSprint' }],
+          keybindings: [{ id: 'plan', title: 'Plan board sprint', command: 'agent-board.plan', keys: ['Meta+P'] }],
+        },
+      }),
+    );
+
+    const harness = createHarness();
+    const res = createResponse();
+    await harness.patchHandler('/api/extensions/keybindings/:extensionId/:keybindingId')(
+      {
+        params: { extensionId: 'agent-board', keybindingId: 'plan' },
+        body: { command: 'agent-board.plan', keys: ['Meta+O'], enabled: true },
+      },
+      res,
+    );
+
+    expect(res.json).toHaveBeenCalledWith({ ok: true });
+
+    const keybindingsRes = createResponse();
+    await harness.getHandler('/api/extensions/keybindings')({}, keybindingsRes);
+    expect(keybindingsRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          extensionId: 'agent-board',
+          surfaceId: 'plan',
+          command: 'agent-board.plan',
+          keys: ['Meta+O'],
+          enabled: true,
+        }),
+      ]),
+    );
+  });
+
   it('rejects toggles and reloads for invalid runtime extensions', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

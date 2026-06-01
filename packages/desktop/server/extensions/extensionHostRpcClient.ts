@@ -418,6 +418,11 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('enabledResult' in response)) throw new Error('Extension host returned an invalid extension enablement response.');
       return response.enabledResult;
     },
+    async setKeybinding(input) {
+      const response = await send({ type: 'setKeybinding', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('keybindingUpdated' in response)) throw new Error('Extension host returned an invalid keybinding update response.');
+    },
     async startStartupActions(input) {
       assertWireableStartupActionsInput(input);
       const response = await send({ type: 'startStartupActions', ...(input ?? {}) });

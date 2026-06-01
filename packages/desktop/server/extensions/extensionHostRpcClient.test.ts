@@ -284,6 +284,7 @@ describe('extension host RPC client', () => {
       .mockResolvedValueOnce(jsonResponse({ ok: true, selfTest: { ok: true, extensionId: 'ext', checks: [] } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, reload: { ok: true, extensionId: 'ext', rebuilt: false } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, enabledResult: { ok: true, extension: { id: 'ext', enabled: true } } }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, keybindingUpdated: true }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, route: { status: 200, body: { ok: true } } }));
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
@@ -294,6 +295,7 @@ describe('extension host RPC client', () => {
       ok: true,
       extension: { id: 'ext', enabled: true },
     });
+    await expect(client.setKeybinding({ extensionId: 'ext', keybindingId: 'open', keys: ['Meta+O'] })).resolves.toBeUndefined();
     await expect(
       client.invokeRoute({
         extensionId: 'ext',
@@ -329,6 +331,13 @@ describe('extension host RPC client', () => {
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       5,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({ request: { type: 'setKeybinding', extensionId: 'ext', keybindingId: 'open', keys: ['Meta+O'] } }),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      6,
       'http://host/route',
       expect.objectContaining({
         body: JSON.stringify({

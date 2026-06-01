@@ -24,7 +24,6 @@ import {
   findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
   setBuildError,
-  setExtensionKeybinding,
 } from '../extensions/extensionRegistry.js';
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from '../extensions/extensionStorage.js';
@@ -537,9 +536,9 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.patch('/api/extensions/keybindings/:extensionId/:keybindingId', (req, res) => {
+  router.patch('/api/extensions/keybindings/:extensionId/:keybindingId', async (req, res) => {
     try {
-      setExtensionKeybinding({
+      await getExtensionHostClient().setKeybinding({
         extensionId: req.params.extensionId,
         keybindingId: req.params.keybindingId,
         ...(typeof req.body?.title === 'string' ? { title: req.body.title } : {}),
