@@ -22,6 +22,33 @@ const SETTINGS_KEY = 'settings';
 const DEFAULT_READ_LINES = 500;
 const DEFAULT_SEARCH_RESULTS = 80;
 const MAX_INLINE_TEXT_BYTES = 256 * 1024;
+const RTK_AUTO_PREFIX_COMMANDS = new Set([
+  'aws',
+  'cargo',
+  'cat',
+  'curl',
+  'docker',
+  'find',
+  'gh',
+  'git',
+  'go',
+  'grep',
+  'jest',
+  'json',
+  'kubectl',
+  'ls',
+  'npm',
+  'pnpm',
+  'pytest',
+  'rg',
+  'rspec',
+  'ruff',
+  'tail',
+  'tree',
+  'tsc',
+  'vitest',
+  'wget',
+]);
 const BOOTSTRAP_STEPS = [
   { id: 'tools', title: 'Check tools', progress: 8 },
   { id: 'source', title: 'Download source', progress: 22 },
@@ -76,14 +103,21 @@ function normalizeSettings(value: unknown): Ds4Settings {
   };
 }
 
+function syncRtkShellCompressionEnv(settings: Ds4Settings): void {
+  process.env.NEON_PILOT_DS4_RTK_SHELL_COMPRESSION = settings.shellCompression;
+}
+
 async function readSettings(ctx: ExtensionBackendContext): Promise<Ds4Settings> {
-  return normalizeSettings(await ctx.storage.get(SETTINGS_KEY).catch(() => null));
+  const settings = normalizeSettings(await ctx.storage.get(SETTINGS_KEY).catch(() => null));
+  syncRtkShellCompressionEnv(settings);
+  return settings;
 }
 
 async function writeSettings(ctx: ExtensionBackendContext, patch: unknown): Promise<Ds4Settings> {
   const current = await readSettings(ctx);
   const next = normalizeSettings({ ...current, ...(patch && typeof patch === 'object' ? (patch as Record<string, unknown>) : {}) });
   await ctx.storage.put(SETTINGS_KEY, next);
+  syncRtkShellCompressionEnv(next);
   return next;
 }
 
@@ -312,6 +346,54 @@ function trimLargeText(text: string): { text: string; truncated: boolean } {
   let end = Math.min(text.length, MAX_INLINE_TEXT_BYTES);
   while (end > 0 && Buffer.byteLength(text.slice(0, end), 'utf8') > MAX_INLINE_TEXT_BYTES) end -= 1;
   return { text: `${text.slice(0, end)}\n\n[Truncated at ${MAX_INLINE_TEXT_BYTES} bytes]`, truncated: true };
+}
+
+function firstShellWord(command: string): string {
+  return command.trim().match(/^[A-Za-z0-9._/-]+/)?.[0] ?? '';
+}
+
+function isSimpleShellCommand(command: string): boolean {
+  return !/[|&;()<>`$\\\n]/.test(command);
+}
+
+function rtkWrappedShellSnippet(command: string): string {
+  const trimmed = command.trim();
+  return [
+    'if command -v rtk >/dev/null 2>&1 && rtk gain >/dev/null 2>&1; then',
+    `  exec rtk ${trimmed}`,
+    'else',
+    `  exec sh -lc ${shellQuote(trimmed)}`,
+    'fi',
+  ].join('\n');
+}
+
+function maybeWrapShellLaunchWithRtk(input: { command: string; args: string[]; env: NodeJS.ProcessEnv }) {
+  if (input.env.NEON_PILOT_DS4_RTK_SHELL_COMPRESSION !== 'rtk') return { command: input.command, args: input.args };
+  const command = input.command.trim();
+  const args = input.args;
+  const shellCommand =
+    (path.basename(command) === 'sh' || path.basename(command) === 'bash') && args[0] === '-lc' && typeof args[1] === 'string'
+      ? args[1]
+      : [command, ...args].join(' ');
+  const trimmed = shellCommand.trim();
+  const firstWord = firstShellWord(trimmed);
+  if (!firstWord || path.basename(firstWord) === 'rtk') return { command: input.command, args: input.args };
+  if (!isSimpleShellCommand(trimmed)) return { command: input.command, args: input.args };
+  if (!RTK_AUTO_PREFIX_COMMANDS.has(path.basename(firstWord))) return { command: input.command, args: input.args };
+  return { command: 'sh', args: ['-lc', rtkWrappedShellSnippet(trimmed)] };
+}
+
+async function maybeWrapWithRtk(command: string, ctx: ExtensionBackendContext): Promise<{ command: string; wrapped: boolean; reason?: string }> {
+  const settings = await readSettings(ctx);
+  if (settings.shellCompression !== 'rtk') return { command, wrapped: false, reason: 'disabled' };
+  const availability = await readRtkAvailability(ctx);
+  if (!availability.valid) return { command, wrapped: false, reason: availability.error ?? 'rtk unavailable' };
+  const trimmed = command.trim();
+  const firstWord = firstShellWord(trimmed);
+  if (!firstWord || path.basename(firstWord) === 'rtk') return { command, wrapped: false, reason: 'already rtk' };
+  if (!isSimpleShellCommand(trimmed)) return { command, wrapped: false, reason: 'complex shell command' };
+  if (!RTK_AUTO_PREFIX_COMMANDS.has(path.basename(firstWord))) return { command, wrapped: false, reason: 'unsupported command' };
+  return { command: `rtk ${trimmed}`, wrapped: true };
 }
 
 function readKey(ctx: ExtensionBackendContext): string {
@@ -626,6 +708,7 @@ async function delay(ms: number) {
 export async function bash(input: { command?: unknown; timeout_sec?: unknown; refresh_sec?: unknown }, ctx: ExtensionBackendContext) {
   const command = stringValue(input.command);
   if (!command) throw new Error('command is required.');
+  const rtk = await maybeWrapWithRtk(command, ctx);
   const refreshSeconds = numeric(input.refresh_sec);
   if (refreshSeconds !== undefined) {
     const cwd = cwdFor(ctx);
@@ -633,7 +716,7 @@ export async function bash(input: { command?: unknown; timeout_sec?: unknown; re
     let output = '';
     const handle = await ctx.shell.spawn({
       command: 'sh',
-      args: ['-lc', command],
+      args: ['-lc', rtk.command],
       cwd,
       onStdout: (chunk) => {
         output += chunk;
@@ -656,7 +739,7 @@ export async function bash(input: { command?: unknown; timeout_sec?: unknown; re
     });
     const job: ShellJob = {
       id,
-      command,
+      command: rtk.command,
       cwd,
       pid: handle.pid,
       startedAt: new Date().toISOString(),
@@ -675,7 +758,7 @@ export async function bash(input: { command?: unknown; timeout_sec?: unknown; re
   return callHostTool(
     'bash',
     {
-      command,
+      command: rtk.command,
       ...(numeric(input.timeout_sec) ? { timeout: numeric(input.timeout_sec) } : {}),
     },
     ctx,
@@ -986,14 +1069,19 @@ export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
     };
     maybeWrapperApi.registerBashProcessWrapper?.(
       'system-ds4-cli',
-      (context) => ({
-        ...context,
-        env: {
+      (context) => {
+        const env = {
           ...context.env,
           PATH: `${cliBinDir}${path.delimiter}${context.env.PATH ?? ''}`,
           DS4_CLI_BIN: path.join(cliBinDir, 'ds4'),
-        },
-      }),
+        };
+        const launch = maybeWrapShellLaunchWithRtk({ command: context.command, args: context.args, env });
+        return {
+          ...context,
+          ...launch,
+          env,
+        };
+      },
       { label: 'DS4 CLI' },
     );
 

@@ -25,6 +25,7 @@ function buildDs4SystemPrompt(skillPaths: string[]): string {
 
 DS4 local model mode:
 - Core tools are stable: bash, read, and edit.
+- If DS4 RTK shell compression is enabled in settings, simple supported bash commands are automatically run through RTK for compact output.
 - Use bash to discover and run extended capabilities through the DS4 CLI.
 - Start with \`ds4 help\` when you need CLI capabilities.
 - Useful CLI commands include \`ds4 list\`, \`ds4 search\`, \`ds4 read\`, \`ds4 write\`, \`ds4 edit\`, and \`ds4 fetch\`.

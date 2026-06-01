@@ -398,11 +398,20 @@ describe('DS4 agent profile activation', () => {
       args: string[];
       env: NodeJS.ProcessEnv;
       wrappers: Array<{ id: string }>;
-    }) => { env: NodeJS.ProcessEnv };
+    }) => { command: string; args: string[]; env: NodeJS.ProcessEnv };
     const result = wrap({ command: 'sh', args: ['-lc', 'ds4 help'], env: { PATH: '/usr/bin' }, wrappers: [] });
     expect(result.env.PATH).toContain('/usr/bin');
     expect(result.env.PATH).toContain('bin');
     expect(result.env.DS4_CLI_BIN).toContain('ds4');
+    expect(result.args).toEqual(['-lc', 'ds4 help']);
+
+    const rtkResult = wrap({
+      command: 'sh',
+      args: ['-lc', 'git status --short'],
+      env: { PATH: '/usr/bin', NEON_PILOT_DS4_RTK_SHELL_COMPRESSION: 'rtk' },
+      wrappers: [],
+    });
+    expect(rtkResult.args[1]).toContain('rtk git status --short');
   });
 
   it('compacts prompt assembly for DS4 only', async () => {
@@ -466,6 +475,70 @@ describe('DS4 file tools', () => {
 });
 
 describe('DS4 bash jobs', () => {
+  it('auto-wraps simple supported bash commands with RTK when enabled', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+    const spawn = vi.fn(async () => ({ pid: 42, usingPty: false, executionWrappers: [], kill: vi.fn(), write: vi.fn(), resize: vi.fn() }));
+    const context = ctx({
+      storage: {
+        get: vi.fn(async (key: string) => (key === 'settings' ? { shellCompression: 'rtk' } : null)),
+        put: vi.fn(async () => ({ ok: true })),
+        delete: vi.fn(async () => ({ ok: true, deleted: true })),
+      },
+      shell: {
+        exec: vi.fn(async (input: { args?: string[] }) => {
+          const command = input.args?.join('\n') ?? '';
+          if (command.includes('command -v rtk')) {
+            return {
+              stdout: 'installed=yes\npath=/opt/homebrew/bin/rtk\nversion=rtk 0.28.2\ngain_exit=0\ngain=Saved 100 tokens\n',
+              stderr: '',
+              command: 'sh',
+              args: [],
+              executionWrappers: [],
+            };
+          }
+          return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        }),
+        spawn,
+      },
+    });
+
+    await backend.bash({ command: 'git status --short', refresh_sec: 0.001 }, context);
+
+    expect(spawn).toHaveBeenCalledWith(expect.objectContaining({ args: ['-lc', 'rtk git status --short'] }));
+  });
+
+  it('leaves complex shell commands unwrapped even when RTK is enabled', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+    const spawn = vi.fn(async () => ({ pid: 42, usingPty: false, executionWrappers: [], kill: vi.fn(), write: vi.fn(), resize: vi.fn() }));
+    const context = ctx({
+      storage: {
+        get: vi.fn(async (key: string) => (key === 'settings' ? { shellCompression: 'rtk' } : null)),
+        put: vi.fn(async () => ({ ok: true })),
+        delete: vi.fn(async () => ({ ok: true, deleted: true })),
+      },
+      shell: {
+        exec: vi.fn(async (input: { args?: string[] }) => {
+          const command = input.args?.join('\n') ?? '';
+          if (command.includes('command -v rtk')) {
+            return {
+              stdout: 'installed=yes\npath=/opt/homebrew/bin/rtk\nversion=rtk 0.28.2\ngain_exit=0\ngain=Saved 100 tokens\n',
+              stderr: '',
+              command: 'sh',
+              args: [],
+              executionWrappers: [],
+            };
+          }
+          return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        }),
+        spawn,
+      },
+    });
+
+    await backend.bash({ command: 'git status --short && git diff --stat', refresh_sec: 0.001 }, context);
+
+    expect(spawn).toHaveBeenCalledWith(expect.objectContaining({ args: ['-lc', 'git status --short && git diff --stat'] }));
+  });
+
   it('starts, reports, and stops refresh_sec jobs', async () => {
     let stdout: ((chunk: string) => void) | undefined;
     let exit: ((event: { code: number | null; signal: NodeJS.Signals | null }) => void) | undefined;

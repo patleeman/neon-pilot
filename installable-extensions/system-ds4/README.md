@@ -14,4 +14,4 @@ The extension owns DS4 runtime setup. It does not assume `ds4` is already instal
 
 When that model is selected, the extension keeps the live tool set to `bash`, `read`, and `edit`. Extra DS4 affordances are exposed through the `ds4` CLI that the extension adds to DS4 bash sessions, keeping the prompt and tool schema surface small.
 
-The settings panel can optionally enable RTK shell output compression. The extension verifies the installed binary with `rtk gain` to avoid the unrelated Rust Type Kit package, then teaches DS4 to prefer explicit `rtk ...` shell commands for compact output. It does not run `rtk init` or patch global agent hooks.
+The settings panel can optionally enable RTK shell output compression. The extension verifies the installed binary with `rtk gain` to avoid the unrelated Rust Type Kit package, then automatically prefixes simple supported DS4 bash commands with `rtk` for compact output. It does not run `rtk init` or patch global agent hooks.
