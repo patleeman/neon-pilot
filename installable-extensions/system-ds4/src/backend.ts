@@ -181,6 +181,14 @@ async function waitForHealth(timeoutMs: number) {
   return last;
 }
 
+async function waitForPidExit(ctx: ExtensionBackendContext, pid: number, timeoutMs: number) {
+  const deadline = Date.now() + timeoutMs;
+  while ((await isPidRunning(ctx, pid)) && Date.now() < deadline) {
+    await delay(250);
+  }
+  return !(await isPidRunning(ctx, pid));
+}
+
 function toolRuntime(ctx: ExtensionBackendContext) {
   return {
     runtimeScope: ctx.runtimeScope,
@@ -351,6 +359,14 @@ export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
   };
 }
 
+export async function runtimeService() {
+  return { ok: true };
+}
+
+export async function runtimeServiceHealth() {
+  return { running: true };
+}
+
 export async function bootstrapRuntime(input: { force?: unknown; start?: unknown }, ctx: ExtensionBackendContext) {
   const paths = await runtimePaths(ctx);
   await mkdir(paths.root, { recursive: true });
@@ -473,9 +489,15 @@ export async function startServer(input: { timeoutMs?: unknown }, ctx: Extension
 export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) {
   const pid = await readStoredPid(ctx, SERVER_PID_KEY);
   if (!(await isPidRunning(ctx, pid))) return { ok: true, stopped: false, status: await status({}, ctx) };
-  await ctx.shell.exec({ command: 'sh', args: ['-c', `kill ${pid} >/dev/null 2>&1 || true`] });
+  await ctx.shell.exec({ command: 'sh', args: ['-c', `kill -TERM ${pid} >/dev/null 2>&1 || true`] });
+  const exited = pid ? await waitForPidExit(ctx, pid, 10_000) : true;
+  if (!exited) {
+    ctx.log.warn('ds4-server did not exit after SIGTERM; sending SIGKILL', { pid });
+    await ctx.shell.exec({ command: 'sh', args: ['-c', `kill -KILL ${pid} >/dev/null 2>&1 || true`] });
+    await waitForPidExit(ctx, pid, 2_000);
+  }
   await ctx.storage.put(SERVER_PID_KEY, 0);
-  return { ok: true, stopped: true, pid, status: await status({}, ctx) };
+  return { ok: true, stopped: true, pid, graceful: exited, status: await status({}, ctx) };
 }
 
 function formatJobUpdate(job: ShellJob, options: { stopped?: boolean } = {}) {

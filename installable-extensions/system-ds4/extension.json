@@ -14,6 +14,19 @@
     "entry": "src/backend.ts",
     "agentExtension": "createDs4AgentExtension",
     "onEnableAction": "ds4InstallProvider",
+    "onDisableAction": "ds4StopServer",
+    "services": [
+      {
+        "id": "ds4-runtime",
+        "handler": "runtimeService",
+        "stopHandler": "stopServer",
+        "healthCheck": "runtimeServiceHealth",
+        "title": "DS4 runtime cleanup",
+        "description": "Stops the managed ds4-server process when Neon Pilot shuts down, reloads, or disables DS4.",
+        "restart": "never",
+        "worker": { "enabled": true }
+      }
+    ],
     "actions": [
       { "id": "ds4InstallProvider", "handler": "installProvider", "title": "Install DS4 model provider", "worker": { "enabled": true } },
       { "id": "ds4Status", "handler": "status", "title": "DS4 server status", "worker": { "enabled": true } },

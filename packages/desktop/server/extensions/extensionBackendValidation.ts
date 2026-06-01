@@ -23,6 +23,7 @@ export function validateExtensionBackendContribution(backend: Record<string, unk
       validateOptionalString(service.title, `backend.services[${index}].title`);
       validateOptionalString(service.description, `backend.services[${index}].description`);
       validateOptionalString(service.healthCheck, `backend.services[${index}].healthCheck`);
+      validateOptionalString(service.stopHandler, `backend.services[${index}].stopHandler`);
       if (service.restart !== undefined) {
         validateEnum(service.restart, ['never', 'on-failure', 'always'], `backend.services[${index}].restart`);
       }

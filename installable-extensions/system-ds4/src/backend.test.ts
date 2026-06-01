@@ -50,6 +50,11 @@ function ctx(overrides: Record<string, unknown> = {}) {
       exec: vi.fn(),
       spawn: vi.fn(),
     },
+    log: {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    },
     filesystem: {
       app: vi.fn(async () => scopedRoot(defaultAppRoot)),
       workspace: vi.fn(async (input?: { cwd?: string }) => scopedRoot(input?.cwd ?? '/repo')),
@@ -239,6 +244,38 @@ describe('DS4 managed runtime', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+
+  it('stops the managed ds4-server gracefully', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+    let running = true;
+    const exec = vi.fn(async (input: { args?: string[] }) => {
+      const command = input.args?.join(' ') ?? '';
+      if (command.includes('kill -0')) return { stdout: running ? 'yes\n' : '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+      if (command.includes('kill -TERM')) running = false;
+      return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+    });
+    const context = ctx({
+      storage: {
+        get: vi.fn(async (key: string) => (key === 'runtime/serverPid' ? 54321 : null)),
+        put: vi.fn(async () => ({ ok: true })),
+        delete: vi.fn(async () => ({ ok: true, deleted: true })),
+      },
+      shell: { exec, spawn: vi.fn() },
+    });
+
+    const result = await backend.stopServer({}, context);
+
+    expect(result.stopped).toBe(true);
+    expect(result.graceful).toBe(true);
+    expect(exec.mock.calls.some(([input]) => (input.args?.join(' ') ?? '').includes('kill -TERM 54321'))).toBe(true);
+    expect(exec.mock.calls.some(([input]) => (input.args?.join(' ') ?? '').includes('kill -KILL 54321'))).toBe(false);
+    expect(context.storage.put).toHaveBeenCalledWith('runtime/serverPid', 0);
+  });
+
+  it('declares a lifecycle service that stays healthy until shutdown cleanup runs', async () => {
+    await expect(backend.runtimeService()).resolves.toEqual({ ok: true });
+    await expect(backend.runtimeServiceHealth()).resolves.toEqual({ running: true });
   });
 });
 
