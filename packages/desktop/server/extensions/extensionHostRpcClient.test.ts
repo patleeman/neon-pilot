@@ -207,7 +207,43 @@ describe('extension host RPC client', () => {
     ]);
   });
 
-  it('uses RPC for wire-safe calls and fallback for callback-bearing calls', async () => {
+  it('streams action updates over the action transport', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response('event: update\ndata: {"content":[{"type":"text","text":"working"}]}\n\nevent: result\ndata: {"ok":true,"result":{"done":true}}\n\n', {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
+      }),
+    );
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
+    const onUpdate = vi.fn();
+
+    await expect(
+      client.invokeAction({
+        extensionId: 'ext',
+        actionId: 'run',
+        input: { x: 1 },
+        toolContext: { onUpdate },
+        toolContextSnapshot: { cwd: '/repo' },
+      }),
+    ).resolves.toEqual({ ok: true, result: { done: true } });
+
+    expect(onUpdate).toHaveBeenCalledWith({ content: [{ type: 'text', text: 'working' }] });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://host/action',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: {
+            extensionId: 'ext',
+            actionId: 'run',
+            input: { x: 1 },
+            toolContextSnapshot: { cwd: '/repo' },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('uses RPC for wire-safe and streaming-update calls, with fallback for non-wireable callbacks', async () => {
     const rpcClient = {
       checkBackendHealth: vi.fn().mockResolvedValue([]),
       health: vi.fn().mockResolvedValue({ status: 'ready' }),
@@ -236,10 +272,19 @@ describe('extension host RPC client', () => {
 
     await expect(client.invokeAction({ extensionId: 'ext', actionId: 'safe', input: {} })).resolves.toEqual({ ok: true, result: 'rpc' });
     await expect(
-      client.invokeAction({ extensionId: 'ext', actionId: 'unsafe', input: {}, toolContext: { onUpdate: () => undefined } }),
+      client.invokeAction({
+        extensionId: 'ext',
+        actionId: 'streaming-safe',
+        input: {},
+        toolContext: { onUpdate: () => undefined },
+        toolContextSnapshot: { cwd: '/repo' },
+      }),
+    ).resolves.toEqual({ ok: true, result: 'rpc' });
+    await expect(
+      client.invokeAction({ extensionId: 'ext', actionId: 'unsafe', input: {}, agentToolContext: { run: () => undefined } }),
     ).resolves.toEqual({ ok: true, result: 'fallback' });
 
-    expect(rpcClient.invokeAction).toHaveBeenCalledTimes(1);
+    expect(rpcClient.invokeAction).toHaveBeenCalledTimes(2);
     expect(fallbackClient.invokeAction).toHaveBeenCalledTimes(1);
   });
 

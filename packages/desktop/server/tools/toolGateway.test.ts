@@ -62,7 +62,7 @@ describe('tool gateway', () => {
     });
   });
 
-  it('keeps live contexts for streaming extension tool calls', async () => {
+  it('uses snapshots plus update callback channel for streaming extension tool calls', async () => {
     const onUpdate = vi.fn();
     const serverContext = { getRuntimeScope: () => 'shared' };
     const toolContext = { cwd: '/repo', onUpdate };
@@ -73,8 +73,9 @@ describe('tool gateway', () => {
       extensionId: 'ext',
       actionId: 'run',
       input: {},
-      serverContext,
-      toolContext,
+      serverContextSnapshot: { runtimeScope: 'shared' },
+      toolContext: { onUpdate },
+      toolContextSnapshot: { cwd: '/repo' },
     });
   });
 });
