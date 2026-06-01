@@ -381,24 +381,24 @@ describe('registerExtensionRoutes', () => {
     );
   });
 
-  it('serves extension state documents with optimistic concurrency', () => {
+  it('serves extension state documents with optimistic concurrency', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const harness = createHarness();
 
     const putRes = createResponse();
-    harness.putHandler('/api/extensions/:id/state/*')(
+    await harness.putHandler('/api/extensions/:id/state/*')(
       { params: { id: 'agent-board', 0: 'tasks/one' }, body: { value: { title: 'Ship it' } } },
       putRes,
     );
     expect(putRes.json).toHaveBeenCalledWith(expect.objectContaining({ key: 'tasks/one', value: { title: 'Ship it' }, version: 1 }));
 
     const getRes = createResponse();
-    harness.getHandler('/api/extensions/:id/state/*')({ params: { id: 'agent-board', 0: 'tasks/one' } }, getRes);
+    await harness.getHandler('/api/extensions/:id/state/*')({ params: { id: 'agent-board', 0: 'tasks/one' } }, getRes);
     expect(getRes.json).toHaveBeenCalledWith(expect.objectContaining({ key: 'tasks/one', value: { title: 'Ship it' }, version: 1 }));
 
     const conflictRes = createResponse();
-    harness.putHandler('/api/extensions/:id/state/*')(
+    await harness.putHandler('/api/extensions/:id/state/*')(
       { params: { id: 'agent-board', 0: 'tasks/one' }, body: { value: { title: 'Nope' }, expectedVersion: 99 } },
       conflictRes,
     );
@@ -406,11 +406,11 @@ describe('registerExtensionRoutes', () => {
     expect(conflictRes.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Extension state version conflict.' }));
 
     const listRes = createResponse();
-    harness.getHandler('/api/extensions/:id/state')({ params: { id: 'agent-board' }, query: { prefix: 'tasks/' } }, listRes);
+    await harness.getHandler('/api/extensions/:id/state')({ params: { id: 'agent-board' }, query: { prefix: 'tasks/' } }, listRes);
     expect(listRes.json).toHaveBeenCalledWith([expect.objectContaining({ key: 'tasks/one' })]);
 
     const deleteRes = createResponse();
-    harness.deleteHandler('/api/extensions/:id/state/*')({ params: { id: 'agent-board', 0: 'tasks/one' } }, deleteRes);
+    await harness.deleteHandler('/api/extensions/:id/state/*')({ params: { id: 'agent-board', 0: 'tasks/one' } }, deleteRes);
     expect(deleteRes.json).toHaveBeenCalledWith({ ok: true, deleted: true });
   });
 

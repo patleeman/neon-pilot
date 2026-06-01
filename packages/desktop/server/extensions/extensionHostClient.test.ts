@@ -23,6 +23,12 @@ const extensionServices = vi.hoisted(() => ({
 const extensionEventBus = vi.hoisted(() => ({
   listExtensionEventSubscriptions: vi.fn(),
 }));
+const extensionStorage = vi.hoisted(() => ({
+  deleteExtensionState: vi.fn(),
+  listExtensionState: vi.fn(),
+  readExtensionState: vi.fn(),
+  writeExtensionState: vi.fn(),
+}));
 const extensionRegistry = vi.hoisted(() => ({
   findExtensionEntry: vi.fn(),
   listExtensionAssemblyProviderRegistrations: vi.fn(),
@@ -51,6 +57,7 @@ vi.mock('./extensionBackend.js', () => extensionBackend);
 vi.mock('./extensionSubscriptions.js', () => extensionSubscriptions);
 vi.mock('./extensionServices.js', () => extensionServices);
 vi.mock('./extensionEventBus.js', () => extensionEventBus);
+vi.mock('./extensionStorage.js', () => extensionStorage);
 vi.mock('./extensionRegistry.js', () => extensionRegistry);
 
 import {
@@ -333,6 +340,44 @@ describe('extension host client', () => {
     );
   });
 
+  it('routes extension state operations through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionStorage.listExtensionState.mockReturnValueOnce([{ key: 'tasks/one', value: { title: 'Ship' }, version: 1 }]);
+    extensionStorage.readExtensionState.mockReturnValueOnce({ key: 'tasks/one', value: { title: 'Ship' }, version: 1 });
+    extensionStorage.writeExtensionState.mockReturnValueOnce({ key: 'tasks/one', value: { title: 'Done' }, version: 2 });
+    extensionStorage.deleteExtensionState.mockReturnValueOnce({ ok: true, deleted: true });
+
+    await expect(getExtensionHostClient().stateOperation({ operation: 'list', extensionId: 'ext', prefix: 'tasks/' })).resolves.toEqual({
+      operation: 'list',
+      documents: [{ key: 'tasks/one', value: { title: 'Ship' }, version: 1 }],
+    });
+    await expect(getExtensionHostClient().stateOperation({ operation: 'read', extensionId: 'ext', key: 'tasks/one' })).resolves.toEqual({
+      operation: 'read',
+      document: { key: 'tasks/one', value: { title: 'Ship' }, version: 1 },
+    });
+    await expect(
+      getExtensionHostClient().stateOperation({
+        operation: 'write',
+        extensionId: 'ext',
+        key: 'tasks/one',
+        value: { title: 'Done' },
+        expectedVersion: 1,
+      }),
+    ).resolves.toEqual({
+      operation: 'write',
+      document: { key: 'tasks/one', value: { title: 'Done' }, version: 2 },
+    });
+    await expect(getExtensionHostClient().stateOperation({ operation: 'delete', extensionId: 'ext', key: 'tasks/one' })).resolves.toEqual({
+      operation: 'delete',
+      deleted: true,
+    });
+
+    expect(extensionStorage.listExtensionState).toHaveBeenCalledWith('ext', 'tasks/');
+    expect(extensionStorage.readExtensionState).toHaveBeenCalledWith('ext', 'tasks/one');
+    expect(extensionStorage.writeExtensionState).toHaveBeenCalledWith('ext', 'tasks/one', { title: 'Done' }, { expectedVersion: 1 });
+    expect(extensionStorage.deleteExtensionState).toHaveBeenCalledWith('ext', 'tasks/one');
+  });
+
   it('routes startup guard lifecycle through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.beginExtensionStartupGuard.mockReturnValueOnce({ safeMode: true, disabledIds: ['ext'] });
@@ -480,6 +525,7 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'listPromptAssemblyContributions' })).toBe('listPromptAssemblyContributions');
     expect(extensionHostRequestName({ type: 'listStaticContributions' })).toBe('listStaticContributions');
     expect(extensionHostRequestName({ type: 'listEventSubscriptions' })).toBe('listEventSubscriptions');
+    expect(extensionHostRequestName({ type: 'stateOperation', operation: 'list', extensionId: 'ext' })).toBe('stateOperation:list:ext');
     expect(extensionHostRequestName({ type: 'readRegistryPresentation' })).toBe('readRegistryPresentation');
     expect(extensionHostRequestName({ type: 'resolveFilePath', extensionId: 'ext', relativePath: 'dist/frontend.js' })).toBe(
       'resolveFilePath:ext/dist/frontend.js',

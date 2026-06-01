@@ -24,7 +24,6 @@ import {
   setBuildError,
 } from '../extensions/extensionRegistry.js';
 import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
-import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from '../extensions/extensionStorage.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import type { ServerRouteContext } from './context.js';
@@ -618,17 +617,27 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/:id/state', (req, res) => {
+  router.get('/api/extensions/:id/state', async (req, res) => {
     try {
-      res.json(listExtensionState(req.params.id, typeof req.query.prefix === 'string' ? req.query.prefix : ''));
+      const state = await getExtensionHostClient().stateOperation({
+        operation: 'list',
+        extensionId: req.params.id,
+        prefix: typeof req.query.prefix === 'string' ? req.query.prefix : '',
+      });
+      res.json(state.operation === 'list' ? state.documents : []);
     } catch (err) {
       sendRouteError(res, 'extension state list error', err);
     }
   });
 
-  router.get('/api/extensions/:id/state/*', (req, res) => {
+  router.get('/api/extensions/:id/state/*', async (req, res) => {
     try {
-      const document = readExtensionState(req.params.id, (req.params as Record<string, string>)['0']);
+      const state = await getExtensionHostClient().stateOperation({
+        operation: 'read',
+        extensionId: req.params.id,
+        key: (req.params as Record<string, string>)['0'],
+      });
+      const document = state.operation === 'read' ? state.document : null;
       if (!document) {
         res.status(404).json({ error: 'Extension state document not found.' });
         return;
@@ -639,12 +648,19 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.put('/api/extensions/:id/state/*', (req, res) => {
+  router.put('/api/extensions/:id/state/*', async (req, res) => {
     try {
       const body = req.body as { value?: unknown; expectedVersion?: unknown };
       const expectedVersion =
         typeof body.expectedVersion === 'number' && Number.isSafeInteger(body.expectedVersion) ? body.expectedVersion : undefined;
-      res.json(writeExtensionState(req.params.id, (req.params as Record<string, string>)['0'], body.value, { expectedVersion }));
+      const state = await getExtensionHostClient().stateOperation({
+        operation: 'write',
+        extensionId: req.params.id,
+        key: (req.params as Record<string, string>)['0'],
+        value: body.value,
+        expectedVersion,
+      });
+      res.json(state.operation === 'write' ? state.document : null);
     } catch (err) {
       const conflict = err instanceof Error && err.message === 'Extension state version conflict.';
       if (conflict) {
@@ -655,9 +671,14 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.delete('/api/extensions/:id/state/*', (req, res) => {
+  router.delete('/api/extensions/:id/state/*', async (req, res) => {
     try {
-      res.json(deleteExtensionState(req.params.id, (req.params as Record<string, string>)['0']));
+      const state = await getExtensionHostClient().stateOperation({
+        operation: 'delete',
+        extensionId: req.params.id,
+        key: (req.params as Record<string, string>)['0'],
+      });
+      res.json({ ok: true, deleted: state.operation === 'delete' ? state.deleted : false });
     } catch (err) {
       sendRouteError(res, 'extension state delete error', err);
     }

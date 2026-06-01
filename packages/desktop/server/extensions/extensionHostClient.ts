@@ -33,6 +33,8 @@ import type {
   ExtensionHostStartServicesRequest,
   ExtensionHostStartStartupActionsRequest,
   ExtensionHostStartupGuardResult,
+  ExtensionHostStateOperationRequest,
+  ExtensionHostStateOperationResult,
   ExtensionHostStaticContributions,
 } from './extensionHostProtocol.js';
 
@@ -48,6 +50,8 @@ function normalizeDependencyId(dependency: string | { id: string; optional?: boo
     : { id: dependency.id, optional: Boolean(dependency.optional) };
 }
 
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
 export type ExtensionHostInstallSubscriptionsInput = Omit<ExtensionHostInstallSubscriptionsRequest, 'type'>;
 export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
@@ -62,6 +66,7 @@ export type ExtensionHostStartServicesInput = Omit<ExtensionHostStartServicesReq
 export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
 export type ExtensionHostBeginStartupGuardInput = Omit<ExtensionHostBeginStartupGuardRequest, 'type'>;
 export type ExtensionHostCompleteStartupGuardInput = Omit<ExtensionHostCompleteStartupGuardRequest, 'type'>;
+export type ExtensionHostStateOperationInput = DistributiveOmit<ExtensionHostStateOperationRequest, 'type'>;
 
 export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
@@ -75,6 +80,7 @@ export interface ExtensionHostClient {
   listPromptAssemblyContributions(): Promise<ExtensionHostPromptAssemblyContributions>;
   listStaticContributions(): Promise<ExtensionHostStaticContributions>;
   listEventSubscriptions(): Promise<ExtensionHostEventSubscription[]>;
+  stateOperation(input: ExtensionHostStateOperationInput): Promise<ExtensionHostStateOperationResult>;
   readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
   resolveFilePath(input: ExtensionHostResolveFilePathInput): Promise<string>;
   resolveModelProfile(input: ExtensionHostResolveModelProfileInput): Promise<ExtensionHostModelProfileResolution>;
@@ -173,6 +179,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('eventSubscriptions' in response)) throw new Error('Extension host returned invalid event subscriptions.');
       return response.eventSubscriptions;
+    },
+    async stateOperation(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'stateOperation', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('state' in response)) throw new Error('Extension host returned invalid state operation response.');
+      return response.state;
     },
     async readRegistryPresentation() {
       const response = await handleInProcessExtensionHostRequest({ type: 'readRegistryPresentation' });
@@ -515,6 +527,34 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
     if (request.type === 'listEventSubscriptions') {
       const { listExtensionEventSubscriptions } = await import('./extensionEventBus.js');
       return { ok: true, eventSubscriptions: listExtensionEventSubscriptions() };
+    }
+    if (request.type === 'stateOperation') {
+      const { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } = await import('./extensionStorage.js');
+      if (request.operation === 'list') {
+        return {
+          ok: true,
+          state: { operation: 'list', documents: listExtensionState(request.extensionId, request.prefix ?? '') },
+        };
+      }
+      if (request.operation === 'read') {
+        return {
+          ok: true,
+          state: { operation: 'read', document: readExtensionState(request.extensionId, request.key) },
+        };
+      }
+      if (request.operation === 'write') {
+        return {
+          ok: true,
+          state: {
+            operation: 'write',
+            document: writeExtensionState(request.extensionId, request.key, request.value, { expectedVersion: request.expectedVersion }),
+          },
+        };
+      }
+      return {
+        ok: true,
+        state: { operation: 'delete', deleted: deleteExtensionState(request.extensionId, request.key).deleted },
+      };
     }
     if (request.type === 'readRegistryPresentation') {
       const {

@@ -380,6 +380,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('eventSubscriptions' in response)) throw new Error('Extension host returned invalid event subscriptions.');
       return response.eventSubscriptions;
     },
+    async stateOperation(input) {
+      const response = await send({ type: 'stateOperation', ...input });
+      if (!response.ok) throw new Error(response.error);
+      if (!('state' in response)) throw new Error('Extension host returned invalid state operation response.');
+      return response.state;
+    },
     async readRegistryPresentation() {
       const response = await send({ type: 'readRegistryPresentation' });
       if (!response.ok) throw new Error(response.error);

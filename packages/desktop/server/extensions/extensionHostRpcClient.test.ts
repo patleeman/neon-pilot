@@ -154,6 +154,7 @@ describe('extension host RPC client', () => {
         }),
       )
       .mockResolvedValueOnce(jsonResponse({ ok: true, eventSubscriptions: [{ extensionId: 'ext', pattern: 'host:*' }] }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, state: { operation: 'list', documents: [{ key: 'tasks/one', value: 1, version: 1 }] } }))
       .mockResolvedValueOnce(
         jsonResponse({
           ok: true,
@@ -198,6 +199,10 @@ describe('extension host RPC client', () => {
       modelDiscovery: [{ extensionId: 'ext', action: 'discoverModels' }],
     });
     await expect(client.listEventSubscriptions()).resolves.toEqual([{ extensionId: 'ext', pattern: 'host:*' }]);
+    await expect(client.stateOperation({ operation: 'list', extensionId: 'ext', prefix: 'tasks/' })).resolves.toEqual({
+      operation: 'list',
+      documents: [{ key: 'tasks/one', value: 1, version: 1 }],
+    });
     await expect(client.readRegistryPresentation()).resolves.toEqual({
       schema: { manifestVersion: 2 },
       installSummaries: [{ id: 'ext', name: 'Ext' }],
@@ -282,15 +287,22 @@ describe('extension host RPC client', () => {
     expect(fetchImpl).toHaveBeenNthCalledWith(
       11,
       'http://host/rpc',
-      expect.objectContaining({ body: JSON.stringify({ request: { type: 'readRegistryPresentation' } }) }),
+      expect.objectContaining({
+        body: JSON.stringify({ request: { type: 'stateOperation', operation: 'list', extensionId: 'ext', prefix: 'tasks/' } }),
+      }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       12,
       'http://host/rpc',
-      expect.objectContaining({ body: JSON.stringify({ request: { type: 'resolveModelProfile', provider: 'openai', model: 'gpt-5' } }) }),
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'readRegistryPresentation' } }) }),
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       13,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'resolveModelProfile', provider: 'openai', model: 'gpt-5' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      14,
       'http://host/rpc',
       expect.objectContaining({
         body: JSON.stringify({ request: { type: 'resolveFilePath', extensionId: 'ext', relativePath: 'dist/frontend.js' } }),

@@ -73,6 +73,48 @@ export interface ExtensionHostEventSubscription {
   pattern: string;
 }
 
+export interface ExtensionHostStateDocument {
+  key: string;
+  value: unknown;
+  version: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type ExtensionHostStateOperationRequest =
+  | {
+      type: 'stateOperation';
+      operation: 'list';
+      extensionId: string;
+      prefix?: string;
+    }
+  | {
+      type: 'stateOperation';
+      operation: 'read';
+      extensionId: string;
+      key: string;
+    }
+  | {
+      type: 'stateOperation';
+      operation: 'write';
+      extensionId: string;
+      key: string;
+      value: unknown;
+      expectedVersion?: number;
+    }
+  | {
+      type: 'stateOperation';
+      operation: 'delete';
+      extensionId: string;
+      key: string;
+    };
+
+export type ExtensionHostStateOperationResult =
+  | { operation: 'list'; documents: ExtensionHostStateDocument[] }
+  | { operation: 'read'; document: ExtensionHostStateDocument | null }
+  | { operation: 'write'; document: ExtensionHostStateDocument }
+  | { operation: 'delete'; deleted: boolean };
+
 export interface ExtensionHostServiceOperationResult {
   extensionId: string;
   serviceId: string;
@@ -378,6 +420,7 @@ export type ExtensionHostRequest =
   | ExtensionHostListPromptAssemblyContributionsRequest
   | ExtensionHostListStaticContributionsRequest
   | ExtensionHostListEventSubscriptionsRequest
+  | ExtensionHostStateOperationRequest
   | ExtensionHostReadRegistryPresentationRequest
   | ExtensionHostResolveModelProfileRequest
   | ExtensionHostResolveFilePathRequest
@@ -435,6 +478,10 @@ export type ExtensionHostResponse =
   | {
       ok: true;
       eventSubscriptions: ExtensionHostEventSubscription[];
+    }
+  | {
+      ok: true;
+      state: ExtensionHostStateOperationResult;
     }
   | {
       ok: true;
@@ -505,6 +552,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'listPromptAssemblyContributions') return 'listPromptAssemblyContributions';
   if (request.type === 'listStaticContributions') return 'listStaticContributions';
   if (request.type === 'listEventSubscriptions') return 'listEventSubscriptions';
+  if (request.type === 'stateOperation') return `stateOperation:${request.operation}:${request.extensionId}`;
   if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
   if (request.type === 'resolveModelProfile') return `resolveModelProfile:${request.provider}/${request.model}`;
   if (request.type === 'resolveFilePath') return `resolveFilePath:${request.extensionId}/${request.relativePath}`;
