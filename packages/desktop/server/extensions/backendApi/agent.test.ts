@@ -44,9 +44,14 @@ function installImporter(options?: { session?: ReturnType<typeof createSession>;
         SessionManager: { inMemory: vi.fn((cwd: string) => ({ cwd })) },
       };
     }
-    if (specifier === '../extensionRegistry.js') {
+    if (specifier === '../extensionPermissions.js') {
       return {
-        findExtensionEntry: vi.fn(() => ({ manifest: { permissions: options?.permissions ?? ['agent:run', 'agent:conversations'] } })),
+        assertExtensionPermission: vi.fn((extensionId: string, permission: string, capability: string) => {
+          const permissions = options?.permissions ?? ['agent:run', 'agent:conversations'];
+          if (!permissions.includes(permission)) {
+            throw new Error(`Extension "${extensionId}" requires permission ${permission} to use ${capability}.`);
+          }
+        }),
       };
     }
     throw new Error(`unexpected import: ${specifier}`);

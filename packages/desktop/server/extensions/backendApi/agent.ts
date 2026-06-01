@@ -173,11 +173,8 @@ function collectAssistantTexts(session: { messages?: unknown[] }): string[] {
 
 async function assertPermission(ctx: ExtensionBackendContextLike, permission: 'agent:run' | 'agent:conversations'): Promise<void> {
   if (!ctx.extensionId) return;
-  const registry = await dynamicImport<typeof import('../extensionRegistry.js')>('../extensionRegistry.js');
-  const entry = registry.findExtensionEntry(ctx.extensionId);
-  const permissions = entry?.manifest.permissions ?? [];
-  if (!permissions.includes(permission))
-    throw new Error(`Extension "${ctx.extensionId}" requires permission ${permission} to use agent conversations.`);
+  const permissions = await dynamicImport<typeof import('../extensionPermissions.js')>('../extensionPermissions.js');
+  permissions.assertExtensionPermission(ctx.extensionId, permission, 'agent conversations');
 }
 
 function getAssistantErrorMessage(session: { messages?: unknown[] }): string | null {

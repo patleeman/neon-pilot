@@ -3,15 +3,7 @@ import {
   enqueueAttentionEventForSessionFile,
   listAttentionEventsForSessionFile,
 } from '../automation/attentionEvents.js';
-import { findExtensionEntry } from './extensionRegistry.js';
-
-function assertPermission(extensionId: string, permission: 'attention:read' | 'attention:write'): void {
-  const entry = findExtensionEntry(extensionId);
-  const permissions = entry?.manifest.permissions ?? [];
-  if (!permissions.includes(permission)) {
-    throw new Error(`Extension "${extensionId}" requires permission ${permission} to use attention events.`);
-  }
-}
+import { assertExtensionPermission } from './extensionPermissions.js';
 
 export interface ExtensionAttentionEnqueueInput {
   conversationId?: string;
@@ -43,7 +35,7 @@ export function createExtensionAttentionCapability(
 
   return {
     async enqueue(input: ExtensionAttentionEnqueueInput) {
-      assertPermission(extensionId, 'attention:write');
+      assertExtensionPermission(extensionId, 'attention:write', 'attention events');
       if (!input.prompt?.trim()) throw new Error('prompt is required');
       const sessionFile = resolveSessionFile(input);
       return enqueueAttentionEventForSessionFile({
@@ -62,11 +54,11 @@ export function createExtensionAttentionCapability(
       });
     },
     async list(input?: { sessionFile?: string }) {
-      assertPermission(extensionId, 'attention:read');
+      assertExtensionPermission(extensionId, 'attention:read', 'attention events');
       return listAttentionEventsForSessionFile(resolveSessionFile(input));
     },
     async cancel(input: { id: string; sessionFile?: string }) {
-      assertPermission(extensionId, 'attention:write');
+      assertExtensionPermission(extensionId, 'attention:write', 'attention events');
       return cancelAttentionEventForSessionFile({ sessionFile: resolveSessionFile(input), id: input.id });
     },
   };
