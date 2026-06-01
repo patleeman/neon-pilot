@@ -509,6 +509,55 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe code mode draft actions through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    setExtensionEnabled('system-code-mode', true, stateRoot);
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ enabled: true, createOptions: { allowedToolNames: ['exec_code'] }, applyAfterCreate: true })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-code-mode', 'prepareDraftConversation', {})).resolves.toEqual({
+      ok: true,
+      result: { enabled: true, createOptions: { allowedToolNames: ['exec_code'] }, applyAfterCreate: true },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-code-mode',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-code-mode', 'dist', 'backend.mjs')),
+      }),
+      'prepareDraftConversation',
+      { type: 'action', label: 'action prepareDraftConversation', target: 'prepareDraftConversation' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

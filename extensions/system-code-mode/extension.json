@@ -27,17 +27,26 @@
       {
         "id": "consumeDraftState",
         "handler": "consumeDraftState",
-        "title": "Consume Draft Code Mode State"
+        "title": "Consume Draft Code Mode State",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "prepareDraftConversation",
         "handler": "prepareDraftConversation",
-        "title": "Prepare Draft Code Mode Conversation"
+        "title": "Prepare Draft Code Mode Conversation",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "applyDraftConversation",
         "handler": "applyDraftConversation",
-        "title": "Apply Draft Code Mode Conversation"
+        "title": "Apply Draft Code Mode Conversation",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
