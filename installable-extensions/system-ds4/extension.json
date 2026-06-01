@@ -37,6 +37,8 @@
       { "id": "ds4RevealRuntimeFolder", "handler": "revealRuntimeFolder", "title": "Reveal DS4 runtime folder", "worker": { "enabled": true } },
       { "id": "ds4RevealModelFile", "handler": "revealModelFile", "title": "Reveal DS4 model file", "worker": { "enabled": true } },
       { "id": "ds4ClearKvCache", "handler": "clearKvCache", "title": "Clear DS4 KV cache", "worker": { "enabled": true } },
+      { "id": "ds4GetSettings", "handler": "getSettings", "title": "Get DS4 settings", "worker": { "enabled": true } },
+      { "id": "ds4SaveSettings", "handler": "saveSettings", "title": "Save DS4 settings", "worker": { "enabled": true } },
       { "id": "ds4OptimizePromptAssembly", "handler": "optimizePromptAssembly", "title": "Optimize DS4 prompt assembly", "worker": { "enabled": true } }
     ]
   },

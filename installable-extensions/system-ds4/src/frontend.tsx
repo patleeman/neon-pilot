@@ -14,6 +14,9 @@ type Ds4Status = {
   reachable?: boolean;
   baseUrl?: string;
   models?: string[];
+  settings?: {
+    shellCompression?: 'off' | 'rtk';
+  };
   runtime?: {
     managedRoot?: string;
     repoInstalled?: boolean;
@@ -24,6 +27,14 @@ type Ds4Status = {
     serverPath?: string;
     modelBytes?: number | null;
     tools?: Record<string, boolean>;
+    rtk?: {
+      installed?: boolean;
+      valid?: boolean;
+      path?: string;
+      version?: string;
+      gainPreview?: string;
+      error?: string;
+    };
   };
   bootstrap?: {
     running?: boolean;
@@ -89,7 +100,7 @@ function stepState(step: { id: string; progress: number }, status: Ds4Status | n
 
 export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
   const [status, setStatus] = useState<Ds4Status | null>(null);
-  const [busy, setBusy] = useState<'setup' | 'repair' | 'start' | 'stop' | 'restart' | 'refresh' | 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy' | null>(null);
+  const [busy, setBusy] = useState<'setup' | 'repair' | 'start' | 'stop' | 'restart' | 'refresh' | 'settings' | 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy' | null>(null);
   const [error, setError] = useState('');
   const label = statusLabel(status);
 
@@ -205,10 +216,33 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     }
   };
 
+  const saveShellCompression = async (shellCompression: 'off' | 'rtk') => {
+    setBusy('settings');
+    try {
+      const result = (await pa.extension.invoke('ds4SaveSettings', { shellCompression })) as { status?: Ds4Status };
+      if (result.status) setStatus(result.status);
+      setError('');
+      pa.ui?.notify?.({
+        message: shellCompression === 'rtk' ? 'DS4 will prefer RTK compact shell output.' : 'DS4 shell output compression disabled.',
+        type: 'info',
+        source: 'DS4',
+      });
+      await refresh();
+    } catch (settingsError) {
+      const message = errorText(settingsError);
+      setError(message);
+      pa.ui?.notify?.({ message: 'DS4 settings update failed.', details: message, type: 'error', source: 'DS4' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const runtimeInstalled = status?.runtime?.installed === true;
   const bootstrapRunning = status?.bootstrap?.running === true;
   const progress = setupProgress(status);
   const tools = status?.runtime?.tools ?? {};
+  const rtk = status?.runtime?.rtk;
+  const shellCompression = status?.settings?.shellCompression ?? 'off';
   const steps =
     status?.bootstrap?.steps ?? [
       { id: 'tools', title: 'Check tools', progress: 8 },
@@ -291,6 +325,43 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
           ))}
         </div>
         <p className="mt-2 text-[12px] text-dim">On macOS, Command Line Tools provide git, make, cc, and curl. Run xcode-select --install if any are missing.</p>
+      </div>
+
+      <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Shell output compression</p>
+            <p className="mt-2 text-primary">RTK {rtk?.valid ? 'ready' : rtk?.installed ? 'installed but not verified' : 'not installed'}</p>
+            <p className="mt-1 text-[12px] text-dim">
+              {rtk?.valid
+                ? `${rtk.version ?? 'rtk'}${rtk.path ? ` at ${rtk.path}` : ''}`
+                : rtk?.error
+                  ? rtk.error
+                  : 'Install rtk-ai/rtk to let DS4 use compact command output through bash.'}
+            </p>
+          </div>
+          <div className="flex rounded-md border border-border-subtle bg-base/50 p-0.5">
+            <button
+              type="button"
+              className={`rounded px-2.5 py-1.5 text-[12px] ${shellCompression === 'off' ? 'bg-surface text-primary' : 'text-secondary hover:text-primary'}`}
+              onClick={() => void saveShellCompression('off')}
+              disabled={busy !== null}
+            >
+              Off
+            </button>
+            <button
+              type="button"
+              className={`rounded px-2.5 py-1.5 text-[12px] ${shellCompression === 'rtk' ? 'bg-surface text-primary' : 'text-secondary hover:text-primary'}`}
+              onClick={() => void saveShellCompression('rtk')}
+              disabled={busy !== null || !rtk?.valid}
+            >
+              RTK
+            </button>
+          </div>
+        </div>
+        {shellCompression === 'rtk' && rtk?.valid ? (
+          <p className="mt-3 text-[12px] text-dim">DS4 guidance will prefer commands like rtk git status, rtk git diff, rtk grep, and rtk vitest for compact results.</p>
+        ) : null}
       </div>
 
       <div className="rounded-md border border-border-subtle bg-surface/40 p-3">

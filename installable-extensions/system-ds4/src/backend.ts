@@ -18,6 +18,7 @@ const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat
 const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
+const SETTINGS_KEY = 'settings';
 const DEFAULT_READ_LINES = 500;
 const DEFAULT_SEARCH_RESULTS = 80;
 const MAX_INLINE_TEXT_BYTES = 256 * 1024;
@@ -31,6 +32,9 @@ const BOOTSTRAP_STEPS = [
 ] as const;
 
 type ToolResult = { content?: Array<{ type?: string; text?: string }>; details?: unknown; isError?: boolean };
+type Ds4Settings = {
+  shellCompression: 'off' | 'rtk';
+};
 type ShellJob = {
   id: number;
   command: string;
@@ -48,6 +52,10 @@ type ShellJob = {
 let nextJobId = 1;
 const shellJobs = new Map<number, ShellJob>();
 
+const DEFAULT_SETTINGS: Ds4Settings = {
+  shellCompression: 'off',
+};
+
 async function exists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);
@@ -59,6 +67,24 @@ async function exists(filePath: string): Promise<boolean> {
 
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function normalizeSettings(value: unknown): Ds4Settings {
+  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    shellCompression: record.shellCompression === 'rtk' ? 'rtk' : 'off',
+  };
+}
+
+async function readSettings(ctx: ExtensionBackendContext): Promise<Ds4Settings> {
+  return normalizeSettings(await ctx.storage.get(SETTINGS_KEY).catch(() => null));
+}
+
+async function writeSettings(ctx: ExtensionBackendContext, patch: unknown): Promise<Ds4Settings> {
+  const current = await readSettings(ctx);
+  const next = normalizeSettings({ ...current, ...(patch && typeof patch === 'object' ? (patch as Record<string, unknown>) : {}) });
+  await ctx.storage.put(SETTINGS_KEY, next);
+  return next;
 }
 
 async function runtimePaths(ctx: ExtensionBackendContext) {
@@ -160,6 +186,47 @@ async function readToolAvailability(ctx: ExtensionBackendContext) {
       .filter((entry): entry is [string, string] => entry.length === 2 && Boolean(entry[0]))
       .map(([tool, state]) => [tool, state === 'ok']),
   ) as Record<string, boolean>;
+}
+
+async function readRtkAvailability(ctx: ExtensionBackendContext) {
+  const result = await ctx.shell.exec({
+    command: 'sh',
+    args: [
+      '-c',
+      [
+        'set +e',
+        'path="$(command -v rtk 2>/dev/null)"',
+        'if [ -z "$path" ]; then echo "installed=no"; exit 0; fi',
+        'echo "installed=yes"',
+        'echo "path=$path"',
+        'version="$(rtk --version 2>&1 | head -n 1)"',
+        'echo "version=$version"',
+        'gain="$(rtk gain 2>&1 | head -n 3)"',
+        'code=$?',
+        'echo "gain_exit=$code"',
+        'printf "gain=%s\\n" "$gain"',
+      ].join('\n'),
+    ],
+  });
+  const fields = Object.fromEntries(
+    result.stdout
+      .split(/\r?\n/)
+      .map((line) => {
+        const index = line.indexOf('=');
+        return index < 0 ? null : [line.slice(0, index), line.slice(index + 1)];
+      })
+      .filter((entry): entry is [string, string] => Boolean(entry)),
+  );
+  const installed = fields.installed === 'yes';
+  const gainExit = Number(fields.gain_exit);
+  return {
+    installed,
+    valid: installed && gainExit === 0,
+    path: fields.path || undefined,
+    version: fields.version || undefined,
+    gainPreview: fields.gain || undefined,
+    error: installed && gainExit !== 0 ? fields.gain || 'rtk gain failed; this may be the wrong rtk package.' : undefined,
+  };
 }
 
 async function readServerHealth() {
@@ -301,7 +368,7 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
   const paths = await runtimePaths(ctx);
-  const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, server, tools] = await Promise.all([
+  const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, server, tools, settings, rtk] = await Promise.all([
     exists(path.join(paths.repoDir, '.git')),
     exists(paths.serverBin),
     exists(paths.modelPath),
@@ -310,6 +377,8 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
     readStoredPid(ctx, SERVER_PID_KEY),
     readServerHealth(),
     readToolAvailability(ctx),
+    readSettings(ctx),
+    readRtkAvailability(ctx),
   ]);
   const managedRunning = await isPidRunning(ctx, serverPid);
   return {
@@ -330,7 +399,9 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
       modelBytes,
       installed: serverInstalled && modelInstalled,
       tools,
+      rtk,
     },
+    settings,
     bootstrap,
     server: {
       ...server,
@@ -359,6 +430,15 @@ export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
       },
     ],
   };
+}
+
+export async function getSettings(_input: unknown, ctx: ExtensionBackendContext) {
+  return { ok: true, settings: await readSettings(ctx), status: await status({}, ctx) };
+}
+
+export async function saveSettings(input: unknown, ctx: ExtensionBackendContext) {
+  const settings = await writeSettings(ctx, input);
+  return { ok: true, settings, status: await status({}, ctx) };
 }
 
 export async function runtimeService() {

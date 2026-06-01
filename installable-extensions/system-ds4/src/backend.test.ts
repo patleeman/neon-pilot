@@ -137,8 +137,10 @@ describe('DS4 managed runtime', () => {
           modelInstalled: true,
           modelBytes: 0,
           tools: expect.any(Object),
+          rtk: expect.objectContaining({ installed: false, valid: false }),
         }),
       );
+      expect(result.settings).toEqual({ shellCompression: 'off' });
       expect(result.bootstrap.steps.map((step) => step.id)).toEqual(['tools', 'source', 'build', 'model', 'verify', 'done']);
       expect(result.models).toEqual(['deepseek-v4-flash']);
     } finally {
@@ -308,6 +310,41 @@ describe('DS4 managed runtime', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+
+  it('stores RTK shell compression settings and verifies the token killer binary', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+    const exec = vi.fn(async (input: { args?: string[] }) => {
+      const command = input.args?.join('\n') ?? '';
+      if (command.includes('command -v rtk')) {
+        return {
+          stdout: 'installed=yes\npath=/opt/homebrew/bin/rtk\nversion=rtk 0.28.2\ngain_exit=0\ngain=Saved 100 tokens\n',
+          stderr: '',
+          command: 'sh',
+          args: [],
+          executionWrappers: [],
+        };
+      }
+      return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+    });
+    const context = ctx({
+      storage: {
+        get: vi.fn(async (key: string) => (key === 'settings' ? { shellCompression: 'rtk' } : null)),
+        put: vi.fn(async () => ({ ok: true })),
+        delete: vi.fn(async () => ({ ok: true, deleted: true })),
+      },
+      shell: { exec, spawn: vi.fn() },
+    });
+
+    const current = await backend.getSettings({}, context);
+    const saved = await backend.saveSettings({ shellCompression: 'off' }, context);
+
+    expect(current.settings).toEqual({ shellCompression: 'rtk' });
+    expect(current.status.runtime.rtk).toEqual(
+      expect.objectContaining({ installed: true, valid: true, path: '/opt/homebrew/bin/rtk', version: 'rtk 0.28.2' }),
+    );
+    expect(saved.settings).toEqual({ shellCompression: 'off' });
+    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off' });
   });
 });
 
