@@ -29,6 +29,8 @@ export interface LiveSessionLoaderOptions {
   initialServiceTier?: string | null;
   /** When set, only these tool names are exposed to the agent session. */
   allowedToolNames?: string[];
+  /** When set, skills are not loaded into the prompt up front. */
+  noSkills?: boolean;
 }
 
 interface PrewarmedLiveSessionLoaderEntry {
@@ -67,7 +69,7 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
     additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
     additionalThemePaths: options.additionalThemePaths,
     systemPrompt: NEON_LIVE_SESSION_SYSTEM_PROMPT,
-    noSkills: true,
+    noSkills: options.noSkills,
     noThemes: true,
   });
 }

@@ -36,19 +36,30 @@ let cachedToolSelection: {
   cachedAtMs: number;
 } | null = null;
 
+interface ResolvedModelProfileSessionPolicy {
+  activeTools: string[] | null;
+  progressiveSkillDiscovery: boolean;
+}
+
 function parseModelRef(modelRef: string): { provider: string; model: string } | null {
   const separator = modelRef.indexOf('/');
   if (separator <= 0 || separator >= modelRef.length - 1) return null;
   return { provider: modelRef.slice(0, separator), model: modelRef.slice(separator + 1) };
 }
 
-async function resolveModelProfileActiveTools(modelRef: string): Promise<string[] | null> {
+async function resolveModelProfileSessionPolicy(modelRef: string): Promise<ResolvedModelProfileSessionPolicy> {
   const parsed = parseModelRef(modelRef);
-  if (!parsed) return null;
+  if (!parsed) return { activeTools: null, progressiveSkillDiscovery: false };
   const profile = await getExtensionHostClient().resolveModelProfile(parsed);
-  if (profile.kind !== 'resolved') return null;
+  if (profile.kind !== 'resolved') return { activeTools: null, progressiveSkillDiscovery: false };
   const activeTools = profile.profile.activeTools;
-  return Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length ? activeTools : null;
+  return {
+    activeTools:
+      Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length
+        ? activeTools
+        : null,
+    progressiveSkillDiscovery: profile.profile.extensionId === 'system-ds4' && profile.profile.id === 'ds4-compatible',
+  };
 }
 
 export function makeAuth(agentDir: string): AuthStorage {
@@ -154,9 +165,12 @@ export async function createPreparedLiveAgentSession(input: {
   const registryAtMs = performance.now();
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const settingsAtMs = performance.now();
-  const resourceLoader = await makeLoader(input.cwd, options);
+  const modelProfilePolicy = await resolveModelProfileSessionPolicy(readSavedModelRef(input.settingsFile, modelRegistry.getAvailable()));
+  const resourceLoader = await makeLoader(
+    input.cwd,
+    modelProfilePolicy.progressiveSkillDiscovery ? { ...options, additionalSkillPaths: [], noSkills: true } : options,
+  );
   const loaderAtMs = performance.now();
-  const modelProfileActiveTools = await resolveModelProfileActiveTools(readSavedModelRef(input.settingsFile, modelRegistry.getAvailable()));
   const { session } = await createAgentSession({
     cwd: input.cwd,
     agentDir,
@@ -165,7 +179,7 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
-    ...(modelProfileActiveTools ?? options.allowedToolNames ? { tools: modelProfileActiveTools ?? options.allowedToolNames } : {}),
+    ...(modelProfilePolicy.activeTools ?? options.allowedToolNames ? { tools: modelProfilePolicy.activeTools ?? options.allowedToolNames } : {}),
   });
   const agentSessionAtMs = performance.now();
 
@@ -205,7 +219,7 @@ export async function createPreparedLiveAgentSession(input: {
     resolveConversationPreferenceStateForSession(input.settingsFile, session.sessionManager, availableModels).currentServiceTier,
   );
 
-  if (!modelProfileActiveTools) {
+  if (!modelProfilePolicy.activeTools) {
     await applyExtensionToolSelection(session, input.settingsFile);
   }
   const doneAtMs = performance.now();

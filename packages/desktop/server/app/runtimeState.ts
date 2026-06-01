@@ -147,7 +147,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       value: withResourceOptionsPerf(
         {
           additionalExtensionPaths: resolved.extensionEntries,
-          additionalSkillPaths: [],
+          additionalSkillPaths: skills.skillPaths,
           additionalPromptTemplatePaths: promptTemplates.templatePaths,
           additionalThemePaths: resolved.themeEntries,
         },
@@ -359,7 +359,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const value = withResourceOptionsPerf(
       {
         additionalExtensionPaths: resolved.extensionEntries,
-        additionalSkillPaths: [],
+        additionalSkillPaths: skills.skillPaths,
         additionalPromptTemplatePaths: promptTemplates.templatePaths,
         additionalThemePaths: resolved.themeEntries,
       },
@@ -421,7 +421,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       const value = withResourceOptionsPerf(
         {
           additionalExtensionPaths: resolved.extensionEntries,
-          additionalSkillPaths: [],
+          additionalSkillPaths: skills.skillPaths,
           additionalPromptTemplatePaths: promptTemplates.templatePaths,
           additionalThemePaths: resolved.themeEntries,
         },

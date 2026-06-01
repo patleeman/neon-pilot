@@ -30,7 +30,7 @@ function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
 
   return {
     additionalExtensionPaths: resolved.extensionEntries,
-    additionalSkillPaths: [],
+    additionalSkillPaths: assembly.skills.skillPaths,
     additionalPromptTemplatePaths: assembly.promptTemplates.templatePaths,
     additionalThemePaths: resolved.themeEntries,
   };

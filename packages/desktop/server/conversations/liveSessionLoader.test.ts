@@ -58,7 +58,7 @@ describe('live session loader cache', () => {
       additionalPromptTemplatePaths: [' /prompts '],
       additionalThemePaths: [' /themes '],
       systemPrompt: expect.stringContaining('Neon Pilot'),
-      noSkills: true,
+      noSkills: undefined,
       noThemes: true,
     });
     expect(agent.DefaultResourceLoader.instances[0].options).not.toEqual(

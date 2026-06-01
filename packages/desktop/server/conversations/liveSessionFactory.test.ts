@@ -173,6 +173,10 @@ describe('live session factory', () => {
     });
 
     expect(extensionRegistry.resolveModelProfile).toHaveBeenCalledWith({ provider: 'ds4', model: 'deepseek-v4-flash' });
+    expect(loader.makeLoader).toHaveBeenCalledWith(
+      '/repo',
+      expect.objectContaining({ additionalSkillPaths: [], noSkills: true }),
+    );
     expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit'] }));
     expect(s.setActiveTools).not.toHaveBeenCalled();
   });
