@@ -1265,6 +1265,29 @@ describe('extension backend capability dispatcher', () => {
     expect(ui.invalidate).toHaveBeenCalledWith(['sessions', 'checkpoints']);
   });
 
+  it('dispatches host-owned image generation capability calls', async () => {
+    const image = { generate: vi.fn(async () => ({ text: 'generated' })) };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ image });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-codex-profile',
+          capability: 'image',
+          operation: 'generate',
+          input: { input: { prompt: 'draw smoke' }, toolContext: { sessionFile: '/tmp/session.json', preferredVisionModel: 'openai/gpt-4o' } },
+        }),
+      ),
+    ).resolves.toEqual({ text: 'generated' });
+
+    expect(image.generate).toHaveBeenCalledWith('system-codex-profile', {
+      input: { prompt: 'draw smoke' },
+      toolContext: { sessionFile: '/tmp/session.json', preferredVisionModel: 'openai/gpt-4o' },
+    });
+  });
+
   it('rejects malformed UI invalidation inputs', async () => {
     const dispatch = createExtensionBackendCapabilityDispatcher({ ui: { invalidate: vi.fn() } });
 

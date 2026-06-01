@@ -507,7 +507,58 @@ async function executeRegisteredTool(factory: (pi: RegisterToolApi) => void, inp
   );
 }
 
+function summarizeImageResult(
+  result: {
+    assistantText: string;
+    imageBase64: string;
+    mimeType: string;
+    model: { provider: string; id: string };
+    responseId?: string;
+    outputFormat: string;
+    quality?: string;
+    background?: string;
+    sourceLabel: string;
+    sourceImageCount: number;
+    action?: string;
+  },
+  input: Record<string, unknown>,
+) {
+  const size = typeof input.size === 'string' && input.size.trim() ? input.size.trim() : 'auto';
+  const summary =
+    result.assistantText ||
+    (result.sourceImageCount > 0
+      ? `Generated image with ${result.model.provider}/${result.model.id} using ${result.sourceImageCount} reference image${
+          result.sourceImageCount === 1 ? '' : 's'
+        }.`
+      : `Generated image with ${result.model.provider}/${result.model.id}.`);
+
+  return {
+    text: summary,
+    content: [
+      { type: 'text' as const, text: summary },
+      { type: 'image' as const, data: result.imageBase64, mimeType: result.mimeType },
+    ],
+    details: {
+      provider: result.model.provider,
+      model: result.model.id,
+      responseId: result.responseId,
+      outputFormat: result.outputFormat,
+      quality: result.quality ?? input.quality ?? 'auto',
+      background: result.background ?? input.background ?? 'auto',
+      size,
+      action: result.action ?? input.action ?? 'auto',
+      source: result.sourceLabel,
+      sourceImageCount: result.sourceImageCount,
+    },
+  };
+}
+
 export async function image(input: unknown, ctx: ImageBackendContext) {
+  const hostImages = await import('@neon-pilot/extensions/backend/images');
+  if (hostImages.hasImageHostCapability()) {
+    return hostImages.generateImageInHost({ input, toolContext: ctx.toolContext });
+  }
+
   const module = await import('./imageTool.js');
   const result = (await executeRegisteredTool(module.createImageAgentExtension(), input, ctx)) as ToolExecutionResult;
   return {
@@ -516,4 +567,43 @@ export async function image(input: unknown, ctx: ImageBackendContext) {
     ...(result.details ? { details: result.details } : {}),
     ...(result.isError ? { isError: result.isError } : {}),
   };
+}
+
+export async function generateImageForHost(
+  input: unknown,
+  hostCtx: {
+    model?: unknown;
+    modelRegistry: {
+      find(provider: string, modelId: string): unknown;
+      getApiKeyAndHeaders(
+        model: unknown,
+      ): Promise<{ ok: true; apiKey?: string; headers?: Record<string, string> } | { ok: false; error: string }>;
+    };
+    sessionManager?: {
+      getEntries?: () => unknown[];
+      getLeafId?: () => string | null;
+    };
+  },
+) {
+  if (!isRecord(input)) {
+    throw new Error('Image input must be an object.');
+  }
+
+  const module = await import('./imageTool.js');
+  const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : '';
+  if (!prompt) {
+    throw new Error('prompt is required.');
+  }
+  const size = typeof input.size === 'string' && input.size.trim() ? input.size.trim() : undefined;
+  const result = await module.generateImage({
+    prompt,
+    ...(size ? { size } : {}),
+    ...(typeof input.quality === 'string' ? { quality: input.quality as never } : {}),
+    ...(typeof input.background === 'string' ? { background: input.background as never } : {}),
+    ...(typeof input.action === 'string' ? { action: input.action as never } : {}),
+    ...(typeof input.source === 'string' ? { source: input.source as never } : {}),
+    ...(typeof input.sourceCount === 'number' ? { sourceCount: input.sourceCount } : {}),
+    ctx: hostCtx as never,
+  });
+  return summarizeImageResult(result, input);
 }

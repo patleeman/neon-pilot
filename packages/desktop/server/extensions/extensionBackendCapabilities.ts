@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
+import { SessionManager } from '@earendil-works/pi-coding-agent';
+import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
+import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
 import { resolveSecret } from '../secrets/secretStore.js';
 import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
@@ -20,7 +25,8 @@ import {
   sendNotifyAsSystemNotification,
   setExtensionBadge,
 } from './extensionNotifications.js';
-import { listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
+import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
+import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
@@ -55,6 +61,10 @@ interface ExtensionBackendCapabilityRuntime {
 
 interface ExtensionBackendCapabilityEvents {
   publish(extensionId: string, event: string, payload: unknown): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityImage {
+  generate(extensionId: string, input: { input: unknown; toolContext?: { preferredVisionModel?: string; sessionFile?: string } }): Promise<unknown>;
 }
 
 interface ExtensionBackendCapabilityConversations {
@@ -256,6 +266,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   extensions?: ExtensionBackendCapabilityExtensions;
   filesystem?: ExtensionBackendCapabilityFilesystem;
   git?: ExtensionBackendCapabilityGit;
+  image?: ExtensionBackendCapabilityImage;
   log?: ExtensionBackendCapabilityLogger;
   models?: ExtensionBackendCapabilityModels;
   notify?: ExtensionBackendCapabilityNotify;
@@ -618,6 +629,61 @@ function dispatchModelsCapability(models: ExtensionBackendCapabilityModels, requ
   }
 
   throw new Error(`Unsupported models capability operation: ${request.operation}`);
+}
+
+function parseModelRef(modelRef: unknown): { provider: string; modelId: string } | undefined {
+  if (typeof modelRef !== 'string') return undefined;
+  const normalized = modelRef.trim();
+  const slashIndex = normalized.indexOf('/');
+  if (slashIndex <= 0 || slashIndex >= normalized.length - 1) return undefined;
+  return { provider: normalized.slice(0, slashIndex), modelId: normalized.slice(slashIndex + 1) };
+}
+
+async function generateImageWithInstalledExtension(
+  extensionId: string,
+  input: { input: unknown; toolContext?: { preferredVisionModel?: string; sessionFile?: string } },
+): Promise<unknown> {
+  const entry = findExtensionEntry(extensionId);
+  const backendEntry = entry?.manifest.backend?.entry;
+  if (!entry || !backendEntry) {
+    throw new Error(`Extension "${extensionId}" has no backend entry for image generation.`);
+  }
+  const loadTarget = resolveExtensionBackendLoadTarget(entry, backendEntry);
+  if (!loadTarget) {
+    throw new Error(`Extension "${extensionId}" backend artifact is unavailable for image generation.`);
+  }
+  const module = (await import(`${pathToFileURL(loadTarget.path).href}?v=${encodeURIComponent(loadTarget.hash)}`)) as {
+    generateImageForHost?: (imageInput: unknown, hostContext: unknown) => Promise<unknown>;
+  };
+  if (typeof module.generateImageForHost !== 'function') {
+    throw new Error(`Extension "${extensionId}" does not export generateImageForHost.`);
+  }
+
+  const authFile = join(getPiAgentRuntimeDir(), 'auth.json');
+  const modelRegistry = createModelRegistryForAuthFile(authFile);
+  const preferred = parseModelRef(input.toolContext?.preferredVisionModel);
+  const model = preferred ? modelRegistry.find(preferred.provider, preferred.modelId) : undefined;
+  const sessionFile = input.toolContext?.sessionFile?.trim();
+  const sessionManager = sessionFile ? SessionManager.open(sessionFile) : undefined;
+
+  return module.generateImageForHost(input.input, {
+    ...(model ? { model } : {}),
+    modelRegistry,
+    ...(sessionManager ? { sessionManager } : {}),
+  });
+}
+
+function dispatchImageCapability(image: ExtensionBackendCapabilityImage, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation !== 'generate') {
+    throw new Error(`Unsupported image capability operation: ${request.operation}`);
+  }
+  const input = normalizeRecordInput(request.input, 'Image');
+  return image.generate(request.extensionId, {
+    input: input.input,
+    ...(input.toolContext && typeof input.toolContext === 'object' && !Array.isArray(input.toolContext)
+      ? { toolContext: input.toolContext as { preferredVisionModel?: string; sessionFile?: string } }
+      : {}),
+  });
 }
 
 function normalizeModelWriteContext(input: Record<string, unknown>): ExtensionBackendModelWriteContext {
@@ -1361,6 +1427,7 @@ export function createExtensionBackendCapabilityDispatcher(
     setEnabled: (extensionId: string, enabled: boolean) => setExtensionEnabled(extensionId, enabled),
   };
   const git = options.git ?? createExtensionGitCapability();
+  const image = options.image ?? { generate: generateImageWithInstalledExtension };
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const models = options.models ?? {
     list: () => createExtensionModelsCapability().list(),
@@ -1447,6 +1514,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'git') {
       return dispatchGitCapability(git, request);
+    }
+    if (request.capability === 'image') {
+      return dispatchImageCapability(image, request);
     }
     if (request.capability === 'log') {
       return dispatchLogCapability(logger, request);

@@ -638,7 +638,7 @@ function mimeTypeFromOutputFormat(outputFormat: string): string {
   }
 }
 
-async function generateImage(input: {
+export async function generateImage(input: {
   prompt: string;
   size?: string;
   quality?: ImageQuality;

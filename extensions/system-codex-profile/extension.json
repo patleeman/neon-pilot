@@ -21,7 +21,11 @@
       {
         "id": "image",
         "handler": "image",
-        "title": "Image"
+        "title": "Image",
+        "worker": {
+          "enabled": true,
+          "ignoreLiveContext": true
+        }
       }
     ]
   },
