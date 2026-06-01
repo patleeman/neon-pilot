@@ -31,7 +31,7 @@ describe('protocol CLI', () => {
     expect(extensionHostClient.invokeProtocolEntrypoint).not.toHaveBeenCalled();
   });
 
-  it('invokes protocol entrypoints with args, stdio, signal, and server context', async () => {
+  it('invokes protocol entrypoints with args, stdio, signal, and server context snapshot', async () => {
     const controller = new AbortController();
 
     await expect(runProtocolCli(['protocol', 'acp', '--stdio'], { signal: controller.signal })).resolves.toBe(0);
@@ -45,18 +45,16 @@ describe('protocol CLI', () => {
       expect.objectContaining({
         protocolId: 'acp',
         input: { args: ['--stdio'] },
-        serverContext: expect.objectContaining({
-          getRuntimeScope: expect.any(Function),
-          buildLiveSessionResourceOptions: expect.any(Function),
-          getRepoRoot: expect.any(Function),
+        serverContextSnapshot: expect.objectContaining({
+          runtimeScope: 'shared',
+          repoRoot: process.cwd(),
+          agentDir: '/agent',
         }),
         stdio: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr },
         signal: controller.signal,
       }),
     );
-    const serverContext = extensionHostClient.invokeProtocolEntrypoint.mock.calls[0][0].serverContext;
-    expect(serverContext.getRepoRoot()).toBe(process.cwd());
-    expect(serverContext.buildLiveSessionResourceOptions()).toEqual({ additionalSkillPaths: ['/skills'] });
+    expect(extensionHostClient.invokeProtocolEntrypoint.mock.calls[0][0]).not.toHaveProperty('serverContext');
   });
 
   it('maps extension protocol errors to specific exit codes', async () => {

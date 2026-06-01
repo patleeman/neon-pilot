@@ -4,7 +4,7 @@ import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
 import { getExtensionHostClient } from './extensions/extensionHostClient.js';
-import type { ExtensionHostBackendServerContext } from './extensions/extensionHostProtocol.js';
+import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 
 export const PROTOCOL_CLI_EXIT_CODES = {
   usage: 1,
@@ -14,11 +14,12 @@ export const PROTOCOL_CLI_EXIT_CODES = {
   runtimeFailure: 5,
 } as const;
 
-function buildServerContext(): ExtensionHostBackendServerContext {
+function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
   const repoRoot = process.cwd();
+  const agentDir = getPiAgentRuntimeDir();
   const runtimeState = createRuntimeState({
     repoRoot,
-    agentDir: getPiAgentRuntimeDir(),
+    agentDir,
     logger: {
       warn: (message, fields) => {
         const suffix = fields ? ` ${JSON.stringify(fields)}` : '';
@@ -28,9 +29,9 @@ function buildServerContext(): ExtensionHostBackendServerContext {
   });
 
   return {
-    getRuntimeScope: runtimeState.getRuntimeScope,
-    buildLiveSessionResourceOptions: () => runtimeState.buildLiveSessionResourceOptions(),
-    getRepoRoot: () => repoRoot,
+    runtimeScope: runtimeState.getRuntimeScope(),
+    repoRoot,
+    agentDir,
   };
 }
 
@@ -67,7 +68,7 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
     await getExtensionHostClient().invokeProtocolEntrypoint({
       protocolId,
       input: { args: protocolArgs },
-      serverContext: buildServerContext(),
+      serverContextSnapshot: buildServerContextSnapshot(),
       stdio: {
         stdin: process.stdin,
         stdout: process.stdout,
