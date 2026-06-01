@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createExtensionHostRpcClient,
   createHybridExtensionHostClient,
+  getExtensionHostInvokeActionFallbackReason,
+  getExtensionHostInvokeRouteFallbackReason,
+  getExtensionHostProtocolEntrypointFallbackReason,
+  getExtensionHostStartupActionsFallbackReason,
   hasFunction,
   isWireableExtensionHostInvokeActionInput,
 } from './extensionHostRpcClient.js';
@@ -106,6 +110,47 @@ describe('extension host RPC client', () => {
     expect(hasFunction({ nested: [{ fn: () => undefined }] })).toBe(true);
   });
 
+  it('names the remaining hybrid fallback reasons', () => {
+    expect(getExtensionHostInvokeActionFallbackReason({ extensionId: 'ext', actionId: 'safe', input: {} })).toBeNull();
+    expect(
+      getExtensionHostInvokeActionFallbackReason({
+        extensionId: 'ext',
+        actionId: 'streaming-safe',
+        input: {},
+        toolContext: { onUpdate: () => undefined },
+        toolContextSnapshot: { cwd: '/repo' },
+      }),
+    ).toBeNull();
+    expect(
+      getExtensionHostInvokeActionFallbackReason({
+        extensionId: 'ext',
+        actionId: 'unsafe',
+        input: {},
+        agentToolContext: { run: () => undefined },
+      }),
+    ).toBe('action:function-bearing-context');
+    expect(
+      getExtensionHostInvokeRouteFallbackReason({
+        extensionId: 'ext',
+        method: 'GET',
+        routePath: '/unsafe',
+        request: { method: 'GET', path: '/unsafe', query: {}, params: {}, signal: new AbortController().signal },
+      }),
+    ).toBeNull();
+    expect(
+      getExtensionHostInvokeRouteFallbackReason({
+        extensionId: 'ext',
+        method: 'GET',
+        routePath: '/unsafe',
+        request: { method: 'GET', path: '/unsafe', query: {}, params: {}, body: { callback: () => undefined } },
+      }),
+    ).toBe('route:function-bearing-context');
+    expect(getExtensionHostStartupActionsFallbackReason({ serverContextSnapshot: { runtimeScope: 'shared' } })).toBeNull();
+    expect(getExtensionHostStartupActionsFallbackReason({ serverContext: { getRuntimeScope: () => 'shared' } })).toBe(
+      'startup:function-bearing-context',
+    );
+    expect(getExtensionHostProtocolEntrypointFallbackReason()).toBe('protocol:stdio-streams');
+  });
 
   it('publishes events over RPC', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ ok: true, published: true }));

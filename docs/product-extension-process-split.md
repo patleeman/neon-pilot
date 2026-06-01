@@ -77,6 +77,17 @@ Product runtime modules must depend on `ExtensionHostClient` and the public host
 
 Manifest-declared tools also invoke backend actions through `ExtensionHostClient`; they pass serializable agent metadata and tool context snapshots through the host action transport. Richer live agent capabilities still need explicit handles before they can leave the in-process fallback.
 
+## Current Hybrid Fallbacks
+
+The hybrid extension host client keeps each remaining in-process path named and test-covered:
+
+- `action:function-bearing-context`: backend action calls that still carry live callback or capability objects outside the supported streaming `toolContext.onUpdate` channel.
+- `route:function-bearing-context`: backend route calls whose request or host context still contains functions after stripping the abort signal.
+- `startup:function-bearing-context`: startup action calls that still receive live server context functions instead of a serializable server context snapshot.
+- `protocol:stdio-streams`: protocol entrypoints that still require raw stdio streams.
+
+Removing a fallback reason means first replacing the live object with a capability channel or snapshot, then routing that call through `ExtensionHostClient` RPC.
+
 ## Migration Phases
 
 1. Add the product runtime / extension host terminology and the `ExtensionHostClient` seam.

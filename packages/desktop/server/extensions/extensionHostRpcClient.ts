@@ -34,6 +34,19 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
   );
 }
 
+export type ExtensionHostFallbackReason =
+  | 'action:function-bearing-context'
+  | 'protocol:stdio-streams'
+  | 'route:function-bearing-context'
+  | 'startup:function-bearing-context';
+
+export function getExtensionHostInvokeActionFallbackReason(
+  input: ExtensionHostInvokeActionInput,
+): ExtensionHostFallbackReason | null {
+  if (isWireableExtensionHostStreamingActionInput(input)) return null;
+  return isWireableExtensionHostInvokeActionInput(input) ? null : 'action:function-bearing-context';
+}
+
 function hasOnlyToolUpdateCallback(input: ExtensionHostInvokeActionInput): boolean {
   const toolContext = input.toolContext;
   if (!toolContext || typeof toolContext !== 'object') return false;
@@ -55,9 +68,25 @@ function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHost
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(stripRouteSignal(input).request);
 }
 
+export function getExtensionHostInvokeRouteFallbackReason(
+  input: Parameters<ExtensionHostClient['invokeRoute']>[0],
+): ExtensionHostFallbackReason | null {
+  return isWireableExtensionHostInvokeRouteInput(input) ? null : 'route:function-bearing-context';
+}
+
 function isWireableExtensionHostStartStartupActionsInput(input: Parameters<ExtensionHostClient['startStartupActions']>[0]): boolean {
   if (!input) return true;
   return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot);
+}
+
+export function getExtensionHostStartupActionsFallbackReason(
+  input: Parameters<ExtensionHostClient['startStartupActions']>[0],
+): ExtensionHostFallbackReason | null {
+  return isWireableExtensionHostStartStartupActionsInput(input) ? null : 'startup:function-bearing-context';
+}
+
+export function getExtensionHostProtocolEntrypointFallbackReason(): ExtensionHostFallbackReason {
+  return 'protocol:stdio-streams';
 }
 
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {
@@ -291,10 +320,7 @@ export function createHybridExtensionHostClient(input: {
       return input.rpcClient.health();
     },
     async invokeAction(actionInput) {
-      if (isWireableExtensionHostStreamingActionInput(actionInput)) {
-        return input.rpcClient.invokeAction(actionInput);
-      }
-      if (!isWireableExtensionHostInvokeActionInput(actionInput)) {
+      if (getExtensionHostInvokeActionFallbackReason(actionInput)) {
         return input.fallbackClient.invokeAction(actionInput);
       }
       return input.rpcClient.invokeAction(actionInput);
@@ -306,7 +332,7 @@ export function createHybridExtensionHostClient(input: {
       return input.fallbackClient.invokeProtocolEntrypoint(protocolInput);
     },
     async invokeRoute(routeInput) {
-      if (!isWireableExtensionHostInvokeRouteInput(routeInput)) {
+      if (getExtensionHostInvokeRouteFallbackReason(routeInput)) {
         return input.fallbackClient.invokeRoute(routeInput);
       }
       return input.rpcClient.invokeRoute(routeInput);
@@ -321,7 +347,7 @@ export function createHybridExtensionHostClient(input: {
       return input.rpcClient.runSelfTest(selfTestInput);
     },
     async startStartupActions(startupInput) {
-      if (!isWireableExtensionHostStartStartupActionsInput(startupInput)) {
+      if (getExtensionHostStartupActionsFallbackReason(startupInput)) {
         return input.fallbackClient.startStartupActions(startupInput);
       }
       return input.rpcClient.startStartupActions(startupInput);
