@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createServer as createNetServer, type Socket } from 'node:net';
 import { PassThrough, Writable } from 'node:stream';
 
+import { setDefaultExtensionBackendWorkerUrl } from '../../server/extensions/extensionBackendWorkerClient.js';
 import { handleInProcessExtensionHostRequest } from '../../server/extensions/extensionHostClient.js';
 import type {
   ExtensionHostInvokeActionRequest,
@@ -205,6 +206,8 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
 }
 
 async function main(): Promise<void> {
+  setDefaultExtensionBackendWorkerUrl(new URL('../../server/dist/extensions/extensionBackendWorker.js', import.meta.url));
+
   const token = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim() || randomUUID();
   const server = createServer((request, response) => {
     void (async () => {

@@ -26,6 +26,27 @@ export interface ExtensionBackendWorkerClientOptions {
   ) => Promise<unknown> | unknown;
 }
 
+const EXTENSION_BACKEND_WORKER_URL_GLOBAL = Symbol.for('neon-pilot.extensionBackendWorkerUrl');
+
+type ExtensionBackendWorkerUrlGlobal = typeof globalThis & {
+  [EXTENSION_BACKEND_WORKER_URL_GLOBAL]?: URL;
+};
+
+export function setDefaultExtensionBackendWorkerUrl(workerUrl: URL | undefined): void {
+  if (workerUrl) {
+    (globalThis as ExtensionBackendWorkerUrlGlobal)[EXTENSION_BACKEND_WORKER_URL_GLOBAL] = workerUrl;
+  } else {
+    delete (globalThis as ExtensionBackendWorkerUrlGlobal)[EXTENSION_BACKEND_WORKER_URL_GLOBAL];
+  }
+}
+
+function getDefaultExtensionBackendWorkerUrl(): URL {
+  return (
+    (globalThis as ExtensionBackendWorkerUrlGlobal)[EXTENSION_BACKEND_WORKER_URL_GLOBAL] ??
+    new URL('./extensionBackendWorker.js', import.meta.url)
+  );
+}
+
 export class ExtensionBackendWorkerClient {
   private worker: Worker | undefined;
   private workerError: Error | undefined;
@@ -74,7 +95,7 @@ export class ExtensionBackendWorkerClient {
     }
 
     this.workerError = undefined;
-    const worker = new Worker(this.options.workerUrl ?? new URL('./extensionBackendWorker.js', import.meta.url), { execArgv: [] });
+    const worker = new Worker(this.options.workerUrl ?? getDefaultExtensionBackendWorkerUrl(), { execArgv: [] });
     worker.on('message', (message: ExtensionBackendWorkerMessage) => this.handleMessage(message));
     worker.on('error', (error) => this.handleError(error));
     worker.on('exit', (code) => this.handleExit(code));

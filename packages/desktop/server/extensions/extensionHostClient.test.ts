@@ -86,6 +86,13 @@ describe('extension host client', () => {
     await expect(getExtensionHostClient().health()).resolves.toEqual({ status: 'ready' });
   });
 
+  it('stores the configured client on the process global for split bundle module graphs', () => {
+    const client = createInProcessExtensionHostClient();
+    setExtensionHostClient(client);
+
+    expect(getExtensionHostClient()).toBe(client);
+  });
+
   it('routes invokeAction through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { done: true } });

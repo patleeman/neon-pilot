@@ -38,7 +38,11 @@ const workerThreads = vi.hoisted(() => {
 
 vi.mock('node:worker_threads', () => ({ Worker: workerThreads.Worker }));
 
-import { ExtensionBackendWorkerClient, ExtensionBackendWorkerPool } from './extensionBackendWorkerClient.js';
+import {
+  ExtensionBackendWorkerClient,
+  ExtensionBackendWorkerPool,
+  setDefaultExtensionBackendWorkerUrl,
+} from './extensionBackendWorkerClient.js';
 
 async function flushPromises(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve));
@@ -48,6 +52,7 @@ describe('ExtensionBackendWorkerClient', () => {
   beforeEach(() => {
     workerThreads.Worker.mockClear();
     workerThreads.instances.length = 0;
+    setDefaultExtensionBackendWorkerUrl(undefined);
   });
 
   it('sends backend import requests to the worker', async () => {
@@ -64,6 +69,18 @@ describe('ExtensionBackendWorkerClient', () => {
 
     worker.emit('message', { id: 1, ok: true });
     await expect(load).resolves.toBeUndefined();
+  });
+
+  it('uses the configured process default worker URL when no explicit URL is provided', async () => {
+    setDefaultExtensionBackendWorkerUrl(new URL('file:///configured-worker.js'));
+    const client = new ExtensionBackendWorkerClient();
+
+    const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    const worker = workerThreads.instances[0]!;
+    worker.emit('message', { id: 1, ok: true });
+    await load;
+
+    expect(worker.url.href).toBe('file:///configured-worker.js');
   });
 
   it('returns backend export availability from the worker', async () => {

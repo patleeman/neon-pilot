@@ -148,13 +148,22 @@ export interface ExtensionHostClient {
   publishEvent(source: string, payload: unknown): Promise<void>;
 }
 
-let configuredExtensionHostClient: ExtensionHostClient | undefined;
+const EXTENSION_HOST_CLIENT_GLOBAL = Symbol.for('neon-pilot.extensionHostClient');
+
+type ExtensionHostClientGlobal = typeof globalThis & {
+  [EXTENSION_HOST_CLIENT_GLOBAL]?: ExtensionHostClient;
+};
 
 export function setExtensionHostClient(client: ExtensionHostClient | undefined): void {
-  configuredExtensionHostClient = client;
+  if (client) {
+    (globalThis as ExtensionHostClientGlobal)[EXTENSION_HOST_CLIENT_GLOBAL] = client;
+  } else {
+    delete (globalThis as ExtensionHostClientGlobal)[EXTENSION_HOST_CLIENT_GLOBAL];
+  }
 }
 
 export function getExtensionHostClient(): ExtensionHostClient {
+  const configuredExtensionHostClient = (globalThis as ExtensionHostClientGlobal)[EXTENSION_HOST_CLIENT_GLOBAL];
   if (!configuredExtensionHostClient) {
     throw new Error('Extension host client is not configured. Product runtime must connect to the extension host RPC process.');
   }
