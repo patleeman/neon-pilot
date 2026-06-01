@@ -7,13 +7,12 @@ import { getRuntimeConfigRoot, getStateRoot, writeMergedMcpConfigFile } from '@n
 import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
-import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
 import {
-  isExtensionEnabled,
-  listExtensionAgentRegistrations,
-  listExtensionEntries,
-  resolveExtensionModelProfile,
-} from '../extensions/extensionRegistry.js';
+  createManifestAgentExtensions,
+  listManifestAgentExtensionCacheEntries,
+  resolveManifestAgentLifecycleModelProfile,
+} from '../extensions/extensionAgentExtensions.js';
+import { listRuntimeExtensionBackendEntries } from '../extensions/extensionRuntimeResources.js';
 import {
   createManifestToolAgentExtensions,
   listManifestToolAgentExtensionCacheEntries,
@@ -83,19 +82,6 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     delete process.env.MCP_CONFIG_PATH;
   }
 
-  function resolveRuntimeExtensionEntries(): string[] {
-    return listExtensionEntries()
-      .filter((entry) => {
-        if (entry.source !== 'system') return true;
-        return isExtensionEnabled(entry.manifest.id);
-      })
-      .flatMap((entry) => {
-        const backend = entry.manifest.backend?.entry;
-        if (!backend) return [];
-        return entry.packageRoot ? [join(entry.packageRoot, backend)] : [];
-      });
-  }
-
   function writeRuntimeMcpConfig(skillDirs: readonly string[]): void {
     const materializedMcpConfigPath = join(agentDir, 'mcp_servers.json');
     const env = { ...process.env };
@@ -141,7 +127,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   }
 
   function materializeRuntimeResources(): void {
-    const extensionEntries = resolveRuntimeExtensionEntries();
+    const extensionEntries = listRuntimeExtensionBackendEntries();
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries,
@@ -216,7 +202,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       const modelId = typeof model?.id === 'string' ? model.id : '';
       if (!provider || !modelId) return { kind: 'none' as const, modelRef: null };
       const modelRef = `${provider}/${modelId}`;
-      const resolution = resolveExtensionModelProfile({ provider, model: modelId });
+      const resolution = resolveManifestAgentLifecycleModelProfile({ provider, model: modelId });
       if (resolution.kind === 'ambiguous' && !warnedAmbiguousProfileRefs.has(modelRef)) {
         warnedAmbiguousProfileRefs.add(modelRef);
         logger.warn('ambiguous model profile match', {
@@ -291,7 +277,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   function buildLiveSessionExtensionFactories(): ExtensionFactory[] {
     clearBashProcessWrappers();
-    const extensionEntries = resolveRuntimeExtensionEntries();
+    const extensionEntries = listRuntimeExtensionBackendEntries();
     const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
     const cacheKey = JSON.stringify({
       runtimeScope,
@@ -300,10 +286,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       stateRoot: getStateRoot(),
       modelRef,
       extensionEntries,
-      agentRegistrations: listExtensionAgentRegistrations().map((registration) => ({
-        extensionId: registration.extensionId,
-        exportName: registration.exportName,
-      })),
+      agentRegistrations: listManifestAgentExtensionCacheEntries(),
       toolRegistrations: listManifestToolAgentExtensionCacheEntries(),
     });
     if (liveSessionExtensionFactoriesCache?.key === cacheKey) {
@@ -340,7 +323,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   function buildLiveSessionResourceOptions(): LiveSessionResourceOptions {
     const startedAtMs = performance.now();
-    const extensionEntries = resolveRuntimeExtensionEntries();
+    const extensionEntries = listRuntimeExtensionBackendEntries();
     const extensionEntriesAtMs = performance.now();
     const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
     const modelRefAtMs = performance.now();
@@ -397,7 +380,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   async function buildLiveSessionResourceOptionsAsync(): Promise<LiveSessionResourceOptions> {
     const startedAtMs = performance.now();
-    const extensionEntries = resolveRuntimeExtensionEntries();
+    const extensionEntries = listRuntimeExtensionBackendEntries();
     const extensionEntriesAtMs = performance.now();
     const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
     const modelRefAtMs = performance.now();
@@ -471,7 +454,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   function withTemporaryRuntimeAgentDir<T>(run: (runtimeAgentDir: string) => Promise<T>): Promise<T> {
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
-      extensionEntries: resolveRuntimeExtensionEntries(),
+      extensionEntries: listRuntimeExtensionBackendEntries(),
     });
     const runtimeAgentDir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-runtime-inspect-'));
     materializeRuntimeResourcesToAgentDir(resolved, runtimeAgentDir);

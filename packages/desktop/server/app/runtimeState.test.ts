@@ -12,7 +12,7 @@ const {
   materializeRuntimeResourcesToAgentDirMock,
   resolveRuntimeResourcesMock,
   createManifestAgentExtensionsMock,
-  listExtensionAgentRegistrationsMock,
+  listManifestAgentExtensionCacheEntriesMock,
   listExtensionToolRegistrationsMock,
   manifestAgentFactoryMock,
   authStorageMock,
@@ -20,8 +20,8 @@ const {
   buildSkillInjectionPlanAsyncMock,
   buildPromptTemplatePlanAsyncMock,
   listExtensionSkillRegistrationsMock,
-  listExtensionEntriesMock,
-  isExtensionEnabledMock,
+  listRuntimeExtensionBackendEntriesMock,
+  resolveManifestAgentLifecycleModelProfileMock,
 } = vi.hoisted(() => {
   const authStorageMock = {
     hasAuth: vi.fn(() => false),
@@ -39,7 +39,7 @@ const {
     resolveRuntimeResourcesMock: vi.fn(),
     writeMergedMcpConfigFileMock: vi.fn(() => ({ bundledServerCount: 0 })),
     createManifestAgentExtensionsMock: vi.fn(() => ({ factories: [manifestAgentFactoryMock], errors: [] })),
-    listExtensionAgentRegistrationsMock: vi.fn(() => []),
+    listManifestAgentExtensionCacheEntriesMock: vi.fn(() => []),
     listExtensionToolRegistrationsMock: vi.fn(() => []),
     manifestAgentFactoryMock,
     authStorageMock,
@@ -47,8 +47,8 @@ const {
     buildSkillInjectionPlanAsyncMock: vi.fn(async () => ({ skillPaths: ['/skills/async'], inlineSkills: [], diagnostics: [] })),
     buildPromptTemplatePlanAsyncMock: vi.fn(async () => ({ templatePaths: ['/prompts/async.md'], templates: [], diagnostics: [] })),
     listExtensionSkillRegistrationsMock: vi.fn(() => []),
-    listExtensionEntriesMock: vi.fn(() => []),
-    isExtensionEnabledMock: vi.fn(() => true),
+    listRuntimeExtensionBackendEntriesMock: vi.fn(() => []),
+    resolveManifestAgentLifecycleModelProfileMock: vi.fn(() => ({ kind: 'none' })),
   };
 });
 
@@ -63,15 +63,6 @@ vi.mock('@neon-pilot/core', () => ({
   writeMergedMcpConfigFile: writeMergedMcpConfigFileMock,
 }));
 
-vi.mock('../extensions/extensionRegistry.js', () => ({
-  isExtensionEnabled: isExtensionEnabledMock,
-  listExtensionEntries: listExtensionEntriesMock,
-  listExtensionSkillRegistrations: listExtensionSkillRegistrationsMock,
-  listExtensionAgentRegistrations: listExtensionAgentRegistrationsMock,
-  listExtensionToolRegistrations: listExtensionToolRegistrationsMock,
-  resolveExtensionModelProfile: vi.fn(() => ({ kind: 'none' })),
-}));
-
 vi.mock('../extensions/manifestToolAgentExtension.js', () => ({
   createManifestToolAgentExtensions: vi.fn(() => []),
   listManifestToolAgentExtensionCacheEntries: listExtensionToolRegistrationsMock,
@@ -79,6 +70,12 @@ vi.mock('../extensions/manifestToolAgentExtension.js', () => ({
 
 vi.mock('../extensions/extensionAgentExtensions.js', () => ({
   createManifestAgentExtensions: createManifestAgentExtensionsMock,
+  listManifestAgentExtensionCacheEntries: listManifestAgentExtensionCacheEntriesMock,
+  resolveManifestAgentLifecycleModelProfile: resolveManifestAgentLifecycleModelProfileMock,
+}));
+
+vi.mock('../extensions/extensionRuntimeResources.js', () => ({
+  listRuntimeExtensionBackendEntries: listRuntimeExtensionBackendEntriesMock,
 }));
 
 vi.mock('@earendil-works/pi-coding-agent', () => ({
@@ -130,14 +127,14 @@ describe('createRuntimeState', () => {
     createManifestAgentExtensionsMock.mockClear();
     manifestAgentFactoryMock.mockClear();
     listExtensionSkillRegistrationsMock.mockReset();
-    listExtensionAgentRegistrationsMock.mockReset();
+    listManifestAgentExtensionCacheEntriesMock.mockReset();
     listExtensionToolRegistrationsMock.mockReset();
-    listExtensionEntriesMock.mockReset();
-    listExtensionEntriesMock.mockReturnValue([]);
-    listExtensionAgentRegistrationsMock.mockReturnValue([]);
+    listRuntimeExtensionBackendEntriesMock.mockReset();
+    listRuntimeExtensionBackendEntriesMock.mockReturnValue([]);
+    listManifestAgentExtensionCacheEntriesMock.mockReturnValue([]);
     listExtensionToolRegistrationsMock.mockReturnValue([]);
-    isExtensionEnabledMock.mockReset();
-    isExtensionEnabledMock.mockReturnValue(true);
+    resolveManifestAgentLifecycleModelProfileMock.mockReset();
+    resolveManifestAgentLifecycleModelProfileMock.mockReturnValue({ kind: 'none' });
     listExtensionSkillRegistrationsMock.mockReturnValue([]);
     readSavedModelPreferencesMock.mockClear();
     readSavedModelPreferencesMock.mockReturnValue({ currentVisionModel: 'openai/gpt-4o' });
@@ -288,7 +285,7 @@ describe('createRuntimeState', () => {
   });
 
   it('caches live session extension factories until registrations change', () => {
-    listExtensionAgentRegistrationsMock.mockReturnValue([{ extensionId: 'agent-ext', exportName: 'create' }]);
+    listManifestAgentExtensionCacheEntriesMock.mockReturnValue([{ extensionId: 'agent-ext', exportName: 'create' }]);
     listExtensionToolRegistrationsMock.mockReturnValue([{ extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' }]);
     const state = createRuntimeState({
       repoRoot: '/repo-root',

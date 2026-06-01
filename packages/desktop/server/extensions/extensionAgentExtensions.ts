@@ -5,6 +5,7 @@ import { ExtensionProcessTerminationBlockedError, withExtensionProcessGuard } fr
 import {
   listExtensionAgentRegistrations,
   recordExtensionFailure,
+  resolveExtensionModelProfile,
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
@@ -89,4 +90,15 @@ export function createManifestAgentExtensions(options: { onError?: (message: str
     }),
     errors,
   };
+}
+
+export function listManifestAgentExtensionCacheEntries(): Array<{ extensionId: string; exportName: string }> {
+  return listExtensionAgentRegistrations().map((registration) => ({
+    extensionId: registration.extensionId,
+    exportName: registration.exportName,
+  }));
+}
+
+export function resolveManifestAgentLifecycleModelProfile(input: { provider: string; model: string }) {
+  return resolveExtensionModelProfile(input);
 }
