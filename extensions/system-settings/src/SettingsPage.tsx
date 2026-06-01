@@ -308,22 +308,6 @@ function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string 
   }
 }
 
-function formatProviderAuthShortStatus(provider: ProviderAuthSummary | null): string {
-  if (!provider) {
-    return 'Not connected.';
-  }
-
-  if (provider.hasStoredCredential) {
-    return provider.authType === 'oauth' ? 'OAuth connected.' : 'API key stored.';
-  }
-
-  if (provider.authType === 'environment') {
-    return 'Using environment credentials.';
-  }
-
-  return 'Not connected.';
-}
-
 function ThemeButton({
   value,
   current,
@@ -3714,6 +3698,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)]">
                               <h3 className="text-[14px] font-medium text-primary">Model Overrides</h3>
                               <div className="min-w-0 space-y-2">
+                                <p className="ui-card-meta">
+                                  {providerModelCount > 0
+                                    ? `${providerModelCount} configured ${providerModelCount === 1 ? 'model' : 'models'} available.`
+                                    : selectedModelProviderId === NEW_MODEL_PROVIDER_ID
+                                      ? 'Optional. Add only when this provider needs custom model routing.'
+                                      : 'No custom model configuration.'}
+                                </p>
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -4198,9 +4189,19 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 {isProviderSetupFlow ? 'Connect Method' : 'Credentials'}
                               </h3>
                               <div className="min-w-0 space-y-3">
+                                <div className="space-y-1">
+                                  {modalProviderAuth ? (
+                                    <p className="text-[12px] text-secondary">{formatProviderAuthStatus(modalProviderAuth)}</p>
+                                  ) : null}
+                                </div>
+
                                 {modalProviderAuth ? (
                                   <div className="space-y-3">
-                                    <p className="text-[12px] text-secondary">{formatProviderAuthShortStatus(modalProviderAuth)}</p>
+                                    {isProviderSetupFlow ? (
+                                      <p className="ui-card-meta">
+                                        Choose one way to connect. You can add model overrides later if this provider needs custom routing.
+                                      </p>
+                                    ) : null}
                                     <div className="flex flex-wrap gap-2">
                                       {canProviderUseApiKey(modalProviderAuth) && (
                                         <button
