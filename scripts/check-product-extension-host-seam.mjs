@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
@@ -17,6 +18,7 @@ const productRuntimeRoots = [
   'packages/desktop/server/workspace',
 ];
 const productRuntimeFiles = ['packages/desktop/server/protocolCli.ts'];
+const architectureDoc = 'docs/product-extension-process-split.md';
 
 const filePattern = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 const forbiddenPatterns = [
@@ -90,6 +92,16 @@ for (const file of listFiles()) {
     if (!match) continue;
     const line = text.slice(0, match.index).split('\n').length;
     failures.push(`${relative(repoRoot, absolute)}:${line}: ${message}`);
+  }
+}
+
+const architectureDocPath = resolve(repoRoot, architectureDoc);
+if (existsSync(architectureDocPath)) {
+  const text = readFileSync(architectureDocPath, 'utf8');
+  const staleHybridFallback = /\bhybrid\b[\s\S]{0,120}\bfallback\b/i.exec(text);
+  if (staleHybridFallback) {
+    const line = text.slice(0, staleHybridFallback.index).split('\n').length;
+    failures.push(`${architectureDoc}:${line}: architecture doc must not describe a hybrid in-process extension-host fallback`);
   }
 }
 
