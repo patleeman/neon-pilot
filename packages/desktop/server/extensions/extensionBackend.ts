@@ -411,6 +411,13 @@ export function createBackendContext(
   const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir();
   const runtimeScope = serverContext?.getRuntimeScope() ?? 'shared';
   const runtimeSettingsFilePath = resolveLocalProfileSettingsFilePath();
+  const liveSessionResourceOptions = () => {
+    if (serverContext?.buildLiveSessionResourceOptions) {
+      return serverContext.buildLiveSessionResourceOptions(serverContext.getRuntimeScope());
+    }
+    return buildLiveSessionResourceOptionsForRuntime();
+  };
+  const extensionBinDirs = () => liveSessionResourceOptions().additionalExtensionPaths.map((extensionPath) => resolve(extensionPath, 'bin'));
   return {
     extensionId,
     runtimeScope,
@@ -421,12 +428,7 @@ export function createBackendContext(
     ...(toolContext ? { toolContext } : {}),
     ...(agentToolContext ? { agentToolContext } : {}),
     runtime: {
-      getLiveSessionResourceOptions: () => {
-        if (serverContext?.buildLiveSessionResourceOptions) {
-          return serverContext.buildLiveSessionResourceOptions(serverContext.getRuntimeScope());
-        }
-        return buildLiveSessionResourceOptionsForRuntime();
-      },
+      getLiveSessionResourceOptions: liveSessionResourceOptions,
       getRepoRoot: () => serverContext?.getRepoRoot?.() ?? process.cwd(),
       refreshSkillMcpConfig: () =>
         refreshHostSkillMcpConfig({
@@ -447,7 +449,7 @@ export function createBackendContext(
     filesystem: createExtensionFilesystemCapability(extensionId, toolContext),
     workspace: createExtensionWorkspaceCapability(extensionId, toolContext),
     git: createExtensionGitCapability(),
-    shell: createExtensionShellCapability(),
+    shell: createExtensionShellCapability({ pathDirs: extensionBinDirs() }),
     commands: {
       execute: async (commandId, args) => {
         const command = findExtensionCommandRegistration(commandId);

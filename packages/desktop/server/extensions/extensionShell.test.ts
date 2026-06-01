@@ -1,4 +1,7 @@
 import { EventEmitter } from 'node:events';
+import { mkdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -84,6 +87,34 @@ describe('extensionShell', () => {
         signal,
       }),
     );
+  });
+
+  it('prepends configured extension bin directories to exec and spawn env', async () => {
+    const tempRoot = path.join(tmpdir(), `neon-pilot-shell-path-${process.pid}`);
+    const binDir = path.join(tempRoot, 'bin');
+    rmSync(tempRoot, { recursive: true, force: true });
+    mkdirSync(binDir, { recursive: true });
+    const child = createChild();
+    spawnProcess.mockReturnValue({ child, launch: { wrappers: [] } });
+
+    try {
+      const shell = createExtensionShellCapability({ pathDirs: [binDir] });
+      await shell.exec({ command: 'sh', args: ['-lc', 'echo ok'], env: { PATH: '/usr/bin' } });
+      expect(execFileProcess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          env: expect.objectContaining({ PATH: `${binDir}${path.delimiter}/usr/bin` }),
+        }),
+      );
+
+      await shell.spawn({ command: 'sh', args: ['-lc', 'echo ok'], env: { PATH: '/bin' } });
+      expect(spawnProcess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          env: expect.objectContaining({ PATH: `${binDir}${path.delimiter}/bin` }),
+        }),
+      );
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 
   it('spawns processes, wires output callbacks, exit callbacks, and kill', async () => {

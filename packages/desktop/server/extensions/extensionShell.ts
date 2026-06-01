@@ -1,4 +1,6 @@
 import { type ChildProcess } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 import { execFileProcess, spawnProcess, terminateProcessGroup } from '../shared/processLauncher.js';
 import { createPtyProcess, type PtySpawnOptions } from '../shared/ptyLauncher.js';
@@ -16,6 +18,16 @@ function installShutdownHooks(): void {
   if (shutdownHooksInstalled) return;
   shutdownHooksInstalled = true;
   process.once('exit', terminateSpawnedExtensionProcesses);
+}
+
+function prependPathDirs(env: NodeJS.ProcessEnv, pathDirs: string[]): NodeJS.ProcessEnv {
+  const dirs = pathDirs.filter((dir) => existsSync(dir));
+  if (dirs.length === 0) return env;
+  const currentParts = (env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  return {
+    ...env,
+    PATH: [...dirs, ...currentParts.filter((part) => !dirs.includes(part))].join(path.delimiter),
+  };
 }
 
 function createPipeBackedSpawnHandle(
@@ -63,7 +75,10 @@ function createPipeBackedSpawnHandle(
   };
 }
 
-export function createExtensionShellCapability() {
+export function createExtensionShellCapability(options: { pathDirs?: string[] } = {}) {
+  const resolveEnv = (inputEnv?: Record<string, string>): NodeJS.ProcessEnv =>
+    prependPathDirs(inputEnv ? { ...process.env, ...inputEnv } : process.env, options.pathDirs ?? []);
+
   return {
     async exec(input: {
       command: string;
@@ -88,7 +103,7 @@ export function createExtensionShellCapability() {
         cwd: input.cwd,
         timeoutMs: input.timeoutMs ?? 30_000,
         maxBuffer: input.maxBuffer ?? 1024 * 1024,
-        env: input.env ? { ...process.env, ...input.env } : process.env,
+        env: resolveEnv(input.env),
         signal: input.signal,
       });
       return {
@@ -119,7 +134,7 @@ export function createExtensionShellCapability() {
       resize: (cols: number, rows: number) => void;
     }> {
       installShutdownHooks();
-      const resolvedEnv = input.env ? { ...process.env, ...input.env } : process.env;
+      const resolvedEnv = resolveEnv(input.env);
 
       if (input.pty) {
         // PTY-backed spawn: use node-pty
