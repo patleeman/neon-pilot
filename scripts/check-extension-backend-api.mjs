@@ -70,6 +70,12 @@ function collectImportSpecifiers(filePath, { staticOnly = false } = {}) {
     .sort();
 }
 
+function collectStaticExportSpecifiers(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const matches = source.matchAll(/\bexport\s+(?:type\s+)?(?:\{[^}]*\}|\*)\s+from\s+['"]([^'"]+)['"]/g);
+  return [...new Set([...matches].map((match) => match[1]))].sort();
+}
+
 function collectHostBackendRuntimeSpecifiers(filePath) {
   const source = readFileSync(filePath, 'utf8');
   const matches = source.matchAll(/['"]\.\.\/\.\.\/([^'"]+\.js)['"]/g);
@@ -118,11 +124,14 @@ for (const moduleName of hostModules) {
 for (const fileName of readdirSync(hostBackendApiRoot)) {
   if (!fileName.endsWith('.ts')) continue;
   const filePath = join(hostBackendApiRoot, fileName);
-  const forbidden = collectImportSpecifiers(filePath, { staticOnly: true }).filter(isForbiddenStaticImport);
+  const forbidden = [
+    ...collectImportSpecifiers(filePath, { staticOnly: true }),
+    ...collectStaticExportSpecifiers(filePath),
+  ].filter(isForbiddenStaticImport);
   assert(
     forbidden.length === 0,
     failures,
-    `backendApi/${fileName} statically imports heavy/runtime modules (${forbidden.join(', ')}); route them through a narrow lazy host seam instead`,
+    `backendApi/${fileName} statically imports or re-exports heavy/runtime modules (${forbidden.join(', ')}); route them through a narrow lazy host seam instead`,
   );
 }
 

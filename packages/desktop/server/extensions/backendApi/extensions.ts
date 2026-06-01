@@ -1,15 +1,20 @@
+import type { ExtensionDoctorReport } from '@neon-pilot/extensions/backend/extensions';
+
 import { importServerExtensionModule } from './serverModuleResolver.js';
 import { importServerModule } from './serverModuleResolver.js';
 
 type ExtensionLifecycleModule = typeof import('../extensionLifecycle.js');
 type ExtensionBackendModule = typeof import('../extensionBackend.js');
-type ExtensionDoctorModule = typeof import('../extensionDoctor.js');
 type ExtensionRegistryModule = typeof import('../extensionRegistry.js');
 type ExtensionCatalogModule = typeof import('../extensionCatalog.js');
 type CoreModule = typeof import('@neon-pilot/core');
 
 type RuntimeExtensionCreateOptions = Parameters<ExtensionLifecycleModule['createRuntimeExtension']>[0];
-type ValidateExtensionPackageOptions = Parameters<ExtensionDoctorModule['validateExtensionPackage']>[0];
+type ValidateExtensionPackageOptions = { extensionId?: string; packageRoot?: string };
+
+interface ExtensionDoctorModule {
+  validateExtensionPackage(input: ValidateExtensionPackageOptions): Promise<ExtensionDoctorReport>;
+}
 
 async function importExtensionLifecycle(): Promise<ExtensionLifecycleModule> {
   return importServerExtensionModule<ExtensionLifecycleModule>('../extensionLifecycle.js');
@@ -90,4 +95,8 @@ export async function installExtensionBundleFromUrl(input: { url?: unknown; expe
   return module.installExtensionBundleFromUrl(input);
 }
 
-export type { ExtensionDoctorFinding, ExtensionDoctorReport, ExtensionDoctorSeverity } from '../extensionDoctor.js';
+export type {
+  ExtensionDoctorFinding,
+  ExtensionDoctorReport,
+  ExtensionDoctorSeverity,
+} from '@neon-pilot/extensions/backend/extensions';

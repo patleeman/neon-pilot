@@ -13,8 +13,19 @@ export interface ExtensionInstallSummary {
   [key: string]: unknown;
 }
 
+export type ExtensionDoctorSeverity = 'error' | 'warning' | 'info';
+
+export interface ExtensionDoctorFinding {
+  severity: ExtensionDoctorSeverity;
+  code: string;
+  message: string;
+  path?: string;
+  fix?: string;
+}
+
 export interface ExtensionDoctorReport {
   ok?: boolean;
+  findings?: ExtensionDoctorFinding[];
   [key: string]: unknown;
 }
 

@@ -1,4 +1,3 @@
-export type { ExtensionBackendContext } from '../extensionBackend.js';
 export * from './agent.js';
 export * from './artifacts.js';
 export * from './automations.js';
@@ -27,3 +26,4 @@ export * from './settings.js';
 export * from './skills.js';
 export * from './telemetry.js';
 export * from './tools.js';
+export type { ExtensionBackendContext } from '@neon-pilot/extensions';
