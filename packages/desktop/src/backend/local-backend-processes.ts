@@ -93,10 +93,7 @@ export class LocalBackendProcesses {
   private backendLiveConversationIds = new Set<string>();
   private pendingLocalApiRpcResponses = new Map<string, (message: LocalApiRpcResponseMessage) => void>();
   private lastStartPerf?: { totalMs: number; spawnMs: number; readyWaitMs: number; assignMs: number };
-  private criticalExtensionRegistryModulePromise?: Promise<
-    typeof import('../../server/extensions/extensionRegistry.js') &
-      typeof import('../../server/app/localApiExtensionRegistryPresentation.js')
-  >;
+  private criticalExtensionRegistryModulePromise?: Promise<typeof import('../../server/extensions/extensionCriticalRegistryPresentation.js')>;
 
   async ensureStarted(): Promise<void> {
     if (this.startPromise) {
@@ -413,10 +410,7 @@ export class LocalBackendProcesses {
     }
     if (input.method === 'GET' && path === '/api/extensions/registry/critical') {
       const registry = await this.warmCriticalExtensionRegistryModule();
-      return this.makeJsonResponse(
-        registry.buildCriticalExtensionRegistryResponse(registry.readExtensionRegistrySnapshot()),
-        'main-process',
-      );
+      return this.makeJsonResponse(registry.readCriticalExtensionRegistryResponse(), 'main-process');
     }
     if (input.method === 'POST' && path === '/api/conversations/reserve') {
       const { reserveConversationSession } = await import('../../server/conversations/conversationReservation.js');
@@ -492,15 +486,9 @@ export class LocalBackendProcesses {
     });
   }
 
-  private warmCriticalExtensionRegistryModule(): Promise<
-    typeof import('../../server/extensions/extensionRegistry.js') &
-      typeof import('../../server/app/localApiExtensionRegistryPresentation.js')
-  > {
+  private warmCriticalExtensionRegistryModule(): Promise<typeof import('../../server/extensions/extensionCriticalRegistryPresentation.js')> {
     if (!this.criticalExtensionRegistryModulePromise) {
-      this.criticalExtensionRegistryModulePromise = Promise.all([
-        import('../../server/extensions/extensionRegistry.js'),
-        import('../../server/app/localApiExtensionRegistryPresentation.js'),
-      ]).then(([registry, presentation]) => ({ ...registry, ...presentation }));
+      this.criticalExtensionRegistryModulePromise = import('../../server/extensions/extensionCriticalRegistryPresentation.js');
     }
     return this.criticalExtensionRegistryModulePromise;
   }

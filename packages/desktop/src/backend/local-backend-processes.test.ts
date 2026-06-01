@@ -53,13 +53,11 @@ const { bootstrapMocks, criticalRegistryMocks, readConversationSessionsCapabilit
     },
     criticalRegistryMocks: {
       moduleLoaded: vi.fn(),
-      readExtensionRegistrySnapshot: vi.fn(() => ({ extensions: [{ id: 'test-extension' }], routes: [], surfaces: [], views: [] })),
-      buildCriticalExtensionRegistryResponse: vi.fn((snapshot: unknown) => ({
+      readCriticalExtensionRegistryResponse: vi.fn(() => ({
         extensions: [],
         routes: [],
         surfaces: [],
         settings: {},
-        snapshot,
       })),
     },
     readConversationSessionsCapabilityMock: vi.fn(() => [{ id: 'limited' }]),
@@ -88,15 +86,12 @@ vi.mock('../../server/conversations/conversationSessionAssetCapability.js', () =
 vi.mock('../../server/conversations/conversationReservation.js', () => ({
   reserveConversationSession: reserveConversationSessionMock,
 }));
-vi.mock('../../server/extensions/extensionRegistry.js', () => {
+vi.mock('../../server/extensions/extensionCriticalRegistryPresentation.js', () => {
   criticalRegistryMocks.moduleLoaded();
   return {
-    readExtensionRegistrySnapshot: criticalRegistryMocks.readExtensionRegistrySnapshot,
+    readCriticalExtensionRegistryResponse: criticalRegistryMocks.readCriticalExtensionRegistryResponse,
   };
 });
-vi.mock('../../server/app/localApiExtensionRegistryPresentation.js', () => ({
-  buildCriticalExtensionRegistryResponse: criticalRegistryMocks.buildCriticalExtensionRegistryResponse,
-}));
 
 import { LocalBackendProcesses, type LocalBackendWorkbenchBrowserToolHost } from './local-backend-processes.js';
 
@@ -135,8 +130,7 @@ describe('LocalBackendProcesses', () => {
   afterEach(() => {
     process.stderr.write = originalStderrWrite;
     criticalRegistryMocks.moduleLoaded.mockClear();
-    criticalRegistryMocks.readExtensionRegistrySnapshot.mockClear();
-    criticalRegistryMocks.buildCriticalExtensionRegistryResponse.mockClear();
+    criticalRegistryMocks.readCriticalExtensionRegistryResponse.mockClear();
     vi.unstubAllGlobals();
   });
 
