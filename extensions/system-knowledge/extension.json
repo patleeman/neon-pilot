@@ -170,7 +170,10 @@
         "method": "GET",
         "path": "/asset",
         "handler": "asset",
-        "title": "Read knowledge asset"
+        "title": "Read knowledge asset",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "method": "GET",

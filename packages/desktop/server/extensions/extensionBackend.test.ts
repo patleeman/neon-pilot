@@ -2724,6 +2724,55 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe knowledge asset route through the worker runner with binary bodies', async () => {
+    const body = Uint8Array.from([137, 80, 78, 71]);
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ status: 200, headers: { 'content-type': 'image/png' }, body })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionRoute('system-knowledge', 'GET', '/asset', {
+        method: 'GET',
+        path: '/asset',
+        query: { id: 'images/shot.png' },
+        params: {},
+      }),
+    ).resolves.toEqual({ status: 200, headers: { 'content-type': 'image/png' }, body });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-knowledge',
+      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-knowledge', 'dist', 'backend.mjs')) }),
+      'asset',
+      { type: 'route', label: 'route GET /asset', target: '/asset' },
+      [{ method: 'GET', path: '/asset', query: { id: 'images/shot.png' }, params: {} }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('keeps SSE backend routes in-process even when worker-declared', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
