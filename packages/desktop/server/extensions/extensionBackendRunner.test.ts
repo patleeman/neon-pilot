@@ -1,0 +1,72 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { createInProcessExtensionBackendRunner, extensionBackendOperation } from './extensionBackendRunner.js';
+import { clearExtensionHostAuditEvents, listExtensionHostAuditEvents } from './extensionHostAudit.js';
+
+describe('extensionBackendRunner', () => {
+  beforeEach(() => {
+    clearExtensionHostAuditEvents();
+  });
+
+  it('audits backend handler execution without recording inputs', async () => {
+    const runner = createInProcessExtensionBackendRunner();
+
+    await expect(
+      runner.run('ext-audit', extensionBackendOperation('action', 'action doThing', { target: 'doThing' }), () => ({ ok: true, secret: 'input' })),
+    ).resolves.toEqual({ ok: true, secret: 'input' });
+
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-audit:action doThing',
+        ok: true,
+      }),
+    ]);
+    expect(listExtensionHostAuditEvents()[0]).not.toHaveProperty('payload');
+    expect(listExtensionHostAuditEvents()[0]).not.toHaveProperty('body');
+    expect(listExtensionHostAuditEvents()[0]).not.toHaveProperty('target');
+  });
+
+  it('audits backend handler failures and rethrows', async () => {
+    const runner = createInProcessExtensionBackendRunner();
+
+    await expect(
+      runner.run('ext-audit-fail', extensionBackendOperation('subscription', 'subscription changed'), () => {
+        throw new Error('handler failed');
+      }),
+    ).rejects.toThrow('handler failed');
+
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-audit-fail:subscription changed',
+        ok: false,
+        error: 'handler failed',
+      }),
+    ]);
+  });
+
+  it('audits backend imports at the runner boundary', async () => {
+    const runner = createInProcessExtensionBackendRunner();
+    const packageRoot = await mkdtemp(join(tmpdir(), 'pa-ext-runner-'));
+    const dist = join(packageRoot, 'dist');
+    mkdirSync(dist);
+    const backendPath = join(dist, 'backend.mjs');
+    writeFileSync(backendPath, 'export const value = 42;\n');
+
+    await expect(runner.loadModule('ext-import-audit', { path: backendPath, hash: 'test-1' })).resolves.toMatchObject({ value: 42 });
+
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-import-audit:backend import',
+        ok: true,
+      }),
+    ]);
+  });
+});

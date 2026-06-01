@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
+import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import { withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 export type ExtensionBackendModule = Record<string, unknown>;
@@ -13,6 +14,7 @@ export type ExtensionBackendOperationType =
   | 'action'
   | 'agent-factory'
   | 'agent-factory-builder'
+  | 'backend-import'
   | 'protocol'
   | 'route'
   | 'self-test-action'
@@ -46,6 +48,29 @@ export function extensionBackendOperation(
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 
+async function auditBackendOperation<T>(extensionId: string, operation: ExtensionBackendOperation, handler: () => Promise<T>): Promise<T> {
+  const started = Date.now();
+  try {
+    const result = await handler();
+    recordExtensionHostAuditEvent({
+      requestType: 'backend',
+      requestName: `${extensionId}:${operation.label}`,
+      ok: true,
+      durationMs: Date.now() - started,
+    });
+    return result;
+  } catch (error) {
+    recordExtensionHostAuditEvent({
+      requestType: 'backend',
+      requestName: `${extensionId}:${operation.label}`,
+      ok: false,
+      durationMs: Date.now() - started,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
 export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner {
   return {
     loadModule(extensionId, compiled) {
@@ -55,10 +80,15 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
         return cached.module;
       }
 
-      const module = withExtensionProcessGuard(
+      const module = auditBackendOperation(
         extensionId,
-        'backend import',
-        () => import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>,
+        extensionBackendOperation('backend-import', 'backend import', { target: compiled.path }),
+        () =>
+          withExtensionProcessGuard(
+            extensionId,
+            'backend import',
+            () => import(`${pathToFileURL(compiled.path).href}?v=${encodeURIComponent(compiled.hash)}`) as Promise<ExtensionBackendModule>,
+          ),
       );
       backendModuleCache.set(extensionId, { cacheKey, module });
       return module;
@@ -67,7 +97,9 @@ export function createInProcessExtensionBackendRunner(): ExtensionBackendRunner 
       backendModuleCache.delete(extensionId);
     },
     run(extensionId, operation, handler) {
-      return withExtensionProcessGuard(extensionId, operation.label, () => Promise.resolve(handler()));
+      return auditBackendOperation(extensionId, operation, () =>
+        withExtensionProcessGuard(extensionId, operation.label, () => Promise.resolve(handler())),
+      );
     },
   };
 }
