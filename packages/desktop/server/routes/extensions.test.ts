@@ -155,7 +155,7 @@ describe('registerExtensionRoutes', () => {
     );
 
     const routesRes = createResponse();
-    harness.getHandler('/api/extensions/routes')({}, routesRes);
+    await harness.getHandler('/api/extensions/routes')({}, routesRes);
     expect(routesRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         { route: '/automations', extensionId: 'system-automations', surfaceId: 'page', packageType: 'system' },

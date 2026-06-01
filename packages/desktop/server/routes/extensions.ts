@@ -27,7 +27,6 @@ import {
   isExtensionEnabled,
   listExtensionInstallSummaries,
   listExtensionSearchProviderRegistrations,
-  readExtensionRegistrySnapshot,
   readExtensionSchema,
   setBuildError,
   setExtensionEnabled,
@@ -427,9 +426,9 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/routes', (_req, res) => {
+  router.get('/api/extensions/routes', async (_req, res) => {
     try {
-      res.json(readExtensionRegistrySnapshot().routes);
+      res.json((await getExtensionHostClient().readRegistryPresentation()).snapshot.routes);
     } catch (err) {
       sendRouteError(res, 'extensions routes error', err);
     }
