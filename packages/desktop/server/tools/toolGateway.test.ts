@@ -2,18 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const extensionHostClient = vi.hoisted(() => ({
   invokeAction: vi.fn(),
-}));
-const extensionRegistry = vi.hoisted(() => ({
-  listExtensionToolRegistrations: vi.fn(),
+  listStaticContributions: vi.fn(),
 }));
 const toolInventory = vi.hoisted(() => ({
-  buildToolInjectionPlan: vi.fn(),
+  buildToolInjectionPlanAsync: vi.fn(),
 }));
 
 vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => extensionHostClient,
 }));
-vi.mock('../extensions/extensionRegistry.js', () => extensionRegistry);
 vi.mock('./toolInventory.js', () => toolInventory);
 
 import { invokeExtensionToolByName } from './toolGateway.js';
@@ -21,20 +18,24 @@ import { invokeExtensionToolByName } from './toolGateway.js';
 describe('tool gateway', () => {
   beforeEach(() => {
     extensionHostClient.invokeAction.mockReset();
-    extensionRegistry.listExtensionToolRegistrations.mockReset();
-    toolInventory.buildToolInjectionPlan.mockReset();
+    extensionHostClient.listStaticContributions.mockReset();
+    toolInventory.buildToolInjectionPlanAsync.mockReset();
 
-    extensionRegistry.listExtensionToolRegistrations.mockReturnValue([
-      {
-        extensionId: 'ext',
-        id: 'tool',
-        name: 'example_tool',
-        action: 'run',
-        description: 'Example tool',
-        inputSchema: {},
-      },
-    ]);
-    toolInventory.buildToolInjectionPlan.mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
+    extensionHostClient.listStaticContributions.mockResolvedValue({
+      skills: [],
+      tools: [
+        {
+          extensionId: 'ext',
+          packageType: 'system',
+          id: 'tool',
+          name: 'example_tool',
+          action: 'run',
+          description: 'Example tool',
+          inputSchema: {},
+        },
+      ],
+    });
+    toolInventory.buildToolInjectionPlanAsync.mockResolvedValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
     extensionHostClient.invokeAction.mockResolvedValue({ ok: true, result: { text: 'done' } });
   });
 

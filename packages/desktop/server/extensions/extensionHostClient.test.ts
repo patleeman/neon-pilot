@@ -24,6 +24,8 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionAssemblyProviderRegistrations: vi.fn(),
   listExtensionPromptAssemblyHookRegistrations: vi.fn(),
   listExtensionPromptContextProviderRegistrations: vi.fn(),
+  listExtensionSkillRegistrations: vi.fn(),
+  listExtensionToolRegistrations: vi.fn(),
 }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
@@ -183,6 +185,21 @@ describe('extension host client', () => {
     });
   });
 
+  it('routes static contribution reads through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.listExtensionToolRegistrations.mockReturnValueOnce([
+      { extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} },
+    ]);
+    extensionRegistry.listExtensionSkillRegistrations.mockReturnValueOnce([
+      { extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' },
+    ]);
+
+    await expect(getExtensionHostClient().listStaticContributions()).resolves.toEqual({
+      tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
+      skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
+    });
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -313,5 +330,6 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'startServices' })).toBe('startServices');
     expect(extensionHostRequestName({ type: 'stopServices', extensionId: 'ext' })).toBe('stopServices:ext');
     expect(extensionHostRequestName({ type: 'listPromptAssemblyContributions' })).toBe('listPromptAssemblyContributions');
+    expect(extensionHostRequestName({ type: 'listStaticContributions' })).toBe('listStaticContributions');
   });
 });

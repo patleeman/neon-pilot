@@ -111,6 +111,43 @@ export interface ExtensionHostPromptAssemblyContributions {
   hooks: ExtensionHostPromptAssemblyHookRegistration[];
 }
 
+export interface ExtensionHostToolRegistration {
+  extensionId: string;
+  packageType: 'system' | 'user';
+  id: string;
+  name: string;
+  action: string;
+  title?: string;
+  label?: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  promptSnippet?: string;
+  promptGuidelines?: string[];
+  priority?: number;
+  when?: {
+    providers?: string[];
+    models?: string[];
+  };
+  replaces?: string;
+  nativeRegistration?: boolean;
+}
+
+export interface ExtensionHostSkillRegistration {
+  extensionId: string;
+  packageType: 'system' | 'user';
+  id: string;
+  name: string;
+  title?: string;
+  description?: string;
+  path: string;
+  packageRoot: string;
+}
+
+export interface ExtensionHostStaticContributions {
+  tools: ExtensionHostToolRegistration[];
+  skills: ExtensionHostSkillRegistration[];
+}
+
 export interface ExtensionHostHealthRequest {
   type: 'health';
 }
@@ -163,6 +200,10 @@ export interface ExtensionHostStopServicesRequest {
 
 export interface ExtensionHostListPromptAssemblyContributionsRequest {
   type: 'listPromptAssemblyContributions';
+}
+
+export interface ExtensionHostListStaticContributionsRequest {
+  type: 'listStaticContributions';
 }
 
 export interface ExtensionHostInvokeProtocolEntrypointRequest {
@@ -238,6 +279,7 @@ export type ExtensionHostRequest =
   | ExtensionHostStartServicesRequest
   | ExtensionHostStopServicesRequest
   | ExtensionHostListPromptAssemblyContributionsRequest
+  | ExtensionHostListStaticContributionsRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostStartStartupActionsRequest
@@ -283,6 +325,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      staticContributions: ExtensionHostStaticContributions;
+    }
+  | {
+      ok: true;
       invoked: true;
     }
   | {
@@ -320,6 +366,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'startServices') return 'startServices';
   if (request.type === 'stopServices') return `stopServices:${request.extensionId}`;
   if (request.type === 'listPromptAssemblyContributions') return 'listPromptAssemblyContributions';
+  if (request.type === 'listStaticContributions') return 'listStaticContributions';
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;

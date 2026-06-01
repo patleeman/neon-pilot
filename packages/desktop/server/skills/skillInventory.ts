@@ -110,7 +110,11 @@ export async function listSkillDefinitionsAsync(ctx: SkillRuntimeContext): Promi
 async function listSkillDefinitionsWithDiagnosticsAsync(
   ctx: SkillRuntimeContext,
 ): Promise<{ definitions: SkillDefinition[]; diagnostics: SkillDiagnostic[] }> {
-  const skills = listSkillDefinitions(ctx);
+  let skills = [...listConfiguredSkillDefinitions(ctx), ...(await listExtensionSkillDefinitionsAsync())];
+  for (const hook of runtimeHooks) {
+    if (hook.afterSkillDiscovery) skills = hook.afterSkillDiscovery(skills, ctx);
+  }
+  skills = dedupeSkills(skills);
   const diagnostics: SkillDiagnostic[] = [];
   const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
   const providers = assemblyProviders.filter((provider) => provider.kind === 'skills');
@@ -240,6 +244,21 @@ function listConfiguredSkillDefinitions(ctx: SkillRuntimeContext): SkillDefiniti
 
 function listExtensionSkillDefinitions(): SkillDefinition[] {
   return listExtensionSkillRegistrations().map(
+    (skill): SkillDefinition => ({
+      id: skill.id,
+      providerId: `extension:${skill.extensionId}`,
+      title: skill.title || skill.name || skill.id,
+      description: skill.description ?? '',
+      source: { kind: 'extension', label: skill.extensionId, extensionId: skill.extensionId, root: skill.packageRoot },
+      location: { kind: 'file', path: skill.path, root: skill.packageRoot },
+      metadata: { packageType: skill.packageType },
+    }),
+  );
+}
+
+async function listExtensionSkillDefinitionsAsync(): Promise<SkillDefinition[]> {
+  const { skills } = await getExtensionHostClient().listStaticContributions();
+  return skills.map(
     (skill): SkillDefinition => ({
       id: skill.id,
       providerId: `extension:${skill.extensionId}`,

@@ -74,6 +74,31 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
 
 vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => ({
+    listStaticContributions: async () => ({
+      skills: [
+        {
+          extensionId: 'test-extension',
+          packageType: 'system',
+          id: 'extension-skill',
+          name: 'test-extension/extension-skill',
+          title: 'Extension Skill',
+          description: 'Extension skill description',
+          path: extensionSkillPath,
+          packageRoot: extensionRoot,
+        },
+      ],
+      tools: [
+        {
+          extensionId: 'test-extension',
+          packageType: 'system',
+          id: 'hello-tool',
+          name: 'hello_tool',
+          action: 'hello',
+          description: 'Say hello',
+          inputSchema: { type: 'object' },
+        },
+      ],
+    }),
     listPromptAssemblyContributions: async () => ({
       assemblyProviders: [
         {

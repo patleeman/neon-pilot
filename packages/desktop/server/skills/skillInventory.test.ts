@@ -47,6 +47,31 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
 vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => ({
     listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
+    listStaticContributions: async () => ({
+      tools: [],
+      skills: [
+        {
+          extensionId: 'test-extension',
+          packageType: 'system',
+          id: 'alpha',
+          name: 'alpha',
+          title: 'Alpha',
+          description: 'Alpha skill',
+          path: join(extensionRoot, 'skills', 'alpha', 'SKILL.md'),
+          packageRoot: extensionRoot,
+        },
+        {
+          extensionId: 'test-extension',
+          packageType: 'system',
+          id: 'beta',
+          name: 'beta',
+          title: 'Beta',
+          description: 'Beta skill',
+          path: join(extensionRoot, 'skills', 'beta', 'SKILL.md'),
+          packageRoot: extensionRoot,
+        },
+      ],
+    }),
   }),
 }));
 

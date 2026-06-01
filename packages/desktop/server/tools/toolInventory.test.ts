@@ -5,6 +5,7 @@ const registry = vi.hoisted(() => ({
 }));
 const extensionHostClient = vi.hoisted(() => ({
   listPromptAssemblyContributions: vi.fn(() => ({ assemblyProviders: [], contextProviders: [], hooks: [] })),
+  listStaticContributions: vi.fn(() => ({ skills: [], tools: [] })),
 }));
 const providerRuntime = vi.hoisted(() => ({
   invokePromptAssemblyProvider: vi.fn(),
@@ -29,6 +30,7 @@ describe('tool inventory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     extensionHostClient.listPromptAssemblyContributions.mockReturnValue({ assemblyProviders: [], contextProviders: [], hooks: [] });
+    extensionHostClient.listStaticContributions.mockReturnValue({ skills: [], tools: [] });
     registry.listExtensionToolRegistrations.mockReturnValue([]);
   });
 
@@ -135,6 +137,7 @@ describe('tool inventory', () => {
   });
 
   it('merges async provider tools, diagnostics, and raw registrations for action-backed tools', async () => {
+    extensionHostClient.listStaticContributions.mockReturnValue({ skills: [], tools: [] });
     extensionHostClient.listPromptAssemblyContributions.mockReturnValue({
       assemblyProviders: [{ id: 'provider', extensionId: 'ext-provider', packageType: 'system', kind: 'tools', title: 'Tools' }],
       contextProviders: [],

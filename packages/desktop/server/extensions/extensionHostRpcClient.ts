@@ -368,6 +368,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('promptAssemblyContributions' in response)) throw new Error('Extension host returned invalid prompt assembly contributions.');
       return response.promptAssemblyContributions;
     },
+    async listStaticContributions() {
+      const response = await send({ type: 'listStaticContributions' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('staticContributions' in response)) throw new Error('Extension host returned invalid static contributions.');
+      return response.staticContributions;
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },

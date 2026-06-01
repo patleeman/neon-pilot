@@ -20,6 +20,7 @@ import type {
   ExtensionHostServiceOperationResult,
   ExtensionHostStartServicesRequest,
   ExtensionHostStartStartupActionsRequest,
+  ExtensionHostStaticContributions,
 } from './extensionHostProtocol.js';
 
 function asExtensionBackendServerContext(
@@ -47,6 +48,7 @@ export interface ExtensionHostClient {
   startServices(input?: ExtensionHostStartServicesInput): Promise<ExtensionHostServiceOperationResult[]>;
   stopServices(extensionId: string): Promise<void>;
   listPromptAssemblyContributions(): Promise<ExtensionHostPromptAssemblyContributions>;
+  listStaticContributions(): Promise<ExtensionHostStaticContributions>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -126,6 +128,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('promptAssemblyContributions' in response)) throw new Error('Extension host returned invalid prompt assembly contributions.');
       return response.promptAssemblyContributions;
+    },
+    async listStaticContributions() {
+      const response = await handleInProcessExtensionHostRequest({ type: 'listStaticContributions' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('staticContributions' in response)) throw new Error('Extension host returned invalid static contributions.');
+      return response.staticContributions;
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -306,6 +314,16 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
           contextProviders: listExtensionPromptContextProviderRegistrations(),
           assemblyProviders: listExtensionAssemblyProviderRegistrations(),
           hooks: listExtensionPromptAssemblyHookRegistrations(),
+        },
+      };
+    }
+    if (request.type === 'listStaticContributions') {
+      const { listExtensionSkillRegistrations, listExtensionToolRegistrations } = await import('./extensionRegistry.js');
+      return {
+        ok: true,
+        staticContributions: {
+          tools: listExtensionToolRegistrations(),
+          skills: listExtensionSkillRegistrations(),
         },
       };
     }

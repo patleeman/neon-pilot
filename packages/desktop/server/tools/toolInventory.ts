@@ -74,7 +74,12 @@ export async function listToolDefinitionsAsync(ctx: AssemblyRuntimeContext): Pro
 async function listToolDefinitionsWithDiagnosticsAsync(
   ctx: AssemblyRuntimeContext,
 ): Promise<{ definitions: ToolDefinition[]; diagnostics: AssemblyDiagnostic[] }> {
-  const tools = listToolDefinitions(ctx);
+  const { tools: staticTools } = await getExtensionHostClient().listStaticContributions();
+  let tools = staticTools.map(extensionToolToDefinition);
+  for (const hook of runtimeHooks) {
+    if (hook.afterToolDiscovery) tools = hook.afterToolDiscovery(tools, ctx);
+  }
+  tools = tools.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
   const diagnostics: AssemblyDiagnostic[] = [];
   const { assemblyProviders } = await getExtensionHostClient().listPromptAssemblyContributions();
   const providers = assemblyProviders.filter((provider) => provider.kind === 'tools');

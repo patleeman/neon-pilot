@@ -4,8 +4,7 @@ import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import type { ExtensionHostBackendServerContext, ExtensionHostToolContext } from '../extensions/extensionHostProtocol.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { createExtensionHostToolContextSnapshot } from '../extensions/extensionHostToolContext.js';
-import { listExtensionToolRegistrations } from '../extensions/extensionRegistry.js';
-import { buildToolInjectionPlan } from './toolInventory.js';
+import { buildToolInjectionPlanAsync } from './toolInventory.js';
 
 export interface ToolGatewayRuntimeContext {
   profile?: string;
@@ -43,14 +42,15 @@ function runtimeContext(input?: ToolGatewayRuntimeContext) {
   };
 }
 
-function activeRegistrations(input?: ToolGatewayRuntimeContext) {
-  const plan = buildToolInjectionPlan(runtimeContext(input));
+async function activeRegistrations(input?: ToolGatewayRuntimeContext) {
+  const plan = await buildToolInjectionPlanAsync(runtimeContext(input));
   const active = new Set(plan.registrations.map((tool) => `${tool.extensionId}/${tool.id}`));
-  return listExtensionToolRegistrations().filter((tool) => active.has(`${tool.extensionId}/${tool.id}`));
+  const { tools } = await getExtensionHostClient().listStaticContributions();
+  return tools.filter((tool) => active.has(`${tool.extensionId}/${tool.id}`));
 }
 
-export function listInvocableExtensionTools(input?: ToolGatewayRuntimeContext): ToolGatewaySummary[] {
-  return activeRegistrations(input).map((tool) => ({
+export async function listInvocableExtensionTools(input?: ToolGatewayRuntimeContext): Promise<ToolGatewaySummary[]> {
+  return (await activeRegistrations(input)).map((tool) => ({
     name: tool.replaces?.trim() || tool.name,
     ...(tool.title ? { title: tool.title } : {}),
     description: tool.description,
@@ -69,7 +69,7 @@ export async function invokeExtensionToolByName(
 ): Promise<AgentToolResult<unknown> & { isError?: boolean; terminate?: boolean }> {
   const name = input.name.trim();
   if (!name) throw new Error('Tool name is required.');
-  const tool = activeRegistrations(input.runtime).find((candidate) => (candidate.replaces?.trim() || candidate.name) === name);
+  const tool = (await activeRegistrations(input.runtime)).find((candidate) => (candidate.replaces?.trim() || candidate.name) === name);
   if (!tool) throw new Error(`Tool is not available: ${name}`);
 
   const result = await getExtensionHostClient().invokeAction({

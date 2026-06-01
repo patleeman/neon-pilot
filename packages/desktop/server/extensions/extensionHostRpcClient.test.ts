@@ -142,6 +142,15 @@ describe('extension host RPC client', () => {
             hooks: [{ extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' }],
           },
         }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          staticContributions: {
+            tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
+            skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
+          },
+        }),
       );
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
@@ -162,6 +171,10 @@ describe('extension host RPC client', () => {
       contextProviders: [{ extensionId: 'ext', id: 'ctx', handler: 'context' }],
       assemblyProviders: [{ extensionId: 'ext', id: 'instructions', handler: 'instructions', kind: 'instructions' }],
       hooks: [{ extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' }],
+    });
+    await expect(client.listStaticContributions()).resolves.toEqual({
+      tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
+      skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
     });
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
@@ -215,6 +228,11 @@ describe('extension host RPC client', () => {
       8,
       'http://host/rpc',
       expect.objectContaining({ body: JSON.stringify({ request: { type: 'listPromptAssemblyContributions' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      9,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'listStaticContributions' } }) }),
     );
   });
 
