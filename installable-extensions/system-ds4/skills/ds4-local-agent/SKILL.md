@@ -10,6 +10,8 @@ Use this skill when the active model is `ds4/deepseek-v4-flash`.
 DS4 is local DeepSeek V4 Flash served by `ds4-server`. It is optimized for coding-agent workflows but local decoding is slower than hosted frontier models, so keep tool loops deliberate and preserve prompt-cache stability.
 
 - Core tools are stable: `bash`, `read`, `edit`, and `subagent`.
+- Typical non-core tools are intentionally offloaded to the `ds4` CLI to keep the tool schema small and prompt-cache stable.
+- Use `bash` to run `ds4 ...` helpers instead of searching the repo to infer missing tools.
 - If DS4 settings report RTK shell compression is enabled and `rtk gain` verifies the binary, simple supported bash commands are automatically run through RTK for compact output.
 - Call `rtk ...` explicitly when you need a specific RTK mode such as `rtk test <command>`, `rtk err <command>`, `rtk gain`, or `rtk discover`.
 - A `ds4` command is available inside DS4 `bash` sessions. Use it for DS4-shaped helpers without changing the model tool list:

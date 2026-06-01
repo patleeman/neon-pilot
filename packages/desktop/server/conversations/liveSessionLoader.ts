@@ -27,7 +27,8 @@ DS4 local model mode:
 - Core tools are stable: bash, read, edit, and subagent.
 - Use the subagent tool directly when the user asks to create, start, inspect, follow up with, or cancel delegated agent work.
 - If DS4 RTK shell compression is enabled in settings, simple supported bash commands are automatically run through RTK for compact output.
-- Use bash to discover and run extended capabilities through the DS4 CLI.
+- In DS4 mode, typical non-core tools are intentionally offloaded to the DS4 CLI to keep the tool schema small and prompt-cache stable.
+- Use bash to run extended capabilities through the DS4 CLI instead of searching the repo to infer missing tools.
 - Start with \`ds4 help\` when you need CLI capabilities.
 - Useful CLI commands include \`ds4 list\`, \`ds4 search\`, \`ds4 read\`, \`ds4 write\`, \`ds4 edit\`, and \`ds4 fetch\`.
 - Prefer direct shell commands when they are shorter or more precise, such as \`rg\`, \`git status --short\`, and focused test commands.
