@@ -429,6 +429,17 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!response.ok) throw new Error(response.error);
       if (!('keybindingUpdated' in response)) throw new Error('Extension host returned an invalid keybinding update response.');
     },
+    async beginStartupGuard(input) {
+      const response = await send({ type: 'beginStartupGuard', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('startupGuard' in response)) throw new Error('Extension host returned an invalid startup guard response.');
+      return response.startupGuard;
+    },
+    async completeStartupGuard(input) {
+      const response = await send({ type: 'completeStartupGuard', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('startupGuardCompleted' in response)) throw new Error('Extension host returned an invalid startup guard completion response.');
+    },
     async startStartupActions(input) {
       assertWireableStartupActionsInput(input);
       const response = await send({ type: 'startStartupActions', ...(input ?? {}) });

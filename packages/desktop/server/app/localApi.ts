@@ -123,10 +123,6 @@ import {
 } from '../conversations/liveSessions.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
-import {
-  beginExtensionStartupGuard,
-  completeExtensionStartupGuard,
-} from '../extensions/extensionRegistry.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
@@ -597,7 +593,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   const capabilityContextAtMs = performance.now();
 
   if (isMainThread) {
-    const startupGuard = beginExtensionStartupGuard();
+    const startupGuard = await getExtensionHostClient().beginStartupGuard();
     if (startupGuard.safeMode) {
       publishAppEvent({
         type: 'notification',
@@ -616,7 +612,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     const startupActionsTimer = setTimeout(() => {
       void getExtensionHostClient()
         .startStartupActions({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) })
-        .then(() => completeExtensionStartupGuard())
+        .then(() => getExtensionHostClient().completeStartupGuard())
         .catch((error) => {
           logError('extension startup dispatch failed', { message: (error as Error).message });
           publishAppEvent({

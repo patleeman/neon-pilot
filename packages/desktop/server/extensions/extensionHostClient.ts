@@ -4,6 +4,8 @@ import type {
   ExtensionHostActionTelemetryEntry,
   ExtensionHostBackendOperationResult,
   ExtensionHostBackendServerContext,
+  ExtensionHostBeginStartupGuardRequest,
+  ExtensionHostCompleteStartupGuardRequest,
   ExtensionHostEventSubscription,
   ExtensionHostInstallSubscriptionsRequest,
   ExtensionHostInvokeActionRequest,
@@ -27,6 +29,7 @@ import type {
   ExtensionHostSetKeybindingRequest,
   ExtensionHostStartServicesRequest,
   ExtensionHostStartStartupActionsRequest,
+  ExtensionHostStartupGuardResult,
   ExtensionHostStaticContributions,
 } from './extensionHostProtocol.js';
 
@@ -53,6 +56,8 @@ export type ExtensionHostSetEnabledInput = Omit<ExtensionHostSetEnabledRequest, 
 export type ExtensionHostSetKeybindingInput = Omit<ExtensionHostSetKeybindingRequest, 'type'>;
 export type ExtensionHostStartServicesInput = Omit<ExtensionHostStartServicesRequest, 'type'>;
 export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
+export type ExtensionHostBeginStartupGuardInput = Omit<ExtensionHostBeginStartupGuardRequest, 'type'>;
+export type ExtensionHostCompleteStartupGuardInput = Omit<ExtensionHostCompleteStartupGuardRequest, 'type'>;
 
 export interface ExtensionHostClient {
   health(): Promise<{ status: 'ready' }>;
@@ -75,6 +80,8 @@ export interface ExtensionHostClient {
   runSelfTest(input: ExtensionHostRunSelfTestInput): Promise<ExtensionHostSelfTestResult>;
   setEnabled(input: ExtensionHostSetEnabledInput): Promise<ExtensionHostSetEnabledResult>;
   setKeybinding(input: ExtensionHostSetKeybindingInput): Promise<void>;
+  beginStartupGuard(input?: ExtensionHostBeginStartupGuardInput): Promise<ExtensionHostStartupGuardResult>;
+  completeStartupGuard(input?: ExtensionHostCompleteStartupGuardInput): Promise<void>;
   startStartupActions(input?: ExtensionHostStartStartupActionsInput): Promise<ExtensionHostBackendOperationResult[]>;
   publishEvent(source: string, payload: unknown): Promise<void>;
 }
@@ -216,6 +223,17 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       const response = await handleInProcessExtensionHostRequest({ type: 'setKeybinding', ...input });
       if (!response.ok) throw new Error(response.error);
       if (!('keybindingUpdated' in response)) throw new Error('Extension host returned an invalid keybinding update response.');
+    },
+    async beginStartupGuard(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'beginStartupGuard', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('startupGuard' in response)) throw new Error('Extension host returned an invalid startup guard response.');
+      return response.startupGuard;
+    },
+    async completeStartupGuard(input) {
+      const response = await handleInProcessExtensionHostRequest({ type: 'completeStartupGuard', ...(input ?? {}) });
+      if (!response.ok) throw new Error(response.error);
+      if (!('startupGuardCompleted' in response)) throw new Error('Extension host returned an invalid startup guard completion response.');
     },
     async startStartupActions(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'startStartupActions', ...(input ?? {}) });
@@ -520,6 +538,15 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         ok: true,
         modelProfile: resolveExtensionModelProfile({ provider: request.provider, model: request.model }) as ExtensionHostModelProfileResolution,
       };
+    }
+    if (request.type === 'beginStartupGuard') {
+      const { beginExtensionStartupGuard } = await import('./extensionRegistry.js');
+      return { ok: true, startupGuard: beginExtensionStartupGuard() };
+    }
+    if (request.type === 'completeStartupGuard') {
+      const { completeExtensionStartupGuard } = await import('./extensionRegistry.js');
+      completeExtensionStartupGuard();
+      return { ok: true, startupGuardCompleted: true };
     }
     if (request.type === 'uninstallSubscriptions') {
       const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');

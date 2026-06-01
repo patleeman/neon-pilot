@@ -267,6 +267,14 @@ export interface ExtensionHostCheckBackendHealthRequest {
   type: 'checkBackendHealth';
 }
 
+export interface ExtensionHostBeginStartupGuardRequest {
+  type: 'beginStartupGuard';
+}
+
+export interface ExtensionHostCompleteStartupGuardRequest {
+  type: 'completeStartupGuard';
+}
+
 export interface ExtensionHostStartStartupActionsRequest {
   type: 'startStartupActions';
   serverContext?: ExtensionHostBackendServerContext;
@@ -347,6 +355,11 @@ export interface ExtensionHostSetEnabledResult {
   status?: number;
 }
 
+export interface ExtensionHostStartupGuardResult {
+  safeMode: boolean;
+  disabledIds: string[];
+}
+
 export type ExtensionHostRequest =
   | ExtensionHostHealthRequest
   | ExtensionHostInvokeActionRequest
@@ -363,6 +376,8 @@ export type ExtensionHostRequest =
   | ExtensionHostResolveModelProfileRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
+  | ExtensionHostBeginStartupGuardRequest
+  | ExtensionHostCompleteStartupGuardRequest
   | ExtensionHostStartStartupActionsRequest
   | ExtensionHostInvokeRouteRequest
   | ExtensionHostListActionTelemetryRequest
@@ -432,6 +447,14 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      startupGuard: ExtensionHostStartupGuardResult;
+    }
+  | {
+      ok: true;
+      startupGuardCompleted: true;
+    }
+  | {
+      ok: true;
       route: ExtensionHostRouteResponse;
     }
   | {
@@ -474,6 +497,8 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
   if (request.type === 'resolveModelProfile') return `resolveModelProfile:${request.provider}/${request.model}`;
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
+  if (request.type === 'beginStartupGuard') return 'beginStartupGuard';
+  if (request.type === 'completeStartupGuard') return 'completeStartupGuard';
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;
   if (request.type === 'listActionTelemetry') return 'listActionTelemetry';

@@ -41,6 +41,8 @@ const extensionRegistry = vi.hoisted(() => ({
   readExtensionSchema: vi.fn(),
   readExtensionRegistrySnapshot: vi.fn(),
   resolveExtensionModelProfile: vi.fn(),
+  beginExtensionStartupGuard: vi.fn(),
+  completeExtensionStartupGuard: vi.fn(),
   setExtensionEnabled: vi.fn(),
   setExtensionKeybinding: vi.fn(),
 }));
@@ -318,6 +320,17 @@ describe('extension host client', () => {
     expect(extensionRegistry.resolveExtensionModelProfile).toHaveBeenCalledWith({ provider: 'openai', model: 'gpt-5' });
   });
 
+  it('routes startup guard lifecycle through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.beginExtensionStartupGuard.mockReturnValueOnce({ safeMode: true, disabledIds: ['ext'] });
+
+    await expect(getExtensionHostClient().beginStartupGuard()).resolves.toEqual({ safeMode: true, disabledIds: ['ext'] });
+    await expect(getExtensionHostClient().completeStartupGuard()).resolves.toBeUndefined();
+
+    expect(extensionRegistry.beginExtensionStartupGuard).toHaveBeenCalled();
+    expect(extensionRegistry.completeExtensionStartupGuard).toHaveBeenCalled();
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -428,6 +441,8 @@ describe('extension host client', () => {
       }),
     ).toBe('invokeProtocolEntrypoint:acp');
     expect(extensionHostRequestName({ type: 'checkBackendHealth' })).toBe('checkBackendHealth');
+    expect(extensionHostRequestName({ type: 'beginStartupGuard' })).toBe('beginStartupGuard');
+    expect(extensionHostRequestName({ type: 'completeStartupGuard' })).toBe('completeStartupGuard');
     expect(extensionHostRequestName({ type: 'startStartupActions' })).toBe('startStartupActions');
     expect(
       extensionHostRequestName({
