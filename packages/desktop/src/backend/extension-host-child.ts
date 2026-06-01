@@ -176,7 +176,8 @@ async function main(): Promise<void> {
             throw new Error('Missing extension host action request.');
           }
           const abort = new AbortController();
-          request.on('close', () => abort.abort());
+          request.on('aborted', () => abort.abort());
+          response.on('close', () => abort.abort());
           response.writeHead(200, {
             'Content-Type': 'text/event-stream; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
