@@ -635,6 +635,10 @@ function hasExtensionBackendExportForSelfTest(extensionId: string, exportName: s
   return getWorkerImportBackendRunner().hasExport(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId), exportName);
 }
 
+function clearWorkerImportBackend(extensionId: string): void {
+  workerImportBackendRunner?.clearModule(extensionId);
+}
+
 export function setWorkerImportBackendRunnerForTests(
   runner: ReturnType<typeof createWorkerImportExtensionBackendRunner> | undefined,
 ): void {
@@ -1070,6 +1074,7 @@ export async function reloadExtensionBackend(extensionId: string): Promise<{ ok:
   const { stopExtensionServices, startExtensionServices } = await import('./extensionServices.js');
   await stopExtensionServices(extensionId);
   getExtensionBackendRunner().clearModule(extensionId);
+  clearWorkerImportBackend(extensionId);
   await loadCompiledExtensionBackendModule(extensionId, loadTarget);
   clearExtensionHealthError(extensionId);
   clearBuildError(extensionId);

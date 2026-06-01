@@ -10,6 +10,7 @@ import {
   invokeExtensionRoute,
   loadExtensionAgentFactory,
   loadExtensionBackend,
+  reloadExtensionBackend,
   runExtensionSelfTest,
   setWorkerImportBackendRunnerForTests,
 } from './extensionBackend.js';
@@ -21,7 +22,15 @@ const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..
 
 const ORIGINAL_STATE_ROOT = process.env.NEON_PILOT_STATE_ROOT;
 
+const extensionServices = vi.hoisted(() => ({
+  startExtensionServices: vi.fn(async () => undefined),
+  stopExtensionServices: vi.fn(async () => undefined),
+}));
+
+vi.mock('./extensionServices.js', () => extensionServices);
+
 afterEach(() => {
+  vi.clearAllMocks();
   setExtensionBackendRunnerForTests(undefined);
   setWorkerImportBackendRunnerForTests(undefined);
   if (ORIGINAL_STATE_ROOT === undefined) delete process.env.NEON_PILOT_STATE_ROOT;
@@ -365,6 +374,60 @@ describe('extension backend action invocation', () => {
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
       'doThing',
     );
+  });
+
+  it('clears both backend runners before reloading a backend', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'reload-worker-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'reload-worker-ext',
+        name: 'Reload Worker Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'doThing', handler: 'doThing' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function doThing() { return true; }\n');
+
+    const backendRunner = {
+      loadModule: vi.fn(async () => ({ doThing: vi.fn() })),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(reloadExtensionBackend('reload-worker-ext')).resolves.toEqual({
+      ok: true,
+      extensionId: 'reload-worker-ext',
+      rebuilt: false,
+    });
+
+    expect(extensionServices.stopExtensionServices).toHaveBeenCalledWith('reload-worker-ext');
+    expect(backendRunner.clearModule).toHaveBeenCalledWith('reload-worker-ext');
+    expect(workerRunner.clearModule).toHaveBeenCalledWith('reload-worker-ext');
+    expect(backendRunner.loadModule).toHaveBeenCalledWith(
+      'reload-worker-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+    );
+    expect(extensionServices.startExtensionServices).toHaveBeenCalledOnce();
   });
 });
 
