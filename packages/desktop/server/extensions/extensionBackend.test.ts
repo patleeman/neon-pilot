@@ -1113,6 +1113,84 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe extension manager read actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'manageExtension'
+          ? { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' }
+          : { ok: true, extensions: [{ id: 'system-todo' }] },
+      ),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-extension-manager', 'listExtensions', {})).resolves.toEqual({
+      ok: true,
+      result: { ok: true, extensions: [{ id: 'system-todo' }] },
+    });
+    await expect(invokeExtensionAction('system-extension-manager', 'manageExtension', { action: 'reloadExtensions' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'listExtensions',
+      { type: 'action', label: 'action listExtensions', target: 'listExtensions' },
+      [{}],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          liveSessionResourceOptions: expect.objectContaining({
+            additionalExtensionPaths: expect.any(Array),
+            additionalSkillPaths: expect.any(Array),
+            additionalPromptTemplatePaths: expect.any(Array),
+            additionalThemePaths: expect.any(Array),
+          }),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'manageExtension',
+      { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
+      [{ action: 'reloadExtensions' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
