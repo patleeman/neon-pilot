@@ -48,15 +48,25 @@ export function extensionBackendOperation(
   };
 }
 
+export function serializeExtensionBackendOperation(operation: ExtensionBackendOperation): ExtensionBackendOperation {
+  return {
+    type: operation.type,
+    label: operation.label,
+    ...(operation.exportName ? { exportName: operation.exportName } : {}),
+    ...(operation.target ? { target: operation.target } : {}),
+  };
+}
+
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
 
 async function auditBackendOperation<T>(extensionId: string, operation: ExtensionBackendOperation, handler: () => Promise<T>): Promise<T> {
+  const serializedOperation = serializeExtensionBackendOperation(operation);
   const started = Date.now();
   try {
     const result = await handler();
     recordExtensionHostAuditEvent({
       requestType: 'backend',
-      requestName: `${extensionId}:${operation.label}`,
+      requestName: `${extensionId}:${serializedOperation.label}`,
       ok: true,
       durationMs: Date.now() - started,
     });
@@ -64,7 +74,7 @@ async function auditBackendOperation<T>(extensionId: string, operation: Extensio
   } catch (error) {
     recordExtensionHostAuditEvent({
       requestType: 'backend',
-      requestName: `${extensionId}:${operation.label}`,
+      requestName: `${extensionId}:${serializedOperation.label}`,
       ok: false,
       durationMs: Date.now() - started,
       error: error instanceof Error ? error.message : String(error),

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { createInProcessExtensionBackendRunner, extensionBackendOperation } from './extensionBackendRunner.js';
+import { createInProcessExtensionBackendRunner, extensionBackendOperation, serializeExtensionBackendOperation } from './extensionBackendRunner.js';
 import { clearExtensionHostAuditEvents, listExtensionHostAuditEvents } from './extensionHostAudit.js';
 
 describe('extensionBackendRunner', () => {
@@ -68,5 +68,20 @@ describe('extensionBackendRunner', () => {
         ok: true,
       }),
     ]);
+  });
+
+  it('serializes operation descriptors to wire-safe metadata only', () => {
+    const operation = {
+      ...extensionBackendOperation('action', 'action doThing', { exportName: 'doThing', target: 'doThing' }),
+      handler: () => 'nope',
+      payload: { secret: true },
+    };
+
+    expect(serializeExtensionBackendOperation(operation)).toEqual({
+      type: 'action',
+      label: 'action doThing',
+      exportName: 'doThing',
+      target: 'doThing',
+    });
   });
 });
