@@ -7,18 +7,16 @@ description: Use when the selected model is local DeepSeek V4 Flash served by ds
 
 Use this skill when the active model is `ds4/deepseek-v4-flash`.
 
-DS4 is local DeepSeek V4 Flash served by `ds4-server`. It is optimized for coding-agent workflows but local decoding is slower than hosted frontier models, so keep tool loops deliberate:
+DS4 is local DeepSeek V4 Flash served by `ds4-server`. It is optimized for coding-agent workflows but local decoding is slower than hosted frontier models, so keep tool loops deliberate and preserve prompt-cache stability.
 
-- Start with the core tools only: `ds4_capabilities`, `bash`, `read`, and `edit`.
-- Use `ds4_capabilities` to enable extra tool groups only when the task requires them:
-  - `inspect` enables `list` and `search`.
-  - `web` enables `google_search` and `visit_page`.
-  - `files` enables `write` and `more`.
-  - `async_shell` enables `bash_status` and `bash_stop`.
-- Use `read` with `start_line` and `max_lines` for focused windows. Use `more` only when the previous read says more context is needed.
-- Prefer `bash` for ordinary repo inspection. Enable `inspect` only when compact structured `list` or `search` output would save context.
+- Core tools are stable: `bash`, `read`, and `edit`.
+- Prefer `bash` for ordinary repo inspection instead of adding specialized tools. Useful patterns:
+  - List files: `find . -maxdepth 2 -type f | sed 's#^\./##' | sort | head -200`
+  - Search text: `rg -n --hidden --glob '!node_modules' --glob '!dist' 'pattern' path`
+  - Inspect git state: `git status --short && git diff --stat`
+  - Fetch a known URL when needed: `python3 - <<'PY'\nimport urllib.request\nprint(urllib.request.urlopen('https://example.com', timeout=10).read().decode('utf-8', 'replace')[:20000])\nPY`
+- Use `read` with `start_line` and `max_lines` for focused file windows.
 - Use `edit` for exact targeted replacements after reading the surrounding anchor text. For large replacements, use `old` with `[upto]` between unique head and tail anchors.
-- Use `write` for new files or deliberate whole-file replacement.
-- Use `bash` for validation and repository inspection. Keep long commands bounded with `timeout_sec`; for long-running commands pass `refresh_sec`, then inspect with `bash_status` or stop with `bash_stop`.
-- Use `google_search` for web search and `visit_page` for a known URL when current external context is needed.
+- Use shell redirection or scripts through `bash` for new files or deliberate whole-file replacement when `edit` is not the right fit.
+- Keep long commands bounded with `timeout_sec`.
 - Do not paste large file contents into assistant text when a tool result already captured them.

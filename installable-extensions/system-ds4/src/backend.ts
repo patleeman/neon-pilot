@@ -14,14 +14,7 @@ const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
 const MODEL_NAME = 'DeepSeek V4 Flash';
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
-const DS4_CORE_TOOLS = ['ds4_capabilities', 'bash', 'read', 'edit'];
-const DS4_PROGRESSIVE_TOOL_GROUPS = {
-  inspect: ['list', 'search'],
-  web: ['google_search', 'visit_page'],
-  files: ['write', 'more'],
-  async_shell: ['bash_status', 'bash_stop'],
-  all: ['list', 'search', 'google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'],
-} as const;
+const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
 const DEFAULT_READ_LINES = 500;
@@ -37,7 +30,6 @@ const BOOTSTRAP_STEPS = [
 ] as const;
 
 type ToolResult = { content?: Array<{ type?: string; text?: string }>; details?: unknown; isError?: boolean };
-type Ds4ProgressiveGroup = keyof typeof DS4_PROGRESSIVE_TOOL_GROUPS;
 type ShellJob = {
   id: number;
   command: string;
@@ -240,10 +232,6 @@ function stringValue(value: unknown): string | undefined {
 
 function booleanValue(value: unknown): boolean {
   return value === true;
-}
-
-function stringArrayValue(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0) : [];
 }
 
 function cwdFor(ctx: ExtensionBackendContext): string {
@@ -841,44 +829,6 @@ export async function visit_page(input: { url?: unknown; raw?: unknown }, ctx: E
   return { text: formatted.text, content: [{ type: 'text' as const, text: formatted.text }], details: { url, contentType, truncated: formatted.truncated } };
 }
 
-export async function capabilities(input: { action?: unknown; groups?: unknown; tools?: unknown }, ctx: ExtensionBackendContext) {
-  const action = stringValue(input.action) ?? 'list';
-  const availableGroups = Object.keys(DS4_PROGRESSIVE_TOOL_GROUPS);
-  if (action === 'list') {
-    const text = [
-      'DS4 starts with a compact core tool set:',
-      `- core: ${DS4_CORE_TOOLS.join(', ')}`,
-      '',
-      'Progressive tool groups are available on request:',
-      `- inspect: ${DS4_PROGRESSIVE_TOOL_GROUPS.inspect.join(', ')}`,
-      `- web: ${DS4_PROGRESSIVE_TOOL_GROUPS.web.join(', ')}`,
-      `- files: ${DS4_PROGRESSIVE_TOOL_GROUPS.files.join(', ')}`,
-      `- async_shell: ${DS4_PROGRESSIVE_TOOL_GROUPS.async_shell.join(', ')}`,
-      `- all: ${DS4_PROGRESSIVE_TOOL_GROUPS.all.join(', ')}`,
-      '',
-      'Call ds4_capabilities with action="enable" and groups=["inspect"] or tools=["write"] when the task needs more surface.',
-    ].join('\n');
-    return { text, content: [{ type: 'text' as const, text }], details: { core: DS4_CORE_TOOLS, groups: DS4_PROGRESSIVE_TOOL_GROUPS } };
-  }
-  if (action !== 'enable') throw new Error('action must be list or enable.');
-  const conversationId = ctx.toolContext?.conversationId ?? ctx.toolContext?.sessionId;
-  if (!conversationId) throw new Error('Cannot enable DS4 tools without an active conversation id.');
-
-  const groups = stringArrayValue(input.groups).filter((group): group is Ds4ProgressiveGroup =>
-    Object.prototype.hasOwnProperty.call(DS4_PROGRESSIVE_TOOL_GROUPS, group),
-  );
-  const directTools = stringArrayValue(input.tools);
-  const requested = new Set([...DS4_CORE_TOOLS, ...groups.flatMap((group) => DS4_PROGRESSIVE_TOOL_GROUPS[group]), ...directTools]);
-  const nextTools = [...requested].filter(Boolean);
-  await ctx.conversations.setActiveTools(conversationId, nextTools);
-  const text = `Enabled DS4 tools: ${nextTools.join(', ')}`;
-  return {
-    text,
-    content: [{ type: 'text' as const, text }],
-    details: { conversationId, activeTools: nextTools, requestedGroups: groups, ignoredGroups: stringArrayValue(input.groups).filter((group) => !availableGroups.includes(group)) },
-  };
-}
-
 export async function optimizePromptAssembly(input: { plan?: unknown; context?: { modelRef?: string; provider?: string } }) {
   const plan = input.plan as
     | {
@@ -924,7 +874,7 @@ export async function optimizePromptAssembly(input: { plan?: unknown; context?: 
     {
       severity: 'info',
       code: 'ds4-progressive-disclosure',
-      message: 'DS4 prompt assembly reduced to core tools/skills and pointer-style global instructions.',
+      message: 'DS4 prompt assembly reduced to core tools, the DS4 skill, and pointer-style global instructions.',
       sourceId: 'system-ds4',
     },
   ];
@@ -942,7 +892,7 @@ export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
         return;
       }
       const active = ctx.getActiveTools?.() ?? [];
-      const keep = active.filter((tool) => !['list', 'search', 'google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'].includes(tool));
+      const keep = active.filter((tool) => !['ds4_capabilities', 'list', 'search', 'google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'].includes(tool));
       ctx.setActiveTools?.([...new Set([...keep, ...DS4_CORE_TOOLS])]);
     };
 

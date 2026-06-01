@@ -328,29 +328,7 @@ describe('DS4 agent profile activation', () => {
       },
     );
 
-    expect(calls).toEqual([['artifact', 'ds4_capabilities', 'bash', 'read', 'edit']]);
-  });
-
-  it('enables progressive DS4 tool groups for the active conversation', async () => {
-    const context = ctx();
-
-    const result = await backend.capabilities({ action: 'enable', groups: ['inspect', 'web', 'async_shell', 'nope'], tools: ['write'] }, context);
-
-    expect(context.conversations.setActiveTools).toHaveBeenCalledWith('conversation-1', [
-      'ds4_capabilities',
-      'bash',
-      'read',
-      'edit',
-      'list',
-      'search',
-      'google_search',
-      'visit_page',
-      'bash_status',
-      'bash_stop',
-      'write',
-    ]);
-    expect(result.text).toContain('Enabled DS4 tools');
-    expect(result.details.ignoredGroups).toEqual(['nope']);
+    expect(calls).toEqual([['artifact', 'bash', 'read', 'edit']]);
   });
 
   it('compacts prompt assembly for DS4 only', async () => {
@@ -370,7 +348,7 @@ describe('DS4 agent profile activation', () => {
 
     expect(result.plan.skills.skillPaths).toEqual(['/extensions/system-ds4/skills/ds4-local-agent']);
     expect(result.plan.skills.inlineSkills).toEqual([]);
-    expect(result.plan.tools.activeToolNames).toEqual(['bash', 'ds4_capabilities']);
+    expect(result.plan.tools.activeToolNames).toEqual(['bash']);
     expect(result.plan.instructions.layers[0].content).toContain('Full instructions are available');
     expect(result.plan.instructions.layers[1].content).toBe('keep me');
   });

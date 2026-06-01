@@ -37,7 +37,6 @@
       { "id": "ds4RevealRuntimeFolder", "handler": "revealRuntimeFolder", "title": "Reveal DS4 runtime folder", "worker": { "enabled": true } },
       { "id": "ds4RevealModelFile", "handler": "revealModelFile", "title": "Reveal DS4 model file", "worker": { "enabled": true } },
       { "id": "ds4ClearKvCache", "handler": "clearKvCache", "title": "Clear DS4 KV cache", "worker": { "enabled": true } },
-      { "id": "ds4Capabilities", "handler": "capabilities", "title": "DS4 progressive capabilities", "worker": { "enabled": true } },
       { "id": "ds4OptimizePromptAssembly", "handler": "optimizePromptAssembly", "title": "Optimize DS4 prompt assembly", "worker": { "enabled": true } },
       { "id": "ds4GoogleSearch", "handler": "google_search", "title": "DS4 google_search", "worker": { "enabled": true } },
       { "id": "ds4VisitPage", "handler": "visit_page", "title": "DS4 visit_page", "worker": { "enabled": true } },
@@ -73,29 +72,6 @@
       }
     ],
     "tools": [
-      {
-        "id": "capabilities",
-        "name": "ds4_capabilities",
-        "title": "DS4 Capabilities",
-        "description": "List or enable progressively disclosed DS4 tool groups for this conversation.",
-        "action": "ds4Capabilities",
-        "priority": 120,
-        "when": { "providers": ["ds4"] },
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "action": { "type": "string", "enum": ["list", "enable"] },
-            "groups": { "type": "array", "items": { "type": "string", "enum": ["inspect", "web", "files", "async_shell", "all"] } },
-            "tools": { "type": "array", "items": { "type": "string" } }
-          },
-          "required": ["action"],
-          "additionalProperties": false
-        },
-        "promptGuidelines": [
-          "DS4 starts with a compact tool set. Use ds4_capabilities to list or enable extra groups only when needed.",
-          "Enable inspect before specialized list/search helpers, web before external research, files before whole-file writes or continuing reads, and async_shell before background shell jobs."
-        ]
-      },
       {
         "id": "google-search",
         "name": "google_search",
