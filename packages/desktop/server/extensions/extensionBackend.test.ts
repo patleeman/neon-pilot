@@ -981,6 +981,7 @@ describe('extension backend action invocation', () => {
         backend: {
           entry: 'dist/backend.mjs',
           actions: [
+            { id: 'ds4InstallProvider', handler: 'installProvider', title: 'Install DS4 model provider', worker: { enabled: true } },
             { id: 'ds4GoogleSearch', handler: 'google_search', title: 'DS4 google_search', worker: { enabled: true } },
             { id: 'ds4Read', handler: 'read', title: 'DS4 read', worker: { enabled: true } },
             { id: 'ds4List', handler: 'list', title: 'DS4 list', worker: { enabled: true } },
@@ -1014,6 +1015,10 @@ describe('extension backend action invocation', () => {
     setExtensionBackendRunnerForTests(backendRunner);
     setWorkerImportBackendRunnerForTests(workerRunner);
 
+    await expect(invokeExtensionAction('system-ds4', 'ds4InstallProvider', {})).resolves.toEqual({
+      ok: true,
+      result: { ok: true, action: 'installProvider' },
+    });
     await expect(invokeExtensionAction('system-ds4', 'ds4GoogleSearch', { query: 'neon pilot' })).resolves.toEqual({
       ok: true,
       result: { ok: true, action: 'google_search' },
@@ -1045,7 +1050,7 @@ describe('extension backend action invocation', () => {
         }),
       },
     );
-    expect(workerRunner.runWorkerExport).toHaveBeenCalledTimes(3);
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledTimes(4);
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 

@@ -5,6 +5,8 @@ export interface ExtensionBackendWorkerBackendContextOptions {
   repoRoot?: string;
   runtimeDir?: string;
   runtimeSettingsFilePath?: string;
+  authFile?: string;
+  stateRoot?: string;
   liveSessionResourceOptions?: Record<string, unknown>;
   toolContext?: {
     conversationId?: string;

@@ -11,7 +11,7 @@
     "agentExtension": "createDs4AgentExtension",
     "onEnableAction": "ds4InstallProvider",
     "actions": [
-      { "id": "ds4InstallProvider", "handler": "installProvider", "title": "Install DS4 model provider" },
+      { "id": "ds4InstallProvider", "handler": "installProvider", "title": "Install DS4 model provider", "worker": { "enabled": true } },
       { "id": "ds4Status", "handler": "status", "title": "DS4 server status" },
       { "id": "ds4Discover", "handler": "discover", "title": "Discover DS4 model" },
       { "id": "ds4BootstrapRuntime", "handler": "bootstrapRuntime", "title": "Download and build DS4 runtime" },

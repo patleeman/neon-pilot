@@ -899,6 +899,77 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({ id: 28, ok: true, result: [{ id: 'model-1', provider: 'provider-a' }] });
   });
 
+  it('runs backend exports with host-mediated model provider write capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const provider = await ctx.models.saveProvider({ provider: 'ds4', baseUrl: 'http://127.0.0.1:8000/v1' });
+  const model = await ctx.models.saveProviderModel({ provider: 'ds4', modelId: 'deepseek-v4-flash' });
+  return { provider, model };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 29,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-model-writes' },
+      exportName: 'doThing',
+      args: [{}],
+      context: {
+        type: 'backend',
+        runtimeScope: 'shared',
+        repoRoot: '/repo',
+        authFile: '/agent/auth.json',
+        stateRoot: '/state',
+      },
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'models',
+      operation: 'saveProvider',
+      input: {
+        input: { provider: 'ds4', baseUrl: 'http://127.0.0.1:8000/v1' },
+        runtimeScope: 'shared',
+        repoRoot: '/repo',
+        authFile: '/agent/auth.json',
+        stateRoot: '/state',
+      },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { provider: 'ds4' } });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'models',
+      operation: 'saveProviderModel',
+      input: {
+        input: { provider: 'ds4', modelId: 'deepseek-v4-flash' },
+        runtimeScope: 'shared',
+        repoRoot: '/repo',
+        authFile: '/agent/auth.json',
+        stateRoot: '/state',
+      },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { modelId: 'deepseek-v4-flash' } });
+
+    await waitForPostMessage({
+      id: 29,
+      ok: true,
+      result: { provider: { provider: 'ds4' }, model: { modelId: 'deepseek-v4-flash' } },
+    });
+  });
+
   it('returns export execution errors when host capabilities fail', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

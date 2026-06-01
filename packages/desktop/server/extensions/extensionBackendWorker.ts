@@ -91,6 +91,14 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
   const repoRoot = options.repoRoot ?? process.cwd();
   const runtimeDir = options.runtimeDir ?? process.cwd();
   const runtimeSettingsFilePath = options.runtimeSettingsFilePath ?? '';
+  const authFile = options.authFile ?? '';
+  const stateRoot = options.stateRoot ?? '';
+  const modelWriteContext = {
+    runtimeScope,
+    repoRoot,
+    ...(authFile ? { authFile } : {}),
+    ...(stateRoot ? { stateRoot } : {}),
+  };
   const liveSessionResourceOptions = options.liveSessionResourceOptions ?? {
     additionalExtensionPaths: [],
     additionalSkillPaths: [],
@@ -196,6 +204,14 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     },
     models: {
       list: () => callHostCapability(extensionId, 'models', 'list'),
+      saveProvider: (input: unknown) =>
+        callHostCapability(extensionId, 'models', 'saveProvider', { input, ...modelWriteContext }),
+      saveProviderModel: (input: unknown) =>
+        callHostCapability(extensionId, 'models', 'saveProviderModel', { input, ...modelWriteContext }),
+      deleteProvider: (provider: string) =>
+        callHostCapability(extensionId, 'models', 'deleteProvider', { provider, ...modelWriteContext }),
+      deleteProviderModel: (input: unknown) =>
+        callHostCapability(extensionId, 'models', 'deleteProviderModel', { input, ...modelWriteContext }),
     },
     notify: {
       toast: (message: string, type?: 'info' | 'warning' | 'error') => callHostCapability(extensionId, 'notify', 'toast', { message, type }),

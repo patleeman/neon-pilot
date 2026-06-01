@@ -698,6 +698,8 @@ function workerBackendContextOptions(
     repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
     runtimeDir: getPiAgentRuntimeDir(),
     runtimeSettingsFilePath: resolveLocalProfileSettingsFilePath(),
+    authFile: serverContext?.getAuthFile?.(),
+    stateRoot: serverContext?.getStateRoot?.(),
     liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
     toolContext: workerBackendToolContext(toolContext),
   };

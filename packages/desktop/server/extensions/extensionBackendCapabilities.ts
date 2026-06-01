@@ -13,6 +13,7 @@ import { queryConversationMetadata, readConversationMetadata, writeConversationM
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
+import { createExtensionBackendServerContextFromSnapshot } from './extensionHostServerContext.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import {
   isSystemNotificationAvailable,
@@ -124,6 +125,17 @@ interface ExtensionBackendCapabilityExtensions {
 
 interface ExtensionBackendCapabilityModels {
   list(): Promise<unknown> | unknown;
+  saveProvider?(input: unknown, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
+  saveProviderModel?(input: unknown, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
+  deleteProvider?(provider: string, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
+  deleteProviderModel?(input: { provider: string; modelId: string }, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendModelWriteContext {
+  runtimeScope?: string;
+  repoRoot?: string;
+  authFile?: string;
+  stateRoot?: string;
 }
 
 interface ExtensionBackendCapabilityNotify {
@@ -557,10 +569,56 @@ function dispatchExtensionsCapability(extensions: ExtensionBackendCapabilityExte
 }
 
 function dispatchModelsCapability(models: ExtensionBackendCapabilityModels, request: ExtensionBackendWorkerCapabilityRequest): unknown {
-  if (request.operation !== 'list') {
-    throw new Error(`Unsupported models capability operation: ${request.operation}`);
+  if (request.operation === 'list') {
+    return models.list();
   }
-  return models.list();
+
+  const input = normalizeRecordInput(request.input, 'Models');
+  const context = normalizeModelWriteContext(input);
+
+  if (request.operation === 'saveProvider') {
+    if (!models.saveProvider) throw new Error('Model provider write capability is unavailable.');
+    return models.saveProvider(normalizeRecordInput(input.input, 'Model provider'), context);
+  }
+
+  if (request.operation === 'saveProviderModel') {
+    if (!models.saveProviderModel) throw new Error('Model provider model write capability is unavailable.');
+    return models.saveProviderModel(normalizeRecordInput(input.input, 'Model provider model'), context);
+  }
+
+  if (request.operation === 'deleteProvider') {
+    if (!models.deleteProvider) throw new Error('Model provider delete capability is unavailable.');
+    return models.deleteProvider(requireString(input.provider, 'Model provider'), context);
+  }
+
+  if (request.operation === 'deleteProviderModel') {
+    if (!models.deleteProviderModel) throw new Error('Model provider model delete capability is unavailable.');
+    const deleteInput = normalizeRecordInput(input.input, 'Model provider model delete');
+    return models.deleteProviderModel(
+      {
+        provider: requireString(deleteInput.provider, 'Model provider'),
+        modelId: requireString(deleteInput.modelId, 'Model id'),
+      },
+      context,
+    );
+  }
+
+  throw new Error(`Unsupported models capability operation: ${request.operation}`);
+}
+
+function normalizeModelWriteContext(input: Record<string, unknown>): ExtensionBackendModelWriteContext {
+  return {
+    ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Model runtime scope') } : {}),
+    ...(input.repoRoot !== undefined ? { repoRoot: optionalString(input.repoRoot, 'Model repo root') } : {}),
+    ...(input.authFile !== undefined ? { authFile: optionalString(input.authFile, 'Model auth file') } : {}),
+    ...(input.stateRoot !== undefined ? { stateRoot: optionalString(input.stateRoot, 'Model state root') } : {}),
+  };
+}
+
+function createModelsCapabilityForWriteContext(context?: ExtensionBackendModelWriteContext): ReturnType<typeof createExtensionModelsCapability> {
+  return createExtensionModelsCapability(
+    createExtensionBackendServerContextFromSnapshot(context?.runtimeScope ? { runtimeScope: context.runtimeScope, ...context } : undefined) as never,
+  );
 }
 
 function dispatchGitCapability(git: ExtensionBackendCapabilityGit, request: ExtensionBackendWorkerCapabilityRequest): unknown {
@@ -1210,7 +1268,17 @@ export function createExtensionBackendCapabilityDispatcher(
   };
   const git = options.git ?? createExtensionGitCapability();
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
-  const models = options.models ?? { list: () => createExtensionModelsCapability().list() };
+  const models = options.models ?? {
+    list: () => createExtensionModelsCapability().list(),
+    saveProvider: (input: unknown, context?: ExtensionBackendModelWriteContext) =>
+      createModelsCapabilityForWriteContext(context).saveProvider(input as never),
+    saveProviderModel: (input: unknown, context?: ExtensionBackendModelWriteContext) =>
+      createModelsCapabilityForWriteContext(context).saveProviderModel(input as never),
+    deleteProvider: (provider: string, context?: ExtensionBackendModelWriteContext) =>
+      createModelsCapabilityForWriteContext(context).deleteProvider(provider),
+    deleteProviderModel: (input: { provider: string; modelId: string }, context?: ExtensionBackendModelWriteContext) =>
+      createModelsCapabilityForWriteContext(context).deleteProviderModel(input),
+  };
   const notify = options.notify ?? {
     toast: (extensionId: string, message: string, type: 'info' | 'warning' | 'error') => {
       logInfo('extension notification', { extensionId, type, message });

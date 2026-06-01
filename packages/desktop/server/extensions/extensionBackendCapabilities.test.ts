@@ -694,9 +694,13 @@ describe('extension backend capability dispatcher', () => {
     expect(log.error).not.toHaveBeenCalled();
   });
 
-  it('dispatches read-only model capability calls', async () => {
+  it('dispatches model capability calls', async () => {
     const models = {
       list: vi.fn(async () => [{ id: 'model-1', provider: 'provider-a' }]),
+      saveProvider: vi.fn(async () => ({ provider: 'ds4' })),
+      saveProviderModel: vi.fn(async () => ({ modelId: 'deepseek-v4-flash' })),
+      deleteProvider: vi.fn(async () => ({ ok: true })),
+      deleteProviderModel: vi.fn(async () => ({ ok: true })),
     };
     const dispatch = createExtensionBackendCapabilityDispatcher({ models });
 
@@ -711,8 +715,75 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toEqual([{ id: 'model-1', provider: 'provider-a' }]);
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'models',
+          operation: 'saveProvider',
+          input: {
+            input: { provider: 'ds4', baseUrl: 'http://127.0.0.1:8000/v1' },
+            runtimeScope: 'shared',
+            repoRoot: '/repo',
+            authFile: '/agent/auth.json',
+            stateRoot: '/state',
+          },
+        }),
+      ),
+    ).resolves.toEqual({ provider: 'ds4' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'models',
+          operation: 'saveProviderModel',
+          input: { input: { provider: 'ds4', modelId: 'deepseek-v4-flash' }, runtimeScope: 'shared', authFile: '/agent/auth.json' },
+        }),
+      ),
+    ).resolves.toEqual({ modelId: 'deepseek-v4-flash' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 4,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'models',
+          operation: 'deleteProvider',
+          input: { provider: 'ds4', runtimeScope: 'shared', authFile: '/agent/auth.json' },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 5,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'models',
+          operation: 'deleteProviderModel',
+          input: { input: { provider: 'ds4', modelId: 'deepseek-v4-flash' }, runtimeScope: 'shared', authFile: '/agent/auth.json' },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
 
     expect(models.list).toHaveBeenCalled();
+    expect(models.saveProvider).toHaveBeenCalledWith(
+      { provider: 'ds4', baseUrl: 'http://127.0.0.1:8000/v1' },
+      { runtimeScope: 'shared', repoRoot: '/repo', authFile: '/agent/auth.json', stateRoot: '/state' },
+    );
+    expect(models.saveProviderModel).toHaveBeenCalledWith(
+      { provider: 'ds4', modelId: 'deepseek-v4-flash' },
+      { runtimeScope: 'shared', authFile: '/agent/auth.json' },
+    );
+    expect(models.deleteProvider).toHaveBeenCalledWith('ds4', { runtimeScope: 'shared', authFile: '/agent/auth.json' });
+    expect(models.deleteProviderModel).toHaveBeenCalledWith(
+      { provider: 'ds4', modelId: 'deepseek-v4-flash' },
+      { runtimeScope: 'shared', authFile: '/agent/auth.json' },
+    );
   });
 
   it('rejects unsupported model capability operations', async () => {
@@ -724,10 +795,10 @@ describe('extension backend capability dispatcher', () => {
         kind: 'capabilityRequest',
         extensionId: 'ext',
         capability: 'models',
-        operation: 'saveProvider',
+        operation: 'unknown',
         input: {},
       }),
-    ).rejects.toThrow('Unsupported models capability operation: saveProvider');
+    ).rejects.toThrow('Unsupported models capability operation: unknown');
   });
 
   it('dispatches extension-scoped notify capability calls', async () => {
