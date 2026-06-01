@@ -1,6 +1,7 @@
 import { resolveSecret } from '../secrets/secretStore.js';
 import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
+import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
 import {
   isSystemNotificationAvailable,
@@ -11,6 +12,7 @@ import { createExtensionGitCapability, createExtensionShellCapability } from './
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
+type ExtensionTelemetrySource = 'server' | 'renderer' | 'agent' | 'system';
 
 interface ExtensionBackendCapabilityLogger {
   info(message: string, fields?: Record<string, unknown>): void;
@@ -45,6 +47,24 @@ interface ExtensionBackendCapabilityStorage {
   list(extensionId: string, prefix?: string): unknown;
 }
 
+interface ExtensionBackendCapabilityTelemetryEvent {
+  source?: ExtensionTelemetrySource;
+  category: string;
+  name: string;
+  sessionId?: string;
+  runId?: string;
+  route?: string;
+  status?: number;
+  durationMs?: number;
+  count?: number;
+  value?: number;
+  metadata?: Record<string, unknown>;
+}
+
+interface ExtensionBackendCapabilityTelemetry {
+  record(extensionId: string, event: ExtensionBackendCapabilityTelemetryEvent): unknown;
+}
+
 interface ExtensionBackendCapabilityShell {
   exec(input: {
     command: string;
@@ -73,6 +93,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   secrets?: ExtensionBackendCapabilitySecrets;
   shell?: ExtensionBackendCapabilityShell;
   storage?: ExtensionBackendCapabilityStorage;
+  telemetry?: ExtensionBackendCapabilityTelemetry;
   ui?: ExtensionBackendCapabilityUi;
 }
 
@@ -217,6 +238,47 @@ function dispatchStorageCapability(storage: ExtensionBackendCapabilityStorage, r
   throw new Error(`Unsupported storage capability operation: ${request.operation}`);
 }
 
+function optionalTelemetrySource(value: unknown): ExtensionTelemetrySource | undefined {
+  if (value === undefined) return undefined;
+  if (value === 'server' || value === 'renderer' || value === 'agent' || value === 'system') return value;
+  throw new Error('Telemetry source must be server, renderer, agent, or system when provided.');
+}
+
+function optionalRecord(value: unknown, label: string): Record<string, unknown> | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object when provided.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function normalizeTelemetryEvent(input: unknown): ExtensionBackendCapabilityTelemetryEvent {
+  const record = normalizeRecordInput(input, 'Telemetry');
+  return {
+    ...(record.source === undefined ? {} : { source: optionalTelemetrySource(record.source) }),
+    category: requireString(record.category, 'Telemetry category'),
+    name: requireString(record.name, 'Telemetry name'),
+    ...(record.sessionId === undefined ? {} : { sessionId: optionalString(record.sessionId, 'Telemetry sessionId') }),
+    ...(record.runId === undefined ? {} : { runId: optionalString(record.runId, 'Telemetry runId') }),
+    ...(record.route === undefined ? {} : { route: optionalString(record.route, 'Telemetry route') }),
+    ...(record.status === undefined ? {} : { status: optionalNumber(record.status, 'Telemetry status') }),
+    ...(record.durationMs === undefined ? {} : { durationMs: optionalNumber(record.durationMs, 'Telemetry durationMs') }),
+    ...(record.count === undefined ? {} : { count: optionalNumber(record.count, 'Telemetry count') }),
+    ...(record.value === undefined ? {} : { value: optionalNumber(record.value, 'Telemetry value') }),
+    ...(record.metadata === undefined ? {} : { metadata: optionalRecord(record.metadata, 'Telemetry metadata') }),
+  };
+}
+
+function dispatchTelemetryCapability(
+  telemetry: ExtensionBackendCapabilityTelemetry,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
+  if (request.operation !== 'record') {
+    throw new Error(`Unsupported telemetry capability operation: ${request.operation}`);
+  }
+  return telemetry.record(request.extensionId, normalizeTelemetryEvent(request.input));
+}
+
 function dispatchSecretsCapability(secrets: ExtensionBackendCapabilitySecrets, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   if (request.operation !== 'get') {
     throw new Error(`Unsupported secrets capability operation: ${request.operation}`);
@@ -321,6 +383,15 @@ export function createExtensionBackendCapabilityDispatcher(
   };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const shell = options.shell ?? createExtensionShellCapability();
+  const telemetry = options.telemetry ?? {
+    record: (extensionId: string, event: ExtensionBackendCapabilityTelemetryEvent) => {
+      persistAppTelemetryEvent({
+        ...event,
+        source: event.source ?? 'server',
+        metadata: { ...(event.metadata ?? {}), extensionId },
+      });
+    },
+  };
   const ui = options.ui ?? {
     invalidate: (topics: string | string[]) => {
       const items = Array.isArray(topics) ? topics : [topics];
@@ -355,6 +426,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'storage') {
       return dispatchStorageCapability(storage, request);
+    }
+    if (request.capability === 'telemetry') {
+      return dispatchTelemetryCapability(telemetry, request);
     }
     if (request.capability === 'ui') {
       return dispatchUiCapability(ui, request);

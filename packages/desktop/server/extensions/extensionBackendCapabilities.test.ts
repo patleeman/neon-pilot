@@ -311,6 +311,59 @@ describe('extension backend capability dispatcher', () => {
     ).rejects.toThrow('Secret id must be a string.');
   });
 
+  it('dispatches extension-scoped telemetry capability calls', async () => {
+    const telemetry = {
+      record: vi.fn(),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'telemetry',
+          operation: 'record',
+          input: {
+            category: 'extension',
+            name: 'done',
+            source: 'agent',
+            sessionId: 'session-1',
+            status: 200,
+            durationMs: 12,
+            metadata: { ok: true },
+          },
+        }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(telemetry.record).toHaveBeenCalledWith('ext', {
+      category: 'extension',
+      name: 'done',
+      source: 'agent',
+      sessionId: 'session-1',
+      status: 200,
+      durationMs: 12,
+      metadata: { ok: true },
+    });
+  });
+
+  it('rejects malformed telemetry capability inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({ telemetry: { record: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'telemetry',
+        operation: 'record',
+        input: { category: 'extension', name: 'done', source: 'ui' },
+      }),
+    ).rejects.toThrow('Telemetry source must be server, renderer, agent, or system when provided.');
+  });
+
   it('dispatches shell exec capability calls', async () => {
     const shell = {
       exec: vi.fn(async () => ({ stdout: 'done', stderr: '' })),

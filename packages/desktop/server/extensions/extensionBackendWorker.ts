@@ -89,6 +89,9 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     secrets: {
       get: (secretId: string) => callHostCapability(extensionId, 'secrets', 'get', { secretId }),
     },
+    telemetry: {
+      record: (event: unknown) => callHostCapability(extensionId, 'telemetry', 'record', event),
+    },
     ui: {
       invalidate: (topics: string | string[]) => callHostCapability(extensionId, 'ui', 'invalidate', { topics }),
     },

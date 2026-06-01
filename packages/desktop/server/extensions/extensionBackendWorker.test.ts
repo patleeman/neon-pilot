@@ -405,6 +405,44 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({ id: 50, ok: true, result: { secret: 'stored-secret' } });
   });
 
+  it('runs backend exports with host-mediated telemetry records', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  await ctx.telemetry.record({ category: 'worker', name: 'done', count: 1 });
+  return { ok: true };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 55,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-telemetry' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'telemetry',
+      operation: 'record',
+      input: { category: 'worker', name: 'done', count: 1 },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true });
+
+    await waitForPostMessage({ id: 55, ok: true, result: { ok: true } });
+  });
+
   it('runs backend exports with host-mediated UI invalidation', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });
