@@ -12,8 +12,23 @@
   "backend": {
     "entry": "src/backend.ts",
     "actions": [
-      { "id": "mcpTool", "handler": "mcpTool", "title": "MCP tool" },
-      { "id": "inspectSettings", "handler": "inspectMcpSettings", "title": "Inspect MCP settings" },
+      {
+        "id": "mcpTool",
+        "handler": "mcpTool",
+        "title": "MCP tool",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["list", "info", "grep"]
+        }
+      },
+      {
+        "id": "inspectSettings",
+        "handler": "inspectMcpSettings",
+        "title": "Inspect MCP settings",
+        "worker": {
+          "enabled": true
+        }
+      },
       { "id": "saveExplicitConfig", "handler": "saveExplicitMcpConfig", "title": "Save explicit MCP config" },
       { "id": "testServer", "handler": "testMcpServer", "title": "Test MCP server" },
       { "id": "authServer", "handler": "authMcpServer", "title": "Authenticate MCP server" },
