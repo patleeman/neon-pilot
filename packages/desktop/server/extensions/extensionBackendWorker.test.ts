@@ -251,6 +251,73 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('runs backend exports with host-mediated live conversation capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  const before = await ctx.conversations.get('conv-1');
+  const tools = await ctx.conversations.setActiveTools('conv-1', ['exec_code']);
+  const entry = await ctx.conversations.appendCustomEntry('conv-1', 'code-mode-state', { enabled: true });
+  return { before, tools, entry };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 17,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-live-conversations' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'get',
+      input: { conversationId: 'conv-1' },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { id: 'conv-1', toolNames: ['read'] } });
+
+    await waitForPostMessage({
+      id: 2,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'setActiveTools',
+      input: { conversationId: 'conv-1', toolNames: ['exec_code'] },
+    });
+    workerThreads.messageHandler?.({ id: 2, kind: 'capabilityResponse', ok: true, result: { conversationId: 'conv-1', toolNames: ['exec_code'] } });
+
+    await waitForPostMessage({
+      id: 3,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'appendCustomEntry',
+      input: { conversationId: 'conv-1', customType: 'code-mode-state', data: { enabled: true } },
+    });
+    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 17,
+      ok: true,
+      result: {
+        before: { id: 'conv-1', toolNames: ['read'] },
+        tools: { conversationId: 'conv-1', toolNames: ['exec_code'] },
+        entry: { ok: true },
+      },
+    });
+  });
+
   it('runs backend exports with host-mediated extension registry capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

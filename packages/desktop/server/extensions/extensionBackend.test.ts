@@ -509,7 +509,7 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('runs worker-safe code mode draft actions through the worker runner', async () => {
+  it('runs worker-safe code mode actions through the worker runner', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     setExtensionEnabled('system-code-mode', true, stateRoot);
@@ -527,7 +527,11 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(async () => true),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
-      runWorkerExport: vi.fn(async () => ({ enabled: true, createOptions: { allowedToolNames: ['exec_code'] }, applyAfterCreate: true })),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
+        exportName === 'toggleCodeMode'
+          ? { enabled: true, active: true, pending: false, running: false, notice: { tone: 'accent', text: 'Code mode enabled.' } }
+          : { enabled: true, createOptions: { allowedToolNames: ['exec_code'] }, applyAfterCreate: true },
+      ),
       run: vi.fn(),
     };
     setExtensionBackendRunnerForTests(backendRunner);
@@ -552,6 +556,33 @@ describe('extension backend action invocation', () => {
           runtimeScope: 'shared',
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    await expect(
+      invokeExtensionAction('system-code-mode', 'toggleCodeMode', { conversationId: 'conv-1', action: 'on' }, undefined, {
+        conversationId: 'conv-1',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { enabled: true, active: true, pending: false, running: false, notice: { tone: 'accent', text: 'Code mode enabled.' } },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-code-mode',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-code-mode', 'dist', 'backend.mjs')),
+      }),
+      'toggleCodeMode',
+      { type: 'action', label: 'action toggleCodeMode', target: 'toggleCodeMode' },
+      [{ conversationId: 'conv-1', action: 'on' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1' },
         }),
       },
     );

@@ -17,12 +17,18 @@
       {
         "id": "readState",
         "handler": "readState",
-        "title": "Read Code Mode State"
+        "title": "Read Code Mode State",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "toggleCodeMode",
         "handler": "toggleCodeMode",
-        "title": "Toggle Code Mode"
+        "title": "Toggle Code Mode",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "consumeDraftState",

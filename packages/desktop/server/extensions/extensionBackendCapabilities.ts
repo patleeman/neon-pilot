@@ -4,6 +4,7 @@ import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
+import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import {
@@ -36,6 +37,9 @@ interface ExtensionBackendCapabilityEvents {
 }
 
 interface ExtensionBackendCapabilityConversations {
+  get(extensionId: string, conversationId: string): Promise<unknown> | unknown;
+  setActiveTools(extensionId: string, conversationId: string, toolNames: string[]): Promise<unknown> | unknown;
+  appendCustomEntry(extensionId: string, conversationId: string, customType: string, data?: unknown): Promise<unknown> | unknown;
   metadata: {
     get(extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }): Promise<unknown> | unknown;
     set(
@@ -208,6 +212,27 @@ function dispatchConversationsCapability(
 ): unknown {
   const input = normalizeRecordInput(request.input, 'Conversations');
 
+  if (request.operation === 'get') {
+    return conversations.get(request.extensionId, requireString(input.conversationId, 'Conversation id'));
+  }
+
+  if (request.operation === 'setActiveTools') {
+    return conversations.setActiveTools(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      requireStringArray(input.toolNames, 'Conversation tool names'),
+    );
+  }
+
+  if (request.operation === 'appendCustomEntry') {
+    return conversations.appendCustomEntry(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      requireString(input.customType, 'Conversation custom type'),
+      input.data,
+    );
+  }
+
   if (request.operation === 'metadata.get') {
     const metadataInput = {
       conversationId: requireString(input.conversationId, 'Conversation id'),
@@ -348,6 +373,13 @@ function normalizeRecordInput(input: unknown, capability: string): Record<string
 function requireString(value: unknown, label: string): string {
   if (typeof value !== 'string') {
     throw new Error(`${label} must be a string.`);
+  }
+  return value;
+}
+
+function requireStringArray(value: unknown, label: string): string[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+    throw new Error(`${label} must be an array of strings.`);
   }
   return value;
 }
@@ -545,6 +577,11 @@ export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const conversations = options.conversations ?? {
+    get: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().get(conversationId),
+    setActiveTools: (_extensionId: string, conversationId: string, toolNames: string[]) =>
+      createExtensionConversationsCapability().setActiveTools(conversationId, toolNames),
+    appendCustomEntry: (_extensionId: string, conversationId: string, customType: string, data?: unknown) =>
+      createExtensionConversationsCapability().appendCustomEntry(conversationId, customType, data),
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
         readConversationMetadata({ ...input, extensionId }),

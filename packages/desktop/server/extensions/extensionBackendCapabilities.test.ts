@@ -3,8 +3,82 @@ import { describe, expect, it, vi } from 'vitest';
 import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
 
 describe('extension backend capability dispatcher', () => {
+  it('dispatches extension-scoped live conversation capability calls', async () => {
+    const conversations = {
+      get: vi.fn(async () => ({ id: 'conv-1', running: false, toolNames: ['read'] })),
+      setActiveTools: vi.fn(async () => ({ conversationId: 'conv-1', toolNames: ['exec_code'] })),
+      appendCustomEntry: vi.fn(async () => ({ ok: true })),
+      metadata: {
+        get: vi.fn(),
+        set: vi.fn(),
+        query: vi.fn(),
+      },
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-code-mode',
+          capability: 'conversations',
+          operation: 'get',
+          input: { conversationId: 'conv-1' },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'conv-1', running: false, toolNames: ['read'] });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'system-code-mode',
+          capability: 'conversations',
+          operation: 'setActiveTools',
+          input: { conversationId: 'conv-1', toolNames: ['exec_code'] },
+        }),
+      ),
+    ).resolves.toEqual({ conversationId: 'conv-1', toolNames: ['exec_code'] });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'system-code-mode',
+          capability: 'conversations',
+          operation: 'appendCustomEntry',
+          input: { conversationId: 'conv-1', customType: 'code-mode-state', data: { enabled: true } },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+
+    expect(conversations.get).toHaveBeenCalledWith('system-code-mode', 'conv-1');
+    expect(conversations.setActiveTools).toHaveBeenCalledWith('system-code-mode', 'conv-1', ['exec_code']);
+    expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-code-mode', 'conv-1', 'code-mode-state', { enabled: true });
+  });
+
+  it('rejects malformed live conversation capability inputs', async () => {
+    const conversations = { get: vi.fn(), setActiveTools: vi.fn(), appendCustomEntry: vi.fn(), metadata: { get: vi.fn(), set: vi.fn(), query: vi.fn() } };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'system-code-mode',
+        capability: 'conversations',
+        operation: 'setActiveTools',
+        input: { conversationId: 'conv-1', toolNames: ['read', 1] },
+      }),
+    ).rejects.toThrow('Conversation tool names must be an array of strings.');
+  });
+
   it('dispatches extension-scoped conversation metadata capability calls', async () => {
     const conversations = {
+      get: vi.fn(),
+      setActiveTools: vi.fn(),
+      appendCustomEntry: vi.fn(),
       metadata: {
         get: vi.fn(async () => ({ items: [] })),
         set: vi.fn(async () => ({ items: [{ id: 'todo-1' }] })),

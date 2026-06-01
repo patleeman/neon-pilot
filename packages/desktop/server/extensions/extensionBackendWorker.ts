@@ -84,6 +84,11 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       publish: (input: { event: string; payload: unknown }) => callHostCapability(extensionId, 'events', 'publish', input),
     },
     conversations: {
+      get: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'get', { conversationId }),
+      setActiveTools: (conversationId: string, toolNames: string[]) =>
+        callHostCapability(extensionId, 'conversations', 'setActiveTools', { conversationId, toolNames }),
+      appendCustomEntry: (conversationId: string, customType: string, data?: unknown) =>
+        callHostCapability(extensionId, 'conversations', 'appendCustomEntry', { conversationId, customType, data }),
       metadata: {
         get: (input: { conversationId: string; namespace?: string }) =>
           callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, profile: runtimeScope }),
