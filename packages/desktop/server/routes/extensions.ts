@@ -58,6 +58,11 @@ async function readExtensionManifestFromHost(extensionId: string): Promise<Exten
   return (manifest ?? null) as ExtensionManifest | null;
 }
 
+async function readExtensionInstallSummaryFromHost(extensionId: string): Promise<Record<string, unknown> | null> {
+  const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
+  return installSummaries.find((extension) => extension.id === extensionId) ?? null;
+}
+
 async function readExtensionActionTargetFromHost(
   extensionId: string,
   actionId: string,
@@ -910,13 +915,14 @@ export function registerExtensionRoutes(
     try {
       invalidateExtensionRegistryReadCaches();
       clearBuildError(req.params.id);
-      const summary = listExtensionInstallSummaries().find((extension) => extension.id === req.params.id);
+      const summary = await readExtensionInstallSummaryFromHost(req.params.id);
       if (summary?.status === 'invalid') {
-        res.status(400).json({ error: summary.errors?.[0] ?? 'Extension manifest is invalid.' });
+        const errors = Array.isArray(summary.errors) ? summary.errors.filter((error): error is string => typeof error === 'string') : [];
+        res.status(400).json({ error: errors[0] ?? 'Extension manifest is invalid.' });
         return;
       }
-      const entry = findExtensionEntry(req.params.id);
-      if (!entry?.manifest.backend?.entry) {
+      const manifest = (summary as { manifest?: unknown } | null)?.manifest as ExtensionManifest | undefined;
+      if (!manifest?.backend?.entry) {
         res.json({ ok: true, id: req.params.id, reloaded: false, message: 'Runtime manifests are read on demand.' });
         return;
       }
