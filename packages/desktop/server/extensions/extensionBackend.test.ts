@@ -1805,6 +1805,8 @@ describe('extension backend action invocation', () => {
       runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
         exportName === 'inspectMcpSettings'
           ? { configPath: '/repo/.mcp.json', servers: [], searchedPaths: ['/repo/.mcp.json'] }
+          : exportName === 'saveExplicitMcpConfig'
+            ? { configPath: '/repo/.mcp.json', servers: [{ name: 'filesystem' }], searchedPaths: ['/repo/.mcp.json'] }
           : { content: [{ type: 'text', text: 'MCP servers (/repo/.mcp.json):\\n' }], details: { action: 'list', serverCount: 0 } },
       ),
       run: vi.fn(),
@@ -1819,6 +1821,10 @@ describe('extension backend action invocation', () => {
     await expect(invokeExtensionAction('system-mcp', 'mcpTool', { action: 'list' })).resolves.toEqual({
       ok: true,
       result: { content: [{ type: 'text', text: 'MCP servers (/repo/.mcp.json):\\n' }], details: { action: 'list', serverCount: 0 } },
+    });
+    await expect(invokeExtensionAction('system-mcp', 'saveExplicitConfig', { json: '{\"mcpServers\":{}}' })).resolves.toEqual({
+      ok: true,
+      result: { configPath: '/repo/.mcp.json', servers: [{ name: 'filesystem' }], searchedPaths: ['/repo/.mcp.json'] },
     });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -1853,6 +1859,23 @@ describe('extension backend action invocation', () => {
       'mcpTool',
       { type: 'action', label: 'action mcpTool', target: 'mcpTool' },
       [{ action: 'list' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-mcp',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-mcp', 'dist', 'backend.mjs')),
+      }),
+      'saveExplicitMcpConfig',
+      { type: 'action', label: 'action saveExplicitConfig', target: 'saveExplicitConfig' },
+      [{ json: '{"mcpServers":{}}' }],
       {
         context: expect.objectContaining({
           type: 'backend',

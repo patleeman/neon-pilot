@@ -29,7 +29,14 @@
           "enabled": true
         }
       },
-      { "id": "saveExplicitConfig", "handler": "saveExplicitMcpConfig", "title": "Save explicit MCP config" },
+      {
+        "id": "saveExplicitConfig",
+        "handler": "saveExplicitMcpConfig",
+        "title": "Save explicit MCP config",
+        "worker": {
+          "enabled": true
+        }
+      },
       {
         "id": "testServer",
         "handler": "testMcpServer",

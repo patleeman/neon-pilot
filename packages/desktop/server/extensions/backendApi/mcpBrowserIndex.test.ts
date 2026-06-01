@@ -22,6 +22,7 @@ describe('backend api mcp/browser/index exports', () => {
         listMcpCatalog: expect.any(Function),
         readBundledSkillMcpManifests: expect.any(Function),
         readMcpConfigDocument: expect.any(Function),
+        writeExplicitMcpConfigDocument: expect.any(Function),
       }),
     );
   });

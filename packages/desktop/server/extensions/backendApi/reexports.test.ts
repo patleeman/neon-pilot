@@ -29,5 +29,6 @@ describe('backendApi re-export modules', () => {
     expect(mcp.callMcpTool).toBeTypeOf('function');
     expect(mcp.inspectMcpServer).toBeTypeOf('function');
     expect(mcp.readMcpConfigDocument).toBeTypeOf('function');
+    expect(mcp.writeExplicitMcpConfigDocument).toBeTypeOf('function');
   });
 });

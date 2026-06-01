@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { inspectMcpSettings, mcpTool } from './backend.js';
+import { inspectMcpSettings, mcpTool, saveExplicitMcpConfig } from './backend.js';
 
 vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
   listMcpCatalog: vi.fn(),
@@ -13,6 +13,7 @@ vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
   buildMergedMcpConfigDocument: vi.fn(),
   readBundledSkillMcpManifests: vi.fn(),
   readMcpConfigDocument: vi.fn(),
+  writeExplicitMcpConfigDocument: vi.fn(),
   getDurableSessionsDir: vi.fn(() => '/tmp/durable-sessions'),
   getPiAgentRuntimeDir: vi.fn(() => '/tmp/neon-pilot-runtime'),
   getConfigRoot: vi.fn(() => '/tmp/pi-agent-config'),
@@ -25,16 +26,7 @@ function buildHandler() {
 }
 
 describe('inspectMcpSettings', () => {
-  it('returns extension-owned MCP settings state', async () => {
-    const context = {
-      runtime: {
-        getLiveSessionResourceOptions: () => ({
-          cwd: '/repo',
-          additionalSkillPaths: ['/skills/runtime/jira-helper'],
-        }),
-        getRepoRoot: () => '/repo',
-      },
-    };
+  function mockSettingsState() {
     vi.mocked(core.readBundledSkillMcpManifests).mockReturnValue([
       {
         skillName: 'jira-helper',
@@ -79,6 +71,19 @@ describe('inspectMcpSettings', () => {
         },
       ],
     });
+  }
+
+  it('returns extension-owned MCP settings state', async () => {
+    const context = {
+      runtime: {
+        getLiveSessionResourceOptions: () => ({
+          cwd: '/repo',
+          additionalSkillPaths: ['/skills/runtime/jira-helper'],
+        }),
+        getRepoRoot: () => '/repo',
+      },
+    };
+    mockSettingsState();
 
     await expect(inspectMcpSettings({}, context)).resolves.toMatchObject({
       configPath: '/repo/.mcp.json',
@@ -110,6 +115,25 @@ describe('inspectMcpSettings', () => {
       cwd: '/repo',
       env: expect.not.objectContaining({ MCP_CONFIG_PATH: expect.any(String) }),
       skillDirs: ['/skills/runtime/jira-helper'],
+    });
+  });
+
+  it('saves explicit MCP config through the host backend API', async () => {
+    const context = {
+      runtime: {
+        getLiveSessionResourceOptions: () => ({ cwd: '/repo', additionalSkillPaths: [] }),
+        getRepoRoot: () => '/repo',
+      },
+    };
+    mockSettingsState();
+
+    await expect(
+      saveExplicitMcpConfig({ json: JSON.stringify({ servers: { filesystem: { command: 'npx', args: ['@mcp/fs'] } } }) }, context),
+    ).resolves.toMatchObject({ configPath: '/repo/.mcp.json' });
+
+    expect(core.writeExplicitMcpConfigDocument).toHaveBeenCalledWith({
+      path: '/repo/.mcp.json',
+      document: { mcpServers: { filesystem: { command: 'npx', args: ['@mcp/fs'] } } },
     });
   });
 });

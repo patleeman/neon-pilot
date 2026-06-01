@@ -12,3 +12,4 @@ export const inspectMcpTool = (..._args: unknown[]): unknown => hostResolved();
 export const listMcpCatalog = (..._args: unknown[]): unknown => hostResolved();
 export const readBundledSkillMcpManifests = (..._args: unknown[]): unknown => hostResolved();
 export const readMcpConfigDocument = (..._args: unknown[]): unknown => hostResolved();
+export const writeExplicitMcpConfigDocument = (..._args: unknown[]): unknown => hostResolved();

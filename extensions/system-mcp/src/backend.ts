@@ -1,6 +1,3 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-
 import {
   authenticateMcpServer,
   buildMergedMcpConfigDocument,
@@ -12,6 +9,7 @@ import {
   listMcpCatalog,
   readBundledSkillMcpManifests,
   readMcpConfigDocument,
+  writeExplicitMcpConfigDocument,
 } from '@neon-pilot/extensions/backend/mcp';
 
 const MCP_ACTION_VALUES = ['list', 'info', 'grep', 'call', 'auth', 'logout'] as const;
@@ -158,8 +156,7 @@ function parseExplicitMcpConfigJson(input: unknown): { mcpServers: Record<string
 export async function saveExplicitMcpConfig(input: unknown, ctx: McpRuntimeContext): Promise<McpSettingsState> {
   const document = parseExplicitMcpConfigJson(input);
   const config = await getExplicitMcpDocument(ctx);
-  mkdirSync(dirname(config.baseConfigPath), { recursive: true });
-  writeFileSync(config.baseConfigPath, `${JSON.stringify(document, null, 2)}\n`);
+  await writeExplicitMcpConfigDocument({ path: config.baseConfigPath, document });
   return inspectMcpSettings({}, ctx);
 }
 

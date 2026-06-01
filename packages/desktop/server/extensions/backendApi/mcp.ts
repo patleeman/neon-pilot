@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
 import { callServerModuleExport } from './serverModuleResolver.js';
 
 async function callCoreExport<T>(name: string, ...args: unknown[]): Promise<T> {
@@ -42,4 +45,9 @@ export async function readBundledSkillMcpManifests(...args: unknown[]) {
 
 export async function readMcpConfigDocument(...args: unknown[]) {
   return callCoreExport('readMcpConfigDocument', ...args);
+}
+
+export async function writeExplicitMcpConfigDocument(input: { path: string; document: unknown }) {
+  mkdirSync(dirname(input.path), { recursive: true });
+  writeFileSync(input.path, `${JSON.stringify(input.document, null, 2)}\n`);
 }
