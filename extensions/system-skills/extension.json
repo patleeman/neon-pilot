@@ -20,7 +20,14 @@
           "enabled": true
         }
       },
-      { "id": "updateSkillEnabled", "handler": "updateSkillEnabled", "title": "Enable or disable a skill" }
+      {
+        "id": "updateSkillEnabled",
+        "handler": "updateSkillEnabled",
+        "title": "Enable or disable a skill",
+        "worker": {
+          "enabled": true
+        }
+      }
     ]
   },
   "contributes": {},

@@ -116,6 +116,12 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     runtime: {
       getRepoRoot: () => repoRoot,
       getLiveSessionResourceOptions: () => liveSessionResourceOptions,
+      refreshSkillMcpConfig: () =>
+        callHostCapability(extensionId, 'runtime', 'refreshSkillMcpConfig', {
+          runtimeScope,
+          repoRoot,
+          runtimeDir,
+        }),
     },
     log: {
       info: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'info', { message, fields }),

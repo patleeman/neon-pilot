@@ -2024,6 +2024,53 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe skills update actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true, id: 'skill-a', enabled: false })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(invokeExtensionAction('system-skills', 'updateSkillEnabled', { id: 'skill-a', enabled: false })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, id: 'skill-a', enabled: false },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-skills',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-skills', 'dist', 'backend.mjs')),
+      }),
+      'updateSkillEnabled',
+      { type: 'action', label: 'action updateSkillEnabled', target: 'updateSkillEnabled' },
+      [{ id: 'skill-a', enabled: false }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('runs worker-safe extension manager read actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),

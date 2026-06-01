@@ -47,6 +47,7 @@ import { createExtensionExecutionsCapability, createExtensionRunsCapability } fr
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
+import { refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
 export interface ExtensionBackendNotifyInput {
@@ -93,6 +94,7 @@ export interface ExtensionBackendContext {
   runtime: {
     getLiveSessionResourceOptions(): LiveSessionResourceOptions;
     getRepoRoot(): string;
+    refreshSkillMcpConfig(): Promise<unknown>;
   };
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;
@@ -416,6 +418,12 @@ export function createBackendContext(
         return buildLiveSessionResourceOptionsForRuntime();
       },
       getRepoRoot: () => serverContext?.getRepoRoot?.() ?? process.cwd(),
+      refreshSkillMcpConfig: () =>
+        refreshHostSkillMcpConfig({
+          runtimeScope,
+          repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
+          runtimeDir: resolvedPiAgentRuntimeDir,
+        }),
     },
     storage: createStorage(extensionId),
     database: createExtensionDatabaseManager(extensionId),

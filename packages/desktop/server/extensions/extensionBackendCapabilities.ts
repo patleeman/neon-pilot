@@ -24,6 +24,7 @@ import { listExtensionInstallSummaries, setExtensionEnabled } from './extensionR
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
+import { refreshHostSkillMcpConfig, type ExtensionRuntimeRefreshSkillMcpConfigInput } from './extensionRuntimeCapability.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
 type ExtensionTelemetrySource = 'server' | 'renderer' | 'agent' | 'system';
@@ -38,6 +39,10 @@ interface ExtensionBackendCapabilityGit {
   status(input: { cwd: string }): Promise<unknown> | unknown;
   diff(input: { cwd: string; path?: string; staged?: boolean }): Promise<unknown> | unknown;
   log(input: { cwd: string; maxCount?: number }): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityRuntime {
+  refreshSkillMcpConfig(input: ExtensionRuntimeRefreshSkillMcpConfigInput): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityEvents {
@@ -246,6 +251,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   log?: ExtensionBackendCapabilityLogger;
   models?: ExtensionBackendCapabilityModels;
   notify?: ExtensionBackendCapabilityNotify;
+  runtime?: ExtensionBackendCapabilityRuntime;
   secrets?: ExtensionBackendCapabilitySecrets;
   shell?: ExtensionBackendCapabilityShell;
   storage?: ExtensionBackendCapabilityStorage;
@@ -773,6 +779,22 @@ function normalizeTelemetryEvent(input: unknown): ExtensionBackendCapabilityTele
   };
 }
 
+function normalizeRuntimeRefreshSkillMcpConfigInput(input: unknown): ExtensionRuntimeRefreshSkillMcpConfigInput {
+  const record = normalizeRecordInput(input, 'Runtime');
+  return {
+    runtimeDir: requireString(record.runtimeDir, 'Runtime dir'),
+    ...(record.runtimeScope !== undefined ? { runtimeScope: optionalString(record.runtimeScope, 'Runtime scope') } : {}),
+    ...(record.repoRoot !== undefined ? { repoRoot: optionalString(record.repoRoot, 'Runtime repo root') } : {}),
+  };
+}
+
+function dispatchRuntimeCapability(runtime: ExtensionBackendCapabilityRuntime, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation === 'refreshSkillMcpConfig') {
+    return runtime.refreshSkillMcpConfig(normalizeRuntimeRefreshSkillMcpConfigInput(request.input));
+  }
+  throw new Error(`Unsupported runtime capability operation: ${request.operation}`);
+}
+
 function dispatchTelemetryCapability(
   telemetry: ExtensionBackendCapabilityTelemetry,
   request: ExtensionBackendWorkerCapabilityRequest,
@@ -1290,6 +1312,9 @@ export function createExtensionBackendCapabilityDispatcher(
     clearBadge: (extensionId: string) => setExtensionBadge(extensionId, 0),
     isSystemAvailable: () => isSystemNotificationAvailable(),
   };
+  const runtime = options.runtime ?? {
+    refreshSkillMcpConfig: refreshHostSkillMcpConfig,
+  };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const shell = options.shell ?? createExtensionShellCapability();
   const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnHandle>();
@@ -1356,6 +1381,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'notify') {
       return dispatchNotifyCapability(notify, request);
+    }
+    if (request.capability === 'runtime') {
+      return dispatchRuntimeCapability(runtime, request);
     }
     if (request.capability === 'shell') {
       return dispatchShellCapability(shell, shellSpawnHandles, request, emit);

@@ -1279,4 +1279,28 @@ describe('extension backend capability dispatcher', () => {
       }),
     ).rejects.toThrow('UI topics must be a string or array of strings.');
   });
+
+  it('dispatches host-owned runtime refresh capability calls', async () => {
+    const runtime = { refreshSkillMcpConfig: vi.fn(async () => ({ mcpConfigPath: '/runtime/mcp_servers.json' })) };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ runtime });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-skills',
+          capability: 'runtime',
+          operation: 'refreshSkillMcpConfig',
+          input: { runtimeScope: 'shared', repoRoot: '/repo', runtimeDir: '/runtime' },
+        }),
+      ),
+    ).resolves.toEqual({ mcpConfigPath: '/runtime/mcp_servers.json' });
+
+    expect(runtime.refreshSkillMcpConfig).toHaveBeenCalledWith({
+      runtimeScope: 'shared',
+      repoRoot: '/repo',
+      runtimeDir: '/runtime',
+    });
+  });
 });

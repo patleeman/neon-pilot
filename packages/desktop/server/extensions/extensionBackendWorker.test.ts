@@ -142,6 +142,52 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('runs backend exports with host-mediated runtime refresh capabilities', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  return ctx.runtime.refreshSkillMcpConfig();
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 13,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-runtime-refresh' },
+      exportName: 'doThing',
+      args: [{}],
+      context: {
+        type: 'backend',
+        runtimeScope: 'project',
+        repoRoot: '/repo',
+        runtimeDir: '/runtime',
+      },
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'runtime',
+      operation: 'refreshSkillMcpConfig',
+      input: {
+        runtimeScope: 'project',
+        repoRoot: '/repo',
+        runtimeDir: '/runtime',
+      },
+    });
+
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { mcpConfigPath: '/runtime/mcp_servers.json' } });
+    await waitForPostMessage({ id: 13, ok: true, result: { mcpConfigPath: '/runtime/mcp_servers.json' } });
+  });
+
   it('runs backend exports with host-mediated event publish capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

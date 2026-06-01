@@ -1205,6 +1205,11 @@ export interface ExtensionBackendContext {
   runtimeSettingsFilePath: string;
   /** @deprecated Use runtimeSettingsFilePath. Profiles are legacy storage plumbing. */
   profileSettingsFilePath: string;
+  runtime: {
+    getLiveSessionResourceOptions(): unknown;
+    getRepoRoot(): string;
+    refreshSkillMcpConfig(): Promise<unknown>;
+  };
   storage: {
     get<T = unknown>(key: string): Promise<T | null>;
     put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<{ ok: true }>;
