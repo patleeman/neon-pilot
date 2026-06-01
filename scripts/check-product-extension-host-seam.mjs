@@ -58,6 +58,14 @@ const forbiddenPatterns = [
     pattern: /import\(\s*['"][^'"]*\/extensions\/extensionSubscriptions\.js['"]\s*\)[\s\S]{0,300}\bpublishExtensionHostEvent\b/,
     message: 'product runtime code must publish extension events through ExtensionHostClient',
   },
+  {
+    pattern: /\bcreateInProcessExtensionHostClient\b/,
+    message: 'product runtime code must not construct the in-process extension host; use the RPC extension host client',
+  },
+  {
+    pattern: /\bcreateHybridExtensionHostClient\b/,
+    message: 'product runtime code must not construct a hybrid extension host fallback; use the RPC extension host client',
+  },
 ];
 
 function listFiles() {
