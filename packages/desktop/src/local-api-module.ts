@@ -25,6 +25,7 @@ export interface LocalApiModule {
     path: string;
     body?: unknown;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
   }): Promise<DesktopLocalApiDispatchResult>;
   readDesktopAppStatus(): Promise<unknown>;
   readDesktopDaemonState(): Promise<unknown>;

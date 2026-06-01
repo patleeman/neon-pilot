@@ -769,6 +769,37 @@ describe('LocalBackendProcesses', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('uses dispatch abort signals for backend fetch without serializing them', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    class StartedBackend extends LocalBackendProcesses {
+      override async ensureStarted(): Promise<void> {}
+    }
+
+    const backend = new StartedBackend() as StartedBackend & { baseUrl: string; token: string };
+    backend.baseUrl = 'http://127.0.0.1:1234';
+    backend.token = 'token';
+    const signal = new AbortController().signal;
+
+    await backend.dispatchApiRequest({
+      method: 'POST',
+      path: '/api/extensions/agent-board/actions/saveTask',
+      body: { title: 'Ship it' },
+      signal,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toBe('http://127.0.0.1:1234/dispatch');
+    expect(init).toEqual(
+      expect.objectContaining({
+        signal,
+        body: JSON.stringify({
+          request: { method: 'POST', path: '/api/extensions/agent-board/actions/saveTask', body: { title: 'Ship it' } },
+        }),
+      }),
+    );
+  });
+
   it('creates a reserved live session without waiting on reservation-time prewarm work', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);

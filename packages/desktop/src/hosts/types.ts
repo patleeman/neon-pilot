@@ -299,6 +299,7 @@ export interface HostController {
     path: string;
     body?: unknown;
     headers?: Record<string, string>;
+    signal?: AbortSignal;
   }): Promise<HostApiDispatchResult>;
   invokeLocalApi(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<unknown>;
   readAppStatus?(): Promise<unknown>;

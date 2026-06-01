@@ -840,6 +840,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: URL;
   body?: unknown;
+  signal?: AbortSignal;
 }): Promise<DesktopLocalApiDispatchResult | null> {
   const path = input.url.pathname;
   const method = input.method;
@@ -961,6 +962,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         actionId: decodeURIComponent(extensionActionMatch[2] ?? ''),
         input: input.body,
         serverContextSnapshot: createExtensionHostServerContextSnapshot(await getLocalServerRouteContext()),
+        signal: input.signal,
       }),
     );
   }
@@ -1382,13 +1384,14 @@ export async function dispatchDesktopLocalApiRequest(input: {
   path: string;
   body?: unknown;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 }): Promise<DesktopLocalApiDispatchResult> {
   const startedAtMs = performance.now();
   process.stderr.write(`[perf] dispatch ${input.method} ${input.path}\n`);
   const url = new URL(input.path, 'http://desktop.local');
   let productResponse: DesktopLocalApiDispatchResult | null;
   try {
-    productResponse = await dispatchDesktopLocalProductApiRequest({ method: input.method, url, body: input.body });
+    productResponse = await dispatchDesktopLocalProductApiRequest({ method: input.method, url, body: input.body, signal: input.signal });
   } catch (error) {
     const statusCode = getDesktopLocalApiErrorStatus(error);
     const message = error instanceof Error ? error.message : String(error);

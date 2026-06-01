@@ -348,6 +348,7 @@ function createDesktopProtocolHandler(options?: {
             path: requestPath,
             body: requestBody,
             headers: requestHeaders,
+            signal: request.signal,
           });
 
           return createBinaryProtocolResponse({
@@ -369,6 +370,7 @@ function createDesktopProtocolHandler(options?: {
           path: requestPath,
           body: requestBody,
           headers: requestHeaders,
+          signal: request.signal,
         });
 
         return createBinaryProtocolResponse({
