@@ -454,7 +454,6 @@ describe('SettingsPage provider model editor', () => {
     click(anthropicButton);
 
     expect(container.textContent).toContain('Anthropic');
-    click(queryButton(container, 'Customize models'));
     expect(container.textContent).toContain('Additional models');
 
     click(queryButton(container, 'Add model'));
