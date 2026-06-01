@@ -2273,7 +2273,7 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('runs worker-safe extension manager read actions through the worker runner', async () => {
+  it('runs worker-safe extension manager actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),
       clearModule: vi.fn(),
@@ -2288,11 +2288,20 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(async () => true),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
-      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName) =>
-        exportName === 'manageExtension'
-          ? { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' }
-          : { ok: true, extensions: [{ id: 'system-todo' }] },
-      ),
+      runWorkerExport: vi.fn(async (_extensionId, _compiled, exportName, _operation, args) => {
+        if (exportName === 'createExtension') return { ok: true, id: 'new-extension' };
+        if (exportName === 'snapshotExtension') return { ok: true, extensionId: 'system-todo', files: [] };
+        if (exportName === 'validateExtension') return { ok: true, valid: true, findings: [] };
+        if (exportName === 'installCatalogExtension') return { ok: true, id: 'system-browser', installed: true };
+        if (exportName === 'installExtensionFromUrl') return { ok: true, id: 'remote-extension', installed: true };
+        if (exportName === 'manageExtension') {
+          const action = (args[0] as { action?: string }).action;
+          return action === 'create'
+            ? { ok: true, id: 'managed-extension' }
+            : { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' };
+        }
+        return { ok: true, extensions: [{ id: 'system-todo' }] };
+      }),
       run: vi.fn(),
     };
     setExtensionBackendRunnerForTests(backendRunner);
@@ -2305,6 +2314,44 @@ describe('extension backend action invocation', () => {
     await expect(invokeExtensionAction('system-extension-manager', 'manageExtension', { action: 'reloadExtensions' })).resolves.toEqual({
       ok: true,
       result: { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' },
+    });
+    await expect(
+      invokeExtensionAction('system-extension-manager', 'createExtension', {
+        id: 'new-extension',
+        name: 'New Extension',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, id: 'new-extension' },
+    });
+    await expect(invokeExtensionAction('system-extension-manager', 'snapshotExtension', { id: 'system-todo' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, extensionId: 'system-todo', files: [] },
+    });
+    await expect(invokeExtensionAction('system-extension-manager', 'validateExtension', { id: 'system-todo' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, valid: true, findings: [] },
+    });
+    await expect(invokeExtensionAction('system-extension-manager', 'installCatalogExtension', { id: 'system-browser' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, id: 'system-browser', installed: true },
+    });
+    await expect(
+      invokeExtensionAction('system-extension-manager', 'installExtensionFromUrl', {
+        url: 'https://example.test/remote.neon-extension.zip',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, id: 'remote-extension', installed: true },
+    });
+    await expect(
+      invokeExtensionAction('system-extension-manager', 'manageExtension', {
+        action: 'create',
+        id: 'managed-extension',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, id: 'managed-extension' },
     });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -2328,6 +2375,57 @@ describe('extension backend action invocation', () => {
             additionalPromptTemplatePaths: expect.any(Array),
             additionalThemePaths: expect.any(Array),
           }),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'createExtension',
+      { type: 'action', label: 'action createExtension', target: 'createExtension' },
+      [{ id: 'new-extension', name: 'New Extension' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'installExtensionFromUrl',
+      { type: 'action', label: 'action installExtensionFromUrl', target: 'installExtensionFromUrl' },
+      [{ url: 'https://example.test/remote.neon-extension.zip' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-extension-manager', 'dist', 'backend.mjs')),
+      }),
+      'manageExtension',
+      { type: 'action', label: 'action manageExtension', target: 'manageExtension' },
+      [{ action: 'create', id: 'managed-extension' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
         }),
       },
     );

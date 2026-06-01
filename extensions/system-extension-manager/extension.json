@@ -20,10 +20,31 @@
           "enabled": true
         }
       },
-      { "id": "createExtension", "handler": "createExtension", "title": "Create extension" },
-      { "id": "snapshotExtension", "handler": "snapshotExtension", "title": "Snapshot extension" },
+      {
+        "id": "createExtension",
+        "handler": "createExtension",
+        "title": "Create extension",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "snapshotExtension",
+        "handler": "snapshotExtension",
+        "title": "Snapshot extension",
+        "worker": {
+          "enabled": true
+        }
+      },
       { "id": "reloadExtension", "handler": "reloadExtension", "title": "Reload extension" },
-      { "id": "validateExtension", "handler": "validateExtension", "title": "Validate extension" },
+      {
+        "id": "validateExtension",
+        "handler": "validateExtension",
+        "title": "Validate extension",
+        "worker": {
+          "enabled": true
+        }
+      },
       {
         "id": "listInstallableExtensions",
         "handler": "listInstallableExtensions",
@@ -32,8 +53,22 @@
           "enabled": true
         }
       },
-      { "id": "installCatalogExtension", "handler": "installCatalogExtension", "title": "Install catalog extension" },
-      { "id": "installExtensionFromUrl", "handler": "installExtensionFromUrl", "title": "Install extension from URL" },
+      {
+        "id": "installCatalogExtension",
+        "handler": "installCatalogExtension",
+        "title": "Install catalog extension",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "installExtensionFromUrl",
+        "handler": "installExtensionFromUrl",
+        "title": "Install extension from URL",
+        "worker": {
+          "enabled": true
+        }
+      },
       { "id": "installMarketplacePackage", "handler": "installMarketplacePackage", "title": "Install marketplace package source" },
       {
         "id": "listHostViewComponents",
@@ -66,7 +101,18 @@
         "title": "Manage extension",
         "worker": {
           "enabled": true,
-          "inputActions": ["list", "hostViewComponents", "listInstallable", "readSearchPaths", "reloadExtensions"]
+          "inputActions": [
+            "list",
+            "create",
+            "snapshot",
+            "validate",
+            "hostViewComponents",
+            "listInstallable",
+            "installCatalog",
+            "installFromUrl",
+            "readSearchPaths",
+            "reloadExtensions"
+          ]
         }
       }
     ]
