@@ -68,7 +68,15 @@ interface ExtensionBackendWorkerImportClient {
 }
 
 type ExtensionBackendWorkerExportOptions = {
-  context?: 'backend' | { type: 'backend'; runtimeScope?: string; toolContext?: Record<string, unknown> };
+  context?:
+    | 'backend'
+    | {
+        type: 'backend';
+        runtimeScope?: string;
+        repoRoot?: string;
+        liveSessionResourceOptions?: Record<string, unknown>;
+        toolContext?: Record<string, unknown>;
+      };
 };
 
 export interface ExtensionBackendWorkerExportRunner extends ExtensionBackendRunner {

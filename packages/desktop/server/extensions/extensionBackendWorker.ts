@@ -54,11 +54,22 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
 
 function createWorkerBackendContext(extensionId: string, options: ExtensionBackendWorkerBackendContextOptions = {}): Record<string, unknown> {
   const runtimeScope = options.runtimeScope ?? 'shared';
+  const repoRoot = options.repoRoot ?? process.cwd();
+  const liveSessionResourceOptions = options.liveSessionResourceOptions ?? {
+    additionalExtensionPaths: [],
+    additionalSkillPaths: [],
+    additionalPromptTemplatePaths: [],
+    additionalThemePaths: [],
+  };
   return {
     extensionId,
     runtimeScope,
     profile: runtimeScope,
     ...(options.toolContext ? { toolContext: options.toolContext } : {}),
+    runtime: {
+      getRepoRoot: () => repoRoot,
+      getLiveSessionResourceOptions: () => liveSessionResourceOptions,
+    },
     log: {
       info: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'info', { message, fields }),
       warn: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'warn', { message, fields }),

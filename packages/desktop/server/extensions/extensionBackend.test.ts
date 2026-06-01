@@ -241,11 +241,18 @@ describe('extension backend action invocation', () => {
       { type: 'action', label: 'action checkpoint', target: 'checkpoint' },
       [{ action: 'list' }],
       {
-        context: {
+        context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          liveSessionResourceOptions: expect.objectContaining({
+            additionalExtensionPaths: expect.any(Array),
+            additionalSkillPaths: expect.any(Array),
+            additionalPromptTemplatePaths: expect.any(Array),
+            additionalThemePaths: expect.any(Array),
+          }),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
-        },
+        }),
       },
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
@@ -322,11 +329,18 @@ describe('extension backend action invocation', () => {
       { type: 'action', label: 'action artifact', target: 'artifact' },
       [{ action: 'list' }],
       {
-        context: {
+        context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          liveSessionResourceOptions: expect.objectContaining({
+            additionalExtensionPaths: expect.any(Array),
+            additionalSkillPaths: expect.any(Array),
+            additionalPromptTemplatePaths: expect.any(Array),
+            additionalThemePaths: expect.any(Array),
+          }),
           toolContext: { conversationId: 'conv-1' },
-        },
+        }),
       },
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();
@@ -372,11 +386,18 @@ describe('extension backend action invocation', () => {
       { type: 'action', label: 'action copyConversationId', target: 'copyConversationId' },
       [{ conversationId: 'conv-1', sessionTitle: 'Architecture Notes' }],
       {
-        context: {
+        context: expect.objectContaining({
           type: 'backend',
           runtimeScope: 'shared',
+          repoRoot: expect.any(String),
+          liveSessionResourceOptions: expect.objectContaining({
+            additionalExtensionPaths: expect.any(Array),
+            additionalSkillPaths: expect.any(Array),
+            additionalPromptTemplatePaths: expect.any(Array),
+            additionalThemePaths: expect.any(Array),
+          }),
           toolContext: undefined,
-        },
+        }),
       },
     );
     expect(backendRunner.runExport).not.toHaveBeenCalled();

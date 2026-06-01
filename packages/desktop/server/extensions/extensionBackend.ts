@@ -676,6 +676,18 @@ function workerBackendToolContext(
   };
 }
 
+function workerLiveSessionResourceOptions(serverContext?: ExtensionBackendServerContext): Record<string, unknown> {
+  const options = serverContext?.buildLiveSessionResourceOptions
+    ? serverContext.buildLiveSessionResourceOptions(serverContext.getRuntimeScope())
+    : buildLiveSessionResourceOptionsForRuntime();
+  return {
+    additionalExtensionPaths: options.additionalExtensionPaths,
+    additionalSkillPaths: options.additionalSkillPaths,
+    additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
+    additionalThemePaths: options.additionalThemePaths,
+  };
+}
+
 async function runExtensionBackendActionInWorker(
   extensionId: string,
   actionId: string,
@@ -703,6 +715,8 @@ async function runExtensionBackendActionInWorker(
       context: {
         type: 'backend',
         runtimeScope: serverContext?.getRuntimeScope() ?? 'shared',
+        repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
+        liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
         toolContext: workerBackendToolContext(toolContext),
       },
     },
