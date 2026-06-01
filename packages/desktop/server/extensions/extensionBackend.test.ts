@@ -1320,6 +1320,16 @@ describe('extension backend action invocation', () => {
           details:
             action === 'create'
               ? { id: 'conv-2', conversationId: 'conv-2' }
+              : action === 'ensure_live'
+                ? { id: 'conv-1', conversationId: 'conv-1' }
+                : action === 'send_message'
+                  ? { accepted: true }
+                  : action === 'abort' || action === 'compact'
+                    ? { ok: true }
+                    : action === 'fork'
+                      ? { id: 'conv-fork', conversationId: 'conv-fork' }
+                      : action === 'set_title'
+                        ? { ok: true }
               : action === 'workspace_get'
                 ? { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' }
                 : action === 'rollback'
@@ -1354,6 +1364,43 @@ describe('extension backend action invocation', () => {
       result: {
         content: [{ type: 'text', text: 'workspace_get complete.' }],
         details: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
+      },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'ensure_live', conversationId: 'conv-1', cwd: '/repo' }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'ensure_live complete.' }],
+        details: { id: 'conv-1', conversationId: 'conv-1' },
+      },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', {
+        action: 'send_message',
+        conversationId: 'conv-1',
+        text: 'Go',
+        steer: true,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'send_message complete.' }],
+        details: { accepted: true },
+      },
+    });
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', {
+        action: 'fork',
+        conversationId: 'conv-1',
+        targetCwd: '/fork',
+        title: 'Fork',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'fork complete.' }],
+        details: { id: 'conv-fork', conversationId: 'conv-fork' },
       },
     });
     await expect(
@@ -1396,6 +1443,40 @@ describe('extension backend action invocation', () => {
           runtimeDir: expect.any(String),
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'send_message', conversationId: 'conv-1', text: 'Go', steer: true }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+        }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'fork', conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
         }),
       },
     );

@@ -153,6 +153,23 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       }) => callHostCapability(extensionId, 'conversations', 'updateWorkspace', { ...input, runtimeScope, runtimeSettingsFilePath }),
       rollback: (conversationId: string, count: number) =>
         callHostCapability(extensionId, 'conversations', 'rollback', { conversationId, count }),
+      ensureLive: (conversationId: string, options?: { cwd?: string }) =>
+        callHostCapability(extensionId, 'conversations', 'ensureLive', { conversationId, ...(options?.cwd ? { cwd: options.cwd } : {}) }),
+      sendMessage: (
+        conversationId: string,
+        text: string,
+        options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
+      ) => callHostCapability(extensionId, 'conversations', 'sendMessage', { conversationId, text, ...(options ?? {}) }),
+      abort: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'abort', { conversationId }),
+      compact: (conversationId: string, customInstructions?: string) =>
+        callHostCapability(extensionId, 'conversations', 'compact', {
+          conversationId,
+          ...(customInstructions !== undefined ? { customInstructions } : {}),
+        }),
+      fork: (input: { conversationId: string; targetCwd?: string; cwd?: string; title?: string }) =>
+        callHostCapability(extensionId, 'conversations', 'fork', input),
+      setTitle: (conversationId: string, title: string) =>
+        callHostCapability(extensionId, 'conversations', 'setTitle', { conversationId, title }),
       metadata: {
         get: (input: { conversationId: string; namespace?: string }) =>
           callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, profile: runtimeScope }),

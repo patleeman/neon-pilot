@@ -591,6 +591,12 @@
           "enabled": true,
           "inputActions": [
             "create",
+            "set_title",
+            "ensure_live",
+            "send_message",
+            "abort",
+            "compact",
+            "fork",
             "set_active_tools",
             "workspace_get",
             "workspace_update",

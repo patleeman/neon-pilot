@@ -14,6 +14,12 @@ describe('extension backend capability dispatcher', () => {
       getWorkspace: vi.fn(async () => ({ openConversationIds: ['conv-1'], activeConversationId: 'conv-1' })),
       updateWorkspace: vi.fn(async () => ({ openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' })),
       rollback: vi.fn(async () => ({ rolledBackTo: 'entry-1' })),
+      ensureLive: vi.fn(async () => ({ id: 'conv-1', conversationId: 'conv-1' })),
+      sendMessage: vi.fn(async () => ({ accepted: true })),
+      abort: vi.fn(async () => ({ ok: true })),
+      compact: vi.fn(async () => ({ ok: true })),
+      fork: vi.fn(async () => ({ id: 'conv-fork', conversationId: 'conv-fork' })),
+      setTitle: vi.fn(async () => ({ ok: true })),
       metadata: {
         get: vi.fn(),
         set: vi.fn(),
@@ -130,6 +136,83 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toEqual({ rolledBackTo: 'entry-1' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 10,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'ensureLive',
+          input: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'conv-1', conversationId: 'conv-1' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 11,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'sendMessage',
+          input: {
+            conversationId: 'conv-1',
+            text: 'Go',
+            steer: true,
+            images: [{ data: 'abc', mimeType: 'image/png', name: 'image.png' }],
+          },
+        }),
+      ),
+    ).resolves.toEqual({ accepted: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 12,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'abort',
+          input: { conversationId: 'conv-1' },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 13,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'compact',
+          input: { conversationId: 'conv-1', customInstructions: 'short' },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 14,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'fork',
+          input: { conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'conv-fork', conversationId: 'conv-fork' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 15,
+          kind: 'capabilityRequest',
+          extensionId: 'system-conversation-tools',
+          capability: 'conversations',
+          operation: 'setTitle',
+          input: { conversationId: 'conv-1', title: 'New Title' },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
 
     expect(conversations.get).toHaveBeenCalledWith('system-code-mode', 'conv-1');
     expect(conversations.setActiveTools).toHaveBeenCalledWith('system-code-mode', 'conv-1', ['exec_code']);
@@ -154,6 +237,19 @@ describe('extension backend capability dispatcher', () => {
       activeConversationId: 'conv-2',
     });
     expect(conversations.rollback).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 2);
+    expect(conversations.ensureLive).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', { cwd: '/repo' });
+    expect(conversations.sendMessage).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'Go', {
+      steer: true,
+      images: [{ data: 'abc', mimeType: 'image/png', name: 'image.png' }],
+    });
+    expect(conversations.abort).toHaveBeenCalledWith('system-conversation-tools', 'conv-1');
+    expect(conversations.compact).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'short');
+    expect(conversations.fork).toHaveBeenCalledWith('system-conversation-tools', {
+      conversationId: 'conv-1',
+      targetCwd: '/fork',
+      title: 'Fork',
+    });
+    expect(conversations.setTitle).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'New Title');
   });
 
   it('rejects malformed live conversation capability inputs', async () => {

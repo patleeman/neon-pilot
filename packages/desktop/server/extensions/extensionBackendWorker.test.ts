@@ -279,7 +279,13 @@ export async function doThing(_input, ctx) {
   const workspaceBefore = await ctx.conversations.getWorkspace();
   const workspaceAfter = await ctx.conversations.updateWorkspace({ openConversationIds: ['conv-1', created.conversationId] });
   const rollback = await ctx.conversations.rollback('conv-1', 2);
-  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback };
+  const ensured = await ctx.conversations.ensureLive('conv-1', { cwd: '/repo' });
+  const sent = await ctx.conversations.sendMessage('conv-1', 'Go', { steer: true });
+  const aborted = await ctx.conversations.abort('conv-1');
+  const compacted = await ctx.conversations.compact('conv-1', 'short');
+  const forked = await ctx.conversations.fork({ conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' });
+  const titled = await ctx.conversations.setTitle('conv-1', 'New Title');
+  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback, ensured, sent, aborted, compacted, forked, titled };
 }
 `,
     );
@@ -406,6 +412,66 @@ export async function doThing(_input, ctx) {
     workerThreads.messageHandler?.({ id: 9, kind: 'capabilityResponse', ok: true, result: { rolledBackTo: 'entry-1' } });
 
     await waitForPostMessage({
+      id: 10,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'ensureLive',
+      input: { conversationId: 'conv-1', cwd: '/repo' },
+    });
+    workerThreads.messageHandler?.({ id: 10, kind: 'capabilityResponse', ok: true, result: { id: 'conv-1', conversationId: 'conv-1' } });
+
+    await waitForPostMessage({
+      id: 11,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'sendMessage',
+      input: { conversationId: 'conv-1', text: 'Go', steer: true },
+    });
+    workerThreads.messageHandler?.({ id: 11, kind: 'capabilityResponse', ok: true, result: { accepted: true } });
+
+    await waitForPostMessage({
+      id: 12,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'abort',
+      input: { conversationId: 'conv-1' },
+    });
+    workerThreads.messageHandler?.({ id: 12, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 13,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'compact',
+      input: { conversationId: 'conv-1', customInstructions: 'short' },
+    });
+    workerThreads.messageHandler?.({ id: 13, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
+      id: 14,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'fork',
+      input: { conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' },
+    });
+    workerThreads.messageHandler?.({ id: 14, kind: 'capabilityResponse', ok: true, result: { id: 'conv-fork', conversationId: 'conv-fork' } });
+
+    await waitForPostMessage({
+      id: 15,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'setTitle',
+      input: { conversationId: 'conv-1', title: 'New Title' },
+    });
+    workerThreads.messageHandler?.({ id: 15, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({
       id: 17,
       ok: true,
       result: {
@@ -418,6 +484,12 @@ export async function doThing(_input, ctx) {
         workspaceBefore: { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' },
         workspaceAfter: { openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' },
         rollback: { rolledBackTo: 'entry-1' },
+        ensured: { id: 'conv-1', conversationId: 'conv-1' },
+        sent: { accepted: true },
+        aborted: { ok: true },
+        compacted: { ok: true },
+        forked: { id: 'conv-fork', conversationId: 'conv-fork' },
+        titled: { ok: true },
       },
     });
   });

@@ -79,6 +79,20 @@ interface ExtensionBackendCapabilityConversations {
       remoteControlledConversationIds?: string[] | null;
     },
   ): Promise<unknown> | unknown;
+  ensureLive?(extensionId: string, conversationId: string, options?: { cwd?: string }): Promise<unknown> | unknown;
+  sendMessage?(
+    extensionId: string,
+    conversationId: string,
+    text: string,
+    options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
+  ): Promise<unknown> | unknown;
+  abort?(extensionId: string, conversationId: string): Promise<unknown> | unknown;
+  compact?(extensionId: string, conversationId: string, customInstructions?: string): Promise<unknown> | unknown;
+  fork?(
+    extensionId: string,
+    input: { conversationId: string; targetCwd?: string; cwd?: string; title?: string },
+  ): Promise<unknown> | unknown;
+  setTitle?(extensionId: string, conversationId: string, title: string): Promise<unknown> | unknown;
   rollback?(extensionId: string, conversationId: string, count: number): Promise<unknown> | unknown;
   metadata: {
     get(extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }): Promise<unknown> | unknown;
@@ -408,6 +422,72 @@ function dispatchConversationsCapability(
     );
   }
 
+  if (request.operation === 'ensureLive') {
+    if (!conversations.ensureLive) {
+      throw new Error('Conversation ensureLive capability is unavailable.');
+    }
+    return conversations.ensureLive(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Conversation cwd') } : undefined,
+    );
+  }
+
+  if (request.operation === 'sendMessage') {
+    if (!conversations.sendMessage) {
+      throw new Error('Conversation sendMessage capability is unavailable.');
+    }
+    return conversations.sendMessage(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      requireString(input.text, 'Conversation message text'),
+      normalizeConversationSendOptions(input),
+    );
+  }
+
+  if (request.operation === 'abort') {
+    if (!conversations.abort) {
+      throw new Error('Conversation abort capability is unavailable.');
+    }
+    return conversations.abort(request.extensionId, requireString(input.conversationId, 'Conversation id'));
+  }
+
+  if (request.operation === 'compact') {
+    if (!conversations.compact) {
+      throw new Error('Conversation compact capability is unavailable.');
+    }
+    return conversations.compact(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      input.customInstructions !== undefined
+        ? optionalString(input.customInstructions, 'Conversation compact custom instructions')
+        : undefined,
+    );
+  }
+
+  if (request.operation === 'fork') {
+    if (!conversations.fork) {
+      throw new Error('Conversation fork capability is unavailable.');
+    }
+    return conversations.fork(request.extensionId, {
+      conversationId: requireString(input.conversationId, 'Conversation id'),
+      ...(input.targetCwd !== undefined ? { targetCwd: optionalString(input.targetCwd, 'Conversation fork target cwd') } : {}),
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Conversation fork cwd') } : {}),
+      ...(input.title !== undefined ? { title: optionalString(input.title, 'Conversation fork title') } : {}),
+    });
+  }
+
+  if (request.operation === 'setTitle') {
+    if (!conversations.setTitle) {
+      throw new Error('Conversation setTitle capability is unavailable.');
+    }
+    return conversations.setTitle(
+      request.extensionId,
+      requireString(input.conversationId, 'Conversation id'),
+      requireString(input.title, 'Conversation title'),
+    );
+  }
+
   if (request.operation === 'metadata.get') {
     const metadataInput = {
       conversationId: requireString(input.conversationId, 'Conversation id'),
@@ -657,6 +737,31 @@ function optionalNullableStringArray(value: unknown, label: string): string[] | 
   return optionalStringArray(value, label) ?? null;
 }
 
+function normalizeConversationImages(value: unknown): Array<{ data: string; mimeType: string; name?: string }> | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new Error('Conversation images must be an array when provided.');
+  }
+  return value.map((item) => {
+    const image = normalizeRecordInput(item, 'Conversation image');
+    return {
+      data: requireString(image.data, 'Conversation image data'),
+      mimeType: requireString(image.mimeType, 'Conversation image mimeType'),
+      ...(image.name !== undefined ? { name: optionalString(image.name, 'Conversation image name') } : {}),
+    };
+  });
+}
+
+function normalizeConversationSendOptions(
+  input: Record<string, unknown>,
+): { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> } | undefined {
+  const options = {
+    ...(input.steer !== undefined ? { steer: optionalBoolean(input.steer, 'Conversation steer') } : {}),
+    ...(input.images !== undefined ? { images: normalizeConversationImages(input.images) } : {}),
+  };
+  return Object.keys(options).length > 0 ? options : undefined;
+}
+
 function optionalStringRecord(value: unknown, label: string): Record<string, string> | undefined {
   if (value === undefined) return undefined;
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -897,6 +1002,21 @@ export function createExtensionBackendCapabilityDispatcher(
       ).updateWorkspace(input),
     rollback: (_extensionId: string, conversationId: string, count: number) =>
       createExtensionConversationsCapability().rollback(conversationId, count),
+    ensureLive: (_extensionId: string, conversationId: string, options?: { cwd?: string }) =>
+      createExtensionConversationsCapability().ensureLive(conversationId, options),
+    sendMessage: (
+      _extensionId: string,
+      conversationId: string,
+      text: string,
+      options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
+    ) => createExtensionConversationsCapability().sendMessage(conversationId, text, options),
+    abort: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().abort(conversationId),
+    compact: (_extensionId: string, conversationId: string, customInstructions?: string) =>
+      createExtensionConversationsCapability().compact(conversationId, customInstructions),
+    fork: (_extensionId: string, input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['fork']>[0]) =>
+      createExtensionConversationsCapability().fork(input),
+    setTitle: (_extensionId: string, conversationId: string, title: string) =>
+      createExtensionConversationsCapability().setTitle(conversationId, title),
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
         readConversationMetadata({ ...input, extensionId }),
