@@ -27,6 +27,14 @@
         "worker": { "enabled": true }
       }
     ],
+    "protocolEntrypoints": [
+      {
+        "id": "ds4-tools",
+        "handler": "ds4ToolsCli",
+        "title": "DS4 tool CLI",
+        "description": "Compact CLI gateway for extension tools intentionally withheld from the DS4 model schema."
+      }
+    ],
     "actions": [
       { "id": "ds4InstallProvider", "handler": "installProvider", "title": "Install DS4 model provider", "worker": { "enabled": true } },
       { "id": "ds4Status", "handler": "status", "title": "DS4 server status", "worker": { "enabled": true } },

@@ -99,6 +99,34 @@ const DEFAULT_SETTINGS: Ds4Settings = {
   shellCompression: 'off',
 };
 
+type Ds4ToolsApi = {
+  listInvocableExtensionTools<T = unknown>(input?: unknown): Promise<T>;
+  invokeToolByName<T = unknown>(input: unknown): Promise<T>;
+};
+
+let ds4ToolsApiOverride: Ds4ToolsApi | null = null;
+
+export function __setDs4ToolsApiForTest(api: Ds4ToolsApi | null): void {
+  ds4ToolsApiOverride = api;
+}
+
+const DS4_CLI_USAGE = `ds4 tool gateway
+
+Usage:
+  ds4 help
+  ds4 tools [--json]
+  ds4 call <tool-name> [json-input]
+  ds4 call <tool-name> --stdin
+
+Examples:
+  ds4 tools
+  ds4 call web_search '{"query":"neon pilot ds4","count":5}'
+  printf '%s' '{"url":"https://example.com"}' | ds4 call web_fetch --stdin
+
+DS4 exposes only core tools directly. This CLI lists and invokes extension tools
+that are active for the current runtime but intentionally absent from the DS4
+model schema.`;
+
 async function exists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);
@@ -325,13 +353,22 @@ function textFrom(result: ToolResult): string {
   return text || JSON.stringify(result.details ?? result, null, 2);
 }
 
+function protocolToolContext(ctx: ExtensionBackendContext): ExtensionBackendContext['toolContext'] {
+  return {
+    conversationId: process.env.NEON_PILOT_SOURCE_CONVERSATION_ID,
+    sessionId: process.env.NEON_PILOT_SOURCE_CONVERSATION_ID,
+    sessionFile: process.env.NEON_PILOT_SOURCE_SESSION_FILE,
+    cwd: process.cwd() || ctx.runtime.getRepoRoot(),
+  };
+}
+
 async function callHostTool(name: string, input: unknown, ctx: ExtensionBackendContext) {
-  const { invokeToolByName } = await import('@neon-pilot/extensions/backend/tools');
+  const { invokeToolByName } = ds4ToolsApiOverride ?? (await import('@neon-pilot/extensions/backend/tools'));
   const result = (await invokeToolByName({
     name,
     input,
     runtime: toolRuntime(ctx),
-    toolContext: ctx.toolContext,
+    toolContext: ctx.toolContext ?? protocolToolContext(ctx),
   })) as ToolResult;
   return {
     text: textFrom(result),
@@ -339,6 +376,75 @@ async function callHostTool(name: string, input: unknown, ctx: ExtensionBackendC
     ...(result.details !== undefined ? { details: result.details } : {}),
     ...(result.isError ? { isError: true } : {}),
   };
+}
+
+function protocolArgs(input: unknown): string[] {
+  if (!input || typeof input !== 'object' || !Array.isArray((input as { args?: unknown }).args)) return [];
+  return (input as { args: unknown[] }).args.filter((arg): arg is string => typeof arg === 'string');
+}
+
+async function readProtocolStdin(ctx: ExtensionBackendContext & { stdio?: { stdin?: NodeJS.ReadableStream } }): Promise<string> {
+  const stdin = ctx.stdio?.stdin;
+  if (!stdin) return '';
+  const chunks: Buffer[] = [];
+  for await (const chunk of stdin) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+function writeProtocol(ctx: ExtensionBackendContext & { stdio?: { stdout?: NodeJS.WritableStream } }, text: string): void {
+  ctx.stdio?.stdout?.write(text.endsWith('\n') ? text : `${text}\n`);
+}
+
+function writeProtocolError(ctx: ExtensionBackendContext & { stdio?: { stderr?: NodeJS.WritableStream } }, text: string): void {
+  ctx.stdio?.stderr?.write(text.endsWith('\n') ? text : `${text}\n`);
+}
+
+function parseJsonInput(raw: string): unknown {
+  const trimmed = raw.trim();
+  if (!trimmed) return {};
+  return JSON.parse(trimmed);
+}
+
+export async function ds4ToolsCli(input: unknown, ctx: ExtensionBackendContext & { stdio?: { stdin?: NodeJS.ReadableStream; stdout?: NodeJS.WritableStream; stderr?: NodeJS.WritableStream } }) {
+  const args = protocolArgs(input);
+  const command = args.shift() ?? 'help';
+  if (command === 'help' || command === '--help' || command === '-h') {
+    writeProtocol(ctx, DS4_CLI_USAGE);
+    return;
+  }
+
+  if (command === 'tools' || command === 'list-tools') {
+    const { listInvocableExtensionTools } = ds4ToolsApiOverride ?? (await import('@neon-pilot/extensions/backend/tools'));
+    const tools = await listInvocableExtensionTools<Array<{ name: string; description: string; source?: { extensionId?: string; toolId?: string } }>>(toolRuntime(ctx));
+    if (args.includes('--json')) {
+      writeProtocol(ctx, JSON.stringify(tools, null, 2));
+      return;
+    }
+    const text = tools.length
+      ? tools
+          .map((tool) => {
+            const source = tool.source?.extensionId && tool.source?.toolId ? ` (${tool.source.extensionId}/${tool.source.toolId})` : '';
+            return `${tool.name}${source}\n  ${tool.description}`;
+          })
+          .join('\n\n')
+      : 'No extension tools are active for this runtime.';
+    writeProtocol(ctx, text);
+    return;
+  }
+
+  if (command === 'call' || command === 'invoke') {
+    const toolName = args.shift();
+    if (!toolName) throw new Error('tool name is required.');
+    const useStdin = args.includes('--stdin') || args.includes('-');
+    const rawInput = useStdin ? await readProtocolStdin(ctx) : args.join(' ');
+    const result = await callHostTool(toolName, parseJsonInput(rawInput), ctx);
+    writeProtocol(ctx, textFrom(result));
+    if (result.isError) process.exitCode = 1;
+    return;
+  }
+
+  writeProtocolError(ctx, `Unknown ds4 command: ${command}\n\n${DS4_CLI_USAGE}`);
+  process.exitCode = 1;
 }
 
 function numeric(value: unknown): number | undefined {

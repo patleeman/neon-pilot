@@ -1,182 +1,74 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
 const args = process.argv.slice(2);
-const command = args.shift() ?? 'help';
-
-function takeFlag(name, fallback = null) {
-  const index = args.indexOf(name);
-  if (index < 0) return fallback;
-  const value = args[index + 1] ?? fallback;
-  args.splice(index, 2);
-  return value;
-}
-
-function hasFlag(name) {
-  const index = args.indexOf(name);
-  if (index < 0) return false;
-  args.splice(index, 1);
-  return true;
-}
 
 function usage() {
-  console.log(`ds4 command helpers
+  console.log(`ds4 tool gateway
 
 Usage:
   ds4 help
-  ds4 list [path]
-  ds4 search <query> [path] [--glob suffix] [--context n] [--max-results n] [--case-sensitive]
-  ds4 read <path> [--start-line n] [--max-lines n] [--whole]
-  ds4 write <path>              # content is read from stdin
-  ds4 edit <path> --old-file file --new-file file
-  ds4 fetch <url> [--max-bytes n]
+  ds4 tools [--json]
+  ds4 call <tool-name> [json-input]
+  ds4 call <tool-name> --stdin
 
-These commands are available only inside DS4 bash sessions. Prefer compact output and bounded reads.`);
+Examples:
+  ds4 tools
+  ds4 call web_search '{"query":"neon pilot ds4","count":5}'
+  printf '%s' '{"url":"https://example.com"}' | ds4 call web_fetch --stdin
+
+DS4 exposes only core tools directly. This CLI lists and invokes extension tools
+that are active for the current runtime but intentionally absent from the DS4
+model schema.`);
 }
 
-function walk(root, visitor) {
-  if (!existsSync(root)) return;
-  const stack = [root];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    let entries;
-    try {
-      entries = readdirSync(current, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
-      const full = join(current, entry.name);
-      if (entry.isDirectory()) stack.push(full);
-      else if (entry.isFile()) visitor(full);
-    }
-  }
-}
-
-function readStdin() {
-  return readFileSync(0, 'utf8');
-}
-
-function lineWindow(text, startLine, maxLines) {
-  const lines = text.split(/\r?\n/);
-  const start = Math.max(1, startLine);
-  const end = Math.min(lines.length, start + maxLines - 1);
-  return lines.slice(start - 1, end).map((line, index) => `${String(start + index).padStart(6)}  ${line}`).join('\n');
-}
-
-async function main() {
-  if (command === 'help' || command === '--help' || command === '-h') {
-    usage();
-    return;
-  }
-
-  if (command === 'list') {
-    const target = resolve(args[0] ?? '.');
-    const entries = readdirSync(target, { withFileTypes: true })
-      .map((entry) => {
-        const full = join(target, entry.name);
-        const stats = statSync(full);
-        const kind = entry.isDirectory() ? 'dir ' : entry.isSymbolicLink() ? 'link' : 'file';
-        return `${kind} ${entry.isFile() ? String(stats.size).padStart(9) : ''.padStart(9)} ${entry.name}${entry.isDirectory() ? '/' : ''}`;
-      })
-      .sort();
-    console.log(entries.join('\n') || '(empty directory)');
-    return;
-  }
-
-  if (command === 'search') {
-    const query = args.shift();
-    if (!query) throw new Error('query is required.');
-    const root = resolve(args.shift() ?? '.');
-    const suffix = takeFlag('--glob');
-    const context = Number(takeFlag('--context', '0'));
-    const maxResults = Number(takeFlag('--max-results', '80'));
-    const caseSensitive = hasFlag('--case-sensitive');
-    const needle = caseSensitive ? query : query.toLowerCase();
-    let count = 0;
-    walk(root, (file) => {
-      if (count >= maxResults) return;
-      if (suffix && !file.endsWith(suffix.replace(/^\*/, ''))) return;
-      let text;
+function findRepoRoot(start) {
+  let current = resolve(start);
+  for (;;) {
+    const packagePath = join(current, 'package.json');
+    const cliPath = join(current, 'scripts', 'neon-pilot-cli.mjs');
+    if (existsSync(packagePath) && existsSync(cliPath)) {
       try {
-        text = readFileSync(file, 'utf8');
+        const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
+        if (pkg?.name === 'neon-pilot') return current;
       } catch {
-        return;
+        // Keep walking.
       }
-      const lines = text.split(/\r?\n/);
-      for (let index = 0; index < lines.length && count < maxResults; index += 1) {
-        const haystack = caseSensitive ? lines[index] : lines[index].toLowerCase();
-        if (!haystack.includes(needle)) continue;
-        count += 1;
-        const from = Math.max(0, index - context);
-        const to = Math.min(lines.length - 1, index + context);
-        console.log(`--- ${relative(process.cwd(), file)}:${index + 1} ---`);
-        for (let line = from; line <= to; line += 1) console.log(`${String(line + 1).padStart(6)}  ${lines[line]}`);
-      }
-    });
-    if (count === 0) console.log(`No matches found for: ${query}`);
-    return;
-  }
-
-  if (command === 'read') {
-    const file = args.shift();
-    if (!file) throw new Error('path is required.');
-    const text = readFileSync(resolve(file), 'utf8');
-    if (hasFlag('--whole')) {
-      console.log(text);
-      return;
     }
-    const startLine = Number(takeFlag('--start-line', '1'));
-    const maxLines = Number(takeFlag('--max-lines', '500'));
-    console.log(lineWindow(text, startLine, maxLines));
-    return;
+    const parent = dirname(current);
+    if (parent === current) return null;
+    current = parent;
   }
-
-  if (command === 'write') {
-    const file = args.shift();
-    if (!file) throw new Error('path is required.');
-    const target = resolve(file);
-    const content = readStdin();
-    writeFileSync(target, content, 'utf8');
-    console.log(`Wrote ${content.length} bytes to ${relative(process.cwd(), target)}`);
-    return;
-  }
-
-  if (command === 'edit') {
-    const file = args.shift();
-    if (!file) throw new Error('path is required.');
-    const oldFile = takeFlag('--old-file');
-    const newFile = takeFlag('--new-file');
-    if (!oldFile || !newFile) throw new Error('edit requires --old-file and --new-file.');
-    const target = resolve(file);
-    const oldText = readFileSync(resolve(oldFile), 'utf8');
-    const newText = readFileSync(resolve(newFile), 'utf8');
-    const text = readFileSync(target, 'utf8');
-    const index = text.indexOf(oldText);
-    if (index < 0) throw new Error('old text was not found.');
-    if (text.indexOf(oldText, index + oldText.length) >= 0) throw new Error('old text appears more than once.');
-    writeFileSync(target, `${text.slice(0, index)}${newText}${text.slice(index + oldText.length)}`, 'utf8');
-    console.log(`Edited ${relative(process.cwd(), target)}`);
-    return;
-  }
-
-  if (command === 'fetch') {
-    const url = args.shift();
-    if (!url) throw new Error('url is required.');
-    const maxBytes = Number(takeFlag('--max-bytes', '20000'));
-    const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const text = await response.text();
-    console.log(text.slice(0, maxBytes));
-    return;
-  }
-
-  throw new Error(`Unknown ds4 command: ${command}`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+function run(command, commandArgs, options = {}) {
+  const result = spawnSync(command, commandArgs, {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: process.env,
+    ...options,
+  });
+  if (result.error) {
+    if (result.error.code === 'ENOENT') return false;
+    throw result.error;
+  }
+  if (result.signal) process.kill(process.pid, result.signal);
+  process.exitCode = result.status ?? 1;
+  return true;
+}
+
+if (args.length === 0 || args[0] === 'help' || args[0] === '--help' || args[0] === '-h') {
+  usage();
+  process.exit(0);
+}
+
+const repoRoot = findRepoRoot(process.cwd());
+if (repoRoot) {
+  const cliPath = join(repoRoot, 'scripts', 'neon-pilot-cli.mjs');
+  run(process.execPath, [cliPath, 'protocol', 'ds4-tools', ...args]);
+} else if (!run('neon-pilot', ['protocol', 'ds4-tools', ...args])) {
+  console.error('Unable to find the Neon Pilot CLI. Run ds4 from a Neon Pilot workspace or ensure neon-pilot is on PATH.');
+  process.exitCode = 127;
+}

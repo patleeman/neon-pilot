@@ -1,8 +1,14 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const backendTools = {
+  listInvocableExtensionTools: vi.fn(async () => []),
+  invokeToolByName: vi.fn(async () => ({ content: [{ type: 'text', text: 'ok' }], details: { ok: true } })),
+};
 
 const backend = await import('./backend.js');
 
@@ -67,6 +73,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
 }
 
 afterEach(() => {
+  backend.__setDs4ToolsApiForTest(null);
   vi.unstubAllGlobals();
 });
 
@@ -490,6 +497,62 @@ describe('DS4 agent profile activation', () => {
     expect(result.plan.tools.activeToolNames).toEqual(['bash']);
     expect(result.plan.instructions.layers[0].content).toContain('Full instructions are available');
     expect(result.plan.instructions.layers[1].content).toBe('keep me');
+  });
+});
+
+describe('DS4 tool CLI gateway', () => {
+  it('lists active undisclosed extension tools through the host tool gateway', async () => {
+    backend.__setDs4ToolsApiForTest(backendTools);
+    backendTools.listInvocableExtensionTools.mockResolvedValueOnce([
+      {
+        name: 'web_search',
+        description: 'Search the web',
+        source: { extensionId: 'system-duckduckgo-search', toolId: 'search' },
+      },
+    ]);
+    const stdout = { write: vi.fn() };
+
+    await backend.ds4ToolsCli({ args: ['tools'] }, ctx({ stdio: { stdout } }) as never);
+
+    expect(backendTools.listInvocableExtensionTools).toHaveBeenCalledWith({
+      runtimeScope: 'shared',
+      repoRoot: '/repo',
+      modelRef: 'ds4/deepseek-v4-flash',
+    });
+    expect(stdout.write.mock.calls[0]?.[0]).toContain('web_search (system-duckduckgo-search/search)');
+  });
+
+  it('invokes a named extension tool with JSON input and DS4 session context', async () => {
+    backend.__setDs4ToolsApiForTest(backendTools);
+    const stdout = { write: vi.fn() };
+    const context = ctx({
+      stdio: {
+        stdin: Readable.from(['{"query":"hello"}']),
+        stdout,
+      },
+      toolContext: undefined,
+    });
+    process.env.NEON_PILOT_SOURCE_CONVERSATION_ID = 'conversation-env';
+    process.env.NEON_PILOT_SOURCE_SESSION_FILE = '/sessions/env.jsonl';
+
+    try {
+      await backend.ds4ToolsCli({ args: ['call', 'web_search', '--stdin'] }, context as never);
+    } finally {
+      delete process.env.NEON_PILOT_SOURCE_CONVERSATION_ID;
+      delete process.env.NEON_PILOT_SOURCE_SESSION_FILE;
+    }
+
+    expect(backendTools.invokeToolByName).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'web_search',
+        input: { query: 'hello' },
+        toolContext: expect.objectContaining({
+          conversationId: 'conversation-env',
+          sessionFile: '/sessions/env.jsonl',
+        }),
+      }),
+    );
+    expect(stdout.write.mock.calls[0]?.[0]).toBe('ok\n');
   });
 });
 
