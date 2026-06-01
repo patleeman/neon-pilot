@@ -126,10 +126,6 @@ import { createExtensionHostServerContextSnapshot } from '../extensions/extensio
 import {
   beginExtensionStartupGuard,
   completeExtensionStartupGuard,
-  listExtensionInstallSummaries,
-  listExtensionMentionRegistrations,
-  listExtensionSlashCommandRegistrations,
-  readExtensionRegistrySnapshot,
 } from '../extensions/extensionRegistry.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
@@ -824,14 +820,18 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
 }
 
 async function readExtensionInstallSummariesWithRuntimeStateForLocalApi() {
-  const summaries = listExtensionInstallSummaries();
-  const runningServices = await getExtensionHostClient().listServices();
+  const [{ installSummaries }, runningServices] = await Promise.all([
+    getExtensionHostClient().readRegistryPresentation(),
+    getExtensionHostClient().listServices(),
+  ]);
   const running = new Map(runningServices.map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
-  return summaries.map((summary) => ({
+  return installSummaries.map((summary) => ({
     ...summary,
-    serviceStatuses: (summary.services ?? []).map((service) => {
-      const status = running.get(`${summary.id}:${service.id}`);
-      return { id: service.id, running: Boolean(status), startedAt: status?.startedAt ?? null };
+    serviceStatuses: (Array.isArray(summary.services) ? summary.services : []).map((service) => {
+      const extensionId = typeof summary.id === 'string' ? summary.id : '';
+      const serviceId = typeof (service as { id?: unknown }).id === 'string' ? (service as { id: string }).id : '';
+      const status = running.get(`${extensionId}:${serviceId}`);
+      return { id: serviceId, running: Boolean(status), startedAt: status?.startedAt ?? null };
     }),
   }));
 }
@@ -933,20 +933,27 @@ async function dispatchDesktopLocalProductApiRequest(input: {
 
   if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
   if (method === 'GET' && path === '/api/extensions/slash-commands') {
-    return createDesktopLocalApiJsonResponse(listExtensionSlashCommandRegistrations());
+    return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).slashCommandRegistrations);
   }
   if (method === 'GET' && path === '/api/extensions/mentions') {
-    return createDesktopLocalApiJsonResponse(listExtensionMentionRegistrations());
+    return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).mentionRegistrations);
   }
   if (method === 'GET' && path === '/api/extensions/registry/critical') {
-    return createDesktopLocalApiJsonResponse(buildCriticalExtensionRegistryResponse(readExtensionRegistrySnapshot()));
+    return createDesktopLocalApiJsonResponse(
+      buildCriticalExtensionRegistryResponse(
+        (await getExtensionHostClient().readRegistryPresentation()).snapshot as unknown as Parameters<
+          typeof buildCriticalExtensionRegistryResponse
+        >[0],
+      ),
+    );
   }
   if (method === 'GET' && path === '/api/extensions/registry') {
-    const [extensions, snapshot, settings] = await Promise.all([
+    const [extensions, registryPresentation, settings] = await Promise.all([
       readExtensionInstallSummariesWithRuntimeStateForLocalApi(),
-      Promise.resolve(readExtensionRegistrySnapshot()),
+      getExtensionHostClient().readRegistryPresentation(),
       Promise.resolve(createSettingsStore().read()),
     ]);
+    const snapshot = registryPresentation.snapshot;
     return createDesktopLocalApiJsonResponse({
       extensions,
       routes: snapshot.routes,

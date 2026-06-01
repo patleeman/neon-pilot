@@ -22,6 +22,24 @@ vi.mock('@neon-pilot/core', async () => {
   };
 });
 
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => ({
+    listServices: async () => [],
+    listPromptAssemblyContributions: async () => ({ assemblyProviders: [], contextProviders: [], hooks: [] }),
+    listStaticContributions: async () => ({ skills: [], tools: [] }),
+    readRegistryPresentation: async () => {
+      const registry = await import('../extensions/extensionRegistry.js');
+      return {
+        installSummaries: registry.listExtensionInstallSummaries(),
+        slashCommandRegistrations: registry.listExtensionSlashCommandRegistrations(),
+        mentionRegistrations: registry.listExtensionMentionRegistrations(),
+        snapshot: registry.readExtensionRegistrySnapshot(),
+      };
+    },
+    invokeAction: async () => ({ ok: true, result: null }),
+  }),
+}));
+
 import { saveConversationArtifact } from '@neon-pilot/core';
 
 import { dispatchDesktopLocalApiRequest, normalizeDesktopLocalApiTailBlocks, rollbackDesktopConversation } from './localApi.js';

@@ -9,6 +9,7 @@ import type {
   ExtensionHostInvokeProtocolEntrypointRequest,
   ExtensionHostInvokeRouteRequest,
   ExtensionHostPromptAssemblyContributions,
+  ExtensionHostRegistryPresentation,
   ExtensionHostReloadBackendRequest,
   ExtensionHostReloadBackendResult,
   ExtensionHostRequest,
@@ -49,6 +50,7 @@ export interface ExtensionHostClient {
   stopServices(extensionId: string): Promise<void>;
   listPromptAssemblyContributions(): Promise<ExtensionHostPromptAssemblyContributions>;
   listStaticContributions(): Promise<ExtensionHostStaticContributions>;
+  readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
   invokeProtocolEntrypoint(input: ExtensionHostInvokeProtocolEntrypointInput): Promise<void>;
   invokeRoute(input: ExtensionHostInvokeRouteInput): Promise<ExtensionHostRouteResponse>;
   listActionTelemetry(extensionId?: string): Promise<ExtensionHostActionTelemetryEntry[]>;
@@ -134,6 +136,12 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('staticContributions' in response)) throw new Error('Extension host returned invalid static contributions.');
       return response.staticContributions;
+    },
+    async readRegistryPresentation() {
+      const response = await handleInProcessExtensionHostRequest({ type: 'readRegistryPresentation' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('registryPresentation' in response)) throw new Error('Extension host returned invalid registry presentation.');
+      return response.registryPresentation;
     },
     async invokeProtocolEntrypoint(input) {
       const response = await handleInProcessExtensionHostRequest({ type: 'invokeProtocolEntrypoint', ...input });
@@ -324,6 +332,23 @@ export async function handleInProcessExtensionHostRequest(request: ExtensionHost
         staticContributions: {
           tools: listExtensionToolRegistrations(),
           skills: listExtensionSkillRegistrations(),
+        },
+      };
+    }
+    if (request.type === 'readRegistryPresentation') {
+      const {
+        listExtensionInstallSummaries,
+        listExtensionMentionRegistrations,
+        listExtensionSlashCommandRegistrations,
+        readExtensionRegistrySnapshot,
+      } = await import('./extensionRegistry.js');
+      return {
+        ok: true,
+        registryPresentation: {
+          installSummaries: listExtensionInstallSummaries() as unknown as Array<Record<string, unknown>>,
+          slashCommandRegistrations: listExtensionSlashCommandRegistrations() as unknown as Array<Record<string, unknown>>,
+          mentionRegistrations: listExtensionMentionRegistrations() as unknown as Array<Record<string, unknown>>,
+          snapshot: readExtensionRegistrySnapshot() as unknown as ExtensionHostRegistryPresentation['snapshot'],
         },
       };
     }

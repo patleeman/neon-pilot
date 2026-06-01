@@ -151,6 +151,17 @@ describe('extension host RPC client', () => {
             skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
           },
         }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          registryPresentation: {
+            installSummaries: [{ id: 'ext', name: 'Ext' }],
+            slashCommandRegistrations: [{ name: 'run' }],
+            mentionRegistrations: [{ id: 'mention' }],
+            snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
+          },
+        }),
       );
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
 
@@ -175,6 +186,12 @@ describe('extension host RPC client', () => {
     await expect(client.listStaticContributions()).resolves.toEqual({
       tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
       skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
+    });
+    await expect(client.readRegistryPresentation()).resolves.toEqual({
+      installSummaries: [{ id: 'ext', name: 'Ext' }],
+      slashCommandRegistrations: [{ name: 'run' }],
+      mentionRegistrations: [{ id: 'mention' }],
+      snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
     });
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
@@ -233,6 +250,11 @@ describe('extension host RPC client', () => {
       9,
       'http://host/rpc',
       expect.objectContaining({ body: JSON.stringify({ request: { type: 'listStaticContributions' } }) }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      10,
+      'http://host/rpc',
+      expect.objectContaining({ body: JSON.stringify({ request: { type: 'readRegistryPresentation' } }) }),
     );
   });
 

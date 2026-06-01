@@ -148,6 +148,18 @@ export interface ExtensionHostStaticContributions {
   skills: ExtensionHostSkillRegistration[];
 }
 
+export interface ExtensionHostRegistryPresentation {
+  installSummaries: Array<Record<string, unknown>>;
+  slashCommandRegistrations: Array<Record<string, unknown>>;
+  mentionRegistrations: Array<Record<string, unknown>>;
+  snapshot: {
+    extensions: Array<Record<string, unknown>>;
+    routes: Array<Record<string, unknown>>;
+    surfaces: Array<Record<string, unknown>>;
+    views: Array<Record<string, unknown>>;
+  } & Record<string, unknown>;
+}
+
 export interface ExtensionHostHealthRequest {
   type: 'health';
 }
@@ -204,6 +216,10 @@ export interface ExtensionHostListPromptAssemblyContributionsRequest {
 
 export interface ExtensionHostListStaticContributionsRequest {
   type: 'listStaticContributions';
+}
+
+export interface ExtensionHostReadRegistryPresentationRequest {
+  type: 'readRegistryPresentation';
 }
 
 export interface ExtensionHostInvokeProtocolEntrypointRequest {
@@ -280,6 +296,7 @@ export type ExtensionHostRequest =
   | ExtensionHostStopServicesRequest
   | ExtensionHostListPromptAssemblyContributionsRequest
   | ExtensionHostListStaticContributionsRequest
+  | ExtensionHostReadRegistryPresentationRequest
   | ExtensionHostInvokeProtocolEntrypointRequest
   | ExtensionHostCheckBackendHealthRequest
   | ExtensionHostStartStartupActionsRequest
@@ -329,6 +346,10 @@ export type ExtensionHostResponse =
     }
   | {
       ok: true;
+      registryPresentation: ExtensionHostRegistryPresentation;
+    }
+  | {
+      ok: true;
       invoked: true;
     }
   | {
@@ -367,6 +388,7 @@ export function extensionHostRequestName(request: ExtensionHostRequest): string 
   if (request.type === 'stopServices') return `stopServices:${request.extensionId}`;
   if (request.type === 'listPromptAssemblyContributions') return 'listPromptAssemblyContributions';
   if (request.type === 'listStaticContributions') return 'listStaticContributions';
+  if (request.type === 'readRegistryPresentation') return 'readRegistryPresentation';
   if (request.type === 'checkBackendHealth') return 'checkBackendHealth';
   if (request.type === 'startStartupActions') return 'startStartupActions';
   if (request.type === 'invokeRoute') return `invokeRoute:${request.extensionId}:${request.method}:${request.routePath}`;

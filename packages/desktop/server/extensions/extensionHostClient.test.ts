@@ -26,6 +26,10 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionPromptContextProviderRegistrations: vi.fn(),
   listExtensionSkillRegistrations: vi.fn(),
   listExtensionToolRegistrations: vi.fn(),
+  listExtensionInstallSummaries: vi.fn(),
+  listExtensionMentionRegistrations: vi.fn(),
+  listExtensionSlashCommandRegistrations: vi.fn(),
+  readExtensionRegistrySnapshot: vi.fn(),
 }));
 
 vi.mock('./extensionBackend.js', () => extensionBackend);
@@ -200,6 +204,26 @@ describe('extension host client', () => {
     });
   });
 
+  it('routes registry presentation reads through the extension host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.listExtensionInstallSummaries.mockReturnValueOnce([{ id: 'ext', name: 'Ext' }]);
+    extensionRegistry.listExtensionSlashCommandRegistrations.mockReturnValueOnce([{ name: 'run' }]);
+    extensionRegistry.listExtensionMentionRegistrations.mockReturnValueOnce([{ id: 'mention' }]);
+    extensionRegistry.readExtensionRegistrySnapshot.mockReturnValueOnce({
+      extensions: [{ id: 'ext' }],
+      routes: [],
+      surfaces: [],
+      views: [],
+    });
+
+    await expect(getExtensionHostClient().readRegistryPresentation()).resolves.toEqual({
+      installSummaries: [{ id: 'ext', name: 'Ext' }],
+      slashCommandRegistrations: [{ name: 'run' }],
+      mentionRegistrations: [{ id: 'mention' }],
+      snapshot: { extensions: [{ id: 'ext' }], routes: [], surfaces: [], views: [] },
+    });
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
@@ -331,5 +355,6 @@ describe('extension host client', () => {
     expect(extensionHostRequestName({ type: 'stopServices', extensionId: 'ext' })).toBe('stopServices:ext');
     expect(extensionHostRequestName({ type: 'listPromptAssemblyContributions' })).toBe('listPromptAssemblyContributions');
     expect(extensionHostRequestName({ type: 'listStaticContributions' })).toBe('listStaticContributions');
+    expect(extensionHostRequestName({ type: 'readRegistryPresentation' })).toBe('readRegistryPresentation');
   });
 });

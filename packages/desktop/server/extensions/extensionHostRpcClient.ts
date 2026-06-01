@@ -374,6 +374,12 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!('staticContributions' in response)) throw new Error('Extension host returned invalid static contributions.');
       return response.staticContributions;
     },
+    async readRegistryPresentation() {
+      const response = await send({ type: 'readRegistryPresentation' });
+      if (!response.ok) throw new Error(response.error);
+      if (!('registryPresentation' in response)) throw new Error('Extension host returned invalid registry presentation.');
+      return response.registryPresentation;
+    },
     async invokeProtocolEntrypoint(input) {
       return sendProtocolEntrypoint(input);
     },
