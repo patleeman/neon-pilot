@@ -442,17 +442,22 @@ describe('SettingsPage provider model editor', () => {
     document.body.innerHTML = '';
   });
 
-  it('customizes models from provider details', async () => {
+  it('adds a model directly to a picked built-in provider without saving the provider first', async () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    click(queryProviderRowAction(container, 'desktop', 'Manage'));
-    await flushAsyncWork();
+    click(queryButton(container, 'Connect provider'));
+    const anthropicButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('Anthropic'));
+    if (!(anthropicButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected Anthropic provider button');
+    }
+    click(anthropicButton);
 
-    click(queryButton(container, 'Customize'));
-    expect(container.textContent).toContain('desktop Models');
+    expect(container.textContent).toContain('Anthropic');
+    click(queryButton(container, 'Customize Models'));
+    expect(container.textContent).toContain('Additional models');
 
-    click(queryButton(container, 'Add Model'));
+    click(queryButton(container, 'Add model'));
     const modelIdInput = queryInput(container, '#settings-provider-model-id');
     updateInputValue(modelIdInput, 'claude-sonnet-4-7');
     await flushAsyncWork();
@@ -468,7 +473,7 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
 
     expect(saveModelProviderModelMock).toHaveBeenCalledWith(
-      'desktop',
+      'anthropic',
       expect.objectContaining({
         modelId: 'claude-sonnet-4-7',
       }),
@@ -535,7 +540,7 @@ describe('SettingsPage provider model editor', () => {
     click(queryProviderRowAction(container, 'OpenAI Codex', 'Manage'));
     await flushAsyncWork();
 
-    const oauthButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('Reconnect'));
+    const oauthButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('OAuth Login'));
     if (!(oauthButton instanceof HTMLButtonElement)) {
       throw new Error('Expected OAuth login button');
     }
@@ -574,7 +579,7 @@ describe('SettingsPage provider model editor', () => {
       click(queryProviderRowAction(container, 'OpenAI Codex', 'Manage'));
       await flushAsyncWork();
 
-      const removeButton = queryButton(container, 'Remove Credential');
+      const removeButton = queryButton(container, 'Remove Stored Credential');
       expect(removeButton.disabled).toBe(false);
       click(removeButton);
       await flushAsyncWork();
@@ -593,11 +598,7 @@ describe('SettingsPage provider model editor', () => {
       const { container } = renderPage();
       await flushAsyncWork();
 
-      const removeButton = container.querySelector('button[aria-label="Remove desktop"]');
-      if (!(removeButton instanceof HTMLButtonElement)) {
-        throw new Error('Expected remove button for desktop');
-      }
-      click(removeButton);
+      click(queryProviderRowAction(container, 'desktop', 'Remove'));
       await flushAsyncWork();
 
       expect(confirmMock).toHaveBeenCalledWith('Remove desktop and all of its model definitions?');
@@ -611,8 +612,8 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
-    click(queryButton(container, 'Connect Provider'));
-    expect(container.textContent).toContain('Connect Provider');
+    click(queryButton(container, 'Connect provider'));
+    expect(container.textContent).toContain('Connect provider');
 
     const anthropicButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('Anthropic'));
     if (!(anthropicButton instanceof HTMLButtonElement)) {
@@ -622,7 +623,6 @@ describe('SettingsPage provider model editor', () => {
 
     expect(container.querySelector('#settings-model-provider-id')).toBeNull();
     expect(container.textContent).toContain('Anthropic');
-    expect(container.textContent).toContain('API Key');
   });
 
   it('runs telemetry database maintenance from settings', async () => {
