@@ -280,6 +280,12 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   workspace?: ExtensionBackendCapabilityWorkspace;
 }
 
+function listEnabledExtensionBinDirs(): string[] {
+  return listExtensionInstallSummaries()
+    .filter((summary) => summary.status === 'enabled' && summary.packageRoot)
+    .map((summary) => join(summary.packageRoot!, 'bin'));
+}
+
 function normalizeLogInput(input: unknown): { message: string; fields?: Record<string, unknown> } {
   if (!input || typeof input !== 'object') {
     throw new Error('Log capability input must be an object.');
@@ -1456,7 +1462,7 @@ export function createExtensionBackendCapabilityDispatcher(
     refreshSkillMcpConfig: refreshHostSkillMcpConfig,
   };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
-  const shell = options.shell ?? createExtensionShellCapability();
+  const shell = options.shell ?? createExtensionShellCapability({ pathDirs: listEnabledExtensionBinDirs() });
   const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnHandle>();
   const telemetry = options.telemetry ?? {
     record: (extensionId: string, event: ExtensionBackendCapabilityTelemetryEvent) => {
