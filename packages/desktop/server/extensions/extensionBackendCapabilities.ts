@@ -2,7 +2,7 @@ import { resolveSecret } from '../secrets/secretStore.js';
 import { type AppEventTopic, invalidateAppTopics } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import type { ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
-import { createExtensionShellCapability } from './extensionShell.js';
+import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 
 type ExtensionLogLevel = 'info' | 'warn' | 'error';
@@ -11,6 +11,12 @@ interface ExtensionBackendCapabilityLogger {
   info(message: string, fields?: Record<string, unknown>): void;
   warn(message: string, fields?: Record<string, unknown>): void;
   error(message: string, fields?: Record<string, unknown>): void;
+}
+
+interface ExtensionBackendCapabilityGit {
+  status(input: { cwd: string }): Promise<unknown> | unknown;
+  diff(input: { cwd: string; path?: string; staged?: boolean }): Promise<unknown> | unknown;
+  log(input: { cwd: string; maxCount?: number }): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityStorage {
@@ -42,6 +48,7 @@ interface ExtensionBackendCapabilityUi {
 export type ExtensionBackendCapabilityDispatcher = (request: ExtensionBackendWorkerCapabilityRequest) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
+  git?: ExtensionBackendCapabilityGit;
   log?: ExtensionBackendCapabilityLogger;
   secrets?: ExtensionBackendCapabilitySecrets;
   shell?: ExtensionBackendCapabilityShell;
@@ -74,6 +81,36 @@ function dispatchLogCapability(logger: ExtensionBackendCapabilityLogger, request
   const { message, fields } = normalizeLogInput(request.input);
   logger[level](`extension:${request.extensionId} ${message}`, fields);
   return undefined;
+}
+
+function dispatchGitCapability(git: ExtensionBackendCapabilityGit, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  const input = normalizeRecordInput(request.input, 'Git');
+
+  if (request.operation === 'status') {
+    return git.status({ cwd: requireString(input.cwd, 'Git cwd') });
+  }
+
+  if (request.operation === 'diff') {
+    const path = input.path;
+    const staged = input.staged;
+    if (path !== undefined && typeof path !== 'string') {
+      throw new Error('Git path must be a string when provided.');
+    }
+    if (staged !== undefined && typeof staged !== 'boolean') {
+      throw new Error('Git staged must be a boolean when provided.');
+    }
+    return git.diff({ cwd: requireString(input.cwd, 'Git cwd'), ...(path === undefined ? {} : { path }), ...(staged === undefined ? {} : { staged }) });
+  }
+
+  if (request.operation === 'log') {
+    const maxCount = input.maxCount;
+    if (maxCount !== undefined && typeof maxCount !== 'number') {
+      throw new Error('Git maxCount must be a number when provided.');
+    }
+    return git.log({ cwd: requireString(input.cwd, 'Git cwd'), ...(maxCount === undefined ? {} : { maxCount }) });
+  }
+
+  throw new Error(`Unsupported git capability operation: ${request.operation}`);
 }
 
 function normalizeRecordInput(input: unknown, capability: string): Record<string, unknown> {
@@ -195,6 +232,7 @@ function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: Extensi
 export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
+  const git = options.git ?? createExtensionGitCapability();
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const shell = options.shell ?? createExtensionShellCapability();
@@ -215,6 +253,9 @@ export function createExtensionBackendCapabilityDispatcher(
       listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
   };
   return (request) => {
+    if (request.capability === 'git') {
+      return dispatchGitCapability(git, request);
+    }
     if (request.capability === 'log') {
       return dispatchLogCapability(logger, request);
     }

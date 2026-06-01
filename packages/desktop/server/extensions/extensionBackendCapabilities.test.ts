@@ -3,6 +3,73 @@ import { describe, expect, it, vi } from 'vitest';
 import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
 
 describe('extension backend capability dispatcher', () => {
+  it('dispatches extension-scoped git capability calls', async () => {
+    const git = {
+      status: vi.fn(() => ({ porcelain: '## main' })),
+      diff: vi.fn(() => ({ diff: 'diff --git a/file b/file' })),
+      log: vi.fn(() => ({ log: 'abc123 commit' })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ git });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'git',
+          operation: 'status',
+          input: { cwd: '/repo' },
+        }),
+      ),
+    ).resolves.toEqual({ porcelain: '## main' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'git',
+          operation: 'diff',
+          input: { cwd: '/repo', path: 'file.ts', staged: true },
+        }),
+      ),
+    ).resolves.toEqual({ diff: 'diff --git a/file b/file' });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'git',
+          operation: 'log',
+          input: { cwd: '/repo', maxCount: 5 },
+        }),
+      ),
+    ).resolves.toEqual({ log: 'abc123 commit' });
+
+    expect(git.status).toHaveBeenCalledWith({ cwd: '/repo' });
+    expect(git.diff).toHaveBeenCalledWith({ cwd: '/repo', path: 'file.ts', staged: true });
+    expect(git.log).toHaveBeenCalledWith({ cwd: '/repo', maxCount: 5 });
+  });
+
+  it('rejects malformed git capability inputs', async () => {
+    const dispatch = createExtensionBackendCapabilityDispatcher({
+      git: { status: vi.fn(), diff: vi.fn(), log: vi.fn() },
+    });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'git',
+        operation: 'diff',
+        input: { cwd: '/repo', staged: 'yes' },
+      }),
+    ).rejects.toThrow('Git staged must be a boolean when provided.');
+  });
+
   it('dispatches extension-scoped log capability calls', async () => {
     const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ log });
