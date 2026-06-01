@@ -65,11 +65,11 @@ const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px
 const CHECKBOX_CLASS = 'h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none';
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
+  { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
   { id: 'settings-conversation', label: 'Conversation', summary: 'Model and behavior defaults' },
   { id: 'settings-workspace', label: 'Workspace', summary: 'Default cwd and local context' },
   { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
-  { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
   { id: 'settings-desktop', label: 'Desktop', summary: 'App behavior, remotes, and keyboard shortcuts' },
 ] as const;
 
@@ -350,8 +350,14 @@ function SettingsSection({
     return null;
   }
 
+  const sectionOrder = SETTINGS_QUICK_LINKS.findIndex((item) => item.id === id);
+
   return (
-    <section id={id} className={cx('scroll-mt-24 space-y-8 border-t border-border-subtle pt-10 first:border-t-0 first:pt-0', className)}>
+    <section
+      id={id}
+      style={{ order: sectionOrder }}
+      className={cx('scroll-mt-24 space-y-8 border-t border-border-subtle pt-10 first:border-t-0 first:pt-0', className)}
+    >
       <div className="max-w-2xl space-y-2">
         <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">{label}</h2>
         {description ? <p className="text-[14px] leading-6 text-secondary">{description}</p> : null}
