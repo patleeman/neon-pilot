@@ -202,22 +202,21 @@ function contextShelfPreview(block: Extract<MessageBlock, { type: 'context' | 's
   return summarizeSystemEventText(block.text);
 }
 
-function normalizeContextChipLabel(label: string): string {
-  switch (label) {
-    case 'System prompt':
-      return 'system prompt';
-    case 'Remote control':
-      return 'remote control';
-    case 'Related conversation pointers':
-    case 'Reused thread summaries':
-      return 'related conversations';
-    case 'Context added':
-      return 'context';
-    case 'Auto-resume':
-      return 'auto-resume';
-    default:
-      return label.toLowerCase();
-  }
+function estimateTextTokens(text: string): number {
+  const normalized = text.trim();
+  return normalized ? Math.ceil(normalized.length / 4) : 0;
+}
+
+function formatTokenCount(tokens: number): string {
+  return `${tokens.toLocaleString()} token${tokens === 1 ? '' : 's'}`;
+}
+
+function formatSystemPromptPreview(toolDefinitionCount: number, tokenCount: number): string {
+  const availability =
+    toolDefinitionCount > 0
+      ? `Runtime instructions and ${toolDefinitionCount} tool definitions available for inspection.`
+      : 'Runtime instructions available for inspection.';
+  return `${availability} ${formatTokenCount(tokenCount)}`;
 }
 
 function LazyDetails({
@@ -271,26 +270,9 @@ export const ContextShelf = memo(function ContextShelf({
   onSelectionGesture?: ReplySelectionGestureHandler;
 }) {
   const normalizedSystemPrompt = systemPrompt?.trim() ?? '';
-  const hasSystemPrompt = normalizedSystemPrompt.length > 0 || toolDefinitions.length > 0;
-  const counts = new Map<string, number>();
-  if (hasSystemPrompt) {
-    counts.set('System prompt', 1);
-  }
-  if (remoteControlled) {
-    counts.set('Remote control', 1);
-  }
-  const nonTopologyBlocks = blocks.filter((b) => !isTopologyBlock(b));
-  for (const block of nonTopologyBlocks) {
-    const label = contextShelfLabel(block);
-    counts.set(label, (counts.get(label) ?? 0) + 1);
-  }
-  const preview = [...counts.entries()]
-    .map(([label, count]) => {
-      const normalizedLabel = normalizeContextChipLabel(label);
-      return count > 1 ? `${normalizedLabel} ×${count}` : normalizedLabel;
-    })
-    .join(' · ');
-  const totalItemCount = nonTopologyBlocks.length + (hasSystemPrompt ? 1 : 0) + (remoteControlled ? 1 : 0);
+  const toolDefinitionsText = formatToolDefinitions(toolDefinitions);
+  const hasSystemPrompt = normalizedSystemPrompt.length > 0 || toolDefinitionsText.length > 0;
+  const systemPromptTokenCount = estimateTextTokens([normalizedSystemPrompt, toolDefinitionsText].filter(Boolean).join('\n\n'));
 
   if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isQuietLifecycleContext)) {
     const marker = blocks.every(isAutoResumeLifecycleContext) ? 'auto-resume' : 'workspace-change';
@@ -302,139 +284,105 @@ export const ContextShelf = memo(function ContextShelf({
     if (block.customType !== 'child_conversation_topology' || !currentConversationId) return true;
     return parseTopologyBlockText(block.text).conversationId !== currentConversationId;
   };
-  const topologyBlocks = blocks.filter((b) => {
-    if (!isTopologyBlock(b)) return false;
-    return shouldRenderTopologyBlock(b);
-  });
-
   return (
-    <div data-context-shelf-wrapper="1">
-      {topologyBlocks.map((block) => (
-        <div key={block.id ?? `topology-${block.ts}`} className="w-[78%] px-2 py-0.5">
-          <TopologyBlock block={block as Extract<MessageBlock, { type: 'context' }>} />
-        </div>
-      ))}
-      <details className="group my-5 block w-full text-dim" data-context-shelf="1">
-        <summary className="grid w-full cursor-pointer grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary [&::-webkit-details-marker]:hidden">
-          <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 text-dim/85 sm:max-w-[42rem]">
-            <span className="text-dim/70 transition-transform group-open:rotate-90" aria-hidden="true">
-              ›
-            </span>
-            <span aria-hidden="true">▣</span>
-            <span className="shrink-0">Context</span>
-            <span className="shrink-0">
-              · {totalItemCount} item{totalItemCount === 1 ? '' : 's'}
-            </span>
-            {preview ? <span className="min-w-0 truncate text-dim/70">· {preview}</span> : null}
-            <span className="shrink-0 text-dim/55">· click to expand</span>
-            {blocks[blocks.length - 1]?.ts ? (
-              <span className="ui-message-meta shrink-0 opacity-70">{timeAgo(blocks[blocks.length - 1].ts)}</span>
-            ) : null}
-          </span>
-          <span className="h-px bg-border-subtle" aria-hidden="true" />
-        </summary>
-        <div className="mt-3 w-full max-w-[72rem] space-y-1.5 pl-5 pr-2">
-          {hasSystemPrompt ? (
-            <LazyDetails
-              className={contextShelfItemClassName}
-              dataAttrs={{ 'data-context-type': 'system_prompt' }}
-              summary={
-                <summary className={contextShelfSummaryClassName}>
-                  <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-                    <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
-                      ›
-                    </span>
-                    <span className="shrink-0 font-medium text-primary/90">System prompt</span>
-                    <span className="min-w-0 truncate text-dim/90">
-                      {toolDefinitions.length > 0
-                        ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
-                        : 'Runtime instructions available for inspection.'}
-                    </span>
-                  </span>
-                  <span className="h-px bg-border-subtle" aria-hidden="true" />
-                </summary>
-              }
-            >
-              <div className={contextShelfSystemPromptBodyClassName}>
-                {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
-                {toolDefinitions.length > 0 ? (
-                  <div className={normalizedSystemPrompt ? 'mt-4' : undefined}>
-                    <div className="mb-2 font-medium text-primary">Available tool definitions</div>
-                    {renderText(formatToolDefinitions(toolDefinitions))}
-                  </div>
-                ) : null}
+    <div className="my-5 w-full max-w-[72rem] space-y-1.5 text-dim" data-context-shelf="1">
+      {hasSystemPrompt ? (
+        <LazyDetails
+          className={contextShelfItemClassName}
+          dataAttrs={{ 'data-context-type': 'system_prompt' }}
+          summary={
+            <summary className={contextShelfSummaryClassName}>
+              <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                  ›
+                </span>
+                <span className="shrink-0 font-medium text-primary/90">System prompt</span>
+                <span className="min-w-0 truncate text-dim/90">
+                  {formatSystemPromptPreview(toolDefinitions.length, systemPromptTokenCount)}
+                </span>
+              </span>
+              <span className="h-px bg-border-subtle" aria-hidden="true" />
+            </summary>
+          }
+        >
+          <div className={contextShelfSystemPromptBodyClassName}>
+            {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
+            {toolDefinitionsText ? (
+              <div className={normalizedSystemPrompt ? 'mt-4' : undefined}>
+                <div className="mb-2 font-medium text-primary">Available tool definitions</div>
+                {renderText(toolDefinitionsText)}
               </div>
-            </LazyDetails>
-          ) : null}
-          {remoteControlled ? (
-            <details className={contextShelfItemClassName} data-context-type="remote_control">
+            ) : null}
+          </div>
+        </LazyDetails>
+      ) : null}
+      {remoteControlled ? (
+        <details className={contextShelfItemClassName} data-context-type="remote_control">
+          <summary className={contextShelfSummaryClassName}>
+            <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+              <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                ›
+              </span>
+              <span className="shrink-0 font-medium text-primary/90">Remote control</span>
+              <span className="min-w-0 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
+            </span>
+            <span className="h-px bg-border-subtle" aria-hidden="true" />
+          </summary>
+          <div className={contextShelfBodyClassName}>Controlled remotely from Kitty Litter.</div>
+        </details>
+      ) : null}
+      {blocks.map((block, index) => {
+        const blockId = block.id?.trim() || undefined;
+        const replySelectionScopeProps = buildReplySelectionScopeProps(
+          typeof messageIndexOffset === 'number' ? messageIndexOffset + index : undefined,
+          blockId,
+          onSelectionGesture,
+        );
+
+        // Topology blocks (parent backlinks, child tombstones) have navigable links;
+        // render them inline with proper navigation instead of as collapsed details.
+        if (isTopologyBlock(block)) {
+          if (!shouldRenderTopologyBlock(block)) return null;
+          return (
+            <div key={block.id ?? index} className="px-2 py-0.5">
+              <TopologyBlock block={block} />
+            </div>
+          );
+        }
+
+        return (
+          <LazyDetails
+            key={block.id ?? index}
+            className={contextShelfItemClassName}
+            dataAttrs={{
+              'data-context-type': block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`,
+              'data-summary-kind': block.type === 'summary' ? block.kind : undefined,
+            }}
+            summary={
               <summary className={contextShelfSummaryClassName}>
                 <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
                   <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
                     ›
                   </span>
-                  <span className="shrink-0 font-medium text-primary/90">Remote control</span>
-                  <span className="min-w-0 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
+                  <span className="shrink-0 font-medium text-primary/90">{contextShelfLabel(block)}</span>
+                  <span className="min-w-0 truncate text-dim/90">{contextShelfPreview(block)}</span>
+                  {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
                 </span>
                 <span className="h-px bg-border-subtle" aria-hidden="true" />
               </summary>
-              <div className={contextShelfBodyClassName}>Controlled remotely from Kitty Litter.</div>
-            </details>
-          ) : null}
-          {blocks.map((block, index) => {
-            const blockId = block.id?.trim() || undefined;
-            const replySelectionScopeProps = buildReplySelectionScopeProps(
-              typeof messageIndexOffset === 'number' ? messageIndexOffset + index : undefined,
-              blockId,
-              onSelectionGesture,
-            );
-
-            // Topology blocks (parent backlinks, child tombstones) have navigable links;
-            // render them inline with proper navigation instead of as collapsed details.
-            if (isTopologyBlock(block)) {
-              if (!shouldRenderTopologyBlock(block)) return null;
-              return (
-                <div key={block.id ?? index} className="px-2 py-0.5">
-                  <TopologyBlock block={block} />
-                </div>
-              );
             }
-
-            return (
-              <LazyDetails
-                key={block.id ?? index}
-                className={contextShelfItemClassName}
-                dataAttrs={{
-                  'data-context-type': block.type === 'context' ? (block.customType ?? 'injected_context') : `summary:${block.kind}`,
-                  'data-summary-kind': block.type === 'summary' ? block.kind : undefined,
-                }}
-                summary={
-                  <summary className={contextShelfSummaryClassName}>
-                    <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-                      <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
-                        ›
-                      </span>
-                      <span className="shrink-0 font-medium text-primary/90">{contextShelfLabel(block)}</span>
-                      <span className="min-w-0 truncate text-dim/90">{contextShelfPreview(block)}</span>
-                      {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
-                    </span>
-                    <span className="h-px bg-border-subtle" aria-hidden="true" />
-                  </summary>
-                }
-              >
-                <div {...replySelectionScopeProps} className={contextShelfBodyClassName}>
-                  {block.type === 'summary' && block.kind === 'compaction' ? (
-                    <p className="mb-2 text-[12px] leading-relaxed text-secondary">
-                      {resolveCompactionSummaryDetail(block.title, block.detail)}
-                    </p>
-                  ) : null}
-                  {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
-                </div>
-              </LazyDetails>
-            );
-          })}
-        </div>
-      </details>
+          >
+            <div {...replySelectionScopeProps} className={contextShelfBodyClassName}>
+              {block.type === 'summary' && block.kind === 'compaction' ? (
+                <p className="mb-2 text-[12px] leading-relaxed text-secondary">
+                  {resolveCompactionSummaryDetail(block.title, block.detail)}
+                </p>
+              ) : null}
+              {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
+            </div>
+          </LazyDetails>
+        );
+      })}
     </div>
   );
 });
@@ -828,14 +776,11 @@ export const SystemPromptMessage = memo(function SystemPromptMessage({
   if (!normalizedText && !toolDefinitionsText) {
     return null;
   }
+  const tokenCount = estimateTextTokens([normalizedText, toolDefinitionsText].filter(Boolean).join('\n\n'));
   return (
     <SystemEventFrame
       label="System prompt"
-      preview={
-        toolDefinitions.length > 0
-          ? `Runtime instructions and ${toolDefinitions.length} tool definitions available for inspection.`
-          : 'Runtime instructions available for inspection.'
-      }
+      preview={formatSystemPromptPreview(toolDefinitions.length, tokenCount)}
       dataAttributes={{ 'data-context-type': 'system_prompt' }}
     >
       <div className="space-y-4 pt-2 pl-5 text-[13px] leading-relaxed text-primary/90">

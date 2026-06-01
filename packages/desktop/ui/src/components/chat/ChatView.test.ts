@@ -1062,10 +1062,11 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('<details');
     expect(html).toContain('data-context-type="system_prompt"');
     expect(html).toContain('System prompt');
-    expect(html).toContain('Runtime instructions available for inspection.');
+    expect(html).toContain('Runtime instructions available for inspection. 14 tokens');
     expect(html).not.toContain('You are Patrick');
     expect(html).not.toContain('~15 tokens');
     expect(html).toContain('data-context-shelf="1"');
+    expect(html).not.toContain('Context ·');
     expect(html).toContain('bg-border-subtle');
     expect(html).not.toContain('Dec 31');
     expect(html).not.toContain('ui-message-card-assistant');
@@ -1086,7 +1087,7 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('Runtime instructions and 1 tool definitions available for inspection.');
+    expect(html).toContain('Runtime instructions and 1 tool definitions available for inspection. 40 tokens');
     expect(html).not.toContain('Available tool definitions');
     expect(html).not.toContain('Execute a bash command.');
     expect(html).not.toContain('&quot;command&quot;');
@@ -1118,6 +1119,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('data-context-type="system_prompt"');
     expect(html).toContain('data-summary-kind="related"');
     expect(html).toContain('Related conversation pointers');
+    expect(html).toContain('Runtime instructions available for inspection. 6 tokens');
     expect(html).not.toContain('~6 tokens');
     expect(html).not.toContain('~7 tokens');
   });
@@ -1233,7 +1235,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('Parent thread');
   });
 
-  it('renders remote control state inside the context shelf', () => {
+  it('renders remote control state inline with context events', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {
         remoteControlled: true,
@@ -1250,7 +1252,7 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('data-context-shelf="1"');
     expect(html).toContain('data-context-type="remote_control"');
-    expect(html).toContain('remote control');
+    expect(html).toContain('Remote control');
     expect(html).toContain('Controlled remotely from Kitty Litter');
     expect(html).not.toContain('data-context-type="referenced_context"');
     expect(html).not.toContain('ui-message-card-assistant');
