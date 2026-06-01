@@ -9,8 +9,13 @@ Use this skill when the active model is `ds4/deepseek-v4-flash`.
 
 DS4 is local DeepSeek V4 Flash served by `ds4-server`. It is optimized for coding-agent workflows but local decoding is slower than hosted frontier models, so keep tool loops deliberate:
 
-- Prefer `search` to locate compact anchors before reading large files.
+- Start with the core tools only: `ds4_capabilities`, `bash`, `read`, `list`, `search`, and `edit`.
+- Use `ds4_capabilities` to enable extra tool groups only when the task requires them:
+  - `web` enables `google_search` and `visit_page`.
+  - `files` enables `write` and `more`.
+  - `async_shell` enables `bash_status` and `bash_stop`.
 - Use `read` with `start_line` and `max_lines` for focused windows. Use `more` only when the previous read says more context is needed.
+- Prefer `search` to locate compact anchors before reading large files.
 - Use `list` for compact directory inspection.
 - Use `edit` for exact targeted replacements after reading the surrounding anchor text. For large replacements, use `old` with `[upto]` between unique head and tail anchors.
 - Use `write` for new files or deliberate whole-file replacement.

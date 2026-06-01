@@ -46,6 +46,9 @@ function ctx(overrides: Record<string, unknown> = {}) {
       saveProvider: vi.fn(async () => ({ providers: [] })),
       saveProviderModel: vi.fn(async () => ({ providers: [] })),
     },
+    conversations: {
+      setActiveTools: vi.fn(async (_conversationId: string, toolNames: string[]) => ({ toolNames })),
+    },
     shell: {
       exec: vi.fn(),
       spawn: vi.fn(),
@@ -309,7 +312,7 @@ describe('DS4 managed runtime', () => {
 });
 
 describe('DS4 agent profile activation', () => {
-  it('adds ds4-agent-shaped tools when the DS4 profile is active', () => {
+  it('keeps only DS4 core tools active when the DS4 profile is active', () => {
     const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
     backend.createDs4AgentExtension()({
       on: (event: string, handler: (event: unknown, ctx: unknown) => void) => handlers.set(event, handler),
@@ -319,15 +322,57 @@ describe('DS4 agent profile activation', () => {
     handlers.get('session_start')?.(
       {},
       {
-        getActiveTools: () => ['artifact'],
+        getActiveTools: () => ['artifact', 'google_search', 'write', 'bash_status'],
         setActiveTools: (tools: string[]) => calls.push(tools),
         modelProfile: { kind: 'resolved', profile: { id: 'ds4-compatible' } },
       },
     );
 
-    expect(calls).toEqual([
-      ['artifact', 'google_search', 'visit_page', 'bash', 'bash_status', 'bash_stop', 'read', 'more', 'write', 'edit', 'search', 'list'],
+    expect(calls).toEqual([['artifact', 'ds4_capabilities', 'bash', 'read', 'list', 'search', 'edit']]);
+  });
+
+  it('enables progressive DS4 tool groups for the active conversation', async () => {
+    const context = ctx();
+
+    const result = await backend.capabilities({ action: 'enable', groups: ['web', 'async_shell', 'nope'], tools: ['write'] }, context);
+
+    expect(context.conversations.setActiveTools).toHaveBeenCalledWith('conversation-1', [
+      'ds4_capabilities',
+      'bash',
+      'read',
+      'list',
+      'search',
+      'edit',
+      'google_search',
+      'visit_page',
+      'bash_status',
+      'bash_stop',
+      'write',
     ]);
+    expect(result.text).toContain('Enabled DS4 tools');
+    expect(result.details.ignoredGroups).toEqual(['nope']);
+  });
+
+  it('compacts prompt assembly for DS4 only', async () => {
+    const plan = {
+      skills: { skillPaths: ['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent'], inlineSkills: [{ id: 'x' }] },
+      tools: { activeToolNames: ['bash', 'write', 'google_search', 'ds4_capabilities'] },
+      instructions: {
+        layers: [
+          { id: 'agents:/Users/patrick/AGENTS.md', title: 'AGENTS.md', content: 'very long global instructions', source: { label: '/Users/patrick/AGENTS.md' } },
+          { id: 'runtime:generated-system-template', title: 'Generated', content: 'keep me', source: { label: 'runtime' } },
+        ],
+      },
+      diagnostics: [],
+    };
+
+    const result = await backend.optimizePromptAssembly({ plan, context: { modelRef: 'ds4/deepseek-v4-flash' } });
+
+    expect(result.plan.skills.skillPaths).toEqual(['/extensions/system-ds4/skills/ds4-local-agent']);
+    expect(result.plan.skills.inlineSkills).toEqual([]);
+    expect(result.plan.tools.activeToolNames).toEqual(['bash', 'ds4_capabilities']);
+    expect(result.plan.instructions.layers[0].content).toContain('Full instructions are available');
+    expect(result.plan.instructions.layers[1].content).toBe('keep me');
   });
 });
 

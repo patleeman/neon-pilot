@@ -14,6 +14,13 @@ const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
 const MODEL_NAME = 'DeepSeek V4 Flash';
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
+const DS4_CORE_TOOLS = ['ds4_capabilities', 'bash', 'read', 'list', 'search', 'edit'];
+const DS4_PROGRESSIVE_TOOL_GROUPS = {
+  web: ['google_search', 'visit_page'],
+  files: ['write', 'more'],
+  async_shell: ['bash_status', 'bash_stop'],
+  all: ['google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'],
+} as const;
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
 const DEFAULT_READ_LINES = 500;
@@ -29,6 +36,7 @@ const BOOTSTRAP_STEPS = [
 ] as const;
 
 type ToolResult = { content?: Array<{ type?: string; text?: string }>; details?: unknown; isError?: boolean };
+type Ds4ProgressiveGroup = keyof typeof DS4_PROGRESSIVE_TOOL_GROUPS;
 type ShellJob = {
   id: number;
   command: string;
@@ -231,6 +239,10 @@ function stringValue(value: unknown): string | undefined {
 
 function booleanValue(value: unknown): boolean {
   return value === true;
+}
+
+function stringArrayValue(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0) : [];
 }
 
 function cwdFor(ctx: ExtensionBackendContext): string {
@@ -828,6 +840,95 @@ export async function visit_page(input: { url?: unknown; raw?: unknown }, ctx: E
   return { text: formatted.text, content: [{ type: 'text' as const, text: formatted.text }], details: { url, contentType, truncated: formatted.truncated } };
 }
 
+export async function capabilities(input: { action?: unknown; groups?: unknown; tools?: unknown }, ctx: ExtensionBackendContext) {
+  const action = stringValue(input.action) ?? 'list';
+  const availableGroups = Object.keys(DS4_PROGRESSIVE_TOOL_GROUPS);
+  if (action === 'list') {
+    const text = [
+      'DS4 starts with a compact core tool set:',
+      `- core: ${DS4_CORE_TOOLS.join(', ')}`,
+      '',
+      'Progressive tool groups are available on request:',
+      `- web: ${DS4_PROGRESSIVE_TOOL_GROUPS.web.join(', ')}`,
+      `- files: ${DS4_PROGRESSIVE_TOOL_GROUPS.files.join(', ')}`,
+      `- async_shell: ${DS4_PROGRESSIVE_TOOL_GROUPS.async_shell.join(', ')}`,
+      `- all: ${DS4_PROGRESSIVE_TOOL_GROUPS.all.join(', ')}`,
+      '',
+      'Call ds4_capabilities with action="enable" and groups=["web"] or tools=["write"] when the task needs more surface.',
+    ].join('\n');
+    return { text, content: [{ type: 'text' as const, text }], details: { core: DS4_CORE_TOOLS, groups: DS4_PROGRESSIVE_TOOL_GROUPS } };
+  }
+  if (action !== 'enable') throw new Error('action must be list or enable.');
+  const conversationId = ctx.toolContext?.conversationId ?? ctx.toolContext?.sessionId;
+  if (!conversationId) throw new Error('Cannot enable DS4 tools without an active conversation id.');
+
+  const groups = stringArrayValue(input.groups).filter((group): group is Ds4ProgressiveGroup =>
+    Object.prototype.hasOwnProperty.call(DS4_PROGRESSIVE_TOOL_GROUPS, group),
+  );
+  const directTools = stringArrayValue(input.tools);
+  const requested = new Set([...DS4_CORE_TOOLS, ...groups.flatMap((group) => DS4_PROGRESSIVE_TOOL_GROUPS[group]), ...directTools]);
+  const nextTools = [...requested].filter(Boolean);
+  await ctx.conversations.setActiveTools(conversationId, nextTools);
+  const text = `Enabled DS4 tools: ${nextTools.join(', ')}`;
+  return {
+    text,
+    content: [{ type: 'text' as const, text }],
+    details: { conversationId, activeTools: nextTools, requestedGroups: groups, ignoredGroups: stringArrayValue(input.groups).filter((group) => !availableGroups.includes(group)) },
+  };
+}
+
+export async function optimizePromptAssembly(input: { plan?: unknown; context?: { modelRef?: string; provider?: string } }) {
+  const plan = input.plan as
+    | {
+        skills?: { skillPaths?: string[]; inlineSkills?: unknown[]; diagnostics?: unknown[] };
+        tools?: { activeToolNames?: string[]; diagnostics?: unknown[] };
+        instructions?: { layers?: Array<Record<string, unknown>>; diagnostics?: unknown[] };
+        diagnostics?: Array<Record<string, unknown>>;
+      }
+    | undefined;
+  const modelRef = input.context?.modelRef ?? '';
+  const isDs4 = input.context?.provider === PROVIDER || modelRef === MODEL_REF || modelRef.startsWith(`${PROVIDER}/`);
+  if (!plan || !isDs4) return { plan };
+
+  if (plan.skills) {
+    const ds4SkillPaths = (plan.skills.skillPaths ?? []).filter((skillPath) => skillPath.includes('system-ds4'));
+    plan.skills = { ...plan.skills, skillPaths: ds4SkillPaths, inlineSkills: [] };
+  }
+  if (plan.tools?.activeToolNames) {
+    plan.tools = { ...plan.tools, activeToolNames: plan.tools.activeToolNames.filter((tool) => DS4_CORE_TOOLS.includes(tool)) };
+  }
+  if (plan.instructions?.layers) {
+    const compacted = plan.instructions.layers.map((layer) => {
+      const id = typeof layer.id === 'string' ? layer.id : '';
+      const title = typeof layer.title === 'string' ? layer.title : 'Instruction layer';
+      const source = layer.source && typeof layer.source === 'object' ? (layer.source as Record<string, unknown>) : {};
+      const label = typeof source.label === 'string' ? source.label : title;
+      const isGlobalAgents = id.startsWith('agents:') || title === 'AGENTS.md';
+      if (!isGlobalAgents) return layer;
+      return {
+        ...layer,
+        content: [
+          `## ${title}`,
+          '',
+          `Full instructions are available at ${label}.`,
+          'For DS4, keep only the local repo instructions in working memory. Read this file only when the task depends on broader global workflow policy.',
+        ].join('\n'),
+      };
+    });
+    plan.instructions = { ...plan.instructions, layers: compacted };
+  }
+  plan.diagnostics = [
+    ...(plan.diagnostics ?? []),
+    {
+      severity: 'info',
+      code: 'ds4-progressive-disclosure',
+      message: 'DS4 prompt assembly reduced to core tools/skills and pointer-style global instructions.',
+      sourceId: 'system-ds4',
+    },
+  ];
+  return { plan };
+}
+
 export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
   return (pi: ExtensionAPI) => {
     const activate = (ctx: {
@@ -839,8 +940,8 @@ export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
         return;
       }
       const active = ctx.getActiveTools?.() ?? [];
-      const wanted = ['google_search', 'visit_page', 'bash', 'bash_status', 'bash_stop', 'read', 'more', 'write', 'edit', 'search', 'list'];
-      ctx.setActiveTools?.([...new Set([...active, ...wanted])]);
+      const keep = active.filter((tool) => !['google_search', 'visit_page', 'bash_status', 'bash_stop', 'more', 'write'].includes(tool));
+      ctx.setActiveTools?.([...new Set([...keep, ...DS4_CORE_TOOLS])]);
     };
 
     pi.on('session_start', (_event, ctx) => activate(ctx));
