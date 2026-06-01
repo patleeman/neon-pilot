@@ -616,22 +616,34 @@
       {
         "id": "duplicateConversation",
         "handler": "duplicateConversation",
-        "title": "Duplicate conversation"
+        "title": "Duplicate conversation",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "copyWorkingDirectory",
         "handler": "copyWorkingDirectory",
-        "title": "Copy working directory"
+        "title": "Copy working directory",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "copyConversationId",
         "handler": "copyConversationId",
-        "title": "Copy conversation ID"
+        "title": "Copy conversation ID",
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "copyDeeplink",
         "handler": "copyDeeplink",
-        "title": "Copy deeplink"
+        "title": "Copy deeplink",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },

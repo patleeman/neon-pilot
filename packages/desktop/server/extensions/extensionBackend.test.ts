@@ -332,6 +332,56 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs worker-safe conversation context menu actions through the worker runner', async () => {
+    const backendRunner = {
+      loadModule: vi.fn(),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true, conversationId: 'conv-1' })),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-conversation-tools', 'copyConversationId', {
+        conversationId: 'conv-1',
+        sessionTitle: 'Architecture Notes',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, conversationId: 'conv-1' },
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'copyConversationId',
+      { type: 'action', label: 'action copyConversationId', target: 'copyConversationId' },
+      [{ conversationId: 'conv-1', sessionTitle: 'Architecture Notes' }],
+      {
+        context: {
+          type: 'backend',
+          runtimeScope: 'shared',
+          toolContext: undefined,
+        },
+      },
+    );
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
+  });
+
   it('normalizes agent factory builders through the extension backend runner seam', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
