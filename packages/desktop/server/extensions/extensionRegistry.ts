@@ -229,6 +229,7 @@ export interface ExtensionModelProfileRegistration {
   description?: string;
   match: string[];
   priority: number;
+  startupAction?: string;
 }
 
 export interface ExtensionAgentRegistration {

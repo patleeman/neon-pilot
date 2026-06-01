@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const piAi = vi.hoisted(() => ({ stream: vi.fn(), streamSimple: vi.fn() }));
 const prefs = vi.hoisted(() => ({ readSavedModelPreferences: vi.fn(() => ({ modelRef: 'saved' })) }));
 const tiers = vi.hoisted(() => ({ modelSupportsServiceTier: vi.fn(() => true) }));
+const extensionHostClient = vi.hoisted(() => ({
+  client: {
+    resolveModelProfile: vi.fn(async () => ({ kind: 'none' })),
+    invokeAction: vi.fn(),
+  },
+}));
 const conversationPrefs = vi.hoisted(() => ({
   readConversationModelPreferenceSnapshot: vi.fn(() => ({ modelRef: 'conversation' })),
   resolveConversationModelPreferenceState: vi.fn(() => ({ currentModel: 'resolved' })),
@@ -11,6 +17,7 @@ const conversationPrefs = vi.hoisted(() => ({
 vi.mock('@earendil-works/pi-ai', () => piAi);
 vi.mock('../models/modelPreferences.js', () => prefs);
 vi.mock('../models/modelServiceTiers.js', () => tiers);
+vi.mock('../extensions/extensionHostClient.js', () => ({ getExtensionHostClient: () => extensionHostClient.client }));
 vi.mock('./conversationModelPreferences.js', () => conversationPrefs);
 
 import {
@@ -23,6 +30,8 @@ import {
 describe('live session models', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    extensionHostClient.client.resolveModelProfile.mockResolvedValue({ kind: 'none' });
+    extensionHostClient.client.invokeAction.mockResolvedValue({ ok: true, result: {} });
   });
 
   it('resolves conversation preference state from conversation snapshot, saved preferences, and available models', () => {
@@ -102,6 +111,27 @@ describe('live session models', () => {
     expect(modelRegistry.find).toHaveBeenCalledWith('opencode-go', 'kimi-k2.6');
     expect(modelRegistry.getApiKeyAndHeaders).toHaveBeenCalledWith(canonicalModel);
     expect(piAi.stream).toHaveBeenCalledWith(canonicalModel, context, expect.objectContaining({ reasoningEffort: 'medium' }));
+  });
+
+  it('starts a matched model profile runtime before streaming', async () => {
+    const auth = { ok: true, apiKey: 'key' };
+    const modelRegistry = { find: vi.fn(() => undefined), getApiKeyAndHeaders: vi.fn(async () => auth) };
+    const session = { agent: {}, modelRegistry };
+    const model = { id: 'deepseek-v4-flash', provider: 'ds4' };
+    extensionHostClient.client.resolveModelProfile.mockResolvedValueOnce({
+      kind: 'resolved',
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', startupAction: 'ds4StartServer' },
+    });
+
+    applyLiveSessionServiceTier(session as never, 'flex');
+    await session.agent.streamFn(model, [], {});
+
+    expect(extensionHostClient.client.invokeAction).toHaveBeenCalledWith({
+      extensionId: 'system-ds4',
+      actionId: 'ds4StartServer',
+      input: {},
+    });
+    expect(piAi.stream).toHaveBeenCalledWith(model, [], expect.objectContaining({ apiKey: 'key' }));
   });
 
   it('converts opencode-go Kimi reasoning payloads to thinking-only requests', async () => {

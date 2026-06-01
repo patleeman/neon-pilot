@@ -38,7 +38,8 @@
         "title": "DS4 Compatible",
         "description": "DeepSeek V4 Flash served by local ds4-server.",
         "match": ["ds4/*"],
-        "priority": 100
+        "priority": 100,
+        "startupAction": "ds4StartServer"
       }
     ],
     "tools": [

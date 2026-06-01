@@ -83,6 +83,7 @@ function buildServiceTierAwareStreamFn(modelRegistry: ModelRegistry, serviceTier
     if (!auth.ok) {
       throw new Error(auth.error);
     }
+    await runModelProfileStartupAction(canonicalModel);
 
     const mergedOptions: ProviderStreamOptions = {
       ...options,
@@ -108,6 +109,22 @@ function buildServiceTierAwareStreamFn(modelRegistry: ModelRegistry, serviceTier
       serviceTier,
     });
   };
+}
+
+async function runModelProfileStartupAction(model: Model<Api>): Promise<void> {
+  const { getExtensionHostClient } = await import('../extensions/extensionHostClient.js');
+  const resolution = await getExtensionHostClient().resolveModelProfile({ provider: model.provider, model: model.id });
+  if (resolution.kind !== 'resolved') return;
+
+  const profile = resolution.profile as { extensionId?: unknown; startupAction?: unknown };
+  const extensionId = typeof profile.extensionId === 'string' ? profile.extensionId : '';
+  const actionId = typeof profile.startupAction === 'string' ? profile.startupAction : '';
+  if (!extensionId || !actionId) return;
+
+  const result = await getExtensionHostClient().invokeAction({ extensionId, actionId, input: {} });
+  if (!result.ok) {
+    throw new Error(result.error || `Model runtime startup action failed: ${extensionId}/${actionId}`);
+  }
 }
 
 export function applyLiveSessionServiceTier(session: AgentSession, serviceTier: string): void {

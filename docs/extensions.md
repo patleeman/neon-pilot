@@ -268,6 +268,8 @@ Profile resolution is deliberately boring:
 
 The profile contribution itself does not define tools or instructions. For example, the Codex Compatibility extension contributes a `modelProfiles` match for `openai-codex/*`, contributes the `apply_patch` tool, and uses its `backend.agentExtension` hooks to switch active tools to `bash` and `apply_patch` when a matching model is active. Explicit per-run tool allowlists still take precedence over extension profile behavior.
 
+Profiles for local runtimes may declare `startupAction`, naming a backend action in the same extension. When that profile is the resolved match for the selected model, Neon Pilot invokes the action before the provider request is sent. Use this for idempotent runtime preparation such as starting a local server; the action should return quickly when the runtime is already healthy and surface setup errors clearly.
+
 For `session_start` and `model_select` handlers, the desktop host augments the lifecycle context with:
 
 ```ts

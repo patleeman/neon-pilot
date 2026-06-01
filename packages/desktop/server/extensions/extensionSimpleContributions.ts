@@ -18,6 +18,7 @@ export interface ExtensionModelProfileRegistration {
   description?: string;
   match: string[];
   priority: number;
+  startupAction?: string;
 }
 
 export function buildExtensionMentionRegistrations(input: {
@@ -67,6 +68,7 @@ export function buildExtensionModelProfileRegistrations(input: {
         ...(profile.description ? { description: profile.description } : {}),
         match,
         priority: Number.isFinite(profile.priority) ? Number(profile.priority) : 0,
+        ...(profile.startupAction ? { startupAction: profile.startupAction } : {}),
       },
     ];
   });
