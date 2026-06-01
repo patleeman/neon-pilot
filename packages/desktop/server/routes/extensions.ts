@@ -18,6 +18,7 @@ import {
   importRuntimeExtensionBundle,
   snapshotRuntimeExtension,
 } from '../extensions/extensionLifecycle.js';
+import type { ExtensionManifest } from '../extensions/extensionManifest.js';
 import { getAggregatedBadgeCount } from '../extensions/extensionNotifications.js';
 import {
   clearBuildError,
@@ -52,6 +53,12 @@ async function readExtensionInstallSummariesWithRuntimeState() {
       return { id: serviceId, running: Boolean(status), startedAt: status?.startedAt ?? null };
     }),
   }));
+}
+
+async function readExtensionManifestFromHost(extensionId: string): Promise<ExtensionManifest | null> {
+  const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
+  const manifest = snapshot.extensions.find((extension) => extension.id === extensionId);
+  return (manifest ?? null) as ExtensionManifest | null;
 }
 
 function isHostCommandAction(action: string): boolean {
@@ -433,27 +440,27 @@ export function registerExtensionRoutes(
     }
   });
 
-  router.get('/api/extensions/:id/manifest', (req, res) => {
+  router.get('/api/extensions/:id/manifest', async (req, res) => {
     try {
-      const entry = findExtensionEntry(req.params.id);
-      if (!entry) {
+      const manifest = await readExtensionManifestFromHost(req.params.id);
+      if (!manifest) {
         res.status(404).json({ error: 'Extension not found.' });
         return;
       }
-      res.json(entry.manifest);
+      res.json(manifest);
     } catch (err) {
       sendRouteError(res, 'extension manifest error', err);
     }
   });
 
-  router.get('/api/extensions/:id/surfaces', (req, res) => {
+  router.get('/api/extensions/:id/surfaces', async (req, res) => {
     try {
-      const entry = findExtensionEntry(req.params.id);
-      if (!entry) {
+      const manifest = await readExtensionManifestFromHost(req.params.id);
+      if (!manifest) {
         res.status(404).json({ error: 'Extension not found.' });
         return;
       }
-      res.json([...(entry.manifest.surfaces ?? []), ...(entry.manifest.contributes?.views ?? [])]);
+      res.json([...(manifest.surfaces ?? []), ...(manifest.contributes?.views ?? [])]);
     } catch (err) {
       sendRouteError(res, 'extension surfaces error', err);
     }

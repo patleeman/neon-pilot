@@ -244,7 +244,7 @@ describe('registerExtensionRoutes', () => {
     expect(res.end).toHaveBeenCalled();
   });
 
-  it('serves per-extension manifest and surfaces', () => {
+  it('serves per-extension manifest and surfaces', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
@@ -263,11 +263,11 @@ describe('registerExtensionRoutes', () => {
 
     const harness = createHarness();
     const manifestRes = createResponse();
-    harness.getHandler('/api/extensions/:id/manifest')({ params: { id: 'agent-board' } }, manifestRes);
+    await harness.getHandler('/api/extensions/:id/manifest')({ params: { id: 'agent-board' } }, manifestRes);
     expect(manifestRes.json).toHaveBeenCalledWith(expect.objectContaining({ id: 'agent-board', contributes: { views: [view] } }));
 
     const surfacesRes = createResponse();
-    harness.getHandler('/api/extensions/:id/surfaces')({ params: { id: 'agent-board' } }, surfacesRes);
+    await harness.getHandler('/api/extensions/:id/surfaces')({ params: { id: 'agent-board' } }, surfacesRes);
     expect(surfacesRes.json).toHaveBeenCalledWith([view]);
   });
 
