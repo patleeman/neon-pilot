@@ -96,21 +96,22 @@ function normalizePromptReferenceResolution(value: unknown): ExtensionHostPrompt
 }
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+type ExtensionHostWireInput<T> = Omit<T, 'type' | 'serverContext'>;
 
-export type ExtensionHostInvokeActionInput = Omit<ExtensionHostInvokeActionRequest, 'type'>;
-export type ExtensionHostInstallSubscriptionsInput = Omit<ExtensionHostInstallSubscriptionsRequest, 'type'>;
-export type ExtensionHostInvokeProtocolEntrypointInput = Omit<ExtensionHostInvokeProtocolEntrypointRequest, 'type'>;
-export type ExtensionHostInvokeRouteInput = Omit<ExtensionHostInvokeRouteRequest, 'type'>;
+export type ExtensionHostInvokeActionInput = ExtensionHostWireInput<ExtensionHostInvokeActionRequest>;
+export type ExtensionHostInstallSubscriptionsInput = ExtensionHostWireInput<ExtensionHostInstallSubscriptionsRequest>;
+export type ExtensionHostInvokeProtocolEntrypointInput = ExtensionHostWireInput<ExtensionHostInvokeProtocolEntrypointRequest>;
+export type ExtensionHostInvokeRouteInput = ExtensionHostWireInput<ExtensionHostInvokeRouteRequest>;
 export type ExtensionHostRegistryMaintenanceInput = DistributiveOmit<ExtensionHostRegistryMaintenanceRequest, 'type'>;
 export type ExtensionHostReloadBackendInput = Omit<ExtensionHostReloadBackendRequest, 'type'>;
 export type ExtensionHostResolveFilePathInput = Omit<ExtensionHostResolveFilePathRequest, 'type'>;
 export type ExtensionHostResolveModelProfileInput = Omit<ExtensionHostResolveModelProfileRequest, 'type'>;
 export type ExtensionHostResolvePromptReferencesInput = Omit<ExtensionHostResolvePromptReferencesRequest, 'type'>;
 export type ExtensionHostRunSelfTestInput = Omit<ExtensionHostRunSelfTestRequest, 'type'>;
-export type ExtensionHostSetEnabledInput = Omit<ExtensionHostSetEnabledRequest, 'type'>;
+export type ExtensionHostSetEnabledInput = ExtensionHostWireInput<ExtensionHostSetEnabledRequest>;
 export type ExtensionHostSetKeybindingInput = Omit<ExtensionHostSetKeybindingRequest, 'type'>;
-export type ExtensionHostStartServicesInput = Omit<ExtensionHostStartServicesRequest, 'type'>;
-export type ExtensionHostStartStartupActionsInput = Omit<ExtensionHostStartStartupActionsRequest, 'type'>;
+export type ExtensionHostStartServicesInput = ExtensionHostWireInput<ExtensionHostStartServicesRequest>;
+export type ExtensionHostStartStartupActionsInput = ExtensionHostWireInput<ExtensionHostStartStartupActionsRequest>;
 export type ExtensionHostBeginStartupGuardInput = Omit<ExtensionHostBeginStartupGuardRequest, 'type'>;
 export type ExtensionHostCompleteStartupGuardInput = Omit<ExtensionHostCompleteStartupGuardRequest, 'type'>;
 export type ExtensionHostStateOperationInput = DistributiveOmit<ExtensionHostStateOperationRequest, 'type'>;

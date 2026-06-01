@@ -95,7 +95,7 @@ describe('extension host client', () => {
         extensionId: 'ext',
         actionId: 'doThing',
         input: { x: 1 },
-        serverContext: { getRuntimeScope: () => 'shared' },
+        serverContextSnapshot: { runtimeScope: 'shared' },
         toolContext: { conversationId: 'conv' },
         agentToolContext: { callId: 'tool-call' },
       }),
@@ -105,9 +105,32 @@ describe('extension host client', () => {
       'ext',
       'doThing',
       { x: 1 },
-      { getRuntimeScope: expect.any(Function) },
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
       { conversationId: 'conv' },
       { callId: 'tool-call' },
+    );
+  });
+
+  it('allows the in-process request handler to resolve live server contexts internally', async () => {
+    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { done: true } });
+
+    await expect(
+      handleInProcessExtensionHostRequest({
+        type: 'invokeAction',
+        extensionId: 'ext',
+        actionId: 'doThing',
+        input: { x: 1 },
+        serverContext: { getRuntimeScope: () => 'shared' },
+      }),
+    ).resolves.toEqual({ ok: true, result: { ok: true, result: { done: true } } });
+
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith(
+      'ext',
+      'doThing',
+      { x: 1 },
+      { getRuntimeScope: expect.any(Function) },
+      undefined,
+      undefined,
     );
   });
 

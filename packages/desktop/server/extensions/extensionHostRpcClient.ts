@@ -30,7 +30,6 @@ export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInv
   const withoutSignal = { ...input };
   delete withoutSignal.signal;
   return (
-    !hasFunction(withoutSignal.serverContext) &&
     !hasFunction(withoutSignal.serverContextSnapshot) &&
     !hasFunction(withoutSignal.toolContext) &&
     !hasFunction(withoutSignal.toolContextSnapshot) &&
@@ -48,7 +47,6 @@ function hasOnlyToolUpdateCallback(input: ExtensionHostInvokeActionInput): boole
 function isWireableExtensionHostStreamingActionInput(input: ExtensionHostInvokeActionInput): boolean {
   if (!hasOnlyToolUpdateCallback(input)) return false;
   return (
-    !hasFunction(input.serverContext) &&
     !hasFunction(input.serverContextSnapshot) &&
     !hasFunction(input.toolContextSnapshot) &&
     !hasFunction(input.agentToolContext)
@@ -56,12 +54,12 @@ function isWireableExtensionHostStreamingActionInput(input: ExtensionHostInvokeA
 }
 
 function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHostClient['invokeRoute']>[0]): boolean {
-  return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot) && !hasFunction(stripRouteSignal(input).request);
+  return !hasFunction(input.serverContextSnapshot) && !hasFunction(stripRouteSignal(input).request);
 }
 
 function isWireableExtensionHostStartStartupActionsInput(input: Parameters<ExtensionHostClient['startStartupActions']>[0]): boolean {
   if (!input) return true;
-  return !hasFunction(input.serverContext) && !hasFunction(input.serverContextSnapshot);
+  return !hasFunction(input.serverContextSnapshot);
 }
 
 function assertWireableInvokeActionInput(input: ExtensionHostInvokeActionInput): void {

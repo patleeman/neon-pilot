@@ -91,6 +91,8 @@ The product runtime no longer routes extension-host calls to the in-process fall
 
 Startup actions, backend routes, and backend actions are no longer allowed to fall back when they carry live functions. Product callers must pass `serverContextSnapshot`, tool context snapshots, serializable route/action data, and normal abort signals so dispatch stays on the extension host child process.
 
+The public `ExtensionHostClient` input types expose `serverContextSnapshot`, not live `serverContext`. Live server contexts are reserved for the in-process request handler and extension-host implementation tests, and `check-product-extension-host-seam.mjs` rejects product-runtime client calls that try to pass `serverContext` directly.
+
 `getExtensionHostClient()` fails closed when no client is configured. Product runtime startup must install the RPC client from the supervised extension host process; only extension-host implementation code and narrow tests should construct the in-process request handler directly.
 
 ## Migration Phases

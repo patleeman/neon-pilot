@@ -220,6 +220,10 @@ const forbiddenPatterns = [
     pattern: /\bcreateHybridExtensionHostClient\b/,
     message: 'product runtime code must not construct a hybrid extension host fallback; use the RPC extension host client',
   },
+  {
+    pattern: /getExtensionHostClient\(\)\.\w+\(\s*\{[\s\S]{0,800}\bserverContext\s*:/,
+    message: 'product runtime ExtensionHostClient calls must pass serverContextSnapshot instead of live serverContext',
+  },
 ];
 
 function listFiles() {

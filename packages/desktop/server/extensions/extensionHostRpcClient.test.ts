@@ -67,17 +67,16 @@ describe('extension host RPC client', () => {
     );
   });
 
-  it('refuses function-bearing invoke contexts until capability channels exist', async () => {
-    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl: vi.fn() });
+  it('does not expose live server contexts on invoke action client inputs', () => {
+    // @ts-expect-error Product callers must pass serverContextSnapshot through the client boundary.
+    const input: Parameters<ReturnType<typeof createExtensionHostRpcClient>['invokeAction']>[0] = {
+      extensionId: 'ext',
+      actionId: 'doThing',
+      input: {},
+      serverContext: { getRuntimeScope: () => 'shared' },
+    };
 
-    await expect(
-      client.invokeAction({
-        extensionId: 'ext',
-        actionId: 'doThing',
-        input: {},
-        serverContext: { getRuntimeScope: () => 'shared' },
-      }),
-    ).rejects.toThrow('function-bearing contexts');
+    expect(input).toEqual(expect.objectContaining({ extensionId: 'ext', actionId: 'doThing' }));
   });
 
   it('classifies wireable invoke action inputs', () => {
@@ -585,11 +584,12 @@ describe('extension host RPC client', () => {
     ).rejects.toThrow('pass serializable route data');
   });
 
-  it('rejects live startup action server contexts before transport', async () => {
-    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl: vi.fn() });
+  it('does not expose live server contexts on startup action client inputs', () => {
+    // @ts-expect-error Product callers must pass serverContextSnapshot through the client boundary.
+    const input: NonNullable<Parameters<ReturnType<typeof createExtensionHostRpcClient>['startStartupActions']>[0]> = {
+      serverContext: { getRuntimeScope: () => 'shared' },
+    };
 
-    await expect(client.startStartupActions({ serverContext: { getRuntimeScope: () => 'shared' } })).rejects.toThrow(
-      'pass a server context snapshot',
-    );
+    expect(input).toEqual(expect.objectContaining({ serverContext: expect.any(Object) }));
   });
 });
