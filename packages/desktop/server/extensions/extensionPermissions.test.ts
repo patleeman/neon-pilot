@@ -4,10 +4,12 @@ const findExtensionEntry = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({ findExtensionEntry }));
 
+const { clearExtensionHostAuditEvents, listExtensionHostAuditEvents } = await import('./extensionHostAudit.js');
 const { assertExtensionPermission, extensionHasPermission } = await import('./extensionPermissions.js');
 
 describe('extensionPermissions', () => {
   beforeEach(() => {
+    clearExtensionHostAuditEvents();
     findExtensionEntry.mockReset();
   });
 
@@ -24,5 +26,13 @@ describe('extensionPermissions', () => {
     expect(() => assertExtensionPermission('ext', 'attention:write', 'attention events')).toThrow(
       'Extension "ext" requires permission attention:write to use attention events.',
     );
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'permission',
+        requestName: 'permission:ext:attention:write',
+        ok: false,
+        error: 'Extension "ext" requires permission attention:write to use attention events.',
+      }),
+    ]);
   });
 });

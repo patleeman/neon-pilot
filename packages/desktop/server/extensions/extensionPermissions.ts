@@ -1,3 +1,4 @@
+import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import type { ExtensionPermission } from './extensionManifest.js';
 import { findExtensionEntry } from './extensionRegistry.js';
 
@@ -20,6 +21,13 @@ export function extensionHasPermission(extensionId: string, permission: Extensio
 
 export function assertExtensionPermission(extensionId: string, permission: ExtensionPermission, capability: string): void {
   if (!extensionHasPermission(extensionId, permission)) {
+    recordExtensionHostAuditEvent({
+      requestType: 'permission',
+      requestName: `permission:${extensionId}:${permission}`,
+      ok: false,
+      durationMs: 0,
+      error: `Extension "${extensionId}" requires permission ${permission} to use ${capability}.`,
+    });
     throw new ExtensionPermissionError(extensionId, permission, capability);
   }
 }

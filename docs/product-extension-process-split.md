@@ -77,9 +77,9 @@ Manifest-declared tools also invoke backend actions through `ExtensionHostClient
 
 ## Extension Host Audit
 
-Extension host permission checks use the host-owned `extensionPermissions` module. Capability adapters should call `assertExtensionPermission(extensionId, permission, capability)` instead of reading manifest permissions directly, so permission denial shape and future audit hooks stay centralized.
+Extension host permission checks use the host-owned `extensionPermissions` module. Capability adapters should call `assertExtensionPermission(extensionId, permission, capability)` instead of reading manifest permissions directly, so permission denial shape and audit metadata stay centralized.
 
-Extension host request handling records metadata-only audit events at the host boundary. These events include request type, stable request name, success/failure, duration, timestamp, and error text for failed requests. They must not record request bodies, route bodies, action inputs, prompt text, or extension payloads.
+Extension host request handling and permission denials record metadata-only audit events at the host boundary. These events include request type, stable request name, success/failure, duration, timestamp, and error text for failed requests. They must not record request bodies, route bodies, action inputs, prompt text, or extension payloads.
 
 Action telemetry is still the action-level diagnostic stream. Host audit events are the process-boundary diagnostic stream and are read through `ExtensionHostClient`, so diagnostics do not import extension-host implementation modules or scatter audit logic through product runtime call sites.
 
