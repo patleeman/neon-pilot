@@ -3,6 +3,7 @@ import { parentPort } from 'node:worker_threads';
 
 import type { ExtensionBackendModule } from './extensionBackendRunner.js';
 import type {
+  ExtensionBackendWorkerBackendContextOptions,
   ExtensionBackendWorkerCapabilityResponse,
   ExtensionBackendWorkerParentMessage,
   ExtensionBackendWorkerRequest,
@@ -51,8 +52,12 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
   else pending.reject(new Error(response.error));
 }
 
-function createWorkerBackendContext(extensionId: string): Record<string, unknown> {
+function createWorkerBackendContext(extensionId: string, options: ExtensionBackendWorkerBackendContextOptions = {}): Record<string, unknown> {
   return {
+    extensionId,
+    runtimeScope: 'shared',
+    profile: 'shared',
+    ...(options.toolContext ? { toolContext: options.toolContext } : {}),
     log: {
       info: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'info', { message, fields }),
       warn: (message: string, fields?: Record<string, unknown>) => callHostCapability(extensionId, 'log', 'warn', { message, fields }),
@@ -86,7 +91,8 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
       if (typeof handler !== 'function') {
         throw new Error(`Extension backend export not found: ${request.exportName}`);
       }
-      const args = request.context === 'backend' ? [...request.args, createWorkerBackendContext(request.extensionId)] : request.args;
+      const contextOptions = typeof request.context === 'object' ? request.context : undefined;
+      const args = request.context ? [...request.args, createWorkerBackendContext(request.extensionId, contextOptions)] : request.args;
       const result = await (handler as (...args: unknown[]) => unknown)(...args);
       return { id: request.id, ok: true, result };
     }

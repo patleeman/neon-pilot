@@ -352,6 +352,7 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(async () => false),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
+      runWorkerExport: vi.fn(),
       run: vi.fn(),
     };
     setWorkerImportBackendRunnerForTests(workerRunner);
@@ -373,6 +374,55 @@ describe('extension backend action invocation', () => {
       'self-test-worker-ext',
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
       'doThing',
+    );
+  });
+
+  it('runs product-critical self-test action smoke checks through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'system-diffs');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-diffs',
+        name: 'System Diffs',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'checkpoint', handler: 'checkpoint' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function checkpoint() { return true; }\n');
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true })),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(runExtensionSelfTest('system-diffs')).resolves.toEqual({
+      ok: true,
+      extensionId: 'system-diffs',
+      checks: [
+        { name: 'backend import', ok: true },
+        { name: 'action export: checkpoint', ok: true },
+        { name: 'action smoke: checkpoint', ok: true },
+      ],
+    });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-diffs',
+      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-diffs', 'dist', 'backend.mjs')) }),
+      'checkpoint',
+      { type: 'self-test-action', label: 'self-test action checkpoint', target: 'checkpoint' },
+      [{ action: 'list' }],
+      { context: { type: 'backend', toolContext: { conversationId: 'extension-self-test', cwd: process.cwd() } } },
     );
   });
 
@@ -401,6 +451,7 @@ describe('extension backend action invocation', () => {
       hasExport: vi.fn(),
       loadAgentFactory: vi.fn(),
       runExport: vi.fn(),
+      runWorkerExport: vi.fn(),
       run: vi.fn(),
     };
     const workerRunner = {

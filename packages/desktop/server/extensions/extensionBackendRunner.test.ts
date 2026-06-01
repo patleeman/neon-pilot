@@ -80,6 +80,7 @@ describe('extensionBackendRunner', () => {
       loadModule: vi.fn(async () => undefined),
       clearModule: vi.fn(async () => undefined),
       hasExport: vi.fn(async () => true),
+      runExport: vi.fn(async () => ({ ok: true })),
     };
     const fallback = createInProcessExtensionBackendRunner();
     const fallbackClear = vi.spyOn(fallback, 'clearModule');
@@ -97,6 +98,45 @@ describe('extensionBackendRunner', () => {
       expect.objectContaining({
         requestType: 'backend',
         requestName: 'ext-worker-import:backend import',
+        ok: true,
+      }),
+    ]);
+  });
+
+  it('runs backend exports through the worker import runner when explicitly requested', async () => {
+    const client = {
+      loadModule: vi.fn(async () => undefined),
+      clearModule: vi.fn(async () => undefined),
+      hasExport: vi.fn(async () => true),
+      runExport: vi.fn(async () => ({ via: 'worker' })),
+    };
+    const fallback = createInProcessExtensionBackendRunner();
+    const fallbackRunExport = vi.spyOn(fallback, 'runExport');
+    const runner = createWorkerImportExtensionBackendRunner(client, fallback);
+
+    await expect(
+      runner.runWorkerExport(
+        'ext-worker-run',
+        { path: '/tmp/backend.mjs', hash: 'hash-1' },
+        'doThing',
+        extensionBackendOperation('self-test-action', 'self-test action doThing', { target: 'doThing' }),
+        [{ ok: true }],
+        { context: { type: 'backend', toolContext: { conversationId: 'self-test' } } },
+      ),
+    ).resolves.toEqual({ via: 'worker' });
+
+    expect(client.runExport).toHaveBeenCalledWith(
+      'ext-worker-run',
+      { path: '/tmp/backend.mjs', hash: 'hash-1' },
+      'doThing',
+      [{ ok: true }],
+      { context: { type: 'backend', toolContext: { conversationId: 'self-test' } } },
+    );
+    expect(fallbackRunExport).not.toHaveBeenCalled();
+    expect(listExtensionHostAuditEvents()).toEqual([
+      expect.objectContaining({
+        requestType: 'backend',
+        requestName: 'ext-worker-run:self-test action doThing',
         ok: true,
       }),
     ]);

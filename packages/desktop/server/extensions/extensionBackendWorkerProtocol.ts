@@ -1,5 +1,15 @@
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
 
+export interface ExtensionBackendWorkerBackendContextOptions {
+  toolContext?: {
+    conversationId?: string;
+    cwd?: string;
+    sessionFile?: string;
+    sessionId?: string;
+    preferredVisionModel?: string;
+  };
+}
+
 export type ExtensionBackendWorkerRequest =
   | {
       id: number;
@@ -21,7 +31,7 @@ export type ExtensionBackendWorkerRequest =
       compiled: ExtensionBackendLoadTarget;
       exportName: string;
       args: unknown[];
-      context?: 'backend';
+      context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions);
     }
   | {
       id: number;

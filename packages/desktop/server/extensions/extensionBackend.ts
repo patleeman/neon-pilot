@@ -635,6 +635,17 @@ function hasExtensionBackendExportForSelfTest(extensionId: string, exportName: s
   return getWorkerImportBackendRunner().hasExport(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId), exportName);
 }
 
+function runExtensionBackendExportForSelfTest(extensionId: string, exportName: string, actionId: string, input: unknown): Promise<unknown> {
+  return getWorkerImportBackendRunner().runWorkerExport(
+    extensionId,
+    resolveInstalledExtensionBackendLoadTarget(extensionId),
+    exportName,
+    extensionBackendOperation('self-test-action', `self-test action ${actionId}`, { target: actionId }),
+    [input],
+    { context: { type: 'backend', toolContext: { conversationId: 'extension-self-test', cwd: process.cwd() } } },
+  );
+}
+
 function clearWorkerImportBackend(extensionId: string): void {
   workerImportBackendRunner?.clearModule(extensionId);
 }
@@ -934,18 +945,7 @@ export async function runExtensionSelfTest(
         continue;
       }
       try {
-        const result = await runExtensionBackendExport(
-          extensionId,
-          handlerName,
-          extensionBackendOperation('self-test-action', `self-test action ${actionId}`, { target: actionId }),
-          (smokeHandler) =>
-            Promise.resolve(
-              smokeHandler(
-                input,
-                createBackendContext(extensionId, undefined, { conversationId: 'extension-self-test', cwd: process.cwd() }),
-              ),
-            ),
-        );
+        const result = await runExtensionBackendExportForSelfTest(extensionId, handlerName, actionId, input);
         checks.push({
           name: `action smoke: ${actionId}`,
           ok: !(result && typeof result === 'object' && 'ok' in result && result.ok === false),

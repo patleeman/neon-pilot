@@ -2,6 +2,7 @@ import { Worker } from 'node:worker_threads';
 
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
 import type {
+  ExtensionBackendWorkerBackendContextOptions,
   ExtensionBackendWorkerCapabilityRequest,
   ExtensionBackendWorkerCapabilityResponse,
   ExtensionBackendWorkerMessage,
@@ -43,7 +44,7 @@ export class ExtensionBackendWorkerClient {
     compiled: ExtensionBackendLoadTarget,
     exportName: string,
     args: unknown[],
-    options: { context?: 'backend' } = {},
+    options: { context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
   ): Promise<unknown> {
     const response = await this.send({ id: 0, type: 'runExport', extensionId, compiled, exportName, args, ...options });
     return response.result;
@@ -181,7 +182,7 @@ export class ExtensionBackendWorkerPool {
     compiled: ExtensionBackendLoadTarget,
     exportName: string,
     args: unknown[],
-    options: { context?: 'backend' } = {},
+    options: { context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
   ): Promise<unknown> {
     return this.getClient(extensionId).runExport(extensionId, compiled, exportName, args, options);
   }

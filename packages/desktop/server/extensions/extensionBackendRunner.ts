@@ -58,6 +58,26 @@ interface ExtensionBackendWorkerImportClient {
   loadModule(extensionId: string, compiled: ExtensionBackendLoadTarget): Promise<void>;
   clearModule(extensionId: string): Promise<void>;
   hasExport(extensionId: string, compiled: ExtensionBackendLoadTarget, exportName: string): Promise<boolean>;
+  runExport(
+    extensionId: string,
+    compiled: ExtensionBackendLoadTarget,
+    exportName: string,
+    args: unknown[],
+    options?: ExtensionBackendWorkerExportOptions,
+  ): Promise<unknown>;
+}
+
+type ExtensionBackendWorkerExportOptions = { context?: 'backend' | { type: 'backend'; toolContext?: Record<string, unknown> } };
+
+export interface ExtensionBackendWorkerExportRunner extends ExtensionBackendRunner {
+  runWorkerExport<T>(
+    extensionId: string,
+    compiled: ExtensionBackendLoadTarget,
+    exportName: string,
+    operation: ExtensionBackendOperation,
+    args: unknown[],
+    options?: ExtensionBackendWorkerExportOptions,
+  ): Promise<T>;
 }
 
 export function extensionBackendOperation(
@@ -182,7 +202,7 @@ export function createWorkerImportExtensionBackendRunner(
     capabilityDispatcher: createExtensionBackendCapabilityDispatcher(),
   }),
   fallback: ExtensionBackendRunner = createInProcessExtensionBackendRunner(),
-): ExtensionBackendRunner {
+): ExtensionBackendWorkerExportRunner {
   return {
     async loadModule(extensionId, compiled) {
       await auditBackendOperation(extensionId, extensionBackendOperation('backend-import', 'backend import', { target: compiled.path }), () =>
@@ -208,6 +228,18 @@ export function createWorkerImportExtensionBackendRunner(
     },
     run(extensionId, operation, handler) {
       return fallback.run(extensionId, operation, handler);
+    },
+    runWorkerExport<T>(
+      extensionId: string,
+      compiled: ExtensionBackendLoadTarget,
+      exportName: string,
+      operation: ExtensionBackendOperation,
+      args: unknown[],
+      options?: ExtensionBackendWorkerExportOptions,
+    ) {
+      return auditBackendOperation(extensionId, { ...operation, exportName: operation.exportName ?? exportName }, () =>
+        client.runExport(extensionId, compiled, exportName, args, options) as Promise<unknown>,
+      ) as Promise<T>;
     },
   };
 }
