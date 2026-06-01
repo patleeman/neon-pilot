@@ -125,6 +125,17 @@ Global agent files use a primary/secondary model:
 
 Runtime discovery also includes explicitly configured instruction files, explicitly configured skill dirs, project instruction files found from the working directory, local overlays, extension-contributed skills, and compatibility skill roots such as `~/.claude/skills` and `~/.codex/skills`.
 
+## Runtime prompt layers
+
+The runtime may materialize both generated prompt defaults and discovered instruction files. They are different layers:
+
+| Layer                    | Runtime file                                      | Source                                                                                      | Purpose                                                                                 |
+| ------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Global system defaults   | `<state-root>/neon-pilot-runtime/APPEND_SYSTEM.md` | Built-in/runtime system prompt template plus configured append-system material              | Always-on personal defaults such as behavior, execution guidance, and knowledge pointers |
+| Agent instruction files  | `<state-root>/neon-pilot-runtime/AGENTS.md`        | Knowledge root, machine-local, configured, repo, ancestor, and local `AGENTS.md` files      | Durable user, machine, repo, and directory-scoped standing instructions                  |
+
+Treat `APPEND_SYSTEM.md` as generated runtime context, not as a repo instruction file. Treat `AGENTS.md` files as editable instruction sources with explicit scope. Model profiles that need smaller prompts, such as local/constrained model extensions, may replace either layer with file pointers while keeping the normal model path fully hydrated.
+
 ## Desktop, daemon, and local UI state
 
 Not every Settings-page control writes to the same JSON file:
