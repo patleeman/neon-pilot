@@ -128,6 +128,27 @@ describe('DS4 provider setup', () => {
       models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 400000 }],
     });
   });
+
+  it('uses saved advanced DS4 settings for model metadata', async () => {
+    const context = ctx({
+      storage: {
+        get: vi.fn(async (key: string) =>
+          key === 'settings' ? { shellCompression: 'rtk', contextWindow: 262144, maxTokens: 131072, kvDiskSpaceMb: 16384 } : null,
+        ),
+        put: vi.fn(async () => ({ ok: true })),
+        delete: vi.fn(async () => ({ ok: true, deleted: true })),
+      },
+    });
+
+    await backend.installProvider({}, context);
+
+    expect(context.models.saveProviderModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contextWindow: 262144,
+        maxTokens: 131072,
+      }),
+    );
+  });
 });
 
 describe('DS4 managed runtime', () => {
@@ -196,7 +217,7 @@ describe('DS4 managed runtime', () => {
           rtk: expect.objectContaining({ installed: false, valid: false }),
         }),
       );
-      expect(result.settings).toEqual({ shellCompression: 'rtk' });
+      expect(result.settings).toEqual({ shellCompression: 'rtk', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
       expect(result.bootstrap.steps.map((step) => step.id)).toEqual(['tools', 'source', 'build', 'model', 'verify', 'done']);
       expect(result.models).toEqual(['deepseek-v4-flash']);
     } finally {
@@ -263,6 +284,13 @@ describe('DS4 managed runtime', () => {
       });
       const context = ctx({
         filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        storage: {
+          get: vi.fn(async (key: string) =>
+            key === 'settings' ? { shellCompression: 'rtk', contextWindow: 262144, maxTokens: 131072, kvDiskSpaceMb: 16384 } : null,
+          ),
+          put: vi.fn(async () => ({ ok: true })),
+          delete: vi.fn(async () => ({ ok: true, deleted: true })),
+        },
         shell: { exec, spawn: vi.fn() },
       });
 
@@ -271,8 +299,8 @@ describe('DS4 managed runtime', () => {
       expect(result.started).toBe(true);
       expect(context.storage.put).toHaveBeenCalledWith('runtime/serverPid', 54321);
       const launchScript = exec.mock.calls.find(([input]) => (input.args?.join(' ') ?? '').includes('ds4-server'))?.[0].args?.join(' ');
-      expect(launchScript).toContain('--ctx 400000');
-      expect(launchScript).toContain('--kv-disk-space-mb 8192');
+      expect(launchScript).toContain('--ctx 262144');
+      expect(launchScript).toContain('--kv-disk-space-mb 16384');
       expect(launchScript).toContain(path.join(dir, 'runtime'));
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -395,12 +423,12 @@ describe('DS4 managed runtime', () => {
     const current = await backend.getSettings({}, context);
     const saved = await backend.saveSettings({ shellCompression: 'off' }, context);
 
-    expect(current.settings).toEqual({ shellCompression: 'rtk' });
+    expect(current.settings).toEqual({ shellCompression: 'rtk', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
     expect(current.status.runtime.rtk).toEqual(
       expect.objectContaining({ installed: true, valid: true, path: '/opt/homebrew/bin/rtk', version: 'rtk 0.28.2' }),
     );
-    expect(saved.settings).toEqual({ shellCompression: 'off' });
-    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off' });
+    expect(saved.settings).toEqual({ shellCompression: 'off', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
+    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
   });
 
   it('lets the DS4 CLI disable shell compression', async () => {
@@ -410,7 +438,7 @@ describe('DS4 managed runtime', () => {
 
     await backend.ds4ToolsCli({ args: ['compression', 'off'] }, context as never);
 
-    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off' });
+    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
     expect(stdout.write.mock.calls[0]?.[0]).toContain('Shell compression disabled');
   });
 

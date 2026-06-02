@@ -15,12 +15,20 @@ const API_KEY = 'dsv4-local';
 const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
 const MODEL_NAME = 'DeepSeek V4 Flash';
-const MODEL_CONTEXT_WINDOW = 400000;
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
 const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
 const SETTINGS_KEY = 'settings';
+const DEFAULT_CONTEXT_WINDOW = 400000;
+const MIN_CONTEXT_WINDOW = 4096;
+const MAX_CONTEXT_WINDOW = 1000000;
+const DEFAULT_MAX_TOKENS = 384000;
+const MIN_MAX_TOKENS = 1024;
+const MAX_MAX_TOKENS = 1000000;
+const DEFAULT_KV_DISK_SPACE_MB = 8192;
+const MIN_KV_DISK_SPACE_MB = 1024;
+const MAX_KV_DISK_SPACE_MB = 1048576;
 const DEFAULT_READ_LINES = 500;
 const DEFAULT_SEARCH_RESULTS = 80;
 const MAX_INLINE_TEXT_BYTES = 256 * 1024;
@@ -79,6 +87,9 @@ const BOOTSTRAP_STEPS = [
 type ToolResult = { content?: Array<{ type?: string; text?: string }>; details?: unknown; isError?: boolean };
 type Ds4Settings = {
   shellCompression: 'off' | 'rtk';
+  contextWindow: number;
+  maxTokens: number;
+  kvDiskSpaceMb: number;
 };
 type ShellJob = {
   id: number;
@@ -99,6 +110,9 @@ const shellJobs = new Map<number, ShellJob>();
 
 const DEFAULT_SETTINGS: Ds4Settings = {
   shellCompression: 'rtk',
+  contextWindow: DEFAULT_CONTEXT_WINDOW,
+  maxTokens: DEFAULT_MAX_TOKENS,
+  kvDiskSpaceMb: DEFAULT_KV_DISK_SPACE_MB,
 };
 
 type Ds4ToolsApi = {
@@ -176,9 +190,20 @@ function shellQuote(value: string) {
 
 function normalizeSettings(value: unknown): Ds4Settings {
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const contextWindow = normalizeInteger(record.contextWindow, DEFAULT_SETTINGS.contextWindow, MIN_CONTEXT_WINDOW, MAX_CONTEXT_WINDOW);
+  const maxTokens = normalizeInteger(record.maxTokens, DEFAULT_SETTINGS.maxTokens, MIN_MAX_TOKENS, Math.min(MAX_MAX_TOKENS, contextWindow));
   return {
     shellCompression: record.shellCompression === 'off' ? 'off' : 'rtk',
+    contextWindow,
+    maxTokens,
+    kvDiskSpaceMb: normalizeInteger(record.kvDiskSpaceMb, DEFAULT_SETTINGS.kvDiskSpaceMb, MIN_KV_DISK_SPACE_MB, MAX_KV_DISK_SPACE_MB),
   };
+}
+
+function normalizeInteger(value: unknown, fallback: number, min: number, max: number): number {
+  const numeric = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(numeric)));
 }
 
 function syncRtkShellCompressionEnv(settings: Ds4Settings): void {
@@ -841,7 +866,7 @@ async function rememberRead(ctx: ExtensionBackendContext, input: { path: string;
   });
 }
 
-export async function installProvider(_input: unknown, ctx: ExtensionBackendContext) {
+async function installProviderWithSettings(ctx: ExtensionBackendContext, settings: Ds4Settings) {
   await ctx.models.saveProvider({
     provider: PROVIDER,
     baseUrl: BASE_URL,
@@ -864,8 +889,8 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
     name: MODEL_NAME,
     reasoning: true,
     input: ['text'],
-    contextWindow: MODEL_CONTEXT_WINDOW,
-    maxTokens: 384000,
+    contextWindow: settings.contextWindow,
+    maxTokens: settings.maxTokens,
     cost: {
       input: 0,
       output: 0,
@@ -874,6 +899,10 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
     },
   });
   return { ok: true, provider: PROVIDER, model: MODEL_REF, state };
+}
+
+export async function installProvider(_input: unknown, ctx: ExtensionBackendContext) {
+  return installProviderWithSettings(ctx, await readSettings(ctx));
 }
 
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
@@ -927,6 +956,7 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
 }
 
 export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
+  const settings = await readSettings(ctx);
   return {
     provider: PROVIDER,
     baseUrl: BASE_URL,
@@ -938,7 +968,8 @@ export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
         name: MODEL_NAME,
         reasoning: true,
         input: ['text'],
-        contextWindow: MODEL_CONTEXT_WINDOW,
+        contextWindow: settings.contextWindow,
+        maxTokens: settings.maxTokens,
       },
     ],
   };
@@ -950,6 +981,7 @@ export async function getSettings(_input: unknown, ctx: ExtensionBackendContext)
 
 export async function saveSettings(input: unknown, ctx: ExtensionBackendContext) {
   const settings = await writeSettings(ctx, input);
+  await installProviderWithSettings(ctx, settings);
   return { ok: true, settings, status: await status({}, ctx) };
 }
 
@@ -1043,6 +1075,7 @@ write_status running tools 2 "Checking required local tools"
 }
 
 export async function startServer(input: { timeoutMs?: unknown }, ctx: ExtensionBackendContext) {
+  const settings = await readSettings(ctx);
   const paths = await runtimePaths(ctx);
   const health = await readServerHealth();
   if (health.reachable) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
@@ -1056,7 +1089,7 @@ export async function startServer(input: { timeoutMs?: unknown }, ctx: Extension
 
   await mkdir(paths.kvDir, { recursive: true });
   await chmod(paths.serverBin, 0o755).catch(() => undefined);
-  const command = `cd ${shellQuote(paths.repoDir)} && exec ${shellQuote(paths.serverBin)} --ctx ${MODEL_CONTEXT_WINDOW} --kv-disk-dir ${shellQuote(paths.kvDir)} --kv-disk-space-mb 8192 >> ${shellQuote(paths.serverLog)} 2>&1`;
+  const command = `cd ${shellQuote(paths.repoDir)} && exec ${shellQuote(paths.serverBin)} --ctx ${settings.contextWindow} --kv-disk-dir ${shellQuote(paths.kvDir)} --kv-disk-space-mb ${settings.kvDiskSpaceMb} >> ${shellQuote(paths.serverLog)} 2>&1`;
   const result = await ctx.shell.exec({
     command: 'sh',
     args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`],

@@ -16,6 +16,9 @@ type Ds4Status = {
   models?: string[];
   settings?: {
     shellCompression?: 'off' | 'rtk';
+    contextWindow?: number;
+    maxTokens?: number;
+    kvDiskSpaceMb?: number;
   };
   runtime?: {
     managedRoot?: string;
@@ -106,6 +109,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     'setup' | 'repair' | 'start' | 'stop' | 'restart' | 'refresh' | 'settings' | 'install-rtk' | 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy' | null
   >(null);
   const [error, setError] = useState('');
+  const [advancedDraft, setAdvancedDraft] = useState({ contextWindow: '400000', maxTokens: '384000', kvDiskSpaceMb: '8192' });
   const label = statusLabel(status);
 
   const refresh = useCallback(async () => {
@@ -133,6 +137,15 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       window.clearInterval(interval);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!status?.settings) return;
+    setAdvancedDraft({
+      contextWindow: String(status.settings.contextWindow ?? 400000),
+      maxTokens: String(status.settings.maxTokens ?? 384000),
+      kvDiskSpaceMb: String(status.settings.kvDiskSpaceMb ?? 8192),
+    });
+  }, [status?.settings?.contextWindow, status?.settings?.maxTokens, status?.settings?.kvDiskSpaceMb]);
 
   const run = async (action: 'setup' | 'repair' | 'start' | 'stop' | 'restart') => {
     const actionId =
@@ -228,6 +241,35 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       setError('');
       pa.ui?.notify?.({
         message: shellCompression === 'rtk' ? 'DS4 will prefer RTK compact shell output.' : 'DS4 shell output compression disabled.',
+        type: 'info',
+        source: 'DS4',
+      });
+      await refresh();
+    } catch (settingsError) {
+      const message = errorText(settingsError);
+      setError(message);
+      pa.ui?.notify?.({ message: 'DS4 settings update failed.', details: message, type: 'error', source: 'DS4' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveAdvancedSettings = async () => {
+    const contextWindow = Number(advancedDraft.contextWindow);
+    const maxTokens = Number(advancedDraft.maxTokens);
+    const kvDiskSpaceMb = Number(advancedDraft.kvDiskSpaceMb);
+    if (![contextWindow, maxTokens, kvDiskSpaceMb].every((value) => Number.isFinite(value) && value > 0)) {
+      pa.ui?.notify?.({ message: 'DS4 advanced settings must be positive numbers.', type: 'warning', source: 'DS4' });
+      return;
+    }
+    setBusy('settings');
+    try {
+      const result = (await pa.extension.invoke('ds4SaveSettings', { contextWindow, maxTokens, kvDiskSpaceMb })) as { status?: Ds4Status };
+      if (result.status) setStatus(result.status);
+      setError('');
+      pa.ui?.notify?.({
+        message: 'DS4 advanced settings saved.',
+        details: 'Restart DS4 for server context and KV cache changes to take effect.',
         type: 'info',
         source: 'DS4',
       });
@@ -453,6 +495,44 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
         </div>
       </div>
 
+      <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Advanced config</p>
+            <p className="mt-2 text-[12px] text-dim">Tune DS4 model metadata and managed server launch flags. Restart DS4 after changing server settings.</p>
+          </div>
+          <button type="button" className={BUTTON_CLASS} onClick={() => void saveAdvancedSettings()} disabled={busy !== null}>
+            {busy === 'settings' ? 'Saving' : 'Save advanced'}
+          </button>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <NumberSetting
+            label="Context window"
+            value={advancedDraft.contextWindow}
+            min={4096}
+            max={1000000}
+            step={1024}
+            onChange={(contextWindow) => setAdvancedDraft((draft) => ({ ...draft, contextWindow }))}
+          />
+          <NumberSetting
+            label="Max response tokens"
+            value={advancedDraft.maxTokens}
+            min={1024}
+            max={1000000}
+            step={1024}
+            onChange={(maxTokens) => setAdvancedDraft((draft) => ({ ...draft, maxTokens }))}
+          />
+          <NumberSetting
+            label="KV disk cache MB"
+            value={advancedDraft.kvDiskSpaceMb}
+            min={1024}
+            max={1048576}
+            step={1024}
+            onChange={(kvDiskSpaceMb) => setAdvancedDraft((draft) => ({ ...draft, kvDiskSpaceMb }))}
+          />
+        </div>
+      </div>
+
       {status?.bootstrap?.log ? <Log title="Bootstrap log" text={status.bootstrap.log} /> : null}
       {status?.server?.log ? <Log title="Server log" text={status.server.log} /> : null}
     </div>
@@ -495,6 +575,37 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">{label}</p>
       <p className="mt-1 text-primary">{value}</p>
     </div>
+  );
+}
+
+function NumberSetting({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block rounded-md border border-border-subtle bg-base/30 p-3">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        className="mt-2 w-full rounded-md border border-border-subtle bg-base px-2.5 py-2 font-mono text-[12px] text-primary outline-none focus:border-accent/60"
+      />
+    </label>
   );
 }
 
