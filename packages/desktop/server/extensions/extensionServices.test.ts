@@ -86,18 +86,35 @@ describe('extensionServices', () => {
         return runnerRun(extensionId, { ...(operation as Record<string, unknown>), exportName }, () => invoke(handler));
       },
     );
-    runExtensionBackendExportInWorker.mockResolvedValue(undefined);
+    runExtensionBackendExportInWorker.mockImplementation(
+      async (
+        extensionId: string,
+        exportName: string,
+        operation: unknown,
+        args: unknown[],
+        serverContext?: unknown,
+      ) => {
+        const backend = await loadExtensionBackend(extensionId);
+        const handler = backend[exportName];
+        if (typeof handler !== 'function') throw new Error(`Missing service handler export "${exportName}".`);
+        return runnerRun(extensionId, { ...(operation as Record<string, unknown>), exportName }, () =>
+          handler(...args, createBackendContext(extensionId, serverContext)),
+        );
+      },
+    );
   });
 
   it('starts enabled extension services, stores stop handles, and stops them', async () => {
     const stop = vi.fn();
-    const startSync = vi.fn().mockResolvedValue(stop);
+    const startSync = vi.fn().mockResolvedValue({ ok: true });
     listExtensionInstallSummaries.mockReturnValue([
       { id: 'ext', status: 'enabled' },
       { id: 'off', status: 'disabled' },
     ]);
-    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'startSync' }] } } });
-    loadExtensionBackend.mockResolvedValue({ startSync });
+    findExtensionEntry.mockReturnValue({
+      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', stopHandler: 'stopSync', worker: { enabled: true } }] } },
+    });
+    loadExtensionBackend.mockResolvedValue({ startSync, stopSync: stop });
 
     await expect(startExtensionServices({ server: true } as never)).resolves.toEqual([{ extensionId: 'ext', serviceId: 'sync', ok: true }]);
     expect(startSync).toHaveBeenCalledWith({ serviceId: 'sync' }, { ctx: true });
@@ -159,7 +176,7 @@ describe('extensionServices', () => {
 
   it('is idempotent for already-running services', async () => {
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
-    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'startSync' }] } } });
+    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } } });
     loadExtensionBackend.mockResolvedValue({ startSync: vi.fn() });
 
     await startExtensionServices();
@@ -170,7 +187,7 @@ describe('extensionServices', () => {
 
   it('records startup failures and publishes app notifications', async () => {
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
-    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'missing' }] } } });
+    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'missing', worker: { enabled: true } }] } } });
     loadExtensionBackend.mockResolvedValue({});
 
     await expect(startExtensionServices()).resolves.toEqual([
@@ -192,13 +209,19 @@ describe('extensionServices', () => {
 
   it('clears service diagnostics after successful health checks', async () => {
     const stop = vi.fn();
-    const startSync = vi.fn().mockResolvedValue(stop);
+    const startSync = vi.fn().mockResolvedValue({ ok: true });
     const checkSync = vi.fn().mockResolvedValue({ running: true });
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
     findExtensionEntry.mockReturnValue({
-      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', healthCheck: 'checkSync', restart: 'on-failure' }] } },
+      manifest: {
+        backend: {
+          services: [
+            { id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', restart: 'on-failure', worker: { enabled: true } },
+          ],
+        },
+      },
     });
-    loadExtensionBackend.mockResolvedValue({ startSync, checkSync });
+    loadExtensionBackend.mockResolvedValue({ startSync, stopSync: stop, checkSync });
 
     await startExtensionServices();
     await runExtensionServiceHealthChecks();
@@ -215,13 +238,19 @@ describe('extensionServices', () => {
 
   it('runs health checks and restarts services that report stopped', async () => {
     const stop = vi.fn();
-    const startSync = vi.fn().mockResolvedValue(stop);
+    const startSync = vi.fn().mockResolvedValue({ ok: true });
     const checkSync = vi.fn().mockResolvedValue({ running: false });
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
     findExtensionEntry.mockReturnValue({
-      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', healthCheck: 'checkSync', restart: 'on-failure' }] } },
+      manifest: {
+        backend: {
+          services: [
+            { id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', restart: 'on-failure', worker: { enabled: true } },
+          ],
+        },
+      },
     });
-    loadExtensionBackend.mockResolvedValue({ startSync, checkSync });
+    loadExtensionBackend.mockResolvedValue({ startSync, stopSync: stop, checkSync });
 
     await startExtensionServices();
     recordExtensionFailure.mockClear();
@@ -240,10 +269,11 @@ describe('extensionServices', () => {
     const stop = vi.fn();
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
     findExtensionEntry.mockReturnValue({
-      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', healthCheck: 'checkSync' }] } },
+      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', worker: { enabled: true } }] } },
     });
     loadExtensionBackend.mockResolvedValue({
-      startSync: vi.fn().mockResolvedValue(stop),
+      startSync: vi.fn().mockResolvedValue({ ok: true }),
+      stopSync: stop,
       checkSync: vi.fn(() => process.exit(1)),
     });
     runnerRun

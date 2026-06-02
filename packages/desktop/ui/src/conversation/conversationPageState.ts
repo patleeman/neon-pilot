@@ -562,13 +562,10 @@ export function resolveConversationPerformanceMode(input: { messageCount: number
 }
 
 export function shouldLoadConversationModels(input: {
+  metadataReady?: boolean;
   draft: boolean;
   hasPendingInitialPrompt: boolean;
   hasPendingInitialPromptInFlight: boolean;
 }): boolean {
-  if (input.draft) {
-    return true;
-  }
-
-  return !input.hasPendingInitialPrompt && !input.hasPendingInitialPromptInFlight;
+  return Boolean(input.metadataReady) && !input.hasPendingInitialPrompt && !input.hasPendingInitialPromptInFlight;
 }

@@ -82,9 +82,7 @@ describe('extensionBackendRunner', () => {
       hasExport: vi.fn(async () => true),
       runExport: vi.fn(async () => ({ ok: true })),
     };
-    const fallback = createInProcessExtensionBackendRunner();
-    const fallbackClear = vi.spyOn(fallback, 'clearModule');
-    const runner = createWorkerImportExtensionBackendRunner(client, fallback);
+    const runner = createWorkerImportExtensionBackendRunner(client);
 
     await expect(runner.loadModule('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' })).resolves.toEqual({});
     await expect(runner.hasExport('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing')).resolves.toBe(true);
@@ -93,7 +91,6 @@ describe('extensionBackendRunner', () => {
     expect(client.loadModule).toHaveBeenCalledWith('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' });
     expect(client.hasExport).toHaveBeenCalledWith('ext-worker-import', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing');
     expect(client.clearModule).toHaveBeenCalledWith('ext-worker-import');
-    expect(fallbackClear).toHaveBeenCalledWith('ext-worker-import');
     expect(listExtensionHostAuditEvents()).toEqual([
       expect.objectContaining({
         requestType: 'backend',

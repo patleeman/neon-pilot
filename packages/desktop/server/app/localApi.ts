@@ -593,8 +593,14 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   const capabilityContextAtMs = performance.now();
 
   if (isMainThread) {
-    const startupGuard = await getExtensionHostClient().beginStartupGuard();
-    if (startupGuard.safeMode) {
+    let extensionHostClient: ReturnType<typeof getExtensionHostClient> | null = null;
+    try {
+      extensionHostClient = getExtensionHostClient();
+    } catch (error) {
+      logError('extension startup guard unavailable', { message: error instanceof Error ? error.message : String(error) });
+    }
+    const startupGuard = await extensionHostClient?.beginStartupGuard();
+    if (startupGuard?.safeMode) {
       publishAppEvent({
         type: 'notification',
         extensionId: 'core',
@@ -610,9 +616,10 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     // Keep their cold imports and service startup out of the initial conversation
     // creation and transcript navigation window.
     const startupActionsTimer = setTimeout(() => {
-      void getExtensionHostClient()
+      if (!extensionHostClient) return;
+      void extensionHostClient
         .startStartupActions({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) })
-        .then(() => getExtensionHostClient().completeStartupGuard())
+        .then(() => extensionHostClient.completeStartupGuard())
         .catch((error) => {
           logError('extension startup dispatch failed', { message: (error as Error).message });
           publishAppEvent({
@@ -626,7 +633,8 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     startupActionsTimer.unref?.();
 
     const backendHealthTimer = setTimeout(() => {
-      void getExtensionHostClient().checkBackendHealth().catch((error) => {
+      if (!extensionHostClient) return;
+      void extensionHostClient.checkBackendHealth().catch((error) => {
         logError('extension backend health check dispatch failed', { message: (error as Error).message });
       });
     }, 60_000);

@@ -5,6 +5,7 @@ const logInfo = vi.fn();
 const createBackendContext = vi.fn();
 const loadExtensionBackend = vi.fn();
 const runExtensionBackendExport = vi.fn();
+const runExtensionBackendExportInWorker = vi.fn();
 const runnerRun = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
 const publishExtensionEvent = vi.fn();
 const subscribeExtensionEvents = vi.fn();
@@ -19,7 +20,7 @@ let handlers: Array<{ extensionId: string; pattern: string; handler: (event: unk
   [];
 
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
-vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend, runExtensionBackendExport }));
+vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend, runExtensionBackendExport, runExtensionBackendExportInWorker }));
 vi.mock('./extensionBackendRunner.js', () => ({
   extensionBackendOperation: (type: string, label: string, options: { target?: string } = {}) => ({ type, label, ...options }),
   getExtensionBackendRunner: () => ({ run: runnerRun }),
@@ -52,6 +53,7 @@ describe('extensionSubscriptions', () => {
       createBackendContext,
       loadExtensionBackend,
       runExtensionBackendExport,
+      runExtensionBackendExportInWorker,
       runnerRun,
       publishExtensionEvent,
       subscribeExtensionEvents,
@@ -77,6 +79,22 @@ describe('extensionSubscriptions', () => {
         const handler = backend[exportName];
         if (typeof handler !== 'function') throw new Error(options?.missingExportMessage ?? `Missing export "${exportName}".`);
         return runnerRun(extensionId, { ...(operation as Record<string, unknown>), exportName }, () => invoke(handler));
+      },
+    );
+    runExtensionBackendExportInWorker.mockImplementation(
+      async (
+        extensionId: string,
+        exportName: string,
+        operation: unknown,
+        args: unknown[],
+        serverContext?: unknown,
+      ) => {
+        const backend = await loadExtensionBackend(extensionId);
+        const handler = backend[exportName];
+        if (typeof handler !== 'function') throw new Error(`Missing subscription handler export "${exportName}".`);
+        return runnerRun(extensionId, { ...(operation as Record<string, unknown>), exportName }, () =>
+          handler(...args, createBackendContext(extensionId, serverContext)),
+        );
       },
     );
     isExtensionEnabled.mockReturnValue(true);

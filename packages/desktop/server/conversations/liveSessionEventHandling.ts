@@ -88,7 +88,12 @@ function stringifyToolError(result: unknown): string | undefined {
 }
 
 function publishConversationLifecycleEvent(sessionId: string, type: string, payload: Record<string, unknown> = {}): void {
-  void getExtensionHostClient().publishEvent('conversation', { conversationId: sessionId, type, ...payload });
+  try {
+    void getExtensionHostClient().publishEvent('conversation', { conversationId: sessionId, type, ...payload });
+  } catch {
+    // The product process wires the extension host client during startup; unit
+    // tests can exercise live-session event handling without that host.
+  }
 }
 
 function readToolInputMetadata(toolName: string, toolInput: unknown): Record<string, unknown> | undefined {

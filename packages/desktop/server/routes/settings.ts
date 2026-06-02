@@ -6,7 +6,14 @@ import { createSettingsStore } from '../settings/settingsStore.js';
 import type { ServerRouteContext } from './context.js';
 
 function publishHostEvent(source: string, payload: unknown): void {
-  void getExtensionHostClient().publishEvent(source, payload).catch((error) => {
+  let extensionHostClient: ReturnType<typeof getExtensionHostClient>;
+  try {
+    extensionHostClient = getExtensionHostClient();
+  } catch (error) {
+    logError('extension host event publish skipped', { message: error instanceof Error ? error.message : String(error) });
+    return;
+  }
+  void extensionHostClient.publishEvent(source, payload).catch((error) => {
     logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
   });
 }

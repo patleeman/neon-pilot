@@ -1,22 +1,39 @@
 #!/usr/bin/env node
 /* eslint-env node */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const roots = ['extensions', 'installable-extensions'];
 
 function listManifests() {
-  return execFileSync('git', ['ls-files', ...roots.map((root) => `${root}/**/extension.json`)], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
-    .split('\n')
-    .filter(Boolean)
-    .filter((file) => existsSync(resolve(repoRoot, file)));
+  try {
+    return execFileSync('git', ['ls-files', ...roots.map((root) => `${root}/**/extension.json`)], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .split('\n')
+      .filter(Boolean)
+      .filter((file) => existsSync(resolve(repoRoot, file)));
+  } catch {
+    const manifests = [];
+    const visit = (directory) => {
+      if (!existsSync(directory)) return;
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const entryPath = join(directory, entry.name);
+        if (entry.isDirectory()) {
+          visit(entryPath);
+        } else if (entry.isFile() && entry.name === 'extension.json') {
+          manifests.push(relative(repoRoot, entryPath));
+        }
+      }
+    };
+    for (const root of roots) visit(resolve(repoRoot, root));
+    return manifests.sort();
+  }
 }
 
 const failures = [];

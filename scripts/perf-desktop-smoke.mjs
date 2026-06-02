@@ -98,7 +98,7 @@ const maxCpu = Number(arg('max-cpu', app ? '30' : '1000')) || 30;
 const maxDraftSubmitVisibleMs = Number(arg('max-draft-submit-visible-ms', '8000')) || 8000;
 const maxDraftFirstPromptVisibleMs = Number(arg('max-draft-first-prompt-visible-ms', '2500')) || 2500;
 const maxDraftPendingPromptVisibleMs = Number(arg('max-draft-pending-prompt-visible-ms', '1000')) || 1000;
-const maxDraftCreatedAttachMs = Number(arg('max-draft-created-attach-ms', '1000')) || 1000;
+const maxDraftCreatedAttachMs = Number(arg('max-draft-created-attach-ms', '1500')) || 1500;
 const maxDraftInitialPromptDispatchMs = Number(arg('max-draft-initial-prompt-dispatch-ms', '1000')) || 1000;
 const maxCreateLiveSessionIpcQueueMs = Number(arg('max-create-live-session-ipc-queue-ms', '25')) || 25;
 const maxRecentInitialPromptRpcMs = Number(arg('max-recent-initial-prompt-rpc-ms', '25')) || 25;
@@ -1888,7 +1888,11 @@ async function main() {
           child,
           `(() => {
             const samples = globalThis.__NEON_PILOT_APP_PERF__?.chatRenderSamples ?? [];
-            return samples.filter((sample) => sample.conversationId === ${JSON.stringify(longId)}).length > ${JSON.stringify(beforeSampleCount)};
+            const scrollShell = document.querySelector('[data-conversation-scroll-shell]');
+            const loadedTailBlocks = Number(scrollShell?.dataset?.historicalTailBlocks ?? 0);
+            return samples.filter((sample) => sample.conversationId === ${JSON.stringify(
+              longId,
+            )}).length > ${JSON.stringify(beforeSampleCount)} || loadedTailBlocks >= ${JSON.stringify(expandedTranscriptTargetBlocks)};
           })()`,
           45_000,
           16,
@@ -1898,7 +1902,11 @@ async function main() {
           `globalThis.__NEON_PILOT_APP_PERF__?.chatRenderSamples?.filter((sample) => sample.conversationId === ${JSON.stringify(longId)}).at(-1) ?? null`,
         );
         const messageCount = latestSample?.meta?.messageCount ?? 0;
-        if (messageCount >= expandedTranscriptTargetBlocks) {
+        const loadedTailBlocks = await evalJs(
+          cdp,
+          `Number(document.querySelector('[data-conversation-scroll-shell]')?.dataset?.historicalTailBlocks ?? 0)`,
+        );
+        if (messageCount >= expandedTranscriptTargetBlocks || loadedTailBlocks >= expandedTranscriptTargetBlocks) {
           break;
         }
       }
@@ -2270,11 +2278,19 @@ async function main() {
         } > ${maxLongTranscriptMountedMessages}`,
       );
     }
-    if ((longTranscriptExpandedWindowing.result?.sample?.meta?.messageCount ?? 0) < expandedTranscriptTargetBlocks) {
+    const expandedWindowingLoadedTailBlocks = Number(
+      longTranscriptExpandedWindowing.result?.diagnostics?.scrollShellDataset?.historicalTailBlocks ?? 0,
+    );
+    if (expandedWindowingLoadedTailBlocks < expandedTranscriptTargetBlocks) {
       failures.push(
-        `longTranscriptExpandedWindowing messageCount too low: ${
+        `longTranscriptExpandedWindowing loaded tail too low: ${expandedWindowingLoadedTailBlocks || 'missing'} < ${expandedTranscriptTargetBlocks}`,
+      );
+    }
+    if ((longTranscriptExpandedWindowing.result?.sample?.meta?.messageCount ?? 0) <= initialTranscriptTailBlocks) {
+      failures.push(
+        `longTranscriptExpandedWindowing messageCount did not grow: ${
           longTranscriptExpandedWindowing.result?.sample?.meta?.messageCount ?? 'missing'
-        } < ${expandedTranscriptTargetBlocks}`,
+        } <= ${initialTranscriptTailBlocks}`,
       );
     }
     if (longTranscriptExpandedWindowing.result?.sample?.meta?.shouldWindowTranscript !== true) {

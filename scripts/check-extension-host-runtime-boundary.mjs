@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-env node */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,9 +24,26 @@ const allowedBackendExportInspectionFiles = new Set([
 const extensionHostClientFile = 'packages/desktop/server/extensions/extensionHostClient.ts';
 
 function listExtensionFiles() {
-  return execFileSync('git', ['ls-files', extensionRoot], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
-    .split('\n')
-    .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.smoke.test.ts'));
+  try {
+    return execFileSync('git', ['ls-files', extensionRoot], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+      .split('\n')
+      .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.smoke.test.ts'));
+  } catch {
+    return walkSourceFiles(extensionRoot).filter((file) => !file.endsWith('.test.ts') && !file.endsWith('.smoke.test.ts'));
+  }
+}
+
+function walkSourceFiles(dir) {
+  const absoluteDir = resolve(repoRoot, dir);
+  if (!existsSync(absoluteDir)) return [];
+  return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+    const child = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (entry.name === 'dist' || entry.name === 'node_modules') return [];
+      return walkSourceFiles(child);
+    }
+    return child.endsWith('.ts') ? [child] : [];
+  });
 }
 
 const failures = [];

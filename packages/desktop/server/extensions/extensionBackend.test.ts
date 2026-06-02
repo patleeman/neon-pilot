@@ -84,9 +84,11 @@ describe('extension backend action invocation', () => {
 
     const result = await invokeExtensionAction('exit-action-ext', 'doThing', {});
 
-    expect(result.ok).toBe(false);
-    expect(result.ok ? '' : result.error).toContain('attempted to terminate the application via process.exit');
-    expect(isExtensionEnabled('exit-action-ext', stateRoot)).toBe(false);
+    expect(result).toEqual({
+      ok: false,
+      error: 'Extension "exit-action-ext" action "doThing" must declare worker.enabled before it can run.',
+    });
+    expect(isExtensionEnabled('exit-action-ext', stateRoot)).toBe(true);
   });
 
   it('returns repeated action handler errors without disabling the extension', async () => {
@@ -114,9 +116,9 @@ describe('extension backend action invocation', () => {
 
     expect(result).toEqual({
       ok: false,
-      error: 'Extension "validation-action-ext" action "doThing" failed: validation failed',
+      error: 'Extension "validation-action-ext" action "doThing" must declare worker.enabled before it can run.',
     });
-    expect(isExtensionEnabled('validation-action-ext', stateRoot)).toBe(true);
+    expect(isExtensionEnabled('validation-action-ext', stateRoot)).toBe(false);
   });
 
   it('blocks process termination during extension backend import', async () => {
@@ -138,7 +140,7 @@ describe('extension backend action invocation', () => {
     await expect(loadExtensionBackend('exit-import-ext')).rejects.toThrow('attempted to terminate the application via process.exit');
   });
 
-  it('loads and executes backend actions through the extension backend runner seam', async () => {
+  it('rejects backend actions that do not declare worker.enabled', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'runner-action-ext');
@@ -156,45 +158,10 @@ describe('extension backend action invocation', () => {
       }),
     );
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
-    const loadModule = vi.fn(async () => ({ doThing: vi.fn((input: unknown) => ({ input, via: 'runner' })) }));
-    const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
-    const runExport = vi.fn(
-      async (
-        extensionId: string,
-        compiled: { path: string; hash: string },
-        exportName: string,
-        operation: unknown,
-        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
-      ) => {
-        const backend = await loadModule(extensionId, compiled);
-        return run(extensionId, operation, () => invoke(backend[exportName] as (...args: unknown[]) => unknown));
-      },
-    );
-    setExtensionBackendRunnerForTests({
-      loadModule,
-      clearModule: vi.fn(),
-      hasExport: vi.fn(),
-      loadAgentFactory: vi.fn(),
-      run,
-      runExport,
-    });
-
     await expect(invokeExtensionAction('runner-action-ext', 'doThing', { ok: true })).resolves.toEqual({
-      ok: true,
-      result: { input: { ok: true }, via: 'runner' },
+      ok: false,
+      error: 'Extension "runner-action-ext" action "doThing" must declare worker.enabled before it can run.',
     });
-
-    expect(loadModule).toHaveBeenCalledWith(
-      'runner-action-ext',
-      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
-    );
-    expect(runExport).toHaveBeenCalledWith(
-      'runner-action-ext',
-      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
-      'doThing',
-      { type: 'action', label: 'action doThing', exportName: 'doThing', target: 'doThing' },
-      expect.any(Function),
-    );
   });
 
   it('runs explicitly worker-safe backend actions through the worker runner', async () => {
@@ -299,7 +266,7 @@ describe('extension backend action invocation', () => {
     );
   });
 
-  it('keeps manifest worker actions in-process when the input is not allowlisted', async () => {
+  it('rejects manifest worker actions when the input is not allowlisted', async () => {
     const backendRunner = {
       loadModule: vi.fn(),
       clearModule: vi.fn(),
@@ -327,10 +294,13 @@ describe('extension backend action invocation', () => {
         conversationId: 'conv-1',
         cwd: '/repo',
       }),
-    ).resolves.toEqual({ ok: true, result: { action: 'unknown', via: 'in-process' } });
+    ).resolves.toEqual({
+      ok: false,
+      error: 'Extension "system-diffs" action "checkpoint" must declare worker.enabled before it can run.',
+    });
 
     expect(workerRunner.runWorkerExport).not.toHaveBeenCalled();
-    expect(backendRunner.runExport).toHaveBeenCalled();
+    expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
   it('runs artifact backend actions through the worker runner when manifest-declared', async () => {
@@ -3044,7 +3014,7 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('loads and executes backend routes through the extension backend runner seam', async () => {
+  it('rejects backend routes that do not declare worker.enabled', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'runner-route-ext');
@@ -3062,40 +3032,9 @@ describe('extension backend action invocation', () => {
       }),
     );
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function unused() { return true; }\n');
-    const loadModule = vi.fn(async () => ({ ping: vi.fn(() => ({ status: 201, body: { via: 'runner' } })) }));
-    const run = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
-    const runExport = vi.fn(
-      async (
-        extensionId: string,
-        compiled: { path: string; hash: string },
-        exportName: string,
-        operation: unknown,
-        invoke: (handler: (...args: unknown[]) => unknown) => unknown,
-      ) => {
-        const backend = await loadModule(extensionId, compiled);
-        return run(extensionId, operation, () => invoke(backend[exportName] as (...args: unknown[]) => unknown));
-      },
-    );
-    setExtensionBackendRunnerForTests({
-      loadModule,
-      clearModule: vi.fn(),
-      hasExport: vi.fn(),
-      loadAgentFactory: vi.fn(),
-      run,
-      runExport,
-    });
-
     await expect(
       invokeExtensionRoute('runner-route-ext', 'GET', '/ping', { method: 'GET', path: '/ping', query: {}, params: {} }),
-    ).resolves.toEqual({ status: 201, body: { via: 'runner' } });
-
-    expect(runExport).toHaveBeenCalledWith(
-      'runner-route-ext',
-      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
-      'ping',
-      { type: 'route', label: 'route GET /ping', exportName: 'ping', target: '/ping' },
-      expect.any(Function),
-    );
+    ).rejects.toMatchObject({ code: 'worker_required' });
   });
 
   it('runs worker-safe backend routes through the worker runner', async () => {
@@ -3391,7 +3330,7 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('keeps SSE backend routes in-process even when worker-declared', async () => {
+  it('routes SSE backend routes through the worker runner when worker-declared', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'sse-route-ext');
@@ -3443,10 +3382,10 @@ describe('extension backend action invocation', () => {
 
     await expect(
       invokeExtensionRoute('sse-route-ext', 'GET', '/stream', { method: 'GET', path: '/stream', query: {}, params: {} }),
-    ).resolves.toEqual({ stream: 'sse', events: [] });
+    ).resolves.toEqual({ status: 200, body: undefined });
 
-    expect(runExport).toHaveBeenCalled();
-    expect(workerRunner.runWorkerExport).not.toHaveBeenCalled();
+    expect(runExport).not.toHaveBeenCalled();
+    expect(workerRunner.runWorkerExport).toHaveBeenCalled();
   });
 
   it('returns HTTP 500 when a backend route export is missing', async () => {
@@ -3470,7 +3409,7 @@ describe('extension backend action invocation', () => {
 
     await expect(
       invokeExtensionRoute('missing-route-ext', 'GET', '/ping', { method: 'GET', path: '/ping', query: {}, params: {} }),
-    ).resolves.toEqual({ status: 500, body: { error: 'Extension route handler not found: missing' } });
+    ).rejects.toMatchObject({ code: 'worker_required' });
   });
 
   it('probes self-test backend imports and exports through the worker import runner', async () => {

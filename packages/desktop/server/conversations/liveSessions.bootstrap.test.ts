@@ -88,6 +88,7 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
   createAgentSession: createAgentSessionMock,
   createBashTool: createBashToolMock,
   estimateTokens: () => 0,
+  loadProjectContextFiles: () => [],
 }));
 
 vi.mock('../shared/appEvents.js', () => ({
@@ -407,16 +408,18 @@ describe('liveSessions bootstrap helpers', () => {
       ],
     });
 
-    expect(DefaultResourceLoaderMock).toHaveBeenCalledWith({
-      cwd: '/tmp/workspace',
-      agentDir: '/tmp/custom-agent-dir',
-      extensionFactories: undefined,
-      additionalExtensionPaths: ['/tmp/extensions'],
-      additionalSkillPaths: undefined,
-      additionalPromptTemplatePaths: undefined,
-      additionalThemePaths: undefined,
-      noThemes: true,
-    });
+    expect(DefaultResourceLoaderMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: '/tmp/workspace',
+        agentDir: '/tmp/custom-agent-dir',
+        extensionFactories: undefined,
+        additionalExtensionPaths: ['/tmp/extensions'],
+        additionalSkillPaths: undefined,
+        additionalPromptTemplatePaths: undefined,
+        additionalThemePaths: undefined,
+        noThemes: true,
+      }),
+    );
     expect(defaultResourceLoaderReloadMock).toHaveBeenCalledTimes(1);
     expect(inspectionSession.session.dispose).toHaveBeenCalledTimes(1);
   });

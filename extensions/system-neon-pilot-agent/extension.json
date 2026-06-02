@@ -51,7 +51,7 @@
     "settingsComponent": {
       "id": "neon-pilot-agent",
       "component": "NeonPilotAgentSettingsPanel",
-      "sectionId": "settings-capabilities",
+      "sectionId": "neon-pilot-agent-capabilities",
       "label": "Neon Pilot Agent",
       "description": "Enable or disable the CLI and MCP entrypoints that expose Neon Pilot to other agents.",
       "order": 45

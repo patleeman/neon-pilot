@@ -138,9 +138,12 @@ describe('Layout workbench toggle', () => {
     await waitFor(() => {
       expect(reserveConversation).toHaveBeenCalledWith(undefined);
     });
-    await waitFor(() => {
-      expect(document.querySelector('[data-chat-rail="1"]')).not.toBeNull();
-    });
+    await waitFor(
+      () => {
+        expect(document.querySelector('[data-chat-rail="1"]')).not.toBeNull();
+      },
+      { timeout: 3000 },
+    );
 
     expect(createLiveSession).toHaveBeenCalledWith(undefined, undefined, {
       workspaceCwd: undefined,

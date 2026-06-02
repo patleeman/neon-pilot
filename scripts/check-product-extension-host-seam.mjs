@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-env node */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -233,8 +233,21 @@ function listFiles() {
       .filter(Boolean)
       .concat(productRuntimeFiles);
   } catch {
-    return [];
+    return productRuntimeRoots.flatMap((root) => walkSourceFiles(root)).concat(productRuntimeFiles);
   }
+}
+
+function walkSourceFiles(dir) {
+  const absoluteDir = resolve(repoRoot, dir);
+  if (!existsSync(absoluteDir)) return [];
+  return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+    const child = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (entry.name === 'dist' || entry.name === 'node_modules') return [];
+      return walkSourceFiles(child);
+    }
+    return filePattern.test(child) ? [child] : [];
+  });
 }
 
 const failures = [];

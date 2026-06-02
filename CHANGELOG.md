@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0-rc.0 — 2026-06-02
+
+### Highlights
+
+- Adds Neon Pilot agent entrypoints and a richer first-party DS4 local model experience, including runtime health, setup progress, quick controls, and CLI-driven tool access.
+- Moves more extension backend work into isolated workers, covering extension manager actions, knowledge operations, MCP, terminal sessions, image generation, local model controls, and conversation helper actions.
+- Exposes extension bin directories and worker-safe shell capabilities so installable extensions can ship sidecar CLIs and make them available to live sessions.
+- Tightens the product/extension host boundary with new RPC client coverage, permission checks, static release guards, and broader worker capability validation.
+- Improves model picker and chat polish with clearer DS4 model status, better menu behavior, and composer spacing fixes.
+
+### Notes
+
+- 245 commits since the previous release.
+
 ## 0.9.3-rc.4 — 2026-05-31
 
 ### Highlights

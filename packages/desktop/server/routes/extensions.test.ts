@@ -6,6 +6,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { setDefaultExtensionBackendWorkerUrl } from '../extensions/extensionBackendWorkerClient.js';
 import { clearExtensionHostAuditEvents } from '../extensions/extensionHostAudit.js';
 import { createInProcessExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionRequestAbortSignal, registerExtensionRoutes } from './extensions.js';
@@ -65,10 +66,12 @@ function setPackagedResourcesPath(value = '/Applications/Neon Pilot.app/Contents
 
 beforeEach(() => {
   setExtensionHostClient(createInProcessExtensionHostClient());
+  setDefaultExtensionBackendWorkerUrl(new URL('../../dist/server/extensions/extensionBackendWorker.js', import.meta.url));
 });
 
 afterEach(() => {
   setExtensionHostClient(undefined);
+  setDefaultExtensionBackendWorkerUrl(undefined);
   delete process.env.NEON_PILOT_STATE_ROOT;
   delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
   if (originalResourcesPathDescriptor) {
@@ -200,7 +203,7 @@ describe('registerExtensionRoutes', () => {
         id: 'agent-board',
         name: 'Agent Board',
         enabled: true,
-        backend: { entry: 'dist/backend.mjs', routes: [{ method: 'GET', path: '/status', handler: 'status' }] },
+        backend: { entry: 'dist/backend.mjs', routes: [{ method: 'GET', path: '/status', handler: 'status', worker: { enabled: true } }] },
       }),
     );
     writeFileSync(
@@ -239,7 +242,7 @@ describe('registerExtensionRoutes', () => {
         id: 'agent-board',
         name: 'Agent Board',
         enabled: true,
-        backend: { entry: 'dist/backend.mjs', routes: [{ method: 'GET', path: '/events', handler: 'events', stream: 'sse' }] },
+        backend: { entry: 'dist/backend.mjs', routes: [{ method: 'GET', path: '/events', handler: 'events', stream: 'sse', worker: { enabled: true } }] },
       }),
     );
     writeFileSync(
@@ -376,7 +379,7 @@ describe('registerExtensionRoutes', () => {
       { params: { commandId: 'agent-board.plan' }, body: { sprint: 'next' } },
       commandRes,
     );
-    expect(commandRes.json).toHaveBeenCalledWith({ ok: true, result: { ok: false, error: expect.stringContaining('backend entry') } });
+    expect(commandRes.json).toHaveBeenCalledWith({ ok: true, result: { ok: false, error: expect.stringContaining('worker') } });
 
     const slashRes = createResponse();
     await harness.getHandler('/api/extensions/slash-commands')({}, slashRes);
@@ -690,12 +693,12 @@ describe('registerExtensionRoutes', () => {
         schemaVersion: 2,
         id: 'agent-board',
         name: 'Agent Board',
-        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'saveTask', handler: 'saveTask' }] },
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'saveTask', handler: 'saveTask', worker: { enabled: true } }] },
       }),
     );
     writeFileSync(
       join(extensionRoot, 'dist', 'backend.mjs'),
-      `export async function saveTask(input, ctx) { await ctx.storage.put('tasks/one', input); return { saved: await ctx.storage.get('tasks/one'), automationsList: typeof ctx.automations.list, runsStart: typeof ctx.runs.start, knowledgeRead: typeof ctx.knowledge.read, conversationsList: typeof ctx.conversations.list }; }`,
+      `export async function saveTask(input, ctx) { await ctx.storage.put('tasks/one', input); return { saved: await ctx.storage.get('tasks/one') }; }`,
     );
 
     const harness = createHarness();
@@ -709,10 +712,6 @@ describe('registerExtensionRoutes', () => {
       ok: true,
       result: {
         saved: { title: 'Ship it' },
-        automationsList: 'function',
-        runsStart: 'function',
-        knowledgeRead: 'function',
-        conversationsList: 'function',
       },
     });
 
@@ -740,7 +739,7 @@ describe('registerExtensionRoutes', () => {
         schemaVersion: 2,
         id: 'agent-board',
         name: 'Agent Board',
-        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'searchTasks', handler: 'searchTasks' }] },
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'searchTasks', handler: 'searchTasks', worker: { enabled: true } }] },
         contributes: { searchProviders: [{ id: 'tasks', title: 'Tasks', action: 'searchTasks' }] },
       }),
     );

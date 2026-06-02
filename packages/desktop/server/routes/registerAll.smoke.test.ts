@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import express from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { createInProcessExtensionHostClient, getExtensionHostClient, setExtensionHostClient, type ExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { registerServerRoutes, type ServerRouteContext } from './index.js';
 
 function startServer(app: express.Express): Promise<{ baseUrl: string; close: () => Promise<void> }> {
@@ -43,8 +44,16 @@ describe('registerServerRoutes smoke test', () => {
 
   let appBaseUrl = '';
   let closeAppServer: (() => Promise<void>) | null = null;
+  let previousExtensionHostClient: ExtensionHostClient | undefined;
 
   beforeAll(async () => {
+    try {
+      previousExtensionHostClient = getExtensionHostClient();
+    } catch {
+      previousExtensionHostClient = undefined;
+    }
+    setExtensionHostClient(createInProcessExtensionHostClient());
+
     mkdirSync(workspaceDir, { recursive: true });
     mkdirSync(runtimeConfigRoot, { recursive: true });
     writeFileSync(join(workspaceDir, 'README.md'), '# smoke\n');
@@ -98,6 +107,7 @@ describe('registerServerRoutes smoke test', () => {
 
   afterAll(async () => {
     await closeAppServer?.();
+    setExtensionHostClient(previousExtensionHostClient);
     rmSync(tempRoot, { recursive: true, force: true });
   });
 

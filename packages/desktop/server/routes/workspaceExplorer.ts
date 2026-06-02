@@ -38,9 +38,13 @@ function writeWorkspaceError(res: { status: (code: number) => { json: (body: unk
 }
 
 function publishHostEvent(source: string, payload: unknown): void {
-  void getExtensionHostClient().publishEvent(source, payload).catch((error) => {
+  try {
+    void getExtensionHostClient().publishEvent(source, payload).catch((error) => {
+      logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
+    });
+  } catch (error) {
     logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
-  });
+  }
 }
 
 export function registerWorkspaceExplorerRoutes(

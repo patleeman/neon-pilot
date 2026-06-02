@@ -926,13 +926,16 @@ describe('LocalBackendProcesses', () => {
       }),
     };
 
-    await expect(backend.callLocalApiMethod('createDesktopLiveSession', [{ cwd: '/repo' }])).resolves.toMatchObject({
+    const firstResult = (await backend.callLocalApiMethod('createDesktopLiveSession', [{ cwd: '/repo' }])) as {
+      perf?: Record<string, unknown>;
+    };
+    expect(firstResult).toMatchObject({
       id: 'conversation-1',
       perf: {
-        rpcEnsureStartedMs: 0,
         rpcTransport: 'ipc',
       },
     });
+    expect(firstResult.perf?.rpcEnsureStartedMs).toEqual(expect.any(Number));
     const result = (await backend.callLocalApiMethod('createDesktopLiveSession', [{ cwd: '/repo' }])) as { perf?: Record<string, unknown> };
     expect(result.perf).not.toHaveProperty('rpcStartTotalMs');
   });

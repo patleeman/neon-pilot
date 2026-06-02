@@ -39,6 +39,109 @@ process.env.NEON_PILOT_CONFIG_ROOT = configRoot;
 process.env.NEON_PILOT_KNOWLEDGE_ROOT = knowledgeRoot;
 delete process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR;
 
+globalThis[Symbol.for('neon-pilot.extensionHostClient')] = {
+  async health() {
+    return { status: 'ready' };
+  },
+  async checkBackendHealth() {
+    return [];
+  },
+  async invokeAction() {
+    return { ok: false, error: 'Extension host action is unavailable in backend runtime smoke.' };
+  },
+  async installSubscriptions() {},
+  async uninstallSubscriptions() {},
+  async listServices() {
+    return [];
+  },
+  async startServices() {
+    return [];
+  },
+  async stopServices() {},
+  async listPromptAssemblyContributions() {
+    return { contextProviders: [], assemblyProviders: [], hooks: [] };
+  },
+  async listStaticContributions() {
+    return { tools: [], skills: [], modelDiscovery: [] };
+  },
+  async listEventSubscriptions() {
+    return [];
+  },
+  async stateOperation() {
+    return { operation: 'list', documents: [] };
+  },
+  async registryMaintenance() {},
+  async readRegistryPresentation() {
+    return {
+      schema: {},
+      installSummaries: [],
+      commandRegistrations: [],
+      keybindingRegistrations: [],
+      slashCommandRegistrations: [],
+      mentionRegistrations: [],
+      quickOpenRegistrations: [],
+      searchProviderRegistrations: [],
+      snapshot: { extensions: [], routes: [], surfaces: [], settings: [] },
+    };
+  },
+  async resolveFilePath() {
+    throw new Error('Extension file resolution is unavailable in backend runtime smoke.');
+  },
+  async resolveModelProfile() {
+    return undefined;
+  },
+  async resolvePromptReferences() {
+    return { contextBlocks: [], references: [] };
+  },
+  async invokeProtocolEntrypoint() {},
+  async invokeRoute() {
+    return { status: 404, body: { ok: false } };
+  },
+  async listActionTelemetry() {
+    return [];
+  },
+  async listAuditEvents() {
+    return [];
+  },
+  async reloadBackend() {
+    return { ok: true };
+  },
+  async runSelfTest() {
+    return { ok: true, checks: [] };
+  },
+  async setEnabled() {
+    return { ok: true };
+  },
+  async setKeybinding() {},
+  async beginStartupGuard() {
+    return { ok: true };
+  },
+  async completeStartupGuard() {},
+  async startStartupActions() {
+    return [];
+  },
+  async publishEvent() {},
+};
+
+const terminalSessions = new Map();
+globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')] = async (capability, operation, input) => {
+  if (capability === 'image') throw new Error('Image generation requires an active agent tool context.');
+  if (capability !== 'terminal') throw new Error('Unsupported smoke capability: ' + capability);
+  if (operation === 'create') {
+    const id = 'terminal-smoke-' + (terminalSessions.size + 1);
+    terminalSessions.set(id, { output: '', exited: false, exitCode: null });
+    return { id, pid: 12345, usingPty: false, initialOutput: '' };
+  }
+  if (operation === 'write') return { ok: terminalSessions.has(input.id) };
+  if (operation === 'drain') return { ok: terminalSessions.has(input.id), output: '', exited: false, exitCode: null };
+  if (operation === 'resize') return { ok: terminalSessions.has(input.id) };
+  if (operation === 'close') {
+    const existed = terminalSessions.delete(input.id);
+    return { ok: existed };
+  }
+  throw new Error('Unsupported smoke terminal operation: ' + operation);
+};
+
 const module = await import(backendUrl);
 const storage = new Map();
 const invalidatedTopics = [];
@@ -337,6 +440,40 @@ const smokes = {
   async 'system-mcp'() {
     const result = await module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
+  },
+  async 'system-neon-pilot-agent'() {
+    module.__setNeonPilotAgentApisForTest({
+      agent: {
+        async runAgentTask() {
+          return { text: 'agent smoke', model: 'test-model', provider: 'test-provider' };
+        },
+      },
+      runs: {
+        async pingDaemon() {
+          return true;
+        },
+        async listDurableRuns() {
+          return {
+            runs: [
+              {
+                runId: 'run-smoke',
+                manifest: { kind: 'background-run', spec: { metadata: { taskSlug: 'smoke-agent' } } },
+                status: { status: 'running' },
+              },
+            ],
+            summary: { total: 1 },
+          };
+        },
+      },
+    });
+    const settings = await module.readSettings({}, ctx);
+    assert(settings.settings.cliEnabled === true && settings.settings.mcpEnabled === true, 'agent settings failed');
+    const capabilities = await module.neonPilotAgent({ action: 'capabilities' }, ctx);
+    assert(capabilities.text.includes('run_task'), 'agent capabilities missing run_task');
+    const runs = await module.neonPilotAgent({ action: 'runs_list', kind: 'subagent' }, ctx);
+    assert(runs.details.runCount === 1, 'agent runs list failed');
+    const task = await module.neonPilotAgent({ action: 'run_task', prompt: 'smoke' }, ctx);
+    assert(task.text.includes('agent smoke'), 'agent run task failed');
   },
   async 'system-onboarding'() {
     const result = await module.ensure({}, ctx);

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { invokeExtensionAction, reloadExtensionBackend } from './extensionBackend.js';
+import { setDefaultExtensionBackendWorkerUrl } from './extensionBackendWorkerClient.js';
 
 const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
 const previousStateRoot = process.env.NEON_PILOT_STATE_ROOT;
@@ -30,6 +31,7 @@ function restoreEnv(name: 'NEON_PILOT_REPO_ROOT' | 'NEON_PILOT_STATE_ROOT', valu
 }
 
 afterEach(() => {
+  setDefaultExtensionBackendWorkerUrl(undefined);
   restoreEnv('NEON_PILOT_REPO_ROOT', previousRepoRoot);
   restoreEnv('NEON_PILOT_STATE_ROOT', previousStateRoot);
 
@@ -61,6 +63,7 @@ describe('conversation inspect extension cache integration', () => {
       `import { parentPort } from 'node:worker_threads'; parentPort?.on('message', (request) => parentPort.postMessage({ id: request.id, ok: true, action: request.action, result: { source: 'repo-worker' }, text: 'repo worker text' }));`,
     );
     process.env.NEON_PILOT_REPO_ROOT = workerRepoRoot;
+    setDefaultExtensionBackendWorkerUrl(new URL('../../dist/server/extensions/extensionBackendWorker.js', import.meta.url));
 
     const action = await invokeExtensionAction(
       'system-conversation-tools',
@@ -73,7 +76,7 @@ describe('conversation inspect extension cache integration', () => {
       { getRuntimeScope: () => 'assistant' } as never,
       { sessionId: 'current-conversation' } as never,
     );
-    expect(action).toMatchObject({ ok: true });
+    if (!action.ok) throw new Error(action.error);
     const result = action.ok ? (action.result as { content?: Array<{ text?: string }> }) : { content: [] };
 
     expect(result.content?.[0]?.text).not.toBe('used cached worker');

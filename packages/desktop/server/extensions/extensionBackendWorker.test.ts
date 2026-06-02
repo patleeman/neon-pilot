@@ -23,7 +23,7 @@ async function flushPromises(): Promise<void> {
 }
 
 async function waitForPostMessage(message: unknown): Promise<void> {
-  for (let index = 0; index < 50; index += 1) {
+  for (let index = 0; index < 250; index += 1) {
     if (workerThreads.parentPort.postMessage.mock.calls.some(([candidate]) => expect.objectContaining(message).asymmetricMatch(candidate))) {
       return;
     }

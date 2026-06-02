@@ -336,10 +336,19 @@ describe('conversation rendering mode', () => {
 });
 
 describe('conversation model loading', () => {
-  it('keeps draft model data hot even before a session exists', () => {
+  it('defers draft model data until non-critical metadata is ready', () => {
     expect(
       shouldLoadConversationModels({
         draft: true,
+        metadataReady: false,
+        hasPendingInitialPrompt: false,
+        hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldLoadConversationModels({
+        draft: true,
+        metadataReady: true,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,
       }),
@@ -367,6 +376,16 @@ describe('conversation model loading', () => {
   it('loads model data once the initial prompt work is clear', () => {
     expect(
       shouldLoadConversationModels({
+        metadataReady: false,
+        draft: false,
+        hasPendingInitialPrompt: false,
+        hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldLoadConversationModels({
+        metadataReady: true,
         draft: false,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,

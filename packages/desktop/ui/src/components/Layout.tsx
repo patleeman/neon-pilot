@@ -1416,9 +1416,20 @@ export function Layout() {
     }
 
     prewarmedLiveSessionWorkspaceCwdsRef.current.set(workspaceCwd, performance.now());
-    void api.prewarmLiveSession(workspaceCwd).catch(() => {
-      prewarmedLiveSessionWorkspaceCwdsRef.current.delete(workspaceCwd);
-    });
+    let requested = false;
+    const timeout = window.setTimeout(() => {
+      requested = true;
+      void api.prewarmLiveSession(workspaceCwd).catch(() => {
+        prewarmedLiveSessionWorkspaceCwdsRef.current.delete(workspaceCwd);
+      });
+    }, 1_500);
+
+    return () => {
+      window.clearTimeout(timeout);
+      if (!requested) {
+        prewarmedLiveSessionWorkspaceCwdsRef.current.delete(workspaceCwd);
+      }
+    };
   }, [activeWorkspaceCwd]);
   const clearActiveWorkbenchFileSelection = useCallback(() => {
     if (activeConversationId) {
