@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0 — 2026-06-02
+
+### Highlights
+
+- Ships the 0.10 stable desktop train with first-party Neon Pilot agent entrypoints and the DS4 local model extension.
+- Adds a richer DS4 runtime experience, including setup progress, health checks, quick controls, CLI tool access, and advanced context/token/KV cache settings.
+- Moves more extension backend actions through isolated workers while tightening product/extension host boundaries with new static guards and runtime coverage.
+- Improves model and conversation ergonomics with clearer DS4 model status, provider identity preservation, and chat UI polish.
+- Carries forward the signed-release validation from the RC train, including packaged extension checks, release smoke coverage, and dependency refreshes.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.10.0-rc.0 — 2026-06-02
 
 ### Highlights

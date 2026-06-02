@@ -4,18 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.9.3-rc.4** — release candidate being prepared.
+**v0.10.0** — stable release being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.9.3-rc.4
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.0
 
 Highlights in this train:
 
-- Adds the DS4 local model extension so DeepSeek DS4 can be installed as a first-party local model provider.
-- Completes the DS4 native tool surface with manifest-declared tools, backend coverage, and agent-facing skill guidance.
-- Lets the DS4 extension manage its runtime directly, including command discovery, setup guidance, and backend runtime lifecycle handling.
-- Expands the conversation admin tool with a richer schema, route coverage, docs, and manifest validation.
-- Disambiguates duplicate model selections by preserving provider/runtime identity through model state, preference saving, and composer menus.
-- Introduces an extension host client boundary so prompt assembly can call extension hooks through a narrower host-facing API.
+- Ships first-party Neon Pilot agent entrypoints and the DS4 local model extension.
+- Adds DS4 runtime setup progress, health checks, quick controls, CLI tool access, and advanced context/token/KV cache settings.
+- Moves more extension backend actions through isolated workers with stronger product/extension host boundary checks.
+- Preserves provider/runtime identity through model state, preferences, and composer menus.
+- Validates the stable train with packaged extension checks, release smoke coverage, and refreshed release dependencies.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
