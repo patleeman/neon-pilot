@@ -1,9 +1,10 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { deleteRuntimeExtension } from './extensionLifecycle.js';
 import {
   beginExtensionStartupGuard,
   clearExtensionFailureRecordsForOperation,
@@ -347,13 +348,39 @@ describe('extension registry', () => {
       }),
     );
 
-    expect(readRuntimeExtensionEntries(stateRoot)).toEqual([
-      expect.objectContaining({
-        packageRoot: extensionRoot,
-        source: 'runtime',
-        manifest: expect.objectContaining({ id: 'agent-board', packageType: 'user' }),
-      }),
-    ]);
+    expect(readRuntimeExtensionEntries(stateRoot)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          packageRoot: extensionRoot,
+          source: 'runtime',
+          manifest: expect.objectContaining({ id: 'agent-board', packageType: 'user' }),
+        }),
+      ]),
+    );
+  });
+
+  it('seeds onboarding into runtime extensions by default and remembers uninstall', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'system-onboarding');
+
+    expect(readRuntimeExtensionEntries(stateRoot)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          packageRoot: extensionRoot,
+          source: 'runtime',
+          manifest: expect.objectContaining({ id: 'system-onboarding', packageType: 'user' }),
+        }),
+      ]),
+    );
+    expect(existsSync(join(extensionRoot, 'extension.json'))).toBe(true);
+
+    await deleteRuntimeExtension('system-onboarding', stateRoot);
+    expect(existsSync(extensionRoot)).toBe(false);
+    invalidateExtensionRegistryReadCaches(stateRoot);
+    expect(readRuntimeExtensionEntries(stateRoot).some((entry) => entry.manifest.id === 'system-onboarding')).toBe(false);
+    expect(JSON.parse(readFileSync(join(stateRoot, 'extensions', 'registry.json'), 'utf8'))).toMatchObject({
+      removedDefaultInstalledIds: ['system-onboarding'],
+    });
   });
 
   it('exposes invalid runtime extension manifests in installation summaries', () => {
@@ -372,7 +399,7 @@ describe('extension registry', () => {
       }),
     );
 
-    expect(readRuntimeExtensionEntries(stateRoot)).toEqual([]);
+    expect(readRuntimeExtensionEntries(stateRoot).filter((entry) => entry.manifest.id !== 'system-onboarding')).toEqual([]);
     expect(listExtensionInstallSummaries(stateRoot)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -483,7 +510,10 @@ describe('extension registry', () => {
     writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'runtime-board', name: 'Runtime Board' }));
 
     expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
-    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: true, disabledIds: ['runtime-board'] });
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({
+      safeMode: true,
+      disabledIds: expect.arrayContaining(['runtime-board']),
+    });
     expect(isExtensionEnabled('runtime-board', stateRoot)).toBe(false);
     completeExtensionStartupGuard(stateRoot);
     expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });

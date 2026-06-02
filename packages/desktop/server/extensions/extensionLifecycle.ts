@@ -403,7 +403,7 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
 
 export async function deleteRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {
   const id = normalizeExtensionId(extensionId);
-  const entry = findExtensionEntry(id);
+  const entry = findExtensionEntry(id, stateRoot);
   if (!entry) {
     const { readInvalidRuntimeExtensionEntries } = await import('./extensionRegistry.js');
     const invalidEntry = readInvalidRuntimeExtensionEntries(stateRoot).find((candidate) => candidate.id === id);

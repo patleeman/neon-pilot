@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
@@ -569,6 +569,16 @@ function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot()): stri
   return join(getRuntimeExtensionsRoot(stateRoot), 'startup-marker.json');
 }
 
+const DEFAULT_INSTALLED_EXTENSION_IDS = ['system-onboarding'];
+
+function candidateDefaultInstalledExtensionRoots(): string[] {
+  return [
+    process.env.NEON_PILOT_REPO_ROOT ? join(process.env.NEON_PILOT_REPO_ROOT, 'installable-extensions') : null,
+    join(process.cwd(), 'installable-extensions'),
+    typeof process.resourcesPath === 'string' ? join(process.resourcesPath, 'default-installable-extensions') : null,
+  ].filter((value): value is string => Boolean(value));
+}
+
 function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): ExtensionRegistryConfig {
   const cache = registryReadCache.getStore();
   const cached = cache?.configs.get(stateRoot);
@@ -663,6 +673,21 @@ function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot
   registryReadCache.getStore()?.configs.delete(stateRoot);
 }
 
+function ensureDefaultInstalledExtensions(stateRoot: string = getStateRoot()): void {
+  const config = readExtensionRegistryConfig(stateRoot);
+  const removed = new Set(config.removedDefaultInstalledIds ?? []);
+  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
+  for (const id of DEFAULT_INSTALLED_EXTENSION_IDS) {
+    if (removed.has(id) || existsSync(join(runtimeRoot, id))) continue;
+    const sourceRoot = candidateDefaultInstalledExtensionRoots()
+      .map((root) => join(root, id))
+      .find((candidate) => existsSync(join(candidate, 'extension.json')));
+    if (!sourceRoot) continue;
+    mkdirSync(runtimeRoot, { recursive: true });
+    cpSync(sourceRoot, join(runtimeRoot, id), { recursive: true, errorOnExist: true });
+  }
+}
+
 export function isExtensionEnabled(extensionId: string, stateRoot: string = getStateRoot()): boolean {
   const config = readExtensionRegistryConfig(stateRoot);
   const entry = listExtensionEntries(stateRoot).find((candidate) => candidate.manifest.id === extensionId);
@@ -689,9 +714,12 @@ export function removeExtensionFromRegistry(extensionId: string, stateRoot: stri
   const config = readExtensionRegistryConfig(stateRoot);
   const disabledIds = (config.disabledIds ?? []).filter((id) => id !== extensionId);
   const enabledIds = (config.enabledIds ?? []).filter((id) => id !== extensionId);
+  const removedDefaultInstalledIds = DEFAULT_INSTALLED_EXTENSION_IDS.includes(extensionId)
+    ? [...new Set([...(config.removedDefaultInstalledIds ?? []), extensionId])]
+    : (config.removedDefaultInstalledIds ?? []);
   const quarantined = { ...(config.quarantined ?? {}) };
   delete quarantined[extensionId];
-  writeExtensionRegistryConfig({ ...config, disabledIds, enabledIds, quarantined }, stateRoot);
+  writeExtensionRegistryConfig({ ...config, disabledIds, enabledIds, removedDefaultInstalledIds, quarantined }, stateRoot);
 }
 
 export function recordExtensionFailure(input: { extensionId: string; operation: string; error: string; stateRoot?: string }): {
@@ -1018,6 +1046,7 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
 }
 
 export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateRoot()): InvalidExtensionEntry[] {
+  ensureDefaultInstalledExtensions(stateRoot);
   const cache = registryReadCache.getStore();
   const scoped = cache?.invalidEntries.get(stateRoot);
   if (scoped) return scoped;
@@ -1054,6 +1083,7 @@ export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateR
 }
 
 export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
+  ensureDefaultInstalledExtensions(stateRoot);
   return listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
     .filter((entry) => entry.source === 'external')
     .flatMap((entry): ExtensionRegistryEntry[] => {
@@ -1743,6 +1773,6 @@ export function listExtensionSettingsComponentRegistrations(stateRoot: string = 
   });
 }
 
-export function findExtensionEntry(extensionId: string): ExtensionRegistryEntry | null {
-  return listExtensionEntries().find((entry) => entry.manifest.id === extensionId) ?? null;
+export function findExtensionEntry(extensionId: string, stateRoot: string = getStateRoot()): ExtensionRegistryEntry | null {
+  return listExtensionEntries(stateRoot).find((entry) => entry.manifest.id === extensionId) ?? null;
 }

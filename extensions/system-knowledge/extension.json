@@ -343,7 +343,7 @@
       {
         "id": "open-knowledge-files-palette",
         "title": "Open knowledge files palette",
-        "keys": ["mod+p"],
+        "keys": ["mod+alt+p"],
         "command": "palette.open",
         "args": {
           "scope": "files"

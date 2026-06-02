@@ -225,7 +225,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 
 - Agent tool: `conversation`.
 - Actions: ask user question, duplicate conversation, copy working directory, copy conversation ID, copy deeplink.
-- Command/keybinding: `open-thread-palette` / Open conversation palette (`mod+k`).
+- Command/keybinding: `open-thread-palette` / Open conversation palette (`mod+p`).
 - Conversation list context menu IDs: `duplicate-conversation`, `copy-working-directory`, `copy-conversation-id`, `copy-deeplink`.
 - Transcript renderers: ask-user-question tool block, terminal bash tool block.
 - Tool operations to test:
@@ -345,7 +345,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 - tools: conversation
 - commands: open-thread-palette
-- keybindings: open-thread-palette [mod+k]
+- keybindings: open-thread-palette [mod+p]
 - transcriptRenderers: ask-user-question-tool-block for ask_user_question, terminal-bash-tool-block for bash
 - contextMenus: duplicate-conversation on conversationList, copy-working-directory on conversationList, copy-conversation-id on conversationList, copy-deeplink on conversationList
 - backend actions: conversationTool, duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink

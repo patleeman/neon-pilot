@@ -249,11 +249,11 @@ describe('CommandsSettingsSection', () => {
         extensionId: 'system-conversation-tools',
         surfaceId: 'open-thread-palette',
         title: 'Open thread palette',
-        keys: ['mod+k'],
+        keys: ['mod+p'],
         command: 'palette.open',
         args: { scope: 'threads' },
         scope: 'global',
-        defaultKeys: ['mod+k'],
+        defaultKeys: ['mod+p'],
         enabled: true,
       },
       {
@@ -282,7 +282,7 @@ describe('CommandsSettingsSection', () => {
     const rows = Array.from(container.querySelectorAll('.grid.gap-3.py-3'));
     expect(rows).toHaveLength(2);
     expect(rows[0]?.textContent).toContain('Open thread palette');
-    expect(rows[0]?.textContent).toContain('mod + k');
+    expect(rows[0]?.textContent).toContain('mod + p');
     expect(rows[0]?.textContent).not.toContain('mod + shift + p');
     expect(rows[1]?.textContent).toContain('Open command palette');
     expect(rows[1]?.textContent).toContain('mod + shift + p');

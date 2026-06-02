@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,8 +19,18 @@ import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
 import { invalidateExtensionRegistryReadCaches, isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
+const INSTALLABLE_EXTENSIONS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../installable-extensions');
 
 const ORIGINAL_STATE_ROOT = process.env.NEON_PILOT_STATE_ROOT;
+
+function installTestExtension(stateRoot: string, extensionId: string): void {
+  mkdirSync(join(stateRoot, 'extensions'), { recursive: true });
+  cpSync(join(INSTALLABLE_EXTENSIONS_ROOT, extensionId), join(stateRoot, 'extensions', extensionId), { recursive: true });
+  mkdirSync(join(stateRoot, 'extensions', extensionId, 'dist'), { recursive: true });
+  writeFileSync(join(stateRoot, 'extensions', extensionId, 'dist', 'backend.mjs'), 'export {};\n');
+  writeFileSync(join(stateRoot, 'extensions', extensionId, 'dist', 'frontend.js'), 'export {};\n');
+  invalidateExtensionRegistryReadCaches(stateRoot);
+}
 
 const extensionServices = vi.hoisted(() => ({
   startExtensionServices: vi.fn(async () => undefined),
@@ -817,6 +827,7 @@ describe('extension backend action invocation', () => {
   it('runs worker-safe code mode actions through the worker runner', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'system-code-mode');
     setExtensionEnabled('system-code-mode', true, stateRoot);
     const backendRunner = {
       loadModule: vi.fn(),
@@ -850,7 +861,7 @@ describe('extension backend action invocation', () => {
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-code-mode',
       expect.objectContaining({
-        path: expect.stringContaining(join('extensions', 'system-code-mode', 'dist', 'backend.mjs')),
+        path: expect.stringContaining(join('system-code-mode', 'dist', 'backend.mjs')),
       }),
       'prepareDraftConversation',
       { type: 'action', label: 'action prepareDraftConversation', target: 'prepareDraftConversation' },
@@ -876,7 +887,7 @@ describe('extension backend action invocation', () => {
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-code-mode',
       expect.objectContaining({
-        path: expect.stringContaining(join('extensions', 'system-code-mode', 'dist', 'backend.mjs')),
+        path: expect.stringContaining(join('system-code-mode', 'dist', 'backend.mjs')),
       }),
       'toggleCodeMode',
       { type: 'action', label: 'action toggleCodeMode', target: 'toggleCodeMode' },
@@ -1697,6 +1708,9 @@ describe('extension backend action invocation', () => {
   });
 
   it('runs worker-safe onboarding actions through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'system-onboarding');
     const backendRunner = {
       loadModule: vi.fn(),
       clearModule: vi.fn(),
@@ -1725,7 +1739,7 @@ describe('extension backend action invocation', () => {
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
       'system-onboarding',
       expect.objectContaining({
-        path: expect.stringContaining(join('extensions', 'system-onboarding', 'dist', 'backend.mjs')),
+        path: expect.stringContaining(join('system-onboarding', 'dist', 'backend.mjs')),
       }),
       'ensure',
       { type: 'action', label: 'action ensure', target: 'ensure' },

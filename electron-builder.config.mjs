@@ -132,6 +132,11 @@ const electronBuilderConfig = {
       filter: packagedExtensionFilter,
     },
     {
+      from: 'installable-extensions',
+      to: 'default-installable-extensions',
+      filter: packagedExtensionFilter.map((entry) => `system-onboarding/${entry}`),
+    },
+    {
       from: 'docs',
       to: 'docs',
     },

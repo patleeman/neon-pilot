@@ -3,6 +3,7 @@ import type { ExtensionPackageType } from './extensionManifest.js';
 export interface ExtensionRegistryConfig {
   disabledIds?: string[];
   enabledIds?: string[];
+  removedDefaultInstalledIds?: string[];
   disabledKeybindings?: string[];
   keybindingOverrides?: Record<string, string[]>;
   commandKeybindings?: Record<
@@ -32,6 +33,9 @@ export function normalizeExtensionRegistryConfig(value: unknown): ExtensionRegis
 
   const disabledIds = Array.isArray(value.disabledIds) ? value.disabledIds.filter((id): id is string => typeof id === 'string') : [];
   const enabledIds = Array.isArray(value.enabledIds) ? value.enabledIds.filter((id): id is string => typeof id === 'string') : [];
+  const removedDefaultInstalledIds = Array.isArray(value.removedDefaultInstalledIds)
+    ? value.removedDefaultInstalledIds.filter((id): id is string => typeof id === 'string')
+    : [];
   const disabledKeybindings = Array.isArray(value.disabledKeybindings)
     ? value.disabledKeybindings.filter((id): id is string => typeof id === 'string')
     : [];
@@ -85,7 +89,7 @@ export function normalizeExtensionRegistryConfig(value: unknown): ExtensionRegis
       )
     : {};
 
-  return { disabledIds, enabledIds, disabledKeybindings, keybindingOverrides, commandKeybindings, quarantined };
+  return { disabledIds, enabledIds, removedDefaultInstalledIds, disabledKeybindings, keybindingOverrides, commandKeybindings, quarantined };
 }
 
 export function serializeExtensionRegistryConfig(config: ExtensionRegistryConfig): string {
@@ -93,6 +97,7 @@ export function serializeExtensionRegistryConfig(config: ExtensionRegistryConfig
     {
       disabledIds: config.disabledIds ?? [],
       enabledIds: config.enabledIds ?? [],
+      removedDefaultInstalledIds: config.removedDefaultInstalledIds ?? [],
       disabledKeybindings: config.disabledKeybindings ?? [],
       keybindingOverrides: config.keybindingOverrides ?? {},
       commandKeybindings: config.commandKeybindings ?? {},
