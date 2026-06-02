@@ -5,7 +5,7 @@ DeepSeek V4 Flash local model profile for [`antirez/ds4`](https://github.com/ant
 Enable this extension after building or installing it. On enable it installs a `ds4` model provider that points at the upstream default server endpoint used by the managed runtime:
 
 ```sh
-./ds4-server --ctx 100000 --kv-disk-dir /tmp/ds4-kv --kv-disk-space-mb 8192
+./ds4-server --ctx 400000 --kv-disk-dir /tmp/ds4-kv --kv-disk-space-mb 8192
 ```
 
 The provider model is `ds4/deepseek-v4-flash`, served from `http://127.0.0.1:8000/v1` with API key `dsv4-local`, matching the Pi config documented by ds4.

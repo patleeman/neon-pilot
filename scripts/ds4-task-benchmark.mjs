@@ -477,7 +477,7 @@ function usage() {
     '  hf-list [--dataset=patrickleenyc/personal-agent-evals] [--limit=20] [--core] [--per-type=3] [--require-commit]',
     '  hf-prepare --case=<id> [--dataset=patrickleenyc/personal-agent-evals] [--mode=optimized|baseline] [--out=<dir>] [--core]',
     '  api-smoke [--mode=optimized|baseline]',
-    '  run-core --mode=optimized|baseline|both [--target-repo=<path>] [--base-url=<url> --token=<token>] [--out=<dir>] [--timeout-ms=900000] [--limit=9]',
+    '  run-core --mode=optimized|baseline|both [--target-repo=<path>] [--base-url=<url> --token=<token>] [--out=<dir>] [--timeout-ms=900000] [--limit=9] [--cases-file=<json|jsonl>] [--attempts=1]',
     '  prepare --task=<id> [--mode=optimized|baseline] [--out=<dir>]',
     '  grade --workspace=<dir> [--metrics=<file>] [--json]',
     '  report --results=<file[,file...]> [--json]',
@@ -625,10 +625,16 @@ function commitExists(cwd, commit) {
   }
 }
 
+function stripBenchmarkPromptMetadata(prompt) {
+  return normalizeNewlines(String(prompt ?? ''))
+    .replace(/\n+Benchmark case:[\s\S]*$/m, '')
+    .trim();
+}
+
 function buildHfPrompt(row, mode, targetRepo) {
   const hasBaseCommit = commitExists(targetRepo, row.base_commit);
   return [
-    normalizeNewlines(String(row.prompt ?? '')).trim(),
+    stripBenchmarkPromptMetadata(row.prompt),
     '',
     `Benchmark case: ${row.id}`,
     `Benchmark mode: ${mode}`,
@@ -640,9 +646,10 @@ function buildHfPrompt(row, mode, targetRepo) {
     .join('\n');
 }
 
-async function runOneCase({ client, row, mode, outputDir, timeoutMs }) {
+async function runOneCase({ client, row, mode, outputDir, timeoutMs, attempt }) {
   const sourceRepo = path.resolve(arg('target-repo', repoRoot));
-  const workspaceInfo = createCaseWorkspace({ sourceRepo, outputDir, mode, caseId: row.id, commit: row.resolvedCommit || row.base_commit });
+  const workspaceMode = attempt > 1 ? `${mode}-attempt${attempt}` : mode;
+  const workspaceInfo = createCaseWorkspace({ sourceRepo, outputDir, mode: workspaceMode, caseId: row.id, commit: row.resolvedCommit || row.base_commit });
   const targetRepo = workspaceInfo.workspace;
   const prompt = buildHfPrompt(row, mode, targetRepo);
   const startedAtMs = Date.now();
@@ -716,6 +723,7 @@ async function runOneCase({ client, row, mode, outputDir, timeoutMs }) {
   const wallMs = Date.now() - startedAtMs;
   const result = {
     caseId: row.id,
+    attempt,
     sourceCandidateId: row.source_candidate_id ?? '',
     mode,
     coreType: row.coreType ?? row.type ?? '',
@@ -753,8 +761,13 @@ async function runOneCase({ client, row, mode, outputDir, timeoutMs }) {
     createdAt: new Date(startedAtMs).toISOString(),
     completedAt: new Date().toISOString(),
   };
-  writeJson(path.join(outputDir, `${mode}-${row.id}.json`), result);
+  const resultFile = attempt > 1 ? `${mode}-${row.id}-attempt${attempt}.json` : `${mode}-${row.id}.json`;
+  writeJson(path.join(outputDir, resultFile), result);
   return result;
+}
+
+function isTimeoutResult(result) {
+  return (result.metrics?.errors ?? []).some((error) => /timed out|timeout/i.test(String(error)));
 }
 
 async function runCore() {
@@ -766,7 +779,8 @@ async function runCore() {
   const outputDir = path.resolve(arg('out') || path.join(repoRoot, 'artifacts', 'ds4-evals', new Date().toISOString().replace(/[:.]/g, '-')));
   mkdirSync(outputDir, { recursive: true });
   const limit = Number(arg('limit', '0')) || 0;
-  const cases = (await fetchCoreHfCases({ dataset, perType: Number(arg('per-type', '3')) || 3 })).slice(0, limit > 0 ? limit : undefined);
+  const cases = (await loadRunCoreCases({ dataset })).slice(0, limit > 0 ? limit : undefined);
+  const attempts = Math.max(1, Number(arg('attempts', '1')) || 1);
   const results = [];
   for (const mode of modes) {
     const providedBaseUrl = arg('base-url');
@@ -778,10 +792,13 @@ async function runCore() {
     const client = { baseUrl: backend.baseUrl, token: backend.token };
     try {
       for (const row of cases) {
-        console.log(`[${mode}] ${row.id}`);
-        const result = await runOneCase({ client, row, mode, outputDir, timeoutMs });
-        results.push(result);
-        append(path.join(outputDir, 'results.jsonl'), `${JSON.stringify(result)}\n`);
+        for (let attempt = 1; attempt <= attempts; attempt += 1) {
+          console.log(`[${mode}] ${row.id}${attempt > 1 ? ` attempt ${attempt}` : ''}`);
+          const result = await runOneCase({ client, row, mode, outputDir, timeoutMs, attempt });
+          results.push(result);
+          append(path.join(outputDir, 'results.jsonl'), `${JSON.stringify(result)}\n`);
+          if (result.passed || !isTimeoutResult(result)) break;
+        }
       }
     } finally {
       await backend.stop();
@@ -789,6 +806,34 @@ async function runCore() {
   }
   writeJson(path.join(outputDir, 'summary.json'), summarizeBenchmarkRun(results));
   console.log(`results=${outputDir}`);
+}
+
+async function loadRunCoreCases({ dataset }) {
+  const casesFile = arg('cases-file');
+  if (!casesFile) return fetchCoreHfCases({ dataset, perType: Number(arg('per-type', '3')) || 3 });
+  const file = path.resolve(casesFile);
+  const text = readFileSync(file, 'utf8');
+  const rows = file.endsWith('.jsonl')
+    ? text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+    : JSON.parse(text);
+  assert(Array.isArray(rows), `--cases-file must contain an array or JSONL rows: ${file}`);
+  return rows.map((row) => ({
+    id: row.id ?? row.caseId,
+    type: row.type ?? row.coreType,
+    coreType: row.coreType ?? row.type,
+    coreFailureMode: row.coreFailureMode ?? '',
+    source_candidate_id: row.source_candidate_id ?? row.sourceCandidateId ?? '',
+    repo: row.repo ?? row.originalDatasetRepo ?? '',
+    base_commit: row.base_commit ?? row.baseCommit ?? '',
+    resolvedCommit: row.resolvedCommit ?? row.targetCommit ?? '',
+    prompt: stripBenchmarkPromptMetadata(row.prompt ?? ''),
+    scoring: row.scoring ?? {},
+    agent: row.agent ?? {},
+  }));
 }
 
 async function apiSmoke() {

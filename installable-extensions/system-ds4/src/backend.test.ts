@@ -108,7 +108,7 @@ describe('DS4 provider setup', () => {
         modelId: 'deepseek-v4-flash',
         name: 'DeepSeek V4 Flash',
         reasoning: true,
-        contextWindow: 100000,
+        contextWindow: 400000,
         maxTokens: 384000,
       }),
     );
@@ -125,7 +125,7 @@ describe('DS4 provider setup', () => {
     await expect(backend.discover({}, ctx())).resolves.toMatchObject({
       provider: 'ds4',
       baseUrl: 'http://127.0.0.1:8000/v1',
-      models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash' }],
+      models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 400000 }],
     });
   });
 });
@@ -271,7 +271,7 @@ describe('DS4 managed runtime', () => {
       expect(result.started).toBe(true);
       expect(context.storage.put).toHaveBeenCalledWith('runtime/serverPid', 54321);
       const launchScript = exec.mock.calls.find(([input]) => (input.args?.join(' ') ?? '').includes('ds4-server'))?.[0].args?.join(' ');
-      expect(launchScript).toContain('--ctx 100000');
+      expect(launchScript).toContain('--ctx 400000');
       expect(launchScript).toContain('--kv-disk-space-mb 8192');
       expect(launchScript).toContain(path.join(dir, 'runtime'));
     } finally {

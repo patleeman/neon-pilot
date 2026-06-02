@@ -15,6 +15,7 @@ const API_KEY = 'dsv4-local';
 const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
 const MODEL_NAME = 'DeepSeek V4 Flash';
+const MODEL_CONTEXT_WINDOW = 400000;
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
 const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
@@ -863,7 +864,7 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
     name: MODEL_NAME,
     reasoning: true,
     input: ['text'],
-    contextWindow: 100000,
+    contextWindow: MODEL_CONTEXT_WINDOW,
     maxTokens: 384000,
     cost: {
       input: 0,
@@ -937,7 +938,7 @@ export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
         name: MODEL_NAME,
         reasoning: true,
         input: ['text'],
-        contextWindow: 100000,
+        contextWindow: MODEL_CONTEXT_WINDOW,
       },
     ],
   };
@@ -1055,7 +1056,7 @@ export async function startServer(input: { timeoutMs?: unknown }, ctx: Extension
 
   await mkdir(paths.kvDir, { recursive: true });
   await chmod(paths.serverBin, 0o755).catch(() => undefined);
-  const command = `cd ${shellQuote(paths.repoDir)} && exec ${shellQuote(paths.serverBin)} --ctx 100000 --kv-disk-dir ${shellQuote(paths.kvDir)} --kv-disk-space-mb 8192 >> ${shellQuote(paths.serverLog)} 2>&1`;
+  const command = `cd ${shellQuote(paths.repoDir)} && exec ${shellQuote(paths.serverBin)} --ctx ${MODEL_CONTEXT_WINDOW} --kv-disk-dir ${shellQuote(paths.kvDir)} --kv-disk-space-mb 8192 >> ${shellQuote(paths.serverLog)} 2>&1`;
   const result = await ctx.shell.exec({
     command: 'sh',
     args: ['-c', `nohup sh -c ${shellQuote(command)} >/dev/null 2>&1 & echo $!`],
