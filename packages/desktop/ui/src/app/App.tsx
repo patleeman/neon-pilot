@@ -189,6 +189,7 @@ export function App() {
   // authoritative running state already pushed over the desktop event stream.
   const refreshSessionMetaSeqRef = useRef(new Map<string, number>());
   const refreshSessionMetaTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const sessionRunningOverridesRef = useRef(new Map<string, boolean>());
 
   const setTitle = useCallback((id: string, title: string) => {
     setTitleMap((prev) => {
@@ -201,18 +202,24 @@ export function App() {
 
   const setProjects = useCallback(() => {}, []);
 
-  const setSessions = useCallback((items: SessionMeta[]) => {
-    sessionStore.replaceAll(items);
-    sessionStore.markReady?.();
+  const applySessionRunningOverride = useCallback((session: SessionMeta): SessionMeta => {
+    const running = sessionRunningOverridesRef.current.get(session.id);
+    return running === undefined || session.isRunning === running ? session : { ...session, isRunning: running };
   }, []);
+
+  const setSessions = useCallback((items: SessionMeta[]) => {
+    sessionStore.replaceAll(items.map(applySessionRunningOverride));
+    sessionStore.markReady?.();
+  }, [applySessionRunningOverride]);
 
   const applySessionMetaUpdate = useCallback((sessionId: string, nextSession: SessionMeta | null) => {
     if (!nextSession) {
+      sessionRunningOverridesRef.current.delete(sessionId);
       sessionStore.remove(sessionId);
       return;
     }
-    sessionStore.upsert(nextSession);
-  }, []);
+    sessionStore.upsert(applySessionRunningOverride(nextSession));
+  }, [applySessionRunningOverride]);
 
   const bumpConversationVersion = useCallback((sessionId: string) => {
     setConversationVersions((previous) => bumpConversationScopedEventVersions(previous, sessionId));
@@ -351,6 +358,7 @@ export function App() {
           return;
         case 'session_meta_changed':
           if (payload.running !== undefined) {
+            sessionRunningOverridesRef.current.set(payload.sessionId, payload.running);
             sessionStore.patch(payload.sessionId, { isRunning: payload.running } as Partial<SessionMeta>);
           }
           bumpConversationMetadataVersion(payload.sessionId);
@@ -366,8 +374,6 @@ export function App() {
         case 'sessions_snapshot':
         case 'sessions':
           setSessions(payload.sessions);
-          sessionStore.replaceAll(payload.sessions);
-          sessionStore.markReady?.();
           return;
         case 'tasks_snapshot':
         case 'tasks':
@@ -455,8 +461,6 @@ export function App() {
     void fetchSessionsSnapshot()
       .then((items) => {
         setSessions(items);
-        sessionStore.replaceAll(items);
-        sessionStore.markReady?.();
       })
       .catch(() => {
         // Keep waiting for SSE or a later retry.

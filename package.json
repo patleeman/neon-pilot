@@ -63,7 +63,9 @@
     "smoke:startup-idle": "node scripts/smoke-startup-idle.mjs --max-cpu=1000",
     "smoke:desktop:fork-rewind": "node scripts/smoke-desktop-fork-rewind.mjs",
     "e2e:chat": "node scripts/e2e-chat-test.mjs",
-    "perf:desktop": "node scripts/perf-desktop-smoke.mjs"
+    "perf:desktop": "node scripts/perf-desktop-smoke.mjs",
+    "eval:ds4": "node scripts/ds4-agent-eval.mjs",
+    "bench:ds4": "node scripts/ds4-task-benchmark.mjs"
   },
   "devDependencies": {
     "@electron/asar": "3.4.1",

@@ -11,12 +11,16 @@ const agent = vi.hoisted(() => {
       DefaultResourceLoader.instances.push(this);
     }
   }
-  return { DefaultResourceLoader };
+  const loadProjectContextFiles = vi.fn(() => [
+    { path: '/agent-runtime/AGENTS.md', content: 'full global instructions' },
+    { path: '/repo/AGENTS.md', content: 'full repo instructions' },
+  ]);
+  return { DefaultResourceLoader, loadProjectContextFiles };
 });
 const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn(() => '/agent-runtime') }));
 const logging = vi.hoisted(() => ({ logWarn: vi.fn() }));
 
-vi.mock('@earendil-works/pi-coding-agent', () => ({ DefaultResourceLoader: agent.DefaultResourceLoader }));
+vi.mock('@earendil-works/pi-coding-agent', () => ({ DefaultResourceLoader: agent.DefaultResourceLoader, loadProjectContextFiles: agent.loadProjectContextFiles }));
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('../shared/logging.js', () => logging);
 
@@ -32,6 +36,10 @@ describe('live session loader cache', () => {
     vi.clearAllMocks();
     agent.DefaultResourceLoader.instances.length = 0;
     agent.DefaultResourceLoader.reloadImpl = async () => undefined;
+    agent.loadProjectContextFiles.mockReturnValue([
+      { path: '/agent-runtime/AGENTS.md', content: 'full global instructions' },
+      { path: '/repo/AGENTS.md', content: 'full repo instructions' },
+    ]);
     clearPrewarmedLiveSessionLoaders();
     vi.useFakeTimers();
     vi.setSystemTime(0);
@@ -60,7 +68,23 @@ describe('live session loader cache', () => {
       systemPrompt: expect.stringContaining('Neon Pilot'),
       noSkills: undefined,
       noThemes: true,
+      noContextFiles: true,
     });
+    expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining('## Global user agent preferences'),
+      }),
+    );
+    expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining('full repo instructions'),
+      }),
+    );
+    expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.not.stringContaining('<project_context>'),
+      }),
+    );
     expect(agent.DefaultResourceLoader.instances[0].options).not.toEqual(
       expect.objectContaining({
         systemPrompt: expect.stringContaining('Pi documentation'),
@@ -81,27 +105,25 @@ describe('live session loader cache', () => {
     const options = agent.DefaultResourceLoader.instances[0].options as {
       systemPrompt: string;
       noSkills: boolean;
+      noContextFiles: boolean;
       appendSystemPromptOverride?: (base: string[]) => string[];
-      agentsFilesOverride: (base: { agentsFiles: Array<{ path: string; content: string }> }) => {
+      agentsFilesOverride?: (base: { agentsFiles: Array<{ path: string; content: string }> }) => {
         agentsFiles: Array<{ path: string; content: string }>;
       };
     };
     expect(options.noSkills).toBe(true);
-    expect(options.systemPrompt).toContain('DS4 local model mode');
+    expect(options.noContextFiles).toBe(true);
+    expect(options.systemPrompt).toContain('DS4 mode');
     expect(options.systemPrompt).toContain('ds4 help');
-    expect(options.systemPrompt).toContain('/skills/ds4/SKILL.md');
+    expect(options.systemPrompt).toContain('ds4 skills search <query>');
+    expect(options.systemPrompt).not.toContain('/skills/ds4/SKILL.md');
     expect(options.appendSystemPromptOverride).toBeUndefined();
-
-    const result = options.agentsFilesOverride({
-      agentsFiles: [
-        { path: '/agent-runtime/AGENTS.md', content: 'full global instructions' },
-        { path: '/repo/AGENTS.md', content: 'full repo instructions' },
-      ],
-    });
-    expect(result.agentsFiles[0]?.content).toContain('Global user agent preferences: /agent-runtime/AGENTS.md');
-    expect(result.agentsFiles[0]?.content).not.toContain('full global instructions');
-    expect(result.agentsFiles[1]?.content).toContain('Repo user agent preferences: /repo/AGENTS.md');
-    expect(result.agentsFiles[1]?.content).not.toContain('full repo instructions');
+    expect(options.agentsFilesOverride).toBeUndefined();
+    expect(options.systemPrompt).toContain('- Global user agent preferences: /agent-runtime/AGENTS.md (pointer only; read if relevant)');
+    expect(options.systemPrompt).toContain('- Repo user agent preferences: /repo/AGENTS.md (pointer only; read if relevant)');
+    expect(options.systemPrompt).not.toContain('full global instructions');
+    expect(options.systemPrompt).not.toContain('full repo instructions');
+    expect(options.systemPrompt).not.toContain('<project_context>');
   });
 
   it('returns a prewarmed loader once and reloads fresh after it is consumed', async () => {

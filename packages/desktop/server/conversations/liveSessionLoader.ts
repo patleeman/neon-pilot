@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import { DefaultResourceLoader, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
+import { DefaultResourceLoader, loadProjectContextFiles, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { logWarn } from '../shared/logging.js';
@@ -19,21 +19,26 @@ Guidelines:
 - Load only relevant knowledge: AGENTS.md for standing context, skills for procedures, notes/projects for reference.
 - When a task matches an available skill, read that SKILL.md before using the workflow.`;
 
-function buildDs4SystemPrompt(skillPaths: string[]): string {
-  const skillLines = normalizeLiveSessionLoaderPaths(skillPaths).map((path) => `- ${path}`);
-  return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}
+function buildNeonSystemPrompt(input: { cwd: string; agentDir: string }): string {
+  return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}${renderAgentsFiles(input.cwd, input.agentDir)}`;
+}
 
-DS4 local model mode:
-- Core tools are stable: bash, read, edit, and subagent.
-- Use the subagent tool directly when the user asks to create, start, inspect, follow up with, or cancel delegated agent work.
-- If DS4 RTK shell compression is enabled in settings, simple supported bash commands are automatically run through RTK for compact output.
-- In DS4 mode, typical non-core tools are intentionally offloaded to the DS4 CLI to keep the tool schema small and prompt-cache stable.
-- Use bash to run extended capabilities through the DS4 CLI instead of searching the repo to infer missing tools.
-- Start with \`ds4 help\` when you need CLI capabilities.
-- Useful CLI commands include \`ds4 list\`, \`ds4 search\`, \`ds4 read\`, \`ds4 write\`, \`ds4 edit\`, and \`ds4 fetch\`.
-- Prefer direct shell commands when they are shorter or more precise, such as \`rg\`, \`git status --short\`, and focused test commands.
-- Skills are pointers only in DS4 mode. Search these skill files first when the task may match a workflow, then read the matching SKILL.md before using it:
-${skillLines.length > 0 ? skillLines.join('\n') : '- No extension skill paths were provided for this session.'}`;
+function buildDs4SystemPrompt(input: { cwd: string; agentDir: string; skillPaths: string[] }): string {
+  const agentsPointers = renderAgentsPointers(input.cwd, input.agentDir);
+  void input.skillPaths;
+  return `You are an expert coding assistant inside Neon Pilot.
+
+Guidelines:
+- Be concise, direct, and verify real behavior before calling work done.
+- Use available tools deliberately; prefer small, precise file reads, edits, and tests.
+- Load context progressively: AGENTS.md for standing instructions, skills for procedures, notes/project files for reference.
+
+DS4 mode:
+- This prompt is intentionally terse; rely on progressive disclosure instead of memorizing everything up front.
+- Only the shown tools are directly available. Use bash to explore and invoke withheld system tools through the \`ds4\` CLI; start with \`ds4 help\` and \`ds4 tools\`.
+- The read tool uses compact \`line|text\` output; line numbers are references, not file content. For large edits, the edit tool supports one \`[upto]\` marker between unique head and tail anchors.
+- DS4 bash compacts eligible shell output with RTK by default when RTK is installed. Use \`ds4 compression off\` to disable it, and \`ds4 compression rtk\` to re-enable it.
+- Skills are progressively loaded too. Use \`ds4 skills list\`, \`ds4 skills search <query>\`, and \`ds4 skills get <id-or-query>\` before applying a workflow.${agentsPointers}`;
 }
 
 function labelAgentsFile(filePath: string, agentDir: string): string {
@@ -47,9 +52,32 @@ function labelAgentsFile(filePath: string, agentDir: string): string {
 
 function renderAgentsPointerContent(filePath: string, agentDir: string): string {
   const label = labelAgentsFile(filePath, agentDir);
-  return `${label}: ${filePath}
+  return `${label}: ${filePath} (pointer only; read if relevant)`;
+}
 
-For DS4, this file is a pointer only. Read it only when the task depends on these preferences.`;
+function renderAgentsPointers(cwd: string, agentDir: string): string {
+  const files = loadProjectContextFiles({ cwd, agentDir });
+  if (files.length === 0) return '';
+  return [
+    '',
+    '',
+    'Instruction files:',
+    ...files.map((file) => `- ${renderAgentsPointerContent(file.path, agentDir)}`),
+  ].join('\n');
+}
+
+function renderAgentsFiles(cwd: string, agentDir: string): string {
+  const files = loadProjectContextFiles({ cwd, agentDir });
+  if (files.length === 0) return '';
+  return [
+    '',
+    '',
+    'Instruction files:',
+    ...files.map((file) => {
+      const label = labelAgentsFile(file.path, agentDir);
+      return [`## ${label}`, `Path: ${file.path}`, '', file.content.trim()].filter(Boolean).join('\n');
+    }),
+  ].join('\n\n');
 }
 
 export interface LiveSessionLoaderOptions {
@@ -111,20 +139,15 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
     additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
     additionalThemePaths: options.additionalThemePaths,
     systemPrompt: options.progressiveDisclosure
-      ? buildDs4SystemPrompt(options.skillDiscoveryPaths ?? options.additionalSkillPaths ?? [])
-      : NEON_LIVE_SESSION_SYSTEM_PROMPT,
+      ? buildDs4SystemPrompt({
+          cwd,
+          agentDir,
+          skillPaths: options.skillDiscoveryPaths ?? options.additionalSkillPaths ?? [],
+        })
+      : buildNeonSystemPrompt({ cwd, agentDir }),
     noSkills: options.noSkills,
     noThemes: true,
-    ...(options.progressiveDisclosure
-      ? {
-          agentsFilesOverride: (base: { agentsFiles: Array<{ path: string; content: string }> }) => ({
-            agentsFiles: base.agentsFiles.map((file) => ({
-              ...file,
-              content: renderAgentsPointerContent(file.path, agentDir),
-            })),
-          }),
-        }
-      : {}),
+    noContextFiles: true,
   });
 }
 

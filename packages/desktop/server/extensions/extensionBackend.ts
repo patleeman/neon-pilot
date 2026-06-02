@@ -703,6 +703,26 @@ function workerBackendToolContext(
   };
 }
 
+function toolContextFromAgentToolContext(agentToolContext: unknown): ExtensionBackendContext['toolContext'] | undefined {
+  const record = agentToolContext && typeof agentToolContext === 'object' && !Array.isArray(agentToolContext) ? (agentToolContext as Record<string, unknown>) : undefined;
+  const source = record?.toolContext && typeof record.toolContext === 'object' && !Array.isArray(record.toolContext) ? (record.toolContext as Record<string, unknown>) : record;
+  if (!source) return undefined;
+  const conversationId = typeof source.conversationId === 'string' && source.conversationId.trim() ? source.conversationId.trim() : undefined;
+  const sessionId = typeof source.sessionId === 'string' && source.sessionId.trim() ? source.sessionId.trim() : conversationId;
+  const cwd = typeof source.cwd === 'string' && source.cwd.trim() ? source.cwd.trim() : undefined;
+  const sessionFile = typeof source.sessionFile === 'string' && source.sessionFile.trim() ? source.sessionFile.trim() : undefined;
+  const preferredVisionModel =
+    typeof source.preferredVisionModel === 'string' && source.preferredVisionModel.trim() ? source.preferredVisionModel.trim() : undefined;
+  if (!conversationId && !sessionId && !cwd && !sessionFile && !preferredVisionModel) return undefined;
+  return {
+    ...(conversationId ? { conversationId } : {}),
+    ...(sessionId ? { sessionId } : {}),
+    ...(cwd ? { cwd } : {}),
+    ...(sessionFile ? { sessionFile } : {}),
+    ...(preferredVisionModel ? { preferredVisionModel } : {}),
+  };
+}
+
 function workerLiveSessionResourceOptions(serverContext?: ExtensionBackendServerContext): Record<string, unknown> {
   const options = serverContext?.buildLiveSessionResourceOptions
     ? serverContext.buildLiveSessionResourceOptions(serverContext.getRuntimeScope())
@@ -963,7 +983,7 @@ export async function invokeExtensionAction(
   input: unknown,
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
-  _agentToolContext?: unknown,
+  agentToolContext?: unknown,
 ): Promise<ExtensionActionInvokeResult> {
   const started = Date.now();
   let actionHandlerStarted = false;
@@ -994,7 +1014,14 @@ export async function invokeExtensionAction(
       });
     }
     actionHandlerStarted = true;
-    result = await runExtensionBackendActionInWorker(extensionId, actionId, handlerName, input, serverContext, toolContext);
+    result = await runExtensionBackendActionInWorker(
+      extensionId,
+      actionId,
+      handlerName,
+      input,
+      serverContext,
+      toolContext ?? toolContextFromAgentToolContext(agentToolContext),
+    );
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };
   } catch (error) {

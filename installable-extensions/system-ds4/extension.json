@@ -69,7 +69,7 @@
         "match": ["ds4/*"],
         "priority": 100,
         "startupAction": "ds4StartServer",
-        "activeTools": ["bash", "read", "edit", "subagent"]
+        "activeTools": ["bash", "read", "edit"]
       }
     ],
     "skills": [

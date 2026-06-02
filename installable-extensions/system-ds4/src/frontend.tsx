@@ -264,7 +264,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
   const progress = setupProgress(status);
   const tools = status?.runtime?.tools ?? {};
   const rtk = status?.runtime?.rtk;
-  const shellCompression = status?.settings?.shellCompression ?? 'off';
+  const shellCompression = status?.settings?.shellCompression ?? 'rtk';
   const localToolsReady = ['git', 'make', 'cc', 'curl'].every((tool) => tools[tool]);
   const optimizations = [
     { label: 'Runtime installed', ready: runtimeInstalled },
@@ -419,7 +419,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
           </div>
         </div>
         {shellCompression === 'rtk' && rtk?.valid ? (
-          <p className="mt-3 text-[12px] text-dim">DS4 guidance will prefer commands like rtk git status, rtk git diff, rtk grep, and rtk vitest for compact results.</p>
+          <p className="mt-3 text-[12px] text-dim">Eligible DS4 bash commands are compacted automatically. Run ds4 compression off to disable it from a DS4 shell.</p>
         ) : null}
       </div>
 

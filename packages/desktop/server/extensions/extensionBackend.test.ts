@@ -260,6 +260,45 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('derives worker tool context from agent tool context when direct tool context is absent', async () => {
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ text: 'ok' })),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction('system-diffs', 'checkpoint', { action: 'list' }, undefined, undefined, {
+        conversationId: 'conv-from-agent',
+        sessionFile: '/sessions/conv-from-agent.jsonl',
+        cwd: '/repo',
+      }),
+    ).resolves.toEqual({ ok: true, result: { text: 'ok' } });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-diffs',
+      expect.any(Object),
+      'checkpoint',
+      expect.any(Object),
+      [{ action: 'list' }],
+      expect.objectContaining({
+        context: expect.objectContaining({
+          toolContext: {
+            conversationId: 'conv-from-agent',
+            sessionId: 'conv-from-agent',
+            cwd: '/repo',
+            sessionFile: '/sessions/conv-from-agent.jsonl',
+          },
+        }),
+      }),
+    );
+  });
+
   it('keeps manifest worker actions in-process when the input is not allowlisted', async () => {
     const backendRunner = {
       loadModule: vi.fn(),

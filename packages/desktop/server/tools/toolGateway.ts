@@ -4,13 +4,14 @@ import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import type { ExtensionHostBackendServerContext, ExtensionHostToolContext } from '../extensions/extensionHostProtocol.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
 import { createExtensionHostToolContextSnapshot } from '../extensions/extensionHostToolContext.js';
-import { buildToolInjectionPlanAsync } from './toolInventory.js';
+import { buildToolInjectionPlanAsync, listToolDefinitionsAsync, type ToolDefinition as InventoryToolDefinition } from './toolInventory.js';
 
 export interface ToolGatewayRuntimeContext {
   profile?: string;
   runtimeScope?: string;
   repoRoot?: string;
   modelRef?: string;
+  directToolNames?: string[];
 }
 
 export interface ToolGatewaySummary {
@@ -49,8 +50,30 @@ async function activeRegistrations(input?: ToolGatewayRuntimeContext) {
   return tools.filter((tool) => active.has(`${tool.extensionId}/${tool.id}`));
 }
 
+function effectiveExtensionToolName(tool: Pick<InventoryToolDefinition, 'name' | 'replaces'>): string {
+  return tool.replaces?.trim() || tool.name;
+}
+
+async function invocableRegistrations(input?: ToolGatewayRuntimeContext) {
+  if (!input?.directToolNames) return activeRegistrations(input);
+
+  const direct = new Set(input.directToolNames.map((name) => name.trim()).filter(Boolean));
+  const definitions = await listToolDefinitionsAsync(runtimeContext(input));
+  const byName = new Map<string, InventoryToolDefinition>();
+  for (const definition of definitions) {
+    if (!definition.raw) continue;
+    const name = effectiveExtensionToolName(definition);
+    if (direct.has(name)) continue;
+    const existing = byName.get(name);
+    if (!existing || definition.priority > existing.priority || (definition.priority === existing.priority && definition.id.localeCompare(existing.id) < 0)) {
+      byName.set(name, definition);
+    }
+  }
+  return [...byName.values()].map((definition) => definition.raw!);
+}
+
 export async function listInvocableExtensionTools(input?: ToolGatewayRuntimeContext): Promise<ToolGatewaySummary[]> {
-  return (await activeRegistrations(input)).map((tool) => ({
+  return (await invocableRegistrations(input)).map((tool) => ({
     name: tool.replaces?.trim() || tool.name,
     ...(tool.title ? { title: tool.title } : {}),
     description: tool.description,
@@ -69,7 +92,7 @@ export async function invokeExtensionToolByName(
 ): Promise<AgentToolResult<unknown> & { isError?: boolean; terminate?: boolean }> {
   const name = input.name.trim();
   if (!name) throw new Error('Tool name is required.');
-  const tool = (await activeRegistrations(input.runtime)).find((candidate) => (candidate.replaces?.trim() || candidate.name) === name);
+  const tool = (await invocableRegistrations(input.runtime)).find((candidate) => (candidate.replaces?.trim() || candidate.name) === name);
   if (!tool) throw new Error(`Tool is not available: ${name}`);
 
   const result = await getExtensionHostClient().invokeAction({

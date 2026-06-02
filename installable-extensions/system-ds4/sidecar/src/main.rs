@@ -123,7 +123,10 @@ fn start_protocol(base_url: &BaseUrl, token: &str, args: &[String]) -> anyhow::R
     let body = json!({
         "request": {
             "protocolId": "ds4-tools",
-            "input": { "args": args }
+            "input": {
+                "args": args,
+                "toolContext": protocol_tool_context()
+            }
         }
     })
     .to_string();
@@ -160,6 +163,21 @@ fn start_protocol(base_url: &BaseUrl, token: &str, args: &[String]) -> anyhow::R
         bail!("{}", parsed.error.unwrap_or_else(|| "Extension host protocol start failed.".to_string()));
     }
     parsed.channel.ok_or_else(|| anyhow!("Extension host did not return a protocol channel."))
+}
+
+fn optional_env(name: &str) -> Option<String> {
+    env::var(name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn protocol_tool_context() -> serde_json::Value {
+    json!({
+        "conversationId": optional_env("NEON_PILOT_SOURCE_CONVERSATION_ID"),
+        "sessionId": optional_env("NEON_PILOT_SOURCE_CONVERSATION_ID"),
+        "sessionFile": optional_env("NEON_PILOT_SOURCE_SESSION_FILE")
+    })
 }
 
 fn run_protocol_channel(host: &str, channel: ProtocolChannel, should_read_stdin: bool) -> anyhow::Result<()> {

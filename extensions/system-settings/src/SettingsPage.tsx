@@ -22,7 +22,6 @@ import {
   type ModelEditorDraft,
   type ModelProviderApi,
   type ModelProviderConfig,
-  type ModelProviderModelConfig,
   type ModelProviderState,
   type ModelState,
   parseOptionalJsonObject,
@@ -62,6 +61,10 @@ import {
 const INPUT_CLASS =
   'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
 const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
+const ICON_BUTTON_CLASS =
+  'ui-toolbar-button inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-0 text-[14px] shadow-none';
+const DANGER_ACTION_BUTTON_CLASS =
+  'inline-flex h-8 shrink-0 items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-danger transition-colors hover:border-danger/60 hover:bg-danger/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/50 disabled:cursor-not-allowed disabled:opacity-40';
 const CHECKBOX_CLASS = 'h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none';
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
@@ -77,6 +80,67 @@ type SettingsQuickLink = (typeof SETTINGS_QUICK_LINKS)[number];
 type SettingsQuickLinkId = SettingsQuickLink['id'];
 const VisibleSettingsSectionsContext = createContext<ReadonlySet<SettingsQuickLinkId> | null>(null);
 type ModelOption = ModelState['models'][number];
+type SettingsIconName = 'check' | 'edit' | 'external' | 'key' | 'plus' | 'refresh' | 'trash' | 'x';
+
+function SettingsIcon({ name }: { name: SettingsIconName }) {
+  const paths: Record<SettingsIconName, ReactNode> = {
+    check: <path d="m5 12 4 4L19 6" />,
+    edit: (
+      <>
+        <path d="M5 19h4" />
+        <path d="m7 17 9.5-9.5 2 2L9 19H7v-2Z" />
+      </>
+    ),
+    external: (
+      <>
+        <path d="M7 17 17 7" />
+        <path d="M9 7h8v8" />
+      </>
+    ),
+    key: (
+      <>
+        <circle cx="8" cy="14" r="3" />
+        <path d="m10.5 11.5 6-6" />
+        <path d="m15 7 2 2" />
+      </>
+    ),
+    plus: (
+      <>
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </>
+    ),
+    refresh: (
+      <>
+        <path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" />
+        <path d="M4 4v4h4" />
+        <path d="M4 13a8 8 0 0 0 14.5 4.5L20 16" />
+        <path d="M20 20v-4h-4" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M5 7h14" />
+        <path d="M9 7V5h6v2" />
+        <path d="M8 10v8" />
+        <path d="M16 10v8" />
+        <path d="M7 7l1 13h8l1-13" />
+      </>
+    ),
+    x: (
+      <>
+        <path d="M7 7l10 10" />
+        <path d="M17 7 7 17" />
+      </>
+    ),
+  };
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      {paths[name]}
+    </svg>
+  );
+}
 
 type DesktopKeyboardShortcutId = keyof DesktopAppPreferencesState['keyboardShortcuts'];
 
@@ -189,20 +253,6 @@ function formatModelProviderSummary(provider: ModelProviderConfig): string {
   return `${provider.models.length} ${provider.models.length === 1 ? 'model' : 'models'}`;
 }
 
-function formatProviderModelSummary(model: ModelProviderModelConfig): string {
-  const parts = [model.name || model.id, `${formatContextWindowLabel(model.contextWindow ?? 128_000)} ctx`];
-
-  if (model.reasoning) {
-    parts.push('reasoning');
-  }
-
-  if (model.input.includes('image')) {
-    parts.push('images');
-  }
-
-  return parts.join(' · ');
-}
-
 function listKnownModelProviderIds(
   modelProviderState: ModelProviderState | undefined,
   providerAuthState: { providers: ProviderAuthSummary[] } | undefined,
@@ -269,6 +319,22 @@ function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string 
         ? 'No stored provider API key detected yet. Save an API key here instead of relying on environment variables.'
         : 'No stored provider credential detected. This provider may still use environment values or apiKey settings from models.json.';
   }
+}
+
+function parseOAuthPromptOptions(message: string): Array<{ id: string; label: string }> {
+  const options: Array<{ id: string; label: string }> = [];
+  const optionPattern = /(?:^|\s)\d+\.\s+(.+?)\s+\(([^()]+)\)(?=\s+\d+\.|$)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = optionPattern.exec(message)) !== null) {
+    const label = match[1]?.replace(/\s*\(default\)\s*/i, '').trim();
+    const id = match[2]?.trim();
+    if (label && id) {
+      options.push({ id, label });
+    }
+  }
+
+  return options;
 }
 
 function ThemeButton({
@@ -1792,7 +1858,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     setDarkTheme,
     setAccent = () => {},
   } = useTheme();
-  const { data: modelState, loading: modelsLoading, error: modelsError, refetch: refetchModels } = useApi(api.models);
+  const {
+    data: modelState,
+    loading: modelsLoading,
+    refreshing: modelsRefreshing,
+    error: modelsError,
+    refetch: refetchModels,
+  } = useApi(api.models);
   const {
     data: modelProviderState,
     loading: modelProviderLoading,
@@ -2086,7 +2158,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
     return providerAuthState.providers.find((provider) => provider.id === editableModelProviderId) ?? null;
   }, [editableModelProviderId, providerAuthState]);
-
   const defaultCwdDirty = defaultCwdState ? defaultCwdDraft.trim() !== defaultCwdState.currentCwd : false;
   const pickingDefaultCwd = pathPickerTarget === 'default-cwd';
 
@@ -2278,6 +2349,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
   const selectedProviderLogin =
     oauthLoginState && selectedProvider && oauthLoginState.provider === selectedProvider.id ? oauthLoginState : null;
+  const oauthPromptOptions = useMemo(
+    () => (selectedProviderLogin?.prompt ? parseOAuthPromptOptions(selectedProviderLogin.prompt.message) : []),
+    [selectedProviderLogin?.prompt],
+  );
 
   async function handleModelPreferenceChange(
     input: { model?: string; visionModel?: string; thinkingLevel?: string; serviceTier?: string },
@@ -3134,52 +3209,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             <p className="text-[12px] text-danger">Failed to load provider credentials: {providerAuthError}</p>
                           )}
                           <div className="space-y-4">
-                            <div className="space-y-2">
-                              <p className="ui-card-meta">Configured providers</p>
-                              {configuredProviderSummaries.length > 0 ? (
-                                <div className="space-y-px">
-                                  {configuredProviderSummaries.map((provider) => {
-                                    const selected = provider.id === selectedModelProviderId || provider.id === selectedProviderId;
-                                    return (
-                                      <button
-                                        key={provider.id}
-                                        type="button"
-                                        onClick={() => {
-                                          if (provider.modelProvider) {
-                                            selectModelProvider(provider.id);
-                                          } else {
-                                            startNewModelProvider(provider.id, 'provider');
-                                          }
-                                        }}
-                                        className={cx(
-                                          'group ui-list-row w-full justify-between px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
-                                          selected ? 'ui-list-row-selected' : 'ui-list-row-hover',
-                                        )}
-                                        aria-pressed={selected}
-                                      >
-                                        <span className="min-w-0">
-                                          <span className="block truncate text-[13px] font-medium text-primary">{provider.id}</span>
-                                          <span className="ui-card-meta block truncate">
-                                            {provider.modelProvider
-                                              ? formatModelProviderSummary(provider.modelProvider)
-                                              : formatProviderAuthStatus(provider.auth)}
-                                          </span>
-                                        </span>
-                                        {provider.modelProvider?.baseUrl && (
-                                          <span className="ui-card-meta hidden truncate text-right xl:block">
-                                            {provider.modelProvider.baseUrl}
-                                          </span>
-                                        )}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <p className="ui-card-meta">No custom providers or overrides yet.</p>
-                              )}
-                            </div>
-
-                            <div className="space-y-3 border-t border-border-subtle pt-4">
+                            <div className="space-y-3">
                               <div className="space-y-1">
                                 <h4 className="text-[13px] font-medium text-primary">Add provider</h4>
                               </div>
@@ -3222,7 +3252,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                     </div>
 
                     {selectedModelProviderId !== '' && (
-                      <div className="space-y-5 rounded-2xl border border-border-subtle bg-surface/50 p-4">
+                      <div className="space-y-5 rounded-lg border border-border-subtle bg-surface/50 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
                             <h3 className="text-[15px] font-medium text-primary">
@@ -3233,22 +3263,51 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 : `Provider · ${editableModelProviderId}`}
                             </h3>
                           </div>
-                          <button
-                            type="button"
-                            onClick={closeProviderEditor}
-                            disabled={
-                              modelProviderAction !== null ||
-                              modelDraftAction !== null ||
-                              providerCredentialAction !== null ||
-                              oauthAction !== null
-                            }
-                            className={ACTION_BUTTON_CLASS}
-                          >
-                            Close
-                          </button>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {modalProviderAuth && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void handleRemoveProviderCredential();
+                                }}
+                                disabled={
+                                  providerCredentialAction !== null ||
+                                  oauthLoginState?.status === 'running' ||
+                                  !modalProviderAuth.hasStoredCredential
+                                }
+                                className={DANGER_ACTION_BUTTON_CLASS}
+                                aria-label="Remove stored credential"
+                                title="Remove stored credential"
+                              >
+                                {providerCredentialAction === 'remove' ? (
+                                  'Removing…'
+                                ) : (
+                                  <>
+                                    <SettingsIcon name="trash" />
+                                    Delete
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={closeProviderEditor}
+                              disabled={
+                                modelProviderAction !== null ||
+                                modelDraftAction !== null ||
+                                providerCredentialAction !== null ||
+                                oauthAction !== null
+                              }
+                              className={ICON_BUTTON_CLASS}
+                              aria-label="Close provider"
+                              title="Close"
+                            >
+                              <SettingsIcon name="x" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="space-y-6 min-w-0">
-                          {(providerEditorMode === 'custom' || selectedModelProvider) && (
+                        <div className="flex min-w-0 flex-col gap-4">
+                          {providerEditorMode === 'custom' && (
                             <div className="space-y-4 min-w-0">
                               <div className="space-y-1">
                                 <h3 className="text-[15px] font-medium text-primary">
@@ -3498,9 +3557,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             onToggle={(event) => {
                               setShowProviderModelManagement((event.currentTarget as HTMLDetailsElement).open);
                             }}
-                            className="space-y-1 border-t border-border-subtle pt-3 min-w-0"
+                            className="order-2 space-y-1 min-w-0"
                           >
-                            <summary className="cursor-pointer text-[14px] font-medium text-primary">Models</summary>
+                            <summary className="cursor-pointer text-[14px] font-medium text-primary">Advanced config</summary>
 
                             <div className="space-y-2 pt-3">
                               <p className="ui-card-meta">
@@ -3517,9 +3576,23 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     startEditingProviderModel(NEW_MODEL_ID);
                                   }}
                                   disabled={!editableModelProviderId || modelDraftAction !== null}
-                                  className={ACTION_BUTTON_CLASS}
+                                  className={ICON_BUTTON_CLASS}
+                                  aria-label="Add model"
+                                  title="Add model"
                                 >
-                                  Add model
+                                  <SettingsIcon name="plus" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void refetchModels({ resetLoading: false });
+                                  }}
+                                  disabled={modelsRefreshing}
+                                  className={ICON_BUTTON_CLASS}
+                                  aria-label="Refresh models"
+                                  title={modelsRefreshing ? 'Refreshing models' : 'Refresh models'}
+                                >
+                                  <SettingsIcon name="refresh" />
                                 </button>
                               </div>
 
@@ -3527,8 +3600,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                               <>
                                 {builtInProviderModels.length > 0 && (
                                   <div className="space-y-1.5">
-                                    <h4 className="text-[12px] font-medium text-secondary">Built-in models</h4>
-                                    <div className="space-y-px">
+                                    <h4 className="text-[12px] font-medium text-secondary">Models</h4>
+                                    <div className="space-y-1">
                                       {builtInProviderModels.map((model) => {
                                         const hasOverride = selectedModelProvider?.models.some((candidate) => candidate.id === model.id);
                                         return (
@@ -3547,19 +3620,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                             )}
                                             aria-pressed={editingModelId === model.id && !editingProviderModel}
                                           >
-                                            <div className="flex min-w-0 items-baseline gap-2 text-[12px]">
-                                              <span className="truncate font-medium text-primary">{model.id}</span>
-                                              <span className="shrink-0 text-dim">{formatContextWindowLabel(model.context)} ctx</span>
-                                            </div>
-                                            <div className="flex shrink-0 items-center gap-2">
-                                              {hasOverride ? (
-                                                <span className="text-[11px] text-accent">Overridden</span>
-                                              ) : (
-                                                <span className="text-[11px] text-dim/70 opacity-0 transition-opacity group-hover:opacity-100">
-                                                  Override
-                                                </span>
-                                              )}
-                                            </div>
+                                            <span className="truncate text-[12px] font-medium text-primary">{model.id}</span>
+                                            <span className="shrink-0 text-dim" aria-hidden="true">
+                                              <SettingsIcon name={hasOverride ? 'check' : 'plus'} />
+                                            </span>
                                           </button>
                                         );
                                       })}
@@ -3570,22 +3634,21 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 <div className="space-y-1.5">
                                   <h4 className="text-[12px] font-medium text-secondary">Additional models</h4>
                                   {selectedModelProvider && selectedModelProvider.models.length > 0 ? (
-                                    <div className="space-y-px">
+                                    <div className="space-y-1">
                                       {selectedModelProvider.models.map((model) => (
                                         <div key={model.id} className="group ui-list-row ui-list-row-hover justify-between px-2 py-1">
-                                          <div className="flex min-w-0 items-baseline gap-2 text-[12px]">
-                                            <span className="truncate font-medium text-primary">{model.id}</span>
-                                            <span className="truncate text-dim">{formatProviderModelSummary(model)}</span>
-                                          </div>
+                                          <span className="min-w-0 truncate text-[12px] font-medium text-primary">{model.id}</span>
                                           <div className="flex flex-wrap gap-2">
                                             <button
                                               type="button"
                                               onClick={() => {
                                                 startEditingProviderModel(model.id);
                                               }}
-                                              className={ACTION_BUTTON_CLASS}
+                                              className={ICON_BUTTON_CLASS}
+                                              aria-label={`Edit ${model.id}`}
+                                              title="Edit"
                                             >
-                                              Edit
+                                              <SettingsIcon name="edit" />
                                             </button>
                                             <button
                                               type="button"
@@ -3593,9 +3656,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                 void handleDeleteProviderModel(model.id);
                                               }}
                                               disabled={modelDraftAction !== null}
-                                              className={ACTION_BUTTON_CLASS}
+                                              className={ICON_BUTTON_CLASS}
+                                              aria-label={`Remove ${model.id}`}
+                                              title="Remove"
                                             >
-                                              {modelDraftAction === 'delete' && editingModelId === model.id ? 'Removing…' : 'Remove'}
+                                              {modelDraftAction === 'delete' && editingModelId === model.id ? '…' : <SettingsIcon name="trash" />}
                                             </button>
                                           </div>
                                         </div>
@@ -3965,7 +4030,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           </div>
                           </details>
 
-                          <div className="space-y-3 border-t border-border-subtle pt-4 min-w-0">
+                          <div className="order-1 space-y-3 min-w-0">
                             <div>
                               <h3 className="text-[15px] font-medium text-primary">Credentials</h3>
                             </div>
@@ -3975,57 +4040,45 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 <p className="text-[12px] text-secondary">{formatProviderAuthStatus(modalProviderAuth)}</p>
 
                                 {canProviderUseApiKey(modalProviderAuth) ? (
-                                  <div className="space-y-2">
+                                  <div className="space-y-2 max-w-2xl">
                                     <label className="ui-card-meta" htmlFor="settings-provider-api-key-modal">
                                       API key
                                     </label>
-                                    <input
-                                      id="settings-provider-api-key-modal"
-                                      type="password"
-                                      value={providerApiKey}
-                                      onChange={(event) => {
-                                        setProviderApiKey(event.target.value);
-                                      }}
-                                      className={INPUT_CLASS}
-                                      placeholder="sk-... or op://Private/API key/password"
-                                      autoComplete="off"
-                                      spellCheck={false}
-                                      disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
-                                    />
+                                    <div className="flex min-w-0 gap-2">
+                                      <input
+                                        id="settings-provider-api-key-modal"
+                                        type="password"
+                                        value={providerApiKey}
+                                        onChange={(event) => {
+                                          setProviderApiKey(event.target.value);
+                                        }}
+                                        className={INPUT_CLASS}
+                                        placeholder="sk-… or op://Private/API key/password"
+                                        autoComplete="off"
+                                        spellCheck={false}
+                                        disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          void handleSaveProviderApiKey();
+                                        }}
+                                        disabled={
+                                          providerCredentialAction !== null ||
+                                          oauthLoginState?.status === 'running' ||
+                                          providerApiKey.trim().length === 0
+                                        }
+                                        className={ICON_BUTTON_CLASS}
+                                        aria-label="Save API key"
+                                        title="Save API key"
+                                      >
+                                        {providerCredentialAction === 'saveKey' ? '…' : <SettingsIcon name="check" />}
+                                      </button>
+                                    </div>
                                   </div>
                                 ) : null}
 
                                 <div className="flex flex-wrap gap-2">
-                                  {canProviderUseApiKey(modalProviderAuth) && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        void handleSaveProviderApiKey();
-                                      }}
-                                      disabled={
-                                        providerCredentialAction !== null ||
-                                        oauthLoginState?.status === 'running' ||
-                                        providerApiKey.trim().length === 0
-                                      }
-                                      className={ACTION_BUTTON_CLASS}
-                                    >
-                                      {providerCredentialAction === 'saveKey' ? 'Saving key…' : 'Save API key'}
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      void handleRemoveProviderCredential();
-                                    }}
-                                    disabled={
-                                      providerCredentialAction !== null ||
-                                      oauthLoginState?.status === 'running' ||
-                                      !modalProviderAuth.hasStoredCredential
-                                    }
-                                    className={ACTION_BUTTON_CLASS}
-                                  >
-                                    {providerCredentialAction === 'remove' ? 'Removing…' : 'Remove stored credential'}
-                                  </button>
                                   {modalProviderAuth.oauthSupported && (
                                     <button
                                       type="button"
@@ -4037,20 +4090,29 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         oauthAction !== null ||
                                         selectedProviderLogin?.status === 'running'
                                       }
-                                      className={ACTION_BUTTON_CLASS}
+                                      className={`${ACTION_BUTTON_CLASS} inline-flex items-center gap-2`}
+                                      aria-label={`Start OAuth login (${modalProviderAuth.id})`}
+                                      title={`Start OAuth login (${modalProviderAuth.id})`}
                                     >
-                                      {oauthAction === 'start' ? 'Starting login…' : `Start OAuth login (${modalProviderAuth.id})`}
+                                      {oauthAction === 'start' ? (
+                                        'Starting…'
+                                      ) : (
+                                        <>
+                                          <SettingsIcon name="external" />
+                                          OAuth Login
+                                        </>
+                                      )}
                                     </button>
                                   )}
                                 </div>
 
                                 {selectedProviderLogin?.status === 'running' && (
                                   <div className="space-y-2 border-t border-border-subtle pt-3">
-                                    <p className="ui-card-meta">
-                                      OAuth login running for {selectedProviderLogin.providerName}.
+                                    <p className="text-[12px] text-secondary">
+                                      OAuth login started.
                                       {selectedProviderLogin.authUrl ? (
                                         <>
-                                          {' Opened the '}
+                                          {' '}
                                           <a
                                             href={selectedProviderLogin.authUrl}
                                             target="_blank"
@@ -4062,7 +4124,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                               window.open(selectedProviderLogin.authUrl, '_blank');
                                             }}
                                           >
-                                            authorization page
+                                            Open authorization page
                                           </a>
                                           .
                                         </>
@@ -4071,9 +4133,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       )}
                                     </p>
                                     {selectedProviderLogin.progress.length > 0 && (
-                                      <p className="ui-card-meta">
-                                        {selectedProviderLogin.progress[selectedProviderLogin.progress.length - 1]}
-                                      </p>
+                                      <p className="text-[12px] text-secondary">Waiting for authorization…</p>
                                     )}
                                     {selectedProviderLogin.authUrl && (
                                       <div className="space-y-2 rounded-md border border-border-subtle bg-elevated/50 p-2.5">
@@ -4117,40 +4177,74 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       </div>
                                     )}
                                     {selectedProviderLogin.prompt && (
-                                      <form
-                                        className="flex flex-col gap-2 sm:flex-row sm:items-end"
-                                        onSubmit={(event) => {
-                                          event.preventDefault();
-                                          void handleSubmitProviderOAuthInput();
-                                        }}
-                                      >
-                                        <div className="min-w-0 flex-1 space-y-1.5">
-                                          <label className="ui-card-meta" htmlFor="settings-provider-oauth-input">
-                                            {selectedProviderLogin.prompt.message}
-                                          </label>
-                                          <input
-                                            id="settings-provider-oauth-input"
-                                            value={oauthInputValue}
-                                            onChange={(event) => {
-                                              setOauthInputValue(event.target.value);
+                                      <div className="space-y-2">
+                                        <p className="ui-card-meta">Login method</p>
+                                        {oauthPromptOptions.length > 0 ? (
+                                          <div className="flex flex-wrap gap-2">
+                                            {oauthPromptOptions.map((option) => (
+                                              <button
+                                                key={option.id}
+                                                type="button"
+                                                onClick={() => {
+                                                  setOauthError(null);
+                                                  setOauthAction('submit');
+                                                  api
+                                                    .submitProviderOAuthLoginInput(selectedProviderLogin.id, option.id)
+                                                    .then((login) => {
+                                                      setOauthLoginState(login);
+                                                      setOauthInputValue('');
+                                                    })
+                                                    .catch((error: unknown) => {
+                                                      setOauthError(error instanceof Error ? error.message : String(error));
+                                                    })
+                                                    .finally(() => {
+                                                      setOauthAction(null);
+                                                    });
+                                                }}
+                                                disabled={oauthAction !== null}
+                                                className={`${ACTION_BUTTON_CLASS} capitalize`}
+                                              >
+                                                {oauthAction === 'submit' ? 'Submitting…' : option.label}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <form
+                                            className="flex flex-col gap-2 sm:flex-row sm:items-end"
+                                            onSubmit={(event) => {
+                                              event.preventDefault();
+                                              void handleSubmitProviderOAuthInput();
                                             }}
-                                            className={INPUT_CLASS}
-                                            placeholder={selectedProviderLogin.prompt.placeholder}
-                                            autoComplete="off"
-                                            disabled={oauthAction !== null}
-                                          />
+                                          >
+                                            <div className="min-w-0 flex-1 space-y-1.5">
+                                              <label className="ui-card-meta" htmlFor="settings-provider-oauth-input">
+                                                Authorization code
+                                              </label>
+                                              <input
+                                                id="settings-provider-oauth-input"
+                                                value={oauthInputValue}
+                                                onChange={(event) => {
+                                                  setOauthInputValue(event.target.value);
+                                                }}
+                                                className={INPUT_CLASS}
+                                                placeholder={selectedProviderLogin.prompt.placeholder || 'Enter code…'}
+                                                autoComplete="off"
+                                                disabled={oauthAction !== null}
+                                              />
+                                            </div>
+                                            <button
+                                              type="submit"
+                                              disabled={
+                                                oauthAction !== null ||
+                                                (!selectedProviderLogin.prompt.allowEmpty && oauthInputValue.trim().length === 0)
+                                              }
+                                              className={ACTION_BUTTON_CLASS}
+                                            >
+                                              {oauthAction === 'submit' ? 'Submitting…' : 'Submit'}
+                                            </button>
+                                          </form>
+                                        )}
                                         </div>
-                                        <button
-                                          type="submit"
-                                          disabled={
-                                            oauthAction !== null ||
-                                            (!selectedProviderLogin.prompt.allowEmpty && oauthInputValue.trim().length === 0)
-                                          }
-                                          className={ACTION_BUTTON_CLASS}
-                                        >
-                                          {oauthAction === 'submit' ? 'Submitting…' : 'Submit'}
-                                        </button>
-                                      </form>
                                     )}
                                     <button
                                       type="button"
@@ -4179,6 +4273,53 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             )}
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {modelProviderState && (
+                      <div className="space-y-2">
+                        <p className="ui-card-meta">Configured providers</p>
+                        {configuredProviderSummaries.length > 0 ? (
+                          <div className="space-y-2">
+                            {configuredProviderSummaries.map((provider) => {
+                              const selected = provider.id === selectedModelProviderId || provider.id === selectedProviderId;
+                              return (
+                                <button
+                                  key={provider.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (provider.modelProvider) {
+                                      selectModelProvider(provider.id);
+                                    } else {
+                                      startNewModelProvider(provider.id, 'provider');
+                                    }
+                                  }}
+                                  className={cx(
+                                    'group flex w-full items-center justify-between gap-4 rounded-lg border border-border-subtle bg-surface/70 px-3 py-3 text-left transition-colors hover:border-border-default hover:bg-surface focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
+                                    selected && 'border-border-default bg-elevated',
+                                  )}
+                                  aria-pressed={selected}
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-[13px] font-medium text-primary">{provider.id}</span>
+                                    <span className="ui-card-meta block truncate">
+                                      {provider.modelProvider
+                                        ? formatModelProviderSummary(provider.modelProvider)
+                                        : formatProviderAuthStatus(provider.auth)}
+                                    </span>
+                                  </span>
+                                  {provider.modelProvider?.baseUrl && (
+                                    <span className="ui-card-meta hidden max-w-[320px] truncate text-right xl:block">
+                                      {provider.modelProvider.baseUrl}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="ui-card-meta">No custom providers or overrides yet.</p>
+                        )}
                       </div>
                     )}
                   </div>

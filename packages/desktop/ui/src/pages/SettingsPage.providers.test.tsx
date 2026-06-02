@@ -74,6 +74,14 @@ function queryButton(container: HTMLElement, label: string, index = 0): HTMLButt
   return button;
 }
 
+function queryButtonByLabel(container: HTMLElement, label: string): HTMLButtonElement {
+  const button = Array.from(container.querySelectorAll('button')).find((node) => node.getAttribute('aria-label') === label);
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Expected button with label ${label}`);
+  }
+  return button;
+}
+
 function queryInput(container: HTMLElement, selector: string): HTMLInputElement {
   const input = container.querySelector(selector);
   if (!(input instanceof HTMLInputElement)) {
@@ -127,6 +135,7 @@ describe('SettingsPage provider model editor', () => {
   let startProviderOAuthLoginMock: ReturnType<typeof vi.spyOn>;
   let removeProviderCredentialMock: ReturnType<typeof vi.spyOn>;
   let maintainTelemetryDbMock: ReturnType<typeof vi.spyOn>;
+  let modelsRefetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     saveModelProviderModelMock = vi.spyOn(api, 'saveModelProviderModel');
@@ -207,6 +216,7 @@ describe('SettingsPage provider model editor', () => {
         },
       ],
     });
+    modelsRefetchMock = modelsResult.refetch;
     const modelProvidersResult = buildUseApiResult({
       profile: 'assistant',
       filePath: '/tmp/assistant-models.json',
@@ -438,7 +448,7 @@ describe('SettingsPage provider model editor', () => {
     expect(container.textContent).toContain('Provider · anthropic');
     expect(container.textContent).toContain('Additional models');
 
-    click(queryButton(container, 'Add model'));
+    click(queryButtonByLabel(container, 'Add model'));
     const modelIdInput = queryInput(container, '#settings-provider-model-id');
     updateInputValue(modelIdInput, 'claude-sonnet-4-7');
     await flushAsyncWork();
@@ -459,6 +469,19 @@ describe('SettingsPage provider model editor', () => {
         modelId: 'claude-sonnet-4-7',
       }),
     );
+  });
+
+  it('refreshes models from advanced config', async () => {
+    const { container } = renderPage();
+    await flushAsyncWork();
+
+    updateSelectValue(queryProviderPicker(container), 'anthropic');
+    click(queryButton(container, 'Continue'));
+
+    click(queryButtonByLabel(container, 'Refresh models'));
+    await flushAsyncWork();
+
+    expect(modelsRefetchMock).toHaveBeenCalledWith({ resetLoading: false });
   });
 
   it('opens OAuth login URLs through the desktop shell bridge', async () => {
@@ -525,12 +548,7 @@ describe('SettingsPage provider model editor', () => {
     click(providerButton);
     await flushAsyncWork();
 
-    const oauthButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Start OAuth login'),
-    );
-    if (!(oauthButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected OAuth login button');
-    }
+    const oauthButton = queryButtonByLabel(container, 'Start OAuth login (openai-codex)');
     click(oauthButton);
     await flushAsyncWork();
 
@@ -572,7 +590,7 @@ describe('SettingsPage provider model editor', () => {
       click(providerButton);
       await flushAsyncWork();
 
-      const removeButton = queryButton(container, 'Remove stored credential');
+      const removeButton = queryButtonByLabel(container, 'Remove stored credential');
       expect(removeButton.disabled).toBe(false);
       click(removeButton);
       await flushAsyncWork();
@@ -595,6 +613,18 @@ describe('SettingsPage provider model editor', () => {
 
     expect(container.querySelector('#settings-model-provider-id')).toBeNull();
     expect(container.textContent).toContain('Provider · anthropic');
+  });
+
+  it('shows provider API key entry when the selected provider supports API keys', async () => {
+    const { container } = renderPage();
+    await flushAsyncWork();
+
+    updateSelectValue(queryProviderPicker(container), 'anthropic');
+    click(queryButton(container, 'Continue'));
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Provider · anthropic');
+    expect(queryInput(container, '#settings-provider-api-key-modal')).toBeInstanceOf(HTMLInputElement);
   });
 
   it('runs telemetry database maintenance from settings', async () => {

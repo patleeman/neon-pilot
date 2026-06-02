@@ -9,6 +9,9 @@ const backendTools = {
   listInvocableExtensionTools: vi.fn(async () => []),
   invokeToolByName: vi.fn(async () => ({ content: [{ type: 'text', text: 'ok' }], details: { ok: true } })),
 };
+const backendSkills = {
+  buildSkillInventoryAsync: vi.fn(async () => []),
+};
 
 const backend = await import('./backend.js');
 
@@ -74,10 +77,13 @@ function ctx(overrides: Record<string, unknown> = {}) {
 
 afterEach(() => {
   backend.__setDs4ToolsApiForTest(null);
+  backend.__setDs4SkillsApiForTest(null);
   backendTools.listInvocableExtensionTools.mockReset();
   backendTools.invokeToolByName.mockReset();
+  backendSkills.buildSkillInventoryAsync.mockReset();
   backendTools.listInvocableExtensionTools.mockResolvedValue([]);
   backendTools.invokeToolByName.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], details: { ok: true } });
+  backendSkills.buildSkillInventoryAsync.mockResolvedValue([]);
   vi.unstubAllGlobals();
 });
 
@@ -190,7 +196,7 @@ describe('DS4 managed runtime', () => {
           rtk: expect.objectContaining({ installed: false, valid: false }),
         }),
       );
-      expect(result.settings).toEqual({ shellCompression: 'off' });
+      expect(result.settings).toEqual({ shellCompression: 'rtk' });
       expect(result.bootstrap.steps.map((step) => step.id)).toEqual(['tools', 'source', 'build', 'model', 'verify', 'done']);
       expect(result.models).toEqual(['deepseek-v4-flash']);
     } finally {
@@ -397,6 +403,17 @@ describe('DS4 managed runtime', () => {
     expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off' });
   });
 
+  it('lets the DS4 CLI disable shell compression', async () => {
+    backend.__setDs4ToolsApiForTest(backendTools);
+    const stdout = { write: vi.fn() };
+    const context = ctx({ stdio: { stdout } });
+
+    await backend.ds4ToolsCli({ args: ['compression', 'off'] }, context as never);
+
+    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off' });
+    expect(stdout.write.mock.calls[0]?.[0]).toContain('Shell compression disabled');
+  });
+
   it('installs RTK through the upstream installer and refreshes status', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
     const exec = vi.fn(async (input: { args?: string[] }) => {
@@ -448,7 +465,7 @@ describe('DS4 agent profile activation', () => {
       },
     );
 
-    expect(calls).toEqual([['bash', 'read', 'edit', 'subagent']]);
+    expect(calls).toEqual([['bash', 'read', 'edit']]);
   });
 
   it('adds the DS4 CLI to bash PATH for DS4 sessions', () => {
@@ -502,6 +519,29 @@ describe('DS4 agent profile activation', () => {
     expect(result.plan.instructions.layers[0].content).toContain('Full instructions are available');
     expect(result.plan.instructions.layers[1].content).toBe('keep me');
   });
+
+  it('leaves DS4 prompt assembly unmodified in baseline optimization mode', async () => {
+    const previousMode = process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
+    process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = 'baseline';
+    const plan = {
+      skills: { skillPaths: ['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent'], inlineSkills: [{ id: 'x' }] },
+      tools: { activeToolNames: ['bash', 'write', 'google_search'] },
+      instructions: { layers: [{ id: 'agents:/Users/patrick/AGENTS.md', title: 'AGENTS.md', content: 'very long global instructions' }] },
+      diagnostics: [],
+    };
+
+    try {
+      const result = await backend.optimizePromptAssembly({ plan, context: { modelRef: 'ds4/deepseek-v4-flash' } });
+
+      expect(result.plan).toBe(plan);
+      expect(result.plan.skills.skillPaths).toEqual(['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent']);
+      expect(result.plan.tools.activeToolNames).toEqual(['bash', 'write', 'google_search']);
+      expect(result.plan.instructions.layers[0].content).toBe('very long global instructions');
+    } finally {
+      if (previousMode === undefined) delete process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
+      else process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = previousMode;
+    }
+  });
 });
 
 describe('DS4 tool CLI gateway', () => {
@@ -523,6 +563,7 @@ describe('DS4 tool CLI gateway', () => {
       runtimeScope: 'shared',
       repoRoot: '/repo',
       modelRef: 'ds4/deepseek-v4-flash',
+      directToolNames: ['bash', 'read', 'edit'],
     });
     expect(stdout.write.mock.calls[0]?.[0]).toContain('web_search (system-duckduckgo-search/search)');
   });
@@ -565,6 +606,92 @@ describe('DS4 tool CLI gateway', () => {
       }),
     );
     expect(stdout.write.mock.calls[0]?.[0]).toBe('ok\n');
+  });
+
+  it('lists and searches skills through the DS4 CLI instead of prompt-injecting skill paths', async () => {
+    backend.__setDs4SkillsApiForTest(backendSkills);
+    backendSkills.buildSkillInventoryAsync.mockResolvedValueOnce([
+      {
+        id: 'browser',
+        title: 'Browser',
+        description: 'Use browser automation.',
+        enabled: true,
+        source: { kind: 'extension', label: 'system-browser' },
+        location: { kind: 'file', path: '/skills/browser/SKILL.md' },
+      },
+      {
+        id: 'disabled',
+        description: 'Hidden skill',
+        enabled: false,
+      },
+    ]);
+    const stdout = { write: vi.fn() };
+
+    await backend.ds4ToolsCli({ args: ['skills', 'search', 'browser'] }, ctx({ stdio: { stdout } }) as never);
+
+    expect(backendSkills.buildSkillInventoryAsync).toHaveBeenCalledWith({ runtimeScope: 'shared', repoRoot: '/repo' });
+    expect(stdout.write.mock.calls[0]?.[0]).toContain('browser (system-browser)');
+    expect(stdout.write.mock.calls[0]?.[0]).not.toContain('disabled');
+  });
+
+  it('reads a matching skill body through the DS4 CLI', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-skill-'));
+    const skillFile = path.join(dir, 'SKILL.md');
+    await writeFile(skillFile, '---\nname: Browser\n---\n\nUse the browser carefully.', 'utf8');
+    backend.__setDs4SkillsApiForTest(backendSkills);
+    backendSkills.buildSkillInventoryAsync.mockResolvedValueOnce([
+      {
+        id: 'browser',
+        title: 'Browser',
+        description: 'Use browser automation.',
+        enabled: true,
+        location: { kind: 'file', path: skillFile },
+      },
+    ]);
+    const stdout = { write: vi.fn() };
+
+    await backend.ds4ToolsCli({ args: ['skills', 'get', 'browser'] }, ctx({ stdio: { stdout } }) as never);
+
+    expect(stdout.write.mock.calls[0]?.[0]).toContain('Path:');
+    expect(stdout.write.mock.calls[0]?.[0]).toContain('Use the browser carefully.');
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('uses protocol-provided tool context when the Rust CLI forwards bash environment metadata', async () => {
+    backend.__setDs4ToolsApiForTest(backendTools);
+    backendTools.listInvocableExtensionTools.mockResolvedValueOnce([
+      {
+        name: 'artifact',
+        source: { extensionId: 'system-artifacts', toolId: 'artifact' },
+        description: 'Artifact tool',
+        inputSchema: { type: 'object', properties: { action: { type: 'string' } }, required: ['action'] },
+      },
+    ]);
+    const stdout = { write: vi.fn() };
+
+    await backend.ds4ToolsCli(
+      {
+        args: ['artifact', '--json', '{"action":"list"}'],
+        toolContext: {
+          conversationId: 'conversation-from-cli',
+          sessionId: 'conversation-from-cli',
+          sessionFile: '/sessions/from-cli.jsonl',
+        },
+      },
+      ctx({ stdio: { stdout }, toolContext: undefined }) as never,
+    );
+
+    expect(backendTools.invokeToolByName).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'artifact',
+        input: { action: 'list', conversationId: 'conversation-from-cli' },
+        toolContext: expect.objectContaining({
+          conversationId: 'conversation-from-cli',
+          sessionId: 'conversation-from-cli',
+          sessionFile: '/sessions/from-cli.jsonl',
+        }),
+      }),
+    );
   });
 
   it('converts tool schemas into CLI flags before invoking tools', async () => {
@@ -623,16 +750,19 @@ describe('DS4 tool CLI gateway', () => {
 });
 
 describe('DS4 file tools', () => {
-  it('supports raw chunk reads and compact directory listing', async () => {
+  it('supports compact chunk reads, raw reads, and compact directory listing', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'ds4-extension-'));
     try {
       await writeFile(path.join(dir, 'sample.txt'), 'one\ntwo\nthree\nfour\n', 'utf8');
       const context = ctx({ runtime: { getRepoRoot: () => dir }, toolContext: { conversationId: 'conversation-1', cwd: dir } });
 
-      const readResult = await backend.read({ path: 'sample.txt', raw: true, start_line: 2, max_lines: 2 }, context);
+      const readResult = await backend.read({ path: 'sample.txt', start_line: 2, max_lines: 2 }, context);
+      const rawResult = await backend.read({ path: 'sample.txt', raw: true, start_line: 2, max_lines: 2 }, context);
       const listResult = await backend.list({ path: '.' }, context);
 
-      expect(readResult.text).toBe('two\nthree');
+      expect(readResult.text).toBe('2|two\n3|three');
+      expect(readResult.details).toEqual(expect.objectContaining({ format: 'compact-line-gutter', startLine: 2, shownLines: 2 }));
+      expect(rawResult.text).toBe('two\nthree');
       expect(listResult.text).toContain('sample.txt');
       expect(context.storage.put).toHaveBeenCalledWith(
         'read-state:conversation-1',
@@ -653,6 +783,40 @@ describe('DS4 file tools', () => {
       await backend.edit({ path: 'sample.txt', old: 'start\n[upto]end\n', new: 'replacement\n' }, context);
 
       await expect(readFile(file, 'utf8')).resolves.toBe('alpha\nreplacement\nomega\n');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('continues compact reads with more', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-extension-'));
+    try {
+      await writeFile(path.join(dir, 'sample.txt'), 'one\ntwo\nthree\nfour\n', 'utf8');
+      const storageState = new Map<string, unknown>();
+      const context = ctx({
+        runtime: { getRepoRoot: () => dir },
+        toolContext: { conversationId: 'conversation-1', cwd: dir },
+        storage: {
+          get: vi.fn(async (key: string) => storageState.get(key) ?? null),
+          put: vi.fn(async (key: string, value: unknown) => {
+            storageState.set(key, value);
+            return { ok: true };
+          }),
+          delete: vi.fn(async (key: string) => {
+            storageState.delete(key);
+            return { ok: true, deleted: true };
+          }),
+        },
+      });
+
+      await backend.read({ path: 'sample.txt', start_line: 1, max_lines: 2 }, context);
+      const result = await backend.more({ count: 2 }, context);
+
+      expect(result.text).toBe('3|three\n4|four');
+      expect(context.storage.put).toHaveBeenLastCalledWith(
+        'read-state:conversation-1',
+        expect.objectContaining({ path: 'sample.txt', nextLine: 5, count: 2 }),
+      );
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -690,6 +854,64 @@ describe('DS4 bash jobs', () => {
     await backend.bash({ command: 'git status --short', refresh_sec: 0.001 }, context);
 
     expect(spawn).toHaveBeenCalledWith(expect.objectContaining({ args: ['-lc', 'rtk git status --short'] }));
+  });
+
+  it('enables RTK wrapping by default when RTK is available', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+    const exec = vi.fn(async (input: { args?: string[] }) => {
+      const command = input.args?.join('\n') ?? '';
+      if (command.includes('command -v rtk')) {
+        return {
+          stdout: 'installed=yes\npath=/opt/homebrew/bin/rtk\nversion=rtk 0.28.2\ngain_exit=0\ngain=Saved 100 tokens\n',
+          stderr: '',
+          command: 'sh',
+          args: [],
+          executionWrappers: [],
+        };
+      }
+      return { stdout: 'ok', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+    });
+    const context = ctx({
+      storage: {
+        get: vi.fn(async () => null),
+        put: vi.fn(async () => ({ ok: true })),
+        delete: vi.fn(async () => ({ ok: true, deleted: true })),
+      },
+      shell: {
+        exec,
+        spawn: vi.fn(),
+      },
+    });
+
+    await backend.bash({ command: 'git status --short' }, context);
+
+    expect(exec).toHaveBeenCalledWith(expect.objectContaining({ args: ['-lc', 'rtk git status --short'] }));
+  });
+
+  it('passes conversation metadata to synchronous bash commands so the ds4 CLI can call conversation-scoped tools', async () => {
+    const exec = vi.fn(async () => ({ stdout: 'ok', stderr: '', command: 'sh', args: [], executionWrappers: [] }));
+    const context = ctx({
+      shell: {
+        exec,
+        spawn: vi.fn(),
+      },
+      toolContext: {
+        conversationId: 'conversation-1',
+        sessionFile: '/sessions/conversation-1.jsonl',
+        cwd: '/repo',
+      },
+    });
+
+    await backend.bash({ command: 'ds4 artifact --json \'{"action":"list"}\'' }, context);
+
+    expect(exec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        env: {
+          NEON_PILOT_SOURCE_CONVERSATION_ID: 'conversation-1',
+          NEON_PILOT_SOURCE_SESSION_FILE: '/sessions/conversation-1.jsonl',
+        },
+      }),
+    );
   });
 
   it('leaves complex shell commands unwrapped even when RTK is enabled', async () => {

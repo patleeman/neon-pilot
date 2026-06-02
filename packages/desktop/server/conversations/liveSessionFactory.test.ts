@@ -142,7 +142,7 @@ describe('live session factory', () => {
     expect(s._baseToolRegistry.get('bash')).toMatchObject({ name: 'bash', cwd: '/repo' });
     const spawnHook = s._baseToolRegistry.get('bash').options.spawnHook;
     expect(spawnHook({ command: 'echo hi', cwd: '/repo', env: { EXISTING: '1' } })).toMatchObject({
-      command: 'wrapped command',
+      command: expect.stringContaining('wrapped command'),
       env: expect.objectContaining({
         NEON_PILOT_SOURCE_CONVERSATION_ID: 's1',
         NEON_PILOT_SOURCE_SESSION_FILE: '/sessions/s1.jsonl',
@@ -168,7 +168,7 @@ describe('live session factory', () => {
     modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
     extensionRegistry.resolveModelProfile.mockResolvedValue({
       kind: 'resolved',
-      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit', 'subagent'] },
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit'] },
     });
     agent.createAgentSession.mockResolvedValueOnce({ session: s });
 
@@ -185,8 +185,37 @@ describe('live session factory', () => {
       '/repo',
       expect.objectContaining({ additionalSkillPaths: [], noSkills: true, progressiveDisclosure: true, skillDiscoveryPaths: [] }),
     );
-    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit', 'subagent'] }));
+    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit'] }));
     expect(s.setActiveTools).not.toHaveBeenCalled();
+  });
+
+  it('can run DS4 sessions in baseline mode without progressive tool and skill filtering', async () => {
+    const previousMode = process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
+    process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = 'baseline';
+    const s = session();
+    modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+    extensionRegistry.resolveModelProfile.mockResolvedValue({
+      kind: 'resolved',
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit'] },
+    });
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    try {
+      await createPreparedLiveAgentSession({
+        cwd: '/repo',
+        agentDir: '/agent',
+        settingsFile: '/settings.json',
+        sessionManager: {} as never,
+        options: { allowedToolNames: ['artifact'] },
+      });
+
+      expect(loader.makeLoader).toHaveBeenCalledWith('/repo', expect.not.objectContaining({ progressiveDisclosure: true, noSkills: true }));
+      expect(agent.createAgentSession).toHaveBeenCalledWith(expect.not.objectContaining({ tools: ['bash', 'read', 'edit'] }));
+      expect(s.setActiveTools).toHaveBeenCalledWith(expect.arrayContaining(['artifact']));
+    } finally {
+      if (previousMode === undefined) delete process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
+      else process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = previousMode;
+    }
   });
 
   it('publishes the DS4 CLI path into host and bash environments for DS4 sessions', async () => {

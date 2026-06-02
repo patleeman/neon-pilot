@@ -16,7 +16,7 @@ const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
 const MODEL_VARIANT = 'q2-imatrix';
 const MODEL_NAME = 'DeepSeek V4 Flash';
 const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
-const DS4_CORE_TOOLS = ['bash', 'read', 'edit', 'subagent'];
+const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
 const SETTINGS_KEY = 'settings';
@@ -65,6 +65,7 @@ function publishDs4CliToProcessPath(cliBinDir = resolveDs4CliBinDir()): void {
   }
   process.env.DS4_CLI_BIN = path.join(cliBinDir, 'ds4');
 }
+
 const BOOTSTRAP_STEPS = [
   { id: 'tools', title: 'Check tools', progress: 8 },
   { id: 'source', title: 'Download source', progress: 22 },
@@ -96,7 +97,7 @@ let nextJobId = 1;
 const shellJobs = new Map<number, ShellJob>();
 
 const DEFAULT_SETTINGS: Ds4Settings = {
-  shellCompression: 'off',
+  shellCompression: 'rtk',
 };
 
 type Ds4ToolsApi = {
@@ -111,11 +112,26 @@ type ToolGatewaySummary = {
   inputSchema?: Record<string, unknown>;
   source?: { extensionId?: string; toolId?: string; action?: string };
 };
+type SkillGatewaySummary = {
+  id: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  enabled?: boolean;
+  source?: { kind?: string; label?: string; extensionId?: string };
+  location?: { kind?: string; path?: string };
+  diagnostics?: unknown[];
+};
 
 let ds4ToolsApiOverride: Ds4ToolsApi | null = null;
+let ds4SkillsApiOverride: { buildSkillInventoryAsync<T = unknown>(input?: unknown): Promise<T> } | null = null;
 
 export function __setDs4ToolsApiForTest(api: Ds4ToolsApi | null): void {
   ds4ToolsApiOverride = api;
+}
+
+export function __setDs4SkillsApiForTest(api: { buildSkillInventoryAsync<T = unknown>(input?: unknown): Promise<T> } | null): void {
+  ds4SkillsApiOverride = api;
 }
 
 const DS4_CLI_USAGE = `ds4 tool gateway
@@ -123,6 +139,8 @@ const DS4_CLI_USAGE = `ds4 tool gateway
 Usage:
   ds4 help
   ds4 tools [--json]
+  ds4 skills [list|search|get] [query] [--json]
+  ds4 compression [status|off|rtk]
   ds4 help <tool-name>
   ds4 <tool-name> [--field value ...]
   ds4 <tool-name> --json '{"field":"value"}'
@@ -130,6 +148,9 @@ Usage:
 
 Examples:
   ds4 tools
+  ds4 skills search browser
+  ds4 skills get browser
+  ds4 compression off
   ds4 help web_search
   ds4 web_search --query "neon pilot ds4" --count 5
   ds4 web_fetch --url https://example.com
@@ -155,7 +176,7 @@ function shellQuote(value: string) {
 function normalizeSettings(value: unknown): Ds4Settings {
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   return {
-    shellCompression: record.shellCompression === 'rtk' ? 'rtk' : 'off',
+    shellCompression: record.shellCompression === 'off' ? 'off' : 'rtk',
   };
 }
 
@@ -354,6 +375,7 @@ function toolRuntime(ctx: ExtensionBackendContext) {
     runtimeScope: ctx.runtimeScope,
     repoRoot: ctx.runtime.getRepoRoot(),
     modelRef: MODEL_REF,
+    directToolNames: DS4_CORE_TOOLS,
   };
 }
 
@@ -374,13 +396,29 @@ function protocolToolContext(ctx: ExtensionBackendContext): ExtensionBackendCont
   };
 }
 
-async function callHostTool(name: string, input: unknown, ctx: ExtensionBackendContext) {
+function protocolInputToolContext(input: unknown, ctx: ExtensionBackendContext): ExtensionBackendContext['toolContext'] | undefined {
+  const record = input && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+  const toolContext = record.toolContext && typeof record.toolContext === 'object' && !Array.isArray(record.toolContext) ? (record.toolContext as Record<string, unknown>) : null;
+  if (!toolContext) return undefined;
+  const conversationId = typeof toolContext.conversationId === 'string' && toolContext.conversationId.trim() ? toolContext.conversationId.trim() : undefined;
+  const sessionId = typeof toolContext.sessionId === 'string' && toolContext.sessionId.trim() ? toolContext.sessionId.trim() : conversationId;
+  const sessionFile = typeof toolContext.sessionFile === 'string' && toolContext.sessionFile.trim() ? toolContext.sessionFile.trim() : undefined;
+  return {
+    conversationId,
+    sessionId,
+    sessionFile,
+    cwd: process.cwd() || ctx.runtime.getRepoRoot(),
+  };
+}
+
+async function callHostTool(name: string, input: unknown, ctx: ExtensionBackendContext, protocolInput?: unknown) {
   const { invokeToolByName } = ds4ToolsApiOverride ?? (await import('@neon-pilot/extensions/backend/tools'));
+  const toolContext = ctx.toolContext ?? protocolInputToolContext(protocolInput, ctx) ?? protocolToolContext(ctx);
   const result = (await invokeToolByName({
     name,
     input,
     runtime: toolRuntime(ctx),
-    toolContext: ctx.toolContext ?? protocolToolContext(ctx),
+    toolContext,
   })) as ToolResult;
   return {
     text: textFrom(result),
@@ -420,6 +458,11 @@ function parseJsonInput(raw: string): unknown {
 async function listDs4CliTools(ctx: ExtensionBackendContext): Promise<ToolGatewaySummary[]> {
   const { listInvocableExtensionTools } = ds4ToolsApiOverride ?? (await import('@neon-pilot/extensions/backend/tools'));
   return listInvocableExtensionTools<ToolGatewaySummary[]>(toolRuntime(ctx));
+}
+
+async function listDs4CliSkills(ctx: ExtensionBackendContext): Promise<SkillGatewaySummary[]> {
+  const { buildSkillInventoryAsync } = ds4SkillsApiOverride ?? (await import('@neon-pilot/extensions/backend/skills'));
+  return buildSkillInventoryAsync<SkillGatewaySummary[]>({ runtimeScope: ctx.runtimeScope ?? ctx.profile, repoRoot: ctx.runtime.getRepoRoot() });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -495,6 +538,23 @@ function parseToolFlagInput(tool: ToolGatewaySummary, args: string[]): unknown {
   return input;
 }
 
+function withImplicitToolInputContext(tool: ToolGatewaySummary, input: unknown, toolContext?: ExtensionBackendContext['toolContext']): unknown {
+  if (!isRecord(input)) return input;
+  const properties = schemaProperties(tool);
+  const next: Record<string, unknown> = { ...input };
+  const acceptsConversationId = properties.conversationId || tool.name === 'artifact' || tool.source?.extensionId === 'system-artifacts';
+  if (acceptsConversationId && next.conversationId === undefined && typeof toolContext?.conversationId === 'string' && toolContext.conversationId.trim()) {
+    next.conversationId = toolContext.conversationId.trim();
+  }
+  if (properties.sessionId && next.sessionId === undefined && typeof toolContext?.sessionId === 'string' && toolContext.sessionId.trim()) {
+    next.sessionId = toolContext.sessionId.trim();
+  }
+  if (properties.sessionFile && next.sessionFile === undefined && typeof toolContext?.sessionFile === 'string' && toolContext.sessionFile.trim()) {
+    next.sessionFile = toolContext.sessionFile.trim();
+  }
+  return next;
+}
+
 function renderToolHelp(tool: ToolGatewaySummary): string {
   const properties = schemaProperties(tool);
   const required = schemaRequired(tool);
@@ -517,6 +577,91 @@ function renderToolHelp(tool: ToolGatewaySummary): string {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+function skillTitle(skill: SkillGatewaySummary): string {
+  return skill.title || skill.name || skill.id;
+}
+
+function skillSearchText(skill: SkillGatewaySummary): string {
+  return [skill.id, skill.title, skill.name, skill.description, skill.source?.label, skill.source?.extensionId, skill.location?.path].filter(Boolean).join(' ').toLowerCase();
+}
+
+function renderSkillList(skills: SkillGatewaySummary[]): string {
+  const enabledSkills = skills.filter((skill) => skill.enabled !== false);
+  if (enabledSkills.length === 0) return 'No enabled skills are available.';
+  return enabledSkills
+    .map((skill) => {
+      const source = skill.source?.label || skill.source?.extensionId || skill.source?.kind;
+      const suffix = source ? ` (${source})` : '';
+      return `${skill.id}${suffix}\n  ${skill.description || skillTitle(skill)}`;
+    })
+    .join('\n\n');
+}
+
+async function readSkillBody(skill: SkillGatewaySummary): Promise<string> {
+  const filePath = skill.location?.kind === 'file' && skill.location.path ? skill.location.path : '';
+  if (!filePath) return '';
+  return readFile(filePath, 'utf8');
+}
+
+async function handleSkillsCommand(args: string[], ctx: ExtensionBackendContext & { stdio?: { stdout?: NodeJS.WritableStream } }) {
+  const subcommand = args.shift() ?? 'list';
+  const json = args.includes('--json');
+  const filteredArgs = args.filter((arg) => arg !== '--json');
+  const query = filteredArgs.join(' ').trim().toLowerCase();
+  const skills = await listDs4CliSkills(ctx);
+
+  if (subcommand === 'list' || subcommand === 'ls') {
+    writeProtocol(ctx, json ? JSON.stringify(skills, null, 2) : renderSkillList(skills));
+    return;
+  }
+
+  if (subcommand === 'search' || subcommand === 'find') {
+    if (!query) throw new Error('skill search query is required.');
+    const matches = skills.filter((skill) => skill.enabled !== false && skillSearchText(skill).includes(query));
+    writeProtocol(ctx, json ? JSON.stringify(matches, null, 2) : renderSkillList(matches));
+    return;
+  }
+
+  if (subcommand === 'get' || subcommand === 'read') {
+    if (!query) throw new Error('skill id or search query is required.');
+    const exact = skills.find((skill) => skill.enabled !== false && (skill.id.toLowerCase() === query || skillTitle(skill).toLowerCase() === query));
+    const skill = exact ?? skills.find((candidate) => candidate.enabled !== false && skillSearchText(candidate).includes(query));
+    if (!skill) throw new Error(`Skill not found: ${query}. Run "ds4 skills search ${query}" to discover matches.`);
+    const body = await readSkillBody(skill);
+    if (json) {
+      writeProtocol(ctx, JSON.stringify({ ...skill, body }, null, 2));
+      return;
+    }
+    const header = [`${skill.id} - ${skillTitle(skill)}`, skill.description ?? '', skill.location?.path ? `Path: ${skill.location.path}` : ''].filter(Boolean).join('\n');
+    writeProtocol(ctx, body ? `${header}\n\n${body}` : header);
+    return;
+  }
+
+  throw new Error(`Unknown ds4 skills command: ${subcommand}. Use list, search, or get.`);
+}
+
+async function handleCompressionCommand(args: string[], ctx: ExtensionBackendContext & { stdio?: { stdout?: NodeJS.WritableStream } }) {
+  const action = (args.shift() ?? 'status').trim().toLowerCase();
+  if (action === 'status' || action === 'show') {
+    const settings = await readSettings(ctx);
+    const rtk = await readRtkAvailability(ctx);
+    writeProtocol(ctx, `Shell compression: ${settings.shellCompression}${settings.shellCompression === 'rtk' && !rtk.valid ? ' (RTK unavailable; bash falls back to raw output)' : ''}`);
+    return;
+  }
+  if (action === 'off' || action === 'disable' || action === 'disabled') {
+    await writeSettings(ctx, { shellCompression: 'off' });
+    writeProtocol(ctx, 'Shell compression disabled for DS4.');
+    return;
+  }
+  if (action === 'rtk' || action === 'on' || action === 'enable' || action === 'enabled') {
+    await writeSettings(ctx, { shellCompression: 'rtk' });
+    const rtk = await readRtkAvailability(ctx);
+    writeProtocol(ctx, rtk.valid ? 'Shell compression enabled with RTK.' : 'Shell compression set to RTK, but RTK is not available yet; bash will fall back to raw output.');
+    return;
+  }
+  throw new Error(`Unknown ds4 compression command: ${action}. Use status, off, or rtk.`);
 }
 
 export async function ds4ToolsCli(input: unknown, ctx: ExtensionBackendContext & { stdio?: { stdin?: NodeJS.ReadableStream; stdout?: NodeJS.WritableStream; stderr?: NodeJS.WritableStream } }) {
@@ -545,6 +690,16 @@ export async function ds4ToolsCli(input: unknown, ctx: ExtensionBackendContext &
     return;
   }
 
+  if (command === 'skills' || command === 'skill') {
+    await handleSkillsCommand(args, ctx);
+    return;
+  }
+
+  if (command === 'compression' || command === 'compress' || command === 'rtk') {
+    await handleCompressionCommand(args, ctx);
+    return;
+  }
+
   const tools = await listDs4CliTools(ctx);
   const toolName = command === 'call' || command === 'invoke' ? args.shift() : command === 'help' ? args.shift() : command;
   const tool = tools.find((candidate) => candidate.name === toolName);
@@ -559,8 +714,9 @@ export async function ds4ToolsCli(input: unknown, ctx: ExtensionBackendContext &
   const useStdin = args.includes('--stdin') || args.includes('-');
   const rawInput =
     useStdin ? await readProtocolStdin(ctx) : jsonIndex >= 0 ? (args[jsonIndex + 1] ?? '') : command === 'call' || command === 'invoke' ? args.join(' ') : '';
-  const toolInput = useStdin || jsonIndex >= 0 || ((command === 'call' || command === 'invoke') && rawInput.trim()) ? parseJsonInput(rawInput) : parseToolFlagInput(tool, args);
-  const result = await callHostTool(tool.name, toolInput, ctx);
+  const parsedToolInput = useStdin || jsonIndex >= 0 || ((command === 'call' || command === 'invoke') && rawInput.trim()) ? parseJsonInput(rawInput) : parseToolFlagInput(tool, args);
+  const toolInput = withImplicitToolInputContext(tool, parsedToolInput, ctx.toolContext ?? protocolInputToolContext(input, ctx) ?? protocolToolContext(ctx));
+  const result = await callHostTool(tool.name, toolInput, ctx, input);
   writeProtocol(ctx, textFrom(result));
   if (result.isError) process.exitCode = 1;
   return;
@@ -585,12 +741,38 @@ function cwdFor(ctx: ExtensionBackendContext): string {
   return ctx.toolContext?.cwd ?? ctx.runtime.getRepoRoot();
 }
 
+function ds4ShellEnv(ctx: ExtensionBackendContext): Record<string, string> {
+  return {
+    ...(typeof ctx.toolContext?.conversationId === 'string' && ctx.toolContext.conversationId.trim()
+      ? { NEON_PILOT_SOURCE_CONVERSATION_ID: ctx.toolContext.conversationId.trim() }
+      : {}),
+    ...(typeof ctx.toolContext?.sessionFile === 'string' && ctx.toolContext.sessionFile.trim()
+      ? { NEON_PILOT_SOURCE_SESSION_FILE: ctx.toolContext.sessionFile.trim() }
+      : {}),
+  };
+}
+
 function trimLargeText(text: string): { text: string; truncated: boolean } {
   const bytes = Buffer.byteLength(text, 'utf8');
   if (bytes <= MAX_INLINE_TEXT_BYTES) return { text, truncated: false };
   let end = Math.min(text.length, MAX_INLINE_TEXT_BYTES);
   while (end > 0 && Buffer.byteLength(text.slice(0, end), 'utf8') > MAX_INLINE_TEXT_BYTES) end -= 1;
   return { text: `${text.slice(0, end)}\n\n[Truncated at ${MAX_INLINE_TEXT_BYTES} bytes]`, truncated: true };
+}
+
+function formatCompactRead(raw: string, input: { startLine: number; count: number; whole: boolean }) {
+  const normalized = raw.replace(/\r\n?/g, '\n');
+  const lines = normalized.split('\n');
+  const startIndex = input.whole ? 0 : Math.max(0, input.startLine - 1);
+  const selected = input.whole ? lines : lines.slice(startIndex, startIndex + input.count);
+  const text = selected.map((line, index) => `${startIndex + index + 1}|${line}`).join('\n');
+  const formatted = trimLargeText(text);
+  return {
+    ...formatted,
+    startLine: startIndex + 1,
+    shownLines: selected.length,
+    totalLines: lines.length,
+  };
 }
 
 function firstShellWord(command: string): string {
@@ -631,13 +813,13 @@ function maybeWrapShellLaunchWithRtk(input: { command: string; args: string[]; e
 async function maybeWrapWithRtk(command: string, ctx: ExtensionBackendContext): Promise<{ command: string; wrapped: boolean; reason?: string }> {
   const settings = await readSettings(ctx);
   if (settings.shellCompression !== 'rtk') return { command, wrapped: false, reason: 'disabled' };
-  const availability = await readRtkAvailability(ctx);
-  if (!availability.valid) return { command, wrapped: false, reason: availability.error ?? 'rtk unavailable' };
   const trimmed = command.trim();
   const firstWord = firstShellWord(trimmed);
   if (!firstWord || path.basename(firstWord) === 'rtk') return { command, wrapped: false, reason: 'already rtk' };
   if (!isSimpleShellCommand(trimmed)) return { command, wrapped: false, reason: 'complex shell command' };
   if (!RTK_AUTO_PREFIX_COMMANDS.has(path.basename(firstWord))) return { command, wrapped: false, reason: 'unsupported command' };
+  const availability = await readRtkAvailability(ctx);
+  if (!availability.valid) return { command, wrapped: false, reason: availability.error ?? 'rtk unavailable' };
   return { command: `rtk ${trimmed}`, wrapped: true };
 }
 
@@ -978,6 +1160,7 @@ export async function bash(input: { command?: unknown; timeout_sec?: unknown; re
       command: 'sh',
       args: ['-lc', rtk.command],
       cwd,
+      env: ds4ShellEnv(ctx),
       onStdout: (chunk) => {
         output += chunk;
         const job = shellJobs.get(id);
@@ -1015,14 +1198,15 @@ export async function bash(input: { command?: unknown; timeout_sec?: unknown; re
     job.output = output;
     return formatJobUpdate(job);
   }
-  return callHostTool(
-    'bash',
-    {
-      command: rtk.command,
-      ...(numeric(input.timeout_sec) ? { timeout: numeric(input.timeout_sec) } : {}),
-    },
-    ctx,
-  );
+  const result = await ctx.shell.exec({
+    command: 'sh',
+    args: ['-lc', rtk.command],
+    cwd: cwdFor(ctx),
+    env: ds4ShellEnv(ctx),
+    ...(numeric(input.timeout_sec) ? { timeoutMs: Math.floor(numeric(input.timeout_sec)! * 1000) } : {}),
+  });
+  const text = [result.stdout, result.stderr].filter(Boolean).join('');
+  return { text, content: [{ type: 'text' as const, text }], details: result };
 }
 
 function readJob(input: { job?: unknown }): ShellJob {
@@ -1059,25 +1243,29 @@ export async function read(
   const startLine = Math.floor(numeric(input.start_line) ?? 1);
   const count = Math.floor(numeric(input.max_lines) ?? DEFAULT_READ_LINES);
   const whole = input.whole === true;
+  const root = await ctx.filesystem.workspace({ cwd: cwdFor(ctx), access: ['read'], reason: 'DS4 file read' });
+  const raw = await root.readText(path, { maxBytes: MAX_INLINE_TEXT_BYTES + 1 });
   if (booleanValue(input.raw)) {
-    const root = await ctx.filesystem.workspace({ cwd: cwdFor(ctx), access: ['read'], reason: 'DS4 raw file read' });
-    const raw = await root.readText(path, { maxBytes: MAX_INLINE_TEXT_BYTES + 1 });
     const lines = raw.split(/\r?\n/);
     const selected = whole ? raw : lines.slice(Math.max(0, startLine - 1), Math.max(0, startLine - 1) + count).join('\n');
     const formatted = trimLargeText(selected);
     await rememberRead(ctx, { path, startLine, count, whole });
     return { text: formatted.text, content: [{ type: 'text' as const, text: formatted.text }], details: { path, raw: true, truncated: formatted.truncated } };
   }
-  const result = await callHostTool(
-    'read',
-    {
-      path,
-      ...(whole ? {} : { offset: startLine, limit: count }),
-    },
-    ctx,
-  );
+  const formatted = formatCompactRead(raw, { startLine, count, whole });
   await rememberRead(ctx, { path, startLine, count, whole });
-  return result;
+  return {
+    text: formatted.text,
+    content: [{ type: 'text' as const, text: formatted.text }],
+    details: {
+      path,
+      startLine: formatted.startLine,
+      shownLines: formatted.shownLines,
+      totalLines: formatted.totalLines,
+      format: 'compact-line-gutter',
+      truncated: formatted.truncated,
+    },
+  };
 }
 
 export async function more(input: { count?: unknown }, ctx: ExtensionBackendContext) {
@@ -1086,9 +1274,7 @@ export async function more(input: { count?: unknown }, ctx: ExtensionBackendCont
   if (!path) throw new Error('No previous read is available for this conversation.');
   const count = Math.floor(numeric(input.count) ?? numeric(state?.count) ?? DEFAULT_READ_LINES);
   const startLine = Math.floor(numeric(state?.nextLine) ?? 1);
-  const result = await callHostTool('read', { path, offset: startLine, limit: count }, ctx);
-  await rememberRead(ctx, { path, startLine, count });
-  return result;
+  return read({ path, start_line: startLine, max_lines: count }, ctx);
 }
 
 export async function write(input: { path?: unknown; content?: unknown }, ctx: ExtensionBackendContext) {
@@ -1263,6 +1449,8 @@ export async function optimizePromptAssembly(input: { plan?: unknown; context?: 
   const modelRef = input.context?.modelRef ?? '';
   const isDs4 = input.context?.provider === PROVIDER || modelRef === MODEL_REF || modelRef.startsWith(`${PROVIDER}/`);
   if (!plan || !isDs4) return { plan };
+  const optimizationMode = process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE?.trim().toLowerCase();
+  if (optimizationMode === 'baseline' || optimizationMode === 'off' || optimizationMode === 'disabled') return { plan };
 
   if (plan.skills) {
     const ds4SkillPaths = (plan.skills.skillPaths ?? []).filter((skillPath) => skillPath.includes('system-ds4'));

@@ -254,6 +254,44 @@ describe('App execution state integration', () => {
     expect(apiSessionMetaMock).toHaveBeenCalledWith('conv-1');
   });
 
+  it('preserves running state when the running event arrives before the session row', async () => {
+    fetchSessionsSnapshotMock.mockResolvedValueOnce([]);
+    apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: false });
+    ({ container, root } = await renderApp());
+
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    expect(container.textContent).toContain('conversation idle');
+
+    await emitDesktopEvent({
+      type: 'sessions',
+      sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: false }],
+    });
+
+    expect(container.textContent).toContain('conversation running');
+
+    await act(async () => {
+      vi.advanceTimersByTime(750);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain('conversation running');
+  });
+
+  it('keeps an active running event from being overwritten by a stale sessions snapshot', async () => {
+    ({ container, root } = await renderApp());
+
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    expect(container.textContent).toContain('conversation running');
+
+    await emitDesktopEvent({
+      type: 'sessions_snapshot',
+      sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: false }],
+    });
+
+    expect(container.textContent).toContain('conversation running');
+  });
+
   it('coalesces repeated session meta change refreshes for the same conversation', async () => {
     apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' });
     ({ root } = await renderApp());

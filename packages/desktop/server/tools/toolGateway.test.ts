@@ -6,6 +6,7 @@ const extensionHostClient = vi.hoisted(() => ({
 }));
 const toolInventory = vi.hoisted(() => ({
   buildToolInjectionPlanAsync: vi.fn(),
+  listToolDefinitionsAsync: vi.fn(),
 }));
 
 vi.mock('../extensions/extensionHostClient.js', () => ({
@@ -13,13 +14,14 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
 }));
 vi.mock('./toolInventory.js', () => toolInventory);
 
-import { invokeExtensionToolByName } from './toolGateway.js';
+import { invokeExtensionToolByName, listInvocableExtensionTools } from './toolGateway.js';
 
 describe('tool gateway', () => {
   beforeEach(() => {
     extensionHostClient.invokeAction.mockReset();
     extensionHostClient.listStaticContributions.mockReset();
     toolInventory.buildToolInjectionPlanAsync.mockReset();
+    toolInventory.listToolDefinitionsAsync.mockReset();
 
     extensionHostClient.listStaticContributions.mockResolvedValue({
       skills: [],
@@ -37,6 +39,24 @@ describe('tool gateway', () => {
       ],
     });
     toolInventory.buildToolInjectionPlanAsync.mockResolvedValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
+    toolInventory.listToolDefinitionsAsync.mockResolvedValue([
+      {
+        id: 'ext/tool',
+        name: 'example_tool',
+        description: 'Example tool',
+        inputSchema: {},
+        raw: {
+          extensionId: 'ext',
+          packageType: 'system',
+          id: 'tool',
+          name: 'example_tool',
+          action: 'run',
+          description: 'Example tool',
+          inputSchema: {},
+        },
+        priority: 0,
+      },
+    ]);
     extensionHostClient.invokeAction.mockResolvedValue({ ok: true, result: { text: 'done' } });
   });
 
@@ -81,5 +101,86 @@ describe('tool gateway', () => {
       toolContextSnapshot: { cwd: '/repo' },
       signal,
     });
+  });
+
+  it('lists and invokes withheld extension tools when direct tools are supplied', async () => {
+    toolInventory.listToolDefinitionsAsync.mockResolvedValueOnce([
+      {
+        id: 'core/bash',
+        name: 'bash',
+        description: 'Direct bash',
+        inputSchema: {},
+        raw: {
+          extensionId: 'core',
+          packageType: 'system',
+          id: 'bash',
+          name: 'bash',
+          action: 'bash',
+          description: 'Direct bash',
+          inputSchema: {},
+        },
+        priority: 0,
+      },
+      {
+        id: 'system-runs/subagent',
+        name: 'subagent',
+        description: 'Start delegated agent work',
+        inputSchema: { type: 'object' },
+        raw: {
+          extensionId: 'system-runs',
+          packageType: 'system',
+          id: 'subagent',
+          name: 'subagent',
+          action: 'subagent',
+          description: 'Start delegated agent work',
+          inputSchema: { type: 'object' },
+        },
+        priority: 0,
+      },
+    ]);
+
+    await expect(
+      listInvocableExtensionTools({ modelRef: 'ds4/deepseek-v4-flash', repoRoot: '/repo', directToolNames: ['bash', 'read', 'edit'] }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'subagent',
+        source: expect.objectContaining({ extensionId: 'system-runs', toolId: 'subagent', action: 'subagent' }),
+      }),
+    ]);
+
+    toolInventory.listToolDefinitionsAsync.mockResolvedValueOnce([
+      {
+        id: 'system-runs/subagent',
+        name: 'subagent',
+        description: 'Start delegated agent work',
+        inputSchema: {},
+        raw: {
+          extensionId: 'system-runs',
+          packageType: 'system',
+          id: 'subagent',
+          name: 'subagent',
+          action: 'subagent',
+          description: 'Start delegated agent work',
+          inputSchema: {},
+        },
+        priority: 0,
+      },
+    ]);
+
+    await expect(
+      invokeExtensionToolByName({
+        name: 'subagent',
+        input: { prompt: 'check this' },
+        runtime: { modelRef: 'ds4/deepseek-v4-flash', repoRoot: '/repo', directToolNames: ['bash', 'read', 'edit'] },
+      }),
+    ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
+
+    expect(extensionHostClient.invokeAction).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        extensionId: 'system-runs',
+        actionId: 'subagent',
+        input: { prompt: 'check this' },
+      }),
+    );
   });
 });

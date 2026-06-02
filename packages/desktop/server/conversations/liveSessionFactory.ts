@@ -44,6 +44,11 @@ interface ResolvedModelProfileSessionPolicy {
   ds4Profile: boolean;
 }
 
+function isDs4OptimizationDisabled(): boolean {
+  const value = process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE?.trim().toLowerCase();
+  return value === 'baseline' || value === 'off' || value === 'disabled';
+}
+
 function parseModelRef(modelRef: string): { provider: string; model: string } | null {
   const separator = modelRef.indexOf('/');
   if (separator <= 0 || separator >= modelRef.length - 1) return null;
@@ -57,6 +62,9 @@ async function resolveModelProfileSessionPolicy(modelRef: string): Promise<Resol
   if (profile.kind !== 'resolved') return { activeTools: null, progressiveSkillDiscovery: false, ds4Profile: false };
   const activeTools = profile.profile.activeTools;
   const ds4Profile = profile.profile.extensionId === 'system-ds4' && profile.profile.id === 'ds4-compatible';
+  if (ds4Profile && isDs4OptimizationDisabled()) {
+    return { activeTools: null, progressiveSkillDiscovery: false, ds4Profile };
+  }
   return {
     activeTools:
       Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length
@@ -118,6 +126,16 @@ function publishDs4CliToHostPath(cliBinDir: string | null): void {
   process.env.DS4_CLI_BIN = path.join(cliBinDir, 'ds4');
 }
 
+function shellEnvAssignments(env: NodeJS.ProcessEnv, names: string[]): string {
+  return names
+    .map((name) => {
+      const value = env[name];
+      return typeof value === 'string' && value ? `${name}=${JSON.stringify(value)}` : '';
+    })
+    .filter(Boolean)
+    .join(' ');
+}
+
 function patchConversationBashTool(session: AgentSession, cwd: string, conversationId: string, sessionFile?: string, ds4CliBinDir?: string | null): void {
   const patchableSession = session as unknown as ToolPatchableSessionInternals;
   if (!(patchableSession._baseToolRegistry instanceof Map) || typeof patchableSession._refreshToolRegistry !== 'function') {
@@ -138,9 +156,11 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
         );
         const launchEnv = ds4CliBinDir ? { ...prependPath(env, ds4CliBinDir), DS4_CLI_BIN: path.join(ds4CliBinDir, 'ds4') } : env;
         const launch = resolveProcessLaunch({ command: 'sh', args: ['-lc', context.command], cwd: context.cwd, env: launchEnv });
+        const inlineEnv = shellEnvAssignments(launch.env, ['NEON_PILOT_SOURCE_CONVERSATION_ID', 'NEON_PILOT_SOURCE_SESSION_FILE', 'DS4_CLI_BIN', 'PATH']);
+        const command = formatProcessLaunchShellCommand(launch);
         return {
           ...context,
-          command: formatProcessLaunchShellCommand(launch),
+          command: inlineEnv ? `${inlineEnv} ${command}` : command,
           env: launch.env,
         };
       },

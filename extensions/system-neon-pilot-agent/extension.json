@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "id": "system-neon-pilot-agent",
+  "name": "Neon Pilot Agent",
+  "packageType": "system",
+  "defaultEnabled": true,
+  "description": "Expose Neon Pilot as a CLI and MCP-accessible delegated agent runtime.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "neonPilotAgent",
+        "handler": "neonPilotAgent",
+        "title": "Neon Pilot Agent",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "readSettings",
+        "handler": "readSettings",
+        "title": "Read Neon Pilot Agent settings",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "updateSettings",
+        "handler": "updateSettings",
+        "title": "Update Neon Pilot Agent settings",
+        "worker": { "enabled": true }
+      }
+    ],
+    "protocolEntrypoints": [
+      {
+        "id": "neon-pilot-agent",
+        "handler": "neonPilotAgentCli",
+        "title": "Neon Pilot Agent CLI",
+        "description": "Command-line interface for delegating tasks to Neon Pilot and inspecting durable runs."
+      },
+      {
+        "id": "neon-pilot-agent-mcp",
+        "handler": "neonPilotAgentMcp",
+        "title": "Neon Pilot Agent MCP Server",
+        "description": "MCP server exposing Neon Pilot task, subagent, and durable-run operations."
+      }
+    ]
+  },
+  "contributes": {
+    "settingsComponent": {
+      "id": "neon-pilot-agent",
+      "component": "NeonPilotAgentSettingsPanel",
+      "sectionId": "settings-capabilities",
+      "label": "Neon Pilot Agent",
+      "description": "Enable or disable the CLI and MCP entrypoints that expose Neon Pilot to other agents.",
+      "order": 45
+    }
+  },
+  "permissions": ["agent:run", "agent:conversations", "runs:read", "runs:write", "settings:read", "settings:write"]
+}
