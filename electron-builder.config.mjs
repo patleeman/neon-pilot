@@ -35,6 +35,9 @@ const packagedExtensionFilter = [
   '!**/*.map',
   '!**/src/**/*.test.*',
 ];
+const defaultInstallableExtensionFilter = ['system-browser', 'system-onboarding'].flatMap((id) =>
+  packagedExtensionFilter.map((entry) => `${id}/${entry.replace(/^\*\//u, '')}`),
+);
 
 function readDesktopPackageVersion() {
   const packageJson = JSON.parse(readFileSync(resolve('packages/desktop/package.json'), 'utf8'));
@@ -134,7 +137,7 @@ const electronBuilderConfig = {
     {
       from: 'installable-extensions',
       to: 'default-installable-extensions',
-      filter: ['system-browser', 'system-onboarding'].flatMap((id) => packagedExtensionFilter.map((entry) => `${id}/${entry}`)),
+      filter: defaultInstallableExtensionFilter,
     },
     {
       from: 'dist/installable-extensions',
