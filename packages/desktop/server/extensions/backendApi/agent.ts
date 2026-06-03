@@ -126,11 +126,10 @@ function ownerExtensionId(ctx: ExtensionBackendContextLike): string {
   return ctx.extensionId;
 }
 
-function resolveAgentToolContext(ctx: ExtensionBackendContextLike): Record<string, unknown> {
+function resolveOptionalAgentToolContext(ctx: ExtensionBackendContextLike): Record<string, unknown> | undefined {
   const raw = ctx.agentToolContext;
   const candidate = isRecord(raw) && isRecord(raw.toolContext) ? raw.toolContext : raw;
-  if (!isRecord(candidate)) throw new Error('Agent task requires an active agent tool context.');
-  return candidate;
+  return isRecord(candidate) ? candidate : undefined;
 }
 
 function modelAcceptsImages(model: unknown): boolean {
@@ -173,8 +172,7 @@ function collectAssistantTexts(session: { messages?: unknown[] }): string[] {
 
 async function assertPermission(ctx: ExtensionBackendContextLike, permission: 'agent:run' | 'agent:conversations'): Promise<void> {
   if (!ctx.extensionId) return;
-  const permissions = await dynamicImport<typeof import('../extensionPermissions.js')>('../extensionPermissions.js');
-  permissions.assertExtensionPermission(ctx.extensionId, permission, 'agent conversations');
+  await callServerModuleExport('../../extensions/extensionPermissions.js', 'assertExtensionPermission', ctx.extensionId, permission, 'agent conversations');
 }
 
 function getAssistantErrorMessage(session: { messages?: unknown[] }): string | null {
@@ -227,19 +225,20 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
   const mode = validateConversationMode(input);
   if (mode.visibility !== 'hidden' || mode.persistence !== 'ephemeral')
     throw new Error('createSession only supports hidden+ephemeral mode.');
-  const agentCtx = resolveAgentToolContext(ctx);
-  const modelRegistry = agentCtx.modelRegistry as { getAvailable(): unknown[] } | undefined;
-  if (!modelRegistry) throw new Error('Agent conversation requires a model registry in the active agent context.');
-  const model = input.modelRef ? resolveModel(modelRegistry.getAvailable(), input.modelRef) : agentCtx.model;
-  if (!model) throw new Error(`Agent conversation model is not available: ${input.modelRef ?? '(current)'}`);
-  const cwd = input.cwd ?? ctx.toolContext?.cwd ?? (typeof agentCtx.cwd === 'string' ? agentCtx.cwd : process.cwd());
+  const agentCtx = resolveOptionalAgentToolContext(ctx);
   const pi = await dynamicImport<PiModule>(PI_CODING_AGENT_PACKAGE);
+  const runtimeDir = await callServerModuleExport<string>(NEON_PILOT_CORE_PACKAGE, 'getPiAgentRuntimeDir');
+  const authStorage = pi.AuthStorage.create(join(runtimeDir, 'auth.json'));
+  const modelRegistry =
+    (agentCtx?.modelRegistry as { getAvailable(): unknown[] } | undefined) ??
+    (pi.ModelRegistry.create(authStorage, join(runtimeDir, 'models.json')) as { getAvailable(): unknown[] });
+  const model = input.modelRef ? resolveModel(modelRegistry.getAvailable(), input.modelRef) : agentCtx?.model ?? modelRegistry.getAvailable()[0];
+  if (!model) throw new Error(`Agent conversation model is not available: ${input.modelRef ?? '(current)'}`);
+  const cwd = input.cwd ?? ctx.toolContext?.cwd ?? (typeof agentCtx?.cwd === 'string' ? agentCtx.cwd : process.cwd());
   const { session } = await pi.createAgentSession({
     cwd,
     model: model as never,
-    authStorage: pi.AuthStorage.create(
-      join(await callServerModuleExport<string>(NEON_PILOT_CORE_PACKAGE, 'getPiAgentRuntimeDir'), 'auth.json'),
-    ),
+    authStorage,
     modelRegistry: modelRegistry as never,
     sessionManager: pi.SessionManager.inMemory(cwd),
     ...(input.tools === 'none' ? { noTools: 'all' as const } : {}),

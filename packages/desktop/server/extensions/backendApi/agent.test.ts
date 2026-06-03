@@ -1,5 +1,28 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const serverModuleMocks = vi.hoisted(() => ({
+  permissions: ['agent:run', 'agent:conversations'] as string[],
+  callServerModuleExport: vi.fn(async (specifier: string, exportName: string, ...args: unknown[]) => {
+    if (specifier === '../../extensions/extensionPermissions.js' && exportName === 'assertExtensionPermission') {
+      const [extensionId, permission, capability] = args as [string, string, string];
+      if (!serverModuleMocks.permissions.includes(permission)) {
+        throw new Error(`Extension "${extensionId}" requires permission ${permission} to use ${capability}.`);
+      }
+      return undefined;
+    }
+    if (specifier === '@neon-pilot/core' && exportName === 'getPiAgentRuntimeDir') return '/runtime';
+    throw new Error(`unexpected server module export: ${specifier}#${exportName}`);
+  }),
+  importServerModule: vi.fn(async (specifier: string) => {
+    throw new Error(`unexpected server module import: ${specifier}`);
+  }),
+}));
+
+vi.mock('./serverModuleResolver.js', () => ({
+  callServerModuleExport: serverModuleMocks.callServerModuleExport,
+  importServerModule: serverModuleMocks.importServerModule,
+}));
+
 import {
   abortAgentConversation,
   createAgentConversation,
@@ -35,23 +58,15 @@ function createSession(overrides?: { prompt?: () => Promise<void>; messages?: un
 
 function installImporter(options?: { session?: ReturnType<typeof createSession>; permissions?: string[] }) {
   const session = options?.session ?? createSession();
+  serverModuleMocks.permissions = options?.permissions ?? ['agent:run', 'agent:conversations'];
   const createAgentSession = vi.fn(async () => ({ session }));
   const importer = vi.fn(async (specifier: string) => {
     if (specifier === '@earendil-works/pi-coding-agent') {
       return {
         createAgentSession,
         AuthStorage: { create: vi.fn((path: string) => ({ path })) },
+        ModelRegistry: { create: vi.fn(() => ({ getAvailable: () => [{ provider: 'openai', id: 'fallback-model', input: ['text'] }] })) },
         SessionManager: { inMemory: vi.fn((cwd: string) => ({ cwd })) },
-      };
-    }
-    if (specifier === '../extensionPermissions.js') {
-      return {
-        assertExtensionPermission: vi.fn((extensionId: string, permission: string, capability: string) => {
-          const permissions = options?.permissions ?? ['agent:run', 'agent:conversations'];
-          if (!permissions.includes(permission)) {
-            throw new Error(`Extension "${extensionId}" requires permission ${permission} to use ${capability}.`);
-          }
-        }),
       };
     }
     throw new Error(`unexpected import: ${specifier}`);
@@ -79,6 +94,7 @@ function createCtx(overrides?: Record<string, unknown>) {
 describe('extension agent backend API', () => {
   afterEach(() => {
     resetExtensionAgentDynamicImportForTests();
+    serverModuleMocks.permissions = ['agent:run', 'agent:conversations'];
     vi.clearAllMocks();
     vi.useRealTimers();
   });

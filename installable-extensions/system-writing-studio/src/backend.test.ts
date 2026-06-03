@@ -115,10 +115,13 @@ describe('Writing Studio backend', () => {
   it('stores chat messages and resolves annotations', async () => {
     const ctx = context();
     const review = await runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx);
+    mockRunAgentTask.mockResolvedValueOnce({ text: 'The live agent answer.' });
     const chat = await sendChat({ body: 'Can you improve this?', markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx);
     const resolved = await resolveAnnotation({ id: review.annotations[0].id }, ctx);
 
     expect(chat.messages.map((message) => message.role)).toEqual(['user', 'agent']);
+    expect(chat.messages[1].body).toBe('The live agent answer.');
+    expect(mockRunAgentTask).toHaveBeenCalledWith(expect.objectContaining({ tools: 'default' }), ctx);
     expect(resolved.annotations[0].status).toBe('resolved');
   });
 

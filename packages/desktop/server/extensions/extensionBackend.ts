@@ -738,6 +738,7 @@ function workerLiveSessionResourceOptions(serverContext?: ExtensionBackendServer
 function workerBackendContextOptions(
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
+  agentToolContext?: unknown,
   updateHandleId?: string,
 ) {
   return {
@@ -750,6 +751,7 @@ function workerBackendContextOptions(
     stateRoot: serverContext?.getStateRoot?.(),
     liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
     toolContext: workerBackendToolContext(toolContext, updateHandleId),
+    ...(agentToolContext ? { agentToolContext } : {}),
   };
 }
 
@@ -760,6 +762,7 @@ async function runExtensionBackendActionInWorker(
   input: unknown,
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
+  agentToolContext?: unknown,
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
   const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
@@ -779,7 +782,7 @@ async function runExtensionBackendActionInWorker(
       extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
       [input],
       {
-        context: workerBackendContextOptions(serverContext, toolContext, updateHandleId),
+        context: workerBackendContextOptions(serverContext, toolContext, agentToolContext, updateHandleId),
       },
     );
   } finally {
@@ -1021,6 +1024,7 @@ export async function invokeExtensionAction(
       input,
       serverContext,
       toolContext ?? toolContextFromAgentToolContext(agentToolContext),
+      agentToolContext,
     );
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };

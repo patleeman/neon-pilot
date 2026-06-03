@@ -11,11 +11,12 @@ export interface ExtensionBackendWorkerBackendContextOptions {
   toolContext?: {
     conversationId?: string;
     cwd?: string;
-        sessionFile?: string;
-        sessionId?: string;
-        preferredVisionModel?: string;
-        updateHandleId?: string;
-      };
+    sessionFile?: string;
+    sessionId?: string;
+    preferredVisionModel?: string;
+    updateHandleId?: string;
+  };
+  agentToolContext?: unknown;
 }
 
 export type ExtensionBackendWorkerRequest =

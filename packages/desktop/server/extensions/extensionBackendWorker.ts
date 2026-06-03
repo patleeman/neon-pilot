@@ -165,6 +165,7 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
           },
         }
       : {}),
+    ...(options.agentToolContext ? { agentToolContext: options.agentToolContext } : {}),
     runtime: {
       getRepoRoot: () => repoRoot,
       getLiveSessionResourceOptions: () => liveSessionResourceOptions,

@@ -984,7 +984,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       setBusy('chat');
       try {
         const currentMarkdown = syncEditorMarkdown() ?? markdown;
-        const result = (await pa.extension.invoke('writingStudioSendChat', { body, markdown: currentMarkdown, documentId: activeDocumentId })) as { messages: ChatMessage[] };
+        const result = (await pa.extension.invoke('writingStudioSendChat', {
+          body,
+          markdown: currentMarkdown,
+          documentId: activeDocumentId,
+          modelRef: currentModel || undefined,
+        })) as { messages: ChatMessage[] };
         setState((current) => (current ? { ...current, chat: result.messages } : current));
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -992,7 +997,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         setBusy(null);
       }
     },
-    [activeDocumentId, markdown, pa, syncEditorMarkdown],
+    [activeDocumentId, currentModel, markdown, pa, syncEditorMarkdown],
   );
 
   const selectAnnotation = useCallback(

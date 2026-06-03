@@ -430,13 +430,39 @@ ${markdown}`;
   }
 }
 
-function chatReply(message: string, markdown: string): string {
-  const words = markdown.trim().split(/\s+/).filter(Boolean).length;
-  if (/rewrite|revise|improve/i.test(message)) {
-    return `I would start by finding the sentence with the most charge in this ${words}-word draft, then write toward it. The piece should feel discovered, not merely corrected.`;
-  }
-  if (/title|headline/i.test(message)) return 'A stronger title should name the concrete promise of the piece, not the process of writing it.';
-  return `I read the current ${words}-word draft. Give me a paragraph or a mood you want protected, and I can mark the canvas with comments or help write into it.`;
+async function buildAgentChatReply(message: string, state: StoredState, ctx: ExtensionBackendContext, modelRef?: string): Promise<string> {
+  const openAnnotations = state.annotations
+    .filter((annotation) => annotation.status === 'open')
+    .slice(0, 12)
+    .map((annotation) => `- ${annotation.kind}: "${annotation.quote}" — ${annotation.body}`)
+    .join('\n');
+  const recentChat = state.chat
+    .slice(-8)
+    .map((chatMessage) => `${chatMessage.role === 'agent' ? 'assistant' : 'user'}: ${chatMessage.body}`)
+    .join('\n\n');
+  const prompt = `You are the Writing Studio collaborator inside Neon Pilot.
+
+The user is chatting beside a markdown draft. Keep the document in focus: answer the user's request, discuss selected passages, suggest concrete edits, or use tools when useful.
+
+If you need to change the document, use the Writing Studio canvas tool instead of only describing the edit.
+If you want to leave margin feedback, use the Writing Studio annotation tool with an exact quote from the draft.
+Do not mention hidden implementation details or that you are an extension backend.
+
+Document:
+${state.markdown}
+
+Open comments:
+${openAnnotations || '(none)'}
+
+Recent chat:
+${recentChat || '(none)'}
+
+User message:
+${message}`;
+  const result = await runAgentTask({ prompt, tools: 'default', timeoutMs: 60_000, modelRef }, ctx);
+  const text = result.text.trim();
+  if (!text) throw new Error('Writing Studio agent returned an empty response.');
+  return text;
 }
 
 function readDocumentId(input: unknown): string | undefined {
@@ -570,13 +596,15 @@ export async function addAnnotation(input: unknown, ctx: ExtensionBackendContext
 }
 
 export async function sendChat(input: unknown, ctx: ExtensionBackendContext): Promise<{ messages: ChatMessage[] }> {
-  const payload = input as { body?: string; markdown?: string; documentId?: string };
+  const payload = input as { body?: string; markdown?: string; documentId?: string; modelRef?: string };
   const body = typeof payload.body === 'string' ? payload.body.trim() : '';
   if (!body) throw new Error('Chat message is required.');
   const state = await readState(ctx, payload.documentId);
   if (typeof payload.markdown === 'string') state.markdown = payload.markdown;
   const userMessage: ChatMessage = { id: randomUUID(), role: 'user', body, createdAt: nowIso() };
-  const agentMessage: ChatMessage = { id: randomUUID(), role: 'agent', body: chatReply(body, state.markdown), createdAt: nowIso() };
+  const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
+  const reply = await buildAgentChatReply(body, { ...state, chat: [...state.chat, userMessage] }, ctx, modelRef);
+  const agentMessage: ChatMessage = { id: randomUUID(), role: 'agent', body: reply, createdAt: nowIso() };
   state.chat.push(userMessage, agentMessage);
   state.events.push(event('chat_message', 'user', { message: userMessage }), event('chat_message', 'agent', { message: agentMessage }));
   await writeState(ctx, state);

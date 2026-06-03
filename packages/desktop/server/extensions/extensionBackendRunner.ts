@@ -81,6 +81,7 @@ type ExtensionBackendWorkerExportOptions = {
         stateRoot?: string;
         liveSessionResourceOptions?: Record<string, unknown>;
         toolContext?: Record<string, unknown>;
+        agentToolContext?: unknown;
       };
 };
 
