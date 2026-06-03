@@ -114,7 +114,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
   >(null);
   const [error, setError] = useState('');
   const [advancedDraft, setAdvancedDraft] = useState({
-    contextWindow: '400000',
+    contextWindow: '1000000',
     maxTokens: '384000',
     kvDiskSpaceMb: '8192',
     directCoreTools: true,
@@ -153,7 +153,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
   useEffect(() => {
     if (!status?.settings) return;
     setAdvancedDraft({
-      contextWindow: String(status.settings.contextWindow ?? 400000),
+      contextWindow: String(status.settings.contextWindow ?? 1000000),
       maxTokens: String(status.settings.maxTokens ?? 384000),
       kvDiskSpaceMb: String(status.settings.kvDiskSpaceMb ?? 8192),
       directCoreTools: status.settings.directCoreTools ?? true,

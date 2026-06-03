@@ -22,7 +22,7 @@
           "input": [
             "text"
           ],
-          "contextWindow": 100000,
+          "contextWindow": 1000000,
           "maxTokens": 384000,
           "cost": {
             "input": 0,
@@ -44,7 +44,7 @@
           "input": [
             "text"
           ],
-          "contextWindow": 400000,
+          "contextWindow": 1000000,
           "maxTokens": 384000,
           "cost": {
             "input": 0.14,

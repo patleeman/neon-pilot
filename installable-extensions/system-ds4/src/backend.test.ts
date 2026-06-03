@@ -108,7 +108,7 @@ describe('DS4 provider setup', () => {
         modelId: 'deepseek-v4-flash',
         name: 'DeepSeek V4 Flash',
         reasoning: true,
-        contextWindow: 400000,
+        contextWindow: 1000000,
         maxTokens: 384000,
       }),
     );
@@ -125,7 +125,7 @@ describe('DS4 provider setup', () => {
     await expect(backend.discover({}, ctx())).resolves.toMatchObject({
       provider: 'ds4',
       baseUrl: 'http://127.0.0.1:8000/v1',
-      models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 400000 }],
+      models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 1000000 }],
     });
   });
 
@@ -219,7 +219,7 @@ describe('DS4 managed runtime', () => {
       );
       expect(result.settings).toEqual({
         shellCompression: 'rtk',
-        contextWindow: 400000,
+        contextWindow: 1000000,
         maxTokens: 384000,
         kvDiskSpaceMb: 8192,
         directCoreTools: true,
@@ -434,7 +434,7 @@ describe('DS4 managed runtime', () => {
 
     expect(current.settings).toEqual({
       shellCompression: 'rtk',
-      contextWindow: 400000,
+      contextWindow: 1000000,
       maxTokens: 384000,
       kvDiskSpaceMb: 8192,
       directCoreTools: true,
@@ -447,7 +447,7 @@ describe('DS4 managed runtime', () => {
     );
     expect(saved.settings).toEqual({
       shellCompression: 'off',
-      contextWindow: 400000,
+      contextWindow: 1000000,
       maxTokens: 384000,
       kvDiskSpaceMb: 8192,
       directCoreTools: true,
@@ -457,7 +457,7 @@ describe('DS4 managed runtime', () => {
     });
     expect(context.storage.put).toHaveBeenCalledWith('settings', {
       shellCompression: 'off',
-      contextWindow: 400000,
+      contextWindow: 1000000,
       maxTokens: 384000,
       kvDiskSpaceMb: 8192,
       directCoreTools: true,
@@ -476,7 +476,7 @@ describe('DS4 managed runtime', () => {
 
     expect(context.storage.put).toHaveBeenCalledWith('settings', {
       shellCompression: 'off',
-      contextWindow: 400000,
+      contextWindow: 1000000,
       maxTokens: 384000,
       kvDiskSpaceMb: 8192,
       directCoreTools: true,
