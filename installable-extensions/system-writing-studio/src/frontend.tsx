@@ -987,6 +987,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
+  const chatRunToken = useRef(0);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const folderPathByTreePathRef = useRef(new Map<string, string>());
   const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
@@ -1477,24 +1478,40 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const sendChat = useCallback(
     async (body: string) => {
       if (!body.trim()) return;
+      const runToken = chatRunToken.current + 1;
+      chatRunToken.current = runToken;
+      const optimisticMessage: ChatMessage = {
+        id: `local-user-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        role: 'user',
+        body: body.trim(),
+        createdAt: new Date().toISOString(),
+      };
       setBusy('chat');
+      setState((current) => (current ? { ...current, chat: [...current.chat, optimisticMessage] } : current));
       try {
         const currentMarkdown = syncEditorMarkdown() ?? markdown;
         const result = (await pa.extension.invoke('writingStudioSendChat', {
-          body,
+          body: body.trim(),
           markdown: currentMarkdown,
           documentId: activeDocumentId,
           modelRef: currentModel || undefined,
         })) as { messages: ChatMessage[] };
+        if (chatRunToken.current !== runToken) return;
         setState((current) => (current ? { ...current, chat: result.messages } : current));
       } catch (err) {
+        if (chatRunToken.current !== runToken) return;
         setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setBusy(null);
+        if (chatRunToken.current === runToken) setBusy(null);
       }
     },
     [activeDocumentId, currentModel, markdown, pa, syncEditorMarkdown],
   );
+
+  const abortChat = useCallback(() => {
+    chatRunToken.current += 1;
+    setBusy((current) => (current === 'chat' ? null : current));
+  }, []);
 
   const selectAnnotation = useCallback(
     (annotation: Annotation) => {
@@ -2155,7 +2172,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               onSubmit={(text: string) => {
                 void sendChat(text);
               }}
-              onAbortStream={() => setBusy(null)}
+              onAbortStream={abortChat}
               onSelectModel={handleSelectModel}
               onSelectThinkingLevel={handleSelectThinkingLevel}
               composerMeta={<></>}
