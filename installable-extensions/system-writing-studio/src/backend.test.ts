@@ -45,6 +45,15 @@ describe('Writing Studio backend', () => {
 
   it('adds review annotations and replay events', async () => {
     const ctx = context();
+    mockRunAgentTask.mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
+          body: 'This is the live review note.',
+          kind: 'suggestion',
+        },
+      ]),
+    });
     const result = await runReview(
       {
         markdown:
@@ -53,7 +62,8 @@ describe('Writing Studio backend', () => {
       ctx,
     );
 
-    expect(result.annotations.length).toBeGreaterThan(0);
+    expect(result.annotations).toHaveLength(1);
+    expect(result.annotations[0].body).toBe('This is the live review note.');
     const state = await load({}, ctx);
     expect(state.annotations.length).toBe(result.annotations.length);
     expect(state.events.some((event) => event.type === 'agent_run_started')).toBe(true);
@@ -63,6 +73,30 @@ describe('Writing Studio backend', () => {
 
   it('can produce more than three review annotations for longer drafts', async () => {
     const ctx = context();
+    mockRunAgentTask.mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
+          body: 'First live note.',
+          kind: 'suggestion',
+        },
+        {
+          quote: 'Maybe this section wants a clearer promise for the person reading it.',
+          body: 'Second live note.',
+          kind: 'warning',
+        },
+        {
+          quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
+          body: 'Third live note.',
+          kind: 'reaction',
+        },
+        {
+          quote: 'This sentence keeps accumulating clauses and side roads until the original point has to fight its way back into view for the reader.',
+          body: 'Fourth live note.',
+          kind: 'comment',
+        },
+      ]),
+    });
     const result = await runReview(
       {
         markdown: [
@@ -79,10 +113,10 @@ describe('Writing Studio backend', () => {
       ctx,
     );
 
-    expect(result.annotations.length).toBeGreaterThanOrEqual(6);
+    expect(result.annotations).toHaveLength(4);
   });
 
-  it('tops up sparse agent review output for longer drafts', async () => {
+  it('does not top up sparse agent review output', async () => {
     const ctx = context();
     const markdown = [
       '# Sparse Agent',
@@ -108,12 +142,34 @@ describe('Writing Studio backend', () => {
 
     const result = await runReview({ markdown }, ctx);
 
-    expect(result.annotations.length).toBeGreaterThanOrEqual(6);
+    expect(result.annotations).toHaveLength(1);
     expect(result.annotations[0].body).toBe('This is the sentence with a live wire in it.');
+  });
+
+  it('fails review instead of fabricating annotations when the agent fails', async () => {
+    const ctx = context();
+
+    await expect(runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx)).rejects.toThrow('Writing Studio review failed');
+  });
+
+  it('fails review instead of fabricating annotations when the agent returns invalid annotations', async () => {
+    const ctx = context();
+    mockRunAgentTask.mockResolvedValueOnce({ text: 'not json' });
+
+    await expect(runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx)).rejects.toThrow('no valid annotations');
   });
 
   it('stores chat messages and resolves annotations', async () => {
     const ctx = context();
+    mockRunAgentTask.mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          quote: 'Maybe this can be clearer.',
+          body: 'This is a live review note.',
+          kind: 'comment',
+        },
+      ]),
+    });
     const review = await runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx);
     mockRunAgentTask.mockResolvedValueOnce({ text: 'The live agent answer.' });
     const chat = await sendChat({ body: 'Can you improve this?', markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx);

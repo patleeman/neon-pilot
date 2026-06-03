@@ -243,127 +243,6 @@ function event(type: EventType, actorId: string, payload: Record<string, unknown
   return { id: randomUUID(), type, actorId, timestamp: nowIso(), payload };
 }
 
-function findSentences(text: string, predicate: (sentence: string) => boolean, limit = 3): Array<{ quote: string; from: number; to: number }> {
-  const found: Array<{ quote: string; from: number; to: number }> = [];
-  const matches = text.matchAll(/[^.!?\n]+[.!?]?/g);
-  for (const match of matches) {
-    const sentence = match[0].trim();
-    if (!sentence) continue;
-    if (predicate(sentence)) {
-      const from = match.index ?? 0;
-      found.push({ quote: sentence, from, to: from + match[0].length });
-      if (found.length >= limit) break;
-    }
-  }
-  return found;
-}
-
-function pushReviewAnnotation(
-  annotations: Annotation[],
-  seenQuotes: Set<string>,
-  annotation: Omit<Annotation, 'id' | 'status'>,
-): void {
-  if (seenQuotes.has(annotation.quote)) return;
-  seenQuotes.add(annotation.quote);
-  annotations.push({
-    id: randomUUID(),
-    status: 'open',
-    ...annotation,
-  });
-}
-
-function buildReviewAnnotations(markdown: string, runId: string, settings: WritingSettings): Annotation[] {
-  const createdAt = nowIso();
-  const annotations: Annotation[] = [];
-  const seenQuotes = new Set<string>();
-  const withoutHeading = markdown.replace(/^# .+$/m, '').trim();
-
-  for (const longSentence of findSentences(withoutHeading, (sentence) => sentence.split(/\s+/).length > 28, 4)) {
-    pushReviewAnnotation(annotations, seenQuotes, {
-      kind: 'suggestion',
-      body: 'This sentence is doing a brave amount of work. I would split it and let the second beat arrive with more oxygen.',
-      quote: longSentence.quote,
-      from: longSentence.from,
-      to: longSentence.to,
-      createdAt,
-      agentRunId: runId,
-    });
-  }
-
-  for (const hedge of findSentences(withoutHeading, (sentence) => /\b(maybe|probably|basically|kind of|sort of)\b/i.test(sentence), 4)) {
-    pushReviewAnnotation(annotations, seenQuotes, {
-      kind: 'warning',
-      body: 'This phrase pulls the punch a little. Keep the softness if it is emotionally true; otherwise let the claim stand up straighter.',
-      quote: hedge.quote,
-      from: hedge.from,
-      to: hedge.to,
-      createdAt,
-      agentRunId: runId,
-    });
-  }
-
-  for (const strongLine of findSentences(withoutHeading, (sentence) => sentence.split(/\s+/).length >= 8 && !/\b(maybe|probably|basically)\b/i.test(sentence), 4)) {
-    pushReviewAnnotation(annotations, seenQuotes, {
-      kind: 'reaction',
-      body: 'There is a pulse here. This feels like a sentence the rest of the piece can gather around.',
-      emoji: '✦',
-      quote: strongLine.quote,
-      from: strongLine.from,
-      to: strongLine.to,
-      createdAt,
-      agentRunId: runId,
-    });
-  }
-
-  for (const paragraph of withoutHeading.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean)) {
-    if (annotations.length >= minimumReviewAnnotations(markdown)) break;
-    const quote = paragraph.length > 180 ? paragraph.slice(0, 180).replace(/\s+\S*$/, '') : paragraph;
-    if (quote.split(/\s+/).length < 8) continue;
-    pushReviewAnnotation(annotations, seenQuotes, {
-      kind: 'comment',
-      body: 'This paragraph is carrying part of the draft’s architecture. I would ask what job it has: proof, texture, turn, or payoff.',
-      quote,
-      from: markdown.indexOf(quote),
-      to: markdown.indexOf(quote) + quote.length,
-      createdAt,
-      agentRunId: runId,
-    });
-  }
-
-  if (annotations.length === 0 && withoutHeading) {
-    const quote = withoutHeading.slice(0, 140);
-    pushReviewAnnotation(annotations, seenQuotes, {
-      kind: 'comment',
-      body: `I am early in the room with this draft, but I can feel what it wants: a sharper promise to the reader. ${settings.reviewPrompt ? 'I will keep reading for texture, stakes, and the places where the voice gets most alive.' : ''}`,
-      quote,
-      from: markdown.indexOf(quote),
-      to: markdown.indexOf(quote) + quote.length,
-      createdAt,
-      agentRunId: runId,
-    });
-  }
-
-  return annotations.slice(0, maxReviewAnnotations);
-}
-
-function minimumReviewAnnotations(markdown: string): number {
-  const words = wordCount(markdown);
-  if (words >= 120) return 6;
-  return 1;
-}
-
-function mergeReviewAnnotations(primary: Annotation[], fallback: Annotation[], minimum: number): Annotation[] {
-  const merged = primary.slice(0, maxReviewAnnotations);
-  const seenQuotes = new Set(merged.map((annotation) => annotation.quote));
-  for (const annotation of fallback) {
-    if (merged.length >= Math.min(maxReviewAnnotations, minimum)) break;
-    if (seenQuotes.has(annotation.quote)) continue;
-    seenQuotes.add(annotation.quote);
-    merged.push(annotation);
-  }
-  return merged;
-}
-
 function parseAgentAnnotations(text: string, markdown: string, runId: string): Annotation[] {
   const jsonText = text.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? text.match(/\[[\s\S]*\]/)?.[0] ?? text;
   let parsed: unknown;
@@ -425,8 +304,8 @@ ${markdown}`;
   try {
     const result = await runAgentTask({ prompt, tools: 'default', timeoutMs: 45_000, modelRef }, ctx);
     return parseAgentAnnotations(result.text, markdown, runId);
-  } catch {
-    return [];
+  } catch (error) {
+    throw new Error(`Writing Studio review failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -513,12 +392,8 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   const runId = randomUUID();
   state.events.push(event('agent_run_started', 'agent', { runId, trigger: payload.trigger ?? 'manual' }));
   const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
-  const agentAnnotations = await buildAgentReviewAnnotations(state.markdown, runId, reviewSettings, ctx, modelRef);
-  const fallbackAnnotations = buildReviewAnnotations(state.markdown, runId, reviewSettings);
-  const annotations =
-    agentAnnotations.length > 0
-      ? mergeReviewAnnotations(agentAnnotations, fallbackAnnotations, minimumReviewAnnotations(state.markdown))
-      : fallbackAnnotations;
+  const annotations = await buildAgentReviewAnnotations(state.markdown, runId, reviewSettings, ctx, modelRef);
+  if (annotations.length === 0) throw new Error('Writing Studio review returned no valid annotations.');
   const refreshedQuotes = new Set(annotations.map((annotation) => annotation.quote));
   state.annotations = state.annotations.filter(
     (annotation) => annotation.status !== 'open' || (annotation.quote && state.markdown.includes(annotation.quote) && !refreshedQuotes.has(annotation.quote)),
