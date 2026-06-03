@@ -54,7 +54,7 @@ const writingStudioCss = `
 .writing-studio-editor-frame{position:relative}.writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor img{display:block;max-width:100%;height:auto;margin:1rem 0;border-radius:6px}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
 .writing-studio-selection-menu{position:absolute;z-index:35;display:flex;align-items:center;gap:.18rem;padding:.25rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 36px rgba(0,0,0,.28);transform:translateX(-50%)}.writing-studio-selection-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.36rem .52rem;font:inherit;font-size:.72rem;font-weight:590;line-height:1;cursor:pointer;white-space:nowrap}.writing-studio-selection-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-selection-menu button:first-child{color:rgb(var(--color-accent))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 21%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}.writing-studio-mark-highlight[data-kind="warning"]{background:color-mix(in srgb,rgb(var(--color-warning)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-warning)) 24%,transparent)}.writing-studio-mark-highlight[data-kind="comment"]{background:color-mix(in srgb,rgb(var(--color-secondary)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-secondary)) 20%,transparent)}.writing-studio-mark-highlight[data-kind="reaction"]{background:color-mix(in srgb,rgb(var(--color-success)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-success)) 20%,transparent)}
-.writing-studio-comments{position:sticky;top:1rem;display:grid;gap:.65rem;padding-top:2.4rem}.writing-studio-comment{--comment-tint:rgb(var(--color-accent));padding:.7rem .75rem;border:1px solid color-mix(in srgb,var(--comment-tint) 18%,rgb(var(--color-border-subtle)));border-radius:8px;background:color-mix(in srgb,var(--comment-tint) 7%,rgb(var(--color-surface)));box-shadow:0 8px 22px rgba(0,0,0,.12);cursor:pointer;text-align:left}.writing-studio-comment.is-active{border-color:color-mix(in srgb,var(--comment-tint) 48%,rgb(var(--color-border-default)));background:color-mix(in srgb,var(--comment-tint) 13%,rgb(var(--color-surface)));box-shadow:0 0 0 1px color-mix(in srgb,var(--comment-tint) 28%,transparent),0 12px 28px rgba(0,0,0,.18)}.writing-studio-comment.is-warning{--comment-tint:rgb(var(--color-warning))}.writing-studio-comment.is-comment{--comment-tint:rgb(var(--color-secondary))}.writing-studio-comment.is-reaction{--comment-tint:rgb(var(--color-success))}
+.writing-studio-comments{position:relative;min-height:76vh;padding-top:.25rem}.writing-studio-comment{--comment-tint:rgb(var(--color-accent));position:absolute;left:0;right:0;padding:.7rem .75rem;border:1px solid color-mix(in srgb,var(--comment-tint) 18%,rgb(var(--color-border-subtle)));border-radius:8px;background:color-mix(in srgb,var(--comment-tint) 7%,rgb(var(--color-surface)));box-shadow:0 8px 22px rgba(0,0,0,.12);cursor:pointer;text-align:left;transition:top .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}.writing-studio-comment.is-active{border-color:color-mix(in srgb,var(--comment-tint) 48%,rgb(var(--color-border-default)));background:color-mix(in srgb,var(--comment-tint) 13%,rgb(var(--color-surface)));box-shadow:0 0 0 1px color-mix(in srgb,var(--comment-tint) 28%,transparent),0 12px 28px rgba(0,0,0,.18)}.writing-studio-comment.is-warning{--comment-tint:rgb(var(--color-warning))}.writing-studio-comment.is-comment{--comment-tint:rgb(var(--color-secondary))}.writing-studio-comment.is-reaction{--comment-tint:rgb(var(--color-success))}
 .writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.45rem}.writing-studio-comment-kind{color:color-mix(in srgb,var(--comment-tint) 72%,rgb(var(--color-secondary)));font-size:.68rem;font-weight:620;text-transform:capitalize;letter-spacing:.01em}.writing-studio-comment-actions{display:flex;align-items:center;gap:.25rem}.writing-studio-comment-actions button{border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment-actions button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-comment-discuss{padding:.22rem .4rem}.writing-studio-comment-close{display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;padding:0;font-size:.9rem;line-height:1}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-suggested-edit{display:grid;gap:.45rem;margin-top:.65rem;padding:.55rem;border-radius:7px;background:color-mix(in srgb,var(--comment-tint) 8%,rgb(var(--color-base)))}.writing-studio-suggested-edit pre{margin:0;white-space:pre-wrap;color:rgb(var(--color-primary));font:inherit;font-size:.78rem;line-height:1.42}.writing-studio-apply-edit{justify-self:start;border:1px solid color-mix(in srgb,var(--comment-tint) 34%,rgb(var(--color-border-subtle)));border-radius:6px;background:color-mix(in srgb,var(--comment-tint) 12%,rgb(var(--color-surface)));color:rgb(var(--color-primary));font:inherit;font-size:.72rem;font-weight:620;padding:.32rem .55rem;cursor:pointer}.writing-studio-apply-edit:hover{background:color-mix(in srgb,var(--comment-tint) 20%,rgb(var(--color-surface-hover)))}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
 .writing-studio-rail{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
 .writing-studio-rail-resizer{position:absolute;left:-4px;top:0;bottom:0;z-index:25;width:8px;cursor:col-resize}.writing-studio-rail-resizer::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:transparent}.writing-studio-rail-resizer:hover::after,.writing-studio-rail-resizer:focus-visible::after{background:rgb(var(--color-accent))}
@@ -64,7 +64,7 @@ const writingStudioCss = `
 .writing-studio-format-actions{position:relative}.writing-studio-format-actions .writing-studio-export-menu{left:0;right:auto;top:2.05rem}.writing-studio-review-status.is-error{color:rgb(var(--color-danger))}
 .writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.56)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:.65rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search,.writing-studio-doc-form input{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.writing-studio-doc-toolbar-group{display:flex;align-items:center;gap:.2rem}.writing-studio-doc-selection{min-height:1rem;color:rgb(var(--color-secondary));font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.writing-studio-doc-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.4rem;align-items:center}.writing-studio-doc-form.is-danger{grid-template-columns:minmax(0,1fr) auto auto;color:rgb(var(--color-danger,255 96 96));font-size:.82rem}.writing-studio-doc-form button{border:0;border-radius:6px;background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary));font:inherit;font-size:.76rem;padding:.48rem .65rem;cursor:pointer}.writing-studio-doc-form button:hover{background:rgb(var(--color-border-subtle))}.writing-studio-doc-form button.is-danger{background:color-mix(in srgb,rgb(var(--color-danger,255 96 96)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}.writing-studio-doc-list{height:min(52vh,28rem);min-height:14rem;overflow:hidden;border:1px solid rgb(var(--color-border-subtle));border-radius:7px;background:rgb(var(--color-base))}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{padding:.35rem .75rem}.writing-studio-doc-import input[type=file]{display:none}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
-@media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;padding-top:0}.writing-studio-comment{max-width:48rem}}
+@media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;display:grid;gap:.65rem;min-height:0;padding-top:0}.writing-studio-comment{position:static!important;max-width:48rem}}
 @media(max-width:860px){.writing-studio,.writing-studio.has-collapsed-rail{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-rail-resizer{display:none}}
 `;
 
@@ -197,6 +197,10 @@ interface SelectionMenuState {
   text: string;
   left: number;
   top: number;
+}
+
+interface CommentLayout {
+  railHeight: number;
 }
 
 const actorId = `writer-${Math.random().toString(16).slice(2)}`;
@@ -971,6 +975,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
   const [chatDraftInsertion, setChatDraftInsertion] = useState<{ id: string; text: string } | null>(null);
+  const [commentLayout, setCommentLayout] = useState<CommentLayout>({ railHeight: 0 });
+  const [commentPositions, setCommentPositions] = useState<Record<string, number>>({});
   const [, setFormatStateVersion] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -979,6 +985,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const folderPathByTreePathRef = useRef(new Map<string, string>());
   const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
+  const editorFrameRef = useRef<HTMLDivElement>(null);
+  const commentsRailRef = useRef<HTMLElement>(null);
+  const commentCardRefs = useRef(new Map<string, HTMLElement>());
   const fileNameDraftRef = useRef('');
   const dismissedSelectionTextRef = useRef('');
 
@@ -1333,6 +1342,81 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         : null;
     editor.view.dispatch(editor.state.tr.setMeta(annotationHighlightPluginKey, true));
   }, [activeAnnotationId, editor, markdown, state?.annotations]);
+
+  const updateCommentLayout = useCallback(() => {
+    if (!editor) return;
+    const editorFrame = editorFrameRef.current;
+    if (!editorFrame) return;
+    const openAnnotations = (state?.annotations ?? []).filter((annotation) => annotation.status === 'open');
+    if (openAnnotations.length === 0) {
+      setCommentPositions({});
+      setCommentLayout({ railHeight: 0 });
+      return;
+    }
+
+    const frameRect = editorFrame.getBoundingClientRect();
+    const positioned = openAnnotations.map((annotation, index) => {
+      let top = index * 132;
+      const selection = findAnnotationSelection(editor, annotation);
+      if (selection) {
+        try {
+          const start = editor.view.coordsAtPos(selection.from);
+          const end = editor.view.coordsAtPos(selection.to);
+          top = Math.max(0, Math.min(start.top, end.top) - frameRect.top);
+        } catch {
+          top = index * 132;
+        }
+      }
+      return { annotation, top, index };
+    });
+
+    positioned.sort((a, b) => a.top - b.top || a.index - b.index);
+
+    const nextPositions: Record<string, number> = {};
+    let bottom = 0;
+    for (const item of positioned) {
+      const cardHeight = commentCardRefs.current.get(item.annotation.id)?.offsetHeight ?? 116;
+      const top = Math.max(item.top, bottom);
+      nextPositions[item.annotation.id] = top;
+      bottom = top + cardHeight + 10;
+    }
+
+    setCommentPositions((current) => {
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(nextPositions);
+      if (currentKeys.length === nextKeys.length && nextKeys.every((key) => Math.abs((current[key] ?? -1) - nextPositions[key]) < 0.5)) {
+        return current;
+      }
+      return nextPositions;
+    });
+    setCommentLayout((current) => {
+      const railHeight = Math.max(bottom, editorFrame.offsetHeight, 0);
+      return Math.abs(current.railHeight - railHeight) < 0.5 ? current : { railHeight };
+    });
+  }, [editor, state?.annotations]);
+
+  useEffect(() => {
+    if (!editor) return;
+    let frame = 0;
+    const schedule = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updateCommentLayout);
+    };
+    schedule();
+    editor.on('update', schedule);
+    editor.on('transaction', schedule);
+    window.addEventListener('resize', schedule);
+    const resizeObserver = new ResizeObserver(schedule);
+    if (editorFrameRef.current) resizeObserver.observe(editorFrameRef.current);
+    for (const card of commentCardRefs.current.values()) resizeObserver.observe(card);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      editor.off('update', schedule);
+      editor.off('transaction', schedule);
+      window.removeEventListener('resize', schedule);
+      resizeObserver.disconnect();
+    };
+  }, [editor, state?.annotations, updateCommentLayout]);
 
   const runReview = useCallback(
     async (trigger: string, options?: { reviewPrompt?: string }) => {
@@ -1905,6 +1989,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         </WritingFormatBar>
         <div className="writing-studio-canvas">
           <div
+            ref={editorFrameRef}
             className="writing-studio-editor-frame"
             onMouseUp={() => {
               dismissedSelectionTextRef.current = '';
@@ -1937,15 +2022,28 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             ) : null}
             <EditorContent editor={editor} />
           </div>
-          <aside className="writing-studio-comments" aria-label="Document comments">
+          <aside
+            ref={commentsRailRef}
+            className="writing-studio-comments"
+            aria-label="Document comments"
+            style={openAnnotations.length > 0 ? { minHeight: Math.max(commentLayout.railHeight, 0) } : undefined}
+          >
             {openAnnotations.length === 0 ? (
               <p className="writing-studio-comment-empty">Comments will appear beside the draft as the agent reads.</p>
             ) : (
               openAnnotations.map((annotation) => (
                 <article
                   key={annotation.id}
+                  ref={(node) => {
+                    if (node) {
+                      commentCardRefs.current.set(annotation.id, node);
+                    } else {
+                      commentCardRefs.current.delete(annotation.id);
+                    }
+                  }}
                   className={`writing-studio-comment is-${annotation.kind} ${activeAnnotationId === annotation.id ? 'is-active' : ''}`}
                   data-annotation-quote={annotation.quote}
+                  style={{ top: commentPositions[annotation.id] ?? 0 }}
                   onClick={() => selectAnnotation(annotation)}
                 >
                   <div className="writing-studio-comment-top">
