@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.1-rc.4 — 2026-06-03
+
+### Highlights
+
+- Fixes packaged default-installable extension resources so Browser and onboarding include their root manifests and can seed fresh RC profiles.
+- Keeps the packaged RC app's default extension resources aligned with the same filter shape used for bundled system extensions.
+
+### Notes
+
+- 1 commit since the previous release.
+
 ## 0.10.1-rc.3 — 2026-06-03
 
 ### Highlights
