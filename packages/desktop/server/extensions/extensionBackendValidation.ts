@@ -7,8 +7,10 @@ function validateOptionalWorker(value: unknown, path: string): void {
   if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
     throw new Error(`Extension manifest ${path}.enabled must be a boolean.`);
   }
-  if (value.timeoutMs !== undefined && (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs <= 0)) {
-    throw new Error(`Extension manifest ${path}.timeoutMs must be a positive integer.`);
+  if (value.timeoutMs !== undefined) {
+    if (typeof value.timeoutMs !== 'number' || !Number.isSafeInteger(value.timeoutMs) || value.timeoutMs <= 0) {
+      throw new Error(`Extension manifest ${path}.timeoutMs must be a positive integer.`);
+    }
   }
 }
 
