@@ -783,7 +783,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     const installedIds = new Set(extensions.map((extension) => extension.id));
     const items = catalog?.packages ?? catalog?.extensions ?? [];
     return items.filter((item) => {
-      if (installedIds.has(item.id)) return false;
+      if (installedIds.has(item.id) || item.installed) return false;
       if (!normalizedQuery) return true;
       return `${item.name} ${item.id} ${item.description ?? ''} ${item.ecosystem ?? ''} ${item.packageType ?? ''}`
         .toLowerCase()
@@ -1191,6 +1191,7 @@ function InstallExtensionModal({
                 <div className="divide-y divide-border-subtle/70">
                   {visibleCatalogItems.map((item) => {
                     const itemBusy = catalogBusyId === item.id;
+                    const unavailablePackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
                     return (
                       <div key={item.id} className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
                         <div className="min-w-0">
@@ -1200,12 +1201,14 @@ function InstallExtensionModal({
                         <button
                           type="button"
                           className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                          disabled={itemBusy || Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource)}
+                          disabled={item.installed || itemBusy || unavailablePackage}
                           onClick={() => onInstallCatalog(item)}
                         >
                           {itemBusy
                             ? 'Installing...'
-                            : item.packageType && item.packageType !== 'extension' && !item.packageSource
+                            : item.installed
+                              ? 'Installed'
+                              : unavailablePackage
                               ? 'Planned'
                               : 'Install'}
                         </button>

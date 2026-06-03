@@ -219,6 +219,44 @@ describe('ExtensionManagerPage', () => {
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 
+  it('does not offer catalog items already marked installed by the catalog', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      ok: true,
+      version: '0.9.1-rc.6',
+      tag: 'v0.9.1-rc.6',
+      extensions: [
+        {
+          id: 'system-agent-browser',
+          name: 'Agent Browser',
+          description: 'Control browsers and Electron apps.',
+          version: '1.0.0',
+          tag: 'v1.0.0',
+          installed: true,
+        },
+        {
+          id: 'available-only',
+          name: 'Available Only',
+          description: 'Catalog-only extension.',
+          version: '1.0.0',
+          tag: 'v1.0.0',
+          installed: false,
+        },
+      ],
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+
+    expect(await screen.findByText('Available Only')).toBeTruthy();
+    expect(screen.queryByText('Agent Browser')).toBeNull();
+  });
+
   it('loads the installable catalog without starting a polling interval', async () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
     const callAction = vi.fn().mockResolvedValue({ ok: true, version: '0.9.1-rc.6', tag: 'v0.9.1-rc.6', extensions: [] });
