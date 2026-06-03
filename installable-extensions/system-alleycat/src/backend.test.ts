@@ -72,11 +72,22 @@ describe('system-alleycat backend', () => {
     });
 
     // startService degrades instead of throwing and initializes the log path.
-    await startService(undefined, context);
+    await expect(startService(undefined, context)).resolves.toMatchObject({ running: false, sidecarRunning: false });
     await expect(status(undefined, context)).resolves.toMatchObject({
       pairPayload: null,
       logs: expect.arrayContaining([expect.stringMatching(/Alleycat service start degraded|sidecar binary missing/)]),
     });
+  });
+
+  it('returns a serializable status object from the worker service handler', async () => {
+    vi.stubEnv('NEON_PILOT_ALLEYCAT_SIDECAR', '/missing/alleycat-sidecar');
+    const { startService } = await import('./backend.js');
+
+    const result = await startService(undefined, ctx());
+
+    expect(typeof result).toBe('object');
+    expect(typeof result).not.toBe('function');
+    expect(result).toMatchObject({ running: false, implementation: 'codex-jsonrpc-compat' });
   });
 
   it('rotates the auth token and stops sidecar state', async () => {

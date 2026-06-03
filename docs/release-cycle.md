@@ -4,16 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.10.1** — patch release being prepared.
+**v0.10.2** — patch release being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.1
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.2
 
 Highlights in this train:
 
-- Installs Browser and onboarding by default while keeping them removable runtime extensions.
-- Adds Dynamic Workflows and Image Probe settings as extension-owned surfaces.
-- Packages installable extension bundles with the app so catalog installs work before release assets are uploaded.
-- Keeps extension-owned workflow entrypoints aligned with the first-party extension model validated in the 0.10 train.
+- Keeps Browser default-installed and Todos default-enabled while preserving user removals/disables.
+- Fixes Extension Manager catalog/install state for already-installed and uninstalled first-party packages.
+- Fixes Alleycat worker service startup so the mobile pairing host can start without circuit-breaker quarantine.
+- Keeps packaged installable bundles aligned with the app so catalog installs work before release assets are uploaded.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

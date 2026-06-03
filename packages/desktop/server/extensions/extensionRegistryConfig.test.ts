@@ -50,6 +50,7 @@ describe('extensionRegistryConfig', () => {
         ext: { reason: 'boom', at: '2026-05-23T00:00:00.000Z', failures: 2 },
         fallbackFailures: { reason: 'warn', at: '2026-05-23T00:00:00.000Z', failures: 0 },
       },
+      removedDefaultInstalledIds: [],
     });
   });
 
@@ -66,6 +67,7 @@ describe('extensionRegistryConfig', () => {
       keybindingOverrides: {},
       commandKeybindings: {},
       quarantined: {},
+      removedDefaultInstalledIds: [],
     });
   });
 });

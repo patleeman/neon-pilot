@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -19,6 +19,7 @@ vi.mock('./extensionLifecycle.js', () => ({
 
 describe('extension catalog', () => {
   const originalRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
+  const localBundlePath = join(process.cwd(), 'dist', 'installable-extensions', 'system-browser.neon-extension.zip');
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -27,6 +28,7 @@ describe('extension catalog', () => {
     setExtensionEnabled.mockReset();
     importRuntimeExtensionBundle.mockReset();
     vi.unstubAllGlobals();
+    rmSync(localBundlePath, { force: true });
     if (originalRepoRoot === undefined) delete process.env.NEON_PILOT_REPO_ROOT;
     else process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
   });
@@ -126,6 +128,8 @@ describe('extension catalog', () => {
 
   it('installs catalog bundles from local packed artifacts when available', async () => {
     process.env.NEON_PILOT_REPO_ROOT = join(process.cwd());
+    mkdirSync(join(process.cwd(), 'dist', 'installable-extensions'), { recursive: true });
+    writeFileSync(localBundlePath, new Uint8Array([1, 2, 3, 4]));
     vi.stubGlobal('fetch', vi.fn());
     importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-browser', enabled: true }, packageRoot: '/tmp/ext' });
     summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: false, version: '1.0.0' }]);

@@ -343,17 +343,15 @@ export async function start(input: unknown, ctx: ExtensionBackendContext): Promi
   return startPromise;
 }
 
-export async function startService(input: unknown, ctx: ExtensionBackendContext): Promise<() => Promise<void>> {
+export async function startService(input: unknown, ctx: ExtensionBackendContext): Promise<AlleycatStatus> {
   try {
-    await start(input, ctx);
+    return await start(input, ctx);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     rememberLog(`Alleycat service start degraded: ${message}`);
     ctx.log.warn('Alleycat service start degraded', { error: message });
+    return status(input, ctx);
   }
-  return async () => {
-    await stop(undefined, ctx);
-  };
 }
 
 async function stopSidecar(ctx?: ExtensionBackendContext, reason = 'requested'): Promise<void> {

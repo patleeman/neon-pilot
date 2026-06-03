@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.2 — 2026-06-03
+
+### Highlights
+
+- Keeps Todos enabled by default for fresh and existing profiles unless explicitly disabled.
+- Fixes Extension Manager catalog state so installed packages no longer show misleading Install buttons.
+- Shows catalog-installed packages in the installed list even when the install summary is briefly stale.
+- Removes uninstalled default packages, including onboarding, from the visible installed list immediately.
+- Fixes the Alleycat service startup contract so the worker-backed host can start without tripping the extension circuit breaker.
+
+### Notes
+
+- 5 commits since the previous release.
+
 ## 0.10.1 — 2026-06-03
 
 ### Highlights
