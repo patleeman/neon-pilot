@@ -922,9 +922,26 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           <div className="writing-studio-modal is-docs">
             <div className="writing-studio-modal-header">
               <h2>Open document</h2>
-              <button className="writing-studio-icon-button" type="button" aria-label="Close documents" onClick={() => setDocumentsOpen(false)}>
-                <WritingIcon name="close" />
-              </button>
+              <div className="writing-studio-rail-tools writing-studio-doc-import">
+                <label className="writing-studio-icon-button" data-tooltip="Import markdown" aria-label="Import markdown">
+                  <WritingIcon name="open" />
+                  <input
+                    type="file"
+                    accept=".md,.markdown,.txt,text/markdown,text/plain"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = '';
+                      if (file) {
+                        setDocumentsOpen(false);
+                        void importDocument(file);
+                      }
+                    }}
+                  />
+                </label>
+                <button className="writing-studio-icon-button" type="button" aria-label="Close documents" data-tooltip="Close" onClick={() => setDocumentsOpen(false)}>
+                  <WritingIcon name="close" />
+                </button>
+              </div>
             </div>
             <div className="writing-studio-modal-body">
               <input
@@ -950,26 +967,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                   ))
                 )}
               </div>
-            </div>
-            <div className="writing-studio-modal-actions writing-studio-doc-import">
-              <label className="writing-studio-icon-button" title="Import markdown" aria-label="Import markdown">
-                <WritingIcon name="open" />
-                <input
-                  type="file"
-                  accept=".md,.markdown,.txt,text/markdown,text/plain"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = '';
-                    if (file) {
-                      setDocumentsOpen(false);
-                      void importDocument(file);
-                    }
-                  }}
-                />
-              </label>
-              <ToolbarButton type="button" onClick={() => setDocumentsOpen(false)}>
-                Close
-              </ToolbarButton>
             </div>
           </div>
         </div>
