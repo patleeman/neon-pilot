@@ -103,6 +103,22 @@ const defaultSettings: WritingSettings = {
   agentInstructions: defaultAgentInstructions,
 };
 const maxReviewAnnotations = 12;
+
+function isUnavailableAgentModelError(error: unknown): boolean {
+  return error instanceof Error && /Agent conversation model is not available/i.test(error.message);
+}
+
+async function runWritingStudioAgentTask(
+  input: Parameters<typeof runAgentTask>[0],
+  ctx: ExtensionBackendContext,
+): ReturnType<typeof runAgentTask> {
+  try {
+    return await runAgentTask(input, ctx);
+  } catch (error) {
+    if (!input.modelRef || !isUnavailableAgentModelError(error)) throw error;
+    return runAgentTask({ ...input, modelRef: undefined }, ctx);
+  }
+}
 const reviewChunkCharacterLimit = 2_400;
 const reviewMaxChunks = 5;
 
@@ -409,7 +425,7 @@ ${settings.agentInstructions}
 Draft chunk:
 ${reviewMarkdown}`;
     try {
-      const result = await runAgentTask({ prompt, tools: 'none', timeoutMs: 90_000, modelRef }, ctx);
+      const result = await runWritingStudioAgentTask({ prompt, tools: 'none', timeoutMs: 90_000, modelRef }, ctx);
       for (const annotation of parseAgentAnnotations(result.text, markdown, runId)) {
         if (seenQuotes.has(annotation.quote)) continue;
         seenQuotes.add(annotation.quote);
@@ -462,7 +478,7 @@ ${recentChat || '(none)'}
 
 User message:
 ${message}`;
-  const result = await runAgentTask({ prompt, tools: 'default', timeoutMs: 60_000, modelRef }, ctx);
+  const result = await runWritingStudioAgentTask({ prompt, tools: 'default', timeoutMs: 60_000, modelRef }, ctx);
   const text = result.text.trim();
   if (!text) throw new Error('Writing Studio agent returned an empty response.');
   return text;

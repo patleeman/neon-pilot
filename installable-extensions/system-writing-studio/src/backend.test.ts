@@ -234,6 +234,26 @@ describe('Writing Studio backend', () => {
     expect(resolved.annotations[0].status).toBe('resolved');
   });
 
+  it('falls back to the default agent model when the selected chat model is unavailable', async () => {
+    const ctx = context();
+    mockRunAgentTask
+      .mockRejectedValueOnce(new Error('Agent conversation model is not available: mrs-mcmodel-face'))
+      .mockResolvedValueOnce({ text: 'The fallback agent answer.' });
+
+    const chat = await sendChat(
+      {
+        body: 'Can you help with this?',
+        markdown: '# Draft\n\nMaybe this can be clearer.',
+        modelRef: 'mrs-mcmodel-face',
+      },
+      ctx,
+    );
+
+    expect(chat.messages[1].body).toBe('The fallback agent answer.');
+    expect(mockRunAgentTask).toHaveBeenNthCalledWith(1, expect.objectContaining({ modelRef: 'mrs-mcmodel-face' }), ctx);
+    expect(mockRunAgentTask).toHaveBeenNthCalledWith(2, expect.objectContaining({ modelRef: undefined }), ctx);
+  });
+
   it('lets the agent inspect and update its own writing instructions', async () => {
     const ctx = context();
 
