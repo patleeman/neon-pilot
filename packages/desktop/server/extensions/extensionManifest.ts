@@ -732,6 +732,8 @@ export interface ExtensionBackendAction {
    */
   worker?: {
     enabled?: boolean;
+    /** Optional per-invocation worker timeout in milliseconds. Defaults to 30s. */
+    timeoutMs?: number;
     /** Optional allowlist for object inputs with a string `action` field. */
     inputActions?: string[];
     /**

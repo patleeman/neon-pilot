@@ -71,7 +71,7 @@ export class ExtensionBackendWorkerClient {
     compiled: ExtensionBackendLoadTarget,
     exportName: string,
     args: unknown[],
-    options: { context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
+    options: { timeoutMs?: number; context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
   ): Promise<unknown> {
     const response = await this.send({ id: 0, type: 'runExport', extensionId, compiled, exportName, args, ...options });
     return this.deserializeWorkerResult(response.result);
@@ -114,7 +114,7 @@ export class ExtensionBackendWorkerClient {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`Extension backend worker ${request.type} timed out.`));
-      }, this.options.timeoutMs ?? 30_000);
+      }, ('timeoutMs' in request && request.timeoutMs ? request.timeoutMs : undefined) ?? this.options.timeoutMs ?? 30_000);
 
       this.pending.set(id, { resolve, reject, timeout });
       try {
@@ -273,7 +273,7 @@ export class ExtensionBackendWorkerPool {
     compiled: ExtensionBackendLoadTarget,
     exportName: string,
     args: unknown[],
-    options: { context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
+    options: { timeoutMs?: number; context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions) } = {},
   ): Promise<unknown> {
     return this.getClient(extensionId).runExport(extensionId, compiled, exportName, args, options);
   }

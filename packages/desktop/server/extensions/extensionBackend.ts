@@ -667,7 +667,7 @@ function runExtensionBackendExportForSelfTest(extensionId: string, exportName: s
 }
 
 function canRunActionInBackendWorker(
-  action: { worker?: { enabled?: boolean; inputActions?: string[]; ignoreLiveContext?: boolean } } | undefined,
+  action: { worker?: { enabled?: boolean; inputActions?: string[]; ignoreLiveContext?: boolean; timeoutMs?: number } } | undefined,
   input: unknown,
 ): boolean {
   if (!action?.worker?.enabled) return false;
@@ -677,6 +677,12 @@ function canRunActionInBackendWorker(
     return typeof inputAction === 'string' && action.worker.inputActions.includes(inputAction);
   }
   return true;
+}
+
+function actionWorkerTimeoutMs(action: { worker?: { timeoutMs?: number } } | undefined): number | undefined {
+  return typeof action?.worker?.timeoutMs === 'number' && Number.isSafeInteger(action.worker.timeoutMs) && action.worker.timeoutMs > 0
+    ? action.worker.timeoutMs
+    : undefined;
 }
 
 function workerBackendToolContext(
@@ -760,6 +766,7 @@ async function runExtensionBackendActionInWorker(
   actionId: string,
   exportName: string,
   input: unknown,
+  timeoutMs?: number,
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
@@ -783,6 +790,7 @@ async function runExtensionBackendActionInWorker(
       [input],
       {
         context: workerBackendContextOptions(serverContext, toolContext, agentToolContext, updateHandleId),
+        ...(timeoutMs ? { timeoutMs } : {}),
       },
     );
   } finally {
@@ -1022,6 +1030,7 @@ export async function invokeExtensionAction(
       actionId,
       handlerName,
       input,
+      actionWorkerTimeoutMs(action),
       serverContext,
       toolContext ?? toolContextFromAgentToolContext(agentToolContext),
       agentToolContext,

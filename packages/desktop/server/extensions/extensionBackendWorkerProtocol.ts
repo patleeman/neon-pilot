@@ -40,6 +40,7 @@ export type ExtensionBackendWorkerRequest =
       compiled: ExtensionBackendLoadTarget;
       exportName: string;
       args: unknown[];
+      timeoutMs?: number;
       context?: 'backend' | ({ type: 'backend' } & ExtensionBackendWorkerBackendContextOptions);
     }
   | {

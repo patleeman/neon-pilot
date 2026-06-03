@@ -858,6 +858,8 @@ export interface ExtensionBackendAction {
   description?: string;
   worker?: {
     enabled?: boolean;
+    /** Optional per-invocation worker timeout in milliseconds. Defaults to 30s. */
+    timeoutMs?: number;
     inputActions?: string[];
     /**
      * Allow worker execution even when the action is invoked from an agent tool

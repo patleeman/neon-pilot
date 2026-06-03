@@ -7,6 +7,9 @@ function validateOptionalWorker(value: unknown, path: string): void {
   if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
     throw new Error(`Extension manifest ${path}.enabled must be a boolean.`);
   }
+  if (value.timeoutMs !== undefined && (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs <= 0)) {
+    throw new Error(`Extension manifest ${path}.timeoutMs must be a positive integer.`);
+  }
 }
 
 export function validateExtensionBackendContribution(backend: Record<string, unknown>): void {
@@ -35,6 +38,7 @@ export function validateExtensionBackendContribution(backend: Record<string, unk
       requireString(action.handler, `backend.actions[${index}].handler`);
       validateOptionalString(action.title, `backend.actions[${index}].title`);
       validateOptionalString(action.description, `backend.actions[${index}].description`);
+      validateOptionalWorker(action.worker, `backend.actions[${index}].worker`);
     }
   }
   if (backend.protocolEntrypoints !== undefined) {

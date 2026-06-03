@@ -89,6 +89,7 @@ const defaultSettings: WritingSettings = {
   reviewPrompt: defaultReviewPrompt,
 };
 const maxReviewAnnotations = 12;
+const reviewDraftCharacterLimit = 4_500;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -251,6 +252,9 @@ function parseAgentAnnotations(text: string, markdown: string, runId: string): A
   } catch {
     return [];
   }
+  if (!Array.isArray(parsed) && parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).annotations)) {
+    parsed = (parsed as { annotations: unknown[] }).annotations;
+  }
   if (!Array.isArray(parsed)) return [];
   const createdAt = nowIso();
   return parsed
@@ -282,6 +286,13 @@ function parseAgentAnnotations(text: string, markdown: string, runId: string): A
     .slice(0, maxReviewAnnotations);
 }
 
+function reviewDraftExcerpt(markdown: string): string {
+  if (markdown.length <= reviewDraftCharacterLimit) return markdown;
+  const excerpt = markdown.slice(0, reviewDraftCharacterLimit);
+  const paragraphBreak = excerpt.lastIndexOf('\n\n');
+  return paragraphBreak > 1_200 ? excerpt.slice(0, paragraphBreak) : excerpt;
+}
+
 async function buildAgentReviewAnnotations(
   markdown: string,
   runId: string,
@@ -289,20 +300,22 @@ async function buildAgentReviewAnnotations(
   ctx: ExtensionBackendContext,
   modelRef?: string,
 ): Promise<Annotation[]> {
+  const reviewMarkdown = reviewDraftExcerpt(markdown);
   const prompt = `You are reviewing a markdown draft in Writing Studio.
 
-Return only JSON: an array of 1-${maxReviewAnnotations} objects with keys quote, body, kind, and optional emoji.
+Return only JSON: an array of 3-6 objects with keys quote, body, kind, and optional emoji.
 kind must be one of comment, suggestion, reaction, warning.
 quote must be an exact substring from the draft.
+Choose quotes by copying 8-30 consecutive words directly from the draft text. Do not paraphrase quotes.
 Write like a generous collaborator with personality. Avoid generic proofreading.
 
 Review prompt:
 ${settings.reviewPrompt}
 
 Draft:
-${markdown}`;
+${reviewMarkdown}`;
   try {
-    const result = await runAgentTask({ prompt, tools: 'default', timeoutMs: 45_000, modelRef }, ctx);
+    const result = await runAgentTask({ prompt, tools: 'none', timeoutMs: 90_000, modelRef }, ctx);
     return parseAgentAnnotations(result.text, markdown, runId);
   } catch (error) {
     throw new Error(`Writing Studio review failed: ${error instanceof Error ? error.message : String(error)}`);

@@ -69,6 +69,7 @@ interface ExtensionBackendWorkerImportClient {
 }
 
 type ExtensionBackendWorkerExportOptions = {
+  timeoutMs?: number;
   context?:
     | 'backend'
     | {
