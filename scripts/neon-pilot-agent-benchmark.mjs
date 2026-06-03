@@ -86,10 +86,23 @@ function readRepoShape(commit) {
   return ['package.json', 'docs', 'packages', 'extensions', 'installable-extensions'].filter((path) => treeHasPath(commit, path));
 }
 
-function readCommitFromResolution(row, resolution) {
-  return (
-    normalizeCommit(resolution?.selected_commit) || normalizeCommit(resolution?.recommended_base_commit) || normalizeCommit(row.base_commit)
-  );
+function readCommitSelection(row, resolution) {
+  const primary =
+    normalizeCommit(resolution?.selected_commit) ||
+    normalizeCommit(resolution?.recommended_base_commit) ||
+    normalizeCommit(row.base_commit);
+  if (commitExists(primary)) {
+    return { commit: primary, strategy: 'primary_resolution_commit' };
+  }
+
+  const candidate = Array.isArray(resolution?.commit_candidates)
+    ? resolution.commit_candidates.map((item) => normalizeCommit(item?.hash)).find((commit) => commitExists(commit))
+    : '';
+  if (candidate) {
+    return { commit: candidate, strategy: 'existing_resolution_candidate', missingPrimaryCommit: primary };
+  }
+
+  return { commit: primary, strategy: 'unresolved' };
 }
 
 function normalizeCommit(value) {
@@ -138,7 +151,8 @@ function buildGoldCases({ cases, resolutions, limit }) {
     }
 
     const resolution = resolutionById.get(row.id) ?? resolutionById.get(row.source_candidate_id) ?? null;
-    const baseCommit = readCommitFromResolution(row, resolution);
+    const commitSelection = readCommitSelection(row, resolution);
+    const baseCommit = commitSelection.commit;
     if (!baseCommit) {
       excluded.push({ id: row.id, reason: 'missing_base_commit' });
       continue;
@@ -180,12 +194,16 @@ function buildGoldCases({ cases, resolutions, limit }) {
       },
       review: {
         commit_exists: true,
+        commit_strategy: commitSelection.strategy,
+        ...(commitSelection.missingPrimaryCommit ? { missing_primary_commit: commitSelection.missingPrimaryCommit } : {}),
         repo_shape: repoShape,
         feasibility: 'runnable_from_base_commit',
         notes:
-          repoShape.includes('package.json') && repoShape.includes('packages')
-            ? 'Selected because the associated base/selected commit exists and has the expected Neon Pilot repo shape.'
-            : 'Selected because the commit exists, but repo shape should be manually reviewed before running.',
+          commitSelection.strategy === 'existing_resolution_candidate'
+            ? 'Selected because an associated commit candidate exists locally; the primary selected/recommended commit is missing.'
+            : repoShape.includes('package.json') && repoShape.includes('packages')
+              ? 'Selected because the associated base/selected commit exists and has the expected Neon Pilot repo shape.'
+              : 'Selected because the commit exists, but repo shape should be manually reviewed before running.',
       },
     });
     seenIds.add(row.id);
@@ -202,6 +220,10 @@ function writeJsonl(file, rows) {
 function writeReport(file, result, dataset) {
   const laneCounts = result.selected.reduce((acc, row) => ({ ...acc, [row.lane]: (acc[row.lane] ?? 0) + 1 }), {});
   const exclusionCounts = result.excluded.reduce((acc, row) => ({ ...acc, [row.reason]: (acc[row.reason] ?? 0) + 1 }), {});
+  const commitStrategyCounts = result.selected.reduce(
+    (acc, row) => ({ ...acc, [row.review.commit_strategy]: (acc[row.review.commit_strategy] ?? 0) + 1 }),
+    {},
+  );
   const lines = [
     '# Neon Pilot Gold Agent Benchmark',
     '',
@@ -218,6 +240,10 @@ function writeReport(file, result, dataset) {
     '',
     ...Object.entries(exclusionCounts).map(([reason, count]) => `- ${reason}: ${count}`),
     '',
+    '## Commit Selection',
+    '',
+    ...Object.entries(commitStrategyCounts).map(([strategy, count]) => `- ${strategy}: ${count}`),
+    '',
     '## Runnable Cases',
     '',
     '| ID | Lane | Base commit | Subject |',
@@ -230,7 +256,8 @@ function writeReport(file, result, dataset) {
     '',
     '- Every selected case has an associated commit that resolves in this repository via `git cat-file -e <commit>^{commit}`.',
     '- Every selected case was also checked for a recognizable Neon Pilot repo shape at that commit (`package.json`, `docs`, and `packages`).',
-    '- The suite is intentionally small for v0 because missing commits make many mined cases non-runnable without backfill.',
+    '- Cases using `existing_resolution_candidate` have a missing primary selected/recommended commit, but another associated commit candidate exists locally.',
+    '- The suite is intentionally small for v0 because missing commits still make many mined cases non-runnable without backfill.',
     '- Backfill candidates should start with excluded `commit_not_in_repo` and `missing_base_commit` cases.',
     '',
   ];
