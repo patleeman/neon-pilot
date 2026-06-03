@@ -2,7 +2,7 @@ import { Markdown } from '@tiptap/markdown';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { ChatView, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { ChatRailComposer, ChatView, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
 
@@ -31,7 +31,7 @@ const writingStudioCss = `
 .writing-studio-rail{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
 .writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-tools{display:flex;align-items:center;gap:.35rem}.writing-studio-review-button{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));color:rgb(var(--color-secondary));padding:.35rem .55rem;font:inherit;font-size:.75rem;cursor:pointer}.writing-studio-review-button:hover{color:rgb(var(--color-primary));border-color:rgb(var(--color-border-strong))}.writing-studio-review-button:disabled{cursor:default;opacity:.55}.writing-studio-icon-button{display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
-.writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-form{padding:.75rem;border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-box{display:grid;gap:.55rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-base));padding:.55rem}.writing-studio-chat-box textarea{width:100%;max-height:9rem;resize:none;border:0;background:transparent;color:rgb(var(--color-primary));outline:none;font:inherit;font-size:.86rem;line-height:1.45}.writing-studio-chat-actions{display:flex;justify-content:flex-end}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
+.writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-composer{border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-composer [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-composer [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-meta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:1rem;padding:.25rem .9rem .75rem;color:rgb(var(--color-dim));font-size:.66rem;font-family:var(--font-mono,monospace)}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
 .writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
 @media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;padding-top:0}.writing-studio-comment{max-width:48rem}}
@@ -294,7 +294,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [chatDraft, setChatDraft] = useState('');
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [activeDocumentId, setActiveDocumentId] = useState('default');
   const [railCollapsed, setRailCollapsed] = useState(false);
@@ -454,23 +453,21 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   );
 
   const sendChat = useCallback(
-    async (event: React.FormEvent) => {
-      event.preventDefault();
-      if (!chatDraft.trim()) return;
+    async (body: string) => {
+      if (!body.trim()) return;
       setBusy('chat');
       try {
         const currentMarkdown = syncEditorMarkdown() ?? markdown;
-        const result = (await pa.extension.invoke('writingStudioSendChat', { body: chatDraft, markdown: currentMarkdown, documentId: activeDocumentId })) as { messages: ChatMessage[] };
+        const result = (await pa.extension.invoke('writingStudioSendChat', { body, markdown: currentMarkdown, documentId: activeDocumentId })) as { messages: ChatMessage[] };
         setState((current) => (current ? { ...current, chat: result.messages } : current));
         setVisibleEventCount((current) => current + 2);
-        setChatDraft('');
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
         setBusy(null);
       }
     },
-    [activeDocumentId, chatDraft, markdown, pa],
+    [activeDocumentId, markdown, pa, syncEditorMarkdown],
   );
 
   const resolveAnnotation = useCallback(
@@ -679,21 +676,30 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               <ChatView messages={chatMessages} isStreaming={busy === 'chat'} layout="compact" />
             )}
           </div>
-          <form className="writing-studio-chat-form" onSubmit={sendChat}>
-            <div className="writing-studio-chat-box">
-              <textarea
-                value={chatDraft}
-                onChange={(event) => setChatDraft(event.target.value)}
-                rows={3}
-                placeholder="Ask about the draft..."
-              />
-              <div className="writing-studio-chat-actions">
-                <ToolbarButton type="submit" disabled={busy === 'chat' || !chatDraft.trim()}>
-                  {busy === 'chat' ? 'Sending...' : 'Send'}
-                </ToolbarButton>
-              </div>
-            </div>
-          </form>
+          <div className="writing-studio-chat-composer" aria-label="Writing Studio chat composer">
+            <ChatRailComposer
+              conversationId={null}
+              workspaceCwd={null}
+              isStreaming={busy === 'chat'}
+              models={[]}
+              currentModel=""
+              currentThinkingLevel=""
+              tokens={null}
+              contextUsage={null}
+              onSubmit={(text: string) => {
+                void sendChat(text);
+              }}
+              onAbortStream={() => setBusy(null)}
+              onSelectModel={() => {}}
+              onSelectThinkingLevel={() => {}}
+              composerMeta={
+                <div className="writing-studio-chat-meta">
+                  <span>Draft chat</span>
+                  <span>{state?.chat.length ?? 0} messages</span>
+                </div>
+              }
+            />
+          </div>
         </section>
       </aside>
 
