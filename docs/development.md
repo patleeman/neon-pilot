@@ -78,15 +78,15 @@ pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500
 
 If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
 
-Agent micro benchmark:
+Agent gold benchmark:
 
 ```bash
-pnpm run bench:agent -- --output=benchmarks/neon-pilot-agent-micro.jsonl --markdown=benchmarks/neon-pilot-agent-micro.md
+pnpm run bench:agent -- --output=benchmarks/neon-pilot-gold.jsonl --report=benchmarks/neon-pilot-gold.md
 ```
 
-This builds a 20-minute-per-task benchmark suite from `patrickleenyc/personal-agent-evals`. It selects no-code diagnosis/planning cases from the `cases` config and converts a few real failure windows from `basis_candidates` into bounded diagnostic tasks. The benchmark is meant for quick agent runs that measure repo navigation, diagnosis quality, instruction following, and handoff clarity without waiting for full feature implementations.
+This builds a 20-minute-per-task gold benchmark suite from `patrickleenyc/personal-agent-evals`. It joins shaped cases with commit-resolution metadata, deduplicates repeated generated cases, and includes only cases whose selected/base commit exists in the Neon Pilot git history. The benchmark is meant for model-comparable agent runs that measure diagnosis, scoped fixes, UX workflow judgment, instruction following, and validation quality on real Neon Pilot work.
 
-The dataset is private/gated, so the script reads `HF_TOKEN` or `~/.cache/huggingface/token`. Use `--limit=<n>` and `--basis-limit=<n>` to tune suite size.
+The dataset is private/gated, so the script reads `HF_TOKEN` or `~/.cache/huggingface/token`. Use `--limit=<n>` to tune suite size. Cases excluded because their commits are missing should be treated as backfill candidates, not benchmark-ready gold.
 
 ## Web UI and desktop QA
 

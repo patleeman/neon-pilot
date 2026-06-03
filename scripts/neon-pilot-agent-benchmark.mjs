@@ -1,19 +1,17 @@
 #!/usr/bin/env node
 /* eslint-env node */
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 const defaultDataset = 'patrickleenyc/personal-agent-evals';
+const repoRoot = resolve(new URL('..', import.meta.url).pathname);
 const args = process.argv.slice(2).filter((value, index) => !(index === 0 && value === '--'));
 
 function arg(name, fallback = '') {
   const prefix = `--${name}=`;
   const found = args.find((value) => value.startsWith(prefix));
   return found ? found.slice(prefix.length) : fallback;
-}
-
-function hasFlag(name) {
-  return args.includes(`--${name}`);
 }
 
 function numberArg(name, fallback) {
@@ -52,150 +50,224 @@ async function fetchHfRows({ dataset, config, split = 'train' }) {
   return rows;
 }
 
-function stringifyValue(value) {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  return JSON.stringify(value, null, 2);
+function write(file, text) {
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, text, 'utf8');
 }
 
-function compactText(value, maxChars = 1800) {
-  return stringifyValue(value).replace(/\s+/g, ' ').trim().slice(0, maxChars);
+function commitExists(commit) {
+  if (!commit) return false;
+  try {
+    execFileSync('git', ['cat-file', '-e', `${commit}^{commit}`], { cwd: repoRoot, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-function caseIsNoCode(row) {
+function commitSubject(commit) {
+  try {
+    return execFileSync('git', ['show', '-s', '--format=%s', commit], { cwd: repoRoot, encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+}
+
+function treeHasPath(commit, path) {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${commit}:${path}`], { cwd: repoRoot, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readRepoShape(commit) {
+  return ['package.json', 'docs', 'packages', 'extensions', 'installable-extensions'].filter((path) => treeHasPath(commit, path));
+}
+
+function readCommitFromResolution(row, resolution) {
+  return (
+    normalizeCommit(resolution?.selected_commit) || normalizeCommit(resolution?.recommended_base_commit) || normalizeCommit(row.base_commit)
+  );
+}
+
+function normalizeCommit(value) {
+  return typeof value === 'string' && value.trim() && value !== 'None' ? value.trim() : '';
+}
+
+function normalizedRepoPath(value) {
+  const text = typeof value === 'string' ? value : '';
+  return text.includes('/personal-agent') ? text.replace('/personal-agent', '/neon-pilot') : text || repoRoot;
+}
+
+function inferLane(row, resolution) {
+  const type = String(row.type ?? resolution?.eval_type ?? '').toLowerCase();
+  const failureMode = String(resolution?.failure_mode ?? row.id ?? '').toLowerCase();
   const prompt = String(row.prompt ?? '').toLowerCase();
-  const scoring = row.scoring && typeof row.scoring === 'object' ? row.scoring : {};
-  return scoring.diff?.require_no_changes === true || prompt.includes('do not make code changes');
+  if (type.includes('frontend') || failureMode.includes('frontend') || prompt.includes('browser') || prompt.includes('sidebar')) {
+    return 'ux_workflow';
+  }
+  if (prompt.includes('do not make code changes') || type.includes('baseline')) return 'diagnosis';
+  return 'scoped_fix';
 }
 
-function caseKind(row) {
-  const text = `${row.type ?? ''} ${row.id ?? ''} ${row.prompt ?? ''}`.toLowerCase();
-  if (text.includes('frontend') || text.includes('ui ') || text.includes('browser')) return 'frontend-diagnosis';
-  if (text.includes('security') || text.includes('permission')) return 'security-reasoning';
-  if (text.includes('plan') || text.includes('assess') || text.includes('explain')) return 'architecture-diagnosis';
-  return 'runtime-diagnosis';
+function validationForLane(lane) {
+  if (lane === 'diagnosis') return ['no code changes; reviewer/judge evaluates final answer'];
+  if (lane === 'ux_workflow') {
+    return ['targeted tests for touched UI/runtime files', 'user-visible route or app-path validation when feasible'];
+  }
+  return ['targeted tests for touched files', 'relevant smoke or static boundary check when extension/core boundary is touched'];
 }
 
-function microPromptFromBasis(row) {
-  const triage = row.triage && typeof row.triage === 'object' ? row.triage : {};
-  const target = row.window?.target_user_turn;
-  const before = Array.isArray(row.window?.before) ? row.window.before.slice(-3) : [];
-  const after = Array.isArray(row.window?.after) ? row.window.after.slice(0, 3) : [];
-  return [
-    'You are benchmarking Neon Pilot on a real historical agent failure window.',
-    '',
-    `Failure mode: ${triage.failure_mode ?? 'unknown'}`,
-    `User turn: ${target?.text ?? row.signal?.matched_text ?? ''}`,
-    '',
-    'Recent context before the user turn:',
-    before.map((item) => `- ${item.role}${item.tool_name ? `/${item.tool_name}` : ''}: ${compactText(item.text, 900)}`).join('\n') ||
-      '- none',
-    '',
-    'Immediate context after the user turn:',
-    after.map((item) => `- ${item.role}${item.tool_name ? `/${item.tool_name}` : ''}: ${compactText(item.text, 900)}`).join('\n') ||
-      '- none',
-    '',
-    'Task: diagnose what went wrong, identify the first repo areas or runtime state to inspect, and propose the smallest corrective next step. Do not make code changes. Keep the response concrete enough that another agent could continue from it.',
-  ].join('\n');
-}
+function buildGoldCases({ cases, resolutions, limit }) {
+  const resolutionById = new Map();
+  for (const resolution of resolutions) {
+    if (resolution.case_id) resolutionById.set(resolution.case_id, resolution);
+    if (resolution.source_candidate_id) resolutionById.set(resolution.source_candidate_id, resolution);
+  }
 
-function buildMicroCases({ cases, basisRows, limit, basisLimit }) {
-  const noCodeCases = cases.filter(caseIsNoCode).map((row) => ({
-    id: row.id,
-    source: { dataset_config: 'cases', source_candidate_id: row.source_candidate_id, case_path: row.case_path },
-    kind: caseKind(row),
-    repo: row.repo,
-    base_commit: row.base_commit,
-    prompt: row.prompt,
-    max_minutes: 20,
-    scoring: {
-      require_no_changes: true,
-      final_must_include: row.scoring?.trace?.final_must_include ?? [],
-      forbidden_shell_patterns: row.scoring?.trace?.forbidden_shell_patterns ?? ['git\\s+commit', 'git\\s+push', 'apply_patch'],
-      judge_rubric: row.scoring?.judge?.rubric ?? 'eval_rubrics/baseline-answer-quality.md',
-    },
-  }));
+  const seenIds = new Set();
+  const selected = [];
+  const excluded = [];
 
-  const basisCases = basisRows.slice(0, basisLimit).map((row) => {
-    const triage = row.triage && typeof row.triage === 'object' ? row.triage : {};
-    return {
-      id: `micro-${row.id}`,
-      source: { dataset_config: 'basis_candidates', basis_id: row.id, conversation_id: row.source?.conversation_id },
-      kind: String(triage.eval_type ?? 'diagnosis').replace(/^triage\./, '') || 'diagnosis',
-      repo: row.source?.cwd ?? '',
-      base_commit: '',
-      prompt: microPromptFromBasis(row),
-      max_minutes: 20,
+  for (const row of cases) {
+    if (seenIds.has(row.id)) {
+      excluded.push({ id: row.id, reason: 'duplicate_case_id' });
+      continue;
+    }
+
+    const resolution = resolutionById.get(row.id) ?? resolutionById.get(row.source_candidate_id) ?? null;
+    const baseCommit = readCommitFromResolution(row, resolution);
+    if (!baseCommit) {
+      excluded.push({ id: row.id, reason: 'missing_base_commit' });
+      continue;
+    }
+
+    if (!commitExists(baseCommit)) {
+      excluded.push({ id: row.id, reason: 'commit_not_in_repo', baseCommit });
+      continue;
+    }
+
+    const lane = inferLane(row, resolution);
+    const scoring = row.scoring && typeof row.scoring === 'object' ? row.scoring : {};
+    const repoShape = readRepoShape(baseCommit);
+    selected.push({
+      id: row.id,
+      project: 'neon-pilot',
+      source_dataset: defaultDataset,
+      source_config: 'cases',
+      source_candidate_id: row.source_candidate_id ?? '',
+      case_path: row.case_path ?? '',
+      lane,
+      task_type: row.type ?? resolution?.eval_type ?? lane,
+      failure_mode: resolution?.failure_mode ?? '',
+      time_budget_minutes: 20,
+      repo: normalizedRepoPath(row.repo),
+      base_commit: baseCommit,
+      base_commit_subject: commitSubject(baseCommit),
+      prompt: row.prompt,
+      allowed_change_scope: scoring.diff?.require_no_changes === true ? 'none' : 'repo',
+      validation: validationForLane(lane),
       scoring: {
-        require_no_changes: true,
-        final_must_include: [String(triage.failure_mode ?? '').replace(/^triage\./, '')].filter(Boolean),
-        forbidden_shell_patterns: ['git\\s+commit', 'git\\s+push', 'apply_patch'],
-        judge_rubric: 'eval_rubrics/micro-diagnosis-quality.md',
+        diff_policy: scoring.diff?.require_no_changes === true ? 'no_changes' : 'focused_changes',
+        require_no_changes: scoring.diff?.require_no_changes === true,
+        forbidden_tools: scoring.trace?.forbidden_tools ?? [],
+        forbidden_shell_patterns: scoring.trace?.forbidden_shell_patterns ?? ['git\\s+commit', 'git\\s+push'],
+        final_must_include: scoring.trace?.final_must_include ?? [],
+        judge_rubric: scoring.judge?.rubric ?? 'eval_rubrics/neon-pilot-gold-quality.md',
+        min_judge_score: scoring.judge?.min_score ?? 4,
       },
-    };
-  });
+      review: {
+        commit_exists: true,
+        repo_shape: repoShape,
+        feasibility: 'runnable_from_base_commit',
+        notes:
+          repoShape.includes('package.json') && repoShape.includes('packages')
+            ? 'Selected because the associated base/selected commit exists and has the expected Neon Pilot repo shape.'
+            : 'Selected because the commit exists, but repo shape should be manually reviewed before running.',
+      },
+    });
+    seenIds.add(row.id);
+    if (selected.length >= limit) break;
+  }
 
-  return [...noCodeCases, ...basisCases].slice(0, limit);
+  return { selected, excluded };
 }
 
 function writeJsonl(file, rows) {
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`, 'utf8');
+  write(file, `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`);
 }
 
-function writeMarkdown(file, rows, dataset) {
-  mkdirSync(dirname(file), { recursive: true });
+function writeReport(file, result, dataset) {
+  const laneCounts = result.selected.reduce((acc, row) => ({ ...acc, [row.lane]: (acc[row.lane] ?? 0) + 1 }), {});
+  const exclusionCounts = result.excluded.reduce((acc, row) => ({ ...acc, [row.reason]: (acc[row.reason] ?? 0) + 1 }), {});
   const lines = [
-    '# Neon Pilot Agent Micro Benchmark',
+    '# Neon Pilot Gold Agent Benchmark',
     '',
-    `Source dataset: ${dataset}`,
+    `Source dataset: \`${dataset}\``,
     '',
-    'Each task is capped at 20 minutes and defaults to no code changes. The goal is to measure diagnosis, repo navigation, instruction following, and handoff quality without waiting for full implementations.',
+    `Selected runnable cases: ${result.selected.length}`,
+    `Excluded source cases: ${result.excluded.length}`,
     '',
-    '| ID | Kind | Max minutes | Source |',
-    '| --- | --- | ---: | --- |',
-    ...rows.map((row) => `| \`${row.id}\` | ${row.kind} | ${row.max_minutes} | ${row.source.dataset_config} |`),
+    '## Lane Counts',
     '',
-    'Run with:',
+    ...Object.entries(laneCounts).map(([lane, count]) => `- ${lane}: ${count}`),
     '',
-    '```bash',
-    'pnpm run bench:agent -- --output=benchmarks/neon-pilot-agent-micro.jsonl --markdown=benchmarks/neon-pilot-agent-micro.md',
-    '```',
+    '## Exclusion Counts',
+    '',
+    ...Object.entries(exclusionCounts).map(([reason, count]) => `- ${reason}: ${count}`),
+    '',
+    '## Runnable Cases',
+    '',
+    '| ID | Lane | Base commit | Subject |',
+    '| --- | --- | --- | --- |',
+    ...result.selected.map(
+      (row) => `| \`${row.id}\` | ${row.lane} | \`${row.base_commit.slice(0, 8)}\` | ${row.base_commit_subject.replaceAll('|', '\\|')} |`,
+    ),
+    '',
+    '## Notes',
+    '',
+    '- Every selected case has an associated commit that resolves in this repository via `git cat-file -e <commit>^{commit}`.',
+    '- Every selected case was also checked for a recognizable Neon Pilot repo shape at that commit (`package.json`, `docs`, and `packages`).',
+    '- The suite is intentionally small for v0 because missing commits make many mined cases non-runnable without backfill.',
+    '- Backfill candidates should start with excluded `commit_not_in_repo` and `missing_base_commit` cases.',
     '',
   ];
-  writeFileSync(file, `${lines.join('\n')}\n`, 'utf8');
+  write(file, `${lines.join('\n')}\n`);
 }
 
 async function main() {
   const dataset = arg('dataset', defaultDataset);
-  const output = resolve(arg('output', 'benchmarks/neon-pilot-agent-micro.jsonl'));
-  const markdown = arg('markdown', '');
-  const limit = numberArg('limit', 12);
-  const basisLimit = numberArg('basis-limit', 4);
-  const [cases, basisRows] = await Promise.all([
+  const output = resolve(arg('output', 'benchmarks/neon-pilot-gold.jsonl'));
+  const report = resolve(arg('report', 'benchmarks/neon-pilot-gold.md'));
+  const limit = numberArg('limit', 50);
+  const [cases, resolutions] = await Promise.all([
     fetchHfRows({ dataset, config: 'cases' }),
-    fetchHfRows({ dataset, config: 'basis_candidates' }),
+    fetchHfRows({ dataset, config: 'commit_resolution' }),
   ]);
-  const rows = buildMicroCases({ cases, basisRows, limit, basisLimit });
-  writeJsonl(output, rows);
-  if (markdown) writeMarkdown(resolve(markdown), rows, dataset);
+  const result = buildGoldCases({ cases, resolutions, limit });
+  writeJsonl(output, result.selected);
+  writeReport(report, result, dataset);
 
-  const summary = {
-    dataset,
-    output,
-    markdown: markdown ? resolve(markdown) : '',
-    selected: rows.length,
-    sourceRows: { cases: cases.length, basis_candidates: basisRows.length },
-    kinds: rows.reduce((acc, row) => ({ ...acc, [row.kind]: (acc[row.kind] ?? 0) + 1 }), {}),
-  };
-  process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        dataset,
+        output,
+        report,
+        selected: result.selected.length,
+        excluded: result.excluded.length,
+        lanes: result.selected.reduce((acc, row) => ({ ...acc, [row.lane]: (acc[row.lane] ?? 0) + 1 }), {}),
+        exclusions: result.excluded.reduce((acc, row) => ({ ...acc, [row.reason]: (acc[row.reason] ?? 0) + 1 }), {}),
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 main().catch((error) => {
-  if (!hasFlag('json-errors')) {
-    console.error(error instanceof Error ? error.message : String(error));
-  } else {
-    console.error(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
-  }
+  console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
