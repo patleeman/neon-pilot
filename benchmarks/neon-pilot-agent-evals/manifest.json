@@ -1,0 +1,32 @@
+{
+  "name": "neon-pilot-agent-evals",
+  "version": 1,
+  "created_at": "2026-06-03T23:55:33.338Z",
+  "source_dataset": "patrickleenyc/personal-agent-evals",
+  "source_project_name": "personal-agent",
+  "project": "neon-pilot",
+  "splits": {
+    "gold": {
+      "rows": 13,
+      "lanes": {
+        "scoped_fix": 11,
+        "ux_workflow": 2
+      },
+      "commit_strategies": {
+        "primary_resolution_commit": 8,
+        "existing_resolution_candidate": 5
+      }
+    },
+    "backfill_candidates": {
+      "rows": 194,
+      "reasons": {
+        "commit_not_in_repo": 171,
+        "duplicate_case_id": 23
+      }
+    }
+  },
+  "validation": {
+    "gold_commits_checked_with": "git cat-file -e <commit>^{commit}",
+    "required_repo_shape": ["package.json", "docs", "packages"]
+  }
+}

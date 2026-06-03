@@ -217,6 +217,11 @@ function writeJsonl(file, rows) {
   write(file, `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`);
 }
 
+function writeExcludedJsonl(file, rows) {
+  if (!file) return;
+  writeJsonl(file, rows);
+}
+
 function writeReport(file, result, dataset) {
   const laneCounts = result.selected.reduce((acc, row) => ({ ...acc, [row.lane]: (acc[row.lane] ?? 0) + 1 }), {});
   const exclusionCounts = result.excluded.reduce((acc, row) => ({ ...acc, [row.reason]: (acc[row.reason] ?? 0) + 1 }), {});
@@ -268,6 +273,7 @@ async function main() {
   const dataset = arg('dataset', defaultDataset);
   const output = resolve(arg('output', 'benchmarks/neon-pilot-gold.jsonl'));
   const report = resolve(arg('report', 'benchmarks/neon-pilot-gold.md'));
+  const excludedOutput = arg('excluded-output') ? resolve(arg('excluded-output')) : '';
   const limit = numberArg('limit', 50);
   const [cases, resolutions] = await Promise.all([
     fetchHfRows({ dataset, config: 'cases' }),
@@ -275,6 +281,7 @@ async function main() {
   ]);
   const result = buildGoldCases({ cases, resolutions, limit });
   writeJsonl(output, result.selected);
+  writeExcludedJsonl(excludedOutput, result.excluded);
   writeReport(report, result, dataset);
 
   process.stdout.write(
@@ -283,6 +290,7 @@ async function main() {
         dataset,
         output,
         report,
+        ...(excludedOutput ? { excludedOutput } : {}),
         selected: result.selected.length,
         excluded: result.excluded.length,
         lanes: result.selected.reduce((acc, row) => ({ ...acc, [row.lane]: (acc[row.lane] ?? 0) + 1 }), {}),

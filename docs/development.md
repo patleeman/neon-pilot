@@ -88,6 +88,8 @@ This builds a 20-minute-per-task gold benchmark suite from `patrickleenyc/person
 
 The dataset is private/gated, so the script reads `HF_TOKEN` or `~/.cache/huggingface/token`. Use `--limit=<n>` to tune suite size. Cases excluded because their commits are missing should be treated as backfill candidates, not benchmark-ready gold.
 
+The packaged dataset lives in `benchmarks/neon-pilot-agent-evals/` and is published privately at `patrickleenyc/neon-pilot-agent-evals` on Hugging Face. It includes a runnable `gold` config and a non-scoring `backfill_candidates` config.
+
 ## Web UI and desktop QA
 
 If you modify web UI, inspect it visually before signing off. Avoid raw `agent-browser`; use the repo wrapper so sessions close cleanly:
