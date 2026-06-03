@@ -390,6 +390,21 @@ describe('extension registry', () => {
     });
   });
 
+  it('enables bundled Todos by default', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+
+    expect(listExtensionInstallSummaries(stateRoot)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'system-todo',
+          enabled: true,
+          status: 'enabled',
+          manifest: expect.objectContaining({ defaultEnabled: true }),
+        }),
+      ]),
+    );
+  });
+
   it('exposes invalid runtime extension manifests in installation summaries', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const extensionRoot = join(stateRoot, 'extensions', 'bad-board');

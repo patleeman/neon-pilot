@@ -3,7 +3,7 @@
   "id": "system-todo",
   "name": "Todos",
   "packageType": "system",
-  "defaultEnabled": false,
+  "defaultEnabled": true,
   "description": "Conversation-scoped execution todos for agents and users.",
   "version": "0.1.0",
   "frontend": {

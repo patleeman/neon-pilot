@@ -462,7 +462,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - views: page (/telemetry)
 - nav: telemetry-nav (/telemetry)
 
-### system-todo — Todos (default disabled)
+### system-todo — Todos (default enabled)
 
 - tools: todo
 - composerShelves: todos
