@@ -301,12 +301,6 @@ function WritingFormatBar({
       </div>
       <div className="writing-studio-format-group">
         <FormatButton label="HR" title="Horizontal rule" disabled={disabled} onClick={() => editor.chain().focus().setHorizontalRule().run()} />
-        <FormatButton label="BR" title="Line break" disabled={disabled} onClick={() => editor.chain().focus().setHardBreak().run()} />
-        <FormatButton label="Tx" title="Clear formatting" disabled={disabled} onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} />
-      </div>
-      <div className="writing-studio-format-group">
-        <FormatButton label="↶" title="Undo" disabled={disabled || !editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} />
-        <FormatButton label="↷" title="Redo" disabled={disabled || !editor.can().redo()} onClick={() => editor.chain().focus().redo().run()} />
       </div>
       <div className="writing-studio-format-spacer" />
       <button
