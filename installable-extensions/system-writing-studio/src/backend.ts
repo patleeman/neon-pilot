@@ -314,6 +314,7 @@ async function buildAgentReviewAnnotations(
   runId: string,
   settings: WritingSettings,
   ctx: ExtensionBackendContext,
+  modelRef?: string,
 ): Promise<Annotation[]> {
   const prompt = `You are reviewing a markdown draft in Writing Studio.
 
@@ -328,7 +329,7 @@ ${settings.reviewPrompt}
 Draft:
 ${markdown}`;
   try {
-    const result = await runAgentTask({ prompt, tools: 'default', timeoutMs: 45_000 }, ctx);
+    const result = await runAgentTask({ prompt, tools: 'default', timeoutMs: 45_000, modelRef }, ctx);
     return parseAgentAnnotations(result.text, markdown, runId);
   } catch {
     return [];
@@ -381,14 +382,15 @@ export async function appendUpdate(input: unknown, ctx: ExtensionBackendContext)
 }
 
 export async function runReview(input: unknown, ctx: ExtensionBackendContext): Promise<{ annotations: Annotation[]; runId: string }> {
-  const payload = input as { markdown?: string; trigger?: string; reviewPrompt?: string; documentId?: string };
+  const payload = input as { markdown?: string; trigger?: string; reviewPrompt?: string; documentId?: string; modelRef?: string };
   const state = await readState(ctx, payload.documentId);
   if (typeof payload.markdown === 'string') state.markdown = payload.markdown;
   state.title = titleFromMarkdown(state.markdown, state.title);
   if (typeof payload.reviewPrompt === 'string') state.settings = normalizeSettings({ ...state.settings, reviewPrompt: payload.reviewPrompt });
   const runId = randomUUID();
   state.events.push(event('agent_run_started', 'agent', { runId, trigger: payload.trigger ?? 'manual' }));
-  const agentAnnotations = await buildAgentReviewAnnotations(state.markdown, runId, state.settings, ctx);
+  const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
+  const agentAnnotations = await buildAgentReviewAnnotations(state.markdown, runId, state.settings, ctx, modelRef);
   const annotations = agentAnnotations.length > 0 ? agentAnnotations : buildReviewAnnotations(state.markdown, runId, state.settings);
   const refreshedQuotes = new Set(annotations.map((annotation) => annotation.quote));
   state.annotations = state.annotations.filter(

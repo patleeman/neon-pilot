@@ -2,8 +2,8 @@ import { Markdown } from '@tiptap/markdown';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { ChatRailComposer, ChatView, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buildApiPath, ChatRailComposer, ChatView, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
 
 interface MarkdownEditor {
@@ -18,7 +18,8 @@ interface MarkdownEditor {
 
 const styleElementId = 'writing-studio-runtime-style';
 const writingStudioCss = `
-.writing-studio{display:grid;grid-template-columns:minmax(0,1fr)22rem;height:100%;min-height:0;background:rgb(var(--color-base));color:rgb(var(--color-primary))}
+.writing-studio{display:grid;grid-template-columns:minmax(0,1fr)var(--writing-studio-rail-width,22rem);height:100%;min-height:0;background:rgb(var(--color-base));color:rgb(var(--color-primary))}
+.writing-studio.has-collapsed-rail{grid-template-columns:minmax(0,1fr)3rem}
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
 .writing-studio-meta{display:flex;align-items:center;justify-content:space-between;gap:1rem;max-width:68rem;margin:0 auto 1.25rem;color:rgb(var(--color-dim));font-size:.75rem;line-height:1.4}.writing-studio-save-status{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}.writing-studio-save-status::before{content:"";width:.42rem;height:.42rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-save-status.is-saved::before{background:rgb(var(--color-success))}.writing-studio-save-status.is-saving::before{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-save-status.is-unsaved::before{background:rgb(var(--color-warning))}.writing-studio-save-status.is-error::before{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
@@ -27,14 +28,15 @@ const writingStudioCss = `
 .writing-studio-editor-frame.writing-studio-mark-highlight{background:transparent;box-shadow:none}.writing-studio-editor-frame.writing-studio-mark-highlight .writing-studio-editor p:first-of-type{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}
 .writing-studio-comments{position:sticky;top:1rem;display:grid;gap:.75rem;padding-top:2.4rem}.writing-studio-comment{border-left:2px solid rgb(var(--color-accent));padding:.65rem .75rem;background:color-mix(in srgb,rgb(var(--color-surface)) 86%,transparent);box-shadow:0 8px 24px rgba(0,0,0,.14)}
 .writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.4rem;color:rgb(var(--color-accent));font-size:.72rem;font-weight:650;text-transform:capitalize}.writing-studio-comment-top button{border:0;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment blockquote{margin:0 0 .45rem;color:rgb(var(--color-primary));font-size:.78rem;line-height:1.35}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
-.writing-studio-rail{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
+.writing-studio-rail{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
+.writing-studio-rail-resizer{position:absolute;left:-4px;top:0;bottom:0;z-index:25;width:8px;cursor:col-resize}.writing-studio-rail-resizer::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:transparent}.writing-studio-rail-resizer:hover::after,.writing-studio-rail-resizer:focus-visible::after{background:rgb(var(--color-accent))}
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
 .writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-tools{display:flex;align-items:center;gap:.25rem}.writing-studio-icon-button{display:inline-flex;align-items:center;justify-content:center;width:1.85rem;height:1.85rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-icon-button:disabled{cursor:default;opacity:.45}.writing-studio-tool-menu{position:relative}.writing-studio-export-menu{position:absolute;right:0;top:2.2rem;z-index:20;display:grid;min-width:8.5rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 12px 32px rgba(0,0,0,.28);padding:.25rem}.writing-studio-export-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.45rem .55rem;text-align:left;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-export-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-composer{border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-composer [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-composer [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-meta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:1rem;padding:.25rem .9rem .75rem;color:rgb(var(--color-dim));font-size:.66rem;font-family:var(--font-mono,monospace)}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
 .writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-list{display:grid;gap:.35rem;max-height:min(52vh,28rem);overflow:auto}.writing-studio-doc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;width:100%;border:0;border-radius:7px;background:transparent;color:inherit;padding:.65rem .7rem;text-align:left;cursor:pointer}.writing-studio-doc-row:hover,.writing-studio-doc-row.is-active{background:rgb(var(--color-surface-hover))}.writing-studio-doc-row strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.86rem}.writing-studio-doc-row span{display:block;color:rgb(var(--color-dim));font-size:.72rem;margin-top:.18rem}.writing-studio-doc-import input[type=file]{display:none}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
 @media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;padding-top:0}.writing-studio-comment{max-width:48rem}}
-@media(max-width:860px){.writing-studio{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}}
+@media(max-width:860px){.writing-studio,.writing-studio.has-collapsed-rail{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-rail-resizer{display:none}}
 `;
 
 function ensureWritingStudioStyle(): void {
@@ -77,6 +79,22 @@ interface DocumentSummary {
   wordCount: number;
 }
 
+interface WritingModelInfo {
+  id: string;
+  provider: string;
+  name: string;
+  context: number;
+  input?: Array<'text' | 'image'>;
+  reasoning?: boolean;
+  supportedServiceTiers?: string[];
+}
+
+interface WritingModelState {
+  currentModel?: string;
+  currentThinkingLevel?: string;
+  models?: WritingModelInfo[];
+}
+
 interface WritingEvent {
   id: string;
   type: string;
@@ -110,6 +128,12 @@ type WritingIconName = 'open' | 'new' | 'save' | 'export' | 'review' | 'settings
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
 const actorId = `writer-${Math.random().toString(16).slice(2)}`;
+const railWidthStorageKey = 'writing-studio:rail-width';
+const modelStorageKey = 'writing-studio:model';
+const thinkingLevelStorageKey = 'writing-studio:thinking-level';
+const defaultRailWidth = 352;
+const minRailWidth = 288;
+const maxRailWidth = 620;
 
 const iconPaths: Record<WritingIconName, string> = {
   open: 'M3.5 6.5h5l1.4 1.8h6.6v7.2a2 2 0 0 1-2 2h-11z M3.5 6.5v-2h5l1.2 1.3h6.8v2.5',
@@ -172,6 +196,33 @@ function printPdf(title: string, markdown: string): void {
 function formatTime(value: string | null): string {
   if (!value) return 'Never';
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function readStringSetting(key: string): string {
+  try {
+    return localStorage.getItem(key) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function writeStringSetting(key: string, value: string): void {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    // Ignore local storage failures.
+  }
+}
+
+function readRailWidth(): number {
+  const value = Number(readStringSetting(railWidthStorageKey));
+  return Number.isFinite(value) ? Math.min(maxRailWidth, Math.max(minRailWidth, value)) : defaultRailWidth;
+}
+
+function modelSelectionValue(model: WritingModelInfo, models: WritingModelInfo[]): string {
+  const duplicateId = models.some((other) => other.id === model.id && other.provider !== model.provider);
+  return duplicateId ? `${model.provider}/${model.id}` : model.id;
 }
 
 function readMarkdownFromEditor(editor: MarkdownEditor): string {
@@ -324,10 +375,79 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [documentSearch, setDocumentSearch] = useState('');
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [railWidth, setRailWidth] = useState(readRailWidth);
+  const [models, setModels] = useState<WritingModelInfo[]>([]);
+  const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
+  const [currentThinkingLevel, setCurrentThinkingLevel] = useState(() => readStringSetting(thinkingLevelStorageKey));
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(buildApiPath('/models'))
+      .then((response) => {
+        if (!response.ok) throw new Error(`Model list failed: ${response.status}`);
+        return response.json() as Promise<WritingModelState>;
+      })
+      .then((result) => {
+        if (cancelled) return;
+        const nextModels = Array.isArray(result.models) ? result.models : [];
+        setModels(nextModels);
+        setCurrentModel((current) => {
+          const stored = current || readStringSetting(modelStorageKey);
+          const next = stored || result.currentModel || (nextModels[0] ? modelSelectionValue(nextModels[0], nextModels) : '');
+          writeStringSetting(modelStorageKey, next);
+          return next;
+        });
+        setCurrentThinkingLevel((current) => {
+          const stored = current || readStringSetting(thinkingLevelStorageKey);
+          const next = stored || result.currentThinkingLevel || '';
+          writeStringSetting(thinkingLevelStorageKey, next);
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleRailResizeStart = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const maxWidth = Math.min(maxRailWidth, Math.max(minRailWidth, Math.floor(window.innerWidth * 0.55)));
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const nextWidth = Math.min(maxWidth, Math.max(minRailWidth, Math.round(window.innerWidth - moveEvent.clientX)));
+      setRailWidth(nextWidth);
+      writeStringSetting(railWidthStorageKey, String(nextWidth));
+    };
+
+    const stopResize = () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopResize);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopResize, { once: true });
+  }, []);
+
+  const handleSelectModel = useCallback((modelId: string) => {
+    setCurrentModel(modelId);
+    writeStringSetting(modelStorageKey, modelId);
+  }, []);
+
+  const handleSelectThinkingLevel = useCallback((thinkingLevel: string) => {
+    setCurrentThinkingLevel(thinkingLevel);
+    writeStringSetting(thinkingLevelStorageKey, thinkingLevel);
+  }, []);
 
   const persistUpdate = useCallback(
     (update: Uint8Array, nextMarkdown: string) => {
@@ -457,7 +577,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       setBusy('review');
       try {
         const currentMarkdown = syncEditorMarkdown() ?? markdown;
-        const result = (await pa.extension.invoke('writingStudioRunReview', { markdown: currentMarkdown, trigger, documentId: activeDocumentId })) as { annotations: Annotation[] };
+        const result = (await pa.extension.invoke('writingStudioRunReview', {
+          markdown: currentMarkdown,
+          trigger,
+          documentId: activeDocumentId,
+          modelRef: currentModel || undefined,
+        })) as { annotations: Annotation[] };
         const currentQuotes = result.annotations.map((annotation) => annotation.quote);
         setState((current) =>
           current
@@ -484,7 +609,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         setBusy(null);
       }
     },
-    [activeDocumentId, editor, markdown, pa],
+    [activeDocumentId, currentModel, editor, markdown, pa, syncEditorMarkdown],
   );
 
   const sendChat = useCallback(
@@ -615,9 +740,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   }));
   const filteredDocuments = documents.filter((doc) => doc.title.toLowerCase().includes(documentSearch.trim().toLowerCase()));
   const saveStatusLabel = saveStatus === 'saved' ? 'Saved' : saveStatus === 'saving' ? 'Saving...' : saveStatus === 'unsaved' ? 'Unsaved' : 'Save failed';
+  const layoutStyle = { '--writing-studio-rail-width': `${railWidth}px` } as CSSProperties;
 
   return (
-    <main className={`writing-studio ${railCollapsed ? 'has-collapsed-rail' : ''}`}>
+    <main className={`writing-studio ${railCollapsed ? 'has-collapsed-rail' : ''}`} style={layoutStyle}>
       <section className="writing-studio-main">
         <div className="writing-studio-meta">
           <span>{eventCount} replay events · Last review {formatTime(state?.lastAgentRunAt ?? null)} · {resolvedCount} resolved</span>
@@ -649,6 +775,16 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       </section>
 
       <aside className={`writing-studio-rail ${railCollapsed ? 'is-collapsed' : ''}`}>
+        {!railCollapsed && (
+          <div
+            className="writing-studio-rail-resizer"
+            role="separator"
+            aria-label="Resize chat sidebar"
+            aria-orientation="vertical"
+            tabIndex={0}
+            onPointerDown={handleRailResizeStart}
+          />
+        )}
         <div className="writing-studio-rail-toolbar">
           {!railCollapsed && <span className="writing-studio-rail-title">Chat</span>}
           <div className="writing-studio-rail-tools">
@@ -719,17 +855,17 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               conversationId={null}
               workspaceCwd={null}
               isStreaming={busy === 'chat'}
-              models={[]}
-              currentModel=""
-              currentThinkingLevel=""
+              models={models}
+              currentModel={currentModel}
+              currentThinkingLevel={currentThinkingLevel}
               tokens={null}
               contextUsage={null}
               onSubmit={(text: string) => {
                 void sendChat(text);
               }}
               onAbortStream={() => setBusy(null)}
-              onSelectModel={() => {}}
-              onSelectThinkingLevel={() => {}}
+              onSelectModel={handleSelectModel}
+              onSelectThinkingLevel={handleSelectThinkingLevel}
               composerMeta={<></>}
             />
           </div>
