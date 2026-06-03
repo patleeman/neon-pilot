@@ -65,7 +65,8 @@
     "e2e:chat": "node scripts/e2e-chat-test.mjs",
     "perf:desktop": "node scripts/perf-desktop-smoke.mjs",
     "eval:ds4": "node scripts/ds4-agent-eval.mjs",
-    "bench:ds4": "node scripts/ds4-task-benchmark.mjs"
+    "bench:ds4": "node scripts/ds4-task-benchmark.mjs",
+    "bench:agent": "node scripts/neon-pilot-agent-benchmark.mjs"
   },
   "devDependencies": {
     "@electron/asar": "3.4.1",

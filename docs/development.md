@@ -78,6 +78,16 @@ pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500
 
 If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
 
+Agent micro benchmark:
+
+```bash
+pnpm run bench:agent -- --output=benchmarks/neon-pilot-agent-micro.jsonl --markdown=benchmarks/neon-pilot-agent-micro.md
+```
+
+This builds a 20-minute-per-task benchmark suite from `patrickleenyc/personal-agent-evals`. It selects no-code diagnosis/planning cases from the `cases` config and converts a few real failure windows from `basis_candidates` into bounded diagnostic tasks. The benchmark is meant for quick agent runs that measure repo navigation, diagnosis quality, instruction following, and handoff clarity without waiting for full feature implementations.
+
+The dataset is private/gated, so the script reads `HF_TOKEN` or `~/.cache/huggingface/token`. Use `--limit=<n>` and `--basis-limit=<n>` to tune suite size.
+
 ## Web UI and desktop QA
 
 If you modify web UI, inspect it visually before signing off. Avoid raw `agent-browser`; use the repo wrapper so sessions close cleanly:
