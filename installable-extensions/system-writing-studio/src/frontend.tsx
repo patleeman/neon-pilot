@@ -1,7 +1,10 @@
 import { Markdown } from '@tiptap/markdown';
+import { Extension } from '@tiptap/core';
 import type { FileTree as TreesModel } from '@pierre/trees';
 import { FileTree as TreesFileTree } from '@pierre/trees/react';
 import Link from '@tiptap/extension-link';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { EditorContent, type Editor, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
@@ -25,6 +28,7 @@ const writingStudioCss = `
 .writing-studio{display:grid;grid-template-columns:minmax(0,1fr)var(--writing-studio-rail-width,22rem);height:100%;min-height:0;background:rgb(var(--color-base));color:rgb(var(--color-primary))}
 .writing-studio.has-collapsed-rail{grid-template-columns:minmax(0,1fr)3rem}
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
+.writing-studio-filebar{display:flex;align-items:center;max-width:68rem;margin:0 auto .55rem}.writing-studio-file-name{width:min(24rem,100%);min-width:0;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.28rem .4rem;font:inherit;font-size:.86rem;font-weight:560;line-height:1.2}.writing-studio-file-name:hover,.writing-studio-file-name:focus{background:rgb(var(--color-surface));color:rgb(var(--color-primary));outline:1px solid rgb(var(--color-border-subtle))}.writing-studio-file-name::placeholder{color:rgb(var(--color-dim))}
 .writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-format-spacer{flex:1 1 auto;min-width:.5rem}.writing-studio-format-save{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-format-save:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-save:disabled{cursor:default;opacity:.55}.writing-studio-format-save::after{content:"";position:absolute;right:.16rem;top:.16rem;width:.34rem;height:.34rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-format-save.is-saved::after{background:rgb(var(--color-success))}.writing-studio-format-save.is-saving::after{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-format-save.is-unsaved::after{background:rgb(var(--color-warning))}.writing-studio-format-save.is-error::after{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
@@ -154,6 +158,42 @@ const defaultRailWidth = 352;
 const minRailWidth = 288;
 const maxRailWidth = 620;
 const useWritingStudioFileTreeModel = useFileTreeModel as unknown as (options: FileTreeModelOptions) => FileTreeModelResult;
+const annotationHighlightPluginKey = new PluginKey('writingStudioAnnotationHighlight');
+
+interface AnnotationHighlight {
+  id: string;
+  kind: Annotation['kind'];
+  from: number;
+  to: number;
+}
+
+function createAnnotationHighlightExtension(activeHighlightRef: { current: AnnotationHighlight | null }) {
+  return Extension.create({
+    name: 'writingStudioAnnotationHighlight',
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          key: annotationHighlightPluginKey,
+          props: {
+            decorations(state) {
+              const highlight = activeHighlightRef.current;
+              if (!highlight || highlight.to <= highlight.from) return DecorationSet.empty;
+              const from = Math.max(1, Math.min(highlight.from, state.doc.content.size));
+              const to = Math.max(from, Math.min(highlight.to, state.doc.content.size));
+              return DecorationSet.create(state.doc, [
+                Decoration.inline(from, to, {
+                  class: 'writing-studio-mark-highlight',
+                  'data-kind': highlight.kind,
+                  'data-annotation-id': highlight.id,
+                }),
+              ]);
+            },
+          },
+        }),
+      ];
+    },
+  });
+}
 
 const iconPaths: Record<WritingIconName, string> = {
   open: 'M3.5 6.5h5l1.4 1.8h6.6v7.2a2 2 0 0 1-2 2h-11z M3.5 6.5v-2h5l1.2 1.3h6.8v2.5',
@@ -440,74 +480,10 @@ function markdownFromEditorElement(element: HTMLElement | null | undefined): str
   return blocks.join('\n\n');
 }
 
-function textNodesUnder(root: Node): Text[] {
-  const nodes: Text[] = [];
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode: (node) => {
-      const parent = node.parentElement;
-      if (!parent || parent.closest('.writing-studio-mark-highlight')) return NodeFilter.FILTER_REJECT;
-      return node.textContent?.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    },
-  });
-  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
-  return nodes;
-}
-
-function clearEditorHighlights(root: HTMLElement): void {
-  for (const mark of Array.from(root.querySelectorAll('.writing-studio-mark-highlight'))) {
-    if (mark instanceof HTMLElement && mark.tagName.toLowerCase() !== 'span') {
-      mark.classList.remove('writing-studio-mark-highlight');
-      continue;
-    }
-    const parent = mark.parentNode;
-    if (!parent) continue;
-    parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
-    parent.normalize();
-  }
-}
-
-function highlightEditorQuotes(root: HTMLElement, annotations: Annotation[]): void {
-  clearEditorHighlights(root);
-  for (const annotation of annotations) {
-    const quoteCandidates = quoteCandidatesForAnnotation(annotation);
-    const quote = quoteCandidates[0] ?? '';
-    if (!quote && annotation.to <= annotation.from) continue;
-    const nodes = textNodesUnder(root);
-    const match = findQuoteInTextNodes(nodes, quoteCandidates);
-    const range = document.createRange();
-    if (match) {
-      range.setStart(match.node, match.index);
-      range.setEnd(match.node, match.index + match.quote.length);
-    } else if (!setRangeFromTextOffsets(range, nodes, annotation.from, annotation.to)) {
-      continue;
-    }
-    const mark = document.createElement('span');
-    mark.className = 'writing-studio-mark-highlight';
-    mark.dataset.kind = annotation.kind;
-    mark.dataset.annotationId = annotation.id;
-    try {
-      range.surroundContents(mark);
-    } catch {
-      range.detach();
-    }
-  }
-}
-
 function quoteCandidatesForAnnotation(annotation: Annotation): string[] {
   const raw = annotation.quote.trim();
   const withoutMarkdownHeading = raw.replace(/^#{1,6}\s+/, '').trim();
   return Array.from(new Set([raw, withoutMarkdownHeading].filter((quote) => quote.length > 0)));
-}
-
-function findQuoteInTextNodes(nodes: Text[], quotes: string[]): { node: Text; index: number; quote: string } | null {
-  for (const quote of quotes) {
-    for (const node of nodes) {
-      const text = node.textContent ?? '';
-      const index = text.indexOf(quote);
-      if (index >= 0) return { node, index, quote };
-    }
-  }
-  return null;
 }
 
 function findAnnotationSelection(editor: Editor, annotation: Annotation): { from: number; to: number } | null {
@@ -562,26 +538,6 @@ function expandTextOffsetsToUsefulRange(text: string, from: number, to: number):
   while (end > start && /\s/.test(text[end - 1] ?? '')) end -= 1;
   if (text.slice(start, end).trim().length >= 8) return { from: start, to: end };
   return { from: Math.max(0, Math.min(from, length)), to: Math.max(0, Math.min(to, length)) };
-}
-
-function setRangeFromTextOffsets(range: Range, nodes: Text[], from: number, to: number): boolean {
-  if (to <= from) return false;
-  let offset = 0;
-  let started = false;
-  for (const node of nodes) {
-    const textLength = node.textContent?.length ?? 0;
-    const nextOffset = offset + textLength;
-    if (!started && from <= nextOffset) {
-      range.setStart(node, Math.max(0, Math.min(textLength, from - offset)));
-      started = true;
-    }
-    if (started && to <= nextOffset) {
-      range.setEnd(node, Math.max(0, Math.min(textLength, to - offset)));
-      return !range.collapsed;
-    }
-    offset = nextOffset + 1;
-  }
-  return false;
 }
 
 function useWritingDoc(initialMarkdown: string, onCrdtUpdate: (update: Uint8Array, markdown: string) => void) {
@@ -643,6 +599,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [fileNameDraft, setFileNameDraft] = useState('');
   const [railWidth, setRailWidth] = useState(readRailWidth);
   const [models, setModels] = useState<WritingModelInfo[]>([]);
   const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
@@ -654,6 +611,13 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
+  const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
+  const fileNameDraftRef = useRef('');
+
+  const updateFileNameDraft = useCallback((value: string) => {
+    fileNameDraftRef.current = value;
+    setFileNameDraft(value);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -748,6 +712,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       StarterKit.configure({ link: false }),
       Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
       Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: false }),
+      createAnnotationHighlightExtension(activeHighlightRef),
     ],
     content: markdown,
     editorProps: {
@@ -816,7 +781,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? documentId ?? 'default');
     setSettingsDraft(next.settings);
     setSaveStatus('saved');
-    setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id ?? documentId))?.updatedAt ?? new Date().toISOString());
+    const activeDoc = (next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id ?? documentId));
+    updateFileNameDraft(activeDoc?.fileName ?? next.fileName ?? '');
+    setLastSavedAt(activeDoc?.updatedAt ?? new Date().toISOString());
     setActiveAnnotationId(null);
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
@@ -827,7 +794,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         applyingEditorContent.current = false;
       }, 250);
     }
-  }, [editor, pa, setMarkdownSilently]);
+  }, [editor, pa, setMarkdownSilently, updateFileNameDraft]);
 
   const handleTreeSelectionChange = useCallback(
     (paths: readonly string[]) => {
@@ -862,8 +829,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   useEffect(() => {
     if (!editor || readMarkdownFromEditor(editor) === markdown) return;
     applyingEditorContent.current = true;
-    const editorElement = (editor as unknown as { view?: { dom?: HTMLElement } }).view?.dom;
-    if (editorElement) clearEditorHighlights(editorElement);
     editor.commands.setContent(markdown, { contentType: 'markdown' });
     setMarkdownSilently(markdown);
     setTimeout(() => {
@@ -873,17 +838,14 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
 
   useEffect(() => {
     if (!editor) return;
-    const editorElement = (editor as unknown as { view?: { dom?: HTMLElement } }).view?.dom;
-    if (!editorElement) return;
-    const timer = setTimeout(() => {
-      const openAnnotations = (state?.annotations ?? []).filter((annotation) => annotation.status === 'open');
-      const activeAnnotation = openAnnotations.find((annotation) => annotation.id === activeAnnotationId);
-      highlightEditorQuotes(
-        editorElement,
-        activeAnnotation ? [activeAnnotation] : [],
-      );
-    }, 0);
-    return () => clearTimeout(timer);
+    const openAnnotations = (state?.annotations ?? []).filter((annotation) => annotation.status === 'open');
+    const activeAnnotation = openAnnotations.find((annotation) => annotation.id === activeAnnotationId);
+    const selection = activeAnnotation ? findAnnotationSelection(editor, activeAnnotation) : null;
+    activeHighlightRef.current =
+      activeAnnotation && selection
+        ? { id: activeAnnotation.id, kind: activeAnnotation.kind, from: selection.from, to: selection.to }
+        : null;
+    editor.view.dispatch(editor.state.tr.setMeta(annotationHighlightPluginKey, true));
   }, [activeAnnotationId, editor, markdown, state?.annotations]);
 
   const runReview = useCallback(
@@ -912,13 +874,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               }
             : current,
         );
-        const editorElement = (editor as unknown as { view?: { dom?: HTMLElement } }).view?.dom;
-        if (editorElement) {
-          const firstAnnotation = result.annotations[0];
-          setActiveAnnotationId(firstAnnotation?.id ?? null);
-          const selection = firstAnnotation ? findAnnotationSelection(editor, firstAnnotation) : null;
-          if (selection) setTimeout(() => editor.chain().focus().setTextSelection(selection).run(), 50);
-        }
+        setActiveAnnotationId(result.annotations[0]?.id ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -948,11 +904,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const selectAnnotation = useCallback(
     (annotation: Annotation) => {
       setActiveAnnotationId(annotation.id);
-      if (!editor) return;
-      const selection = findAnnotationSelection(editor, annotation);
-      if (selection) editor.chain().focus().setTextSelection(selection).run();
     },
-    [editor],
+    [],
   );
 
   const discussAnnotation = useCallback(
@@ -992,33 +945,37 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     }
   }, [activeDocumentId, pa, settingsDraft]);
 
-  const saveDocument = useCallback(async () => {
+  const saveDocument = useCallback(async (nextFileName?: string) => {
     setSaveStatus('saving');
     const currentMarkdown = syncEditorMarkdown() ?? markdown;
+    const fileName = nextFileName ?? fileNameDraftRef.current ?? fileNameDraft;
     try {
-      const result = (await pa.extension.invoke('writingStudioSaveDocument', { documentId: activeDocumentId, markdown: currentMarkdown })) as {
+      const result = (await pa.extension.invoke('writingStudioSaveDocument', { documentId: activeDocumentId, markdown: currentMarkdown, fileName })) as {
         document: DocumentSummary;
       };
       setDocuments((current) => [result.document, ...current.filter((doc) => doc.id !== result.document.id)]);
+      setState((current) => (current ? { ...current, fileName: result.document.fileName, folderPath: result.document.folderPath, title: result.document.title } : current));
+      updateFileNameDraft(result.document.fileName);
       setSaveStatus('saved');
       setLastSavedAt(result.document.updatedAt ?? new Date().toISOString());
     } catch (err) {
       setSaveStatus('error');
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [activeDocumentId, markdown, pa, syncEditorMarkdown]);
+  }, [activeDocumentId, fileNameDraft, markdown, pa, syncEditorMarkdown, updateFileNameDraft]);
 
   const createDocument = useCallback(async () => {
     const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: 'Untitled', fileName: 'untitled.md', folderPath: 'Drafts' })) as StoredState;
     setState(next);
     setDocuments(next.documents ?? []);
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
+    updateFileNameDraft(next.fileName ?? 'untitled.md');
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
     setSaveStatus('saved');
     setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString());
     editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
-  }, [editor, pa, setMarkdownSilently]);
+  }, [editor, pa, setMarkdownSilently, updateFileNameDraft]);
 
   const importDocument = useCallback(
     async (file: File) => {
@@ -1032,13 +989,14 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       setState(next);
       setDocuments(next.documents ?? []);
       setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
+      updateFileNameDraft(next.fileName ?? file.name);
       setMarkdown(next.markdown);
       setMarkdownSilently(next.markdown);
       setSaveStatus('saved');
       setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString());
       editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
     },
-    [editor, pa, setMarkdownSilently],
+    [editor, pa, setMarkdownSilently, updateFileNameDraft],
   );
 
   const exportDocument = useCallback(
@@ -1130,6 +1088,30 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   return (
     <main className={`writing-studio ${railCollapsed ? 'has-collapsed-rail' : ''}`} style={layoutStyle}>
       <section className="writing-studio-main">
+        <div className="writing-studio-filebar">
+          <input
+            className="writing-studio-file-name"
+            value={fileNameDraft}
+            onChange={(event) => {
+              updateFileNameDraft(event.target.value);
+              setSaveStatus('unsaved');
+            }}
+            onBlur={(event) => {
+              const nextFileName = event.currentTarget.value;
+              if (nextFileName.trim()) void saveDocument(nextFileName);
+              else updateFileNameDraft(state?.fileName ?? 'draft.md');
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                if (event.currentTarget.value.trim()) void saveDocument(event.currentTarget.value);
+                event.currentTarget.blur();
+              }
+            }}
+            placeholder="filename.md"
+            aria-label="File name"
+            spellCheck={false}
+          />
+        </div>
         <WritingFormatBar editor={editor} saveStatus={saveStatus} saveTooltip={saveTooltip} onSave={() => void saveDocument()} />
         <div className="writing-studio-canvas">
           <div className="writing-studio-editor-frame">
