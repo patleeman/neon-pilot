@@ -359,27 +359,34 @@ describe('extension registry', () => {
     );
   });
 
-  it('seeds onboarding into runtime extensions by default and remembers uninstall', async () => {
+  it('seeds default installable extensions into runtime extensions and remembers uninstall', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
-    const extensionRoot = join(stateRoot, 'extensions', 'system-onboarding');
+    const onboardingRoot = join(stateRoot, 'extensions', 'system-onboarding');
+    const browserRoot = join(stateRoot, 'extensions', 'system-browser');
 
     expect(readRuntimeExtensionEntries(stateRoot)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          packageRoot: extensionRoot,
+          packageRoot: onboardingRoot,
           source: 'runtime',
           manifest: expect.objectContaining({ id: 'system-onboarding', packageType: 'user' }),
         }),
+        expect.objectContaining({
+          packageRoot: browserRoot,
+          source: 'runtime',
+          manifest: expect.objectContaining({ id: 'system-browser', packageType: 'user' }),
+        }),
       ]),
     );
-    expect(existsSync(join(extensionRoot, 'extension.json'))).toBe(true);
+    expect(existsSync(join(onboardingRoot, 'extension.json'))).toBe(true);
+    expect(existsSync(join(browserRoot, 'extension.json'))).toBe(true);
 
-    await deleteRuntimeExtension('system-onboarding', stateRoot);
-    expect(existsSync(extensionRoot)).toBe(false);
+    await deleteRuntimeExtension('system-browser', stateRoot);
+    expect(existsSync(browserRoot)).toBe(false);
     invalidateExtensionRegistryReadCaches(stateRoot);
-    expect(readRuntimeExtensionEntries(stateRoot).some((entry) => entry.manifest.id === 'system-onboarding')).toBe(false);
+    expect(readRuntimeExtensionEntries(stateRoot).some((entry) => entry.manifest.id === 'system-browser')).toBe(false);
     expect(JSON.parse(readFileSync(join(stateRoot, 'extensions', 'registry.json'), 'utf8'))).toMatchObject({
-      removedDefaultInstalledIds: ['system-onboarding'],
+      removedDefaultInstalledIds: ['system-browser'],
     });
   });
 
@@ -399,7 +406,9 @@ describe('extension registry', () => {
       }),
     );
 
-    expect(readRuntimeExtensionEntries(stateRoot).filter((entry) => entry.manifest.id !== 'system-onboarding')).toEqual([]);
+    expect(
+      readRuntimeExtensionEntries(stateRoot).filter((entry) => !['system-browser', 'system-onboarding'].includes(entry.manifest.id)),
+    ).toEqual([]);
     expect(listExtensionInstallSummaries(stateRoot)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

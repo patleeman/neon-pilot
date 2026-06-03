@@ -569,7 +569,7 @@ function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot()): stri
   return join(getRuntimeExtensionsRoot(stateRoot), 'startup-marker.json');
 }
 
-const DEFAULT_INSTALLED_EXTENSION_IDS = ['system-onboarding'];
+const DEFAULT_INSTALLED_EXTENSION_IDS = ['system-browser', 'system-onboarding'];
 
 function candidateDefaultInstalledExtensionRoots(): string[] {
   return [

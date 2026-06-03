@@ -353,33 +353,6 @@ const smokes = {
     assert(result.text.includes('updated: smoke.txt'), 'applyPatch did not update smoke file');
     await expectReject(() => module.image({ prompt: 'draw smoke' }, { ...ctx, agentToolContext: undefined }), /active agent tool context/i);
   },
-  async 'system-code-mode'() {
-    await smokeAgentFactory('default');
-    const execCode = registeredTools.find((tool) => tool.name === 'exec_code');
-    assert(execCode?.execute, 'exec_code tool was not registered');
-    const start = registeredEvents.find((event) => event.eventName === 'session_start');
-    assert(start?.handler, 'code mode session_start hook missing');
-    activeTools = ['read', 'exec_code'];
-    await start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
-    assert(JSON.stringify(activeTools) === JSON.stringify(['read']), 'code mode should not stay active by default');
-    sessionEntries = [{ type: 'custom', customType: 'code-mode-state', data: { enabled: true } }];
-    activeTools = ['read'];
-    await start.handler({}, { ...ctx.agentToolContext, getActiveTools: pi.getActiveTools, setActiveTools: pi.setActiveTools });
-    assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not hydrate from session metadata');
-    const draftOn = await module.toggleCodeMode({ draft: true, action: 'on' }, ctx);
-    assert(draftOn.enabled === true, 'code mode draft toggle did not enable');
-    const draftState = await module.readState({ draft: true }, ctx);
-    assert(draftState.enabled === true, 'code mode draft state did not persist');
-    const consumedDraftState = await module.consumeDraftState({}, ctx);
-    assert(consumedDraftState.enabled === true, 'code mode draft state did not consume enabled state');
-    const draftAfterConsume = await module.readState({ draft: true }, ctx);
-    assert(draftAfterConsume.enabled === false, 'code mode draft state was not cleared after consume');
-    await module.toggleCodeMode({ conversationId: 'smoke-conversation', action: 'on' }, ctx);
-    assert(JSON.stringify(activeTools) === JSON.stringify(['exec_code']), 'code mode did not replace active tools');
-    assert(appendedEntries.some((entry) => entry.customType === 'code-mode-state'), 'code mode state was not persisted to session');
-    const result = await execCode.execute('smoke', { code: 'return await listTools();' }, undefined, undefined, ctx.agentToolContext);
-    assert(result?.content?.[0]?.text?.includes('read'), 'exec_code did not expose tool discovery');
-  },
   async 'system-alleycat'() {
     const result = await module.status({}, ctx);
     assert(result.running === false, 'alleycat status should not auto-start service');

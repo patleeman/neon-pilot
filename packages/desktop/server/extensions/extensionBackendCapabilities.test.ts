@@ -7,7 +7,7 @@ describe('extension backend capability dispatcher', () => {
     const conversations = {
       get: vi.fn(async () => ({ id: 'conv-1', running: false, toolNames: ['read'] })),
       create: vi.fn(async () => ({ id: 'conv-2', conversationId: 'conv-2' })),
-      setActiveTools: vi.fn(async () => ({ conversationId: 'conv-1', toolNames: ['exec_code'] })),
+      setActiveTools: vi.fn(async () => ({ conversationId: 'conv-1', toolNames: ['read'] })),
       appendCustomEntry: vi.fn(async () => ({ ok: true })),
       appendTranscriptBlock: vi.fn(async () => ({ blockId: 'block-1' })),
       updateTranscriptBlock: vi.fn(async () => ({ blockId: 'block-1' })),
@@ -33,7 +33,7 @@ describe('extension backend capability dispatcher', () => {
         dispatch({
           id: 1,
           kind: 'capabilityRequest',
-          extensionId: 'system-code-mode',
+          extensionId: 'system-conversation-tools',
           capability: 'conversations',
           operation: 'get',
           input: { conversationId: 'conv-1' },
@@ -45,22 +45,22 @@ describe('extension backend capability dispatcher', () => {
         dispatch({
           id: 2,
           kind: 'capabilityRequest',
-          extensionId: 'system-code-mode',
+          extensionId: 'system-conversation-tools',
           capability: 'conversations',
           operation: 'setActiveTools',
-          input: { conversationId: 'conv-1', toolNames: ['exec_code'] },
+          input: { conversationId: 'conv-1', toolNames: ['read'] },
         }),
       ),
-    ).resolves.toEqual({ conversationId: 'conv-1', toolNames: ['exec_code'] });
+    ).resolves.toEqual({ conversationId: 'conv-1', toolNames: ['read'] });
     await expect(
       Promise.resolve(
         dispatch({
           id: 3,
           kind: 'capabilityRequest',
-          extensionId: 'system-code-mode',
+          extensionId: 'system-conversation-tools',
           capability: 'conversations',
           operation: 'appendCustomEntry',
-          input: { conversationId: 'conv-1', customType: 'code-mode-state', data: { enabled: true } },
+          input: { conversationId: 'conv-1', customType: 'conversation-tools-state', data: { enabled: true } },
         }),
       ),
     ).resolves.toEqual({ ok: true });
@@ -214,9 +214,9 @@ describe('extension backend capability dispatcher', () => {
       ),
     ).resolves.toEqual({ ok: true });
 
-    expect(conversations.get).toHaveBeenCalledWith('system-code-mode', 'conv-1');
-    expect(conversations.setActiveTools).toHaveBeenCalledWith('system-code-mode', 'conv-1', ['exec_code']);
-    expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-code-mode', 'conv-1', 'code-mode-state', { enabled: true });
+    expect(conversations.get).toHaveBeenCalledWith('system-conversation-tools', 'conv-1');
+    expect(conversations.setActiveTools).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', ['read']);
+    expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'conversation-tools-state', { enabled: true });
     expect(conversations.create).toHaveBeenCalledWith('system-onboarding', { cwd: '/repo', title: 'Welcome', live: false });
     expect(conversations.appendTranscriptBlock).toHaveBeenCalledWith('system-onboarding', {
       conversationId: 'conv-2',
@@ -260,7 +260,7 @@ describe('extension backend capability dispatcher', () => {
       dispatch({
         id: 1,
         kind: 'capabilityRequest',
-        extensionId: 'system-code-mode',
+        extensionId: 'system-conversation-tools',
         capability: 'conversations',
         operation: 'setActiveTools',
         input: { conversationId: 'conv-1', toolNames: ['read', 1] },

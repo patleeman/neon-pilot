@@ -142,7 +142,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Views: Workspace files tab-local rail, workspace file detail.
 - Test tree load, cwd switching, file open, large file, binary/image file, diff view, readonly mode, missing file, permission errors.
 
-### Browser (`system-browser`, default disabled)
+### Browser (`system-browser`, default installed)
 
 - Views: Browser workbench tabs.
 - Commands/buttons/keybindings: open browser (`mod+shift+b`), new tab (`mod+t`), reopen closed tab (`mod+shift+t`), close tab (`mod+w`), focus location bar (`mod+l`).
@@ -474,7 +474,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - tools: web-fetch/web_fetch
 - backend actions: webFetch
 
-### system-browser — Browser (default disabled)
+### system-browser — Browser (default installed)
 
 - tools: browser_snapshot, browser_cdp, browser_screenshot
 - views: browser-tabs, browser-workbench

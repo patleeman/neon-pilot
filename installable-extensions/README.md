@@ -33,8 +33,7 @@ Current installable extensions:
 
 - `system-agent-browser` — agent-browser CLI tool integration for autonomous browser/app automation.
 - `system-alleycat` — mobile pairing bridge for Kitty Litter clients.
-- `system-browser` — browser automation tool and Workbench browser views.
-- `system-code-mode` — conversation-scoped code execution mode and related composer controls.
+- `system-browser` — browser automation tool and Workbench browser views. Installed by default, but removable.
 - `system-duckduckgo-search` — agent web search tool backed by DuckDuckGo HTML results.
 - `system-exa-search` — agent tool for Exa web search.
 - `system-local-models` — local MLX and GGUF model management UI. Runtime implementation lives in `shared/local-model-runtimes`.

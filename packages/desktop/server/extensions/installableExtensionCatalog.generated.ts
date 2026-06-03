@@ -19,11 +19,6 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     "description": "Browse web pages beside the active conversation."
   },
   {
-    "id": "system-code-mode",
-    "name": "Code Mode",
-    "description": "Replace the model-visible tool surface with a JavaScript REPL that exposes tools as globals."
-  },
-  {
     "id": "system-ds4",
     "name": "DS4",
     "description": "DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4."

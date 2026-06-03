@@ -10,7 +10,7 @@ Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.1-rc.0
 
 Highlights in this train:
 
-- Makes Code Mode and onboarding available as installable extension experiences.
+- Installs Browser and onboarding by default while keeping them removable runtime extensions.
 - Keeps extension-owned workflow entrypoints aligned with the first-party extension model validated in the 0.10 train.
 - Refreshes site screenshots so public docs reflect the current desktop experience for this RC.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.

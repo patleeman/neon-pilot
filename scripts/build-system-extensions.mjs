@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionsRoot = join(repoRoot, 'extensions');
 const installableRoot = join(repoRoot, 'installable-extensions');
-const defaultInstallableExtensionIds = new Set(['system-onboarding']);
+const defaultInstallableExtensionIds = new Set(['system-browser', 'system-onboarding']);
 const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 
 function readJson(path) {
