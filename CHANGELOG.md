@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.1-rc.2 — 2026-06-03
+
+### Highlights
+
+- Adds the Dynamic Workflows system extension with backend workflow execution, agent-facing skill guidance, and runtime smoke coverage.
+- Adds Image Probe settings UI wiring so image analysis configuration lives with the extension-owned settings surface.
+- Improves DS4 and live-session runtime behavior with updated model defaults, background-runner handling, and focused regression coverage.
+- Polishes linked run rendering and related Settings provider tests for the refreshed extension surfaces.
+
+### Notes
+
+- 1 commit since the previous release.
+
 ## 0.10.1-rc.1 — 2026-06-03
 
 ### Highlights
