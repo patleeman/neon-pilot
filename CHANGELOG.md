@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.1-rc.3 — 2026-06-03
+
+### Highlights
+
+- Bundles installable extension zip assets inside the packaged RC app so catalog installs work before GitHub release assets are uploaded.
+- Includes Browser in packaged default-installable resources so fresh RC profiles seed it by default.
+- Keeps the Extension Manager catalog aligned with the local packaged app by resolving bundled installable assets from `process.resourcesPath`.
+
+### Notes
+
+- 1 commit since the previous release.
+
 ## 0.10.1-rc.2 — 2026-06-03
 
 ### Highlights
