@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 
 type EventType = 'yjs_update' | 'annotation_added' | 'annotation_resolved' | 'chat_message' | 'agent_run_started' | 'agent_run_completed';
 type AnnotationKind = 'comment' | 'suggestion' | 'reaction' | 'warning';
@@ -269,6 +270,71 @@ function buildReviewAnnotations(markdown: string, runId: string, settings: Writi
   return annotations.slice(0, 3);
 }
 
+function parseAgentAnnotations(text: string, markdown: string, runId: string): Annotation[] {
+  const jsonText = text.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? text.match(/\[[\s\S]*\]/)?.[0] ?? text;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const createdAt = nowIso();
+  return parsed
+    .map((item): Annotation | null => {
+      if (!item || typeof item !== 'object') return null;
+      const record = item as Record<string, unknown>;
+      const quote = typeof record.quote === 'string' ? record.quote.trim() : '';
+      const body = typeof record.body === 'string' ? record.body.trim() : '';
+      if (!quote || !body) return null;
+      const from = markdown.indexOf(quote);
+      if (from < 0) return null;
+      const rawKind = typeof record.kind === 'string' ? record.kind : 'comment';
+      const kind: AnnotationKind = rawKind === 'suggestion' || rawKind === 'reaction' || rawKind === 'warning' ? rawKind : 'comment';
+      const emoji = typeof record.emoji === 'string' && record.emoji.trim() ? record.emoji.trim().slice(0, 8) : undefined;
+      return {
+        id: randomUUID(),
+        kind,
+        body,
+        ...(emoji ? { emoji } : {}),
+        quote,
+        from,
+        to: from + quote.length,
+        status: 'open',
+        createdAt,
+        agentRunId: runId,
+      };
+    })
+    .filter((annotation): annotation is Annotation => annotation !== null)
+    .slice(0, 5);
+}
+
+async function buildAgentReviewAnnotations(
+  markdown: string,
+  runId: string,
+  settings: WritingSettings,
+  ctx: ExtensionBackendContext,
+): Promise<Annotation[]> {
+  const prompt = `You are reviewing a markdown draft in Writing Studio.
+
+Return only JSON: an array of 1-5 objects with keys quote, body, kind, and optional emoji.
+kind must be one of comment, suggestion, reaction, warning.
+quote must be an exact substring from the draft.
+Write like a generous collaborator with personality. Avoid generic proofreading.
+
+Review prompt:
+${settings.reviewPrompt}
+
+Draft:
+${markdown}`;
+  try {
+    const result = await runAgentTask({ prompt, tools: 'default', timeoutMs: 45_000 }, ctx);
+    return parseAgentAnnotations(result.text, markdown, runId);
+  } catch {
+    return [];
+  }
+}
+
 function chatReply(message: string, markdown: string): string {
   const words = markdown.trim().split(/\s+/).filter(Boolean).length;
   if (/rewrite|revise|improve/i.test(message)) {
@@ -322,7 +388,8 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   if (typeof payload.reviewPrompt === 'string') state.settings = normalizeSettings({ ...state.settings, reviewPrompt: payload.reviewPrompt });
   const runId = randomUUID();
   state.events.push(event('agent_run_started', 'agent', { runId, trigger: payload.trigger ?? 'manual' }));
-  const annotations = buildReviewAnnotations(state.markdown, runId, state.settings);
+  const agentAnnotations = await buildAgentReviewAnnotations(state.markdown, runId, state.settings, ctx);
+  const annotations = agentAnnotations.length > 0 ? agentAnnotations : buildReviewAnnotations(state.markdown, runId, state.settings);
   const refreshedQuotes = new Set(annotations.map((annotation) => annotation.quote));
   state.annotations = state.annotations.filter(
     (annotation) => annotation.status !== 'open' || (annotation.quote && state.markdown.includes(annotation.quote) && !refreshedQuotes.has(annotation.quote)),
@@ -333,6 +400,58 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   state.events.push(event('agent_run_completed', 'agent', { runId, annotationCount: annotations.length }));
   await writeState(ctx, state);
   return { annotations, runId };
+}
+
+export async function getCanvas(input: unknown, ctx: ExtensionBackendContext): Promise<{
+  documentId: string;
+  title: string;
+  markdown: string;
+  annotations: Annotation[];
+  documents: DocumentSummary[];
+}> {
+  const state = await readState(ctx, readDocumentId(input));
+  const index = await readIndex(ctx);
+  return { documentId: state.id, title: state.title, markdown: state.markdown, annotations: state.annotations, documents: index.documents };
+}
+
+export async function updateCanvas(input: unknown, ctx: ExtensionBackendContext): Promise<{ ok: true; document: DocumentSummary }> {
+  const payload = input as { documentId?: string; markdown?: string; title?: string };
+  if (typeof payload.markdown !== 'string') throw new Error('markdown is required.');
+  const state = await readState(ctx, payload.documentId);
+  state.markdown = payload.markdown;
+  state.title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : titleFromMarkdown(state.markdown, state.title);
+  state.updateClock += 1;
+  state.events.push(event('yjs_update', 'agent', { agentEditedCanvas: true, markdownLength: state.markdown.length, clock: state.updateClock }));
+  await writeState(ctx, state);
+  return { ok: true, document: summarize(state) };
+}
+
+export async function addAnnotation(input: unknown, ctx: ExtensionBackendContext): Promise<{ annotation: Annotation; annotations: Annotation[] }> {
+  const payload = input as { documentId?: string; quote?: string; body?: string; kind?: AnnotationKind; emoji?: string };
+  const quote = typeof payload.quote === 'string' ? payload.quote.trim() : '';
+  const body = typeof payload.body === 'string' ? payload.body.trim() : '';
+  if (!quote) throw new Error('quote is required.');
+  if (!body) throw new Error('body is required.');
+  const state = await readState(ctx, payload.documentId);
+  const from = state.markdown.indexOf(quote);
+  if (from < 0) throw new Error('quote must exactly match text in the current canvas.');
+  const kind: AnnotationKind =
+    payload.kind === 'suggestion' || payload.kind === 'reaction' || payload.kind === 'warning' || payload.kind === 'comment' ? payload.kind : 'comment';
+  const annotation: Annotation = {
+    id: randomUUID(),
+    kind,
+    body,
+    ...(typeof payload.emoji === 'string' && payload.emoji.trim() ? { emoji: payload.emoji.trim().slice(0, 8) } : {}),
+    quote,
+    from,
+    to: from + quote.length,
+    status: 'open',
+    createdAt: nowIso(),
+  };
+  state.annotations.unshift(annotation);
+  state.events.push(event('annotation_added', 'agent', { annotation }));
+  await writeState(ctx, state);
+  return { annotation, annotations: state.annotations };
 }
 
 export async function sendChat(input: unknown, ctx: ExtensionBackendContext): Promise<{ messages: ChatMessage[] }> {

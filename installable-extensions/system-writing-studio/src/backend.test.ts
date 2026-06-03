@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { appendUpdate, load, resolveAnnotation, runReview, sendChat } from './backend';
+import { addAnnotation, appendUpdate, getCanvas, load, resolveAnnotation, runReview, sendChat, updateCanvas } from './backend';
 
 function context() {
   const store = new Map<string, unknown>();
@@ -61,5 +61,20 @@ describe('Writing Studio backend', () => {
 
     expect(chat.messages.map((message) => message.role)).toEqual(['user', 'agent']);
     expect(resolved.annotations[0].status).toBe('resolved');
+  });
+
+  it('lets agent tools inspect, update, and annotate the canvas', async () => {
+    const ctx = context();
+    await updateCanvas({ markdown: '# Tool Draft\n\nThis line wants a comment.' }, ctx);
+    const canvas = await getCanvas({}, ctx);
+    const annotated = await addAnnotation(
+      { quote: 'This line wants a comment.', body: 'There is a useful spark here.', kind: 'reaction', emoji: '*' },
+      ctx,
+    );
+
+    expect(canvas.title).toBe('Tool Draft');
+    expect(canvas.markdown).toContain('This line wants a comment.');
+    expect(annotated.annotation).toEqual(expect.objectContaining({ kind: 'reaction', quote: 'This line wants a comment.' }));
+    expect((await getCanvas({}, ctx)).annotations[0].body).toBe('There is a useful spark here.');
   });
 });

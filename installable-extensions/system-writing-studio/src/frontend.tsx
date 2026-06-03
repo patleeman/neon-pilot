@@ -20,7 +20,7 @@ const styleElementId = 'writing-studio-runtime-style';
 const writingStudioCss = `
 .writing-studio{display:grid;grid-template-columns:minmax(0,1fr)22rem;height:100%;min-height:0;background:rgb(var(--color-base));color:rgb(var(--color-primary))}
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
-.writing-studio-meta{max-width:68rem;margin:0 auto 1.25rem;color:rgb(var(--color-dim));font-size:.75rem;line-height:1.4}
+.writing-studio-meta{display:flex;align-items:center;justify-content:space-between;gap:1rem;max-width:68rem;margin:0 auto 1.25rem;color:rgb(var(--color-dim));font-size:.75rem;line-height:1.4}.writing-studio-save-status{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}.writing-studio-save-status::before{content:"";width:.42rem;height:.42rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-save-status.is-saved::before{background:rgb(var(--color-success))}.writing-studio-save-status.is-saving::before{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-save-status.is-unsaved::before{background:rgb(var(--color-warning))}.writing-studio-save-status.is-error::before{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 28%,transparent)}
@@ -107,6 +107,7 @@ interface ChatViewMessage {
 }
 
 type WritingIconName = 'open' | 'new' | 'save' | 'export' | 'review' | 'settings' | 'collapse' | 'expand' | 'close';
+type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
 const actorId = `writer-${Math.random().toString(16).slice(2)}`;
 
@@ -322,6 +323,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [documentSearch, setDocumentSearch] = useState('');
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -329,12 +331,20 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
 
   const persistUpdate = useCallback(
     (update: Uint8Array, nextMarkdown: string) => {
+      setSaveStatus('unsaved');
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
+        setSaveStatus('saving');
         void pa.extension
           .invoke('writingStudioAppendUpdate', { updateBase64: bytesToBase64(update), markdown: nextMarkdown, actorId, documentId: activeDocumentId })
-          .then(() => setVisibleEventCount((current) => current + 1))
-          .catch((err: Error) => setError(err.message));
+          .then(() => {
+            setVisibleEventCount((current) => current + 1);
+            setSaveStatus('saved');
+          })
+          .catch((err: Error) => {
+            setSaveStatus('error');
+            setError(err.message);
+          });
       }, 250);
     },
     [activeDocumentId, pa],
@@ -399,6 +409,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? documentId ?? 'default');
     setSettingsDraft(next.settings);
     setVisibleEventCount(next.events.length);
+    setSaveStatus('saved');
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
     if (editor) {
@@ -517,12 +528,19 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   }, [activeDocumentId, pa, settingsDraft]);
 
   const saveDocument = useCallback(async () => {
+    setSaveStatus('saving');
     const currentMarkdown = syncEditorMarkdown() ?? markdown;
-    const result = (await pa.extension.invoke('writingStudioSaveDocument', { documentId: activeDocumentId, markdown: currentMarkdown })) as {
-      document: DocumentSummary;
-    };
-    setDocuments((current) => [result.document, ...current.filter((doc) => doc.id !== result.document.id)]);
-    setVisibleEventCount((current) => current + 1);
+    try {
+      const result = (await pa.extension.invoke('writingStudioSaveDocument', { documentId: activeDocumentId, markdown: currentMarkdown })) as {
+        document: DocumentSummary;
+      };
+      setDocuments((current) => [result.document, ...current.filter((doc) => doc.id !== result.document.id)]);
+      setVisibleEventCount((current) => current + 1);
+      setSaveStatus('saved');
+    } catch (err) {
+      setSaveStatus('error');
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }, [activeDocumentId, markdown, pa, syncEditorMarkdown]);
 
   const createDocument = useCallback(async () => {
@@ -532,6 +550,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
+    setSaveStatus('saved');
     editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
   }, [editor, pa, setMarkdownSilently]);
 
@@ -544,6 +563,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
       setMarkdown(next.markdown);
       setMarkdownSilently(next.markdown);
+      setSaveStatus('saved');
       editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
     },
     [editor, pa, setMarkdownSilently],
@@ -594,12 +614,14 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     text: message.body,
   }));
   const filteredDocuments = documents.filter((doc) => doc.title.toLowerCase().includes(documentSearch.trim().toLowerCase()));
+  const saveStatusLabel = saveStatus === 'saved' ? 'Saved' : saveStatus === 'saving' ? 'Saving...' : saveStatus === 'unsaved' ? 'Unsaved' : 'Save failed';
 
   return (
     <main className={`writing-studio ${railCollapsed ? 'has-collapsed-rail' : ''}`}>
       <section className="writing-studio-main">
         <div className="writing-studio-meta">
-          {eventCount} replay events · Last review {formatTime(state?.lastAgentRunAt ?? null)} · {resolvedCount} resolved
+          <span>{eventCount} replay events · Last review {formatTime(state?.lastAgentRunAt ?? null)} · {resolvedCount} resolved</span>
+          <span className={`writing-studio-save-status is-${saveStatus}`}>{saveStatusLabel}</span>
         </div>
         <div className="writing-studio-canvas">
           <div className={`writing-studio-editor-frame ${openAnnotations.length ? 'writing-studio-mark-highlight' : ''}`}>
@@ -708,12 +730,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               onAbortStream={() => setBusy(null)}
               onSelectModel={() => {}}
               onSelectThinkingLevel={() => {}}
-              composerMeta={
-                <div className="writing-studio-chat-meta">
-                  <span>Draft chat</span>
-                  <span>{state?.chat.length ?? 0} messages</span>
-                </div>
-              }
+              composerMeta={<></>}
             />
           </div>
         </section>

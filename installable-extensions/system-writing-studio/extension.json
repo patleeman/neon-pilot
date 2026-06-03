@@ -23,7 +23,10 @@
       { "id": "writingStudioRunReview", "handler": "runReview", "title": "Review writing document", "worker": { "enabled": true } },
       { "id": "writingStudioSendChat", "handler": "sendChat", "title": "Send writing chat message", "worker": { "enabled": true } },
       { "id": "writingStudioSaveSettings", "handler": "saveSettings", "title": "Save writing studio settings", "worker": { "enabled": true } },
-      { "id": "writingStudioResolveAnnotation", "handler": "resolveAnnotation", "title": "Resolve writing annotation", "worker": { "enabled": true } }
+      { "id": "writingStudioResolveAnnotation", "handler": "resolveAnnotation", "title": "Resolve writing annotation", "worker": { "enabled": true } },
+      { "id": "writingStudioGetCanvas", "handler": "getCanvas", "title": "Get Writing Studio canvas", "worker": { "enabled": true } },
+      { "id": "writingStudioUpdateCanvas", "handler": "updateCanvas", "title": "Update Writing Studio canvas", "worker": { "enabled": true } },
+      { "id": "writingStudioAddAnnotation", "handler": "addAnnotation", "title": "Add Writing Studio annotation", "worker": { "enabled": true } }
     ]
   },
   "contributes": {
@@ -46,7 +49,87 @@
         "route": "/ext/writing-studio",
         "icon": "sparkle"
       }
+    ],
+    "tools": [
+      {
+        "id": "get-canvas",
+        "name": "writing_studio_get_canvas",
+        "description": "Read the active Writing Studio document, markdown canvas, open comments, and document list.",
+        "action": "writingStudioGetCanvas",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "update-canvas",
+        "name": "writing_studio_update_canvas",
+        "description": "Replace the markdown content of a Writing Studio document.",
+        "action": "writingStudioUpdateCanvas",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." },
+            "markdown": { "type": "string", "description": "Full replacement markdown for the canvas." },
+            "title": { "type": "string", "description": "Optional document title." }
+          },
+          "required": ["markdown"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": ["Read the canvas first and preserve user intent; this tool replaces the full document."]
+      },
+      {
+        "id": "add-annotation",
+        "name": "writing_studio_add_annotation",
+        "description": "Add a floating Writing Studio comment, suggestion, reaction, or warning anchored to an exact quote in the canvas.",
+        "action": "writingStudioAddAnnotation",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." },
+            "quote": { "type": "string", "description": "Exact substring from the canvas to anchor the annotation." },
+            "body": { "type": "string", "description": "Comment text to show beside the document." },
+            "kind": { "type": "string", "enum": ["comment", "suggestion", "reaction", "warning"] },
+            "emoji": { "type": "string", "description": "Optional short emoji or marker for reactions." }
+          },
+          "required": ["quote", "body"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": ["Anchor comments to exact quotes and write like a generous collaborator, not a proofreader."]
+      },
+      {
+        "id": "review-canvas",
+        "name": "writing_studio_review_canvas",
+        "description": "Run the Writing Studio review pipeline for the active document and add generated annotations.",
+        "action": "writingStudioRunReview",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." },
+            "trigger": { "type": "string", "description": "Why the review is being run." }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "resolve-annotation",
+        "name": "writing_studio_resolve_annotation",
+        "description": "Resolve an open Writing Studio annotation by id.",
+        "action": "writingStudioResolveAnnotation",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." },
+            "id": { "type": "string", "description": "Annotation id to resolve." }
+          },
+          "required": ["id"],
+          "additionalProperties": false
+        }
+      }
     ]
   },
-  "permissions": ["storage:readwrite", "agent:run"]
+  "permissions": ["storage:readwrite", "agent:run", "agent:conversations"]
 }
