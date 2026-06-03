@@ -32,6 +32,8 @@ interface ToolPatchableSessionInternals {
 }
 
 const TOOL_SELECTION_CACHE_TTL_MS = 60_000;
+const DS4_LOCAL_PROVIDER = 'ds4';
+const DS4_LOCAL_MODEL = 'deepseek-v4-flash';
 let cachedToolSelection: {
   key: string;
   activeToolNames: string[];
@@ -49,6 +51,12 @@ function isDs4OptimizationDisabled(): boolean {
   return value === 'baseline' || value === 'off' || value === 'disabled';
 }
 
+function ds4EnvFlag(name: string, fallback: boolean): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (value === undefined || value === '') return fallback;
+  return !['0', 'false', 'off', 'disabled', 'no'].includes(value);
+}
+
 function parseModelRef(modelRef: string): { provider: string; model: string } | null {
   const separator = modelRef.indexOf('/');
   if (separator <= 0 || separator >= modelRef.length - 1) return null;
@@ -61,16 +69,19 @@ async function resolveModelProfileSessionPolicy(modelRef: string): Promise<Resol
   const profile = await getExtensionHostClient().resolveModelProfile(parsed);
   if (profile.kind !== 'resolved') return { activeTools: null, progressiveSkillDiscovery: false, ds4Profile: false };
   const activeTools = profile.profile.activeTools;
-  const ds4Profile = profile.profile.extensionId === 'system-ds4' && profile.profile.id === 'ds4-compatible';
+  const isLocalDs4Model = parsed.provider === DS4_LOCAL_PROVIDER && parsed.model === DS4_LOCAL_MODEL;
+  const ds4Profile = isLocalDs4Model && profile.profile.extensionId === 'system-ds4' && profile.profile.id === 'ds4-compatible';
   if (ds4Profile && isDs4OptimizationDisabled()) {
     return { activeTools: null, progressiveSkillDiscovery: false, ds4Profile };
   }
+  const directCoreTools = ds4EnvFlag('NEON_PILOT_DS4_DIRECT_CORE_TOOLS', true);
+  const progressiveSkills = ds4EnvFlag('NEON_PILOT_DS4_PROGRESSIVE_SKILLS', true);
   return {
     activeTools:
-      Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length
+      ds4Profile && directCoreTools && Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length
         ? activeTools
         : null,
-    progressiveSkillDiscovery: ds4Profile,
+    progressiveSkillDiscovery: ds4Profile && progressiveSkills,
     ds4Profile,
   };
 }
@@ -173,10 +184,10 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
   });
 }
 
-export async function warmLiveSessionToolSelection(settingsFile: string): Promise<string[]> {
+export async function warmLiveSessionToolSelection(settingsFile: string, modelRefOverride?: string | null): Promise<string[]> {
   const profile = process.env.PERSONAL_AGENT_ACTIVE_PROFILE || process.env.PERSONAL_AGENT_PROFILE || 'shared';
   const repoRoot = process.env.PERSONAL_AGENT_REPO_ROOT || process.cwd();
-  const modelRef = readSavedModelRef(settingsFile);
+  const modelRef = modelRefOverride ?? readSavedModelRef(settingsFile);
   const cacheKey = JSON.stringify({ profile, repoRoot, modelRef });
   const nowMs = Date.now();
   let extensionToolNames =
@@ -191,11 +202,11 @@ export async function warmLiveSessionToolSelection(settingsFile: string): Promis
   return extensionToolNames;
 }
 
-async function applyExtensionToolSelection(session: AgentSession, settingsFile: string): Promise<void> {
+async function applyExtensionToolSelection(session: AgentSession, settingsFile: string, modelRefOverride?: string | null): Promise<void> {
   const patchable = session as unknown as { setActiveTools?: (toolNames: string[]) => void; getActiveToolNames?: () => string[] };
   if (typeof patchable.setActiveTools !== 'function') return;
 
-  const extensionToolNames = await warmLiveSessionToolSelection(settingsFile);
+  const extensionToolNames = await warmLiveSessionToolSelection(settingsFile, modelRefOverride);
   const currentToolNames = patchable.getActiveToolNames?.() ?? [];
   if (currentToolNames.length === 1 && extensionToolNames.includes(currentToolNames[0] ?? '')) {
     return;
@@ -222,7 +233,9 @@ export async function createPreparedLiveAgentSession(input: {
   const registryAtMs = performance.now();
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const settingsAtMs = performance.now();
-  const modelProfilePolicy = await resolveModelProfileSessionPolicy(readSavedModelRef(input.settingsFile, modelRegistry.getAvailable()));
+  const savedModelRef = readSavedModelRef(input.settingsFile, modelRegistry.getAvailable());
+  const effectiveModelRef = options.initialModel ?? savedModelRef;
+  const modelProfilePolicy = await resolveModelProfileSessionPolicy(effectiveModelRef);
   const ds4CliBinDir = modelProfilePolicy.ds4Profile ? resolveDs4CliBinDir(options) : null;
   publishDs4CliToHostPath(ds4CliBinDir);
   const resourceLoader = await makeLoader(
@@ -287,7 +300,7 @@ export async function createPreparedLiveAgentSession(input: {
   );
 
   if (!modelProfilePolicy.activeTools) {
-    await applyExtensionToolSelection(session, input.settingsFile);
+    await applyExtensionToolSelection(session, input.settingsFile, effectiveModelRef);
   }
   const doneAtMs = performance.now();
 

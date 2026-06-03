@@ -98,6 +98,17 @@ describe('linkedRuns', () => {
     );
     expect(buildToolPreview({ ...base, tool: 'todo', input: { action: 'update', id: 'td_123', status: 'done' } })).toBe('update done');
     expect(buildToolPreview({ ...base, tool: 'todo', input: { action: 'clear', scope: 'done' } })).toBe('clear done');
+    expect(buildToolPreview({ ...base, tool: 'workflow', input: { name: 'test-workflow', description: 'Simple smoke test' } })).toBe(
+      'test-workflow Simple smoke test',
+    );
+    expect(
+      buildToolPreview({
+        ...base,
+        tool: 'workflow',
+        input: { name: 'fanout', agentDefaults: { model: 'opencode-go/deepseek-v4-flash' } },
+        details: { status: 'completed', result: '2 agents completed' },
+      }),
+    ).toBe('fanout [completed] 2 agents completed · opencode-go/deepseek-v4-flash');
     expect(buildToolPreview({ ...base, tool: 'browser_snapshot', input: {} })).toBe('snapshot active tab');
     expect(buildToolPreview({ ...base, tool: 'browser_screenshot', input: { tabId: 'tab-1' } })).toBe('tab tab-1');
   });

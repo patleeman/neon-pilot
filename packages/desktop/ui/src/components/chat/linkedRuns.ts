@@ -272,6 +272,19 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const prompt = excerpt('prompt');
       return [action, task ?? prompt].filter(Boolean).join(' ');
     }
+    case 'workflow': {
+      const name = read('name');
+      const status = read('status');
+      const result = excerpt('summary') ?? excerpt('result');
+      const description = excerpt('description');
+      const phase = read('activePhase');
+      const agentDefaultsModel = isRecord(input.agentDefaults) ? readRunField(input.agentDefaults, 'model') : null;
+      const model = read('model') ?? agentDefaultsModel;
+      const subject = [name, status ? `[${status}]` : null, phase ? `phase ${phase}` : null, result ?? description, model ? `· ${model}` : null]
+        .filter(Boolean)
+        .join(' ');
+      return subject || 'dynamic workflow';
+    }
     case 'goal':
       return excerpt('objective') ?? excerpt('status') ?? '';
     case 'write':

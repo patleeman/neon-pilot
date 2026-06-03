@@ -180,6 +180,17 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByLabelText('Settings for Menu Test')).toBeNull();
   });
 
+  it('opens the extension details modal from the settings action', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createConfigurableExtension()]);
+    renderPage();
+
+    expect(await screen.findByText('Configurable Test')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Settings for Configurable Test'));
+
+    expect(await screen.findByRole('dialog', { name: 'Extension details' })).toBeTruthy();
+    expect(screen.getByText('Toggle a test setting.')).toBeTruthy();
+  });
+
   it('shows catalog-only extensions in the install modal instead of the installed table', async () => {
     const callAction = vi.fn().mockResolvedValue({
       ok: true,

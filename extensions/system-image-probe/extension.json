@@ -5,6 +5,10 @@
   "packageType": "system",
   "description": "Inspect image attachments with a host-owned vision agent.",
   "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
   "backend": {
     "entry": "src/backend.ts",
     "actions": [
@@ -19,6 +23,14 @@
     ]
   },
   "contributes": {
+    "settingsComponent": {
+      "id": "image-probe-settings",
+      "component": "ImageProbeSettings",
+      "sectionId": "settings-image-probe",
+      "label": "Image Probe",
+      "description": "Vision model used by image probing.",
+      "order": 20
+    },
     "tools": [
       {
         "id": "probe-image",

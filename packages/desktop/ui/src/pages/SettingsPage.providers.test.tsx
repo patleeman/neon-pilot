@@ -641,73 +641,12 @@ describe('SettingsPage provider model editor', () => {
     expect(container.textContent).toContain('Pruned 1 app telemetry rows and 2 trace rows');
   });
 
-  it('renders the vision model selector with image-capable models', async () => {
+  it('does not render the vision model selector in general conversation settings', async () => {
     const { container } = renderPage();
     await flushAsyncWork();
 
     const visionSelect = container.querySelector<HTMLSelectElement>('#settings-vision-model');
-    expect(visionSelect).toBeTruthy();
-    expect(visionSelect!.disabled).toBe(false);
-    expect(visionSelect!.value).toBe('');
-    expect(container.textContent).toContain('Vision model');
-    expect(container.textContent).toContain('Not configured');
-    expect(container.textContent).toContain('GPT-5.4');
-    expect(container.textContent).toContain('Required before inspecting uploaded images with the current model.');
-  });
-
-  it('shows the configured vision model label when a vision model is selected', async () => {
-    // Set currentVisionModel so the page shows which model is being used
-    const modelsWithVision = buildUseApiResult({
-      currentModel: 'gpt-5.4',
-      currentVisionModel: 'openai-codex/gpt-5.4',
-      currentThinkingLevel: 'medium',
-      currentServiceTier: '',
-      models: [
-        {
-          id: 'gpt-5.4',
-          provider: 'openai-codex',
-          name: 'GPT-5.4',
-          context: 200000,
-          input: ['text', 'image'],
-          supportedServiceTiers: ['auto', 'priority'],
-        },
-      ],
-    });
-
-    const fallbackImpl = vi.mocked(useApi).getMockImplementation()!;
-    vi.mocked(useApi).mockImplementation((fetcher, _key) => {
-      if (fetcher === api.models) {
-        return modelsWithVision;
-      }
-      // Return empty defaults for everything else to keep the page rendering
-      return buildUseApiResult(Array.isArray(null) ? [] : null);
-    });
-
-    const { container } = renderPage();
-    await flushAsyncWork();
-
-    const visionSelect = container.querySelector<HTMLSelectElement>('#settings-vision-model');
-    expect(visionSelect).toBeTruthy();
-    expect(visionSelect!.value).toBe('openai-codex/gpt-5.4');
-    expect(container.textContent).toContain('Image probing uses');
-
-    vi.mocked(useApi).mockImplementation(fallbackImpl);
-  });
-
-  it('calls updateModelPreferences when vision model is changed', async () => {
-    updateModelPreferencesMock.mockResolvedValue(undefined);
-
-    const { container } = renderPage();
-    await flushAsyncWork();
-
-    const visionSelect = container.querySelector<HTMLSelectElement>('#settings-vision-model');
-    expect(visionSelect).toBeTruthy();
-
-    updateSelectValue(visionSelect!, 'openai-codex/gpt-5.4');
-    await flushAsyncWork();
-
-    expect(updateModelPreferencesMock).toHaveBeenCalledWith({
-      visionModel: 'openai-codex/gpt-5.4',
-    });
+    expect(visionSelect).toBeNull();
+    expect(container.textContent).not.toContain('Required before inspecting uploaded images with the current model.');
   });
 });

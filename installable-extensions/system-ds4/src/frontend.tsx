@@ -19,6 +19,10 @@ type Ds4Status = {
     contextWindow?: number;
     maxTokens?: number;
     kvDiskSpaceMb?: number;
+    directCoreTools?: boolean;
+    progressiveSkills?: boolean;
+    compactSkillPrompt?: boolean;
+    agentsPointers?: boolean;
   };
   runtime?: {
     managedRoot?: string;
@@ -109,7 +113,15 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     'setup' | 'repair' | 'start' | 'stop' | 'restart' | 'refresh' | 'settings' | 'install-rtk' | 'reveal-root' | 'reveal-model' | 'clear-kv' | 'copy' | null
   >(null);
   const [error, setError] = useState('');
-  const [advancedDraft, setAdvancedDraft] = useState({ contextWindow: '400000', maxTokens: '384000', kvDiskSpaceMb: '8192' });
+  const [advancedDraft, setAdvancedDraft] = useState({
+    contextWindow: '400000',
+    maxTokens: '384000',
+    kvDiskSpaceMb: '8192',
+    directCoreTools: true,
+    progressiveSkills: true,
+    compactSkillPrompt: true,
+    agentsPointers: true,
+  });
   const label = statusLabel(status);
 
   const refresh = useCallback(async () => {
@@ -144,8 +156,20 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       contextWindow: String(status.settings.contextWindow ?? 400000),
       maxTokens: String(status.settings.maxTokens ?? 384000),
       kvDiskSpaceMb: String(status.settings.kvDiskSpaceMb ?? 8192),
+      directCoreTools: status.settings.directCoreTools ?? true,
+      progressiveSkills: status.settings.progressiveSkills ?? true,
+      compactSkillPrompt: status.settings.compactSkillPrompt ?? true,
+      agentsPointers: status.settings.agentsPointers ?? true,
     });
-  }, [status?.settings?.contextWindow, status?.settings?.maxTokens, status?.settings?.kvDiskSpaceMb]);
+  }, [
+    status?.settings?.contextWindow,
+    status?.settings?.maxTokens,
+    status?.settings?.kvDiskSpaceMb,
+    status?.settings?.directCoreTools,
+    status?.settings?.progressiveSkills,
+    status?.settings?.compactSkillPrompt,
+    status?.settings?.agentsPointers,
+  ]);
 
   const run = async (action: 'setup' | 'repair' | 'start' | 'stop' | 'restart') => {
     const actionId =
@@ -264,7 +288,15 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     }
     setBusy('settings');
     try {
-      const result = (await pa.extension.invoke('ds4SaveSettings', { contextWindow, maxTokens, kvDiskSpaceMb })) as { status?: Ds4Status };
+      const result = (await pa.extension.invoke('ds4SaveSettings', {
+        contextWindow,
+        maxTokens,
+        kvDiskSpaceMb,
+        directCoreTools: advancedDraft.directCoreTools,
+        progressiveSkills: advancedDraft.progressiveSkills,
+        compactSkillPrompt: advancedDraft.compactSkillPrompt,
+        agentsPointers: advancedDraft.agentsPointers,
+      })) as { status?: Ds4Status };
       if (result.status) setStatus(result.status);
       setError('');
       pa.ui?.notify?.({
@@ -531,6 +563,32 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
             onChange={(kvDiskSpaceMb) => setAdvancedDraft((draft) => ({ ...draft, kvDiskSpaceMb }))}
           />
         </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          <ToggleSetting
+            label="Direct core tools only"
+            description="Expose only bash, read, and edit directly; use the DS4 CLI for withheld tools."
+            checked={advancedDraft.directCoreTools}
+            onChange={(directCoreTools) => setAdvancedDraft((draft) => ({ ...draft, directCoreTools }))}
+          />
+          <ToggleSetting
+            label="Progressive skills"
+            description="Keep skills out of the initial prompt and discover them through ds4 skills."
+            checked={advancedDraft.progressiveSkills}
+            onChange={(progressiveSkills) => setAdvancedDraft((draft) => ({ ...draft, progressiveSkills }))}
+          />
+          <ToggleSetting
+            label="Compact skill prompt"
+            description="Keep only the DS4 skill path in prompt assembly and remove inline skill bodies."
+            checked={advancedDraft.compactSkillPrompt}
+            onChange={(compactSkillPrompt) => setAdvancedDraft((draft) => ({ ...draft, compactSkillPrompt }))}
+          />
+          <ToggleSetting
+            label="AGENTS.md pointers"
+            description="Replace injected AGENTS.md bodies with brief file pointers."
+            checked={advancedDraft.agentsPointers}
+            onChange={(agentsPointers) => setAdvancedDraft((draft) => ({ ...draft, agentsPointers }))}
+          />
+        </div>
       </div>
 
       {status?.bootstrap?.log ? <Log title="Bootstrap log" text={status.bootstrap.log} /> : null}
@@ -605,6 +663,28 @@ function NumberSetting({
         onChange={(event) => onChange(event.currentTarget.value)}
         className="mt-2 w-full rounded-md border border-border-subtle bg-base px-2.5 py-2 font-mono text-[12px] text-primary outline-none focus:border-accent/60"
       />
+    </label>
+  );
+}
+
+function ToggleSetting({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border-subtle bg-base/30 p-3">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.currentTarget.checked)} className="mt-1 h-4 w-4 accent-accent" />
+      <span className="min-w-0">
+        <span className="block text-[12px] font-medium text-primary">{label}</span>
+        <span className="mt-1 block text-[12px] text-dim">{description}</span>
+      </span>
     </label>
   );
 }

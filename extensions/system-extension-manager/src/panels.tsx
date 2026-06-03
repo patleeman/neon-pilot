@@ -872,7 +872,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   aria-label={`Settings for ${extension.name}`}
                   onClick={(event) => {
                     event.stopPropagation();
-                    navigate(settingsSectionTarget(extension));
+                    setDetailsExtensionId(extension.id);
                   }}
                 >
                   <GearIcon />
@@ -1383,11 +1383,6 @@ function hasInlineRailSettings(extension: ExtensionInstallSummary): boolean {
     entries.length <= 3 &&
     entries.every((entry) => ['boolean', 'number', 'string'].includes(entry.type) || entry.enum?.length)
   );
-}
-
-function settingsSectionTarget(extension: ExtensionInstallSummary): string {
-  const settingsComponent = extension.manifest?.contributes?.settingsComponent;
-  return settingsComponent?.sectionId ? `/settings#${settingsComponent.sectionId}` : '/settings';
 }
 
 function ExtensionSettingRow({

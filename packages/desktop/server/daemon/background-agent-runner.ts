@@ -9,6 +9,8 @@ import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot } from '@neon-
 import { appendConversationOffshootMetadata } from '../conversations/conversationService.js';
 import { createPreparedLiveAgentSession } from '../conversations/liveSessionFactory.js';
 import { resolveLiveSessionFile } from '../conversations/liveSessionPersistence.js';
+import { setExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { createExtensionHostRpcClient } from '../extensions/extensionHostRpcClient.js';
 import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { buildLiveSessionResourceOptionsForRuntime } from '../extensions/runtimeAgentHooks.js';
@@ -143,7 +145,18 @@ function readParentSessionFile(): string | undefined {
   return value ? value : undefined;
 }
 
+export function configureExtensionHostClientFromEnv(env: NodeJS.ProcessEnv = process.env): boolean {
+  const baseUrl = env.NEON_PILOT_EXTENSION_HOST_BASE_URL?.trim();
+  const token = env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim();
+  if (!baseUrl || !token) {
+    return false;
+  }
+  setExtensionHostClient(createExtensionHostRpcClient({ baseUrl, token }));
+  return true;
+}
+
 export async function main(): Promise<void> {
+  configureExtensionHostClientFromEnv();
   const args = parseArgs(process.argv.slice(2));
   const agentDir = getPiAgentRuntimeDir();
   const resourceOptions = buildLiveSessionResourceOptionsForRuntime();

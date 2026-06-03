@@ -217,7 +217,16 @@ describe('DS4 managed runtime', () => {
           rtk: expect.objectContaining({ installed: false, valid: false }),
         }),
       );
-      expect(result.settings).toEqual({ shellCompression: 'rtk', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
+      expect(result.settings).toEqual({
+        shellCompression: 'rtk',
+        contextWindow: 400000,
+        maxTokens: 384000,
+        kvDiskSpaceMb: 8192,
+        directCoreTools: true,
+        progressiveSkills: true,
+        compactSkillPrompt: true,
+        agentsPointers: true,
+      });
       expect(result.bootstrap.steps.map((step) => step.id)).toEqual(['tools', 'source', 'build', 'model', 'verify', 'done']);
       expect(result.models).toEqual(['deepseek-v4-flash']);
     } finally {
@@ -423,12 +432,39 @@ describe('DS4 managed runtime', () => {
     const current = await backend.getSettings({}, context);
     const saved = await backend.saveSettings({ shellCompression: 'off' }, context);
 
-    expect(current.settings).toEqual({ shellCompression: 'rtk', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
+    expect(current.settings).toEqual({
+      shellCompression: 'rtk',
+      contextWindow: 400000,
+      maxTokens: 384000,
+      kvDiskSpaceMb: 8192,
+      directCoreTools: true,
+      progressiveSkills: true,
+      compactSkillPrompt: true,
+      agentsPointers: true,
+    });
     expect(current.status.runtime.rtk).toEqual(
       expect.objectContaining({ installed: true, valid: true, path: '/opt/homebrew/bin/rtk', version: 'rtk 0.28.2' }),
     );
-    expect(saved.settings).toEqual({ shellCompression: 'off', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
-    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
+    expect(saved.settings).toEqual({
+      shellCompression: 'off',
+      contextWindow: 400000,
+      maxTokens: 384000,
+      kvDiskSpaceMb: 8192,
+      directCoreTools: true,
+      progressiveSkills: true,
+      compactSkillPrompt: true,
+      agentsPointers: true,
+    });
+    expect(context.storage.put).toHaveBeenCalledWith('settings', {
+      shellCompression: 'off',
+      contextWindow: 400000,
+      maxTokens: 384000,
+      kvDiskSpaceMb: 8192,
+      directCoreTools: true,
+      progressiveSkills: true,
+      compactSkillPrompt: true,
+      agentsPointers: true,
+    });
   });
 
   it('lets the DS4 CLI disable shell compression', async () => {
@@ -438,7 +474,16 @@ describe('DS4 managed runtime', () => {
 
     await backend.ds4ToolsCli({ args: ['compression', 'off'] }, context as never);
 
-    expect(context.storage.put).toHaveBeenCalledWith('settings', { shellCompression: 'off', contextWindow: 400000, maxTokens: 384000, kvDiskSpaceMb: 8192 });
+    expect(context.storage.put).toHaveBeenCalledWith('settings', {
+      shellCompression: 'off',
+      contextWindow: 400000,
+      maxTokens: 384000,
+      kvDiskSpaceMb: 8192,
+      directCoreTools: true,
+      progressiveSkills: true,
+      compactSkillPrompt: true,
+      agentsPointers: true,
+    });
     expect(stdout.write.mock.calls[0]?.[0]).toContain('Shell compression disabled');
   });
 
@@ -489,11 +534,38 @@ describe('DS4 agent profile activation', () => {
       {
         getActiveTools: () => ['artifact', 'google_search', 'write', 'bash_status'],
         setActiveTools: (tools: string[]) => calls.push(tools),
-        modelProfile: { kind: 'resolved', profile: { id: 'ds4-compatible' } },
+        modelProfile: { kind: 'resolved', profile: { extensionId: 'system-ds4', id: 'ds4-compatible' } },
       },
     );
 
     expect(calls).toEqual([['bash', 'read', 'edit']]);
+  });
+
+  it('does not force DS4 core tools when the direct tool intervention is disabled', () => {
+    const previousTools = process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS;
+    process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS = '0';
+    const handlers = new Map<string, (event: unknown, ctx: unknown) => void>();
+    backend.createDs4AgentExtension()({
+      on: (event: string, handler: (event: unknown, ctx: unknown) => void) => handlers.set(event, handler),
+      registerBashProcessWrapper: vi.fn(),
+    } as never);
+    const setActiveTools = vi.fn();
+
+    try {
+      handlers.get('session_start')?.(
+        {},
+        {
+          getActiveTools: () => ['artifact'],
+          setActiveTools,
+          modelProfile: { kind: 'resolved', profile: { extensionId: 'system-ds4', id: 'ds4-compatible' } },
+        },
+      );
+
+      expect(setActiveTools).not.toHaveBeenCalled();
+    } finally {
+      if (previousTools === undefined) delete process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS;
+      else process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS = previousTools;
+    }
   });
 
   it('adds the DS4 CLI to bash PATH for DS4 sessions', () => {
@@ -548,6 +620,37 @@ describe('DS4 agent profile activation', () => {
     expect(result.plan.instructions.layers[1].content).toBe('keep me');
   });
 
+  it('can disable individual DS4 prompt assembly interventions', async () => {
+    const previousTools = process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS;
+    const previousSkills = process.env.NEON_PILOT_DS4_COMPACT_SKILL_PROMPT;
+    const previousAgents = process.env.NEON_PILOT_DS4_AGENTS_POINTERS;
+    process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS = '0';
+    process.env.NEON_PILOT_DS4_COMPACT_SKILL_PROMPT = '0';
+    process.env.NEON_PILOT_DS4_AGENTS_POINTERS = '0';
+    const plan = {
+      skills: { skillPaths: ['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent'], inlineSkills: [{ id: 'x' }] },
+      tools: { activeToolNames: ['bash', 'write', 'google_search'] },
+      instructions: { layers: [{ id: 'agents:/Users/patrick/AGENTS.md', title: 'AGENTS.md', content: 'very long global instructions' }] },
+      diagnostics: [],
+    };
+
+    try {
+      const result = await backend.optimizePromptAssembly({ plan, context: { modelRef: 'ds4/deepseek-v4-flash' } });
+
+      expect(result.plan.skills.skillPaths).toEqual(['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent']);
+      expect(result.plan.skills.inlineSkills).toEqual([{ id: 'x' }]);
+      expect(result.plan.tools.activeToolNames).toEqual(['bash', 'write', 'google_search']);
+      expect(result.plan.instructions.layers[0].content).toBe('very long global instructions');
+    } finally {
+      if (previousTools === undefined) delete process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS;
+      else process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS = previousTools;
+      if (previousSkills === undefined) delete process.env.NEON_PILOT_DS4_COMPACT_SKILL_PROMPT;
+      else process.env.NEON_PILOT_DS4_COMPACT_SKILL_PROMPT = previousSkills;
+      if (previousAgents === undefined) delete process.env.NEON_PILOT_DS4_AGENTS_POINTERS;
+      else process.env.NEON_PILOT_DS4_AGENTS_POINTERS = previousAgents;
+    }
+  });
+
   it('leaves DS4 prompt assembly unmodified in baseline optimization mode', async () => {
     const previousMode = process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
     process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = 'baseline';
@@ -569,6 +672,37 @@ describe('DS4 agent profile activation', () => {
       if (previousMode === undefined) delete process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
       else process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = previousMode;
     }
+  });
+
+  it('leaves opencode DeepSeek V4 Flash prompt assembly unmodified', async () => {
+    const plan = {
+      skills: { skillPaths: ['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent'], inlineSkills: [{ id: 'x' }] },
+      tools: { activeToolNames: ['bash', 'write', 'google_search'] },
+      instructions: { layers: [{ id: 'agents:/Users/patrick/AGENTS.md', title: 'AGENTS.md', content: 'very long global instructions' }] },
+      diagnostics: [],
+    };
+
+    const result = await backend.optimizePromptAssembly({ plan, context: { provider: 'opencode-go', modelRef: 'opencode-go/deepseek-v4-flash' } });
+
+    expect(result.plan).toBe(plan);
+    expect(result.plan.tools.activeToolNames).toEqual(['bash', 'write', 'google_search']);
+    expect(result.plan.instructions.layers[0].content).toBe('very long global instructions');
+  });
+
+  it('leaves opencode DeepSeek V4 Flash unmodified when prompt context has a bare model id', async () => {
+    const plan = {
+      skills: { skillPaths: ['/skills/a', '/extensions/system-ds4/skills/ds4-local-agent'], inlineSkills: [{ id: 'x' }] },
+      tools: { activeToolNames: ['bash', 'write', 'google_search'] },
+      instructions: { layers: [{ id: 'agents:/Users/patrick/AGENTS.md', title: 'AGENTS.md', content: 'very long global instructions' }] },
+      diagnostics: [],
+    };
+
+    const result = await backend.optimizePromptAssembly({ plan, context: { provider: 'opencode-go', modelRef: 'deepseek-v4-flash' } });
+
+    expect(result.plan).toBe(plan);
+    expect(result.plan.skills.inlineSkills).toEqual([{ id: 'x' }]);
+    expect(result.plan.tools.activeToolNames).toEqual(['bash', 'write', 'google_search']);
+    expect(result.plan.instructions.layers[0].content).toBe('very long global instructions');
   });
 });
 
@@ -660,6 +794,42 @@ describe('DS4 tool CLI gateway', () => {
     expect(backendSkills.buildSkillInventoryAsync).toHaveBeenCalledWith({ runtimeScope: 'shared', repoRoot: '/repo' });
     expect(stdout.write.mock.calls[0]?.[0]).toContain('browser (system-browser)');
     expect(stdout.write.mock.calls[0]?.[0]).not.toContain('disabled');
+  });
+
+  it('discovers the built-in dynamic workflow skill through the DS4 CLI', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-workflow-skill-'));
+    const skillFile = path.join(dir, 'SKILL.md');
+    await writeFile(skillFile, '---\nname: dynamic-workflows\ndescription: Use the workflow tool.\n---\n\nNo module exports. Use workflow.finish().', 'utf8');
+    backend.__setDs4SkillsApiForTest(backendSkills);
+    backendSkills.buildSkillInventoryAsync
+      .mockResolvedValueOnce([
+        {
+          id: 'dynamic-workflows',
+          title: 'Dynamic Workflows',
+          description: 'Built-in guidance for using the workflow tool.',
+          enabled: true,
+          source: { kind: 'extension', label: 'system-dynamic-workflows', extensionId: 'system-dynamic-workflows' },
+          location: { kind: 'file', path: skillFile },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'dynamic-workflows',
+          title: 'Dynamic Workflows',
+          description: 'Built-in guidance for using the workflow tool.',
+          enabled: true,
+          source: { kind: 'extension', label: 'system-dynamic-workflows', extensionId: 'system-dynamic-workflows' },
+          location: { kind: 'file', path: skillFile },
+        },
+      ]);
+    const stdout = { write: vi.fn() };
+
+    await backend.ds4ToolsCli({ args: ['skills', 'search', 'workflow'] }, ctx({ stdio: { stdout } }) as never);
+    await backend.ds4ToolsCli({ args: ['skills', 'get', 'dynamic-workflows'] }, ctx({ stdio: { stdout } }) as never);
+
+    expect(stdout.write.mock.calls[0]?.[0]).toContain('dynamic-workflows (system-dynamic-workflows)');
+    expect(stdout.write.mock.calls[1]?.[0]).toContain('No module exports. Use workflow.finish().');
+    await rm(dir, { recursive: true, force: true });
   });
 
   it('reads a matching skill body through the DS4 CLI', async () => {

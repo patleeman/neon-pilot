@@ -189,6 +189,50 @@ describe('live session factory', () => {
     expect(s.setActiveTools).not.toHaveBeenCalled();
   });
 
+  it('does not apply DS4 session interventions to opencode DeepSeek V4 Flash', async () => {
+    const s = session();
+    modelPrefs.readSavedModelRef.mockReturnValue('opencode-go/deepseek-v4-flash');
+    extensionRegistry.resolveModelProfile.mockResolvedValue({
+      kind: 'resolved',
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit'] },
+    });
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    await createPreparedLiveAgentSession({
+      cwd: '/repo',
+      agentDir: '/agent',
+      settingsFile: '/settings.json',
+      sessionManager: {} as never,
+      options: { allowedToolNames: ['artifact'] },
+    });
+
+    expect(extensionRegistry.resolveModelProfile).toHaveBeenCalledWith({ provider: 'opencode-go', model: 'deepseek-v4-flash' });
+    expect(loader.makeLoader).toHaveBeenCalledWith('/repo', expect.not.objectContaining({ progressiveDisclosure: true, noSkills: true }));
+    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['artifact'] }));
+  });
+
+  it('does not apply DS4 session interventions when saved defaults are DS4 but the composer starts opencode', async () => {
+    const s = session();
+    modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+    extensionRegistry.resolveModelProfile.mockResolvedValue({
+      kind: 'resolved',
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit'] },
+    });
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    await createPreparedLiveAgentSession({
+      cwd: '/repo',
+      agentDir: '/agent',
+      settingsFile: '/settings.json',
+      sessionManager: {} as never,
+      options: { allowedToolNames: ['artifact'], initialModel: 'opencode-go/deepseek-v4-flash' },
+    });
+
+    expect(extensionRegistry.resolveModelProfile).toHaveBeenCalledWith({ provider: 'opencode-go', model: 'deepseek-v4-flash' });
+    expect(loader.makeLoader).toHaveBeenCalledWith('/repo', expect.not.objectContaining({ progressiveDisclosure: true, noSkills: true }));
+    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['artifact'] }));
+  });
+
   it('can run DS4 sessions in baseline mode without progressive tool and skill filtering', async () => {
     const previousMode = process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
     process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = 'baseline';
@@ -215,6 +259,38 @@ describe('live session factory', () => {
     } finally {
       if (previousMode === undefined) delete process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
       else process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = previousMode;
+    }
+  });
+
+  it('can disable DS4 direct tool and progressive skill interventions independently', async () => {
+    const previousTools = process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS;
+    const previousSkills = process.env.NEON_PILOT_DS4_PROGRESSIVE_SKILLS;
+    process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS = '0';
+    process.env.NEON_PILOT_DS4_PROGRESSIVE_SKILLS = '0';
+    const s = session();
+    modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+    extensionRegistry.resolveModelProfile.mockResolvedValue({
+      kind: 'resolved',
+      profile: { extensionId: 'system-ds4', id: 'ds4-compatible', match: ['ds4/*'], priority: 100, activeTools: ['bash', 'read', 'edit'] },
+    });
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    try {
+      await createPreparedLiveAgentSession({
+        cwd: '/repo',
+        agentDir: '/agent',
+        settingsFile: '/settings.json',
+        sessionManager: {} as never,
+        options: { allowedToolNames: ['artifact'] },
+      });
+
+      expect(loader.makeLoader).toHaveBeenCalledWith('/repo', expect.not.objectContaining({ progressiveDisclosure: true, noSkills: true }));
+      expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['artifact'] }));
+    } finally {
+      if (previousTools === undefined) delete process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS;
+      else process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS = previousTools;
+      if (previousSkills === undefined) delete process.env.NEON_PILOT_DS4_PROGRESSIVE_SKILLS;
+      else process.env.NEON_PILOT_DS4_PROGRESSIVE_SKILLS = previousSkills;
     }
   });
 

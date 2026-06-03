@@ -90,6 +90,10 @@ type Ds4Settings = {
   contextWindow: number;
   maxTokens: number;
   kvDiskSpaceMb: number;
+  directCoreTools: boolean;
+  progressiveSkills: boolean;
+  compactSkillPrompt: boolean;
+  agentsPointers: boolean;
 };
 type ShellJob = {
   id: number;
@@ -113,6 +117,10 @@ const DEFAULT_SETTINGS: Ds4Settings = {
   contextWindow: DEFAULT_CONTEXT_WINDOW,
   maxTokens: DEFAULT_MAX_TOKENS,
   kvDiskSpaceMb: DEFAULT_KV_DISK_SPACE_MB,
+  directCoreTools: true,
+  progressiveSkills: true,
+  compactSkillPrompt: true,
+  agentsPointers: true,
 };
 
 type Ds4ToolsApi = {
@@ -197,6 +205,10 @@ function normalizeSettings(value: unknown): Ds4Settings {
     contextWindow,
     maxTokens,
     kvDiskSpaceMb: normalizeInteger(record.kvDiskSpaceMb, DEFAULT_SETTINGS.kvDiskSpaceMb, MIN_KV_DISK_SPACE_MB, MAX_KV_DISK_SPACE_MB),
+    directCoreTools: record.directCoreTools === false ? false : DEFAULT_SETTINGS.directCoreTools,
+    progressiveSkills: record.progressiveSkills === false ? false : DEFAULT_SETTINGS.progressiveSkills,
+    compactSkillPrompt: record.compactSkillPrompt === false ? false : DEFAULT_SETTINGS.compactSkillPrompt,
+    agentsPointers: record.agentsPointers === false ? false : DEFAULT_SETTINGS.agentsPointers,
   };
 }
 
@@ -208,6 +220,22 @@ function normalizeInteger(value: unknown, fallback: number, min: number, max: nu
 
 function syncRtkShellCompressionEnv(settings: Ds4Settings): void {
   process.env.NEON_PILOT_DS4_RTK_SHELL_COMPRESSION = settings.shellCompression;
+  process.env.NEON_PILOT_DS4_DIRECT_CORE_TOOLS = settings.directCoreTools ? '1' : '0';
+  process.env.NEON_PILOT_DS4_PROGRESSIVE_SKILLS = settings.progressiveSkills ? '1' : '0';
+  process.env.NEON_PILOT_DS4_COMPACT_SKILL_PROMPT = settings.compactSkillPrompt ? '1' : '0';
+  process.env.NEON_PILOT_DS4_AGENTS_POINTERS = settings.agentsPointers ? '1' : '0';
+}
+
+function envFlag(name: string, fallback: boolean): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (value === undefined || value === '') return fallback;
+  return !['0', 'false', 'off', 'disabled', 'no'].includes(value);
+}
+
+function isLocalDs4Model(input: { provider?: string; modelRef?: string }): boolean {
+  const modelRef = input.modelRef ?? '';
+  if (modelRef.includes('/')) return modelRef === MODEL_REF;
+  return input.provider === PROVIDER && modelRef === MODEL_ID;
 }
 
 async function readSettings(ctx: ExtensionBackendContext): Promise<Ds4Settings> {
@@ -1481,19 +1509,23 @@ export async function optimizePromptAssembly(input: { plan?: unknown; context?: 
       }
     | undefined;
   const modelRef = input.context?.modelRef ?? '';
-  const isDs4 = input.context?.provider === PROVIDER || modelRef === MODEL_REF || modelRef.startsWith(`${PROVIDER}/`);
+  const isDs4 = isLocalDs4Model({ provider: input.context?.provider, modelRef });
   if (!plan || !isDs4) return { plan };
   const optimizationMode = process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE?.trim().toLowerCase();
   if (optimizationMode === 'baseline' || optimizationMode === 'off' || optimizationMode === 'disabled') return { plan };
 
-  if (plan.skills) {
+  const compactSkillPrompt = envFlag('NEON_PILOT_DS4_COMPACT_SKILL_PROMPT', DEFAULT_SETTINGS.compactSkillPrompt);
+  const directCoreTools = envFlag('NEON_PILOT_DS4_DIRECT_CORE_TOOLS', DEFAULT_SETTINGS.directCoreTools);
+  const agentsPointers = envFlag('NEON_PILOT_DS4_AGENTS_POINTERS', DEFAULT_SETTINGS.agentsPointers);
+
+  if (compactSkillPrompt && plan.skills) {
     const ds4SkillPaths = (plan.skills.skillPaths ?? []).filter((skillPath) => skillPath.includes('system-ds4'));
     plan.skills = { ...plan.skills, skillPaths: ds4SkillPaths, inlineSkills: [] };
   }
-  if (plan.tools?.activeToolNames) {
+  if (directCoreTools && plan.tools?.activeToolNames) {
     plan.tools = { ...plan.tools, activeToolNames: plan.tools.activeToolNames.filter((tool) => DS4_CORE_TOOLS.includes(tool)) };
   }
-  if (plan.instructions?.layers) {
+  if (agentsPointers && plan.instructions?.layers) {
     const compacted = plan.instructions.layers.map((layer) => {
       const id = typeof layer.id === 'string' ? layer.id : '';
       const title = typeof layer.title === 'string' ? layer.title : 'Instruction layer';
@@ -1518,7 +1550,7 @@ export async function optimizePromptAssembly(input: { plan?: unknown; context?: 
     {
       severity: 'info',
       code: 'ds4-progressive-disclosure',
-      message: 'DS4 prompt assembly reduced to core tools, the DS4 skill, and pointer-style global instructions.',
+      message: 'DS4 prompt assembly applied enabled context interventions.',
       sourceId: 'system-ds4',
     },
   ];
@@ -1573,7 +1605,14 @@ export function createDs4AgentExtension(): (pi: ExtensionAPI) => void {
       getActiveTools?: () => string[];
       setActiveTools?: (toolNames: string[]) => void;
     }) => {
-      if (ctx.modelProfile?.kind !== 'resolved' || ctx.modelProfile.profile?.id !== 'ds4-compatible') {
+      if (
+        ctx.modelProfile?.kind !== 'resolved' ||
+        ctx.modelProfile.profile?.extensionId !== 'system-ds4' ||
+        ctx.modelProfile.profile?.id !== 'ds4-compatible'
+      ) {
+        return;
+      }
+      if (!envFlag('NEON_PILOT_DS4_DIRECT_CORE_TOOLS', DEFAULT_SETTINGS.directCoreTools)) {
         return;
       }
       ctx.setActiveTools?.(DS4_CORE_TOOLS);

@@ -144,6 +144,7 @@ globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')] = async (capa
 
 const module = await import(backendUrl);
 const storage = new Map();
+const smokeDatabases = new Map();
 const invalidatedTopics = [];
 const conversations = [];
 const registeredTools = [];
@@ -204,6 +205,93 @@ const ctx = {
     },
     async delete(key) {
       storage.delete(key);
+    },
+  },
+  database: {
+    async open(name) {
+      const key = name ?? 'main';
+      if (smokeDatabases.has(key)) return smokeDatabases.get(key);
+      const tables = { runs: new Map(), nodes: new Map(), events: [] };
+      const db = {
+        exec() {},
+        pragma() {},
+        close() {},
+        transaction(fn) {
+          return fn;
+        },
+        prepare(sql) {
+          return {
+            run(...params) {
+              if (sql.startsWith('INSERT INTO workflow_runs')) {
+                tables.runs.set(String(params[0]), {
+                  id: params[0],
+                  name: params[1],
+                  description: params[2],
+                  status: params[3],
+                  cwd: params[4],
+                  parent_conversation_id: params[5],
+                  block_id: params[6],
+                  script: params[7],
+                  args_json: params[8],
+                  result_text: params[9],
+                  error: params[10],
+                  active_phase: params[11],
+                  model: params[12],
+                  agent_defaults_json: params[13],
+                  settings_json: params[14],
+                  created_at: params[15],
+                  updated_at: params[16],
+                  completed_at: params[17],
+                });
+              } else if (sql.startsWith('DELETE FROM workflow_runs')) {
+                tables.runs.delete(String(params[0]));
+              } else if (sql.startsWith('INSERT INTO workflow_nodes')) {
+                tables.nodes.set(String(params[0]), {
+                  id: params[0],
+                  workflow_id: params[1],
+                  phase: params[2],
+                  role: params[3],
+                  prompt: params[4],
+                  status: params[5],
+                  run_id: params[6],
+                  model: params[7],
+                  allowed_tools_json: params[8],
+                  result_text: params[9],
+                  error: params[10],
+                  created_at: params[11],
+                  updated_at: params[12],
+                  completed_at: params[13],
+                });
+              } else if (sql.startsWith('DELETE FROM workflow_nodes')) {
+                tables.nodes.delete(String(params[0]));
+              } else if (sql.startsWith('INSERT INTO workflow_events')) {
+                tables.events.push({
+                  id: params[0],
+                  workflow_id: params[1],
+                  event_type: params[2],
+                  message: params[3],
+                  data_json: params[4],
+                  created_at: params[5],
+                });
+              }
+              return { changes: 1, lastInsertRowid: 1 };
+            },
+            get(...params) {
+              if (sql.includes('FROM workflow_runs')) return tables.runs.get(String(params[0]));
+              if (sql.includes('FROM workflow_nodes')) return tables.nodes.get(String(params[0]));
+              return undefined;
+            },
+            all(...params) {
+              if (sql.includes('FROM workflow_runs')) return Array.from(tables.runs.values());
+              if (sql.includes('FROM workflow_nodes')) return Array.from(tables.nodes.values()).filter((row) => row.workflow_id === params[0]);
+              if (sql.includes('FROM workflow_events')) return tables.events.filter((row) => row.workflow_id === params[0]);
+              return [];
+            },
+          };
+        },
+      };
+      smokeDatabases.set(key, db);
+      return db;
     },
   },
   extensions: {
@@ -389,6 +477,27 @@ const smokes = {
     const result = await module.checkpoint({ action: 'list' }, ctx);
     assert(result.action === 'list', 'checkpoint list did not return list action');
   },
+  async 'system-dynamic-workflows'() {
+    const result = await module.workflow(
+      {
+        name: 'Smoke workflow',
+        args: { subject: 'runtime' },
+        script:
+          "await workflow.phase('verify');\n" +
+          "workflow.log('running ' + args.subject);\n" +
+          "return workflow.finish('done:' + args.subject);",
+      },
+      ctx,
+    );
+    assert(result?.details?.status === 'completed', 'dynamic workflow did not complete: ' + JSON.stringify(result?.details));
+    assert(result?.content?.[0]?.text?.includes('done:runtime'), 'dynamic workflow result missing');
+    const list = await module.listWorkflows({}, ctx);
+    assert(Array.isArray(list.workflows) && list.workflows.length === 1, 'dynamic workflows list failed');
+    const detail = await module.getWorkflow({ workflowId: result.details.workflowId }, ctx);
+    assert(detail.workflow?.resultText === 'done:runtime', 'dynamic workflow detail missing final result');
+    assert(detail.events.some((event) => event.type === 'log'), 'dynamic workflow log event missing');
+    await expectReject(() => module.workflow({ name: 'Smoke' }, ctx), /script is required/i);
+  },
   async 'system-extension-manager'() {
     const result = await module.listHostViewComponents({}, ctx);
     assert(result.ok === true && Array.isArray(result.hostViewComponents), 'host component list failed');
@@ -561,6 +670,14 @@ describe('system extension backend runtime smoke tests', () => {
       systemBackends.map((backend) => backend.id).filter((id) => !smokeIds.has(id)),
       'Missing system extension backend runtime smoke cases',
     ).toEqual([]);
+  });
+
+  it('registers the dynamic workflows skill for agent guidance', () => {
+    const summary = listExtensionInstallSummaries().find((item) => item.id === 'system-dynamic-workflows');
+    const skill = summary?.skills?.find((item) => item.id === 'dynamic-workflows');
+
+    expect(skill, 'system-dynamic-workflows must contribute a dynamic-workflows skill').toBeTruthy();
+    expect(skill?.path).toContain('skills/dynamic-workflows/SKILL.md');
   });
 
   it('imports each prebuilt backend and exercises one safe runtime path', () => {
