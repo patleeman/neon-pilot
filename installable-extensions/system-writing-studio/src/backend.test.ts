@@ -89,6 +89,7 @@ describe('Writing Studio backend', () => {
 
     expect(result.annotations).toHaveLength(1);
     expect(result.annotations[0].body).toBe('This is the live review note.');
+    expect(result.annotations[0].anchor).toEqual(expect.objectContaining({ before: '# Draft', after: '' }));
     expect(result.annotations[0].suggestedReplacement).toBe('This sentence has enough substance to show a concrete approved edit.');
     const state = await load({}, ctx);
     expect(state.annotations.length).toBe(result.annotations.length);
@@ -292,6 +293,7 @@ describe('Writing Studio backend', () => {
     expect(canvas.title).toBe('Tool Draft');
     expect(canvas.markdown).toContain('This line wants a comment.');
     expect(annotated.annotation).toEqual(expect.objectContaining({ kind: 'reaction', quote: 'This line wants a comment.' }));
+    expect(annotated.annotation.anchor).toEqual(expect.objectContaining({ before: '# Tool Draft', after: '' }));
     expect((await getCanvas({}, ctx)).annotations[0].body).toBe('There is a useful spark here.');
   });
 

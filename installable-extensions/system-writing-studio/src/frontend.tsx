@@ -83,6 +83,10 @@ interface Annotation {
   emoji?: string;
   suggestedReplacement?: string;
   quote: string;
+  anchor?: {
+    before: string;
+    after: string;
+  };
   from: number;
   to: number;
   status: 'open' | 'resolved';
@@ -816,24 +820,57 @@ function quoteForChat(text: string): string {
     .join('\n');
 }
 
+function normalizeAnchorText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function editorTextIndex(editor: Editor): Array<{ text: string; from: number; to: number; start: number; end: number }> {
+  const entries: Array<{ text: string; from: number; to: number; start: number; end: number }> = [];
+  let offset = 0;
+  editor.state.doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return true;
+    const text = node.text;
+    entries.push({ text, from: pos, to: pos + text.length, start: offset, end: offset + text.length });
+    offset += text.length;
+    return true;
+  });
+  return entries;
+}
+
+function documentPositionForTextOffset(
+  entries: Array<{ text: string; from: number; to: number; start: number; end: number }>,
+  target: number,
+): number | null {
+  for (const entry of entries) {
+    if (target <= entry.end) return entry.from + Math.max(0, Math.min(entry.text.length, target - entry.start));
+  }
+  return entries.at(-1)?.to ?? null;
+}
+
 function findAnnotationSelection(editor: Editor, annotation: Annotation): { from: number; to: number } | null {
   const quotes = quoteCandidatesForAnnotation(annotation);
+  const textEntries = editorTextIndex(editor);
+  const renderedText = textEntries.map((entry) => entry.text).join('');
   for (const quote of quotes) {
-    let match: { from: number; to: number } | null = null;
-    editor.state.doc.descendants((node, pos) => {
-      if (match || !node.isText) return false;
-      const index = (node.text ?? '').indexOf(quote);
-      if (index < 0) return true;
-      match = { from: pos + index, to: pos + index + quote.length };
-      return false;
-    });
-    if (match) return match;
-  }
-  if (annotation.to > annotation.from) {
-    const expanded = expandTextOffsetsToUsefulRange(editor.state.doc.textContent, annotation.from, annotation.to);
-    const from = textOffsetToDocumentPosition(editor, expanded.from);
-    const to = textOffsetToDocumentPosition(editor, expanded.to);
+    const normalizedQuote = normalizeAnchorText(quote);
+    const index = renderedText.indexOf(normalizedQuote);
+    if (index < 0) continue;
+    const from = documentPositionForTextOffset(textEntries, index);
+    const to = documentPositionForTextOffset(textEntries, index + normalizedQuote.length);
     if (from !== null && to !== null && to > from) return { from, to };
+  }
+  const before = normalizeAnchorText(annotation.anchor?.before ?? '');
+  const after = normalizeAnchorText(annotation.anchor?.after ?? '');
+  if (before || after) {
+    const beforeIndex = before ? renderedText.indexOf(before) : -1;
+    const afterIndex = after ? renderedText.indexOf(after, Math.max(0, beforeIndex)) : -1;
+    if ((before ? beforeIndex >= 0 : true) && (after ? afterIndex >= 0 : true)) {
+      const start = before ? beforeIndex + before.length : Math.max(0, afterIndex - annotation.quote.length);
+      const end = after ? afterIndex : Math.min(renderedText.length, start + annotation.quote.length);
+      const from = documentPositionForTextOffset(textEntries, start);
+      const to = documentPositionForTextOffset(textEntries, end);
+      if (from !== null && to !== null && to > from) return { from, to };
+    }
   }
   return null;
 }
@@ -860,38 +897,6 @@ function scrollAnnotationIntoView(editor: Editor, annotation: Annotation): void 
           : null;
     element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
-}
-
-function textOffsetToDocumentPosition(editor: Editor, targetOffset: number): number | null {
-  let textOffset = 0;
-  let result: number | null = null;
-  editor.state.doc.descendants((node, pos) => {
-    if (result !== null || !node.isText) return result === null;
-    const textLength = node.text?.length ?? 0;
-    const nextOffset = textOffset + textLength;
-    if (targetOffset <= nextOffset) {
-      result = pos + Math.max(0, Math.min(textLength, targetOffset - textOffset));
-      return false;
-    }
-    textOffset = nextOffset + 1;
-    return true;
-  });
-  return result;
-}
-
-function expandTextOffsetsToUsefulRange(text: string, from: number, to: number): { from: number; to: number } {
-  const length = text.length;
-  let start = Math.max(0, Math.min(from, length));
-  let end = Math.max(start, Math.min(to, length));
-  const selected = text.slice(start, end);
-  if (selected.trim().length >= 8) return { from: start, to: end };
-  while (start > 0 && !/[.!?\n]/.test(text[start - 1] ?? '')) start -= 1;
-  while (end < length && !/[.!?\n]/.test(text[end] ?? '')) end += 1;
-  if (end < length && /[.!?]/.test(text[end] ?? '')) end += 1;
-  while (start < end && /\s/.test(text[start] ?? '')) start += 1;
-  while (end > start && /\s/.test(text[end - 1] ?? '')) end -= 1;
-  if (text.slice(start, end).trim().length >= 8) return { from: start, to: end };
-  return { from: Math.max(0, Math.min(from, length)), to: Math.max(0, Math.min(to, length)) };
 }
 
 function useWritingDoc(initialMarkdown: string, onCrdtUpdate: (update: Uint8Array, markdown: string) => void) {

@@ -15,6 +15,11 @@ type EventType =
   | 'agent_run_completed';
 type AnnotationKind = 'comment' | 'suggestion' | 'reaction' | 'warning';
 
+export interface AnnotationAnchor {
+  before: string;
+  after: string;
+}
+
 export interface WritingEvent {
   id: string;
   type: EventType;
@@ -30,6 +35,7 @@ export interface Annotation {
   emoji?: string;
   suggestedReplacement?: string;
   quote: string;
+  anchor?: AnnotationAnchor;
   from: number;
   to: number;
   status: 'open' | 'resolved';
@@ -271,6 +277,34 @@ function normalizeSettings(value: unknown): WritingSettings {
   return { reviewIntervalSeconds, reviewPrompt, agentInstructions };
 }
 
+function textAnchorForQuote(markdown: string, from: number, quote: string): AnnotationAnchor {
+  const before = markdown
+    .slice(Math.max(0, from - 80), from)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(-60);
+  const after = markdown
+    .slice(from + quote.length, from + quote.length + 80)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60);
+  return { before, after };
+}
+
+function normalizeAnnotation(value: unknown, markdown: string): Annotation {
+  const annotation = value as Annotation;
+  const quote = typeof annotation.quote === 'string' ? annotation.quote : '';
+  const from = typeof annotation.from === 'number' && Number.isFinite(annotation.from) ? annotation.from : markdown.indexOf(quote);
+  const storedAnchor = annotation.anchor as AnnotationAnchor | undefined;
+  const anchor =
+    storedAnchor && typeof storedAnchor === 'object' && typeof storedAnchor.before === 'string' && typeof storedAnchor.after === 'string'
+      ? storedAnchor
+      : from >= 0 && quote
+        ? textAnchorForQuote(markdown, from, quote)
+        : undefined;
+  return { ...annotation, ...(anchor ? { anchor } : {}) };
+}
+
 function normalizeState(id: string, stored: Partial<StoredState>): StoredState {
   const title =
     typeof stored.title === 'string' && stored.title.trim() ? stored.title.trim() : titleFromMarkdown(stored.markdown ?? seedMarkdown);
@@ -284,7 +318,11 @@ function normalizeState(id: string, stored: Partial<StoredState>): StoredState {
     folderPath: normalizeFolderPath(stored.folderPath),
     markdown: typeof stored.markdown === 'string' ? stored.markdown : seedMarkdown,
     events: Array.isArray(stored.events) ? stored.events : [],
-    annotations: Array.isArray(stored.annotations) ? stored.annotations : [],
+    annotations: Array.isArray(stored.annotations)
+      ? stored.annotations.map((annotation) =>
+          normalizeAnnotation(annotation, typeof stored.markdown === 'string' ? stored.markdown : seedMarkdown),
+        )
+      : [],
     chat: Array.isArray(stored.chat) ? stored.chat : [],
     settings: normalizeSettings(stored.settings),
   };
@@ -354,6 +392,7 @@ function parseAgentAnnotations(text: string, markdown: string, runId: string): A
         ...(emoji ? { emoji } : {}),
         ...(suggestedReplacement ? { suggestedReplacement } : {}),
         quote,
+        anchor: textAnchorForQuote(markdown, from, quote),
         from,
         to: from + quote.length,
         status: 'open',
@@ -632,6 +671,7 @@ export async function addAnnotation(
       ? { suggestedReplacement: payload.suggestedReplacement.trim() }
       : {}),
     quote,
+    anchor: textAnchorForQuote(state.markdown, from, quote),
     from,
     to: from + quote.length,
     status: 'open',
@@ -678,6 +718,7 @@ export async function updateAnnotation(
   const updated: Annotation = {
     ...existing,
     quote: nextQuote,
+    anchor: textAnchorForQuote(state.markdown, from, nextQuote),
     body: nextBody,
     kind: nextKind,
     ...(nextEmoji ? { emoji: nextEmoji } : {}),
