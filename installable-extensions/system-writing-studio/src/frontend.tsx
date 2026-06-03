@@ -31,7 +31,8 @@ const writingStudioCss = `
 .writing-studio-filebar{display:flex;align-items:center;max-width:68rem;margin:0 auto .55rem}.writing-studio-file-name{width:min(24rem,100%);min-width:0;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.28rem .4rem;font:inherit;font-size:.86rem;font-weight:560;line-height:1.2}.writing-studio-file-name:hover,.writing-studio-file-name:focus{background:rgb(var(--color-surface));color:rgb(var(--color-primary));outline:1px solid rgb(var(--color-border-subtle))}.writing-studio-file-name::placeholder{color:rgb(var(--color-dim))}
 .writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-format-spacer{flex:1 1 auto;min-width:.5rem}.writing-studio-format-save{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-format-save:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-save:disabled{cursor:default;opacity:.55}.writing-studio-format-save::after{content:"";position:absolute;right:.16rem;top:.16rem;width:.34rem;height:.34rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-format-save.is-saved::after{background:rgb(var(--color-success))}.writing-studio-format-save.is-saving::after{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-format-save.is-unsaved::after{background:rgb(var(--color-warning))}.writing-studio-format-save.is-error::after{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
-.writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
+.writing-studio-editor-frame{position:relative}.writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
+.writing-studio-selection-menu{position:absolute;z-index:35;display:flex;align-items:center;gap:.18rem;padding:.25rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 36px rgba(0,0,0,.28);transform:translateX(-50%)}.writing-studio-selection-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.36rem .52rem;font:inherit;font-size:.72rem;font-weight:590;line-height:1;cursor:pointer;white-space:nowrap}.writing-studio-selection-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-selection-menu button:first-child{color:rgb(var(--color-accent))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 21%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}.writing-studio-mark-highlight[data-kind="warning"]{background:color-mix(in srgb,rgb(var(--color-warning)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-warning)) 24%,transparent)}.writing-studio-mark-highlight[data-kind="comment"]{background:color-mix(in srgb,rgb(var(--color-secondary)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-secondary)) 20%,transparent)}.writing-studio-mark-highlight[data-kind="reaction"]{background:color-mix(in srgb,rgb(var(--color-success)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-success)) 20%,transparent)}
 .writing-studio-comments{position:sticky;top:1rem;display:grid;gap:.65rem;padding-top:2.4rem}.writing-studio-comment{--comment-tint:rgb(var(--color-accent));padding:.7rem .75rem;border:1px solid color-mix(in srgb,var(--comment-tint) 18%,rgb(var(--color-border-subtle)));border-radius:8px;background:color-mix(in srgb,var(--comment-tint) 7%,rgb(var(--color-surface)));box-shadow:0 8px 22px rgba(0,0,0,.12);cursor:pointer;text-align:left}.writing-studio-comment.is-active{border-color:color-mix(in srgb,var(--comment-tint) 48%,rgb(var(--color-border-default)));background:color-mix(in srgb,var(--comment-tint) 13%,rgb(var(--color-surface)));box-shadow:0 0 0 1px color-mix(in srgb,var(--comment-tint) 28%,transparent),0 12px 28px rgba(0,0,0,.18)}.writing-studio-comment.is-warning{--comment-tint:rgb(var(--color-warning))}.writing-studio-comment.is-comment{--comment-tint:rgb(var(--color-secondary))}.writing-studio-comment.is-reaction{--comment-tint:rgb(var(--color-success))}
 .writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.45rem}.writing-studio-comment-kind{color:color-mix(in srgb,var(--comment-tint) 72%,rgb(var(--color-secondary)));font-size:.68rem;font-weight:620;text-transform:capitalize;letter-spacing:.01em}.writing-studio-comment-actions{display:flex;align-items:center;gap:.25rem}.writing-studio-comment-actions button{border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment-actions button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-comment-discuss{padding:.22rem .4rem}.writing-studio-comment-close{display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;padding:0;font-size:.9rem;line-height:1}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
@@ -150,6 +151,11 @@ type FileTreeModelOptions = {
   onSelectionChange: (paths: readonly string[]) => void;
   unsafeCSS: string;
 };
+interface SelectionMenuState {
+  text: string;
+  left: number;
+  top: number;
+}
 
 const actorId = `writer-${Math.random().toString(16).slice(2)}`;
 const railWidthStorageKey = 'writing-studio:rail-width';
@@ -481,6 +487,14 @@ function quoteCandidatesForAnnotation(annotation: Annotation): string[] {
   return Array.from(new Set([raw, withoutMarkdownHeading].filter((quote) => quote.length > 0)));
 }
 
+function quoteForChat(text: string): string {
+  return text
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join('\n');
+}
+
 function findAnnotationSelection(editor: Editor, annotation: Annotation): { from: number; to: number } | null {
   const quotes = quoteCandidatesForAnnotation(annotation);
   for (const quote of quotes) {
@@ -603,6 +617,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState(() => readStringSetting(thinkingLevelStorageKey));
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
+  const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
   const [, setFormatStateVersion] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -611,6 +626,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
   const fileNameDraftRef = useRef('');
+  const dismissedSelectionTextRef = useRef('');
 
   const updateFileNameDraft = useCallback((value: string) => {
     fileNameDraftRef.current = value;
@@ -738,16 +754,83 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     },
   });
 
+  const updateSelectionMenu = useCallback(() => {
+    if (!editor) {
+      setSelectionMenu(null);
+      return;
+    }
+    const frame = editor.view.dom.closest('.writing-studio-editor-frame')?.getBoundingClientRect();
+    if (!frame) {
+      setSelectionMenu(null);
+      return;
+    }
+
+    const { from, to, empty } = editor.state.selection;
+    let text = empty || to <= from ? '' : editor.state.doc.textBetween(from, to, '\n').trim();
+    let rect: DOMRect | null = null;
+
+    if (text) {
+      try {
+        const start = editor.view.coordsAtPos(from);
+        const end = editor.view.coordsAtPos(to);
+        rect = {
+          left: Math.min(start.left, end.left),
+          right: Math.max(start.right, end.right),
+          top: Math.min(start.top, end.top),
+          bottom: Math.max(start.bottom, end.bottom),
+          width: Math.abs(end.right - start.left),
+          height: Math.abs(end.bottom - start.top),
+          x: Math.min(start.left, end.left),
+          y: Math.min(start.top, end.top),
+          toJSON: () => ({}),
+        } as DOMRect;
+      } catch {
+        rect = null;
+      }
+    }
+
+    if (!text) {
+      const selection = window.getSelection();
+      const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const anchor = selection?.anchorNode instanceof Node ? selection.anchorNode : null;
+      if (!selection || selection.isCollapsed || !range || !anchor || !editor.view.dom.contains(anchor)) {
+        setSelectionMenu(null);
+        return;
+      }
+      text = selection.toString().trim();
+      rect = range.getBoundingClientRect();
+    }
+
+    if (!text || text === dismissedSelectionTextRef.current || !rect || rect.width === 0 || rect.height === 0) {
+      setSelectionMenu(null);
+      return;
+    }
+
+    const left = Math.min(Math.max(rect.left + rect.width / 2 - frame.left, 5), frame.width - 5);
+    const top = rect.top - frame.top > 56 ? rect.top - frame.top - 42 : rect.bottom - frame.top + 8;
+    setSelectionMenu({ text, left, top });
+  }, [editor]);
+
+  const clearSelectionMenu = useCallback(() => {
+    dismissedSelectionTextRef.current = selectionMenu?.text.trim() ?? '';
+    setSelectionMenu(null);
+    window.getSelection()?.removeAllRanges();
+    if (editor && !editor.state.selection.empty) editor.commands.setTextSelection(editor.state.selection.to);
+  }, [editor, selectionMenu?.text]);
+
   useEffect(() => {
     if (!editor) return;
-    const refreshFormatState = () => setFormatStateVersion((version) => version + 1);
+    const refreshFormatState = () => {
+      setFormatStateVersion((version) => version + 1);
+      window.setTimeout(updateSelectionMenu, 0);
+    };
     editor.on('selectionUpdate', refreshFormatState);
     editor.on('transaction', refreshFormatState);
     return () => {
       editor.off('selectionUpdate', refreshFormatState);
       editor.off('transaction', refreshFormatState);
     };
-  }, [editor]);
+  }, [editor, updateSelectionMenu]);
 
   const syncEditorMarkdown = useCallback(() => {
     if (!editor || applyingEditorContent.current) return markdown;
@@ -853,7 +936,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   }, [activeAnnotationId, editor, markdown, state?.annotations]);
 
   const runReview = useCallback(
-    async (trigger: string) => {
+    async (trigger: string, options?: { reviewPrompt?: string }) => {
       setBusy('review');
       setReviewStatus('running');
       if (reviewStatusTimer.current) clearTimeout(reviewStatusTimer.current);
@@ -864,6 +947,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           trigger,
           documentId: activeDocumentId,
           modelRef: currentModel || undefined,
+          reviewPrompt: options?.reviewPrompt,
         })) as { annotations: Annotation[] };
         const currentQuotes = result.annotations.map((annotation) => annotation.quote);
         setState((current) =>
@@ -931,6 +1015,35 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     },
     [sendChat],
   );
+
+  const sendSelectionToChat = useCallback(
+    (intent: 'discuss' | 'enhance') => {
+      const text = selectionMenu?.text.trim();
+      if (!text) return;
+      clearSelectionMenu();
+      const prompt =
+        intent === 'enhance'
+          ? 'Can you suggest a stronger version of this passage? Preserve my voice, then explain the tradeoffs.'
+          : 'Can we discuss this passage?';
+      void sendChat([prompt, '', quoteForChat(text)].join('\n'));
+    },
+    [clearSelectionMenu, selectionMenu?.text, sendChat],
+  );
+
+  const reviewSelection = useCallback(() => {
+    const text = selectionMenu?.text.trim();
+    if (!text) return;
+    clearSelectionMenu();
+    const reviewPrompt = [
+      'Focus this review only on the selected passage below.',
+      'Add useful margin comments when there is something specific to say. Prefer lively editorial commentary, concrete options, and reactions over generic critique.',
+      'Anchor annotations to exact text from the selected passage when possible.',
+      '',
+      'Selected passage:',
+      text,
+    ].join('\n');
+    void runReview('selection', { reviewPrompt });
+  }, [clearSelectionMenu, runReview, selectionMenu?.text]);
 
   const resolveAnnotation = useCallback(
     async (id: string) => {
@@ -1132,7 +1245,37 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         </div>
         <WritingFormatBar editor={editor} saveStatus={saveStatus} saveTooltip={saveTooltip} onSave={() => void saveDocument()} />
         <div className="writing-studio-canvas">
-          <div className="writing-studio-editor-frame">
+          <div
+            className="writing-studio-editor-frame"
+            onMouseUp={() => {
+              dismissedSelectionTextRef.current = '';
+              window.setTimeout(updateSelectionMenu, 0);
+            }}
+            onKeyUp={() => {
+              dismissedSelectionTextRef.current = '';
+              window.setTimeout(updateSelectionMenu, 0);
+            }}
+          >
+            {selectionMenu ? (
+              <div
+                className="writing-studio-selection-menu"
+                style={{ left: selectionMenu.left, top: selectionMenu.top }}
+                role="menu"
+                aria-label="Selected text actions"
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseUp={(event) => event.stopPropagation()}
+              >
+                <button type="button" role="menuitem" onClick={() => sendSelectionToChat('discuss')}>
+                  Discuss
+                </button>
+                <button type="button" role="menuitem" onClick={reviewSelection}>
+                  Review
+                </button>
+                <button type="button" role="menuitem" onClick={() => sendSelectionToChat('enhance')}>
+                  Improve
+                </button>
+              </div>
+            ) : null}
             <EditorContent editor={editor} />
           </div>
           <aside className="writing-studio-comments" aria-label="Document comments">

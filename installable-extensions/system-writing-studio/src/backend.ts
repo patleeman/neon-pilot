@@ -480,12 +480,15 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   const state = await readState(ctx, payload.documentId);
   if (typeof payload.markdown === 'string') state.markdown = payload.markdown;
   state.title = titleFromMarkdown(state.markdown, state.title);
-  if (typeof payload.reviewPrompt === 'string') state.settings = normalizeSettings({ ...state.settings, reviewPrompt: payload.reviewPrompt });
+  const reviewSettings =
+    typeof payload.reviewPrompt === 'string' && payload.reviewPrompt.trim()
+      ? normalizeSettings({ ...state.settings, reviewPrompt: payload.reviewPrompt })
+      : state.settings;
   const runId = randomUUID();
   state.events.push(event('agent_run_started', 'agent', { runId, trigger: payload.trigger ?? 'manual' }));
   const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
-  const agentAnnotations = await buildAgentReviewAnnotations(state.markdown, runId, state.settings, ctx, modelRef);
-  const fallbackAnnotations = buildReviewAnnotations(state.markdown, runId, state.settings);
+  const agentAnnotations = await buildAgentReviewAnnotations(state.markdown, runId, reviewSettings, ctx, modelRef);
+  const fallbackAnnotations = buildReviewAnnotations(state.markdown, runId, reviewSettings);
   const annotations =
     agentAnnotations.length > 0
       ? mergeReviewAnnotations(agentAnnotations, fallbackAnnotations, minimumReviewAnnotations(state.markdown))
