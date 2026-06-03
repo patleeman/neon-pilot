@@ -15,23 +15,89 @@
     "actions": [
       { "id": "writingStudioLoad", "handler": "load", "title": "Load writing document", "worker": { "enabled": true } },
       { "id": "writingStudioListDocuments", "handler": "listDocuments", "title": "List writing documents", "worker": { "enabled": true } },
-      { "id": "writingStudioCreateDocument", "handler": "createDocument", "title": "Create writing document", "worker": { "enabled": true } },
+      {
+        "id": "writingStudioCreateDocument",
+        "handler": "createDocument",
+        "title": "Create writing document",
+        "worker": { "enabled": true }
+      },
       { "id": "writingStudioCreateFolder", "handler": "createFolder", "title": "Create writing folder", "worker": { "enabled": true } },
-      { "id": "writingStudioRenameDocument", "handler": "renameDocument", "title": "Rename writing document", "worker": { "enabled": true } },
-      { "id": "writingStudioDeleteDocument", "handler": "deleteDocument", "title": "Delete writing document", "worker": { "enabled": true } },
+      {
+        "id": "writingStudioRenameDocument",
+        "handler": "renameDocument",
+        "title": "Rename writing document",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioDeleteDocument",
+        "handler": "deleteDocument",
+        "title": "Delete writing document",
+        "worker": { "enabled": true }
+      },
       { "id": "writingStudioRenameFolder", "handler": "renameFolder", "title": "Rename writing folder", "worker": { "enabled": true } },
       { "id": "writingStudioDeleteFolder", "handler": "deleteFolder", "title": "Delete writing folder", "worker": { "enabled": true } },
-      { "id": "writingStudioImportDocument", "handler": "importDocument", "title": "Import writing document", "worker": { "enabled": true } },
+      {
+        "id": "writingStudioImportDocument",
+        "handler": "importDocument",
+        "title": "Import writing document",
+        "worker": { "enabled": true }
+      },
       { "id": "writingStudioSaveDocument", "handler": "saveDocument", "title": "Save writing document", "worker": { "enabled": true } },
-      { "id": "writingStudioExportDocument", "handler": "exportDocument", "title": "Export writing document", "worker": { "enabled": true } },
-      { "id": "writingStudioAppendUpdate", "handler": "appendUpdate", "title": "Append writing CRDT update", "worker": { "enabled": true } },
-      { "id": "writingStudioRunReview", "handler": "runReview", "title": "Review writing document", "worker": { "enabled": true, "timeoutMs": 120000 } },
-      { "id": "writingStudioSendChat", "handler": "sendChat", "title": "Send writing chat message", "worker": { "enabled": true, "timeoutMs": 90000 } },
-      { "id": "writingStudioSaveSettings", "handler": "saveSettings", "title": "Save writing studio settings", "worker": { "enabled": true } },
-      { "id": "writingStudioResolveAnnotation", "handler": "resolveAnnotation", "title": "Resolve writing annotation", "worker": { "enabled": true } },
+      {
+        "id": "writingStudioExportDocument",
+        "handler": "exportDocument",
+        "title": "Export writing document",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioAppendUpdate",
+        "handler": "appendUpdate",
+        "title": "Append writing CRDT update",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioRunReview",
+        "handler": "runReview",
+        "title": "Review writing document",
+        "worker": { "enabled": true, "timeoutMs": 120000 }
+      },
+      {
+        "id": "writingStudioSendChat",
+        "handler": "sendChat",
+        "title": "Send writing chat message",
+        "worker": { "enabled": true, "timeoutMs": 90000 }
+      },
+      {
+        "id": "writingStudioSaveSettings",
+        "handler": "saveSettings",
+        "title": "Save writing studio settings",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioResolveAnnotation",
+        "handler": "resolveAnnotation",
+        "title": "Resolve writing annotation",
+        "worker": { "enabled": true }
+      },
       { "id": "writingStudioGetCanvas", "handler": "getCanvas", "title": "Get Writing Studio canvas", "worker": { "enabled": true } },
-      { "id": "writingStudioUpdateCanvas", "handler": "updateCanvas", "title": "Update Writing Studio canvas", "worker": { "enabled": true } },
-      { "id": "writingStudioAddAnnotation", "handler": "addAnnotation", "title": "Add Writing Studio annotation", "worker": { "enabled": true } }
+      {
+        "id": "writingStudioUpdateCanvas",
+        "handler": "updateCanvas",
+        "title": "Update Writing Studio canvas",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioAddAnnotation",
+        "handler": "addAnnotation",
+        "title": "Add Writing Studio annotation",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioUpdateAnnotation",
+        "handler": "updateAnnotation",
+        "title": "Update Writing Studio annotation",
+        "worker": { "enabled": true }
+      }
     ]
   },
   "contributes": {
@@ -133,6 +199,26 @@
           "required": ["id"],
           "additionalProperties": false
         }
+      },
+      {
+        "id": "update-annotation",
+        "name": "writing_studio_update_annotation",
+        "description": "Update an existing Writing Studio annotation body, kind, emoji, or exact quote anchor.",
+        "action": "writingStudioUpdateAnnotation",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." },
+            "id": { "type": "string", "description": "Annotation id to update." },
+            "quote": { "type": "string", "description": "Optional replacement exact substring from the canvas." },
+            "body": { "type": "string", "description": "Optional replacement comment text." },
+            "kind": { "type": "string", "enum": ["comment", "suggestion", "reaction", "warning"] },
+            "emoji": { "type": "string", "description": "Optional short emoji or marker for reactions." }
+          },
+          "required": ["id"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": ["Use this when the user asks to revise a margin comment without changing the document text."]
       }
     ]
   },

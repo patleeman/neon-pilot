@@ -22,6 +22,7 @@ import {
   resolveAnnotation,
   runReview,
   sendChat,
+  updateAnnotation,
   updateCanvas,
 } from './backend';
 
@@ -137,12 +138,25 @@ describe('Writing Studio backend', () => {
     expect(result.annotations).toHaveLength(4);
   });
 
-  it('does not top up sparse agent review output', async () => {
+  it('fans review across document chunks when early output is sparse', async () => {
     const ctx = context();
     const markdown = [
       '# Sparse Agent',
       '',
       'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
+      'A paragraph near the top has a live wire and enough detail to earn one focused margin note from the reviewer.',
+      'Another early paragraph is deliberately plain so the first model pass can stay sparse without ending the review.',
+      'This sentence pads the opening section with a little more material so the review chunk boundary has somewhere natural to land.',
+      'The top section keeps moving with more words and more claims and more texture before the second section finally arrives.',
+      'One last top-section sentence gives the first review chunk enough weight to stand apart from the rest of the draft.',
+      'The opening material now has enough length to make the chunker continue into later parts of the document.',
+      'A final bridge line closes the first region and lets the next paragraph become a fresh review target.',
+      Array.from(
+        { length: 34 },
+        () =>
+          'This deliberately plain bridge sentence adds length without adding an annotation target, letting the review continue downward.',
+      ).join(' '),
+      '',
       'Maybe this section wants a clearer promise for the person reading it.',
       'The strongest idea arrives when the draft names the actual user and the actual moment.',
       'This sentence keeps accumulating clauses and side roads until the original point has to fight its way back into view for the reader.',
@@ -151,11 +165,21 @@ describe('Writing Studio backend', () => {
       'A second long sentence keeps adding context and qualifiers and momentum until the useful phrase at the center starts to disappear from view.',
       'Another strong line gives the reader a concrete image and a reason to keep going.',
     ].join('\n\n');
+    mockRunAgentTask.mockResolvedValue({ text: '[]' });
+    mockRunAgentTask.mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          quote: 'A paragraph near the top has a live wire and enough detail to earn one focused margin note from the reviewer.',
+          body: 'This opening has enough charge to deserve a note.',
+          kind: 'reaction',
+        },
+      ]),
+    });
     mockRunAgentTask.mockResolvedValueOnce({
       text: JSON.stringify([
         {
           quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
-          body: 'This is the sentence with a live wire in it.',
+          body: 'This later sentence has a live wire in it.',
           kind: 'reaction',
         },
       ]),
@@ -163,8 +187,11 @@ describe('Writing Studio backend', () => {
 
     const result = await runReview({ markdown }, ctx);
 
-    expect(result.annotations).toHaveLength(1);
-    expect(result.annotations[0].body).toBe('This is the sentence with a live wire in it.');
+    expect(mockRunAgentTask.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(result.annotations.map((annotation) => annotation.body)).toEqual([
+      'This opening has enough charge to deserve a note.',
+      'This later sentence has a live wire in it.',
+    ]);
   });
 
   it('fails review instead of fabricating annotations when the agent fails', async () => {
@@ -215,6 +242,30 @@ describe('Writing Studio backend', () => {
     expect(canvas.markdown).toContain('This line wants a comment.');
     expect(annotated.annotation).toEqual(expect.objectContaining({ kind: 'reaction', quote: 'This line wants a comment.' }));
     expect((await getCanvas({}, ctx)).annotations[0].body).toBe('There is a useful spark here.');
+  });
+
+  it('lets agent tools update existing annotations', async () => {
+    const ctx = context();
+    await updateCanvas({ markdown: '# Tool Draft\n\nThis line wants a comment.' }, ctx);
+    const annotated = await addAnnotation(
+      { quote: 'This line wants a comment.', body: 'There is a useful spark here.', kind: 'reaction', emoji: '*' },
+      ctx,
+    );
+    const updated = await updateAnnotation(
+      {
+        id: annotated.annotation.id,
+        quote: 'This line wants a comment.',
+        body: 'Keep this, but make the point sharper.',
+        kind: 'suggestion',
+      },
+      ctx,
+    );
+
+    expect(updated.annotation).toEqual(
+      expect.objectContaining({ id: annotated.annotation.id, body: 'Keep this, but make the point sharper.', kind: 'suggestion' }),
+    );
+    expect(updated.annotations[0].body).toBe('Keep this, but make the point sharper.');
+    expect((await load({}, ctx)).events.some((event) => event.type === 'annotation_updated')).toBe(true);
   });
 
   it('keeps document title, file name, and folder path separate', async () => {
