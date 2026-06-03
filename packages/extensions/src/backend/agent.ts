@@ -37,6 +37,23 @@ export interface ExtensionAgentConversationSendInput {
   timeoutMs?: number;
 }
 
+export type ExtensionAgentConversationStreamEvent =
+  | { type: 'user_message'; text: string; id?: string; ts?: string }
+  | { type: 'agent_start' }
+  | { type: 'text_delta'; delta: string }
+  | { type: 'thinking_delta'; delta: string }
+  | { type: 'tool_start'; toolCallId: string; toolName: string; args: Record<string, unknown> }
+  | { type: 'tool_update'; toolCallId: string; partialResult: unknown }
+  | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean; durationMs: number; output: string; details?: unknown }
+  | { type: 'agent_end'; text?: string }
+  | { type: 'turn_end' }
+  | { type: 'error'; message: string };
+
+export interface ExtensionAgentConversationStreamResult {
+  stream: 'sse';
+  events: AsyncIterable<{ event?: string; data?: ExtensionAgentConversationStreamEvent }>;
+}
+
 export interface ExtensionAgentConversationSummary {
   id: string;
   ownerExtensionId: string;
@@ -74,6 +91,13 @@ export async function sendAgentMessage(
   _input: ExtensionAgentConversationSendInput,
   _ctx: ExtensionBackendContext,
 ): Promise<ExtensionAgentConversationMessageResult> {
+  hostResolved();
+}
+
+export async function streamAgentMessage(
+  _input: ExtensionAgentConversationSendInput,
+  _ctx: ExtensionBackendContext,
+): Promise<ExtensionAgentConversationStreamResult> {
   hostResolved();
 }
 

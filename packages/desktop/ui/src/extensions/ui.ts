@@ -1,6 +1,7 @@
 export { buildApiPath } from '../client/apiBase';
-export { ChatRailComposer } from '../components/chat/ChatRailComposer';
-export { ChatView } from '../components/chat/ChatView';
+export { ChatRailComposer, type ChatRailComposerProps } from '../components/chat/ChatRailComposer';
+export { ChatView, type ChatViewProps } from '../components/chat/ChatView';
+export type { ChatViewLayout } from '../components/chat/chatViewTypes';
 export { CheckpointInlineDiff } from '../components/chat/CheckpointInlineDiff';
 export { DiffActionButton, GitDiffIcon } from '../components/chat/DiffActionButton';
 export { ContextMenuWrapper } from '../components/shared/ContextMenuWrapper';

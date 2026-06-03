@@ -2,6 +2,98 @@ export type { ExtensionSurfaceProps } from './index.js';
 
 export type HostComponent = (...args: never[]) => unknown;
 export type DesktopKnowledgeEntryContextMenuAction = unknown;
+export type ExtensionChatViewLayout = 'default' | 'compact';
+
+export interface ExtensionChatImage {
+  alt: string;
+  src?: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+  deferred?: boolean;
+}
+
+export type ExtensionChatMessageBlock =
+  | { type: 'user'; id?: string; ts: string; text: string; images?: ExtensionChatImage[] }
+  | { type: 'text'; id?: string; ts: string; text: string; streaming?: boolean }
+  | { type: 'context'; id?: string; ts: string; text: string; customType?: string }
+  | { type: 'thinking'; id?: string; ts: string; text: string }
+  | {
+      type: 'image';
+      id?: string;
+      ts: string;
+      alt: string;
+      src?: string;
+      mimeType?: string;
+      width?: number;
+      height?: number;
+      caption?: string;
+    }
+  | { type: 'error'; id?: string; ts: string; tool?: string; message: string };
+
+export interface ExtensionChatModelInfo {
+  id: string;
+  provider?: string;
+  name?: string;
+  label?: string;
+  [key: string]: unknown;
+}
+
+export interface ExtensionChatTokenUsage {
+  input: number;
+  output: number;
+  total: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+export interface ExtensionChatContextUsage {
+  usedTokens?: number;
+  maxTokens?: number;
+  [key: string]: unknown;
+}
+
+export interface ChatViewProps {
+  messages: ExtensionChatMessageBlock[];
+  conversationId?: string | null;
+  messageIndexOffset?: number;
+  scrollContainerRef?: unknown;
+  focusMessageIndex?: number | null;
+  isStreaming?: boolean;
+  isCompacting?: boolean;
+  pendingStatusLabel?: string | null;
+  performanceMode?: 'default' | 'aggressive';
+  layout?: ExtensionChatViewLayout;
+  onForkMessage?: (messageIndex: number) => Promise<void> | void;
+  onRewindMessage?: (messageIndex: number) => Promise<void> | void;
+  onEditUserMessage?: (messageIndex: number, text: string) => Promise<void> | void;
+  onReplyToSelection?: (selection: { text: string; messageIndex: number; blockId?: string; action?: unknown }) => Promise<void> | void;
+  selectionActions?: unknown[];
+  onHydrateMessage?: (blockId: string) => Promise<void> | void;
+  hydratingMessageBlockIds?: ReadonlySet<string>;
+  onFocusComposerRequest?: () => void;
+  bottomPaddingPx?: number;
+  systemPrompt?: string | null;
+  remoteControlled?: boolean;
+}
+
+export interface ChatRailComposerProps {
+  conversationId: string | null;
+  workspaceCwd: string | null;
+  isStreaming: boolean;
+  models: ExtensionChatModelInfo[];
+  currentModel: string;
+  currentThinkingLevel: string;
+  tokens: ExtensionChatTokenUsage | null;
+  contextUsage: ExtensionChatContextUsage | null;
+  onSubmit: (text: string, behavior?: 'steer' | 'followUp', images?: unknown[], attachmentRefs?: unknown[]) => void;
+  onAbortStream: () => void;
+  onSelectModel: (modelId: string) => void;
+  onSelectThinkingLevel: (thinkingLevel: string) => void;
+  composerMeta?: unknown;
+  externalDraft?: { id: string; text: string } | null;
+}
 
 export declare const AppPageEmptyState: HostComponent;
 export declare const AppPageIntro: HostComponent;
@@ -9,8 +101,8 @@ export declare const AppPageLayout: HostComponent;
 export declare const AppPageSection: HostComponent;
 export declare const AppPageToc: HostComponent;
 export declare const CheckpointInlineDiff: (...args: never[]) => unknown;
-export declare const ChatRailComposer: (...args: never[]) => unknown;
-export declare const ChatView: (...args: never[]) => unknown;
+export declare const ChatRailComposer: (props: ChatRailComposerProps) => unknown;
+export declare const ChatView: (props: ChatViewProps) => unknown;
 export declare const DiffActionButton: (...args: never[]) => unknown;
 export declare const GitDiffIcon: HostComponent;
 export declare const ContextMenuWrapper: HostComponent;

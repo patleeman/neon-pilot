@@ -55,22 +55,7 @@ function clearForkPromptDraft(conversationId: string): void {
   }
 }
 
-export function ChatRailComposer({
-  conversationId,
-  workspaceCwd: _workspaceCwd,
-  isStreaming,
-  models,
-  currentModel,
-  currentThinkingLevel,
-  tokens,
-  contextUsage,
-  onSubmit,
-  onAbortStream,
-  onSelectModel,
-  onSelectThinkingLevel,
-  composerMeta,
-  externalDraft,
-}: {
+export interface ChatRailComposerProps {
   conversationId: string | null;
   workspaceCwd: string | null;
   isStreaming: boolean;
@@ -90,7 +75,24 @@ export function ChatRailComposer({
   onSelectThinkingLevel: (thinkingLevel: string) => void;
   composerMeta?: ReactNode;
   externalDraft?: { id: string; text: string } | null;
-}) {
+}
+
+export function ChatRailComposer({
+  conversationId,
+  workspaceCwd: _workspaceCwd,
+  isStreaming,
+  models,
+  currentModel,
+  currentThinkingLevel,
+  tokens,
+  contextUsage,
+  onSubmit,
+  onAbortStream,
+  onSelectModel,
+  onSelectThinkingLevel,
+  composerMeta,
+  externalDraft,
+}: ChatRailComposerProps) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
   const [drawingAttachments, setDrawingAttachments] = useState<ComposerDrawingAttachment[]>([]);

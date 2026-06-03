@@ -40,6 +40,23 @@ export interface ExtensionAgentConversationSendInput {
   timeoutMs?: number;
 }
 
+type ExtensionAgentConversationStreamEvent =
+  | { type: 'user_message'; text: string; id?: string; ts?: string }
+  | { type: 'agent_start' }
+  | { type: 'text_delta'; delta: string }
+  | { type: 'thinking_delta'; delta: string }
+  | { type: 'tool_start'; toolCallId: string; toolName: string; args: Record<string, unknown> }
+  | { type: 'tool_update'; toolCallId: string; partialResult: unknown }
+  | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean; durationMs: number; output: string; details?: unknown }
+  | { type: 'agent_end'; text?: string }
+  | { type: 'turn_end' }
+  | { type: 'error'; message: string };
+
+export interface ExtensionAgentConversationStreamResult {
+  stream: 'sse';
+  events: AsyncIterable<{ event?: string; data?: ExtensionAgentConversationStreamEvent }>;
+}
+
 export interface ExtensionAgentConversationSummary {
   id: string;
   ownerExtensionId: string;
@@ -170,9 +187,61 @@ function collectAssistantTexts(session: { messages?: unknown[] }): string[] {
     .filter(Boolean);
 }
 
+function readNestedTextDelta(event: unknown): string | null {
+  if (!isRecord(event)) return null;
+  if (event.type === 'text_delta' && typeof event.delta === 'string') return event.delta;
+  if (event.type !== 'message_update' || !isRecord(event.assistantMessageEvent)) return null;
+  const assistantEvent = event.assistantMessageEvent;
+  return assistantEvent.type === 'text_delta' && typeof assistantEvent.delta === 'string' ? assistantEvent.delta : null;
+}
+
+function normalizeSessionEvent(event: unknown): ExtensionAgentConversationStreamEvent | null {
+  if (!isRecord(event)) return null;
+  const textDelta = readNestedTextDelta(event);
+  if (textDelta !== null) return { type: 'text_delta', delta: textDelta };
+  if (event.type === 'agent_start') return { type: 'agent_start' };
+  if (event.type === 'agent_end') return { type: 'agent_end' };
+  if (event.type === 'turn_end') return { type: 'turn_end' };
+  if (event.type === 'thinking_delta' && typeof event.delta === 'string') return { type: 'thinking_delta', delta: event.delta };
+  if (event.type === 'message_update' && isRecord(event.assistantMessageEvent)) {
+    const assistantEvent = event.assistantMessageEvent;
+    if (assistantEvent.type === 'thinking_delta' && typeof assistantEvent.delta === 'string')
+      return { type: 'thinking_delta', delta: assistantEvent.delta };
+  }
+  if (event.type === 'tool_start' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {
+    return {
+      type: 'tool_start',
+      toolCallId: event.toolCallId,
+      toolName: event.toolName,
+      args: isRecord(event.args) ? event.args : {},
+    };
+  }
+  if (event.type === 'tool_update' && typeof event.toolCallId === 'string') {
+    return { type: 'tool_update', toolCallId: event.toolCallId, partialResult: event.partialResult };
+  }
+  if (event.type === 'tool_end' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {
+    return {
+      type: 'tool_end',
+      toolCallId: event.toolCallId,
+      toolName: event.toolName,
+      isError: event.isError === true,
+      durationMs: typeof event.durationMs === 'number' ? event.durationMs : 0,
+      output: typeof event.output === 'string' ? event.output : '',
+      ...(event.details !== undefined ? { details: event.details } : {}),
+    };
+  }
+  return null;
+}
+
 async function assertPermission(ctx: ExtensionBackendContextLike, permission: 'agent:run' | 'agent:conversations'): Promise<void> {
   if (!ctx.extensionId) return;
-  await callServerModuleExport('../../extensions/extensionPermissions.js', 'assertExtensionPermission', ctx.extensionId, permission, 'agent conversations');
+  await callServerModuleExport(
+    '../../extensions/extensionPermissions.js',
+    'assertExtensionPermission',
+    ctx.extensionId,
+    permission,
+    'agent conversations',
+  );
 }
 
 function getAssistantErrorMessage(session: { messages?: unknown[] }): string | null {
@@ -232,7 +301,9 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
   const modelRegistry =
     (agentCtx?.modelRegistry as { getAvailable(): unknown[] } | undefined) ??
     (pi.ModelRegistry.create(authStorage, join(runtimeDir, 'models.json')) as { getAvailable(): unknown[] });
-  const model = input.modelRef ? resolveModel(modelRegistry.getAvailable(), input.modelRef) : agentCtx?.model ?? modelRegistry.getAvailable()[0];
+  const model = input.modelRef
+    ? resolveModel(modelRegistry.getAvailable(), input.modelRef)
+    : (agentCtx?.model ?? modelRegistry.getAvailable()[0]);
   if (!model) throw new Error(`Agent conversation model is not available: ${input.modelRef ?? '(current)'}`);
   const cwd = input.cwd ?? ctx.toolContext?.cwd ?? (typeof agentCtx?.cwd === 'string' ? agentCtx.cwd : process.cwd());
   const { session } = await pi.createAgentSession({
@@ -391,6 +462,88 @@ export async function sendAgentMessage(
   } finally {
     record.isBusy = false;
   }
+}
+
+export async function streamAgentMessage(
+  input: ExtensionAgentConversationSendInput,
+  ctx: ExtensionBackendContextLike,
+): Promise<ExtensionAgentConversationStreamResult> {
+  await assertPermission(ctx, 'agent:conversations');
+  const record = getOwnedRecord(input.conversationId, ctx);
+  if (record.visibility === 'visible') {
+    throw new Error('Visible saved extension conversations stream through the host live-session events endpoint.');
+  }
+  if (record.isBusy) throw new Error(`Agent conversation is already busy: ${input.conversationId}`);
+  if (!record.session) throw new Error(`Agent conversation session is not available: ${record.id}`);
+  const text = typeof input.text === 'string' ? input.text.trim() : '';
+  if (!text) throw new Error('Agent conversation message text is required.');
+  if ((input.images?.length ?? 0) > 0 && !modelAcceptsImages(record.model))
+    throw new Error(`Agent conversation model does not accept images: ${record.id}`);
+
+  async function* events(): AsyncIterable<{ event?: string; data?: ExtensionAgentConversationStreamEvent }> {
+    const queue: ExtensionAgentConversationStreamEvent[] = [];
+    let notify: (() => void) | null = null;
+    let done = false;
+    let failure: Error | null = null;
+    let streamedText = '';
+    const enqueue = (event: ExtensionAgentConversationStreamEvent) => {
+      if (event.type === 'text_delta') streamedText += event.delta;
+      queue.push(event);
+      notify?.();
+      notify = null;
+    };
+    const unsubscribe = record.session!.subscribe((event) => {
+      const normalized = normalizeSessionEvent(event);
+      if (normalized) enqueue(normalized);
+      if (isRecord(event) && event.type === 'message_end' && isRecord(event.message) && event.message.role === 'assistant') {
+        const finalText = extractTextContent(event.message.content).trim();
+        if (finalText && !streamedText) enqueue({ type: 'text_delta', delta: finalText });
+      }
+    });
+    record.isBusy = true;
+    enqueue({ type: 'user_message', text, ts: new Date().toISOString() });
+    enqueue({ type: 'agent_start' });
+    void runWithTimeout(
+      record.session!.prompt(text, input.images?.length ? { images: input.images } : undefined),
+      input.timeoutMs,
+      () => void record.session?.abort?.(),
+    )
+      .then(() => {
+        const assistantError = getAssistantErrorMessage(record.session!);
+        if (assistantError) throw new Error(assistantError);
+        if (!streamedText) {
+          const fallback = collectAssistantTexts(record.session!).at(-1)?.trim();
+          if (fallback) enqueue({ type: 'text_delta', delta: fallback });
+        }
+        record.updatedAt = new Date().toISOString();
+        enqueue({ type: 'agent_end', text: streamedText || record.assistantTexts.at(-1)?.trim() });
+        enqueue({ type: 'turn_end' });
+      })
+      .catch((error: unknown) => {
+        failure = error instanceof Error ? error : new Error(String(error));
+        enqueue({ type: 'error', message: failure.message });
+      })
+      .finally(() => {
+        record.isBusy = false;
+        done = true;
+        unsubscribe();
+        notify?.();
+        notify = null;
+      });
+
+    while (!done || queue.length > 0) {
+      if (queue.length === 0) {
+        await new Promise<void>((resolve) => {
+          notify = resolve;
+        });
+        continue;
+      }
+      const next = queue.shift()!;
+      yield { data: next };
+    }
+    if (failure) return;
+  }
+  return { stream: 'sse', events: events() };
 }
 
 export async function getAgentConversation(input: { conversationId: string }, ctx: ExtensionBackendContextLike) {

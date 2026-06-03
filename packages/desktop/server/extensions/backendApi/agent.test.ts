@@ -33,6 +33,7 @@ import {
   runAgentTask,
   sendAgentMessage,
   setExtensionAgentDynamicImportForTests,
+  streamAgentMessage,
 } from './agent.js';
 
 function createSession(overrides?: { prompt?: () => Promise<void>; messages?: unknown[]; emitText?: boolean }) {
@@ -132,6 +133,43 @@ describe('extension agent backend API', () => {
       visibility: 'hidden',
       persistence: 'ephemeral',
     });
+  });
+
+  it('streams hidden extension-owned conversation turns', async () => {
+    const session = createSession();
+    installImporter({ session });
+    const ctx = createCtx();
+    const created = await createAgentConversation({ title: 'Streaming probe' }, ctx);
+
+    const result = await streamAgentMessage({ conversationId: created.id, text: 'stream this' }, ctx);
+    const events: unknown[] = [];
+    for await (const event of result.events) {
+      events.push(event.data);
+    }
+
+    expect(result.stream).toBe('sse');
+    expect(events).toEqual([
+      { type: 'user_message', text: 'stream this', ts: expect.any(String) },
+      { type: 'agent_start' },
+      { type: 'text_delta', delta: 'probe result' },
+      { type: 'agent_end', text: 'probe result' },
+      { type: 'turn_end' },
+    ]);
+    expect(session.prompt).toHaveBeenCalledWith('stream this', undefined);
+  });
+
+  it('rejects streaming visible saved conversations because they use host live-session events', async () => {
+    installImporter();
+    const conversations = {
+      create: vi.fn(async () => ({ id: 'visible-conversation' })),
+      sendMessage: vi.fn(async () => ({ accepted: true })),
+      getMeta: vi.fn(async () => ({})),
+      list: vi.fn(async () => []),
+    };
+    const ctx = createCtx({ conversations });
+    const created = await createAgentConversation({ visibility: 'visible', persistence: 'saved' }, ctx);
+
+    await expect(streamAgentMessage({ conversationId: created.id, text: 'stream' }, ctx)).rejects.toThrow('host live-session events');
   });
 
   it('hides conversations from other extension owners', async () => {

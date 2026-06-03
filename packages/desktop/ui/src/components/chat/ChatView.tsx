@@ -32,7 +32,7 @@ import { useInlineTraceRunExpansion } from './useInlineTraceRunExpansion.js';
 
 // ── ChatView ──────────────────────────────────────────────────────────────────
 
-interface ChatViewProps {
+export interface ChatViewProps {
   messages: MessageBlock[];
   conversationId?: string | null;
   messageIndexOffset?: number;
