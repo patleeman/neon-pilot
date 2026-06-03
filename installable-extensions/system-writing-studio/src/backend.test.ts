@@ -16,6 +16,7 @@ import {
   deleteFolder,
   exportDocument,
   getCanvas,
+  getAgentInstructions,
   importDocument,
   load,
   renameDocument,
@@ -24,6 +25,7 @@ import {
   runReview,
   sendChat,
   updateAnnotation,
+  updateAgentInstructions,
   updateCanvas,
 } from './backend';
 
@@ -230,6 +232,32 @@ describe('Writing Studio backend', () => {
     expect(chat.messages[1].body).toBe('The live agent answer.');
     expect(mockRunAgentTask).toHaveBeenCalledWith(expect.objectContaining({ tools: 'default' }), ctx);
     expect(resolved.annotations[0].status).toBe('resolved');
+  });
+
+  it('lets the agent inspect and update its own writing instructions', async () => {
+    const ctx = context();
+
+    expect((await getAgentInstructions({}, ctx)).instructions).toContain('Keep the document in focus');
+
+    const updated = await updateAgentInstructions({ instructions: 'Prefer punchy comments that can become edits.' }, ctx);
+
+    expect(updated.instructions).toBe('Prefer punchy comments that can become edits.');
+    expect((await getAgentInstructions({}, ctx)).instructions).toBe('Prefer punchy comments that can become edits.');
+    expect((await load({}, ctx)).events).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'settings_updated', actorId: 'agent' })]),
+    );
+  });
+
+  it('includes current writing instructions and tool guidance in chat prompts', async () => {
+    const ctx = context();
+    await updateAgentInstructions({ instructions: 'Only comment on rhythm unless the user asks for structure.' }, ctx);
+    mockRunAgentTask.mockResolvedValueOnce({ text: 'I will keep an ear on the rhythm.' });
+
+    await sendChat({ body: 'Remember this style.', markdown: '# Draft\n\nThis sentence moves quickly.' }, ctx);
+
+    const prompt = mockRunAgentTask.mock.calls.at(-1)?.[0].prompt;
+    expect(prompt).toContain('Only comment on rhythm unless the user asks for structure.');
+    expect(prompt).toContain('update agent instructions tool');
   });
 
   it('lets agent tools inspect, update, and annotate the canvas', async () => {

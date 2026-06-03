@@ -74,6 +74,18 @@
         "worker": { "enabled": true }
       },
       {
+        "id": "writingStudioGetAgentInstructions",
+        "handler": "getAgentInstructions",
+        "title": "Get Writing Studio agent instructions",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioUpdateAgentInstructions",
+        "handler": "updateAgentInstructions",
+        "title": "Update Writing Studio agent instructions",
+        "worker": { "enabled": true }
+      },
+      {
         "id": "writingStudioResolveAnnotation",
         "handler": "resolveAnnotation",
         "title": "Resolve writing annotation",
@@ -249,6 +261,39 @@
           "additionalProperties": false
         },
         "promptGuidelines": ["Use only after the user approves a suggested edit."]
+      },
+      {
+        "id": "get-agent-instructions",
+        "name": "writing_studio_get_agent_instructions",
+        "description": "Read the current Writing Studio agent instructions for the active document.",
+        "action": "writingStudioGetAgentInstructions",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "update-agent-instructions",
+        "name": "writing_studio_update_agent_instructions",
+        "description": "Update the Writing Studio agent's own per-document instructions.",
+        "action": "writingStudioUpdateAgentInstructions",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." },
+            "instructions": { "type": "string", "description": "New instructions for the Writing Studio agent." },
+            "append": {
+              "type": "boolean",
+              "description": "Append to the existing instructions instead of replacing them."
+            }
+          },
+          "required": ["instructions"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": ["Use this when the user asks you to remember or change how you should behave in Writing Studio."]
       }
     ]
   },

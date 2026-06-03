@@ -100,6 +100,7 @@ interface ChatMessage {
 interface WritingSettings {
   reviewIntervalSeconds: number;
   reviewPrompt: string;
+  agentInstructions: string;
 }
 
 interface DocumentSummary {
@@ -961,7 +962,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState(() => readStringSetting(thinkingLevelStorageKey));
   const documentsRef = useRef<DocumentSummary[]>([]);
   const selectedTreePathRef = useRef<string | null>(null);
-  const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
+  const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({
+    reviewIntervalSeconds: 12,
+    reviewPrompt: '',
+    agentInstructions:
+      'Keep the document in focus. Be useful, specific, and alive on the page. Prefer concrete edits, margin comments, and approved-edit suggestions over abstract writing advice.',
+  });
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
   const [, setFormatStateVersion] = useState(0);
@@ -2102,6 +2108,14 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                   id="writing-studio-review-prompt"
                   value={settingsDraft.reviewPrompt}
                   onChange={(event) => setSettingsDraft((draft) => ({ ...draft, reviewPrompt: event.target.value }))}
+                />
+              </div>
+              <div className="writing-studio-field">
+                <label htmlFor="writing-studio-agent-instructions">Agent instructions</label>
+                <textarea
+                  id="writing-studio-agent-instructions"
+                  value={settingsDraft.agentInstructions}
+                  onChange={(event) => setSettingsDraft((draft) => ({ ...draft, agentInstructions: event.target.value }))}
                 />
               </div>
             </div>

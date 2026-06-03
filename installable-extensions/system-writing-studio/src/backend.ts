@@ -10,6 +10,7 @@ type EventType =
   | 'annotation_updated'
   | 'annotation_resolved'
   | 'chat_message'
+  | 'settings_updated'
   | 'agent_run_started'
   | 'agent_run_completed';
 type AnnotationKind = 'comment' | 'suggestion' | 'reaction' | 'warning';
@@ -46,6 +47,7 @@ export interface ChatMessage {
 export interface WritingSettings {
   reviewIntervalSeconds: number;
   reviewPrompt: string;
+  agentInstructions: string;
 }
 
 interface StoredState {
@@ -92,10 +94,13 @@ Start writing here. The agent will keep the document in focus and add comments, 
 
 const defaultReviewPrompt =
   'Read like a generous collaborator with taste. Leave lively marginalia: notice energy, friction, specificity, rhythm, and places where the draft wants a stronger choice. Avoid generic proofreading unless the text truly needs it.';
+const defaultAgentInstructions =
+  'Keep the document in focus. Be useful, specific, and alive on the page. Prefer concrete edits, margin comments, and approved-edit suggestions over abstract writing advice.';
 
 const defaultSettings: WritingSettings = {
   reviewIntervalSeconds: 12,
   reviewPrompt: defaultReviewPrompt,
+  agentInstructions: defaultAgentInstructions,
 };
 const maxReviewAnnotations = 12;
 const reviewChunkCharacterLimit = 2_400;
@@ -243,7 +248,11 @@ function normalizeSettings(value: unknown): WritingSettings {
       : defaultSettings.reviewIntervalSeconds;
   const reviewPrompt =
     typeof record.reviewPrompt === 'string' && record.reviewPrompt.trim() ? record.reviewPrompt.trim() : defaultSettings.reviewPrompt;
-  return { reviewIntervalSeconds, reviewPrompt };
+  const agentInstructions =
+    typeof record.agentInstructions === 'string' && record.agentInstructions.trim()
+      ? record.agentInstructions.trim().slice(0, 12_000)
+      : defaultSettings.agentInstructions;
+  return { reviewIntervalSeconds, reviewPrompt, agentInstructions };
 }
 
 function normalizeState(id: string, stored: Partial<StoredState>): StoredState {
@@ -394,6 +403,9 @@ This is chunk ${index + 1} of ${chunks.length}. Review this chunk only, so the d
 Review prompt:
 ${settings.reviewPrompt}
 
+Agent instructions:
+${settings.agentInstructions}
+
 Draft chunk:
 ${reviewMarkdown}`;
     try {
@@ -428,11 +440,15 @@ async function buildAgentChatReply(message: string, state: StoredState, ctx: Ext
 
 The user is chatting beside a markdown draft. Keep the document in focus: answer the user's request, discuss selected passages, suggest concrete edits, or use tools when useful.
 
+Current Writing Studio agent instructions:
+${state.settings.agentInstructions}
+
 If you need to change the document, use the Writing Studio canvas tool instead of only describing the edit.
 If you want to leave margin feedback, use the Writing Studio annotation tool with an exact quote from the draft.
 If you are proposing a concrete edit, include a suggested replacement on the annotation so the user can approve it.
 If the user asks to dismiss a comment, use the Writing Studio resolve annotation tool.
 If the user asks to revise a comment, use the Writing Studio update annotation tool.
+If the user asks you to change how you should behave in Writing Studio, use the Writing Studio update agent instructions tool.
 Do not mention hidden implementation details or that you are an extension backend.
 
 Document:
@@ -712,8 +728,29 @@ export async function saveSettings(input: unknown, ctx: ExtensionBackendContext)
     ...state.settings,
     ...(input && typeof input === 'object' ? (input as Record<string, unknown>) : {}),
   });
+  state.events.push(event('settings_updated', 'user', { settings: state.settings }));
   await writeState(ctx, state);
   return { settings: state.settings };
+}
+
+export async function getAgentInstructions(input: unknown, ctx: ExtensionBackendContext): Promise<{ instructions: string }> {
+  const state = await readState(ctx, readDocumentId(input));
+  return { instructions: state.settings.agentInstructions };
+}
+
+export async function updateAgentInstructions(
+  input: unknown,
+  ctx: ExtensionBackendContext,
+): Promise<{ instructions: string; settings: WritingSettings }> {
+  const payload = input as { documentId?: string; instructions?: string; append?: boolean };
+  const incoming = typeof payload.instructions === 'string' ? payload.instructions.trim() : '';
+  if (!incoming) throw new Error('instructions are required.');
+  const state = await readState(ctx, payload.documentId);
+  const nextInstructions = payload.append ? `${state.settings.agentInstructions.trim()}\n\n${incoming}`.trim() : incoming;
+  state.settings = normalizeSettings({ ...state.settings, agentInstructions: nextInstructions });
+  state.events.push(event('settings_updated', 'agent', { agentInstructions: state.settings.agentInstructions }));
+  await writeState(ctx, state);
+  return { instructions: state.settings.agentInstructions, settings: state.settings };
 }
 
 export async function resolveAnnotation(input: unknown, ctx: ExtensionBackendContext): Promise<{ annotations: Annotation[] }> {
