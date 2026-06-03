@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.1 — 2026-06-03
+
+### Highlights
+
+- Promotes the `0.10.1` patch train to stable with Browser and onboarding installed by default for fresh runtime profiles.
+- Removes Code Mode from the first-party installable catalog while keeping Extension Manager catalog installs working from packaged/local bundle assets.
+- Adds Dynamic Workflows and Image Probe settings as extension-owned surfaces with focused backend, UI, and smoke coverage.
+- Improves DS4, live-session, background-runner, and linked-run behavior carried forward from the RC validation pass.
+- Packages installable extension assets and default Browser/onboarding manifests with the desktop app so extension installs work before separate release assets are uploaded.
+
+### Notes
+
+- 0 commits since the previous release.
+
 ## 0.10.1-rc.4 — 2026-06-03
 
 ### Highlights
