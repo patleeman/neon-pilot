@@ -111,7 +111,8 @@ describe('Writing Studio backend', () => {
           kind: 'reaction',
         },
         {
-          quote: 'This sentence keeps accumulating clauses and side roads until the original point has to fight its way back into view for the reader.',
+          quote:
+            'This sentence keeps accumulating clauses and side roads until the original point has to fight its way back into view for the reader.',
           body: 'Fourth live note.',
           kind: 'comment',
         },
@@ -245,6 +246,23 @@ describe('Writing Studio backend', () => {
 
     expect((await getCanvas({ documentId: imported.id }, ctx)).title).toBe('Retitled Draft');
     expect(exported.fileName).toBe('client-copy.md');
+  });
+
+  it('exports embedded markdown images as HTML images', async () => {
+    const ctx = context();
+    const imported = await importDocument(
+      {
+        title: 'Image Draft',
+        fileName: 'image-draft.md',
+        markdown: '# Image Draft\n\n![Tiny chart](data:image/png;base64,aGVsbG8= "Draft image")\n\nCaption text.',
+      },
+      ctx,
+    );
+
+    const exported = await exportDocument({ documentId: imported.id, format: 'html' }, ctx);
+
+    expect(exported.content).toContain('<img src="data:image/png;base64,aGVsbG8=" alt="Tiny chart" title="Draft image">');
+    expect(exported.content).toContain('img{display:block;max-width:100%;height:auto');
   });
 
   it('creates folders and documents inside the document index', async () => {

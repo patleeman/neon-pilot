@@ -114,7 +114,12 @@ function normalizeFolderPath(value: unknown): string {
   const raw = typeof value === 'string' ? value : 'Drafts';
   const clean = raw
     .split(/[\\/]+/)
-    .map((part) => part.trim().replace(/[^a-z0-9 _.-]+/gi, '').replace(/\s+/g, ' '))
+    .map((part) =>
+      part
+        .trim()
+        .replace(/[^a-z0-9 _.-]+/gi, '')
+        .replace(/\s+/g, ' '),
+    )
     .filter(Boolean)
     .join('/');
   return clean || 'Drafts';
@@ -144,7 +149,13 @@ function foldersFromDocuments(documents: DocumentSummary[], folders: string[] = 
   return [...next].sort((a, b) => a.localeCompare(b));
 }
 
-function defaultState(id = DEFAULT_DOCUMENT_ID, title = 'Draft', markdown = seedMarkdown, fileName = `${title}.md`, folderPath = 'Drafts'): StoredState {
+function defaultState(
+  id = DEFAULT_DOCUMENT_ID,
+  title = 'Draft',
+  markdown = seedMarkdown,
+  fileName = `${title}.md`,
+  folderPath = 'Drafts',
+): StoredState {
   return {
     id,
     title,
@@ -167,7 +178,10 @@ function wordCount(markdown: string): number {
 function titleFromMarkdown(markdown: string, fallback = 'Draft'): string {
   const heading = markdown.match(/^#\s+(.+)$/m)?.[1]?.trim();
   if (heading) return heading.slice(0, 80);
-  const firstLine = markdown.split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+  const firstLine = markdown
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
   return (firstLine || fallback).slice(0, 80);
 }
 
@@ -218,12 +232,14 @@ function normalizeSettings(value: unknown): WritingSettings {
     typeof record.reviewIntervalSeconds === 'number' && Number.isFinite(record.reviewIntervalSeconds)
       ? Math.min(Math.max(Math.round(record.reviewIntervalSeconds), 3), 300)
       : defaultSettings.reviewIntervalSeconds;
-  const reviewPrompt = typeof record.reviewPrompt === 'string' && record.reviewPrompt.trim() ? record.reviewPrompt.trim() : defaultSettings.reviewPrompt;
+  const reviewPrompt =
+    typeof record.reviewPrompt === 'string' && record.reviewPrompt.trim() ? record.reviewPrompt.trim() : defaultSettings.reviewPrompt;
   return { reviewIntervalSeconds, reviewPrompt };
 }
 
 function normalizeState(id: string, stored: Partial<StoredState>): StoredState {
-  const title = typeof stored.title === 'string' && stored.title.trim() ? stored.title.trim() : titleFromMarkdown(stored.markdown ?? seedMarkdown);
+  const title =
+    typeof stored.title === 'string' && stored.title.trim() ? stored.title.trim() : titleFromMarkdown(stored.markdown ?? seedMarkdown);
   const fileName = typeof stored.fileName === 'string' && stored.fileName.trim() ? stored.fileName : title;
   return {
     ...defaultState(id),
@@ -258,7 +274,9 @@ async function writeState(ctx: ExtensionBackendContext, state: StoredState): Pro
   await ctx.storage.put(documentKey(state.id), state);
   const index = await readIndex(ctx);
   const summary = summarize(state);
-  const documents = [summary, ...index.documents.filter((doc) => doc.id !== state.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const documents = [summary, ...index.documents.filter((doc) => doc.id !== state.id)].sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt),
+  );
   await writeIndex(ctx, { activeDocumentId: state.id, documents, folders: index.folders });
 }
 
@@ -441,7 +459,9 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   if (annotations.length === 0) throw new Error('Writing Studio review returned no valid annotations.');
   const refreshedQuotes = new Set(annotations.map((annotation) => annotation.quote));
   state.annotations = state.annotations.filter(
-    (annotation) => annotation.status !== 'open' || (annotation.quote && state.markdown.includes(annotation.quote) && !refreshedQuotes.has(annotation.quote)),
+    (annotation) =>
+      annotation.status !== 'open' ||
+      (annotation.quote && state.markdown.includes(annotation.quote) && !refreshedQuotes.has(annotation.quote)),
   );
   state.annotations.unshift(...annotations);
   for (const annotation of annotations) state.events.push(event('annotation_added', 'agent', { annotation }));
@@ -451,7 +471,10 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   return { annotations, runId };
 }
 
-export async function getCanvas(input: unknown, ctx: ExtensionBackendContext): Promise<{
+export async function getCanvas(
+  input: unknown,
+  ctx: ExtensionBackendContext,
+): Promise<{
   documentId: string;
   title: string;
   fileName: string;
@@ -478,16 +501,22 @@ export async function updateCanvas(input: unknown, ctx: ExtensionBackendContext)
   if (typeof payload.markdown !== 'string') throw new Error('markdown is required.');
   const state = await readState(ctx, payload.documentId);
   state.markdown = payload.markdown;
-  state.title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : titleFromMarkdown(state.markdown, state.title);
+  state.title =
+    typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : titleFromMarkdown(state.markdown, state.title);
   if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
   if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
   state.updateClock += 1;
-  state.events.push(event('yjs_update', 'agent', { agentEditedCanvas: true, markdownLength: state.markdown.length, clock: state.updateClock }));
+  state.events.push(
+    event('yjs_update', 'agent', { agentEditedCanvas: true, markdownLength: state.markdown.length, clock: state.updateClock }),
+  );
   await writeState(ctx, state);
   return { ok: true, document: summarize(state) };
 }
 
-export async function addAnnotation(input: unknown, ctx: ExtensionBackendContext): Promise<{ annotation: Annotation; annotations: Annotation[] }> {
+export async function addAnnotation(
+  input: unknown,
+  ctx: ExtensionBackendContext,
+): Promise<{ annotation: Annotation; annotations: Annotation[] }> {
   const payload = input as { documentId?: string; quote?: string; body?: string; kind?: AnnotationKind; emoji?: string };
   const quote = typeof payload.quote === 'string' ? payload.quote.trim() : '';
   const body = typeof payload.body === 'string' ? payload.body.trim() : '';
@@ -497,7 +526,9 @@ export async function addAnnotation(input: unknown, ctx: ExtensionBackendContext
   const from = state.markdown.indexOf(quote);
   if (from < 0) throw new Error('quote must exactly match text in the current canvas.');
   const kind: AnnotationKind =
-    payload.kind === 'suggestion' || payload.kind === 'reaction' || payload.kind === 'warning' || payload.kind === 'comment' ? payload.kind : 'comment';
+    payload.kind === 'suggestion' || payload.kind === 'reaction' || payload.kind === 'warning' || payload.kind === 'comment'
+      ? payload.kind
+      : 'comment';
   const annotation: Annotation = {
     id: randomUUID(),
     kind,
@@ -533,7 +564,10 @@ export async function sendChat(input: unknown, ctx: ExtensionBackendContext): Pr
 
 export async function saveSettings(input: unknown, ctx: ExtensionBackendContext): Promise<{ settings: WritingSettings }> {
   const state = await readState(ctx, readDocumentId(input));
-  state.settings = normalizeSettings({ ...state.settings, ...(input && typeof input === 'object' ? (input as Record<string, unknown>) : {}) });
+  state.settings = normalizeSettings({
+    ...state.settings,
+    ...(input && typeof input === 'object' ? (input as Record<string, unknown>) : {}),
+  });
   await writeState(ctx, state);
   return { settings: state.settings };
 }
@@ -552,7 +586,10 @@ export async function resolveAnnotation(input: unknown, ctx: ExtensionBackendCon
 
 export async function createDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredStateWithIndex> {
   const payload = input as { title?: string; markdown?: string; fileName?: string; folderPath?: string };
-  const markdown = typeof payload.markdown === 'string' ? payload.markdown : `# ${typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled'}\n\n`;
+  const markdown =
+    typeof payload.markdown === 'string'
+      ? payload.markdown
+      : `# ${typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled'}\n\n`;
   const title = titleFromMarkdown(markdown, payload.title || 'Untitled');
   const state = defaultState(randomUUID(), title, markdown, payload.fileName || title, payload.folderPath || 'Drafts');
   state.events.push(event('yjs_update', 'user', { imported: false, markdownLength: markdown.length, clock: 0 }));
@@ -567,7 +604,14 @@ export async function renameDocument(input: unknown, ctx: ExtensionBackendContex
   if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
   if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
   state.updateClock += 1;
-  state.events.push(event('yjs_update', 'user', { renamedDocument: true, fileName: state.fileName, folderPath: state.folderPath, clock: state.updateClock }));
+  state.events.push(
+    event('yjs_update', 'user', {
+      renamedDocument: true,
+      fileName: state.fileName,
+      folderPath: state.folderPath,
+      clock: state.updateClock,
+    }),
+  );
   await writeState(ctx, state);
   const index = await readIndex(ctx);
   return { ...state, documents: index.documents, activeDocumentId: state.id, folders: index.folders };
@@ -608,9 +652,7 @@ export async function renameFolder(input: unknown, ctx: ExtensionBackendContext)
       movedDocuments.push(doc);
     }
   }
-  const folders = index.folders
-    .filter((folder) => folder !== folderPath && !folder.startsWith(`${folderPath}/`))
-    .concat(nextFolderPath);
+  const folders = index.folders.filter((folder) => folder !== folderPath && !folder.startsWith(`${folderPath}/`)).concat(nextFolderPath);
   await writeIndex(ctx, { activeDocumentId: index.activeDocumentId, documents: movedDocuments, folders });
   return readIndex(ctx);
 }
@@ -633,7 +675,13 @@ export async function importDocument(input: unknown, ctx: ExtensionBackendContex
   const payload = input as { title?: string; markdown?: string; fileName?: string; folderPath?: string };
   if (typeof payload.markdown !== 'string') throw new Error('markdown is required.');
   const title = titleFromMarkdown(payload.markdown, payload.title || 'Imported draft');
-  const state = defaultState(randomUUID(), title, payload.markdown, payload.fileName || payload.title || title, payload.folderPath || 'Imports');
+  const state = defaultState(
+    randomUUID(),
+    title,
+    payload.markdown,
+    payload.fileName || payload.title || title,
+    payload.folderPath || 'Imports',
+  );
   state.events.push(event('yjs_update', 'user', { imported: true, markdownLength: payload.markdown.length, clock: 0 }));
   await writeState(ctx, state);
   const index = await readIndex(ctx);
@@ -644,7 +692,8 @@ export async function saveDocument(input: unknown, ctx: ExtensionBackendContext)
   const payload = input as { documentId?: string; markdown?: string; title?: string; fileName?: string; folderPath?: string };
   const state = await readState(ctx, payload.documentId);
   if (typeof payload.markdown === 'string') state.markdown = payload.markdown;
-  state.title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : titleFromMarkdown(state.markdown, state.title);
+  state.title =
+    typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : titleFromMarkdown(state.markdown, state.title);
   if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
   if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
   state.updateClock += 1;
@@ -657,6 +706,20 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function renderInlineMarkdown(value: string): string {
+  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g;
+  let html = '';
+  let lastIndex = 0;
+  for (const match of value.matchAll(imagePattern)) {
+    html += escapeHtml(value.slice(lastIndex, match.index));
+    const [, alt = '', src = '', title] = match;
+    html += `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${title ? ` title="${escapeHtml(title)}"` : ''}>`;
+    lastIndex = (match.index ?? 0) + match[0].length;
+  }
+  html += escapeHtml(value.slice(lastIndex));
+  return html;
+}
+
 function markdownToHtml(markdown: string): string {
   return markdown
     .split(/\n{2,}/)
@@ -664,15 +727,15 @@ function markdownToHtml(markdown: string): string {
       const text = block.trim();
       if (!text) return '';
       const heading = text.match(/^(#{1,6})\s+(.+)$/);
-      if (heading) return `<h${heading[1].length}>${escapeHtml(heading[2])}</h${heading[1].length}>`;
-      return `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
+      if (heading) return `<h${heading[1].length}>${renderInlineMarkdown(heading[2])}</h${heading[1].length}>`;
+      return `<p>${renderInlineMarkdown(text).replace(/\n/g, '<br>')}</p>`;
     })
     .filter(Boolean)
     .join('\n');
 }
 
 function documentHtml(title: string, markdown: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:760px;margin:48px auto;color:#111}h1,h2,h3{line-height:1.25}</style></head><body>${markdownToHtml(markdown)}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:760px;margin:48px auto;color:#111}h1,h2,h3{line-height:1.25}img{display:block;max-width:100%;height:auto;margin:1rem 0}</style></head><body>${markdownToHtml(markdown)}</body></html>`;
 }
 
 function rtfEscape(value: string): string {
@@ -732,21 +795,51 @@ function docx(title: string, markdown: string): string {
     .map((block) => `<w:p><w:r><w:t>${escapeHtml(block.replace(/^#+\s+/, '').trim())}</w:t></w:r></w:p>`)
     .join('');
   const zip = zipStore([
-    { name: '[Content_Types].xml', content: '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>' },
-    { name: '_rels/.rels', content: '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>' },
-    { name: 'word/document.xml', content: `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr/></w:body></w:document>` },
-    { name: 'docProps/core.xml', content: `<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${escapeHtml(title)}</dc:title></cp:coreProperties>` },
+    {
+      name: '[Content_Types].xml',
+      content:
+        '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+    },
+    {
+      name: '_rels/.rels',
+      content:
+        '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+    },
+    {
+      name: 'word/document.xml',
+      content: `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr/></w:body></w:document>`,
+    },
+    {
+      name: 'docProps/core.xml',
+      content: `<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${escapeHtml(title)}</dc:title></cp:coreProperties>`,
+    },
   ]);
   return zip.toString('base64');
 }
 
-export async function exportDocument(input: unknown, ctx: ExtensionBackendContext): Promise<{ fileName: string; mimeType: string; content: string; encoding: 'text' | 'base64' }> {
+export async function exportDocument(
+  input: unknown,
+  ctx: ExtensionBackendContext,
+): Promise<{ fileName: string; mimeType: string; content: string; encoding: 'text' | 'base64' }> {
   const payload = input as { documentId?: string; format?: ExportFormat };
   const format = payload.format ?? 'markdown';
   const state = await readState(ctx, payload.documentId);
   const fileStem = slugFileName(state.fileName || state.title || 'draft').replace(/\.md$/i, '');
-  if (format === 'html') return { fileName: `${fileStem}.html`, mimeType: 'text/html', content: documentHtml(state.title, state.markdown), encoding: 'text' };
-  if (format === 'rtf') return { fileName: `${fileStem}.rtf`, mimeType: 'application/rtf', content: `{\\rtf1\\ansi\n${rtfEscape(state.markdown)}}`, encoding: 'text' };
-  if (format === 'docx') return { fileName: `${fileStem}.docx`, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', content: docx(state.title, state.markdown), encoding: 'base64' };
+  if (format === 'html')
+    return { fileName: `${fileStem}.html`, mimeType: 'text/html', content: documentHtml(state.title, state.markdown), encoding: 'text' };
+  if (format === 'rtf')
+    return {
+      fileName: `${fileStem}.rtf`,
+      mimeType: 'application/rtf',
+      content: `{\\rtf1\\ansi\n${rtfEscape(state.markdown)}}`,
+      encoding: 'text',
+    };
+  if (format === 'docx')
+    return {
+      fileName: `${fileStem}.docx`,
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      content: docx(state.title, state.markdown),
+      encoding: 'base64',
+    };
   return { fileName: `${fileStem}.md`, mimeType: 'text/markdown', content: state.markdown, encoding: 'text' };
 }

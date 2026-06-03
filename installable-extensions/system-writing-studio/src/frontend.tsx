@@ -2,14 +2,32 @@ import { Markdown } from '@tiptap/markdown';
 import { Extension } from '@tiptap/core';
 import type { FileTree as TreesModel } from '@pierre/trees';
 import { FileTree as TreesFileTree } from '@pierre/trees/react';
+import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { EditorContent, type Editor, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { buildApiPath, ChatRailComposer, ChatView, ErrorState, LoadingState, ToolbarButton, useFileTreeModel } from '@neon-pilot/extensions/ui';
-import { type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  buildApiPath,
+  ChatRailComposer,
+  ChatView,
+  ErrorState,
+  LoadingState,
+  ToolbarButton,
+  useFileTreeModel,
+} from '@neon-pilot/extensions/ui';
+import {
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import * as Y from 'yjs';
 
 interface MarkdownEditor {
@@ -30,9 +48,9 @@ const writingStudioCss = `
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
 .writing-studio-filebar{display:flex;align-items:center;max-width:68rem;margin:0 auto .55rem}.writing-studio-file-name{width:min(24rem,100%);min-width:0;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.28rem .4rem;font:inherit;font-size:.86rem;font-weight:560;line-height:1.2}.writing-studio-file-name:hover,.writing-studio-file-name:focus{background:rgb(var(--color-surface));color:rgb(var(--color-primary));outline:1px solid rgb(var(--color-border-subtle))}.writing-studio-file-name::placeholder{color:rgb(var(--color-dim))}
 .writing-studio-inline-error{max-width:68rem;margin:0 auto .55rem;border:1px solid color-mix(in srgb,rgb(var(--color-danger)) 38%,rgb(var(--color-border-default)));border-radius:7px;background:color-mix(in srgb,rgb(var(--color-danger)) 8%,transparent);color:rgb(var(--color-danger));font-size:.78rem;line-height:1.4;padding:.45rem .6rem}
-.writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-format-spacer{flex:1 1 auto;min-width:.5rem}.writing-studio-format-save,.writing-studio-format-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-format-save:hover,.writing-studio-format-icon:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-save:disabled,.writing-studio-format-icon:disabled{cursor:default;opacity:.55}.writing-studio-format-save::after{content:"";position:absolute;right:.16rem;top:.16rem;width:.34rem;height:.34rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-format-save.is-saved::after{background:rgb(var(--color-success))}.writing-studio-format-save.is-saving::after{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-format-save.is-unsaved::after{background:rgb(var(--color-warning))}.writing-studio-format-save.is-error::after{background:rgb(var(--color-danger))}.writing-studio-format-icon.is-running{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-accent));opacity:1}.writing-studio-format-icon.is-running svg{animation:writing-studio-review-spin 1.1s linear infinite}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
+.writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-hidden-file{display:none}.writing-studio-format-spacer{flex:1 1 auto;min-width:.5rem}.writing-studio-format-save,.writing-studio-format-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-format-save:hover,.writing-studio-format-icon:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-save:disabled,.writing-studio-format-icon:disabled{cursor:default;opacity:.55}.writing-studio-format-save::after{content:"";position:absolute;right:.16rem;top:.16rem;width:.34rem;height:.34rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-format-save.is-saved::after{background:rgb(var(--color-success))}.writing-studio-format-save.is-saving::after{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-format-save.is-unsaved::after{background:rgb(var(--color-warning))}.writing-studio-format-save.is-error::after{background:rgb(var(--color-danger))}.writing-studio-format-icon.is-running{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-accent));opacity:1}.writing-studio-format-icon.is-running svg{animation:writing-studio-review-spin 1.1s linear infinite}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
-.writing-studio-editor-frame{position:relative}.writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
+.writing-studio-editor-frame{position:relative}.writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor img{display:block;max-width:100%;height:auto;margin:1rem 0;border-radius:6px}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
 .writing-studio-selection-menu{position:absolute;z-index:35;display:flex;align-items:center;gap:.18rem;padding:.25rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 36px rgba(0,0,0,.28);transform:translateX(-50%)}.writing-studio-selection-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.36rem .52rem;font:inherit;font-size:.72rem;font-weight:590;line-height:1;cursor:pointer;white-space:nowrap}.writing-studio-selection-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-selection-menu button:first-child{color:rgb(var(--color-accent))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 21%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}.writing-studio-mark-highlight[data-kind="warning"]{background:color-mix(in srgb,rgb(var(--color-warning)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-warning)) 24%,transparent)}.writing-studio-mark-highlight[data-kind="comment"]{background:color-mix(in srgb,rgb(var(--color-secondary)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-secondary)) 20%,transparent)}.writing-studio-mark-highlight[data-kind="reaction"]{background:color-mix(in srgb,rgb(var(--color-success)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-success)) 20%,transparent)}
 .writing-studio-comments{position:sticky;top:1rem;display:grid;gap:.65rem;padding-top:2.4rem}.writing-studio-comment{--comment-tint:rgb(var(--color-accent));padding:.7rem .75rem;border:1px solid color-mix(in srgb,var(--comment-tint) 18%,rgb(var(--color-border-subtle)));border-radius:8px;background:color-mix(in srgb,var(--comment-tint) 7%,rgb(var(--color-surface)));box-shadow:0 8px 22px rgba(0,0,0,.12);cursor:pointer;text-align:left}.writing-studio-comment.is-active{border-color:color-mix(in srgb,var(--comment-tint) 48%,rgb(var(--color-border-default)));background:color-mix(in srgb,var(--comment-tint) 13%,rgb(var(--color-surface)));box-shadow:0 0 0 1px color-mix(in srgb,var(--comment-tint) 28%,transparent),0 12px 28px rgba(0,0,0,.18)}.writing-studio-comment.is-warning{--comment-tint:rgb(var(--color-warning))}.writing-studio-comment.is-comment{--comment-tint:rgb(var(--color-secondary))}.writing-studio-comment.is-reaction{--comment-tint:rgb(var(--color-success))}
@@ -146,6 +164,7 @@ type WritingIconName =
   | 'folderNew'
   | 'save'
   | 'export'
+  | 'image'
   | 'import'
   | 'review'
   | 'settings'
@@ -159,7 +178,10 @@ type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 type ReviewStatus = 'idle' | 'running' | 'complete' | 'error';
 type FileTreeModelResult = {
   model: TreesModel;
-  resetTree: (paths: readonly string[], options?: { initialExpandedPaths?: readonly string[]; initialSelectedPaths?: readonly string[] }) => void;
+  resetTree: (
+    paths: readonly string[],
+    options?: { initialExpandedPaths?: readonly string[]; initialSelectedPaths?: readonly string[] },
+  ) => void;
 };
 type FileTreeModelOptions = {
   search: boolean;
@@ -225,9 +247,11 @@ const iconPaths: Record<WritingIconName, string> = {
   folderNew: 'M2.5 6h5l1.2 1.5h5.8v7h-12z M12 2.8v4.4 M9.8 5h4.4',
   save: 'M4 3.5h9l2.5 2.5v10.5h-11.5z M6 3.5v4h6 M6.5 16.5v-5h6v5',
   export: 'M9 12.5v-9 M5.5 7 9 3.5 12.5 7 M4 11v4.5h10V11',
+  image: 'M3.5 4.5h11v10h-11z M6 8a1.2 1.2 0 1 0 0-2.4A1.2 1.2 0 0 0 6 8z M4.5 13l3-3 2 2 1.5-1.8 3 3.8',
   import: 'M9 3.5v9 M5.5 9 9 12.5 12.5 9 M4 6V3.5h10V6 M4 11v4.5h10V11',
   review: 'M3.5 4.5h10v8h-6l-4 3.5z M6 7.5h5 M6 10h3',
-  settings: 'M8.5 2.8 9.8 5l2.5.5.3 2.5 2 1.6-1.2 2.2.7 2.4-2.3 1.2-2-1.5-2 .8-2-1.3-2.4.6-1.1-2.4 1.5-1.9-.9-2.3 2.1-1.5.4-2.5 2.5-.5z M8.5 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
+  settings:
+    'M8.5 2.8 9.8 5l2.5.5.3 2.5 2 1.6-1.2 2.2.7 2.4-2.3 1.2-2-1.5-2 .8-2-1.3-2.4.6-1.1-2.4 1.5-1.9-.9-2.3 2.1-1.5.4-2.5 2.5-.5z M8.5 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
   rename: 'M3.5 13.5h3.2l7-7a1.6 1.6 0 0 0-2.2-2.2l-7 7z M10.8 5.2l2 2',
   delete: 'M4.5 5h9 M7 5V3.5h4V5 M6 7v8h6V7 M8 8.5v4 M10.5 8.5v4',
   collapse: 'M6.5 4.5 10.5 8.5l-4 4',
@@ -237,7 +261,17 @@ const iconPaths: Record<WritingIconName, string> = {
 
 function WritingIcon({ name }: { name: WritingIconName }) {
   return (
-    <svg width="15" height="15" viewBox="0 0 17 17" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 17 17"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d={iconPaths[name]} />
     </svg>
   );
@@ -302,6 +336,7 @@ function WritingFormatBar({
 }) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkHref, setLinkHref] = useState('');
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!editor) return null;
   const disabled = !editor;
@@ -318,17 +353,41 @@ function WritingFormatBar({
     }
     setLinkOpen(false);
   };
+  const insertImageFile = (file: File | null | undefined) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    void fileToDataUrl(file).then((src) => {
+      editor
+        .chain()
+        .focus()
+        .setImage({ src, alt: file.name.replace(/\.[^.]+$/, '') })
+        .run();
+    });
+  };
   return (
-    <div
-      className="writing-studio-formatbar"
-      aria-label="Markdown formatting"
-      onMouseDown={(event) => event.preventDefault()}
-    >
+    <div className="writing-studio-formatbar" aria-label="Markdown formatting" onMouseDown={(event) => event.preventDefault()}>
       <div className="writing-studio-format-group writing-studio-format-actions">
-        <button className="writing-studio-format-icon" type="button" aria-label="Open document" title="Open document" onMouseDown={(event) => { event.preventDefault(); onOpen(); }}>
+        <button
+          className="writing-studio-format-icon"
+          type="button"
+          aria-label="Open document"
+          title="Open document"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            onOpen();
+          }}
+        >
           <WritingIcon name="open" />
         </button>
-        <button className="writing-studio-format-icon" type="button" aria-label="New document" title="New document" onMouseDown={(event) => { event.preventDefault(); onNew(); }}>
+        <button
+          className="writing-studio-format-icon"
+          type="button"
+          aria-label="New document"
+          title="New document"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            onNew();
+          }}
+        >
           <WritingIcon name="new" />
         </button>
         <button
@@ -346,7 +405,16 @@ function WritingFormatBar({
         </button>
       </div>
       <div className="writing-studio-format-group writing-studio-format-actions">
-        <button className="writing-studio-format-icon" type="button" aria-label="Export document" title="Export document" onMouseDown={(event) => { event.preventDefault(); onExport(); }}>
+        <button
+          className="writing-studio-format-icon"
+          type="button"
+          aria-label="Export document"
+          title="Export document"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            onExport();
+          }}
+        >
           <WritingIcon name="export" />
         </button>
         <button
@@ -363,32 +431,142 @@ function WritingFormatBar({
         >
           <WritingIcon name="review" />
         </button>
-        <button className="writing-studio-format-icon" type="button" aria-label="Writing Studio settings" title="Settings" onMouseDown={(event) => { event.preventDefault(); onSettings(); }}>
+        <button
+          className="writing-studio-format-icon"
+          type="button"
+          aria-label="Writing Studio settings"
+          title="Settings"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            onSettings();
+          }}
+        >
           <WritingIcon name="settings" />
         </button>
         {exportMenuOpen ? children : null}
       </div>
       <div className="writing-studio-format-group">
-        <FormatButton label="P" title="Paragraph" disabled={disabled} active={editor.isActive('paragraph')} onClick={() => editor.chain().focus().setParagraph().run()} />
-        <FormatButton label="H1" title="Heading 1" disabled={disabled} active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} />
-        <FormatButton label="H2" title="Heading 2" disabled={disabled} active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} />
-        <FormatButton label="H3" title="Heading 3" disabled={disabled} active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} />
+        <FormatButton
+          label="P"
+          title="Paragraph"
+          disabled={disabled}
+          active={editor.isActive('paragraph')}
+          onClick={() => editor.chain().focus().setParagraph().run()}
+        />
+        <FormatButton
+          label="H1"
+          title="Heading 1"
+          disabled={disabled}
+          active={editor.isActive('heading', { level: 1 })}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        />
+        <FormatButton
+          label="H2"
+          title="Heading 2"
+          disabled={disabled}
+          active={editor.isActive('heading', { level: 2 })}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        />
+        <FormatButton
+          label="H3"
+          title="Heading 3"
+          disabled={disabled}
+          active={editor.isActive('heading', { level: 3 })}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        />
       </div>
       <div className="writing-studio-format-group">
-        <FormatButton label="B" title="Bold" disabled={disabled} active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} />
-        <FormatButton label="I" title="Italic" disabled={disabled} active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} />
-        <FormatButton label="S" title="Strikethrough" disabled={disabled} active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} />
-        <FormatButton label="`" title="Inline code" disabled={disabled} active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()} />
+        <FormatButton
+          label="B"
+          title="Bold"
+          disabled={disabled}
+          active={editor.isActive('bold')}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+        />
+        <FormatButton
+          label="I"
+          title="Italic"
+          disabled={disabled}
+          active={editor.isActive('italic')}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+        />
+        <FormatButton
+          label="S"
+          title="Strikethrough"
+          disabled={disabled}
+          active={editor.isActive('strike')}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+        />
+        <FormatButton
+          label="`"
+          title="Inline code"
+          disabled={disabled}
+          active={editor.isActive('code')}
+          onClick={() => editor.chain().focus().toggleCode().run()}
+        />
         <FormatButton label="[]" title="Link" disabled={disabled} active={editor.isActive('link') || linkOpen} onClick={openLinkEditor} />
+        <button
+          className="writing-studio-format-icon"
+          type="button"
+          aria-label="Insert image"
+          title="Insert image"
+          disabled={disabled}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            imageInputRef.current?.click();
+          }}
+        >
+          <WritingIcon name="image" />
+        </button>
+        <input
+          ref={imageInputRef}
+          className="writing-studio-hidden-file"
+          type="file"
+          accept="image/*"
+          aria-label="Image file"
+          onChange={(event) => {
+            insertImageFile(event.target.files?.[0]);
+            event.currentTarget.value = '';
+          }}
+        />
       </div>
       <div className="writing-studio-format-group">
-        <FormatButton label="•" title="Bulleted list" disabled={disabled} active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} />
-        <FormatButton label="1." title="Numbered list" disabled={disabled} active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} />
-        <FormatButton label="❝" title="Quote" disabled={disabled} active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} />
-        <FormatButton label="{ }" title="Code block" disabled={disabled} active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
+        <FormatButton
+          label="•"
+          title="Bulleted list"
+          disabled={disabled}
+          active={editor.isActive('bulletList')}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        />
+        <FormatButton
+          label="1."
+          title="Numbered list"
+          disabled={disabled}
+          active={editor.isActive('orderedList')}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        />
+        <FormatButton
+          label="❝"
+          title="Quote"
+          disabled={disabled}
+          active={editor.isActive('blockquote')}
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        />
+        <FormatButton
+          label="{ }"
+          title="Code block"
+          disabled={disabled}
+          active={editor.isActive('codeBlock')}
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        />
       </div>
       <div className="writing-studio-format-group">
-        <FormatButton label="HR" title="Horizontal rule" disabled={disabled} onClick={() => editor.chain().focus().setHorizontalRule().run()} />
+        <FormatButton
+          label="HR"
+          title="Horizontal rule"
+          disabled={disabled}
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        />
       </div>
       {linkOpen ? (
         <form
@@ -398,7 +576,13 @@ function WritingFormatBar({
             applyLink();
           }}
         >
-          <input value={linkHref} onChange={(event) => setLinkHref(event.target.value)} placeholder="https://..." aria-label="Link URL" autoFocus />
+          <input
+            value={linkHref}
+            onChange={(event) => setLinkHref(event.target.value)}
+            placeholder="https://..."
+            aria-label="Link URL"
+            autoFocus
+          />
           <button type="submit">Apply</button>
           <button type="button" onClick={() => editor.chain().focus().unsetLink().run()}>
             Clear
@@ -420,6 +604,36 @@ function base64ToBytes(value: string): Uint8Array {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('Unable to read image file.'));
+    });
+    reader.addEventListener('error', () => reject(reader.error ?? new Error('Unable to read image file.')));
+    reader.readAsDataURL(file);
+  });
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderInlineMarkdown(value: string): string {
+  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g;
+  let html = '';
+  let lastIndex = 0;
+  for (const match of value.matchAll(imagePattern)) {
+    html += escapeHtml(value.slice(lastIndex, match.index));
+    const [, alt = '', src = '', title] = match;
+    html += `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${title ? ` title="${escapeHtml(title)}"` : ''}>`;
+    lastIndex = (match.index ?? 0) + match[0].length;
+  }
+  html += escapeHtml(value.slice(lastIndex));
+  return html;
+}
+
 function downloadFile(fileName: string, mimeType: string, content: string | Uint8Array): void {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -434,15 +648,17 @@ function printPdf(title: string, markdown: string): void {
   const html = markdown
     .split(/\n{2,}/)
     .map((block) => {
-      const text = block.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const text = block.trim();
       const heading = text.match(/^(#{1,6})\s+(.+)$/);
-      if (heading) return `<h${heading[1].length}>${heading[2]}</h${heading[1].length}>`;
-      return `<p>${text.replace(/\n/g, '<br>')}</p>`;
+      if (heading) return `<h${heading[1].length}>${renderInlineMarkdown(heading[2])}</h${heading[1].length}>`;
+      return `<p>${renderInlineMarkdown(text).replace(/\n/g, '<br>')}</p>`;
     })
     .join('');
   const win = window.open('', '_blank');
   if (!win) return;
-  win.document.write(`<!doctype html><title>${title}</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:760px;margin:48px auto;color:#111}</style>${html}`);
+  win.document.write(
+    `<!doctype html><title>${escapeHtml(title)}</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:760px;margin:48px auto;color:#111}img{display:block;max-width:100%;height:auto;margin:1rem 0}</style>${html}`,
+  );
   win.document.close();
   setTimeout(() => win.print(), 250);
 }
@@ -514,7 +730,20 @@ function escapeMarkdownText(value: string): string {
   return value.replace(/([\\`*_{}[\]])/g, '\\$1');
 }
 
+function escapeMarkdownAttribute(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function markdownImageFromAttrs(attrs: Record<string, unknown> | undefined): string {
+  const src = typeof attrs?.src === 'string' ? attrs.src.trim() : '';
+  if (!src) return '';
+  const alt = typeof attrs?.alt === 'string' ? escapeMarkdownText(attrs.alt) : '';
+  const title = typeof attrs?.title === 'string' && attrs.title.trim() ? ` "${escapeMarkdownAttribute(attrs.title.trim())}"` : '';
+  return `![${alt}](${src}${title})`;
+}
+
 function textFromNode(node: ReturnType<NonNullable<MarkdownEditor['getJSON']>>): string {
+  if (node.type === 'image') return markdownImageFromAttrs(node.attrs);
   if (typeof node.text === 'string') {
     let text = escapeMarkdownText(node.text);
     for (const mark of node.marks ?? []) {
@@ -536,11 +765,15 @@ function markdownFromNode(node: ReturnType<NonNullable<MarkdownEditor['getJSON']
     return `${'#'.repeat(level)} ${textFromNode(node)}`.trim();
   }
   if (node.type === 'paragraph') return textFromNode(node).trim();
+  if (node.type === 'image') return markdownImageFromAttrs(node.attrs);
   if (node.type === 'blockquote') return (node.content ?? []).map(markdownFromNode).join('\n').replace(/^/gm, '> ');
-  if (node.type === 'bulletList') return (node.content ?? []).map((child) => `- ${markdownFromNode(child).replace(/\n/g, '\n  ')}`).join('\n');
-  if (node.type === 'orderedList') return (node.content ?? []).map((child, index) => `${index + 1}. ${markdownFromNode(child).replace(/\n/g, '\n   ')}`).join('\n');
+  if (node.type === 'bulletList')
+    return (node.content ?? []).map((child) => `- ${markdownFromNode(child).replace(/\n/g, '\n  ')}`).join('\n');
+  if (node.type === 'orderedList')
+    return (node.content ?? []).map((child, index) => `${index + 1}. ${markdownFromNode(child).replace(/\n/g, '\n   ')}`).join('\n');
   if (node.type === 'listItem') return (node.content ?? []).map(markdownFromNode).filter(Boolean).join('\n');
-  if (node.type === 'codeBlock') return `\`\`\`${typeof node.attrs?.language === 'string' ? node.attrs.language : ''}\n${textFromNode(node)}\n\`\`\``;
+  if (node.type === 'codeBlock')
+    return `\`\`\`${typeof node.attrs?.language === 'string' ? node.attrs.language : ''}\n${textFromNode(node)}\n\`\`\``;
   if (node.type === 'horizontalRule') return '---';
   if (node.type === 'hardBreak') return '\n';
   return textFromNode(node);
@@ -797,7 +1030,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       saveTimer.current = setTimeout(() => {
         setSaveStatus('saving');
         void pa.extension
-          .invoke('writingStudioAppendUpdate', { updateBase64: bytesToBase64(update), markdown: nextMarkdown, actorId, documentId: activeDocumentId })
+          .invoke('writingStudioAppendUpdate', {
+            updateBase64: bytesToBase64(update),
+            markdown: nextMarkdown,
+            actorId,
+            documentId: activeDocumentId,
+          })
           .then(() => {
             setSaveStatus('saved');
             setLastSavedAt(new Date().toISOString());
@@ -816,6 +1054,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ link: false }),
+      Image.configure({ allowBase64: true, inline: false }),
       Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
       Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: false }),
       createAnnotationHighlightExtension(activeHighlightRef),
@@ -826,6 +1065,32 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         class: 'writing-studio-editor',
         'aria-label': 'Writing document',
       },
+      handlePaste: (_view, event) => {
+        const image = Array.from(event.clipboardData?.files ?? []).find((file) => file.type.startsWith('image/'));
+        if (!image) return false;
+        event.preventDefault();
+        void fileToDataUrl(image).then((src) =>
+          editor
+            ?.chain()
+            .focus()
+            .setImage({ src, alt: image.name.replace(/\.[^.]+$/, '') })
+            .run(),
+        );
+        return true;
+      },
+      handleDrop: (_view, event) => {
+        const image = Array.from(event.dataTransfer?.files ?? []).find((file) => file.type.startsWith('image/'));
+        if (!image) return false;
+        event.preventDefault();
+        void fileToDataUrl(image).then((src) =>
+          editor
+            ?.chain()
+            .focus()
+            .setImage({ src, alt: image.name.replace(/\.[^.]+$/, '') })
+            .run(),
+        );
+        return true;
+      },
     },
     onUpdate: ({ editor: nextEditor }) => {
       if (applyingEditorContent.current) return;
@@ -834,9 +1099,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       setMarkdown(nextMarkdown);
       replaceMarkdown(nextMarkdown);
       if (reviewTimer.current) clearTimeout(reviewTimer.current);
-      reviewTimer.current = setTimeout(() => {
-        void runReview('periodic');
-      }, Math.max(3, state?.settings.reviewIntervalSeconds ?? 12) * 1000);
+      reviewTimer.current = setTimeout(
+        () => {
+          void runReview('periodic');
+        },
+        Math.max(3, state?.settings.reviewIntervalSeconds ?? 12) * 1000,
+      );
     },
   });
 
@@ -921,7 +1189,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const syncEditorMarkdown = useCallback(() => {
     if (!editor || applyingEditorContent.current) return markdown;
     const editorElement = (editor as unknown as { view?: { dom?: HTMLElement } }).view?.dom;
-    const nextMarkdown = markdownFromEditorElement(editorElement) || readMarkdownFromEditor(editor);
+    const nextMarkdown = readMarkdownFromEditor(editor) || markdownFromEditorElement(editorElement);
     if (!nextMarkdown || nextMarkdown === markdown) return markdown;
     setMarkdown(nextMarkdown);
     replaceMarkdown(nextMarkdown);
@@ -947,38 +1215,38 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     };
   }, [editor, syncEditorMarkdown]);
 
-  const load = useCallback(async (documentId?: string) => {
-    const next = (await pa.extension.invoke('writingStudioLoad', documentId ? { documentId } : {})) as StoredState;
-    setState(next);
-    setDocuments(next.documents ?? []);
-    setDocumentFolders(next.folders ?? []);
-    setActiveDocumentId(next.activeDocumentId ?? next.id ?? documentId ?? 'default');
-    setSettingsDraft(next.settings);
-    setSaveStatus('saved');
-    const activeDoc = (next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id ?? documentId));
-    updateFileNameDraft(activeDoc?.fileName ?? next.fileName ?? '');
-    setLastSavedAt(activeDoc?.updatedAt ?? new Date().toISOString());
-    setActiveAnnotationId(null);
-    setMarkdown(next.markdown);
-    setMarkdownSilently(next.markdown);
-    if (editor) {
-      applyingEditorContent.current = true;
-      editor.commands.setContent(next.markdown, { contentType: 'markdown' });
-      setTimeout(() => {
-        applyingEditorContent.current = false;
-      }, 250);
-    }
-  }, [editor, pa, setMarkdownSilently, updateFileNameDraft]);
-
-  const handleTreeSelectionChange = useCallback(
-    (paths: readonly string[]) => {
-      const selectedPath = paths[0];
-      setSelectedTreePath(selectedPath ?? null);
-      setDocumentModalMode('idle');
-      setDocumentModalValue('');
+  const load = useCallback(
+    async (documentId?: string) => {
+      const next = (await pa.extension.invoke('writingStudioLoad', documentId ? { documentId } : {})) as StoredState;
+      setState(next);
+      setDocuments(next.documents ?? []);
+      setDocumentFolders(next.folders ?? []);
+      setActiveDocumentId(next.activeDocumentId ?? next.id ?? documentId ?? 'default');
+      setSettingsDraft(next.settings);
+      setSaveStatus('saved');
+      const activeDoc = (next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id ?? documentId));
+      updateFileNameDraft(activeDoc?.fileName ?? next.fileName ?? '');
+      setLastSavedAt(activeDoc?.updatedAt ?? new Date().toISOString());
+      setActiveAnnotationId(null);
+      setMarkdown(next.markdown);
+      setMarkdownSilently(next.markdown);
+      if (editor) {
+        applyingEditorContent.current = true;
+        editor.commands.setContent(next.markdown, { contentType: 'markdown' });
+        setTimeout(() => {
+          applyingEditorContent.current = false;
+        }, 250);
+      }
     },
-    [],
+    [editor, pa, setMarkdownSilently, updateFileNameDraft],
   );
+
+  const handleTreeSelectionChange = useCallback((paths: readonly string[]) => {
+    const selectedPath = paths[0];
+    setSelectedTreePath(selectedPath ?? null);
+    setDocumentModalMode('idle');
+    setDocumentModalValue('');
+  }, []);
 
   const { model: documentTreeModel, resetTree: resetDocumentTree } = useWritingStudioFileTreeModel({
     search: false,
@@ -1054,7 +1322,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                 annotations: [
                   ...result.annotations,
                   ...current.annotations.filter(
-                    (annotation) => annotation.status !== 'open' || (annotation.quote && currentMarkdown.includes(annotation.quote) && !currentQuotes.includes(annotation.quote)),
+                    (annotation) =>
+                      annotation.status !== 'open' ||
+                      (annotation.quote && currentMarkdown.includes(annotation.quote) && !currentQuotes.includes(annotation.quote)),
                   ),
                 ],
                 lastAgentRunAt: new Date().toISOString(),
@@ -1097,22 +1367,13 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [activeDocumentId, currentModel, markdown, pa, syncEditorMarkdown],
   );
 
-  const selectAnnotation = useCallback(
-    (annotation: Annotation) => {
-      setActiveAnnotationId(annotation.id);
-    },
-    [],
-  );
+  const selectAnnotation = useCallback((annotation: Annotation) => {
+    setActiveAnnotationId(annotation.id);
+  }, []);
 
   const discussAnnotation = useCallback(
     (annotation: Annotation) => {
-      const lines = [
-        'Can we discuss this annotation?',
-        '',
-        `> ${annotation.quote}`,
-        '',
-        `${annotation.kind}: ${annotation.body}`,
-      ];
+      const lines = ['Can we discuss this annotation?', '', `> ${annotation.quote}`, '', `${annotation.kind}: ${annotation.body}`];
       void sendChat(lines.join('\n'));
     },
     [sendChat],
@@ -1149,7 +1410,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
 
   const resolveAnnotation = useCallback(
     async (id: string) => {
-      const result = (await pa.extension.invoke('writingStudioResolveAnnotation', { id, documentId: activeDocumentId })) as { annotations: Annotation[] };
+      const result = (await pa.extension.invoke('writingStudioResolveAnnotation', { id, documentId: activeDocumentId })) as {
+        annotations: Annotation[];
+      };
       setState((current) => (current ? { ...current, annotations: result.annotations } : current));
       setActiveAnnotationId((current) => (current === id ? null : current));
     },
@@ -1159,7 +1422,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const saveSettings = useCallback(async () => {
     setBusy('settings');
     try {
-      const result = (await pa.extension.invoke('writingStudioSaveSettings', { ...settingsDraft, documentId: activeDocumentId })) as { settings: WritingSettings };
+      const result = (await pa.extension.invoke('writingStudioSaveSettings', { ...settingsDraft, documentId: activeDocumentId })) as {
+        settings: WritingSettings;
+      };
       setSettingsDraft(result.settings);
       setState((current) => (current ? { ...current, settings: result.settings } : current));
       setSettingsOpen(false);
@@ -1170,28 +1435,46 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     }
   }, [activeDocumentId, pa, settingsDraft]);
 
-  const saveDocument = useCallback(async (nextFileName?: string) => {
-    setSaveStatus('saving');
-    const currentMarkdown = syncEditorMarkdown() ?? markdown;
-    const fileName = nextFileName ?? fileNameDraftRef.current ?? fileNameDraft;
-    try {
-      const result = (await pa.extension.invoke('writingStudioSaveDocument', { documentId: activeDocumentId, markdown: currentMarkdown, fileName })) as {
-        document: DocumentSummary;
-      };
-      setDocuments((current) => [result.document, ...current.filter((doc) => doc.id !== result.document.id)]);
-      setState((current) => (current ? { ...current, fileName: result.document.fileName, folderPath: result.document.folderPath, title: result.document.title } : current));
-      updateFileNameDraft(result.document.fileName);
-      setSaveStatus('saved');
-      setLastSavedAt(result.document.updatedAt ?? new Date().toISOString());
-    } catch (err) {
-      setSaveStatus('error');
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [activeDocumentId, fileNameDraft, markdown, pa, syncEditorMarkdown, updateFileNameDraft]);
+  const saveDocument = useCallback(
+    async (nextFileName?: string) => {
+      setSaveStatus('saving');
+      const currentMarkdown = syncEditorMarkdown() ?? markdown;
+      const fileName = nextFileName ?? fileNameDraftRef.current ?? fileNameDraft;
+      try {
+        const result = (await pa.extension.invoke('writingStudioSaveDocument', {
+          documentId: activeDocumentId,
+          markdown: currentMarkdown,
+          fileName,
+        })) as {
+          document: DocumentSummary;
+        };
+        setDocuments((current) => [result.document, ...current.filter((doc) => doc.id !== result.document.id)]);
+        setState((current) =>
+          current
+            ? { ...current, fileName: result.document.fileName, folderPath: result.document.folderPath, title: result.document.title }
+            : current,
+        );
+        updateFileNameDraft(result.document.fileName);
+        setSaveStatus('saved');
+        setLastSavedAt(result.document.updatedAt ?? new Date().toISOString());
+      } catch (err) {
+        setSaveStatus('error');
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [activeDocumentId, fileNameDraft, markdown, pa, syncEditorMarkdown, updateFileNameDraft],
+  );
 
   const createDocument = useCallback(async () => {
-    const selectedFolder = selectedTreePath ? (folderPathByTreePathRef.current.get(selectedTreePath) ?? documents.find((doc) => doc.id === documentIdByTreePathRef.current.get(selectedTreePath))?.folderPath) : undefined;
-    const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: 'Untitled', fileName: 'untitled.md', folderPath: selectedFolder ?? 'Drafts' })) as StoredState;
+    const selectedFolder = selectedTreePath
+      ? (folderPathByTreePathRef.current.get(selectedTreePath) ??
+        documents.find((doc) => doc.id === documentIdByTreePathRef.current.get(selectedTreePath))?.folderPath)
+      : undefined;
+    const next = (await pa.extension.invoke('writingStudioCreateDocument', {
+      title: 'Untitled',
+      fileName: 'untitled.md',
+      folderPath: selectedFolder ?? 'Drafts',
+    })) as StoredState;
     setState(next);
     setDocuments(next.documents ?? []);
     setDocumentFolders(next.folders ?? []);
@@ -1200,7 +1483,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
     setSaveStatus('saved');
-    setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString());
+    setLastSavedAt(
+      (next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString(),
+    );
     editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
     setDocumentsOpen(false);
   }, [documents, editor, pa, selectedTreePath, setMarkdownSilently, updateFileNameDraft]);
@@ -1222,7 +1507,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       setMarkdown(next.markdown);
       setMarkdownSilently(next.markdown);
       setSaveStatus('saved');
-      setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString());
+      setLastSavedAt(
+        (next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString(),
+      );
       editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
     },
     [editor, pa, setMarkdownSilently, updateFileNameDraft],
@@ -1230,9 +1517,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
 
   const selectedDocument = useMemo(() => {
     const documentId = selectedTreePath ? documentIdByTreePathRef.current.get(selectedTreePath) : undefined;
-    return documentId ? documents.find((doc) => doc.id === documentId) ?? null : null;
+    return documentId ? (documents.find((doc) => doc.id === documentId) ?? null) : null;
   }, [documents, selectedTreePath]);
-  const selectedFolder = useMemo(() => (selectedTreePath ? folderPathByTreePathRef.current.get(selectedTreePath) ?? null : null), [selectedTreePath]);
+  const selectedFolder = useMemo(
+    () => (selectedTreePath ? (folderPathByTreePathRef.current.get(selectedTreePath) ?? null) : null),
+    [selectedTreePath],
+  );
 
   const openSelectedDocument = useCallback(() => {
     if (!selectedDocument) return;
@@ -1240,21 +1530,28 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     void load(selectedDocument.id);
   }, [load, selectedDocument]);
 
-  const beginDocumentModalMode = useCallback((mode: DocumentModalMode) => {
-    setDocumentModalMode(mode);
-    if (mode === 'new-document') setDocumentModalValue('untitled.md');
-    else if (mode === 'new-folder') setDocumentModalValue('New Folder');
-    else if (mode === 'rename-document') setDocumentModalValue(selectedDocument?.fileName ?? '');
-    else if (mode === 'rename-folder') setDocumentModalValue(selectedFolder?.split('/').at(-1) ?? '');
-    else setDocumentModalValue('');
-  }, [selectedDocument?.fileName, selectedFolder]);
+  const beginDocumentModalMode = useCallback(
+    (mode: DocumentModalMode) => {
+      setDocumentModalMode(mode);
+      if (mode === 'new-document') setDocumentModalValue('untitled.md');
+      else if (mode === 'new-folder') setDocumentModalValue('New Folder');
+      else if (mode === 'rename-document') setDocumentModalValue(selectedDocument?.fileName ?? '');
+      else if (mode === 'rename-folder') setDocumentModalValue(selectedFolder?.split('/').at(-1) ?? '');
+      else setDocumentModalValue('');
+    },
+    [selectedDocument?.fileName, selectedFolder],
+  );
 
   const runDocumentModalAction = useCallback(async () => {
     const value = documentModalValue.trim();
     try {
       if (documentModalMode === 'new-document') {
         const folderPath = selectedFolder ?? selectedDocument?.folderPath ?? 'Drafts';
-        const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: value.replace(/\.[^.]+$/, '') || 'Untitled', fileName: value || 'untitled.md', folderPath })) as StoredState;
+        const next = (await pa.extension.invoke('writingStudioCreateDocument', {
+          title: value.replace(/\.[^.]+$/, '') || 'Untitled',
+          fileName: value || 'untitled.md',
+          folderPath,
+        })) as StoredState;
         setState(next);
         setDocuments(next.documents ?? []);
         setDocumentFolders(next.folders ?? []);
@@ -1267,11 +1564,17 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       } else if (documentModalMode === 'new-folder') {
         const parent = selectedFolder ?? selectedDocument?.folderPath ?? 'Drafts';
         const folderPath = value.includes('/') ? value : `${parent}/${value}`;
-        const index = (await pa.extension.invoke('writingStudioCreateFolder', { folderPath })) as { documents: DocumentSummary[]; folders?: string[] };
+        const index = (await pa.extension.invoke('writingStudioCreateFolder', { folderPath })) as {
+          documents: DocumentSummary[];
+          folders?: string[];
+        };
         setDocuments(index.documents ?? []);
         setDocumentFolders(index.folders ?? []);
       } else if (documentModalMode === 'rename-document' && selectedDocument) {
-        const next = (await pa.extension.invoke('writingStudioRenameDocument', { documentId: selectedDocument.id, fileName: value || selectedDocument.fileName })) as StoredState;
+        const next = (await pa.extension.invoke('writingStudioRenameDocument', {
+          documentId: selectedDocument.id,
+          fileName: value || selectedDocument.fileName,
+        })) as StoredState;
         setDocuments(next.documents ?? []);
         setDocumentFolders(next.folders ?? []);
         if (selectedDocument.id === activeDocumentId) updateFileNameDraft(next.fileName ?? value);
@@ -1288,11 +1591,17 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       } else if (documentModalMode === 'rename-folder' && selectedFolder) {
         const parentParts = selectedFolder.split('/').slice(0, -1);
         const nextFolderPath = value.includes('/') ? value : [...parentParts, value].filter(Boolean).join('/');
-        const index = (await pa.extension.invoke('writingStudioRenameFolder', { folderPath: selectedFolder, nextFolderPath })) as { documents: DocumentSummary[]; folders?: string[] };
+        const index = (await pa.extension.invoke('writingStudioRenameFolder', { folderPath: selectedFolder, nextFolderPath })) as {
+          documents: DocumentSummary[];
+          folders?: string[];
+        };
         setDocuments(index.documents ?? []);
         setDocumentFolders(index.folders ?? []);
       } else if (documentModalMode === 'delete-folder' && selectedFolder) {
-        const index = (await pa.extension.invoke('writingStudioDeleteFolder', { folderPath: selectedFolder })) as { documents: DocumentSummary[]; folders?: string[] };
+        const index = (await pa.extension.invoke('writingStudioDeleteFolder', { folderPath: selectedFolder })) as {
+          documents: DocumentSummary[];
+          folders?: string[];
+        };
         setDocuments(index.documents ?? []);
         setDocumentFolders(index.folders ?? []);
       }
@@ -1302,7 +1611,17 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [activeDocumentId, documentModalMode, documentModalValue, editor, pa, selectedDocument, selectedFolder, setMarkdownSilently, updateFileNameDraft]);
+  }, [
+    activeDocumentId,
+    documentModalMode,
+    documentModalValue,
+    editor,
+    pa,
+    selectedDocument,
+    selectedFolder,
+    setMarkdownSilently,
+    updateFileNameDraft,
+  ]);
 
   const exportDocument = useCallback(
     async (format: 'markdown' | 'html' | 'rtf' | 'docx' | 'pdf') => {
@@ -1323,11 +1642,15 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [activeDocumentId, markdown, pa, saveDocument, state?.title, syncEditorMarkdown],
   );
 
-  const filteredDocuments = useMemo(() => documents.filter((doc) => {
-    const query = documentSearch.trim().toLowerCase();
-    if (!query) return true;
-    return `${doc.title} ${doc.fileName} ${doc.folderPath} ${documentTreePath(doc)}`.toLowerCase().includes(query);
-  }), [documentSearch, documents]);
+  const filteredDocuments = useMemo(
+    () =>
+      documents.filter((doc) => {
+        const query = documentSearch.trim().toLowerCase();
+        if (!query) return true;
+        return `${doc.title} ${doc.fileName} ${doc.folderPath} ${documentTreePath(doc)}`.toLowerCase().includes(query);
+      }),
+    [documentSearch, documents],
+  );
   const filteredFolders = useMemo(() => {
     const query = documentSearch.trim().toLowerCase();
     return documentFolders.filter((folder) => !query || folder.toLowerCase().includes(query));
@@ -1371,7 +1694,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   useEffect(() => {
     documentIdByTreePathRef.current = documentTree.documentIdByPath;
     folderPathByTreePathRef.current = documentTree.folderPathByPath;
-    resetDocumentTree(documentTree.paths, { initialExpandedPaths: documentTree.expandedPaths, initialSelectedPaths: documentTree.selectedPaths });
+    resetDocumentTree(documentTree.paths, {
+      initialExpandedPaths: documentTree.expandedPaths,
+      initialSelectedPaths: documentTree.selectedPaths,
+    });
   }, [documentTree, resetDocumentTree]);
 
   if (loading) {
@@ -1458,10 +1784,15 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         >
           <div className="writing-studio-export-menu">
             {(['markdown', 'html', 'rtf', 'docx', 'pdf'] as const).map((format) => (
-              <button key={format} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => {
-                setExportMenuOpen(false);
-                void exportDocument(format);
-              }}>
+              <button
+                key={format}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setExportMenuOpen(false);
+                  void exportDocument(format);
+                }}
+              >
                 {format.toUpperCase()}
               </button>
             ))}
@@ -1613,7 +1944,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           <div className="writing-studio-modal">
             <div className="writing-studio-modal-header">
               <h2>Writing Studio settings</h2>
-              <button className="writing-studio-icon-button" type="button" aria-label="Close settings" onClick={() => setSettingsOpen(false)}>
+              <button
+                className="writing-studio-icon-button"
+                type="button"
+                aria-label="Close settings"
+                onClick={() => setSettingsOpen(false)}
+              >
                 ×
               </button>
             </div>
@@ -1627,7 +1963,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                   max={300}
                   value={settingsDraft.reviewIntervalSeconds}
                   onChange={(event) =>
-                    setSettingsDraft((draft) => ({ ...draft, reviewIntervalSeconds: Number(event.target.value) || draft.reviewIntervalSeconds }))
+                    setSettingsDraft((draft) => ({
+                      ...draft,
+                      reviewIntervalSeconds: Number(event.target.value) || draft.reviewIntervalSeconds,
+                    }))
                   }
                 />
               </div>
@@ -1668,7 +2007,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                   setDocumentModalValue('');
                 }}
               >
-                  <WritingIcon name="close" />
+                <WritingIcon name="close" />
               </button>
             </div>
             <div className="writing-studio-modal-body">
@@ -1746,9 +2085,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               </div>
               {documentModalMode === 'delete-document' || documentModalMode === 'delete-folder' ? (
                 <div className="writing-studio-doc-form is-danger">
-                  <span>
-                    Delete {documentModalMode === 'delete-document' ? selectedDocument?.fileName : `${selectedFolder}/`}?
-                  </span>
+                  <span>Delete {documentModalMode === 'delete-document' ? selectedDocument?.fileName : `${selectedFolder}/`}?</span>
                   <button className="is-danger" type="button" onClick={() => void runDocumentModalAction()}>
                     Delete
                   </button>
@@ -1774,7 +2111,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                             ? 'Rename document'
                             : 'Rename folder'
                     }
-                    placeholder={documentModalMode === 'new-folder' || documentModalMode === 'rename-folder' ? 'Folder name' : 'filename.md'}
+                    placeholder={
+                      documentModalMode === 'new-folder' || documentModalMode === 'rename-folder' ? 'Folder name' : 'filename.md'
+                    }
                     autoFocus
                   />
                   <button type="button" onClick={() => void runDocumentModalAction()}>
