@@ -1,6 +1,7 @@
 import { Markdown } from '@tiptap/markdown';
 import type { FileTree as TreesModel } from '@pierre/trees';
 import { FileTree as TreesFileTree } from '@pierre/trees/react';
+import Link from '@tiptap/extension-link';
 import { EditorContent, type Editor, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
@@ -25,7 +26,7 @@ const writingStudioCss = `
 .writing-studio.has-collapsed-rail{grid-template-columns:minmax(0,1fr)3rem}
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
 .writing-studio-meta{display:flex;align-items:center;justify-content:space-between;gap:1rem;max-width:68rem;margin:0 auto 1.25rem;color:rgb(var(--color-dim));font-size:.75rem;line-height:1.4}.writing-studio-save-status{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}.writing-studio-save-status::before{content:"";width:.42rem;height:.42rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-save-status.is-saved::before{background:rgb(var(--color-success))}.writing-studio-save-status.is-saving::before{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-save-status.is-unsaved::before{background:rgb(var(--color-warning))}.writing-studio-save-status.is-error::before{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}
-.writing-studio-formatbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:.18rem;max-width:68rem;margin:-.55rem auto 1rem;padding:.35rem 0;background:linear-gradient(rgb(var(--color-base)) 78%,transparent)}.writing-studio-format-group{display:flex;align-items:center;gap:.12rem;padding-right:.35rem;margin-right:.25rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.74rem;font-weight:650;cursor:pointer}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}
+.writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 28%,transparent)}
@@ -207,23 +208,73 @@ function FormatButton({
 }
 
 function WritingFormatBar({ editor }: { editor: Editor | null }) {
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkHref, setLinkHref] = useState('');
+
+  if (!editor) return null;
   const disabled = !editor;
+  const openLinkEditor = () => {
+    setLinkHref((editor.getAttributes('link').href as string | undefined) ?? '');
+    setLinkOpen((open) => !open);
+  };
+  const applyLink = () => {
+    const href = linkHref.trim();
+    if (!href) {
+      editor.chain().focus().unsetLink().run();
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+    }
+    setLinkOpen(false);
+  };
   return (
-    <div className="writing-studio-formatbar" aria-label="Document formatting">
+    <div
+      className="writing-studio-formatbar"
+      aria-label="Markdown formatting"
+      onMouseDown={(event) => event.preventDefault()}
+    >
       <div className="writing-studio-format-group">
-        <FormatButton label="P" title="Paragraph" disabled={disabled} active={Boolean(editor?.isActive('paragraph'))} onClick={() => editor?.chain().focus().setParagraph().run()} />
-        <FormatButton label="H1" title="Heading 1" disabled={disabled} active={Boolean(editor?.isActive('heading', { level: 1 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} />
-        <FormatButton label="H2" title="Heading 2" disabled={disabled} active={Boolean(editor?.isActive('heading', { level: 2 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} />
+        <FormatButton label="P" title="Paragraph" disabled={disabled} active={editor.isActive('paragraph')} onClick={() => editor.chain().focus().setParagraph().run()} />
+        <FormatButton label="H1" title="Heading 1" disabled={disabled} active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} />
+        <FormatButton label="H2" title="Heading 2" disabled={disabled} active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} />
+        <FormatButton label="H3" title="Heading 3" disabled={disabled} active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} />
       </div>
       <div className="writing-studio-format-group">
-        <FormatButton label="B" title="Bold" disabled={disabled} active={Boolean(editor?.isActive('bold'))} onClick={() => editor?.chain().focus().toggleBold().run()} />
-        <FormatButton label="I" title="Italic" disabled={disabled} active={Boolean(editor?.isActive('italic'))} onClick={() => editor?.chain().focus().toggleItalic().run()} />
+        <FormatButton label="B" title="Bold" disabled={disabled} active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} />
+        <FormatButton label="I" title="Italic" disabled={disabled} active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} />
+        <FormatButton label="S" title="Strikethrough" disabled={disabled} active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} />
+        <FormatButton label="`" title="Inline code" disabled={disabled} active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()} />
+        <FormatButton label="[]" title="Link" disabled={disabled} active={editor.isActive('link') || linkOpen} onClick={openLinkEditor} />
       </div>
       <div className="writing-studio-format-group">
-        <FormatButton label="•" title="Bulleted list" disabled={disabled} active={Boolean(editor?.isActive('bulletList'))} onClick={() => editor?.chain().focus().toggleBulletList().run()} />
-        <FormatButton label="1." title="Numbered list" disabled={disabled} active={Boolean(editor?.isActive('orderedList'))} onClick={() => editor?.chain().focus().toggleOrderedList().run()} />
-        <FormatButton label="❝" title="Quote" disabled={disabled} active={Boolean(editor?.isActive('blockquote'))} onClick={() => editor?.chain().focus().toggleBlockquote().run()} />
+        <FormatButton label="•" title="Bulleted list" disabled={disabled} active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} />
+        <FormatButton label="1." title="Numbered list" disabled={disabled} active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} />
+        <FormatButton label="❝" title="Quote" disabled={disabled} active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} />
+        <FormatButton label="{ }" title="Code block" disabled={disabled} active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
       </div>
+      <div className="writing-studio-format-group">
+        <FormatButton label="HR" title="Horizontal rule" disabled={disabled} onClick={() => editor.chain().focus().setHorizontalRule().run()} />
+        <FormatButton label="BR" title="Line break" disabled={disabled} onClick={() => editor.chain().focus().setHardBreak().run()} />
+        <FormatButton label="Tx" title="Clear formatting" disabled={disabled} onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} />
+      </div>
+      <div className="writing-studio-format-group">
+        <FormatButton label="↶" title="Undo" disabled={disabled || !editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} />
+        <FormatButton label="↷" title="Redo" disabled={disabled || !editor.can().redo()} onClick={() => editor.chain().focus().redo().run()} />
+      </div>
+      {linkOpen ? (
+        <form
+          className="writing-studio-link-popover"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyLink();
+          }}
+        >
+          <input value={linkHref} onChange={(event) => setLinkHref(event.target.value)} placeholder="https://..." aria-label="Link URL" autoFocus />
+          <button type="submit">Apply</button>
+          <button type="button" onClick={() => editor.chain().focus().unsetLink().run()}>
+            Clear
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }
@@ -325,7 +376,9 @@ function textFromNode(node: ReturnType<NonNullable<MarkdownEditor['getJSON']>>):
     for (const mark of node.marks ?? []) {
       if (mark.type === 'bold') text = `**${text}**`;
       if (mark.type === 'italic') text = `_${text}_`;
+      if (mark.type === 'strike') text = `~~${text}~~`;
       if (mark.type === 'code') text = `\`${text.replace(/`/g, '\\`')}\``;
+      if (mark.type === 'link' && typeof mark.attrs?.href === 'string') text = `[${text}](${mark.attrs.href})`;
     }
     return text;
   }
@@ -343,6 +396,8 @@ function markdownFromNode(node: ReturnType<NonNullable<MarkdownEditor['getJSON']
   if (node.type === 'bulletList') return (node.content ?? []).map((child) => `- ${markdownFromNode(child).replace(/\n/g, '\n  ')}`).join('\n');
   if (node.type === 'orderedList') return (node.content ?? []).map((child, index) => `${index + 1}. ${markdownFromNode(child).replace(/\n/g, '\n   ')}`).join('\n');
   if (node.type === 'listItem') return (node.content ?? []).map(markdownFromNode).filter(Boolean).join('\n');
+  if (node.type === 'codeBlock') return `\`\`\`${typeof node.attrs?.language === 'string' ? node.attrs.language : ''}\n${textFromNode(node)}\n\`\`\``;
+  if (node.type === 'horizontalRule') return '---';
   if (node.type === 'hardBreak') return '\n';
   return textFromNode(node);
 }
@@ -571,7 +626,11 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const { replaceMarkdown, setMarkdownSilently } = useWritingDoc(markdown, persistUpdate);
 
   const editor = useEditor({
-    extensions: [StarterKit, Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: false })],
+    extensions: [
+      StarterKit.configure({ link: false }),
+      Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
+      Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: false }),
+    ],
     content: markdown,
     editorProps: {
       attributes: {

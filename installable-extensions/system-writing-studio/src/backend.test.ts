@@ -93,7 +93,7 @@ describe('Writing Studio backend', () => {
     expect(imported.title).toBe('Draft Title');
     expect(imported.fileName).toBe('client-copy.md');
     expect(imported.folderPath).toBe('Clients/Acme');
-    expect(imported.documents[0]).toEqual(
+    expect(imported.documents.find((doc) => doc.id === imported.id)).toEqual(
       expect.objectContaining({
         title: 'Draft Title',
         fileName: 'client-copy.md',

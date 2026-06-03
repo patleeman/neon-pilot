@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@neon-pilot/extensions": "*",
+    "@tiptap/extension-link": "3.21.0",
     "@tiptap/markdown": "3.21.0",
     "@tiptap/react": "3.21.0",
     "@tiptap/starter-kit": "3.21.0",
