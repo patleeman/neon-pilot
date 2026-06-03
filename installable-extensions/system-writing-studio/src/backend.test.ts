@@ -6,7 +6,24 @@ vi.mock('@neon-pilot/extensions/backend/agent', () => ({
   runAgentTask: mockRunAgentTask,
 }));
 
-import { addAnnotation, appendUpdate, exportDocument, getCanvas, importDocument, load, resolveAnnotation, runReview, sendChat, updateCanvas } from './backend';
+import {
+  addAnnotation,
+  appendUpdate,
+  createDocument,
+  createFolder,
+  deleteDocument,
+  deleteFolder,
+  exportDocument,
+  getCanvas,
+  importDocument,
+  load,
+  renameDocument,
+  renameFolder,
+  resolveAnnotation,
+  runReview,
+  sendChat,
+  updateCanvas,
+} from './backend';
 
 function context() {
   const store = new Map<string, unknown>();
@@ -15,6 +32,9 @@ function context() {
       get: vi.fn(async (key: string) => store.get(key)),
       put: vi.fn(async (key: string, value: unknown) => {
         store.set(key, value);
+      }),
+      delete: vi.fn(async (key: string) => {
+        store.delete(key);
       }),
     },
   } as never;
@@ -225,5 +245,63 @@ describe('Writing Studio backend', () => {
 
     expect((await getCanvas({ documentId: imported.id }, ctx)).title).toBe('Retitled Draft');
     expect(exported.fileName).toBe('client-copy.md');
+  });
+
+  it('creates folders and documents inside the document index', async () => {
+    const ctx = context();
+
+    const folders = await createFolder({ folderPath: 'Projects/Essay' }, ctx);
+    const created = await createDocument({ title: 'Field Notes', fileName: 'field-notes.md', folderPath: 'Projects/Essay' }, ctx);
+
+    expect(folders.folders).toContain('Projects');
+    expect(folders.folders).toContain('Projects/Essay');
+    expect(created.folders).toContain('Projects/Essay');
+    expect(created.documents.find((doc) => doc.id === created.id)).toEqual(
+      expect.objectContaining({ fileName: 'field-notes.md', folderPath: 'Projects/Essay', path: 'Projects/Essay/field-notes.md' }),
+    );
+  });
+
+  it('renames and deletes documents without mixing title and file name', async () => {
+    const ctx = context();
+    const created = await createDocument({ title: 'Document Title', fileName: 'draft.md', folderPath: 'Drafts' }, ctx);
+
+    const renamed = await renameDocument({ documentId: created.id, fileName: 'renamed-copy.md' }, ctx);
+    const deleted = await deleteDocument({ documentId: created.id }, ctx);
+
+    expect(renamed.title).toBe('Document Title');
+    expect(renamed.fileName).toBe('renamed-copy.md');
+    expect(deleted.activeDocumentId).not.toBe(created.id);
+    expect(deleted.documents.some((doc) => doc.id === created.id)).toBe(false);
+  });
+
+  it('renames folders and refuses to delete non-empty folders', async () => {
+    const ctx = context();
+    await createDocument({ title: 'Nested Draft', fileName: 'nested.md', folderPath: 'Projects/Old' }, ctx);
+
+    const renamed = await renameFolder({ folderPath: 'Projects/Old', nextFolderPath: 'Projects/New' }, ctx);
+
+    expect(renamed.folders).toContain('Projects/New');
+    expect(renamed.documents[0]).toEqual(expect.objectContaining({ folderPath: 'Projects/New', path: 'Projects/New/nested.md' }));
+    await expect(deleteFolder({ folderPath: 'Projects/New' }, ctx)).rejects.toThrow('Folder contains documents');
+  });
+
+  it('deletes empty folders from the document index', async () => {
+    const ctx = context();
+    await createFolder({ folderPath: 'Empty/Child' }, ctx);
+
+    const deleted = await deleteFolder({ folderPath: 'Empty/Child' }, ctx);
+
+    expect(deleted.folders).not.toContain('Empty/Child');
+  });
+
+  it('keeps explicit folders after deleting their last document', async () => {
+    const ctx = context();
+    await createFolder({ folderPath: 'Project Archive' }, ctx);
+    const created = await createDocument({ title: 'Temporary Draft', fileName: 'temporary.md', folderPath: 'Project Archive' }, ctx);
+
+    const deleted = await deleteDocument({ documentId: created.id }, ctx);
+
+    expect(deleted.folders).toContain('Project Archive');
+    expect(deleted.documents.some((doc) => doc.folderPath === 'Project Archive')).toBe(false);
   });
 });

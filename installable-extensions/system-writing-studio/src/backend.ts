@@ -67,6 +67,7 @@ interface DocumentSummary {
 interface DocumentIndex {
   activeDocumentId: string;
   documents: DocumentSummary[];
+  folders: string[];
 }
 
 type ExportFormat = 'markdown' | 'html' | 'rtf' | 'docx';
@@ -123,6 +124,26 @@ function documentPath(folderPath: string, fileName: string): string {
   return `${normalizeFolderPath(folderPath)}/${slugFileName(fileName)}`;
 }
 
+function folderAncestors(folderPath: string): string[] {
+  const parts = normalizeFolderPath(folderPath).split('/').filter(Boolean);
+  return parts.map((_, index) => parts.slice(0, index + 1).join('/'));
+}
+
+function normalizeFolderList(folders: unknown): string[] {
+  const values = Array.isArray(folders) ? folders : [];
+  const next = new Set<string>();
+  for (const value of values) {
+    for (const folder of folderAncestors(normalizeFolderPath(value))) next.add(folder);
+  }
+  return [...next].sort((a, b) => a.localeCompare(b));
+}
+
+function foldersFromDocuments(documents: DocumentSummary[], folders: string[] = []): string[] {
+  const next = new Set<string>(normalizeFolderList(folders));
+  for (const doc of documents) for (const folder of folderAncestors(doc.folderPath)) next.add(folder);
+  return [...next].sort((a, b) => a.localeCompare(b));
+}
+
 function defaultState(id = DEFAULT_DOCUMENT_ID, title = 'Draft', markdown = seedMarkdown, fileName = `${title}.md`, folderPath = 'Drafts'): StoredState {
   return {
     id,
@@ -176,18 +197,19 @@ async function readIndex(ctx: ExtensionBackendContext): Promise<DocumentIndex> {
           folderPath: normalizeFolderPath(doc.folderPath),
           path: documentPath(normalizeFolderPath(doc.folderPath), typeof doc.fileName === 'string' ? doc.fileName : doc.title),
         })),
+      folders: foldersFromDocuments(stored.documents, normalizeFolderList((stored as { folders?: unknown }).folders)),
     };
   }
   const legacy = await ctx.storage.get<StoredState>(legacyStateKey).catch(() => null);
   const state = legacy && typeof legacy === 'object' ? normalizeState(DEFAULT_DOCUMENT_ID, legacy) : defaultState();
   await ctx.storage.put(documentKey(state.id), state);
-  const index = { activeDocumentId: state.id, documents: [summarize(state)] };
+  const index = { activeDocumentId: state.id, documents: [summarize(state)], folders: foldersFromDocuments([summarize(state)]) };
   await ctx.storage.put(INDEX_KEY, index);
   return index;
 }
 
 async function writeIndex(ctx: ExtensionBackendContext, index: DocumentIndex): Promise<void> {
-  await ctx.storage.put(INDEX_KEY, index);
+  await ctx.storage.put(INDEX_KEY, { ...index, folders: foldersFromDocuments(index.documents, index.folders) });
 }
 
 function normalizeSettings(value: unknown): WritingSettings {
@@ -237,7 +259,7 @@ async function writeState(ctx: ExtensionBackendContext, state: StoredState): Pro
   const index = await readIndex(ctx);
   const summary = summarize(state);
   const documents = [summary, ...index.documents.filter((doc) => doc.id !== state.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  await writeIndex(ctx, { activeDocumentId: state.id, documents });
+  await writeIndex(ctx, { activeDocumentId: state.id, documents, folders: index.folders });
 }
 
 function event(type: EventType, actorId: string, payload: Record<string, unknown>): WritingEvent {
@@ -366,12 +388,22 @@ export async function listDocuments(_input: unknown, ctx: ExtensionBackendContex
   return readIndex(ctx);
 }
 
-export async function load(input: unknown, ctx: ExtensionBackendContext): Promise<StoredState & { documents: DocumentSummary[]; activeDocumentId: string }> {
+export async function createFolder(input: unknown, ctx: ExtensionBackendContext): Promise<DocumentIndex> {
+  const payload = input as { folderPath?: string };
+  const folderPath = normalizeFolderPath(payload.folderPath);
+  const index = await readIndex(ctx);
+  await writeIndex(ctx, { ...index, folders: [...index.folders, folderPath] });
+  return readIndex(ctx);
+}
+
+type StoredStateWithIndex = StoredState & { documents: DocumentSummary[]; activeDocumentId: string; folders: string[] };
+
+export async function load(input: unknown, ctx: ExtensionBackendContext): Promise<StoredStateWithIndex> {
   const state = await readState(ctx, readDocumentId(input));
   const index = await readIndex(ctx);
   if (index.activeDocumentId !== state.id) await writeIndex(ctx, { ...index, activeDocumentId: state.id });
   const refreshed = await readIndex(ctx);
-  return { ...state, documents: refreshed.documents, activeDocumentId: state.id };
+  return { ...state, documents: refreshed.documents, activeDocumentId: state.id, folders: refreshed.folders };
 }
 
 export async function appendUpdate(input: unknown, ctx: ExtensionBackendContext): Promise<{ ok: true; clock: number }> {
@@ -518,7 +550,7 @@ export async function resolveAnnotation(input: unknown, ctx: ExtensionBackendCon
   return { annotations: state.annotations };
 }
 
-export async function createDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredState & { documents: DocumentSummary[]; activeDocumentId: string }> {
+export async function createDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredStateWithIndex> {
   const payload = input as { title?: string; markdown?: string; fileName?: string; folderPath?: string };
   const markdown = typeof payload.markdown === 'string' ? payload.markdown : `# ${typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled'}\n\n`;
   const title = titleFromMarkdown(markdown, payload.title || 'Untitled');
@@ -526,10 +558,78 @@ export async function createDocument(input: unknown, ctx: ExtensionBackendContex
   state.events.push(event('yjs_update', 'user', { imported: false, markdownLength: markdown.length, clock: 0 }));
   await writeState(ctx, state);
   const index = await readIndex(ctx);
-  return { ...state, documents: index.documents, activeDocumentId: state.id };
+  return { ...state, documents: index.documents, activeDocumentId: state.id, folders: index.folders };
 }
 
-export async function importDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredState & { documents: DocumentSummary[]; activeDocumentId: string }> {
+export async function renameDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredStateWithIndex> {
+  const payload = input as { documentId?: string; fileName?: string; folderPath?: string };
+  const state = await readState(ctx, payload.documentId);
+  if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
+  if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
+  state.updateClock += 1;
+  state.events.push(event('yjs_update', 'user', { renamedDocument: true, fileName: state.fileName, folderPath: state.folderPath, clock: state.updateClock }));
+  await writeState(ctx, state);
+  const index = await readIndex(ctx);
+  return { ...state, documents: index.documents, activeDocumentId: state.id, folders: index.folders };
+}
+
+export async function deleteDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredStateWithIndex> {
+  const documentId = readDocumentId(input);
+  if (!documentId) throw new Error('documentId is required.');
+  const index = await readIndex(ctx);
+  const remainingDocuments = index.documents.filter((doc) => doc.id !== documentId);
+  await ctx.storage.delete(documentKey(documentId));
+  if (remainingDocuments.length === 0) {
+    const state = defaultState(randomUUID(), 'Untitled', '# Untitled\n\n', 'untitled.md', 'Drafts');
+    state.events.push(event('yjs_update', 'user', { recreatedAfterDelete: true, markdownLength: state.markdown.length, clock: 0 }));
+    await writeState(ctx, state);
+    const nextIndex = await readIndex(ctx);
+    return { ...state, documents: nextIndex.documents, activeDocumentId: state.id, folders: nextIndex.folders };
+  }
+  const activeDocumentId = index.activeDocumentId === documentId ? remainingDocuments[0].id : index.activeDocumentId;
+  await writeIndex(ctx, { activeDocumentId, documents: remainingDocuments, folders: index.folders });
+  return load({ documentId: activeDocumentId }, ctx);
+}
+
+export async function renameFolder(input: unknown, ctx: ExtensionBackendContext): Promise<DocumentIndex> {
+  const payload = input as { folderPath?: string; nextFolderPath?: string };
+  const folderPath = normalizeFolderPath(payload.folderPath);
+  const nextFolderPath = normalizeFolderPath(payload.nextFolderPath);
+  const index = await readIndex(ctx);
+  const movedDocuments: DocumentSummary[] = [];
+  for (const doc of index.documents) {
+    if (doc.folderPath === folderPath || doc.folderPath.startsWith(`${folderPath}/`)) {
+      const state = await readState(ctx, doc.id);
+      state.folderPath = normalizeFolderPath(`${nextFolderPath}${state.folderPath.slice(folderPath.length)}`);
+      state.events.push(event('yjs_update', 'user', { renamedFolder: true, from: folderPath, to: nextFolderPath }));
+      await ctx.storage.put(documentKey(state.id), state);
+      movedDocuments.push(summarize(state));
+    } else {
+      movedDocuments.push(doc);
+    }
+  }
+  const folders = index.folders
+    .filter((folder) => folder !== folderPath && !folder.startsWith(`${folderPath}/`))
+    .concat(nextFolderPath);
+  await writeIndex(ctx, { activeDocumentId: index.activeDocumentId, documents: movedDocuments, folders });
+  return readIndex(ctx);
+}
+
+export async function deleteFolder(input: unknown, ctx: ExtensionBackendContext): Promise<DocumentIndex> {
+  const payload = input as { folderPath?: string };
+  const folderPath = normalizeFolderPath(payload.folderPath);
+  const index = await readIndex(ctx);
+  if (index.documents.some((doc) => doc.folderPath === folderPath || doc.folderPath.startsWith(`${folderPath}/`))) {
+    throw new Error('Folder contains documents.');
+  }
+  await writeIndex(ctx, {
+    ...index,
+    folders: index.folders.filter((folder) => folder !== folderPath && !folder.startsWith(`${folderPath}/`)),
+  });
+  return readIndex(ctx);
+}
+
+export async function importDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredStateWithIndex> {
   const payload = input as { title?: string; markdown?: string; fileName?: string; folderPath?: string };
   if (typeof payload.markdown !== 'string') throw new Error('markdown is required.');
   const title = titleFromMarkdown(payload.markdown, payload.title || 'Imported draft');
@@ -537,7 +637,7 @@ export async function importDocument(input: unknown, ctx: ExtensionBackendContex
   state.events.push(event('yjs_update', 'user', { imported: true, markdownLength: payload.markdown.length, clock: 0 }));
   await writeState(ctx, state);
   const index = await readIndex(ctx);
-  return { ...state, documents: index.documents, activeDocumentId: state.id };
+  return { ...state, documents: index.documents, activeDocumentId: state.id, folders: index.folders };
 }
 
 export async function saveDocument(input: unknown, ctx: ExtensionBackendContext): Promise<{ ok: true; document: DocumentSummary }> {

@@ -43,7 +43,7 @@ const writingStudioCss = `
 .writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-heading{display:flex;align-items:center;gap:.55rem;min-width:0}.writing-studio-review-status{color:rgb(var(--color-dim));font-size:.72rem;white-space:nowrap}.writing-studio-review-status.is-running{color:rgb(var(--color-accent))}.writing-studio-review-status.is-complete{color:rgb(var(--color-success))}.writing-studio-rail-tools{display:flex;align-items:center;gap:.25rem}.writing-studio-icon-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.85rem;height:1.85rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-icon-button:disabled{cursor:default;opacity:.45}.writing-studio-icon-button.is-running{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-accent));opacity:1}.writing-studio-icon-button.is-running svg{animation:writing-studio-review-spin 1.1s linear infinite}@keyframes writing-studio-review-spin{to{transform:rotate(360deg)}}.writing-studio-icon-button[data-tooltip]::after{content:attr(data-tooltip);position:absolute;right:0;top:calc(100% + .4rem);z-index:50;pointer-events:none;max-width:12rem;white-space:nowrap;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));box-shadow:0 10px 28px rgba(0,0,0,.28);color:rgb(var(--color-primary));font-size:.72rem;font-weight:500;line-height:1;padding:.42rem .5rem;opacity:0;transform:translateY(-2px);transition:opacity .12s ease,transform .12s ease}.writing-studio-icon-button[data-tooltip]:hover::after,.writing-studio-icon-button[data-tooltip]:focus-visible::after{opacity:1;transform:translateY(0)}.writing-studio-tool-menu{position:relative}.writing-studio-export-menu{position:absolute;right:0;top:2.2rem;z-index:20;display:grid;min-width:8.5rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 12px 32px rgba(0,0,0,.28);padding:.25rem}.writing-studio-export-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.45rem .55rem;text-align:left;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-export-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-composer{border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-composer [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-composer [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-meta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:1rem;padding:.25rem .9rem .75rem;color:rgb(var(--color-dim));font-size:.66rem;font-family:var(--font-mono,monospace)}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
 .writing-studio-format-actions{position:relative}.writing-studio-format-actions .writing-studio-export-menu{left:0;right:auto;top:2.05rem}.writing-studio-review-status.is-error{color:rgb(var(--color-danger))}
-.writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-list{height:min(52vh,28rem);min-height:14rem;overflow:hidden}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{padding:.35rem .1rem}.writing-studio-doc-import input[type=file]{display:none}
+.writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.56)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:.65rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search,.writing-studio-doc-form input{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.writing-studio-doc-toolbar-group{display:flex;align-items:center;gap:.2rem}.writing-studio-doc-selection{min-height:1rem;color:rgb(var(--color-secondary));font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.writing-studio-doc-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.4rem;align-items:center}.writing-studio-doc-form.is-danger{grid-template-columns:minmax(0,1fr) auto auto;color:rgb(var(--color-danger,255 96 96));font-size:.82rem}.writing-studio-doc-form button{border:0;border-radius:6px;background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary));font:inherit;font-size:.76rem;padding:.48rem .65rem;cursor:pointer}.writing-studio-doc-form button:hover{background:rgb(var(--color-border-subtle))}.writing-studio-doc-form button.is-danger{background:color-mix(in srgb,rgb(var(--color-danger,255 96 96)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}.writing-studio-doc-list{height:min(52vh,28rem);min-height:14rem;overflow:hidden;border:1px solid rgb(var(--color-border-subtle));border-radius:7px;background:rgb(var(--color-base))}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{padding:.35rem .75rem}.writing-studio-doc-import input[type=file]{display:none}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
 @media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;padding-top:0}.writing-studio-comment{max-width:48rem}}
 @media(max-width:860px){.writing-studio,.writing-studio.has-collapsed-rail{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-rail-resizer{display:none}}
@@ -130,6 +130,7 @@ interface StoredState {
   settings: WritingSettings;
   documents?: DocumentSummary[];
   activeDocumentId?: string;
+  folders?: string[];
 }
 
 interface ChatViewMessage {
@@ -139,7 +140,21 @@ interface ChatViewMessage {
   text: string;
 }
 
-type WritingIconName = 'open' | 'new' | 'save' | 'export' | 'review' | 'settings' | 'collapse' | 'expand' | 'close';
+type WritingIconName =
+  | 'open'
+  | 'new'
+  | 'folderNew'
+  | 'save'
+  | 'export'
+  | 'import'
+  | 'review'
+  | 'settings'
+  | 'rename'
+  | 'delete'
+  | 'collapse'
+  | 'expand'
+  | 'close';
+type DocumentModalMode = 'idle' | 'new-document' | 'new-folder' | 'rename-document' | 'rename-folder' | 'delete-document' | 'delete-folder';
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 type ReviewStatus = 'idle' | 'running' | 'complete' | 'error';
 type FileTreeModelResult = {
@@ -207,10 +222,14 @@ function createAnnotationHighlightExtension(activeHighlightRef: { current: Annot
 const iconPaths: Record<WritingIconName, string> = {
   open: 'M3.5 6.5h5l1.4 1.8h6.6v7.2a2 2 0 0 1-2 2h-11z M3.5 6.5v-2h5l1.2 1.3h6.8v2.5',
   new: 'M9 3.5v13 M2.5 10h13',
+  folderNew: 'M2.5 6h5l1.2 1.5h5.8v7h-12z M12 2.8v4.4 M9.8 5h4.4',
   save: 'M4 3.5h9l2.5 2.5v10.5h-11.5z M6 3.5v4h6 M6.5 16.5v-5h6v5',
   export: 'M9 12.5v-9 M5.5 7 9 3.5 12.5 7 M4 11v4.5h10V11',
+  import: 'M9 3.5v9 M5.5 9 9 12.5 12.5 9 M4 6V3.5h10V6 M4 11v4.5h10V11',
   review: 'M3.5 4.5h10v8h-6l-4 3.5z M6 7.5h5 M6 10h3',
   settings: 'M8.5 2.8 9.8 5l2.5.5.3 2.5 2 1.6-1.2 2.2.7 2.4-2.3 1.2-2-1.5-2 .8-2-1.3-2.4.6-1.1-2.4 1.5-1.9-.9-2.3 2.1-1.5.4-2.5 2.5-.5z M8.5 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
+  rename: 'M3.5 13.5h3.2l7-7a1.6 1.6 0 0 0-2.2-2.2l-7 7z M10.8 5.2l2 2',
+  delete: 'M4.5 5h9 M7 5V3.5h4V5 M6 7v8h6V7 M8 8.5v4 M10.5 8.5v4',
   collapse: 'M6.5 4.5 10.5 8.5l-4 4',
   expand: 'M10.5 4.5 6.5 8.5l4 4',
   close: 'M4.5 4.5 12.5 12.5 M12.5 4.5 4.5 12.5',
@@ -667,6 +686,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [documentSearch, setDocumentSearch] = useState('');
+  const [documentFolders, setDocumentFolders] = useState<string[]>([]);
+  const [selectedTreePath, setSelectedTreePath] = useState<string | null>(null);
+  const [documentModalMode, setDocumentModalMode] = useState<DocumentModalMode>('idle');
+  const [documentModalValue, setDocumentModalValue] = useState('');
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
@@ -686,6 +709,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const reviewStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
+  const folderPathByTreePathRef = useRef(new Map<string, string>());
   const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
   const fileNameDraftRef = useRef('');
   const dismissedSelectionTextRef = useRef('');
@@ -927,6 +951,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     const next = (await pa.extension.invoke('writingStudioLoad', documentId ? { documentId } : {})) as StoredState;
     setState(next);
     setDocuments(next.documents ?? []);
+    setDocumentFolders(next.folders ?? []);
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? documentId ?? 'default');
     setSettingsDraft(next.settings);
     setSaveStatus('saved');
@@ -948,13 +973,11 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const handleTreeSelectionChange = useCallback(
     (paths: readonly string[]) => {
       const selectedPath = paths[0];
-      if (!selectedPath || selectedPath.endsWith('/')) return;
-      const documentId = documentIdByTreePathRef.current.get(selectedPath);
-      if (!documentId) return;
-      setDocumentsOpen(false);
-      void load(documentId);
+      setSelectedTreePath(selectedPath ?? null);
+      setDocumentModalMode('idle');
+      setDocumentModalValue('');
     },
-    [load],
+    [],
   );
 
   const { model: documentTreeModel, resetTree: resetDocumentTree } = useWritingStudioFileTreeModel({
@@ -963,11 +986,17 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     dragAndDrop: false,
     onSelectionChange: handleTreeSelectionChange,
     unsafeCSS: `
-      :host{--tree-row-height:26px}
-      .row{font-size:12px}
-      .row[aria-selected="true"]{background:rgb(var(--color-surface-hover))}
+      :host{--tree-row-height:26px;color:rgb(var(--color-primary))}
+      .row{font-size:12px;color:rgb(var(--color-primary))}
+      .row:hover{background:rgb(var(--color-surface-hover))}
+      .row[aria-selected="true"]{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}
+      .icon,.file-icon,.folder-icon{color:rgb(var(--color-secondary))}
     `,
   });
+
+  useEffect(() => {
+    documentTreeModel.setIcons({ set: 'minimal', colored: false });
+  }, [documentTreeModel]);
 
   useEffect(() => {
     load()
@@ -1161,9 +1190,11 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   }, [activeDocumentId, fileNameDraft, markdown, pa, syncEditorMarkdown, updateFileNameDraft]);
 
   const createDocument = useCallback(async () => {
-    const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: 'Untitled', fileName: 'untitled.md', folderPath: 'Drafts' })) as StoredState;
+    const selectedFolder = selectedTreePath ? (folderPathByTreePathRef.current.get(selectedTreePath) ?? documents.find((doc) => doc.id === documentIdByTreePathRef.current.get(selectedTreePath))?.folderPath) : undefined;
+    const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: 'Untitled', fileName: 'untitled.md', folderPath: selectedFolder ?? 'Drafts' })) as StoredState;
     setState(next);
     setDocuments(next.documents ?? []);
+    setDocumentFolders(next.folders ?? []);
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
     updateFileNameDraft(next.fileName ?? 'untitled.md');
     setMarkdown(next.markdown);
@@ -1171,7 +1202,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setSaveStatus('saved');
     setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString());
     editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
-  }, [editor, pa, setMarkdownSilently, updateFileNameDraft]);
+    setDocumentsOpen(false);
+  }, [documents, editor, pa, selectedTreePath, setMarkdownSilently, updateFileNameDraft]);
 
   const importDocument = useCallback(
     async (file: File) => {
@@ -1184,6 +1216,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       })) as StoredState;
       setState(next);
       setDocuments(next.documents ?? []);
+      setDocumentFolders(next.folders ?? []);
       setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
       updateFileNameDraft(next.fileName ?? file.name);
       setMarkdown(next.markdown);
@@ -1194,6 +1227,82 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     },
     [editor, pa, setMarkdownSilently, updateFileNameDraft],
   );
+
+  const selectedDocument = useMemo(() => {
+    const documentId = selectedTreePath ? documentIdByTreePathRef.current.get(selectedTreePath) : undefined;
+    return documentId ? documents.find((doc) => doc.id === documentId) ?? null : null;
+  }, [documents, selectedTreePath]);
+  const selectedFolder = useMemo(() => (selectedTreePath ? folderPathByTreePathRef.current.get(selectedTreePath) ?? null : null), [selectedTreePath]);
+
+  const openSelectedDocument = useCallback(() => {
+    if (!selectedDocument) return;
+    setDocumentsOpen(false);
+    void load(selectedDocument.id);
+  }, [load, selectedDocument]);
+
+  const beginDocumentModalMode = useCallback((mode: DocumentModalMode) => {
+    setDocumentModalMode(mode);
+    if (mode === 'new-document') setDocumentModalValue('untitled.md');
+    else if (mode === 'new-folder') setDocumentModalValue('New Folder');
+    else if (mode === 'rename-document') setDocumentModalValue(selectedDocument?.fileName ?? '');
+    else if (mode === 'rename-folder') setDocumentModalValue(selectedFolder?.split('/').at(-1) ?? '');
+    else setDocumentModalValue('');
+  }, [selectedDocument?.fileName, selectedFolder]);
+
+  const runDocumentModalAction = useCallback(async () => {
+    const value = documentModalValue.trim();
+    try {
+      if (documentModalMode === 'new-document') {
+        const folderPath = selectedFolder ?? selectedDocument?.folderPath ?? 'Drafts';
+        const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: value.replace(/\.[^.]+$/, '') || 'Untitled', fileName: value || 'untitled.md', folderPath })) as StoredState;
+        setState(next);
+        setDocuments(next.documents ?? []);
+        setDocumentFolders(next.folders ?? []);
+        setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
+        updateFileNameDraft(next.fileName ?? value);
+        setMarkdown(next.markdown);
+        setMarkdownSilently(next.markdown);
+        editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
+        setDocumentsOpen(false);
+      } else if (documentModalMode === 'new-folder') {
+        const parent = selectedFolder ?? selectedDocument?.folderPath ?? 'Drafts';
+        const folderPath = value.includes('/') ? value : `${parent}/${value}`;
+        const index = (await pa.extension.invoke('writingStudioCreateFolder', { folderPath })) as { documents: DocumentSummary[]; folders?: string[] };
+        setDocuments(index.documents ?? []);
+        setDocumentFolders(index.folders ?? []);
+      } else if (documentModalMode === 'rename-document' && selectedDocument) {
+        const next = (await pa.extension.invoke('writingStudioRenameDocument', { documentId: selectedDocument.id, fileName: value || selectedDocument.fileName })) as StoredState;
+        setDocuments(next.documents ?? []);
+        setDocumentFolders(next.folders ?? []);
+        if (selectedDocument.id === activeDocumentId) updateFileNameDraft(next.fileName ?? value);
+      } else if (documentModalMode === 'delete-document' && selectedDocument) {
+        const next = (await pa.extension.invoke('writingStudioDeleteDocument', { documentId: selectedDocument.id })) as StoredState;
+        setState(next);
+        setDocuments(next.documents ?? []);
+        setDocumentFolders(next.folders ?? []);
+        setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
+        updateFileNameDraft(next.fileName ?? 'untitled.md');
+        setMarkdown(next.markdown);
+        setMarkdownSilently(next.markdown);
+        editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
+      } else if (documentModalMode === 'rename-folder' && selectedFolder) {
+        const parentParts = selectedFolder.split('/').slice(0, -1);
+        const nextFolderPath = value.includes('/') ? value : [...parentParts, value].filter(Boolean).join('/');
+        const index = (await pa.extension.invoke('writingStudioRenameFolder', { folderPath: selectedFolder, nextFolderPath })) as { documents: DocumentSummary[]; folders?: string[] };
+        setDocuments(index.documents ?? []);
+        setDocumentFolders(index.folders ?? []);
+      } else if (documentModalMode === 'delete-folder' && selectedFolder) {
+        const index = (await pa.extension.invoke('writingStudioDeleteFolder', { folderPath: selectedFolder })) as { documents: DocumentSummary[]; folders?: string[] };
+        setDocuments(index.documents ?? []);
+        setDocumentFolders(index.folders ?? []);
+      }
+      setSelectedTreePath(null);
+      setDocumentModalMode('idle');
+      setDocumentModalValue('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [activeDocumentId, documentModalMode, documentModalValue, editor, pa, selectedDocument, selectedFolder, setMarkdownSilently, updateFileNameDraft]);
 
   const exportDocument = useCallback(
     async (format: 'markdown' | 'html' | 'rtf' | 'docx' | 'pdf') => {
@@ -1219,17 +1328,32 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     if (!query) return true;
     return `${doc.title} ${doc.fileName} ${doc.folderPath} ${documentTreePath(doc)}`.toLowerCase().includes(query);
   }), [documentSearch, documents]);
+  const filteredFolders = useMemo(() => {
+    const query = documentSearch.trim().toLowerCase();
+    return documentFolders.filter((folder) => !query || folder.toLowerCase().includes(query));
+  }, [documentFolders, documentSearch]);
   const documentTree = useMemo(() => {
     const filePaths: string[] = [];
     const folderPaths = new Set<string>();
     const documentIdByPath = new Map<string, string>();
+    const folderPathByPath = new Map<string, string>();
     const counts = new Map<string, number>();
+    for (const folder of filteredFolders) {
+      const folderTreePath = `${folder.replace(/\/+$/, '')}/`;
+      for (const folderPath of folderPathsFor(`${folderTreePath}placeholder.md`)) {
+        folderPaths.add(folderPath);
+        folderPathByPath.set(folderPath, folderPath.replace(/\/$/, ''));
+      }
+    }
     for (const doc of filteredDocuments) {
       const basePath = documentTreePath(doc);
       const count = (counts.get(basePath) ?? 0) + 1;
       counts.set(basePath, count);
       const treePath = count === 1 ? basePath : basePath.replace(/(\.[^/.]+)?$/, `-${count}$1`);
-      for (const folderPath of folderPathsFor(treePath)) folderPaths.add(folderPath);
+      for (const folderPath of folderPathsFor(treePath)) {
+        folderPaths.add(folderPath);
+        folderPathByPath.set(folderPath, folderPath.replace(/\/$/, ''));
+      }
       filePaths.push(treePath);
       documentIdByPath.set(treePath, doc.id);
     }
@@ -1240,11 +1364,13 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       expandedPaths: [...folderPaths],
       selectedPaths: activePath ? [activePath] : [],
       documentIdByPath,
+      folderPathByPath,
     };
-  }, [activeDocumentId, filteredDocuments]);
+  }, [activeDocumentId, filteredDocuments, filteredFolders]);
 
   useEffect(() => {
     documentIdByTreePathRef.current = documentTree.documentIdByPath;
+    folderPathByTreePathRef.current = documentTree.folderPathByPath;
     resetDocumentTree(documentTree.paths, { initialExpandedPaths: documentTree.expandedPaths, initialSelectedPaths: documentTree.selectedPaths });
   }, [documentTree, resetDocumentTree]);
 
@@ -1531,28 +1657,134 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           <div className="writing-studio-modal is-docs">
             <div className="writing-studio-modal-header">
               <h2>Open document</h2>
-              <div className="writing-studio-rail-tools writing-studio-doc-import">
-                <label className="writing-studio-icon-button" data-tooltip="Import markdown" aria-label="Import markdown">
-                  <WritingIcon name="open" />
-                  <input
-                    type="file"
-                    accept=".md,.markdown,.txt,text/markdown,text/plain"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = '';
-                      if (file) {
-                        setDocumentsOpen(false);
-                        void importDocument(file);
-                      }
-                    }}
-                  />
-                </label>
-                <button className="writing-studio-icon-button" type="button" aria-label="Close documents" data-tooltip="Close" onClick={() => setDocumentsOpen(false)}>
+              <button
+                className="writing-studio-icon-button"
+                type="button"
+                aria-label="Close documents"
+                data-tooltip="Close"
+                onClick={() => {
+                  setDocumentsOpen(false);
+                  setDocumentModalMode('idle');
+                  setDocumentModalValue('');
+                }}
+              >
                   <WritingIcon name="close" />
-                </button>
-              </div>
+              </button>
             </div>
             <div className="writing-studio-modal-body">
+              <div className="writing-studio-doc-toolbar">
+                <div className="writing-studio-doc-toolbar-group writing-studio-doc-import">
+                  <button
+                    className="writing-studio-icon-button"
+                    type="button"
+                    aria-label="Open selected document"
+                    data-tooltip="Open selected document"
+                    disabled={!selectedDocument}
+                    onClick={openSelectedDocument}
+                  >
+                    <WritingIcon name="open" />
+                  </button>
+                  <button
+                    className="writing-studio-icon-button"
+                    type="button"
+                    aria-label="New document"
+                    data-tooltip="New document"
+                    onClick={() => beginDocumentModalMode('new-document')}
+                  >
+                    <WritingIcon name="new" />
+                  </button>
+                  <button
+                    className="writing-studio-icon-button"
+                    type="button"
+                    aria-label="New folder"
+                    data-tooltip="New folder"
+                    onClick={() => beginDocumentModalMode('new-folder')}
+                  >
+                    <WritingIcon name="folderNew" />
+                  </button>
+                  <span className="writing-studio-tool-divider" />
+                  <button
+                    className="writing-studio-icon-button"
+                    type="button"
+                    aria-label="Rename selected item"
+                    data-tooltip="Rename selected item"
+                    disabled={!selectedDocument && !selectedFolder}
+                    onClick={() => beginDocumentModalMode(selectedDocument ? 'rename-document' : 'rename-folder')}
+                  >
+                    <WritingIcon name="rename" />
+                  </button>
+                  <button
+                    className="writing-studio-icon-button"
+                    type="button"
+                    aria-label="Delete selected item"
+                    data-tooltip="Delete selected item"
+                    disabled={!selectedDocument && !selectedFolder}
+                    onClick={() => beginDocumentModalMode(selectedDocument ? 'delete-document' : 'delete-folder')}
+                  >
+                    <WritingIcon name="delete" />
+                  </button>
+                  <span className="writing-studio-tool-divider" />
+                  <label className="writing-studio-icon-button" data-tooltip="Import markdown" aria-label="Import markdown">
+                    <WritingIcon name="import" />
+                    <input
+                      type="file"
+                      accept=".md,.markdown,.txt,text/markdown,text/plain"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = '';
+                        if (file) {
+                          setDocumentsOpen(false);
+                          void importDocument(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="writing-studio-doc-selection">
+                  {selectedDocument ? selectedDocument.path : selectedFolder ? `${selectedFolder}/` : 'Select a document or folder'}
+                </div>
+              </div>
+              {documentModalMode === 'delete-document' || documentModalMode === 'delete-folder' ? (
+                <div className="writing-studio-doc-form is-danger">
+                  <span>
+                    Delete {documentModalMode === 'delete-document' ? selectedDocument?.fileName : `${selectedFolder}/`}?
+                  </span>
+                  <button className="is-danger" type="button" onClick={() => void runDocumentModalAction()}>
+                    Delete
+                  </button>
+                  <button type="button" onClick={() => beginDocumentModalMode('idle')}>
+                    Cancel
+                  </button>
+                </div>
+              ) : documentModalMode !== 'idle' ? (
+                <div className="writing-studio-doc-form">
+                  <input
+                    value={documentModalValue}
+                    onChange={(event) => setDocumentModalValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') void runDocumentModalAction();
+                      if (event.key === 'Escape') beginDocumentModalMode('idle');
+                    }}
+                    aria-label={
+                      documentModalMode === 'new-document'
+                        ? 'New document file name'
+                        : documentModalMode === 'new-folder'
+                          ? 'New folder name'
+                          : documentModalMode === 'rename-document'
+                            ? 'Rename document'
+                            : 'Rename folder'
+                    }
+                    placeholder={documentModalMode === 'new-folder' || documentModalMode === 'rename-folder' ? 'Folder name' : 'filename.md'}
+                    autoFocus
+                  />
+                  <button type="button" onClick={() => void runDocumentModalAction()}>
+                    {documentModalMode.startsWith('rename') ? 'Rename' : 'Create'}
+                  </button>
+                  <button type="button" onClick={() => beginDocumentModalMode('idle')}>
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
               <input
                 className="writing-studio-doc-search"
                 value={documentSearch}
