@@ -718,6 +718,16 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       try {
         await api.deleteExtension(extension.id);
         setExtensions((items) => items.filter((item) => item.id !== extension.id));
+        setCatalog((current) => {
+          if (!current) return current;
+          const markUninstalled = (item: InstallableExtensionCatalogItem) =>
+            item.id === extension.id ? { ...item, installed: false, enabled: false, installedVersion: undefined } : item;
+          return {
+            ...current,
+            extensions: current.extensions.map(markUninstalled),
+            ...(current.packages ? { packages: current.packages.map(markUninstalled) } : {}),
+          };
+        });
         notifyExtensionRegistryChanged();
         if (extension.routes.some((route) => location.pathname === route.route || location.pathname.startsWith(`${route.route}/`))) {
           navigate('/extensions', { replace: true });

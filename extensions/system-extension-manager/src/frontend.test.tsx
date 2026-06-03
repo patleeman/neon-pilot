@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   buildExtension: vi.fn(),
+  deleteExtension: vi.fn(),
   exportExtension: vi.fn(),
   extensionInstallations: vi.fn(),
   notifyExtensionRegistryChanged: vi.fn(),
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@neon-pilot/extensions/data', () => ({
   api: {
     buildExtension: mocks.buildExtension,
+    deleteExtension: mocks.deleteExtension,
     exportExtension: mocks.exportExtension,
     extensionInstallations: mocks.extensionInstallations,
     reloadExtension: mocks.reloadExtension,
@@ -124,6 +126,7 @@ describe('ExtensionManagerPage', () => {
     vi.clearAllMocks();
     mocks.extensionInstallations.mockResolvedValue([createExtension()]);
     mocks.extensionKeybindings.mockResolvedValue([]);
+    mocks.deleteExtension.mockResolvedValue({ ok: true, extensionId: 'menu-test', deleted: true });
     mocks.reloadExtension.mockResolvedValue({ ok: true, id: 'menu-test', reloaded: true, message: 'Extension backend reloaded.' });
     mocks.validateExtension.mockResolvedValue({
       ok: true,
@@ -282,6 +285,50 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Agent Browser')).toBeTruthy();
+  });
+
+  it('removes deleted catalog-installed extensions from the installed list', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      ok: true,
+      version: '0.9.1-rc.6',
+      tag: 'v0.9.1-rc.6',
+      extensions: [
+        {
+          id: 'system-onboarding',
+          name: 'Onboarding',
+          description: 'Creates a one-time onboarding conversation.',
+          version: '1.0.0',
+          tag: 'v1.0.0',
+          installed: true,
+          enabled: true,
+        },
+      ],
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-onboarding',
+        name: 'Onboarding',
+        description: 'Creates a one-time onboarding conversation.',
+        enabled: true,
+        packageType: 'user',
+      } as never,
+    ]);
+    mocks.deleteExtension.mockResolvedValue({ ok: true, extensionId: 'system-onboarding', deleted: true });
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect(await screen.findByText('Onboarding')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Uninstall'));
+
+    await screen.findByText('No extensions installed');
+    expect(screen.queryByText('Onboarding')).toBeNull();
   });
 
   it('loads the installable catalog without starting a polling interval', async () => {
