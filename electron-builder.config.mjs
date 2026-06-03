@@ -134,7 +134,12 @@ const electronBuilderConfig = {
     {
       from: 'installable-extensions',
       to: 'default-installable-extensions',
-      filter: packagedExtensionFilter.map((entry) => `system-onboarding/${entry}`),
+      filter: ['system-browser', 'system-onboarding'].flatMap((id) => packagedExtensionFilter.map((entry) => `${id}/${entry}`)),
+    },
+    {
+      from: 'dist/installable-extensions',
+      to: 'installable-extension-bundles',
+      filter: ['*.neon-extension.zip'],
     },
     {
       from: 'docs',

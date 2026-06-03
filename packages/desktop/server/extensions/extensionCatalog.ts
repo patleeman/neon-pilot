@@ -105,6 +105,7 @@ function localBundlePathFor(id: string): string | null {
   const candidates = [
     process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'dist', 'installable-extensions') : null,
     resolve(process.cwd(), 'dist', 'installable-extensions'),
+    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'installable-extension-bundles') : null,
   ].filter((value): value is string => Boolean(value));
   for (const root of candidates) {
     const bundlePath = resolve(root, `${id}.neon-extension.zip`);
