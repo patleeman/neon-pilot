@@ -4,17 +4,15 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.10.0** — stable release being prepared.
+**v0.10.1-rc.0** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.0
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.1-rc.0
 
 Highlights in this train:
 
-- Ships first-party Neon Pilot agent entrypoints and the DS4 local model extension.
-- Adds DS4 runtime setup progress, health checks, quick controls, CLI tool access, and advanced context/token/KV cache settings.
-- Moves more extension backend actions through isolated workers with stronger product/extension host boundary checks.
-- Preserves provider/runtime identity through model state, preferences, and composer menus.
-- Validates the stable train with packaged extension checks, release smoke coverage, and refreshed release dependencies.
+- Makes Code Mode and onboarding available as installable extension experiences.
+- Keeps extension-owned workflow entrypoints aligned with the first-party extension model validated in the 0.10 train.
+- Refreshes site screenshots so public docs reflect the current desktop experience for this RC.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

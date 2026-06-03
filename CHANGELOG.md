@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.1-rc.0 — 2026-06-03
+
+### Highlights
+
+- Makes Code Mode and onboarding available as installable extension experiences, keeping those user-facing workflows outside the core runtime.
+- Keeps extension-owned workflow entrypoints aligned with the first-party extension model validated in the 0.10 train.
+- Refreshes site screenshots so public docs reflect the current desktop experience for this RC.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.10.0 — 2026-06-02
 
 ### Highlights
