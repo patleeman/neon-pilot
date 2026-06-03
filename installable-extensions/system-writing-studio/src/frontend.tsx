@@ -38,7 +38,7 @@ const writingStudioCss = `
 .writing-studio-rail{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
 .writing-studio-rail-resizer{position:absolute;left:-4px;top:0;bottom:0;z-index:25;width:8px;cursor:col-resize}.writing-studio-rail-resizer::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:transparent}.writing-studio-rail-resizer:hover::after,.writing-studio-rail-resizer:focus-visible::after{background:rgb(var(--color-accent))}
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
-.writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-tools{display:flex;align-items:center;gap:.25rem}.writing-studio-icon-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.85rem;height:1.85rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-icon-button:disabled{cursor:default;opacity:.45}.writing-studio-icon-button[data-tooltip]::after{content:attr(data-tooltip);position:absolute;right:0;top:calc(100% + .4rem);z-index:50;pointer-events:none;max-width:12rem;white-space:nowrap;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));box-shadow:0 10px 28px rgba(0,0,0,.28);color:rgb(var(--color-primary));font-size:.72rem;font-weight:500;line-height:1;padding:.42rem .5rem;opacity:0;transform:translateY(-2px);transition:opacity .12s ease,transform .12s ease}.writing-studio-icon-button[data-tooltip]:hover::after,.writing-studio-icon-button[data-tooltip]:focus-visible::after{opacity:1;transform:translateY(0)}.writing-studio-tool-menu{position:relative}.writing-studio-export-menu{position:absolute;right:0;top:2.2rem;z-index:20;display:grid;min-width:8.5rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 12px 32px rgba(0,0,0,.28);padding:.25rem}.writing-studio-export-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.45rem .55rem;text-align:left;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-export-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
+.writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-heading{display:flex;align-items:center;gap:.55rem;min-width:0}.writing-studio-review-status{color:rgb(var(--color-dim));font-size:.72rem;white-space:nowrap}.writing-studio-review-status.is-running{color:rgb(var(--color-accent))}.writing-studio-review-status.is-complete{color:rgb(var(--color-success))}.writing-studio-rail-tools{display:flex;align-items:center;gap:.25rem}.writing-studio-icon-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.85rem;height:1.85rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-icon-button:disabled{cursor:default;opacity:.45}.writing-studio-icon-button.is-running{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-accent));opacity:1}.writing-studio-icon-button.is-running svg{animation:writing-studio-review-spin 1.1s linear infinite}@keyframes writing-studio-review-spin{to{transform:rotate(360deg)}}.writing-studio-icon-button[data-tooltip]::after{content:attr(data-tooltip);position:absolute;right:0;top:calc(100% + .4rem);z-index:50;pointer-events:none;max-width:12rem;white-space:nowrap;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));box-shadow:0 10px 28px rgba(0,0,0,.28);color:rgb(var(--color-primary));font-size:.72rem;font-weight:500;line-height:1;padding:.42rem .5rem;opacity:0;transform:translateY(-2px);transition:opacity .12s ease,transform .12s ease}.writing-studio-icon-button[data-tooltip]:hover::after,.writing-studio-icon-button[data-tooltip]:focus-visible::after{opacity:1;transform:translateY(0)}.writing-studio-tool-menu{position:relative}.writing-studio-export-menu{position:absolute;right:0;top:2.2rem;z-index:20;display:grid;min-width:8.5rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 12px 32px rgba(0,0,0,.28);padding:.25rem}.writing-studio-export-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.45rem .55rem;text-align:left;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-export-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-composer{border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-composer [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-composer [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-meta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:1rem;padding:.25rem .9rem .75rem;color:rgb(var(--color-dim));font-size:.66rem;font-family:var(--font-mono,monospace)}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
 .writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-list{height:min(52vh,28rem);min-height:14rem;overflow:hidden}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{padding:.35rem .1rem}.writing-studio-doc-import input[type=file]{display:none}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
@@ -138,6 +138,7 @@ interface ChatViewMessage {
 
 type WritingIconName = 'open' | 'new' | 'save' | 'export' | 'review' | 'settings' | 'collapse' | 'expand' | 'close';
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
+type ReviewStatus = 'idle' | 'running' | 'complete' | 'error';
 type FileTreeModelResult = {
   model: TreesModel;
   resetTree: (paths: readonly string[], options?: { initialExpandedPaths?: readonly string[]; initialSelectedPaths?: readonly string[] }) => void;
@@ -593,6 +594,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<ReviewStatus>('idle');
+  const [lastReviewCount, setLastReviewCount] = useState(0);
   const [fileNameDraft, setFileNameDraft] = useState('');
   const [railWidth, setRailWidth] = useState(readRailWidth);
   const [models, setModels] = useState<WritingModelInfo[]>([]);
@@ -603,6 +606,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [, setFormatStateVersion] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reviewStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
@@ -611,6 +615,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const updateFileNameDraft = useCallback((value: string) => {
     fileNameDraftRef.current = value;
     setFileNameDraft(value);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (reviewStatusTimer.current) clearTimeout(reviewStatusTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -845,6 +855,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const runReview = useCallback(
     async (trigger: string) => {
       setBusy('review');
+      setReviewStatus('running');
+      if (reviewStatusTimer.current) clearTimeout(reviewStatusTimer.current);
       try {
         const currentMarkdown = syncEditorMarkdown() ?? markdown;
         const result = (await pa.extension.invoke('writingStudioRunReview', {
@@ -869,7 +881,11 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             : current,
         );
         setActiveAnnotationId(result.annotations[0]?.id ?? null);
+        setLastReviewCount(result.annotations.length);
+        setReviewStatus('complete');
       } catch (err) {
+        setReviewStatus('error');
+        reviewStatusTimer.current = setTimeout(() => setReviewStatus('idle'), 5000);
         setError(err instanceof Error ? err.message : String(err));
       } finally {
         setBusy(null);
@@ -1077,6 +1093,14 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         : saveStatus === 'unsaved'
           ? `Unsaved changes${lastSavedAt ? ` · Last saved ${formatTime(lastSavedAt)}` : ''}`
           : `Save failed${lastSavedAt ? ` · Last saved ${formatTime(lastSavedAt)}` : ''}`;
+  const reviewStatusText =
+    reviewStatus === 'running'
+      ? 'Reviewing...'
+      : reviewStatus === 'complete'
+        ? `Reviewed ${lastReviewCount}`
+        : reviewStatus === 'error'
+          ? 'Review failed'
+          : '';
   const layoutStyle = { '--writing-studio-rail-width': `${railWidth}px` } as CSSProperties;
 
   return (
@@ -1170,7 +1194,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           />
         )}
         <div className="writing-studio-rail-toolbar">
-          {!railCollapsed && <span className="writing-studio-rail-title">Chat</span>}
+          {!railCollapsed && (
+            <div className="writing-studio-rail-heading">
+              <span className="writing-studio-rail-title">Chat</span>
+              {reviewStatusText ? <span className={`writing-studio-review-status is-${reviewStatus}`}>{reviewStatusText}</span> : null}
+            </div>
+          )}
           <div className="writing-studio-rail-tools">
             {!railCollapsed && (
               <button className="writing-studio-icon-button" type="button" aria-label="Open document" data-tooltip="Open document" onClick={() => setDocumentsOpen(true)}>
@@ -1202,7 +1231,15 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               </div>
             )}
             {!railCollapsed && (
-              <button className="writing-studio-icon-button" type="button" aria-label="Review document" data-tooltip="Review document" onClick={() => void runReview('manual')} disabled={busy === 'review'}>
+              <button
+                className={`writing-studio-icon-button ${busy === 'review' ? 'is-running' : ''}`}
+                type="button"
+                aria-label="Review document"
+                data-tooltip={busy === 'review' ? 'Reviewing document' : 'Review document'}
+                aria-busy={busy === 'review'}
+                onClick={() => void runReview('manual')}
+                disabled={busy === 'review'}
+              >
                 <WritingIcon name="review" />
               </button>
             )}
