@@ -1,4 +1,5 @@
 export { buildApiPath } from '../client/apiBase';
+export { ChatView } from '../components/chat/ChatView';
 export { CheckpointInlineDiff } from '../components/chat/CheckpointInlineDiff';
 export { DiffActionButton, GitDiffIcon } from '../components/chat/DiffActionButton';
 export { ContextMenuWrapper } from '../components/shared/ContextMenuWrapper';

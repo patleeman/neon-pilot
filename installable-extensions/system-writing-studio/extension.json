@@ -14,9 +14,15 @@
     "entry": "dist/backend.mjs",
     "actions": [
       { "id": "writingStudioLoad", "handler": "load", "title": "Load writing document", "worker": { "enabled": true } },
+      { "id": "writingStudioListDocuments", "handler": "listDocuments", "title": "List writing documents", "worker": { "enabled": true } },
+      { "id": "writingStudioCreateDocument", "handler": "createDocument", "title": "Create writing document", "worker": { "enabled": true } },
+      { "id": "writingStudioImportDocument", "handler": "importDocument", "title": "Import writing document", "worker": { "enabled": true } },
+      { "id": "writingStudioSaveDocument", "handler": "saveDocument", "title": "Save writing document", "worker": { "enabled": true } },
+      { "id": "writingStudioExportDocument", "handler": "exportDocument", "title": "Export writing document", "worker": { "enabled": true } },
       { "id": "writingStudioAppendUpdate", "handler": "appendUpdate", "title": "Append writing CRDT update", "worker": { "enabled": true } },
       { "id": "writingStudioRunReview", "handler": "runReview", "title": "Review writing document", "worker": { "enabled": true } },
       { "id": "writingStudioSendChat", "handler": "sendChat", "title": "Send writing chat message", "worker": { "enabled": true } },
+      { "id": "writingStudioSaveSettings", "handler": "saveSettings", "title": "Save writing studio settings", "worker": { "enabled": true } },
       { "id": "writingStudioResolveAnnotation", "handler": "resolveAnnotation", "title": "Resolve writing annotation", "worker": { "enabled": true } }
     ]
   },
