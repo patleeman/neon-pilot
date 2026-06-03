@@ -43,6 +43,8 @@ export interface WritingSettings {
 interface StoredState {
   id: string;
   title: string;
+  fileName: string;
+  folderPath: string;
   markdown: string;
   updateClock: number;
   events: WritingEvent[];
@@ -55,6 +57,9 @@ interface StoredState {
 interface DocumentSummary {
   id: string;
   title: string;
+  fileName: string;
+  folderPath: string;
+  path: string;
   updatedAt: string;
   wordCount: number;
 }
@@ -88,10 +93,40 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function defaultState(id = DEFAULT_DOCUMENT_ID, title = 'Draft', markdown = seedMarkdown): StoredState {
+function slugFileName(value: string, fallback = 'draft.md'): string {
+  const base = value
+    .replace(/\.[^.]+$/, '')
+    .trim()
+    .replace(/[/\\:]+/g, ' ')
+    .replace(/[^a-z0-9 _.-]+/gi, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+  const fileName = base || fallback.replace(/\.md$/i, '') || 'draft';
+  return /\.md$/i.test(fileName) ? fileName : `${fileName}.md`;
+}
+
+function normalizeFolderPath(value: unknown): string {
+  const raw = typeof value === 'string' ? value : 'Drafts';
+  const clean = raw
+    .split(/[\\/]+/)
+    .map((part) => part.trim().replace(/[^a-z0-9 _.-]+/gi, '').replace(/\s+/g, ' '))
+    .filter(Boolean)
+    .join('/');
+  return clean || 'Drafts';
+}
+
+function documentPath(folderPath: string, fileName: string): string {
+  return `${normalizeFolderPath(folderPath)}/${slugFileName(fileName)}`;
+}
+
+function defaultState(id = DEFAULT_DOCUMENT_ID, title = 'Draft', markdown = seedMarkdown, fileName = `${title}.md`, folderPath = 'Drafts'): StoredState {
   return {
     id,
     title,
+    fileName: slugFileName(fileName, 'draft.md'),
+    folderPath: normalizeFolderPath(folderPath),
     markdown,
     updateClock: 0,
     events: [],
@@ -115,7 +150,15 @@ function titleFromMarkdown(markdown: string, fallback = 'Draft'): string {
 
 function summarize(state: StoredState): DocumentSummary {
   const updated = state.events.at(-1)?.timestamp ?? state.lastAgentRunAt ?? nowIso();
-  return { id: state.id, title: state.title || titleFromMarkdown(state.markdown), updatedAt: updated, wordCount: wordCount(state.markdown) };
+  return {
+    id: state.id,
+    title: state.title || titleFromMarkdown(state.markdown),
+    fileName: state.fileName,
+    folderPath: state.folderPath,
+    path: documentPath(state.folderPath, state.fileName),
+    updatedAt: updated,
+    wordCount: wordCount(state.markdown),
+  };
 }
 
 async function readIndex(ctx: ExtensionBackendContext): Promise<DocumentIndex> {
@@ -123,7 +166,14 @@ async function readIndex(ctx: ExtensionBackendContext): Promise<DocumentIndex> {
   if (stored && typeof stored === 'object' && Array.isArray(stored.documents) && typeof stored.activeDocumentId === 'string') {
     return {
       activeDocumentId: stored.activeDocumentId || DEFAULT_DOCUMENT_ID,
-      documents: stored.documents.filter((doc) => doc && typeof doc.id === 'string' && typeof doc.title === 'string'),
+      documents: stored.documents
+        .filter((doc) => doc && typeof doc.id === 'string' && typeof doc.title === 'string')
+        .map((doc) => ({
+          ...doc,
+          fileName: typeof doc.fileName === 'string' && doc.fileName.trim() ? slugFileName(doc.fileName) : slugFileName(doc.title),
+          folderPath: normalizeFolderPath(doc.folderPath),
+          path: documentPath(normalizeFolderPath(doc.folderPath), typeof doc.fileName === 'string' ? doc.fileName : doc.title),
+        })),
     };
   }
   const legacy = await ctx.storage.get<StoredState>(legacyStateKey).catch(() => null);
@@ -149,11 +199,15 @@ function normalizeSettings(value: unknown): WritingSettings {
 }
 
 function normalizeState(id: string, stored: Partial<StoredState>): StoredState {
+  const title = typeof stored.title === 'string' && stored.title.trim() ? stored.title.trim() : titleFromMarkdown(stored.markdown ?? seedMarkdown);
+  const fileName = typeof stored.fileName === 'string' && stored.fileName.trim() ? stored.fileName : title;
   return {
     ...defaultState(id),
     ...stored,
     id,
-    title: typeof stored.title === 'string' && stored.title.trim() ? stored.title.trim() : titleFromMarkdown(stored.markdown ?? seedMarkdown),
+    title,
+    fileName: slugFileName(fileName),
+    folderPath: normalizeFolderPath(stored.folderPath),
     markdown: typeof stored.markdown === 'string' ? stored.markdown : seedMarkdown,
     events: Array.isArray(stored.events) ? stored.events : [],
     annotations: Array.isArray(stored.annotations) ? stored.annotations : [],
@@ -407,21 +461,33 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
 export async function getCanvas(input: unknown, ctx: ExtensionBackendContext): Promise<{
   documentId: string;
   title: string;
+  fileName: string;
+  folderPath: string;
   markdown: string;
   annotations: Annotation[];
   documents: DocumentSummary[];
 }> {
   const state = await readState(ctx, readDocumentId(input));
   const index = await readIndex(ctx);
-  return { documentId: state.id, title: state.title, markdown: state.markdown, annotations: state.annotations, documents: index.documents };
+  return {
+    documentId: state.id,
+    title: state.title,
+    fileName: state.fileName,
+    folderPath: state.folderPath,
+    markdown: state.markdown,
+    annotations: state.annotations,
+    documents: index.documents,
+  };
 }
 
 export async function updateCanvas(input: unknown, ctx: ExtensionBackendContext): Promise<{ ok: true; document: DocumentSummary }> {
-  const payload = input as { documentId?: string; markdown?: string; title?: string };
+  const payload = input as { documentId?: string; markdown?: string; title?: string; fileName?: string; folderPath?: string };
   if (typeof payload.markdown !== 'string') throw new Error('markdown is required.');
   const state = await readState(ctx, payload.documentId);
   state.markdown = payload.markdown;
   state.title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : titleFromMarkdown(state.markdown, state.title);
+  if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
+  if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
   state.updateClock += 1;
   state.events.push(event('yjs_update', 'agent', { agentEditedCanvas: true, markdownLength: state.markdown.length, clock: state.updateClock }));
   await writeState(ctx, state);
@@ -490,9 +556,10 @@ export async function resolveAnnotation(input: unknown, ctx: ExtensionBackendCon
 }
 
 export async function createDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredState & { documents: DocumentSummary[]; activeDocumentId: string }> {
-  const payload = input as { title?: string; markdown?: string };
+  const payload = input as { title?: string; markdown?: string; fileName?: string; folderPath?: string };
   const markdown = typeof payload.markdown === 'string' ? payload.markdown : `# ${typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled'}\n\n`;
-  const state = defaultState(randomUUID(), titleFromMarkdown(markdown, payload.title || 'Untitled'), markdown);
+  const title = titleFromMarkdown(markdown, payload.title || 'Untitled');
+  const state = defaultState(randomUUID(), title, markdown, payload.fileName || title, payload.folderPath || 'Drafts');
   state.events.push(event('yjs_update', 'user', { imported: false, markdownLength: markdown.length, clock: 0 }));
   await writeState(ctx, state);
   const index = await readIndex(ctx);
@@ -500,9 +567,10 @@ export async function createDocument(input: unknown, ctx: ExtensionBackendContex
 }
 
 export async function importDocument(input: unknown, ctx: ExtensionBackendContext): Promise<StoredState & { documents: DocumentSummary[]; activeDocumentId: string }> {
-  const payload = input as { title?: string; markdown?: string };
+  const payload = input as { title?: string; markdown?: string; fileName?: string; folderPath?: string };
   if (typeof payload.markdown !== 'string') throw new Error('markdown is required.');
-  const state = defaultState(randomUUID(), titleFromMarkdown(payload.markdown, payload.title || 'Imported draft'), payload.markdown);
+  const title = titleFromMarkdown(payload.markdown, payload.title || 'Imported draft');
+  const state = defaultState(randomUUID(), title, payload.markdown, payload.fileName || payload.title || title, payload.folderPath || 'Imports');
   state.events.push(event('yjs_update', 'user', { imported: true, markdownLength: payload.markdown.length, clock: 0 }));
   await writeState(ctx, state);
   const index = await readIndex(ctx);
@@ -510,10 +578,12 @@ export async function importDocument(input: unknown, ctx: ExtensionBackendContex
 }
 
 export async function saveDocument(input: unknown, ctx: ExtensionBackendContext): Promise<{ ok: true; document: DocumentSummary }> {
-  const payload = input as { documentId?: string; markdown?: string; title?: string };
+  const payload = input as { documentId?: string; markdown?: string; title?: string; fileName?: string; folderPath?: string };
   const state = await readState(ctx, payload.documentId);
   if (typeof payload.markdown === 'string') state.markdown = payload.markdown;
   state.title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : titleFromMarkdown(state.markdown, state.title);
+  if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
+  if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
   state.updateClock += 1;
   state.events.push(event('yjs_update', 'user', { manualSave: true, markdownLength: state.markdown.length, clock: state.updateClock }));
   await writeState(ctx, state);
@@ -611,9 +681,9 @@ export async function exportDocument(input: unknown, ctx: ExtensionBackendContex
   const payload = input as { documentId?: string; format?: ExportFormat };
   const format = payload.format ?? 'markdown';
   const state = await readState(ctx, payload.documentId);
-  const safeTitle = (state.title || 'draft').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'draft';
-  if (format === 'html') return { fileName: `${safeTitle}.html`, mimeType: 'text/html', content: documentHtml(state.title, state.markdown), encoding: 'text' };
-  if (format === 'rtf') return { fileName: `${safeTitle}.rtf`, mimeType: 'application/rtf', content: `{\\rtf1\\ansi\n${rtfEscape(state.markdown)}}`, encoding: 'text' };
-  if (format === 'docx') return { fileName: `${safeTitle}.docx`, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', content: docx(state.title, state.markdown), encoding: 'base64' };
-  return { fileName: `${safeTitle}.md`, mimeType: 'text/markdown', content: state.markdown, encoding: 'text' };
+  const fileStem = slugFileName(state.fileName || state.title || 'draft').replace(/\.md$/i, '');
+  if (format === 'html') return { fileName: `${fileStem}.html`, mimeType: 'text/html', content: documentHtml(state.title, state.markdown), encoding: 'text' };
+  if (format === 'rtf') return { fileName: `${fileStem}.rtf`, mimeType: 'application/rtf', content: `{\\rtf1\\ansi\n${rtfEscape(state.markdown)}}`, encoding: 'text' };
+  if (format === 'docx') return { fileName: `${fileStem}.docx`, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', content: docx(state.title, state.markdown), encoding: 'base64' };
+  return { fileName: `${fileStem}.md`, mimeType: 'text/markdown', content: state.markdown, encoding: 'text' };
 }

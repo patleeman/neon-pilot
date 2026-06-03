@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { addAnnotation, appendUpdate, getCanvas, load, resolveAnnotation, runReview, sendChat, updateCanvas } from './backend';
+import { addAnnotation, appendUpdate, exportDocument, getCanvas, importDocument, load, resolveAnnotation, runReview, sendChat, updateCanvas } from './backend';
 
 function context() {
   const store = new Map<string, unknown>();
@@ -76,5 +76,36 @@ describe('Writing Studio backend', () => {
     expect(canvas.markdown).toContain('This line wants a comment.');
     expect(annotated.annotation).toEqual(expect.objectContaining({ kind: 'reaction', quote: 'This line wants a comment.' }));
     expect((await getCanvas({}, ctx)).annotations[0].body).toBe('There is a useful spark here.');
+  });
+
+  it('keeps document title, file name, and folder path separate', async () => {
+    const ctx = context();
+    const imported = await importDocument(
+      {
+        title: 'Browser visible title',
+        fileName: 'client-copy.md',
+        folderPath: 'Clients/Acme',
+        markdown: '# Draft Title\n\nThe document title comes from the draft, not the file name.',
+      },
+      ctx,
+    );
+
+    expect(imported.title).toBe('Draft Title');
+    expect(imported.fileName).toBe('client-copy.md');
+    expect(imported.folderPath).toBe('Clients/Acme');
+    expect(imported.documents[0]).toEqual(
+      expect.objectContaining({
+        title: 'Draft Title',
+        fileName: 'client-copy.md',
+        folderPath: 'Clients/Acme',
+        path: 'Clients/Acme/client-copy.md',
+      }),
+    );
+
+    await updateCanvas({ documentId: imported.id, markdown: '# Retitled Draft\n\nStill the same file.', title: 'Retitled Draft' }, ctx);
+    const exported = await exportDocument({ documentId: imported.id, format: 'markdown' }, ctx);
+
+    expect((await getCanvas({ documentId: imported.id }, ctx)).title).toBe('Retitled Draft');
+    expect(exported.fileName).toBe('client-copy.md');
   });
 });

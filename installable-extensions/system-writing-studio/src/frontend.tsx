@@ -1,8 +1,10 @@
 import { Markdown } from '@tiptap/markdown';
+import type { FileTree as TreesModel } from '@pierre/trees';
+import { FileTree as TreesFileTree } from '@pierre/trees/react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { buildApiPath, ChatRailComposer, ChatView, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { buildApiPath, ChatRailComposer, ChatView, ErrorState, LoadingState, ToolbarButton, useFileTreeModel } from '@neon-pilot/extensions/ui';
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
 
@@ -33,7 +35,7 @@ const writingStudioCss = `
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
 .writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-tools{display:flex;align-items:center;gap:.25rem}.writing-studio-icon-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.85rem;height:1.85rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-icon-button:disabled{cursor:default;opacity:.45}.writing-studio-icon-button[data-tooltip]::after{content:attr(data-tooltip);position:absolute;right:0;top:calc(100% + .4rem);z-index:50;pointer-events:none;max-width:12rem;white-space:nowrap;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));box-shadow:0 10px 28px rgba(0,0,0,.28);color:rgb(var(--color-primary));font-size:.72rem;font-weight:500;line-height:1;padding:.42rem .5rem;opacity:0;transform:translateY(-2px);transition:opacity .12s ease,transform .12s ease}.writing-studio-icon-button[data-tooltip]:hover::after,.writing-studio-icon-button[data-tooltip]:focus-visible::after{opacity:1;transform:translateY(0)}.writing-studio-tool-menu{position:relative}.writing-studio-export-menu{position:absolute;right:0;top:2.2rem;z-index:20;display:grid;min-width:8.5rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 12px 32px rgba(0,0,0,.28);padding:.25rem}.writing-studio-export-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.45rem .55rem;text-align:left;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-export-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-composer{border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-composer [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-composer [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-meta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:1rem;padding:.25rem .9rem .75rem;color:rgb(var(--color-dim));font-size:.66rem;font-family:var(--font-mono,monospace)}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
-.writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-list{display:grid;gap:.15rem;max-height:min(52vh,28rem);overflow:auto}.writing-studio-doc-row{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;gap:.85rem;width:100%;min-height:2.25rem;border:0;border-radius:6px;background:transparent;color:inherit;padding:.42rem .55rem;text-align:left;cursor:pointer}.writing-studio-doc-row:hover,.writing-studio-doc-row.is-active{background:rgb(var(--color-surface-hover))}.writing-studio-doc-row strong{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.84rem;font-weight:650}.writing-studio-doc-meta{color:rgb(var(--color-dim));font-size:.72rem;white-space:nowrap}.writing-studio-doc-import input[type=file]{display:none}
+.writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-list{height:min(52vh,28rem);min-height:14rem;overflow:hidden}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{padding:.35rem .1rem}.writing-studio-doc-import input[type=file]{display:none}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
 @media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;padding-top:0}.writing-studio-comment{max-width:48rem}}
 @media(max-width:860px){.writing-studio,.writing-studio.has-collapsed-rail{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-rail-resizer{display:none}}
@@ -75,6 +77,9 @@ interface WritingSettings {
 interface DocumentSummary {
   id: string;
   title: string;
+  fileName: string;
+  folderPath: string;
+  path: string;
   updatedAt: string;
   wordCount: number;
 }
@@ -106,6 +111,8 @@ interface WritingEvent {
 interface StoredState {
   id: string;
   title: string;
+  fileName: string;
+  folderPath: string;
   markdown: string;
   updateClock: number;
   events: WritingEvent[];
@@ -126,6 +133,17 @@ interface ChatViewMessage {
 
 type WritingIconName = 'open' | 'new' | 'save' | 'export' | 'review' | 'settings' | 'collapse' | 'expand' | 'close';
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
+type FileTreeModelResult = {
+  model: TreesModel;
+  resetTree: (paths: readonly string[], options?: { initialExpandedPaths?: readonly string[]; initialSelectedPaths?: readonly string[] }) => void;
+};
+type FileTreeModelOptions = {
+  search: boolean;
+  useNativeContextMenu: boolean;
+  dragAndDrop: false;
+  onSelectionChange: (paths: readonly string[]) => void;
+  unsafeCSS: string;
+};
 
 const actorId = `writer-${Math.random().toString(16).slice(2)}`;
 const railWidthStorageKey = 'writing-studio:rail-width';
@@ -134,6 +152,7 @@ const thinkingLevelStorageKey = 'writing-studio:thinking-level';
 const defaultRailWidth = 352;
 const minRailWidth = 288;
 const maxRailWidth = 620;
+const useWritingStudioFileTreeModel = useFileTreeModel as unknown as (options: FileTreeModelOptions) => FileTreeModelResult;
 
 const iconPaths: Record<WritingIconName, string> = {
   open: 'M3.5 6.5h5l1.4 1.8h6.6v7.2a2 2 0 0 1-2 2h-11z M3.5 6.5v-2h5l1.2 1.3h6.8v2.5',
@@ -223,6 +242,17 @@ function readRailWidth(): number {
 function modelSelectionValue(model: WritingModelInfo, models: WritingModelInfo[]): string {
   const duplicateId = models.some((other) => other.id === model.id && other.provider !== model.provider);
   return duplicateId ? `${model.provider}/${model.id}` : model.id;
+}
+
+function documentTreePath(doc: DocumentSummary): string {
+  const folderPath = doc.folderPath?.trim() || 'Drafts';
+  const fileName = doc.fileName?.trim() || `${doc.title || 'Draft'}.md`;
+  return doc.path?.trim() || `${folderPath}/${fileName}`;
+}
+
+function folderPathsFor(path: string): string[] {
+  const parts = path.split('/').filter(Boolean);
+  return parts.slice(0, -1).map((_, index) => `${parts.slice(0, index + 1).join('/')}/`);
 }
 
 function readMarkdownFromEditor(editor: MarkdownEditor): string {
@@ -383,6 +413,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
+  const documentIdByTreePathRef = useRef(new Map<string, string>());
 
   useEffect(() => {
     let cancelled = false;
@@ -541,6 +572,30 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     }
   }, [editor, pa, setMarkdownSilently]);
 
+  const handleTreeSelectionChange = useCallback(
+    (paths: readonly string[]) => {
+      const selectedPath = paths[0];
+      if (!selectedPath || selectedPath.endsWith('/')) return;
+      const documentId = documentIdByTreePathRef.current.get(selectedPath);
+      if (!documentId) return;
+      setDocumentsOpen(false);
+      void load(documentId);
+    },
+    [load],
+  );
+
+  const { model: documentTreeModel, resetTree: resetDocumentTree } = useWritingStudioFileTreeModel({
+    search: false,
+    useNativeContextMenu: false,
+    dragAndDrop: false,
+    onSelectionChange: handleTreeSelectionChange,
+    unsafeCSS: `
+      :host{--tree-row-height:26px}
+      .row{font-size:12px}
+      .row[aria-selected="true"]{background:rgb(var(--color-surface-hover))}
+    `,
+  });
+
   useEffect(() => {
     load()
       .catch((err: Error) => setError(err.message))
@@ -669,7 +724,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   }, [activeDocumentId, markdown, pa, syncEditorMarkdown]);
 
   const createDocument = useCallback(async () => {
-    const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: 'Untitled' })) as StoredState;
+    const next = (await pa.extension.invoke('writingStudioCreateDocument', { title: 'Untitled', fileName: 'untitled.md', folderPath: 'Drafts' })) as StoredState;
     setState(next);
     setDocuments(next.documents ?? []);
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
@@ -682,7 +737,12 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const importDocument = useCallback(
     async (file: File) => {
       const text = await file.text();
-      const next = (await pa.extension.invoke('writingStudioImportDocument', { title: file.name.replace(/\.[^.]+$/, ''), markdown: text })) as StoredState;
+      const next = (await pa.extension.invoke('writingStudioImportDocument', {
+        title: file.name.replace(/\.[^.]+$/, ''),
+        fileName: file.name,
+        folderPath: 'Imports',
+        markdown: text,
+      })) as StoredState;
       setState(next);
       setDocuments(next.documents ?? []);
       setActiveDocumentId(next.activeDocumentId ?? next.id ?? 'default');
@@ -713,6 +773,40 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [activeDocumentId, markdown, pa, saveDocument, state?.title, syncEditorMarkdown],
   );
 
+  const filteredDocuments = useMemo(() => documents.filter((doc) => {
+    const query = documentSearch.trim().toLowerCase();
+    if (!query) return true;
+    return `${doc.title} ${doc.fileName} ${doc.folderPath} ${documentTreePath(doc)}`.toLowerCase().includes(query);
+  }), [documentSearch, documents]);
+  const documentTree = useMemo(() => {
+    const filePaths: string[] = [];
+    const folderPaths = new Set<string>();
+    const documentIdByPath = new Map<string, string>();
+    const counts = new Map<string, number>();
+    for (const doc of filteredDocuments) {
+      const basePath = documentTreePath(doc);
+      const count = (counts.get(basePath) ?? 0) + 1;
+      counts.set(basePath, count);
+      const treePath = count === 1 ? basePath : basePath.replace(/(\.[^/.]+)?$/, `-${count}$1`);
+      for (const folderPath of folderPathsFor(treePath)) folderPaths.add(folderPath);
+      filePaths.push(treePath);
+      documentIdByPath.set(treePath, doc.id);
+    }
+    const activeDoc = filteredDocuments.find((doc) => doc.id === activeDocumentId);
+    const activePath = activeDoc ? Array.from(documentIdByPath.entries()).find(([, id]) => id === activeDoc.id)?.[0] : undefined;
+    return {
+      paths: [...folderPaths, ...filePaths],
+      expandedPaths: [...folderPaths],
+      selectedPaths: activePath ? [activePath] : [],
+      documentIdByPath,
+    };
+  }, [activeDocumentId, filteredDocuments]);
+
+  useEffect(() => {
+    documentIdByTreePathRef.current = documentTree.documentIdByPath;
+    resetDocumentTree(documentTree.paths, { initialExpandedPaths: documentTree.expandedPaths, initialSelectedPaths: documentTree.selectedPaths });
+  }, [documentTree, resetDocumentTree]);
+
   if (loading) {
     return (
       <div className="writing-studio-center">
@@ -738,7 +832,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     ts: message.createdAt,
     text: message.body,
   }));
-  const filteredDocuments = documents.filter((doc) => doc.title.toLowerCase().includes(documentSearch.trim().toLowerCase()));
   const saveStatusLabel = saveStatus === 'saved' ? 'Saved' : saveStatus === 'saving' ? 'Saving...' : saveStatus === 'unsaved' ? 'Unsaved' : 'Save failed';
   const layoutStyle = { '--writing-studio-rail-width': `${railWidth}px` } as CSSProperties;
 
@@ -954,17 +1047,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               />
               <div className="writing-studio-doc-list">
                 {filteredDocuments.length === 0 ? (
-                  <p className="writing-studio-muted">No documents match that search.</p>
+                  <p className="writing-studio-muted writing-studio-doc-empty">No documents match that search.</p>
                 ) : (
-                  filteredDocuments.map((doc) => (
-                    <button key={doc.id} className={`writing-studio-doc-row ${doc.id === activeDocumentId ? 'is-active' : ''}`} type="button" onClick={() => {
-                      setDocumentsOpen(false);
-                      void load(doc.id);
-                    }}>
-                      <strong>{doc.title}</strong>
-                      <span className="writing-studio-doc-meta">{doc.wordCount} words · {formatTime(doc.updatedAt)}</span>
-                    </button>
-                  ))
+                  <TreesFileTree className="writing-studio-doc-tree" model={documentTreeModel} />
                 )}
               </div>
             </div>
