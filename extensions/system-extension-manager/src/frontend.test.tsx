@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -254,7 +254,34 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
 
     expect(await screen.findByText('Available Only')).toBeTruthy();
-    expect(screen.queryByText('Agent Browser')).toBeNull();
+    expect(within(screen.getByRole('dialog', { name: 'Install extension' })).queryByText('Agent Browser')).toBeNull();
+  });
+
+  it('shows catalog-installed extensions in the installed list when summaries lag', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      ok: true,
+      version: '0.9.1-rc.6',
+      tag: 'v0.9.1-rc.6',
+      extensions: [
+        {
+          id: 'system-agent-browser',
+          name: 'Agent Browser',
+          description: 'Control browsers and Electron apps.',
+          version: '1.0.0',
+          tag: 'v1.0.0',
+          installed: true,
+          enabled: false,
+        },
+      ],
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect(await screen.findByText('Agent Browser')).toBeTruthy();
   });
 
   it('loads the installable catalog without starting a polling interval', async () => {

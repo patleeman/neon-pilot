@@ -492,6 +492,38 @@ function packageKindLabel(item: InstallableExtensionCatalogItem): string {
   return item.packageType;
 }
 
+function installedCatalogItemToSummary(item: InstallableExtensionCatalogItem): ExtensionInstallSummary {
+  const enabled = item.enabled ?? false;
+  return {
+    id: item.id,
+    name: item.name,
+    packageType: 'user',
+    enabled,
+    status: enabled ? 'enabled' : 'disabled',
+    ...(item.description ? { description: item.description } : {}),
+    ...(item.installedVersion ?? item.version ? { version: item.installedVersion ?? item.version } : {}),
+    manifest: {
+      schemaVersion: 2,
+      id: item.id,
+      name: item.name,
+      packageType: 'user',
+      ...(item.description ? { description: item.description } : {}),
+      ...(item.installedVersion ?? item.version ? { version: item.installedVersion ?? item.version } : {}),
+    },
+    permissions: [],
+    surfaces: [],
+    backendActions: [],
+    services: [],
+    subscriptions: [],
+    dependsOn: [],
+    skills: [],
+    mentions: [],
+    tools: [],
+    modelProfiles: [],
+    routes: [],
+  } as ExtensionInstallSummary;
+}
+
 function formatExtensionDiagnostics(extension: ExtensionInstallSummary): string {
   return JSON.stringify(
     {
@@ -752,9 +784,18 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   const catalogIds = useMemo(() => new Set(catalog?.extensions.map((item) => item.id) ?? []), [catalog]);
 
+  const installedExtensions = useMemo(() => {
+    const byId = new Map(extensions.map((extension) => [extension.id, extension]));
+    for (const item of catalog?.extensions ?? []) {
+      if (!item.installed || byId.has(item.id)) continue;
+      byId.set(item.id, installedCatalogItemToSummary(item));
+    }
+    return [...byId.values()];
+  }, [catalog, extensions]);
+
   const visibleExtensions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return extensions.filter((extension) => {
+    return installedExtensions.filter((extension) => {
       const unavailableCatalogItem =
         extension.packageType !== 'system' && extension.id.startsWith('system-') && catalog && !catalogIds.has(extension.id);
       if (
@@ -776,7 +817,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         .toLowerCase()
         .includes(normalizedQuery);
     });
-  }, [activeFilter, catalog, catalogIds, extensions, query]);
+  }, [activeFilter, catalog, catalogIds, installedExtensions, query]);
 
   const visibleCatalogExtensions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
