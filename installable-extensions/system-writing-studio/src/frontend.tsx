@@ -832,6 +832,30 @@ function findAnnotationSelection(editor: Editor, annotation: Annotation): { from
   return null;
 }
 
+function scrollAnnotationIntoView(editor: Editor, annotation: Annotation): void {
+  const selection = findAnnotationSelection(editor, annotation);
+  if (!selection) return;
+  const scrollContainer = editor.view.dom.closest('.writing-studio-main');
+  if (!(scrollContainer instanceof HTMLElement)) return;
+  try {
+    const start = editor.view.coordsAtPos(selection.from);
+    const end = editor.view.coordsAtPos(selection.to);
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const targetTop = Math.min(start.top, end.top);
+    const offset = targetTop - containerRect.top - scrollContainer.clientHeight * 0.32;
+    scrollContainer.scrollTo({ top: scrollContainer.scrollTop + offset, behavior: 'smooth' });
+  } catch {
+    const domAtPos = editor.view.domAtPos(selection.from);
+    const element =
+      domAtPos.node instanceof HTMLElement
+        ? domAtPos.node
+        : domAtPos.node.parentElement instanceof HTMLElement
+          ? domAtPos.node.parentElement
+          : null;
+    element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
 function textOffsetToDocumentPosition(editor: Editor, targetOffset: number): number | null {
   let textOffset = 0;
   let result: number | null = null;
@@ -1375,9 +1399,13 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [activeDocumentId, currentModel, markdown, pa, syncEditorMarkdown],
   );
 
-  const selectAnnotation = useCallback((annotation: Annotation) => {
-    setActiveAnnotationId(annotation.id);
-  }, []);
+  const selectAnnotation = useCallback(
+    (annotation: Annotation) => {
+      setActiveAnnotationId(annotation.id);
+      if (editor) scrollAnnotationIntoView(editor, annotation);
+    },
+    [editor],
+  );
 
   const discussAnnotation = useCallback(
     (annotation: Annotation) => {
