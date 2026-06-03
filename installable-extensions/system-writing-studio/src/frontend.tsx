@@ -1,7 +1,7 @@
 import { Markdown } from '@tiptap/markdown';
 import type { FileTree as TreesModel } from '@pierre/trees';
 import { FileTree as TreesFileTree } from '@pierre/trees/react';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, type Editor, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import { buildApiPath, ChatRailComposer, ChatView, ErrorState, LoadingState, ToolbarButton, useFileTreeModel } from '@neon-pilot/extensions/ui';
@@ -14,6 +14,7 @@ interface MarkdownEditor {
     type?: string;
     text?: string;
     attrs?: Record<string, unknown>;
+    marks?: Array<{ type?: string; attrs?: Record<string, unknown> }>;
     content?: Array<ReturnType<NonNullable<MarkdownEditor['getJSON']>>>;
   };
 }
@@ -24,6 +25,7 @@ const writingStudioCss = `
 .writing-studio.has-collapsed-rail{grid-template-columns:minmax(0,1fr)3rem}
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
 .writing-studio-meta{display:flex;align-items:center;justify-content:space-between;gap:1rem;max-width:68rem;margin:0 auto 1.25rem;color:rgb(var(--color-dim));font-size:.75rem;line-height:1.4}.writing-studio-save-status{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}.writing-studio-save-status::before{content:"";width:.42rem;height:.42rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-save-status.is-saved::before{background:rgb(var(--color-success))}.writing-studio-save-status.is-saving::before{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-save-status.is-unsaved::before{background:rgb(var(--color-warning))}.writing-studio-save-status.is-error::before{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}
+.writing-studio-formatbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:.18rem;max-width:68rem;margin:-.55rem auto 1rem;padding:.35rem 0;background:linear-gradient(rgb(var(--color-base)) 78%,transparent)}.writing-studio-format-group{display:flex;align-items:center;gap:.12rem;padding-right:.35rem;margin-right:.25rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.74rem;font-weight:650;cursor:pointer}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 28%,transparent)}
@@ -174,6 +176,58 @@ function WritingIcon({ name }: { name: WritingIconName }) {
   );
 }
 
+function FormatButton({
+  label,
+  title,
+  active,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  title: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`writing-studio-format-button ${active ? 'is-active' : ''}`}
+      type="button"
+      aria-label={title}
+      title={title}
+      disabled={disabled}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onClick();
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function WritingFormatBar({ editor }: { editor: Editor | null }) {
+  const disabled = !editor;
+  return (
+    <div className="writing-studio-formatbar" aria-label="Document formatting">
+      <div className="writing-studio-format-group">
+        <FormatButton label="P" title="Paragraph" disabled={disabled} active={Boolean(editor?.isActive('paragraph'))} onClick={() => editor?.chain().focus().setParagraph().run()} />
+        <FormatButton label="H1" title="Heading 1" disabled={disabled} active={Boolean(editor?.isActive('heading', { level: 1 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} />
+        <FormatButton label="H2" title="Heading 2" disabled={disabled} active={Boolean(editor?.isActive('heading', { level: 2 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} />
+      </div>
+      <div className="writing-studio-format-group">
+        <FormatButton label="B" title="Bold" disabled={disabled} active={Boolean(editor?.isActive('bold'))} onClick={() => editor?.chain().focus().toggleBold().run()} />
+        <FormatButton label="I" title="Italic" disabled={disabled} active={Boolean(editor?.isActive('italic'))} onClick={() => editor?.chain().focus().toggleItalic().run()} />
+      </div>
+      <div className="writing-studio-format-group">
+        <FormatButton label="•" title="Bulleted list" disabled={disabled} active={Boolean(editor?.isActive('bulletList'))} onClick={() => editor?.chain().focus().toggleBulletList().run()} />
+        <FormatButton label="1." title="Numbered list" disabled={disabled} active={Boolean(editor?.isActive('orderedList'))} onClick={() => editor?.chain().focus().toggleOrderedList().run()} />
+        <FormatButton label="❝" title="Quote" disabled={disabled} active={Boolean(editor?.isActive('blockquote'))} onClick={() => editor?.chain().focus().toggleBlockquote().run()} />
+      </div>
+    </div>
+  );
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -261,8 +315,20 @@ function readMarkdownFromEditor(editor: MarkdownEditor): string {
   return typeof editor.getMarkdown === 'function' ? editor.getMarkdown() : '';
 }
 
+function escapeMarkdownText(value: string): string {
+  return value.replace(/([\\`*_{}[\]])/g, '\\$1');
+}
+
 function textFromNode(node: ReturnType<NonNullable<MarkdownEditor['getJSON']>>): string {
-  if (typeof node.text === 'string') return node.text;
+  if (typeof node.text === 'string') {
+    let text = escapeMarkdownText(node.text);
+    for (const mark of node.marks ?? []) {
+      if (mark.type === 'bold') text = `**${text}**`;
+      if (mark.type === 'italic') text = `_${text}_`;
+      if (mark.type === 'code') text = `\`${text.replace(/`/g, '\\`')}\``;
+    }
+    return text;
+  }
   return (node.content ?? []).map(textFromNode).join('');
 }
 
@@ -274,9 +340,9 @@ function markdownFromNode(node: ReturnType<NonNullable<MarkdownEditor['getJSON']
   }
   if (node.type === 'paragraph') return textFromNode(node).trim();
   if (node.type === 'blockquote') return (node.content ?? []).map(markdownFromNode).join('\n').replace(/^/gm, '> ');
-  if (node.type === 'bulletList') return (node.content ?? []).map(markdownFromNode).join('\n');
-  if (node.type === 'orderedList') return (node.content ?? []).map((child, index) => `${index + 1}. ${textFromNode(child)}`).join('\n');
-  if (node.type === 'listItem') return `- ${textFromNode(node)}`;
+  if (node.type === 'bulletList') return (node.content ?? []).map((child) => `- ${markdownFromNode(child).replace(/\n/g, '\n  ')}`).join('\n');
+  if (node.type === 'orderedList') return (node.content ?? []).map((child, index) => `${index + 1}. ${markdownFromNode(child).replace(/\n/g, '\n   ')}`).join('\n');
+  if (node.type === 'listItem') return (node.content ?? []).map(markdownFromNode).filter(Boolean).join('\n');
   if (node.type === 'hardBreak') return '\n';
   return textFromNode(node);
 }
@@ -410,6 +476,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState(() => readStringSetting(thinkingLevelStorageKey));
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
+  const [, setFormatStateVersion] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
@@ -514,6 +581,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     },
     onUpdate: ({ editor: nextEditor }) => {
       if (applyingEditorContent.current) return;
+      setFormatStateVersion((version) => version + 1);
       const nextMarkdown = readMarkdownFromEditor(nextEditor);
       setMarkdown(nextMarkdown);
       replaceMarkdown(nextMarkdown);
@@ -523,6 +591,17 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       }, Math.max(3, state?.settings.reviewIntervalSeconds ?? 12) * 1000);
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    const refreshFormatState = () => setFormatStateVersion((version) => version + 1);
+    editor.on('selectionUpdate', refreshFormatState);
+    editor.on('transaction', refreshFormatState);
+    return () => {
+      editor.off('selectionUpdate', refreshFormatState);
+      editor.off('transaction', refreshFormatState);
+    };
+  }, [editor]);
 
   const syncEditorMarkdown = useCallback(() => {
     if (!editor || applyingEditorContent.current) return markdown;
@@ -842,6 +921,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           <span>{eventCount} replay events · Last review {formatTime(state?.lastAgentRunAt ?? null)} · {resolvedCount} resolved</span>
           <span className={`writing-studio-save-status is-${saveStatus}`}>{saveStatusLabel}</span>
         </div>
+        <WritingFormatBar editor={editor} />
         <div className="writing-studio-canvas">
           <div className={`writing-studio-editor-frame ${openAnnotations.length ? 'writing-studio-mark-highlight' : ''}`}>
             <EditorContent editor={editor} />
