@@ -1,0 +1,13 @@
+{
+  "name": "@neon-pilot/extension-writing-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@neon-pilot/extensions": "*",
+    "@tiptap/markdown": "3.21.0",
+    "@tiptap/react": "3.21.0",
+    "@tiptap/starter-kit": "3.21.0",
+    "yjs": "13.6.27"
+  }
+}

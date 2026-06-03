@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "id": "system-writing-studio",
+  "name": "Writing Studio",
+  "packageType": "system",
+  "description": "Document-first collaborative markdown editor with CRDT replay, agent annotations, reactions, suggestions, and chat.",
+  "version": "0.1.0",
+  "defaultEnabled": false,
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "writingStudioLoad", "handler": "load", "title": "Load writing document", "worker": { "enabled": true } },
+      { "id": "writingStudioAppendUpdate", "handler": "appendUpdate", "title": "Append writing CRDT update", "worker": { "enabled": true } },
+      { "id": "writingStudioRunReview", "handler": "runReview", "title": "Review writing document", "worker": { "enabled": true } },
+      { "id": "writingStudioSendChat", "handler": "sendChat", "title": "Send writing chat message", "worker": { "enabled": true } },
+      { "id": "writingStudioResolveAnnotation", "handler": "resolveAnnotation", "title": "Resolve writing annotation", "worker": { "enabled": true } }
+    ]
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "page",
+        "title": "Writing Studio",
+        "location": "main",
+        "route": "/ext/writing-studio",
+        "component": "WritingStudioPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ],
+    "nav": [
+      {
+        "id": "nav",
+        "label": "Writing Studio",
+        "route": "/ext/writing-studio",
+        "icon": "sparkle"
+      }
+    ]
+  },
+  "permissions": ["storage:readwrite", "agent:run"]
+}
