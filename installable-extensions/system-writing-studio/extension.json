@@ -97,6 +97,12 @@
         "handler": "updateAnnotation",
         "title": "Update Writing Studio annotation",
         "worker": { "enabled": true }
+      },
+      {
+        "id": "writingStudioApplyAnnotationEdit",
+        "handler": "applyAnnotationEdit",
+        "title": "Apply Writing Studio annotation edit",
+        "worker": { "enabled": true }
       }
     ]
   },
@@ -164,7 +170,11 @@
             "quote": { "type": "string", "description": "Exact substring from the canvas to anchor the annotation." },
             "body": { "type": "string", "description": "Comment text to show beside the document." },
             "kind": { "type": "string", "enum": ["comment", "suggestion", "reaction", "warning"] },
-            "emoji": { "type": "string", "description": "Optional short emoji or marker for reactions." }
+            "emoji": { "type": "string", "description": "Optional short emoji or marker for reactions." },
+            "suggestedReplacement": {
+              "type": "string",
+              "description": "Optional exact replacement text the user can approve to replace quote."
+            }
           },
           "required": ["quote", "body"],
           "additionalProperties": false
@@ -213,12 +223,32 @@
             "quote": { "type": "string", "description": "Optional replacement exact substring from the canvas." },
             "body": { "type": "string", "description": "Optional replacement comment text." },
             "kind": { "type": "string", "enum": ["comment", "suggestion", "reaction", "warning"] },
-            "emoji": { "type": "string", "description": "Optional short emoji or marker for reactions." }
+            "emoji": { "type": "string", "description": "Optional short emoji or marker for reactions." },
+            "suggestedReplacement": {
+              "type": "string",
+              "description": "Optional exact replacement text the user can approve to replace the quote."
+            }
           },
           "required": ["id"],
           "additionalProperties": false
         },
         "promptGuidelines": ["Use this when the user asks to revise a margin comment without changing the document text."]
+      },
+      {
+        "id": "apply-annotation-edit",
+        "name": "writing_studio_apply_annotation_edit",
+        "description": "Apply an approved Writing Studio annotation replacement and resolve that annotation.",
+        "action": "writingStudioApplyAnnotationEdit",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "documentId": { "type": "string", "description": "Optional Writing Studio document id. Defaults to the active document." },
+            "id": { "type": "string", "description": "Annotation id with a suggested replacement to apply." }
+          },
+          "required": ["id"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": ["Use only after the user approves a suggested edit."]
       }
     ]
   },

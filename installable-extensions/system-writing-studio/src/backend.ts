@@ -27,6 +27,7 @@ export interface Annotation {
   kind: AnnotationKind;
   body: string;
   emoji?: string;
+  suggestedReplacement?: string;
   quote: string;
   from: number;
   to: number;
@@ -317,11 +318,16 @@ function parseAgentAnnotations(text: string, markdown: string, runId: string): A
       const rawKind = typeof record.kind === 'string' ? record.kind : 'comment';
       const kind: AnnotationKind = rawKind === 'suggestion' || rawKind === 'reaction' || rawKind === 'warning' ? rawKind : 'comment';
       const emoji = typeof record.emoji === 'string' && record.emoji.trim() ? record.emoji.trim().slice(0, 8) : undefined;
+      const suggestedReplacement =
+        typeof record.suggestedReplacement === 'string' && record.suggestedReplacement.trim()
+          ? record.suggestedReplacement.trim()
+          : undefined;
       return {
         id: randomUUID(),
         kind,
         body,
         ...(emoji ? { emoji } : {}),
+        ...(suggestedReplacement ? { suggestedReplacement } : {}),
         quote,
         from,
         to: from + quote.length,
@@ -377,10 +383,11 @@ async function buildAgentReviewAnnotations(
     const targetCount = Math.min(4, Math.max(2, remaining));
     const prompt = `You are reviewing a markdown draft in Writing Studio.
 
-Return only JSON: an array of ${targetCount}-${targetCount + 1} objects with keys quote, body, kind, and optional emoji.
+Return only JSON: an array of ${targetCount}-${targetCount + 1} objects with keys quote, body, kind, optional emoji, and optional suggestedReplacement.
 kind must be one of comment, suggestion, reaction, warning.
 quote must be an exact substring from the draft.
 Choose quotes by copying 8-30 consecutive words directly from the draft text. Do not paraphrase quotes.
+When you are proposing a concrete rewrite, include suggestedReplacement as the exact replacement text for quote. Only include it when the user could approve it directly.
 Write like a generous collaborator with personality. Avoid generic proofreading.
 This is chunk ${index + 1} of ${chunks.length}. Review this chunk only, so the document gets useful margin coverage from top to bottom.
 
@@ -408,7 +415,10 @@ async function buildAgentChatReply(message: string, state: StoredState, ctx: Ext
   const openAnnotations = state.annotations
     .filter((annotation) => annotation.status === 'open')
     .slice(0, 12)
-    .map((annotation) => `- ${annotation.kind}: "${annotation.quote}" — ${annotation.body}`)
+    .map((annotation) => {
+      const replacement = annotation.suggestedReplacement ? ` Suggested replacement: "${annotation.suggestedReplacement}"` : '';
+      return `- ${annotation.kind} (${annotation.id}): "${annotation.quote}" — ${annotation.body}${replacement}`;
+    })
     .join('\n');
   const recentChat = state.chat
     .slice(-8)
@@ -420,6 +430,7 @@ The user is chatting beside a markdown draft. Keep the document in focus: answer
 
 If you need to change the document, use the Writing Studio canvas tool instead of only describing the edit.
 If you want to leave margin feedback, use the Writing Studio annotation tool with an exact quote from the draft.
+If you are proposing a concrete edit, include a suggested replacement on the annotation so the user can approve it.
 If the user asks to dismiss a comment, use the Writing Studio resolve annotation tool.
 If the user asks to revise a comment, use the Writing Studio update annotation tool.
 Do not mention hidden implementation details or that you are an extension backend.
@@ -561,7 +572,14 @@ export async function addAnnotation(
   input: unknown,
   ctx: ExtensionBackendContext,
 ): Promise<{ annotation: Annotation; annotations: Annotation[] }> {
-  const payload = input as { documentId?: string; quote?: string; body?: string; kind?: AnnotationKind; emoji?: string };
+  const payload = input as {
+    documentId?: string;
+    quote?: string;
+    body?: string;
+    kind?: AnnotationKind;
+    emoji?: string;
+    suggestedReplacement?: string;
+  };
   const quote = typeof payload.quote === 'string' ? payload.quote.trim() : '';
   const body = typeof payload.body === 'string' ? payload.body.trim() : '';
   if (!quote) throw new Error('quote is required.');
@@ -578,6 +596,9 @@ export async function addAnnotation(
     kind,
     body,
     ...(typeof payload.emoji === 'string' && payload.emoji.trim() ? { emoji: payload.emoji.trim().slice(0, 8) } : {}),
+    ...(typeof payload.suggestedReplacement === 'string' && payload.suggestedReplacement.trim()
+      ? { suggestedReplacement: payload.suggestedReplacement.trim() }
+      : {}),
     quote,
     from,
     to: from + quote.length,
@@ -594,7 +615,15 @@ export async function updateAnnotation(
   input: unknown,
   ctx: ExtensionBackendContext,
 ): Promise<{ annotation: Annotation; annotations: Annotation[] }> {
-  const payload = input as { documentId?: string; id?: string; quote?: string; body?: string; kind?: AnnotationKind; emoji?: string };
+  const payload = input as {
+    documentId?: string;
+    id?: string;
+    quote?: string;
+    body?: string;
+    kind?: AnnotationKind;
+    emoji?: string;
+    suggestedReplacement?: string | null;
+  };
   if (!payload.id) throw new Error('Annotation id is required.');
   const state = await readState(ctx, payload.documentId);
   const existing = state.annotations.find((annotation) => annotation.id === payload.id);
@@ -608,19 +637,57 @@ export async function updateAnnotation(
       : existing.kind;
   const nextBody = typeof payload.body === 'string' && payload.body.trim() ? payload.body.trim() : existing.body;
   const nextEmoji = typeof payload.emoji === 'string' ? payload.emoji.trim().slice(0, 8) : existing.emoji;
+  const nextSuggestedReplacement =
+    payload.suggestedReplacement === null
+      ? undefined
+      : typeof payload.suggestedReplacement === 'string'
+        ? payload.suggestedReplacement.trim() || undefined
+        : existing.suggestedReplacement;
   const updated: Annotation = {
     ...existing,
     quote: nextQuote,
     body: nextBody,
     kind: nextKind,
     ...(nextEmoji ? { emoji: nextEmoji } : {}),
+    ...(nextSuggestedReplacement ? { suggestedReplacement: nextSuggestedReplacement } : {}),
     from,
     to: from + nextQuote.length,
   };
+  if (!nextSuggestedReplacement) delete updated.suggestedReplacement;
   state.annotations = state.annotations.map((annotation) => (annotation.id === payload.id ? updated : annotation));
   state.events.push(event('annotation_updated', 'agent', { annotation: updated }));
   await writeState(ctx, state);
   return { annotation: updated, annotations: state.annotations };
+}
+
+export async function applyAnnotationEdit(input: unknown, ctx: ExtensionBackendContext): Promise<StoredStateWithIndex> {
+  const payload = input as { documentId?: string; id?: string };
+  if (!payload.id) throw new Error('Annotation id is required.');
+  const state = await readState(ctx, payload.documentId);
+  const annotation = state.annotations.find((item) => item.id === payload.id);
+  if (!annotation) throw new Error('Annotation not found.');
+  if (!annotation.suggestedReplacement?.trim()) throw new Error('Annotation has no suggested replacement.');
+  const from = state.markdown.indexOf(annotation.quote);
+  if (from < 0) throw new Error('The annotated text changed; the edit can no longer be applied safely.');
+  const to = from + annotation.quote.length;
+  state.markdown = `${state.markdown.slice(0, from)}${annotation.suggestedReplacement}${state.markdown.slice(to)}`;
+  state.title = titleFromMarkdown(state.markdown, state.title);
+  state.updateClock += 1;
+  state.annotations = state.annotations.map((item) =>
+    item.id === annotation.id ? { ...item, status: 'resolved' as const, from, to: from + annotation.suggestedReplacement!.length } : item,
+  );
+  state.events.push(
+    event('yjs_update', 'user', {
+      appliedAnnotationEdit: true,
+      annotationId: annotation.id,
+      markdownLength: state.markdown.length,
+      clock: state.updateClock,
+    }),
+    event('annotation_resolved', 'user', { annotationId: annotation.id, appliedEdit: true }),
+  );
+  await writeState(ctx, state);
+  const index = await readIndex(ctx);
+  return { ...state, documents: index.documents, activeDocumentId: state.id, folders: index.folders };
 }
 
 export async function sendChat(input: unknown, ctx: ExtensionBackendContext): Promise<{ messages: ChatMessage[] }> {

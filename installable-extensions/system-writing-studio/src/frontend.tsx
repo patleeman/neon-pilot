@@ -55,7 +55,7 @@ const writingStudioCss = `
 .writing-studio-selection-menu{position:absolute;z-index:35;display:flex;align-items:center;gap:.18rem;padding:.25rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 36px rgba(0,0,0,.28);transform:translateX(-50%)}.writing-studio-selection-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.36rem .52rem;font:inherit;font-size:.72rem;font-weight:590;line-height:1;cursor:pointer;white-space:nowrap}.writing-studio-selection-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-selection-menu button:first-child{color:rgb(var(--color-accent))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 21%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}.writing-studio-mark-highlight[data-kind="warning"]{background:color-mix(in srgb,rgb(var(--color-warning)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-warning)) 24%,transparent)}.writing-studio-mark-highlight[data-kind="comment"]{background:color-mix(in srgb,rgb(var(--color-secondary)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-secondary)) 20%,transparent)}.writing-studio-mark-highlight[data-kind="reaction"]{background:color-mix(in srgb,rgb(var(--color-success)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-success)) 20%,transparent)}
 .writing-studio-comments{position:sticky;top:1rem;display:grid;gap:.65rem;padding-top:2.4rem}.writing-studio-comment{--comment-tint:rgb(var(--color-accent));padding:.7rem .75rem;border:1px solid color-mix(in srgb,var(--comment-tint) 18%,rgb(var(--color-border-subtle)));border-radius:8px;background:color-mix(in srgb,var(--comment-tint) 7%,rgb(var(--color-surface)));box-shadow:0 8px 22px rgba(0,0,0,.12);cursor:pointer;text-align:left}.writing-studio-comment.is-active{border-color:color-mix(in srgb,var(--comment-tint) 48%,rgb(var(--color-border-default)));background:color-mix(in srgb,var(--comment-tint) 13%,rgb(var(--color-surface)));box-shadow:0 0 0 1px color-mix(in srgb,var(--comment-tint) 28%,transparent),0 12px 28px rgba(0,0,0,.18)}.writing-studio-comment.is-warning{--comment-tint:rgb(var(--color-warning))}.writing-studio-comment.is-comment{--comment-tint:rgb(var(--color-secondary))}.writing-studio-comment.is-reaction{--comment-tint:rgb(var(--color-success))}
-.writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.45rem}.writing-studio-comment-kind{color:color-mix(in srgb,var(--comment-tint) 72%,rgb(var(--color-secondary)));font-size:.68rem;font-weight:620;text-transform:capitalize;letter-spacing:.01em}.writing-studio-comment-actions{display:flex;align-items:center;gap:.25rem}.writing-studio-comment-actions button{border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment-actions button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-comment-discuss{padding:.22rem .4rem}.writing-studio-comment-close{display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;padding:0;font-size:.9rem;line-height:1}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
+.writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.45rem}.writing-studio-comment-kind{color:color-mix(in srgb,var(--comment-tint) 72%,rgb(var(--color-secondary)));font-size:.68rem;font-weight:620;text-transform:capitalize;letter-spacing:.01em}.writing-studio-comment-actions{display:flex;align-items:center;gap:.25rem}.writing-studio-comment-actions button{border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment-actions button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-comment-discuss{padding:.22rem .4rem}.writing-studio-comment-close{display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;padding:0;font-size:.9rem;line-height:1}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-suggested-edit{display:grid;gap:.45rem;margin-top:.65rem;padding:.55rem;border-radius:7px;background:color-mix(in srgb,var(--comment-tint) 8%,rgb(var(--color-base)))}.writing-studio-suggested-edit pre{margin:0;white-space:pre-wrap;color:rgb(var(--color-primary));font:inherit;font-size:.78rem;line-height:1.42}.writing-studio-apply-edit{justify-self:start;border:1px solid color-mix(in srgb,var(--comment-tint) 34%,rgb(var(--color-border-subtle)));border-radius:6px;background:color-mix(in srgb,var(--comment-tint) 12%,rgb(var(--color-surface)));color:rgb(var(--color-primary));font:inherit;font-size:.72rem;font-weight:620;padding:.32rem .55rem;cursor:pointer}.writing-studio-apply-edit:hover{background:color-mix(in srgb,var(--comment-tint) 20%,rgb(var(--color-surface-hover)))}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
 .writing-studio-rail{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
 .writing-studio-rail-resizer{position:absolute;left:-4px;top:0;bottom:0;z-index:25;width:8px;cursor:col-resize}.writing-studio-rail-resizer::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:transparent}.writing-studio-rail-resizer:hover::after,.writing-studio-rail-resizer:focus-visible::after{background:rgb(var(--color-accent))}
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
@@ -81,6 +81,7 @@ interface Annotation {
   kind: 'comment' | 'suggestion' | 'reaction' | 'warning';
   body: string;
   emoji?: string;
+  suggestedReplacement?: string;
   quote: string;
   from: number;
   to: number;
@@ -1455,6 +1456,40 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [activeDocumentId, pa],
   );
 
+  const applyAnnotationEdit = useCallback(
+    async (annotation: Annotation) => {
+      if (!annotation.suggestedReplacement?.trim()) return;
+      setBusy('apply-annotation');
+      try {
+        const next = (await pa.extension.invoke('writingStudioApplyAnnotationEdit', {
+          id: annotation.id,
+          documentId: activeDocumentId,
+        })) as StoredState;
+        setState(next);
+        setDocuments(next.documents ?? []);
+        setDocumentFolders(next.folders ?? []);
+        setActiveDocumentId(next.activeDocumentId ?? next.id ?? activeDocumentId);
+        setActiveAnnotationId(null);
+        setMarkdown(next.markdown);
+        setMarkdownSilently(next.markdown);
+        setSaveStatus('saved');
+        setLastSavedAt(new Date().toISOString());
+        if (editor) {
+          applyingEditorContent.current = true;
+          editor.commands.setContent(next.markdown, { contentType: 'markdown' });
+          setTimeout(() => {
+            applyingEditorContent.current = false;
+          }, 250);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusy(null);
+      }
+    },
+    [activeDocumentId, editor, pa, setMarkdownSilently],
+  );
+
   const saveSettings = useCallback(async () => {
     setBusy('settings');
     try {
@@ -1938,6 +1973,23 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                     </div>
                   </div>
                   <p>{annotation.body}</p>
+                  {annotation.suggestedReplacement?.trim() ? (
+                    <div className="writing-studio-suggested-edit">
+                      <pre>{annotation.suggestedReplacement}</pre>
+                      <button
+                        className="writing-studio-apply-edit"
+                        type="button"
+                        disabled={busy === 'apply-annotation'}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectAnnotation(annotation);
+                          void applyAnnotationEdit(annotation);
+                        }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  ) : null}
                 </article>
               ))
             )}

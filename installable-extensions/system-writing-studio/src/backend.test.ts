@@ -8,6 +8,7 @@ vi.mock('@neon-pilot/extensions/backend/agent', () => ({
 
 import {
   addAnnotation,
+  applyAnnotationEdit,
   appendUpdate,
   createDocument,
   createFolder,
@@ -72,6 +73,7 @@ describe('Writing Studio backend', () => {
           quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
           body: 'This is the live review note.',
           kind: 'suggestion',
+          suggestedReplacement: 'This sentence has enough substance to show a concrete approved edit.',
         },
       ]),
     });
@@ -85,6 +87,7 @@ describe('Writing Studio backend', () => {
 
     expect(result.annotations).toHaveLength(1);
     expect(result.annotations[0].body).toBe('This is the live review note.');
+    expect(result.annotations[0].suggestedReplacement).toBe('This sentence has enough substance to show a concrete approved edit.');
     const state = await load({}, ctx);
     expect(state.annotations.length).toBe(result.annotations.length);
     expect(state.events.some((event) => event.type === 'agent_run_started')).toBe(true);
@@ -266,6 +269,26 @@ describe('Writing Studio backend', () => {
     );
     expect(updated.annotations[0].body).toBe('Keep this, but make the point sharper.');
     expect((await load({}, ctx)).events.some((event) => event.type === 'annotation_updated')).toBe(true);
+  });
+
+  it('applies approved annotation edits and resolves the annotation', async () => {
+    const ctx = context();
+    await updateCanvas({ markdown: '# Tool Draft\n\nThis line wants a comment.' }, ctx);
+    const annotated = await addAnnotation(
+      {
+        quote: 'This line wants a comment.',
+        body: 'Try this sharper line.',
+        kind: 'suggestion',
+        suggestedReplacement: 'This line earns a sharper comment.',
+      },
+      ctx,
+    );
+
+    const applied = await applyAnnotationEdit({ id: annotated.annotation.id }, ctx);
+
+    expect(applied.markdown).toBe('# Tool Draft\n\nThis line earns a sharper comment.');
+    expect(applied.annotations[0]).toEqual(expect.objectContaining({ id: annotated.annotation.id, status: 'resolved' }));
+    expect(applied.events.some((event) => event.type === 'yjs_update' && event.payload.appliedAnnotationEdit === true)).toBe(true);
   });
 
   it('keeps document title, file name, and folder path separate', async () => {
