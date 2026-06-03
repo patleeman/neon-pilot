@@ -101,6 +101,18 @@ function bundleUrlFor(id: string, version: string): string {
   return `${GITHUB_RELEASE_BASE_URL}/${encodeURIComponent(tag)}/${encodeURIComponent(id)}.neon-extension.zip`;
 }
 
+function localBundlePathFor(id: string): string | null {
+  const candidates = [
+    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'dist', 'installable-extensions') : null,
+    resolve(process.cwd(), 'dist', 'installable-extensions'),
+  ].filter((value): value is string => Boolean(value));
+  for (const root of candidates) {
+    const bundlePath = resolve(root, `${id}.neon-extension.zip`);
+    if (existsSync(bundlePath)) return bundlePath;
+  }
+  return null;
+}
+
 export function listInstallableExtensionCatalog(): {
   ok: true;
   version: string;
@@ -184,6 +196,25 @@ export async function installExtensionBundleFromUrl(input: { url?: unknown; expe
   }
 }
 
+export function installExtensionBundleFromPath(input: { path?: unknown; expectedId?: unknown }, stateRoot?: string) {
+  const rawPath = typeof input.path === 'string' ? input.path.trim() : '';
+  if (!rawPath) throw new Error('path is required.');
+  const expectedId = typeof input.expectedId === 'string' && input.expectedId.trim() ? input.expectedId.trim() : undefined;
+  const zipPath = resolve(rawPath);
+  if (!existsSync(zipPath)) throw new Error(`Extension bundle not found: ${zipPath}`);
+  if (!zipPath.endsWith('.neon-extension.zip')) throw new Error('Extension bundle path must end with .neon-extension.zip.');
+  const result = importRuntimeExtensionBundle({ zipPath }, stateRoot);
+  if (expectedId && result.extension?.id !== expectedId) {
+    throw new Error(`Extension id ${result.extension?.id ?? 'unknown'} did not match expected id ${expectedId}.`);
+  }
+  if (result.extension?.id) {
+    setExtensionEnabled(result.extension.id, false, stateRoot);
+    const disabled = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
+    return { ...result, extension: disabled ?? result.extension };
+  }
+  return result;
+}
+
 export async function installCatalogExtension(input: { id?: unknown }, stateRoot?: string) {
   const id = typeof input.id === 'string' ? input.id.trim() : '';
   if (!id) throw new Error('id is required.');
@@ -191,5 +222,7 @@ export async function installCatalogExtension(input: { id?: unknown }, stateRoot
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
   if (findExtensionEntry(id)) throw new Error(`Extension ${id} is already installed.`);
+  const localBundlePath = localBundlePathFor(id);
+  if (localBundlePath) return installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot);
   return installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
 }

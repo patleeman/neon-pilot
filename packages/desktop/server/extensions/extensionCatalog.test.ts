@@ -124,6 +124,24 @@ describe('extension catalog', () => {
     expect(result.extension).toMatchObject({ id: 'system-browser', enabled: false });
   });
 
+  it('installs catalog bundles from local packed artifacts when available', async () => {
+    process.env.NEON_PILOT_REPO_ROOT = join(process.cwd());
+    vi.stubGlobal('fetch', vi.fn());
+    importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-browser', enabled: true }, packageRoot: '/tmp/ext' });
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: false, version: '1.0.0' }]);
+
+    const { installCatalogExtension } = await import('./extensionCatalog.js');
+    const result = await installCatalogExtension({ id: 'system-browser' });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith(
+      { zipPath: join(process.cwd(), 'dist', 'installable-extensions', 'system-browser.neon-extension.zip') },
+      undefined,
+    );
+    expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', false, undefined);
+    expect(result.extension).toMatchObject({ id: 'system-browser', enabled: false });
+  });
+
   it('refuses to install a catalog item that is already installed', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { id: 'system-browser' } });
     const { installCatalogExtension } = await import('./extensionCatalog.js');
