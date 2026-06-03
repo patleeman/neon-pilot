@@ -19,8 +19,7 @@ interface MarkdownEditor {
 const styleElementId = 'writing-studio-runtime-style';
 const writingStudioCss = `
 .writing-studio{display:grid;grid-template-columns:minmax(0,1fr)22rem;height:100%;min-height:0;background:rgb(var(--color-base));color:rgb(var(--color-primary))}
-.writing-studio-main{min-width:0;overflow:auto;padding:1.25rem clamp(1.25rem,3vw,3rem) 4rem}
-.writing-studio-docbar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;max-width:68rem;margin:0 auto 1rem}.writing-studio-docbar-left,.writing-studio-docbar-right{display:flex;align-items:center;gap:.5rem}.writing-studio-docbar select{min-width:12rem;max-width:20rem;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));color:rgb(var(--color-primary));padding:.4rem .55rem;font:inherit;font-size:.82rem}.writing-studio-docbar input[type=file]{display:none}.writing-studio-small-button{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));color:rgb(var(--color-secondary));padding:.4rem .55rem;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-small-button:hover{color:rgb(var(--color-primary));border-color:rgb(var(--color-border-strong))}
+.writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
 .writing-studio-meta{max-width:68rem;margin:0 auto 1.25rem;color:rgb(var(--color-dim));font-size:.75rem;line-height:1.4}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
@@ -30,9 +29,9 @@ const writingStudioCss = `
 .writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.4rem;color:rgb(var(--color-accent));font-size:.72rem;font-weight:650;text-transform:capitalize}.writing-studio-comment-top button{border:0;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment blockquote{margin:0 0 .45rem;color:rgb(var(--color-primary));font-size:.78rem;line-height:1.35}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
 .writing-studio-rail{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
-.writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-tools{display:flex;align-items:center;gap:.35rem}.writing-studio-review-button{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));color:rgb(var(--color-secondary));padding:.35rem .55rem;font:inherit;font-size:.75rem;cursor:pointer}.writing-studio-review-button:hover{color:rgb(var(--color-primary));border-color:rgb(var(--color-border-strong))}.writing-studio-review-button:disabled{cursor:default;opacity:.55}.writing-studio-icon-button{display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
+.writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-tools{display:flex;align-items:center;gap:.25rem}.writing-studio-icon-button{display:inline-flex;align-items:center;justify-content:center;width:1.85rem;height:1.85rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-icon-button:disabled{cursor:default;opacity:.45}.writing-studio-tool-menu{position:relative}.writing-studio-export-menu{position:absolute;right:0;top:2.2rem;z-index:20;display:grid;min-width:8.5rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 12px 32px rgba(0,0,0,.28);padding:.25rem}.writing-studio-export-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.45rem .55rem;text-align:left;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-export-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-composer{border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-composer [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-composer [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-meta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:1rem;padding:.25rem .9rem .75rem;color:rgb(var(--color-dim));font-size:.66rem;font-family:var(--font-mono,monospace)}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
-.writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}
+.writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.48)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:1rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-list{display:grid;gap:.35rem;max-height:min(52vh,28rem);overflow:auto}.writing-studio-doc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;width:100%;border:0;border-radius:7px;background:transparent;color:inherit;padding:.65rem .7rem;text-align:left;cursor:pointer}.writing-studio-doc-row:hover,.writing-studio-doc-row.is-active{background:rgb(var(--color-surface-hover))}.writing-studio-doc-row strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.86rem}.writing-studio-doc-row span{display:block;color:rgb(var(--color-dim));font-size:.72rem;margin-top:.18rem}.writing-studio-doc-import input[type=file]{display:none}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
 @media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;padding-top:0}.writing-studio-comment{max-width:48rem}}
 @media(max-width:860px){.writing-studio{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}}
@@ -107,7 +106,29 @@ interface ChatViewMessage {
   text: string;
 }
 
+type WritingIconName = 'open' | 'new' | 'save' | 'export' | 'review' | 'settings' | 'collapse' | 'expand' | 'close';
+
 const actorId = `writer-${Math.random().toString(16).slice(2)}`;
+
+const iconPaths: Record<WritingIconName, string> = {
+  open: 'M3.5 6.5h5l1.4 1.8h6.6v7.2a2 2 0 0 1-2 2h-11z M3.5 6.5v-2h5l1.2 1.3h6.8v2.5',
+  new: 'M9 3.5v13 M2.5 10h13',
+  save: 'M4 3.5h9l2.5 2.5v10.5h-11.5z M6 3.5v4h6 M6.5 16.5v-5h6v5',
+  export: 'M9 12.5v-9 M5.5 7 9 3.5 12.5 7 M4 11v4.5h10V11',
+  review: 'M3.5 4.5h10v8h-6l-4 3.5z M6 7.5h5 M6 10h3',
+  settings: 'M8.5 2.8 9.8 5l2.5.5.3 2.5 2 1.6-1.2 2.2.7 2.4-2.3 1.2-2-1.5-2 .8-2-1.3-2.4.6-1.1-2.4 1.5-1.9-.9-2.3 2.1-1.5.4-2.5 2.5-.5z M8.5 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
+  collapse: 'M10.5 4.5 6.5 8.5l4 4',
+  expand: 'M6.5 4.5 10.5 8.5l-4 4',
+  close: 'M4.5 4.5 12.5 12.5 M12.5 4.5 4.5 12.5',
+};
+
+function WritingIcon({ name }: { name: WritingIconName }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 17 17" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d={iconPaths[name]} />
+    </svg>
+  );
+}
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -298,6 +319,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [activeDocumentId, setActiveDocumentId] = useState('default');
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [documentSearch, setDocumentSearch] = useState('');
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -569,53 +593,11 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     ts: message.createdAt,
     text: message.body,
   }));
+  const filteredDocuments = documents.filter((doc) => doc.title.toLowerCase().includes(documentSearch.trim().toLowerCase()));
 
   return (
     <main className={`writing-studio ${railCollapsed ? 'has-collapsed-rail' : ''}`}>
       <section className="writing-studio-main">
-        <div className="writing-studio-docbar">
-          <div className="writing-studio-docbar-left">
-            <select value={activeDocumentId} onChange={(event) => void load(event.target.value)} aria-label="Writing document">
-              {documents.map((doc) => (
-                <option key={doc.id} value={doc.id}>
-                  {doc.title}
-                </option>
-              ))}
-            </select>
-            <button className="writing-studio-small-button" type="button" onClick={() => void createDocument()}>
-              New
-            </button>
-            <label className="writing-studio-small-button">
-              Import
-              <input
-                type="file"
-                accept=".md,.markdown,.txt,text/markdown,text/plain"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = '';
-                  if (file) void importDocument(file);
-                }}
-              />
-            </label>
-            <button className="writing-studio-small-button" type="button" onClick={() => void saveDocument()}>
-              Save
-            </button>
-          </div>
-          <div className="writing-studio-docbar-right">
-            <select value="" onChange={(event) => {
-              const format = event.target.value as 'markdown' | 'html' | 'rtf' | 'docx' | 'pdf';
-              event.target.value = '';
-              if (format) void exportDocument(format);
-            }} aria-label="Export document">
-              <option value="">Export</option>
-              <option value="markdown">Markdown</option>
-              <option value="html">HTML</option>
-              <option value="rtf">RTF</option>
-              <option value="docx">DOCX</option>
-              <option value="pdf">PDF</option>
-            </select>
-          </div>
-        </div>
         <div className="writing-studio-meta">
           {eventCount} replay events · Last review {formatTime(state?.lastAgentRunAt ?? null)} · {resolvedCount} resolved
         </div>
@@ -649,13 +631,47 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           {!railCollapsed && <span className="writing-studio-rail-title">Chat</span>}
           <div className="writing-studio-rail-tools">
             {!railCollapsed && (
-              <button className="writing-studio-review-button" type="button" onClick={() => void runReview('manual')} disabled={busy === 'review'}>
-                {busy === 'review' ? 'Reviewing' : 'Review'}
+              <button className="writing-studio-icon-button" type="button" aria-label="Open document" title="Open document" onClick={() => setDocumentsOpen(true)}>
+                <WritingIcon name="open" />
               </button>
             )}
             {!railCollapsed && (
-              <button className="writing-studio-icon-button" type="button" aria-label="Writing Studio settings" onClick={() => setSettingsOpen(true)}>
-                ⚙
+              <button className="writing-studio-icon-button" type="button" aria-label="New document" title="New document" onClick={() => void createDocument()}>
+                <WritingIcon name="new" />
+              </button>
+            )}
+            {!railCollapsed && (
+              <button className="writing-studio-icon-button" type="button" aria-label="Save document" title="Save document" onClick={() => void saveDocument()}>
+                <WritingIcon name="save" />
+              </button>
+            )}
+            {!railCollapsed && (
+              <div className="writing-studio-tool-menu">
+                <button className="writing-studio-icon-button" type="button" aria-label="Export document" title="Export document" onClick={() => setExportMenuOpen((open) => !open)}>
+                  <WritingIcon name="export" />
+                </button>
+                {exportMenuOpen && (
+                  <div className="writing-studio-export-menu">
+                    {(['markdown', 'html', 'rtf', 'docx', 'pdf'] as const).map((format) => (
+                      <button key={format} type="button" onClick={() => {
+                        setExportMenuOpen(false);
+                        void exportDocument(format);
+                      }}>
+                        {format.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {!railCollapsed && (
+              <button className="writing-studio-icon-button" type="button" aria-label="Review document" title="Review document" onClick={() => void runReview('manual')} disabled={busy === 'review'}>
+                <WritingIcon name="review" />
+              </button>
+            )}
+            {!railCollapsed && (
+              <button className="writing-studio-icon-button" type="button" aria-label="Writing Studio settings" title="Settings" onClick={() => setSettingsOpen(true)}>
+                <WritingIcon name="settings" />
               </button>
             )}
             <button
@@ -664,7 +680,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               aria-label={railCollapsed ? 'Expand chat' : 'Collapse chat'}
               onClick={() => setRailCollapsed((collapsed) => !collapsed)}
             >
-              {railCollapsed ? '‹' : '›'}
+              <WritingIcon name={railCollapsed ? 'expand' : 'collapse'} />
             </button>
           </div>
         </div>
@@ -741,6 +757,66 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               </ToolbarButton>
               <ToolbarButton type="button" onClick={() => void saveSettings()} disabled={busy === 'settings'}>
                 {busy === 'settings' ? 'Saving...' : 'Save'}
+              </ToolbarButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {documentsOpen && (
+        <div className="writing-studio-modal-backdrop" role="dialog" aria-modal="true" aria-label="Open writing document">
+          <div className="writing-studio-modal is-docs">
+            <div className="writing-studio-modal-header">
+              <h2>Open document</h2>
+              <button className="writing-studio-icon-button" type="button" aria-label="Close documents" onClick={() => setDocumentsOpen(false)}>
+                <WritingIcon name="close" />
+              </button>
+            </div>
+            <div className="writing-studio-modal-body">
+              <input
+                className="writing-studio-doc-search"
+                value={documentSearch}
+                onChange={(event) => setDocumentSearch(event.target.value)}
+                placeholder="Search documents..."
+                aria-label="Search documents"
+                autoFocus
+              />
+              <div className="writing-studio-doc-list">
+                {filteredDocuments.length === 0 ? (
+                  <p className="writing-studio-muted">No documents match that search.</p>
+                ) : (
+                  filteredDocuments.map((doc) => (
+                    <button key={doc.id} className={`writing-studio-doc-row ${doc.id === activeDocumentId ? 'is-active' : ''}`} type="button" onClick={() => {
+                      setDocumentsOpen(false);
+                      void load(doc.id);
+                    }}>
+                      <div>
+                        <strong>{doc.title}</strong>
+                        <span>{doc.wordCount} words · Updated {formatTime(doc.updatedAt)}</span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="writing-studio-modal-actions writing-studio-doc-import">
+              <label className="writing-studio-icon-button" title="Import markdown" aria-label="Import markdown">
+                <WritingIcon name="open" />
+                <input
+                  type="file"
+                  accept=".md,.markdown,.txt,text/markdown,text/plain"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    if (file) {
+                      setDocumentsOpen(false);
+                      void importDocument(file);
+                    }
+                  }}
+                />
+              </label>
+              <ToolbarButton type="button" onClick={() => setDocumentsOpen(false)}>
+                Close
               </ToolbarButton>
             </div>
           </div>
