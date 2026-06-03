@@ -1041,15 +1041,7 @@ export async function invokeExtensionAction(
       });
     } else if (!actionHandlerStarted && (!(error instanceof ExtensionLoadError) || error.code !== 'extension_disabled')) {
       setExtensionHealthError(extensionId, message);
-      const circuit = recordExtensionFailure({ extensionId, operation: `action ${actionId}`, error: message });
-      if (circuit.quarantined) {
-        publishAppEvent({
-          type: 'notification',
-          extensionId,
-          message: `Extension entered limp mode after ${circuit.failures} failures and was disabled: ${message}`,
-          severity: 'error',
-        });
-      }
+      recordExtensionFailure({ extensionId, operation: `action ${actionId}`, error: message });
     }
     recordActionTelemetry({
       extensionId,

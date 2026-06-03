@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
+import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import {
   validateActivityTreeItemElementContributions,
   validateActivityTreeItemStyleContributions,
@@ -752,6 +753,11 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
     }),
     stateRoot,
   );
+  publishExtensionQuarantineNotification({
+    extensionId: input.extensionId,
+    message: `Extension quarantined after ${next.length} failures and was disabled.`,
+    details: input.error,
+  });
   return buildExtensionFailureResponse({ quarantined: true, failures: next.length });
 }
 
@@ -792,10 +798,28 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
     );
     disabledIds.push(...plan.disabledIds);
     writeExtensionRegistryConfig(plan.config, stateRoot);
+    for (const extensionId of plan.disabledIds) {
+      publishExtensionQuarantineNotification({
+        extensionId,
+        message: 'Extension quarantined by safe mode and was disabled.',
+        details: 'Neon Pilot detected an unclean startup and disabled enabled runtime extensions before loading them again.',
+      });
+    }
   }
   mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
   writeFileSync(markerPath, buildExtensionStartupMarker(new Date().toISOString()));
   return buildExtensionStartupGuardResult({ safeMode, disabledIds });
+}
+
+function publishExtensionQuarantineNotification(input: { extensionId: string; message: string; details: string }): void {
+  invalidateAppTopics('extensions', 'notifications');
+  publishAppEvent({
+    type: 'notification',
+    extensionId: input.extensionId,
+    message: input.message,
+    details: input.details,
+    severity: 'warning',
+  });
 }
 
 export function completeExtensionStartupGuard(stateRoot: string = getStateRoot()): void {

@@ -2,7 +2,11 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn(), publishAppEvent: vi.fn() }));
+
+vi.mock('../shared/appEvents.js', () => appEvents);
 
 import { deleteRuntimeExtension } from './extensionLifecycle.js';
 import {
@@ -34,6 +38,8 @@ import {
 describe('extension registry', () => {
   afterEach(() => {
     delete process.env.NEON_PILOT_STATE_ROOT;
+    appEvents.invalidateAppTopics.mockReset();
+    appEvents.publishAppEvent.mockReset();
   });
 
   it('persists custom keybindings only for declared commands', () => {
@@ -505,6 +511,14 @@ describe('extension registry', () => {
       enabled: false,
       diagnostics: [expect.stringContaining('Extension disabled by circuit breaker')],
     });
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('extensions', 'notifications');
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({
+      type: 'notification',
+      extensionId: 'flaky-board',
+      message: 'Extension quarantined after 3 failures and was disabled.',
+      details: 'boom 3',
+      severity: 'warning',
+    });
   });
 
   it('clears failure records for a recovered operation without dropping unrelated failures', () => {
@@ -539,6 +553,14 @@ describe('extension registry', () => {
       disabledIds: expect.arrayContaining(['runtime-board']),
     });
     expect(isExtensionEnabled('runtime-board', stateRoot)).toBe(false);
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('extensions', 'notifications');
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({
+      type: 'notification',
+      extensionId: 'runtime-board',
+      message: 'Extension quarantined by safe mode and was disabled.',
+      details: 'Neon Pilot detected an unclean startup and disabled enabled runtime extensions before loading them again.',
+      severity: 'warning',
+    });
     completeExtensionStartupGuard(stateRoot);
     expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
   });
