@@ -43,6 +43,16 @@ function resolveModel(models: Model[], modelRef: string): Model | null {
 
 type Ds4Status = {
   reachable?: boolean;
+  settings?: {
+    shellCompression?: 'off' | 'rtk';
+    contextWindow?: number;
+    maxTokens?: number;
+    kvDiskSpaceMb?: number;
+    directCoreTools?: boolean;
+    progressiveSkills?: boolean;
+    compactSkillPrompt?: boolean;
+    agentsPointers?: boolean;
+  };
   runtime?: { installed?: boolean };
   bootstrap?: { running?: boolean; status?: string; progress?: number; message?: string };
   server?: { managedRunning?: boolean; error?: string };
@@ -62,6 +72,7 @@ function useDs4Health(
   const [stopping, setStopping] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [settingUp, setSettingUp] = useState(false);
+  const [savingSetting, setSavingSetting] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const refresh = useCallback(
@@ -169,7 +180,51 @@ function useDs4Health(
     await pa.commands?.execute('app.navigate', { to: '/settings#settings-ds4' });
   };
 
-  return { isDs4, status, checking, starting, stopping, restarting, settingUp, error, refresh, start, stop, restart, setup, openSettings };
+  const saveIntervention = async (key: 'directCoreTools' | 'progressiveSkills' | 'compactSkillPrompt' | 'agentsPointers', value: boolean) => {
+    if (!isDs4 || savingSetting) return;
+    setSavingSetting(key);
+    try {
+      const current = status?.settings ?? {};
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4SaveSettings', {
+        shellCompression: current.shellCompression ?? 'rtk',
+        contextWindow: current.contextWindow ?? 1000000,
+        maxTokens: current.maxTokens ?? 384000,
+        kvDiskSpaceMb: current.kvDiskSpaceMb ?? 8192,
+        directCoreTools: current.directCoreTools ?? true,
+        progressiveSkills: current.progressiveSkills ?? true,
+        compactSkillPrompt: current.compactSkillPrompt ?? true,
+        agentsPointers: current.agentsPointers ?? true,
+        [key]: value,
+      })) as { status?: Ds4Status };
+      setStatus(result.status ?? null);
+      setError('');
+      await refresh();
+    } catch (settingsError) {
+      setError(settingsError instanceof Error ? settingsError.message : String(settingsError));
+      await refresh();
+    } finally {
+      setSavingSetting(null);
+    }
+  };
+
+  return {
+    isDs4,
+    status,
+    checking,
+    starting,
+    stopping,
+    restarting,
+    settingUp,
+    savingSetting,
+    error,
+    refresh,
+    start,
+    stop,
+    restart,
+    setup,
+    openSettings,
+    saveIntervention,
+  };
 }
 
 function thinkingOptions(model: Model | null): Array<{ value: string; label: string }> {
@@ -259,6 +314,38 @@ function Ds4HealthIndicator({
     health.status?.bootstrap?.running && typeof health.status.bootstrap.progress === 'number'
       ? Math.max(0, Math.min(100, Math.round(health.status.bootstrap.progress)))
       : null;
+  const settings = health.status?.settings ?? {};
+  const interventionItems: Array<{
+    key: 'directCoreTools' | 'progressiveSkills' | 'compactSkillPrompt' | 'agentsPointers';
+    label: string;
+    description: string;
+    checked: boolean;
+  }> = [
+    {
+      key: 'directCoreTools',
+      label: 'Core tools only',
+      description: 'Expose bash/read/edit directly',
+      checked: settings.directCoreTools ?? true,
+    },
+    {
+      key: 'progressiveSkills',
+      label: 'Progressive skills',
+      description: 'Discover skills through ds4',
+      checked: settings.progressiveSkills ?? true,
+    },
+    {
+      key: 'compactSkillPrompt',
+      label: 'Compact skill prompt',
+      description: 'Skip inline skill bodies',
+      checked: settings.compactSkillPrompt ?? true,
+    },
+    {
+      key: 'agentsPointers',
+      label: 'AGENTS.md pointers',
+      description: 'Use file pointers instead of bodies',
+      checked: settings.agentsPointers ?? true,
+    },
+  ];
   const needsLabel =
     variant === 'menu' || active || description.tone === 'danger' || description.tone === 'warn' || 'canSetup' in description || description.canStart;
   const dotClass =
@@ -302,7 +389,7 @@ function Ds4HealthIndicator({
         {compactStatus}
         {needsLabel ? <span className="min-w-0 truncate">{setupProgress !== null ? 'DS4 setup' : description.label}</span> : null}
       </summary>
-      <div className="absolute bottom-full right-0 z-50 mb-2 w-48 rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl">
+      <div className="absolute bottom-full right-0 z-50 mb-2 w-64 rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl">
         <MenuButton onClick={() => void health.refresh()} disabled={health.checking}>
           {health.checking ? 'Refreshing' : 'Refresh status'}
         </MenuButton>
@@ -320,6 +407,18 @@ function Ds4HealthIndicator({
         <MenuButton onClick={() => void health.restart()} disabled={health.restarting || health.status?.runtime?.installed === false}>
           {health.restarting ? 'Restarting' : 'Restart server'}
         </MenuButton>
+        <div className="my-1 border-t border-border-subtle" />
+        <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">Interventions</div>
+        {interventionItems.map((item) => (
+          <MenuCheckbox
+            key={item.key}
+            checked={item.checked}
+            disabled={health.savingSetting !== null}
+            label={item.label}
+            saving={health.savingSetting === item.key}
+            onChange={(checked) => void health.saveIntervention(item.key, checked)}
+          />
+        ))}
         <div className="my-1 border-t border-border-subtle" />
         <MenuButton onClick={() => void health.openSettings()}>Open DS4 settings</MenuButton>
       </div>
@@ -355,6 +454,40 @@ function MenuButton({
         <span className="flex w-3 shrink-0 justify-center">{checked ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : null}</span>
       ) : null}
       {children}
+    </button>
+  );
+}
+
+function MenuCheckbox({
+  checked,
+  disabled,
+  label,
+  saving,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  saving?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={cx(
+        'flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-[11px] text-primary hover:bg-surface/65',
+        disabled ? 'cursor-default opacity-50' : '',
+      )}
+      disabled={disabled}
+      onClick={(event) => {
+        event.stopPropagation();
+        onChange(!checked);
+      }}
+    >
+      <span className="min-w-0 truncate">{saving ? 'Saving...' : label}</span>
+      <span className="w-3 shrink-0 text-right text-[12px] leading-none text-accent" aria-hidden="true">
+        {checked ? '✓' : ''}
+      </span>
     </button>
   );
 }

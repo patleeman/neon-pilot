@@ -149,6 +149,47 @@ describe('DS4 provider setup', () => {
       }),
     );
   });
+
+  it('installs and discovers enabled custom DS4 model slots', async () => {
+    const context = ctx({
+      storage: {
+        get: vi.fn(async (key: string) =>
+          key === 'settings'
+            ? {
+                activeModelSlotId: 'spark-mini-q2-reap',
+                modelSlots: [
+                  {
+                    id: 'default',
+                    enabled: true,
+                    modelId: 'deepseek-v4-flash',
+                    name: 'DeepSeek V4 Flash',
+                    filename: 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf',
+                    downloadVariant: 'q2-imatrix',
+                  },
+                  {
+                    id: 'spark-mini-q2-reap',
+                    enabled: true,
+                    modelId: 'deepseek-v4-flash-spark-mini-q2-reap',
+                    name: 'DeepSeek V4 Flash Spark Mini Q2 REAP',
+                    filename: 'DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf',
+                    downloadUrl: 'https://huggingface.co/0xSero/DeepSeek-V4-Flash-162B-GGUF/resolve/main/DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf',
+                  },
+                ],
+              }
+            : null,
+        ),
+        put: vi.fn(async () => ({ ok: true })),
+        delete: vi.fn(async () => ({ ok: true, deleted: true })),
+      },
+    });
+
+    await backend.installProvider({}, context);
+    const discovered = await backend.discover({}, context);
+
+    expect(context.models.saveProviderModel).toHaveBeenCalledWith(expect.objectContaining({ modelId: 'deepseek-v4-flash' }));
+    expect(context.models.saveProviderModel).toHaveBeenCalledWith(expect.objectContaining({ modelId: 'deepseek-v4-flash-spark-mini-q2-reap' }));
+    expect(discovered.models.map((model: { id: string }) => model.id)).toEqual(['deepseek-v4-flash', 'deepseek-v4-flash-spark-mini-q2-reap']);
+  });
 });
 
 describe('DS4 managed runtime', () => {
@@ -217,7 +258,7 @@ describe('DS4 managed runtime', () => {
           rtk: expect.objectContaining({ installed: false, valid: false }),
         }),
       );
-      expect(result.settings).toEqual({
+      expect(result.settings).toEqual(expect.objectContaining({
         shellCompression: 'rtk',
         contextWindow: 1000000,
         maxTokens: 384000,
@@ -226,7 +267,9 @@ describe('DS4 managed runtime', () => {
         progressiveSkills: true,
         compactSkillPrompt: true,
         agentsPointers: true,
-      });
+        activeModelSlotId: 'default',
+      }));
+      expect(result.settings.modelSlots.length).toBeGreaterThanOrEqual(2);
       expect(result.bootstrap.steps.map((step) => step.id)).toEqual(['tools', 'source', 'build', 'model', 'verify', 'done']);
       expect(result.models).toEqual(['deepseek-v4-flash']);
     } finally {
@@ -256,9 +299,10 @@ describe('DS4 managed runtime', () => {
       expect(launchScript).toContain('https://github.com/antirez/ds4.git');
       expect(launchScript).toContain('write_status running tools');
       expect(launchScript).toContain('Missing required tools');
-      expect(launchScript).toContain('Downloading DeepSeek V4 Flash model');
+      expect(launchScript).toContain('Downloading DeepSeek V4 Flash');
       expect(launchScript).toContain('./download_model.sh');
       expect(launchScript).toContain('q2-imatrix');
+      expect(launchScript).toContain('ds4flash.gguf');
       expect(launchScript).toContain(dir);
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -432,7 +476,7 @@ describe('DS4 managed runtime', () => {
     const current = await backend.getSettings({}, context);
     const saved = await backend.saveSettings({ shellCompression: 'off' }, context);
 
-    expect(current.settings).toEqual({
+    expect(current.settings).toEqual(expect.objectContaining({
       shellCompression: 'rtk',
       contextWindow: 1000000,
       maxTokens: 384000,
@@ -441,11 +485,13 @@ describe('DS4 managed runtime', () => {
       progressiveSkills: true,
       compactSkillPrompt: true,
       agentsPointers: true,
-    });
+      activeModelSlotId: 'default',
+    }));
+    expect(current.settings.modelSlots.length).toBeGreaterThanOrEqual(2);
     expect(current.status.runtime.rtk).toEqual(
       expect.objectContaining({ installed: true, valid: true, path: '/opt/homebrew/bin/rtk', version: 'rtk 0.28.2' }),
     );
-    expect(saved.settings).toEqual({
+    expect(saved.settings).toEqual(expect.objectContaining({
       shellCompression: 'off',
       contextWindow: 1000000,
       maxTokens: 384000,
@@ -454,8 +500,9 @@ describe('DS4 managed runtime', () => {
       progressiveSkills: true,
       compactSkillPrompt: true,
       agentsPointers: true,
-    });
-    expect(context.storage.put).toHaveBeenCalledWith('settings', {
+      activeModelSlotId: 'default',
+    }));
+    expect(context.storage.put).toHaveBeenCalledWith('settings', expect.objectContaining({
       shellCompression: 'off',
       contextWindow: 1000000,
       maxTokens: 384000,
@@ -464,7 +511,8 @@ describe('DS4 managed runtime', () => {
       progressiveSkills: true,
       compactSkillPrompt: true,
       agentsPointers: true,
-    });
+      activeModelSlotId: 'default',
+    }));
   });
 
   it('lets the DS4 CLI disable shell compression', async () => {
@@ -474,7 +522,7 @@ describe('DS4 managed runtime', () => {
 
     await backend.ds4ToolsCli({ args: ['compression', 'off'] }, context as never);
 
-    expect(context.storage.put).toHaveBeenCalledWith('settings', {
+    expect(context.storage.put).toHaveBeenCalledWith('settings', expect.objectContaining({
       shellCompression: 'off',
       contextWindow: 1000000,
       maxTokens: 384000,
@@ -483,7 +531,8 @@ describe('DS4 managed runtime', () => {
       progressiveSkills: true,
       compactSkillPrompt: true,
       agentsPointers: true,
-    });
+      activeModelSlotId: 'default',
+    }));
     expect(stdout.write.mock.calls[0]?.[0]).toContain('Shell compression disabled');
   });
 

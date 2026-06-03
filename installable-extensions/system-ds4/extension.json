@@ -5,7 +5,7 @@
   "packageType": "system",
   "defaultEnabled": false,
   "description": "DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "frontend": {
     "entry": "dist/frontend.js",
     "styles": []

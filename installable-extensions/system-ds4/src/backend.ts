@@ -8,14 +8,11 @@ import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { extractReadableHtml, parseDuckDuckGoHtml } from '@neon-pilot/extensions/backend/webContent';
 
 const PROVIDER = 'ds4';
-const MODEL_ID = 'deepseek-v4-flash';
-const MODEL_REF = `${PROVIDER}/${MODEL_ID}`;
 const BASE_URL = 'http://127.0.0.1:8000/v1';
 const API_KEY = 'dsv4-local';
 const DS4_REPO_URL = 'https://github.com/antirez/ds4.git';
-const MODEL_VARIANT = 'q2-imatrix';
-const MODEL_NAME = 'DeepSeek V4 Flash';
-const MODEL_FILENAME = 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf';
+const DEFAULT_MODEL_SLOT_ID = 'default';
+const MODEL_LINK_FILENAME = 'ds4flash.gguf';
 const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
@@ -94,6 +91,18 @@ type Ds4Settings = {
   progressiveSkills: boolean;
   compactSkillPrompt: boolean;
   agentsPointers: boolean;
+  activeModelSlotId: string;
+  modelSlots: Ds4ModelSlot[];
+};
+type Ds4ModelSlot = {
+  id: string;
+  enabled: boolean;
+  modelId: string;
+  name: string;
+  filename: string;
+  downloadVariant?: string;
+  downloadUrl?: string;
+  sizeLabel?: string;
 };
 type ShellJob = {
   id: number;
@@ -121,6 +130,28 @@ const DEFAULT_SETTINGS: Ds4Settings = {
   progressiveSkills: true,
   compactSkillPrompt: true,
   agentsPointers: true,
+  activeModelSlotId: DEFAULT_MODEL_SLOT_ID,
+  modelSlots: [
+    {
+      id: DEFAULT_MODEL_SLOT_ID,
+      enabled: true,
+      modelId: 'deepseek-v4-flash',
+      name: 'DeepSeek V4 Flash',
+      filename: 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf',
+      downloadVariant: 'q2-imatrix',
+      sizeLabel: '~81 GB',
+    },
+    {
+      id: 'spark-mini-q2-reap',
+      enabled: false,
+      modelId: 'deepseek-v4-flash-spark-mini-q2-reap',
+      name: 'DeepSeek V4 Flash Spark Mini Q2 REAP',
+      filename: 'DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf',
+      downloadUrl:
+        'https://huggingface.co/0xSero/DeepSeek-V4-Flash-162B-GGUF/resolve/main/DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf',
+      sizeLabel: '~49 GiB',
+    },
+  ],
 };
 
 type Ds4ToolsApi = {
@@ -196,10 +227,69 @@ function shellQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
+function normalizeSlug(value: unknown, fallback: string): string {
+  const raw = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  const slug = raw.replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
+  return slug || fallback;
+}
+
+function normalizeNonEmptyString(value: unknown, fallback: string, maxLength = 256): string {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  return (raw || fallback).slice(0, maxLength);
+}
+
+function normalizeOptionalString(value: unknown, maxLength = 2048): string | undefined {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  return raw ? raw.slice(0, maxLength) : undefined;
+}
+
+function normalizeFilename(value: unknown, fallback: string): string {
+  const raw = normalizeNonEmptyString(value, fallback, 512);
+  const base = path.basename(raw).replaceAll('\0', '');
+  return base.endsWith('.gguf') ? base : fallback;
+}
+
+function normalizeModelSlots(value: unknown): Ds4ModelSlot[] {
+  const defaults = DEFAULT_SETTINGS.modelSlots;
+  const input = Array.isArray(value) ? value : defaults;
+  const slots = input.slice(0, 6).map((entry, index): Ds4ModelSlot => {
+    const record = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
+    const fallback = defaults[index] ?? defaults[0];
+    return {
+      id: normalizeSlug(record.id, fallback.id || `slot-${index + 1}`),
+      enabled: record.enabled === false ? false : Boolean(record.enabled ?? fallback.enabled),
+      modelId: normalizeSlug(record.modelId, fallback.modelId || `deepseek-v4-flash-${index + 1}`),
+      name: normalizeNonEmptyString(record.name, fallback.name || `DeepSeek V4 Flash ${index + 1}`),
+      filename: normalizeFilename(record.filename, fallback.filename),
+      ...(normalizeOptionalString(record.downloadVariant, 128) ? { downloadVariant: normalizeOptionalString(record.downloadVariant, 128) } : {}),
+      ...(normalizeOptionalString(record.downloadUrl) ? { downloadUrl: normalizeOptionalString(record.downloadUrl) } : {}),
+      ...(normalizeOptionalString(record.sizeLabel, 64) ? { sizeLabel: normalizeOptionalString(record.sizeLabel, 64) } : {}),
+    };
+  });
+  return slots.length ? slots : defaults;
+}
+
+function activeModelSlot(settings: Ds4Settings): Ds4ModelSlot {
+  return (
+    settings.modelSlots.find((slot) => slot.id === settings.activeModelSlotId) ??
+    settings.modelSlots.find((slot) => slot.enabled) ??
+    settings.modelSlots[0] ??
+    DEFAULT_SETTINGS.modelSlots[0]
+  );
+}
+
+function enabledModelSlots(settings: Ds4Settings): Ds4ModelSlot[] {
+  const enabled = settings.modelSlots.filter((slot) => slot.enabled);
+  return enabled.length ? enabled : [activeModelSlot(settings)];
+}
+
 function normalizeSettings(value: unknown): Ds4Settings {
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   const contextWindow = normalizeInteger(record.contextWindow, DEFAULT_SETTINGS.contextWindow, MIN_CONTEXT_WINDOW, MAX_CONTEXT_WINDOW);
   const maxTokens = normalizeInteger(record.maxTokens, DEFAULT_SETTINGS.maxTokens, MIN_MAX_TOKENS, Math.min(MAX_MAX_TOKENS, contextWindow));
+  const modelSlots = normalizeModelSlots(record.modelSlots);
+  const requestedActiveSlot = normalizeSlug(record.activeModelSlotId, DEFAULT_SETTINGS.activeModelSlotId);
+  const activeModelSlotId = modelSlots.some((slot) => slot.id === requestedActiveSlot) ? requestedActiveSlot : modelSlots[0].id;
   return {
     shellCompression: record.shellCompression === 'off' ? 'off' : 'rtk',
     contextWindow,
@@ -209,6 +299,8 @@ function normalizeSettings(value: unknown): Ds4Settings {
     progressiveSkills: record.progressiveSkills === false ? false : DEFAULT_SETTINGS.progressiveSkills,
     compactSkillPrompt: record.compactSkillPrompt === false ? false : DEFAULT_SETTINGS.compactSkillPrompt,
     agentsPointers: record.agentsPointers === false ? false : DEFAULT_SETTINGS.agentsPointers,
+    activeModelSlotId,
+    modelSlots,
   };
 }
 
@@ -234,8 +326,8 @@ function envFlag(name: string, fallback: boolean): boolean {
 
 function isLocalDs4Model(input: { provider?: string; modelRef?: string }): boolean {
   const modelRef = input.modelRef ?? '';
-  if (modelRef.includes('/')) return modelRef === MODEL_REF;
-  return input.provider === PROVIDER && modelRef === MODEL_ID;
+  if (modelRef.includes('/')) return modelRef.startsWith(`${PROVIDER}/`);
+  return input.provider === PROVIDER && Boolean(modelRef);
 }
 
 async function readSettings(ctx: ExtensionBackendContext): Promise<Ds4Settings> {
@@ -252,19 +344,23 @@ async function writeSettings(ctx: ExtensionBackendContext, patch: unknown): Prom
   return next;
 }
 
-async function runtimePaths(ctx: ExtensionBackendContext) {
+async function runtimePaths(ctx: ExtensionBackendContext, settings?: Ds4Settings) {
+  settings ??= await readSettings(ctx);
+  const slot = activeModelSlot(settings);
   const appRoot = await ctx.filesystem.app({
     access: ['read', 'write', 'delete', 'list', 'metadata'],
     reason: 'manage DS4 local runtime files',
   });
   const root = path.join(appRoot.root.path, 'runtime');
   const repoDir = path.join(root, 'ds4');
+  const modelPath = path.join(repoDir, 'gguf', slot.filename);
   return {
     root,
     repoDir,
     serverBin: path.join(repoDir, 'ds4-server'),
-    modelPath: path.join(repoDir, 'gguf', MODEL_FILENAME),
-    modelLink: path.join(repoDir, 'ds4flash.gguf'),
+    modelPath,
+    modelLink: path.join(repoDir, MODEL_LINK_FILENAME),
+    modelSlot: slot,
     kvDir: path.join(root, 'kv-cache'),
     bootstrapLog: path.join(root, 'bootstrap.log'),
     bootstrapStatus: path.join(root, 'bootstrap.status'),
@@ -428,7 +524,7 @@ function toolRuntime(ctx: ExtensionBackendContext) {
   return {
     runtimeScope: ctx.runtimeScope,
     repoRoot: ctx.runtime.getRepoRoot(),
-    modelRef: MODEL_REF,
+    modelRef: `${PROVIDER}/${DEFAULT_SETTINGS.modelSlots[0].modelId}`,
     directToolNames: DS4_CORE_TOOLS,
   };
 }
@@ -911,22 +1007,26 @@ async function installProviderWithSettings(ctx: ExtensionBackendContext, setting
       requiresReasoningContentOnAssistantMessages: true,
     },
   });
-  const state = await ctx.models.saveProviderModel({
-    provider: PROVIDER,
-    modelId: MODEL_ID,
-    name: MODEL_NAME,
-    reasoning: true,
-    input: ['text'],
-    contextWindow: settings.contextWindow,
-    maxTokens: settings.maxTokens,
-    cost: {
-      input: 0,
-      output: 0,
-      cacheRead: 0,
-      cacheWrite: 0,
-    },
-  });
-  return { ok: true, provider: PROVIDER, model: MODEL_REF, state };
+  let state: unknown = null;
+  for (const slot of enabledModelSlots(settings)) {
+    state = await ctx.models.saveProviderModel({
+      provider: PROVIDER,
+      modelId: slot.modelId,
+      name: slot.name,
+      reasoning: true,
+      input: ['text'],
+      contextWindow: settings.contextWindow,
+      maxTokens: settings.maxTokens,
+      cost: {
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+      },
+    });
+  }
+  const slot = activeModelSlot(settings);
+  return { ok: true, provider: PROVIDER, model: `${PROVIDER}/${slot.modelId}`, state };
 }
 
 export async function installProvider(_input: unknown, ctx: ExtensionBackendContext) {
@@ -936,7 +1036,8 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
   publishDs4CliToProcessPath();
   const cliPath = process.env.DS4_CLI_BIN ?? path.join(resolveDs4CliBinDir(), 'ds4');
-  const paths = await runtimePaths(ctx);
+  const currentSettings = await readSettings(ctx);
+  const paths = await runtimePaths(ctx, currentSettings);
   const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, server, tools, settings, rtk] = await Promise.all([
     exists(path.join(paths.repoDir, '.git')),
     exists(paths.serverBin),
@@ -962,9 +1063,11 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
       repoInstalled,
       serverInstalled,
       serverPath: paths.serverBin,
-      modelVariant: MODEL_VARIANT,
+      modelSlot: paths.modelSlot,
+      modelVariant: paths.modelSlot.downloadVariant,
       modelInstalled,
       modelPath: paths.modelPath,
+      modelLink: paths.modelLink,
       modelBytes,
       installed: serverInstalled && modelInstalled,
       tools,
@@ -990,16 +1093,14 @@ export async function discover(_input: unknown, ctx: ExtensionBackendContext) {
     baseUrl: BASE_URL,
     api: 'openai-completions',
     apiKey: API_KEY,
-    models: [
-      {
-        id: MODEL_ID,
-        name: MODEL_NAME,
-        reasoning: true,
-        input: ['text'],
-        contextWindow: settings.contextWindow,
-        maxTokens: settings.maxTokens,
-      },
-    ],
+    models: enabledModelSlots(settings).map((slot) => ({
+      id: slot.modelId,
+      name: slot.name,
+      reasoning: true,
+      input: ['text'],
+      contextWindow: settings.contextWindow,
+      maxTokens: settings.maxTokens,
+    })),
   };
 }
 
@@ -1022,7 +1123,9 @@ export async function runtimeServiceHealth() {
 }
 
 export async function bootstrapRuntime(input: { force?: unknown; start?: unknown }, ctx: ExtensionBackendContext) {
-  const paths = await runtimePaths(ctx);
+  const settings = await readSettings(ctx);
+  const paths = await runtimePaths(ctx, settings);
+  const slot = paths.modelSlot;
   await mkdir(paths.root, { recursive: true });
   const running = await readBootstrapState(ctx, paths);
   if (running.running) return { ok: true, started: false, bootstrap: running, status: await status({}, ctx) };
@@ -1073,10 +1176,14 @@ write_status running tools 2 "Checking required local tools"
   write_status running build 22 "Building ds4-server"
   make -C ${shellQuote(paths.repoDir)} -j"$(sysctl -n hw.ncpu 2>/dev/null || echo 4)"
   if [ ${force ? '1' : '0'} -eq 1 ] || [ ! -f ${shellQuote(paths.modelPath)} ]; then
-    write_status running model 42 "Downloading DeepSeek V4 Flash model (~81 GB)"
-    echo "[$(date -u +%FT%TZ)] Downloading model variant ${MODEL_VARIANT}. This is roughly 81 GB and may take a long time."
+    write_status running model 42 "Downloading ${slot.name} (${slot.sizeLabel ?? 'large GGUF'})"
+    echo "[$(date -u +%FT%TZ)] Downloading model ${slot.name} to ${paths.modelPath}."
     cd ${shellQuote(paths.repoDir)}
-    ./download_model.sh ${shellQuote(MODEL_VARIANT)}
+    ${
+      slot.downloadUrl
+        ? `curl -L --fail --continue-at - --output ${shellQuote(paths.modelPath)} ${shellQuote(slot.downloadUrl)}`
+        : `./download_model.sh ${shellQuote(slot.downloadVariant ?? DEFAULT_SETTINGS.modelSlots[0].downloadVariant ?? 'q2-imatrix')}`
+    }
   else
     write_status running model 82 "Model file already present; offline setup can reuse it"
     echo "[$(date -u +%FT%TZ)] Model file already exists; skipping download"
@@ -1084,6 +1191,7 @@ write_status running tools 2 "Checking required local tools"
   write_status running verify 95 "Verifying DS4 runtime files"
   test -x ${shellQuote(paths.serverBin)}
   test -f ${shellQuote(paths.modelPath)}
+  ln -sf ${shellQuote(path.join('gguf', slot.filename))} ${shellQuote(paths.modelLink)}
   write_status succeeded done 100 "DS4 runtime ready"
   echo "[$(date -u +%FT%TZ)] DS4 runtime ready"
 } >> ${shellQuote(paths.bootstrapLog)} 2>&1 || {
@@ -1104,7 +1212,7 @@ write_status running tools 2 "Checking required local tools"
 
 export async function startServer(input: { timeoutMs?: unknown }, ctx: ExtensionBackendContext) {
   const settings = await readSettings(ctx);
-  const paths = await runtimePaths(ctx);
+  const paths = await runtimePaths(ctx, settings);
   const health = await readServerHealth();
   if (health.reachable) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
 
@@ -1116,6 +1224,10 @@ export async function startServer(input: { timeoutMs?: unknown }, ctx: Extension
   if (await isPidRunning(ctx, pid)) return { ok: true, starting: true, status: await status({}, ctx) };
 
   await mkdir(paths.kvDir, { recursive: true });
+  await ctx.shell.exec({
+    command: 'sh',
+    args: ['-c', `cd ${shellQuote(paths.repoDir)} && ln -sf ${shellQuote(path.join('gguf', paths.modelSlot.filename))} ${shellQuote(paths.modelLink)}`],
+  });
   await chmod(paths.serverBin, 0o755).catch(() => undefined);
   const command = `cd ${shellQuote(paths.repoDir)} && exec ${shellQuote(paths.serverBin)} --ctx ${settings.contextWindow} --kv-disk-dir ${shellQuote(paths.kvDir)} --kv-disk-space-mb ${settings.kvDiskSpaceMb} >> ${shellQuote(paths.serverLog)} 2>&1`;
   const result = await ctx.shell.exec({

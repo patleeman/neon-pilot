@@ -23,6 +23,8 @@ type Ds4Status = {
     progressiveSkills?: boolean;
     compactSkillPrompt?: boolean;
     agentsPointers?: boolean;
+    activeModelSlotId?: string;
+    modelSlots?: Ds4ModelSlot[];
   };
   runtime?: {
     managedRoot?: string;
@@ -33,6 +35,8 @@ type Ds4Status = {
     modelPath?: string;
     serverPath?: string;
     modelBytes?: number | null;
+    modelSlot?: Ds4ModelSlot;
+    modelLink?: string;
     tools?: Record<string, boolean>;
     cliAvailable?: boolean;
     cliPath?: string;
@@ -57,6 +61,38 @@ type Ds4Status = {
   };
   server?: { managedRunning?: boolean; managedPid?: number | null; error?: string; log?: string };
 };
+
+type Ds4ModelSlot = {
+  id: string;
+  enabled: boolean;
+  modelId: string;
+  name: string;
+  filename: string;
+  downloadVariant?: string;
+  downloadUrl?: string;
+  sizeLabel?: string;
+};
+
+const DEFAULT_MODEL_SLOTS: Ds4ModelSlot[] = [
+  {
+    id: 'default',
+    enabled: true,
+    modelId: 'deepseek-v4-flash',
+    name: 'DeepSeek V4 Flash',
+    filename: 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf',
+    downloadVariant: 'q2-imatrix',
+    sizeLabel: '~81 GB',
+  },
+  {
+    id: 'spark-mini-q2-reap',
+    enabled: false,
+    modelId: 'deepseek-v4-flash-spark-mini-q2-reap',
+    name: 'DeepSeek V4 Flash Spark Mini Q2 REAP',
+    filename: 'DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf',
+    downloadUrl: 'https://huggingface.co/0xSero/DeepSeek-V4-Flash-162B-GGUF/resolve/main/DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf',
+    sizeLabel: '~49 GiB',
+  },
+];
 
 const BUTTON_CLASS =
   'rounded-md border border-border-subtle bg-surface/35 px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface/65 hover:text-primary disabled:cursor-default disabled:opacity-50';
@@ -121,6 +157,8 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     progressiveSkills: true,
     compactSkillPrompt: true,
     agentsPointers: true,
+    activeModelSlotId: 'default',
+    modelSlots: DEFAULT_MODEL_SLOTS,
   });
   const label = statusLabel(status);
 
@@ -160,6 +198,8 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       progressiveSkills: status.settings.progressiveSkills ?? true,
       compactSkillPrompt: status.settings.compactSkillPrompt ?? true,
       agentsPointers: status.settings.agentsPointers ?? true,
+      activeModelSlotId: status.settings.activeModelSlotId ?? 'default',
+      modelSlots: status.settings.modelSlots?.length ? status.settings.modelSlots : DEFAULT_MODEL_SLOTS,
     });
   }, [
     status?.settings?.contextWindow,
@@ -169,6 +209,8 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     status?.settings?.progressiveSkills,
     status?.settings?.compactSkillPrompt,
     status?.settings?.agentsPointers,
+    status?.settings?.activeModelSlotId,
+    status?.settings?.modelSlots,
   ]);
 
   const run = async (action: 'setup' | 'repair' | 'start' | 'stop' | 'restart') => {
@@ -296,6 +338,8 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
         progressiveSkills: advancedDraft.progressiveSkills,
         compactSkillPrompt: advancedDraft.compactSkillPrompt,
         agentsPointers: advancedDraft.agentsPointers,
+        activeModelSlotId: advancedDraft.activeModelSlotId,
+        modelSlots: advancedDraft.modelSlots,
       })) as { status?: Ds4Status };
       if (result.status) setStatus(result.status);
       setError('');
@@ -357,6 +401,34 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       { id: 'verify', title: 'Verify install', progress: 95 },
       { id: 'done', title: 'Ready', progress: 100 },
     ];
+  const activeSlot = advancedDraft.modelSlots.find((slot) => slot.id === advancedDraft.activeModelSlotId) ?? advancedDraft.modelSlots[0];
+  const updateModelSlot = (index: number, patch: Partial<Ds4ModelSlot>) => {
+    setAdvancedDraft((draft) => ({
+      ...draft,
+      modelSlots: draft.modelSlots.map((slot, slotIndex) => (slotIndex === index ? { ...slot, ...patch } : slot)),
+    }));
+  };
+  const addModelSlot = () => {
+    setAdvancedDraft((draft) => {
+      const nextIndex = draft.modelSlots.length + 1;
+      const id = `custom-${nextIndex}`;
+      return {
+        ...draft,
+        modelSlots: [
+          ...draft.modelSlots,
+          {
+            id,
+            enabled: false,
+            modelId: `deepseek-v4-flash-custom-${nextIndex}`,
+            name: `DeepSeek V4 Flash Custom ${nextIndex}`,
+            filename: `deepseek-v4-flash-custom-${nextIndex}.gguf`,
+            downloadUrl: '',
+            sizeLabel: '',
+          },
+        ].slice(0, 6),
+      };
+    });
+  };
 
   return (
     <div className="space-y-4 text-[13px] text-secondary">
@@ -432,7 +504,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       <div className="grid gap-2 md:grid-cols-2">
         <Info label="Repository" value={status?.runtime?.repoInstalled ? 'Installed' : 'Missing'} />
         <Info label="Server binary" value={status?.runtime?.serverInstalled ? 'Installed' : 'Missing'} />
-        <Info label="Model file" value={status?.runtime?.modelInstalled ? formatBytes(status.runtime.modelBytes) : 'Missing'} />
+        <Info label="Model file" value={`${activeSlot?.name ?? 'Selected model'}: ${status?.runtime?.modelInstalled ? formatBytes(status.runtime.modelBytes) : 'Missing'}`} />
         <Info label="Server process" value={status?.server?.managedRunning ? `Running${status.server.managedPid ? ` (${status.server.managedPid})` : ''}` : 'Stopped'} />
       </div>
 
@@ -500,10 +572,57 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
       <div className="rounded-md border border-border-subtle bg-surface/40 p-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Setup</p>
         <p className="mt-2">
-          Setup clones antirez/ds4, builds ds4-server, and downloads the recommended DeepSeek V4 Flash GGUF into extension-owned app storage.
-          The model download is about 81 GB and can take a while. If the model file is already present, setup skips the download and can finish offline.
+          Setup clones antirez/ds4, builds ds4-server, and downloads the selected GGUF into extension-owned app storage.
+          If the selected model file is already present, setup skips the download and can finish offline.
         </p>
         {status?.runtime?.managedRoot ? <p className="mt-2 break-all font-mono text-[11px] text-dim">{status.runtime.managedRoot}</p> : null}
+      </div>
+
+      <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Model slots</p>
+            <p className="mt-2 text-[12px] text-dim">Enable slots to expose several DS4 models. The active slot controls setup and the managed server GGUF.</p>
+          </div>
+          <button type="button" className={BUTTON_CLASS} onClick={addModelSlot} disabled={busy !== null || advancedDraft.modelSlots.length >= 6}>
+            Add slot
+          </button>
+        </div>
+        <label className="mt-3 block">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">Active runtime slot</span>
+          <select
+            value={advancedDraft.activeModelSlotId}
+            onChange={(event) => setAdvancedDraft((draft) => ({ ...draft, activeModelSlotId: event.currentTarget.value }))}
+            className="mt-2 w-full rounded-md border border-border-subtle bg-base px-2.5 py-2 text-[12px] text-primary outline-none focus:border-accent/60"
+          >
+            {advancedDraft.modelSlots.map((slot) => (
+              <option key={slot.id} value={slot.id}>
+                {slot.name || slot.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="mt-3 space-y-3">
+          {advancedDraft.modelSlots.map((slot, index) => (
+            <div key={`${slot.id}-${index}`} className="rounded-md border border-border-subtle bg-base/30 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-[12px] text-primary">
+                  <input type="checkbox" checked={slot.enabled} onChange={(event) => updateModelSlot(index, { enabled: event.currentTarget.checked })} className="h-4 w-4 accent-accent" />
+                  Expose in picker
+                </label>
+                <span className="font-mono text-[11px] text-dim">{slot.id}</span>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <TextSetting label="Model id" value={slot.modelId} onChange={(modelId) => updateModelSlot(index, { modelId })} />
+                <TextSetting label="Display name" value={slot.name} onChange={(name) => updateModelSlot(index, { name })} />
+                <TextSetting label="GGUF filename" value={slot.filename} onChange={(filename) => updateModelSlot(index, { filename })} />
+                <TextSetting label="Size label" value={slot.sizeLabel ?? ''} onChange={(sizeLabel) => updateModelSlot(index, { sizeLabel })} />
+                <TextSetting label="DS4 download variant" value={slot.downloadVariant ?? ''} onChange={(downloadVariant) => updateModelSlot(index, { downloadVariant })} />
+                <TextSetting label="Direct download URL" value={slot.downloadUrl ?? ''} onChange={(downloadUrl) => updateModelSlot(index, { downloadUrl })} />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
@@ -659,6 +778,20 @@ function NumberSetting({
         min={min}
         max={max}
         step={step}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        className="mt-2 w-full rounded-md border border-border-subtle bg-base px-2.5 py-2 font-mono text-[12px] text-primary outline-none focus:border-accent/60"
+      />
+    </label>
+  );
+}
+
+function TextSetting({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">{label}</span>
+      <input
+        type="text"
         value={value}
         onChange={(event) => onChange(event.currentTarget.value)}
         className="mt-2 w-full rounded-md border border-border-subtle bg-base px-2.5 py-2 font-mono text-[12px] text-primary outline-none focus:border-accent/60"
