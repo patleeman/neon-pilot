@@ -29,10 +29,9 @@ const writingStudioCss = `
 .writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
-.writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 28%,transparent)}
-.writing-studio-editor-frame.writing-studio-mark-highlight{background:transparent;box-shadow:none}.writing-studio-editor-frame.writing-studio-mark-highlight .writing-studio-editor p:first-of-type{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}
-.writing-studio-comments{position:sticky;top:1rem;display:grid;gap:.75rem;padding-top:2.4rem}.writing-studio-comment{border-left:2px solid rgb(var(--color-accent));padding:.65rem .75rem;background:color-mix(in srgb,rgb(var(--color-surface)) 86%,transparent);box-shadow:0 8px 24px rgba(0,0,0,.14)}
-.writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.4rem;color:rgb(var(--color-accent));font-size:.72rem;font-weight:650;text-transform:capitalize}.writing-studio-comment-top button{border:0;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment blockquote{margin:0 0 .45rem;color:rgb(var(--color-primary));font-size:.78rem;line-height:1.35}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
+.writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 21%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}.writing-studio-mark-highlight[data-kind="warning"]{background:color-mix(in srgb,rgb(var(--color-warning)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-warning)) 24%,transparent)}.writing-studio-mark-highlight[data-kind="comment"]{background:color-mix(in srgb,rgb(var(--color-secondary)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-secondary)) 20%,transparent)}.writing-studio-mark-highlight[data-kind="reaction"]{background:color-mix(in srgb,rgb(var(--color-success)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-success)) 20%,transparent)}
+.writing-studio-comments{position:sticky;top:1rem;display:grid;gap:.65rem;padding-top:2.4rem}.writing-studio-comment{--comment-tint:rgb(var(--color-accent));padding:.7rem .75rem;border:1px solid color-mix(in srgb,var(--comment-tint) 18%,rgb(var(--color-border-subtle)));border-radius:8px;background:color-mix(in srgb,var(--comment-tint) 7%,rgb(var(--color-surface)));box-shadow:0 8px 22px rgba(0,0,0,.12);cursor:pointer;text-align:left}.writing-studio-comment.is-active{border-color:color-mix(in srgb,var(--comment-tint) 48%,rgb(var(--color-border-default)));background:color-mix(in srgb,var(--comment-tint) 13%,rgb(var(--color-surface)));box-shadow:0 0 0 1px color-mix(in srgb,var(--comment-tint) 28%,transparent),0 12px 28px rgba(0,0,0,.18)}.writing-studio-comment.is-warning{--comment-tint:rgb(var(--color-warning))}.writing-studio-comment.is-comment{--comment-tint:rgb(var(--color-secondary))}.writing-studio-comment.is-reaction{--comment-tint:rgb(var(--color-success))}
+.writing-studio-comment-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.45rem}.writing-studio-comment-kind{color:color-mix(in srgb,var(--comment-tint) 72%,rgb(var(--color-secondary)));font-size:.68rem;font-weight:620;text-transform:capitalize;letter-spacing:.01em}.writing-studio-comment-actions{display:flex;align-items:center;gap:.25rem}.writing-studio-comment-actions button{border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer;font:inherit;font-size:.72rem}.writing-studio-comment-actions button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-comment-discuss{padding:.22rem .4rem}.writing-studio-comment-close{display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;padding:0;font-size:.9rem;line-height:1}.writing-studio-comment p{margin:0;color:rgb(var(--color-secondary));font-size:.8rem;line-height:1.45}.writing-studio-comment-empty{color:rgb(var(--color-dim));font-size:.8rem;line-height:1.5}
 .writing-studio-rail{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr);min-width:0;min-height:0;border-left:1px solid rgb(var(--color-border-subtle));background:rgb(var(--color-surface))}
 .writing-studio-rail-resizer{position:absolute;left:-4px;top:0;bottom:0;z-index:25;width:8px;cursor:col-resize}.writing-studio-rail-resizer::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:transparent}.writing-studio-rail-resizer:hover::after,.writing-studio-rail-resizer:focus-visible::after{background:rgb(var(--color-accent))}
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
@@ -446,25 +445,120 @@ function clearEditorHighlights(root: HTMLElement): void {
 
 function highlightEditorQuotes(root: HTMLElement, annotations: Annotation[]): void {
   clearEditorHighlights(root);
-  const quotes = annotations.map((annotation) => annotation.quote.trim()).filter((quote) => quote.length > 0);
-  for (const quote of quotes) {
-    const node = textNodesUnder(root).find((candidate) => (candidate.textContent ?? '').includes(quote));
-    if (!node) continue;
-    const text = node.textContent ?? '';
-    const index = text.indexOf(quote);
-    if (index < 0) continue;
-    node.parentElement?.closest('p,h1,h2,h3,blockquote,li')?.classList.add('writing-studio-mark-highlight');
+  for (const annotation of annotations) {
+    const quoteCandidates = quoteCandidatesForAnnotation(annotation);
+    const quote = quoteCandidates[0] ?? '';
+    if (!quote && annotation.to <= annotation.from) continue;
+    const nodes = textNodesUnder(root);
+    const match = findQuoteInTextNodes(nodes, quoteCandidates);
     const range = document.createRange();
-    range.setStart(node, index);
-    range.setEnd(node, index + quote.length);
+    if (match) {
+      range.setStart(match.node, match.index);
+      range.setEnd(match.node, match.index + match.quote.length);
+    } else if (!setRangeFromTextOffsets(range, nodes, annotation.from, annotation.to)) {
+      continue;
+    }
     const mark = document.createElement('span');
     mark.className = 'writing-studio-mark-highlight';
+    mark.dataset.kind = annotation.kind;
+    mark.dataset.annotationId = annotation.id;
     try {
       range.surroundContents(mark);
     } catch {
       range.detach();
     }
   }
+}
+
+function quoteCandidatesForAnnotation(annotation: Annotation): string[] {
+  const raw = annotation.quote.trim();
+  const withoutMarkdownHeading = raw.replace(/^#{1,6}\s+/, '').trim();
+  return Array.from(new Set([raw, withoutMarkdownHeading].filter((quote) => quote.length > 0)));
+}
+
+function findQuoteInTextNodes(nodes: Text[], quotes: string[]): { node: Text; index: number; quote: string } | null {
+  for (const quote of quotes) {
+    for (const node of nodes) {
+      const text = node.textContent ?? '';
+      const index = text.indexOf(quote);
+      if (index >= 0) return { node, index, quote };
+    }
+  }
+  return null;
+}
+
+function findAnnotationSelection(editor: Editor, annotation: Annotation): { from: number; to: number } | null {
+  const quotes = quoteCandidatesForAnnotation(annotation);
+  for (const quote of quotes) {
+    let match: { from: number; to: number } | null = null;
+    editor.state.doc.descendants((node, pos) => {
+      if (match || !node.isText) return false;
+      const index = (node.text ?? '').indexOf(quote);
+      if (index < 0) return true;
+      match = { from: pos + index, to: pos + index + quote.length };
+      return false;
+    });
+    if (match) return match;
+  }
+  if (annotation.to > annotation.from) {
+    const expanded = expandTextOffsetsToUsefulRange(editor.state.doc.textContent, annotation.from, annotation.to);
+    const from = textOffsetToDocumentPosition(editor, expanded.from);
+    const to = textOffsetToDocumentPosition(editor, expanded.to);
+    if (from !== null && to !== null && to > from) return { from, to };
+  }
+  return null;
+}
+
+function textOffsetToDocumentPosition(editor: Editor, targetOffset: number): number | null {
+  let textOffset = 0;
+  let result: number | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (result !== null || !node.isText) return result === null;
+    const textLength = node.text?.length ?? 0;
+    const nextOffset = textOffset + textLength;
+    if (targetOffset <= nextOffset) {
+      result = pos + Math.max(0, Math.min(textLength, targetOffset - textOffset));
+      return false;
+    }
+    textOffset = nextOffset + 1;
+    return true;
+  });
+  return result;
+}
+
+function expandTextOffsetsToUsefulRange(text: string, from: number, to: number): { from: number; to: number } {
+  const length = text.length;
+  let start = Math.max(0, Math.min(from, length));
+  let end = Math.max(start, Math.min(to, length));
+  const selected = text.slice(start, end);
+  if (selected.trim().length >= 8) return { from: start, to: end };
+  while (start > 0 && !/[.!?\n]/.test(text[start - 1] ?? '')) start -= 1;
+  while (end < length && !/[.!?\n]/.test(text[end] ?? '')) end += 1;
+  if (end < length && /[.!?]/.test(text[end] ?? '')) end += 1;
+  while (start < end && /\s/.test(text[start] ?? '')) start += 1;
+  while (end > start && /\s/.test(text[end - 1] ?? '')) end -= 1;
+  if (text.slice(start, end).trim().length >= 8) return { from: start, to: end };
+  return { from: Math.max(0, Math.min(from, length)), to: Math.max(0, Math.min(to, length)) };
+}
+
+function setRangeFromTextOffsets(range: Range, nodes: Text[], from: number, to: number): boolean {
+  if (to <= from) return false;
+  let offset = 0;
+  let started = false;
+  for (const node of nodes) {
+    const textLength = node.textContent?.length ?? 0;
+    const nextOffset = offset + textLength;
+    if (!started && from <= nextOffset) {
+      range.setStart(node, Math.max(0, Math.min(textLength, from - offset)));
+      started = true;
+    }
+    if (started && to <= nextOffset) {
+      range.setEnd(node, Math.max(0, Math.min(textLength, to - offset)));
+      return !range.collapsed;
+    }
+    offset = nextOffset + 1;
+  }
+  return false;
 }
 
 function useWritingDoc(initialMarkdown: string, onCrdtUpdate: (update: Uint8Array, markdown: string) => void) {
@@ -531,6 +625,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState(() => readStringSetting(thinkingLevelStorageKey));
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
+  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [, setFormatStateVersion] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -699,6 +794,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setSettingsDraft(next.settings);
     setVisibleEventCount(next.events.length);
     setSaveStatus('saved');
+    setActiveAnnotationId(null);
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
     if (editor) {
@@ -757,13 +853,15 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     const editorElement = (editor as unknown as { view?: { dom?: HTMLElement } }).view?.dom;
     if (!editorElement) return;
     const timer = setTimeout(() => {
+      const openAnnotations = (state?.annotations ?? []).filter((annotation) => annotation.status === 'open');
+      const activeAnnotation = openAnnotations.find((annotation) => annotation.id === activeAnnotationId);
       highlightEditorQuotes(
         editorElement,
-        (state?.annotations ?? []).filter((annotation) => annotation.status === 'open'),
+        activeAnnotation ? [activeAnnotation] : [],
       );
     }, 0);
     return () => clearTimeout(timer);
-  }, [editor, markdown, state?.annotations]);
+  }, [activeAnnotationId, editor, markdown, state?.annotations]);
 
   const runReview = useCallback(
     async (trigger: string) => {
@@ -793,7 +891,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         );
         const editorElement = (editor as unknown as { view?: { dom?: HTMLElement } }).view?.dom;
         if (editorElement) {
-          setTimeout(() => highlightEditorQuotes(editorElement, result.annotations), 50);
+          const firstAnnotation = result.annotations[0];
+          setActiveAnnotationId(firstAnnotation?.id ?? null);
+          const selection = firstAnnotation ? findAnnotationSelection(editor, firstAnnotation) : null;
+          if (selection) setTimeout(() => editor.chain().focus().setTextSelection(selection).run(), 50);
         }
         setVisibleEventCount((current) => current + result.annotations.length + 2);
       } catch (err) {
@@ -823,10 +924,35 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [activeDocumentId, markdown, pa, syncEditorMarkdown],
   );
 
+  const selectAnnotation = useCallback(
+    (annotation: Annotation) => {
+      setActiveAnnotationId(annotation.id);
+      if (!editor) return;
+      const selection = findAnnotationSelection(editor, annotation);
+      if (selection) editor.chain().focus().setTextSelection(selection).run();
+    },
+    [editor],
+  );
+
+  const discussAnnotation = useCallback(
+    (annotation: Annotation) => {
+      const lines = [
+        'Can we discuss this annotation?',
+        '',
+        `> ${annotation.quote}`,
+        '',
+        `${annotation.kind}: ${annotation.body}`,
+      ];
+      void sendChat(lines.join('\n'));
+    },
+    [sendChat],
+  );
+
   const resolveAnnotation = useCallback(
     async (id: string) => {
       const result = (await pa.extension.invoke('writingStudioResolveAnnotation', { id, documentId: activeDocumentId })) as { annotations: Annotation[] };
       setState((current) => (current ? { ...current, annotations: result.annotations } : current));
+      setActiveAnnotationId((current) => (current === id ? null : current));
     },
     [activeDocumentId, pa],
   );
@@ -982,7 +1108,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         </div>
         <WritingFormatBar editor={editor} />
         <div className="writing-studio-canvas">
-          <div className={`writing-studio-editor-frame ${openAnnotations.length ? 'writing-studio-mark-highlight' : ''}`}>
+          <div className="writing-studio-editor-frame">
             <EditorContent editor={editor} />
           </div>
           <aside className="writing-studio-comments" aria-label="Document comments">
@@ -990,14 +1116,40 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               <p className="writing-studio-comment-empty">Comments will appear beside the draft as the agent reads.</p>
             ) : (
               openAnnotations.map((annotation) => (
-                <article key={annotation.id} className={`writing-studio-comment is-${annotation.kind}`}>
+                <article
+                  key={annotation.id}
+                  className={`writing-studio-comment is-${annotation.kind} ${activeAnnotationId === annotation.id ? 'is-active' : ''}`}
+                  data-annotation-quote={annotation.quote}
+                  onClick={() => selectAnnotation(annotation)}
+                >
                   <div className="writing-studio-comment-top">
-                    <span>{annotation.emoji ?? annotation.kind}</span>
-                    <button type="button" onClick={() => void resolveAnnotation(annotation.id)}>
-                      Resolve
-                    </button>
+                    <span className="writing-studio-comment-kind">{annotation.emoji ?? annotation.kind}</span>
+                    <div className="writing-studio-comment-actions">
+                      <button
+                        className="writing-studio-comment-discuss"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectAnnotation(annotation);
+                          discussAnnotation(annotation);
+                        }}
+                      >
+                        Discuss
+                      </button>
+                      <button
+                        className="writing-studio-comment-close"
+                        type="button"
+                        aria-label="Resolve annotation"
+                        title="Resolve annotation"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void resolveAnnotation(annotation.id);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
-                  <blockquote>{annotation.quote}</blockquote>
                   <p>{annotation.body}</p>
                 </article>
               ))
