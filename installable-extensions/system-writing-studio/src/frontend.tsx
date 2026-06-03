@@ -25,8 +25,7 @@ const writingStudioCss = `
 .writing-studio{display:grid;grid-template-columns:minmax(0,1fr)var(--writing-studio-rail-width,22rem);height:100%;min-height:0;background:rgb(var(--color-base));color:rgb(var(--color-primary))}
 .writing-studio.has-collapsed-rail{grid-template-columns:minmax(0,1fr)3rem}
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
-.writing-studio-meta{display:flex;align-items:center;justify-content:space-between;gap:1rem;max-width:68rem;margin:0 auto 1.25rem;color:rgb(var(--color-dim));font-size:.75rem;line-height:1.4}.writing-studio-save-status{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}.writing-studio-save-status::before{content:"";width:.42rem;height:.42rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-save-status.is-saved::before{background:rgb(var(--color-success))}.writing-studio-save-status.is-saving::before{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-save-status.is-unsaved::before{background:rgb(var(--color-warning))}.writing-studio-save-status.is-error::before{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}
-.writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
+.writing-studio-formatbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-format-spacer{flex:1 1 auto;min-width:.5rem}.writing-studio-format-save{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-format-save:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-save:disabled{cursor:default;opacity:.55}.writing-studio-format-save::after{content:"";position:absolute;right:.16rem;top:.16rem;width:.34rem;height:.34rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-format-save.is-saved::after{background:rgb(var(--color-success))}.writing-studio-format-save.is-saving::after{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-format-save.is-unsaved::after{background:rgb(var(--color-warning))}.writing-studio-format-save.is-error::after{background:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
 .writing-studio-mark-highlight{border-radius:3px;background:color-mix(in srgb,rgb(var(--color-accent)) 21%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-accent)) 22%,transparent)}.writing-studio-mark-highlight[data-kind="warning"]{background:color-mix(in srgb,rgb(var(--color-warning)) 23%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-warning)) 24%,transparent)}.writing-studio-mark-highlight[data-kind="comment"]{background:color-mix(in srgb,rgb(var(--color-secondary)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-secondary)) 20%,transparent)}.writing-studio-mark-highlight[data-kind="reaction"]{background:color-mix(in srgb,rgb(var(--color-success)) 18%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,rgb(var(--color-success)) 20%,transparent)}
@@ -206,7 +205,17 @@ function FormatButton({
   );
 }
 
-function WritingFormatBar({ editor }: { editor: Editor | null }) {
+function WritingFormatBar({
+  editor,
+  saveStatus,
+  saveTooltip,
+  onSave,
+}: {
+  editor: Editor | null;
+  saveStatus: SaveStatus;
+  saveTooltip: string;
+  onSave: () => void;
+}) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkHref, setLinkHref] = useState('');
 
@@ -259,6 +268,20 @@ function WritingFormatBar({ editor }: { editor: Editor | null }) {
         <FormatButton label="↶" title="Undo" disabled={disabled || !editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} />
         <FormatButton label="↷" title="Redo" disabled={disabled || !editor.can().redo()} onClick={() => editor.chain().focus().redo().run()} />
       </div>
+      <div className="writing-studio-format-spacer" />
+      <button
+        className={`writing-studio-format-save is-${saveStatus}`}
+        type="button"
+        aria-label="Save document"
+        title={saveTooltip}
+        disabled={saveStatus === 'saving'}
+        onMouseDown={(event) => {
+          event.preventDefault();
+          onSave();
+        }}
+      >
+        <WritingIcon name="save" />
+      </button>
       {linkOpen ? (
         <form
           className="writing-studio-link-popover"
@@ -607,7 +630,6 @@ function useWritingDoc(initialMarkdown: string, onCrdtUpdate: (update: Uint8Arra
 export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   ensureWritingStudioStyle();
   const [state, setState] = useState<StoredState | null>(null);
-  const [visibleEventCount, setVisibleEventCount] = useState(0);
   const [markdown, setMarkdown] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -620,6 +642,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [documentSearch, setDocumentSearch] = useState('');
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [railWidth, setRailWidth] = useState(readRailWidth);
   const [models, setModels] = useState<WritingModelInfo[]>([]);
   const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
@@ -706,8 +729,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         void pa.extension
           .invoke('writingStudioAppendUpdate', { updateBase64: bytesToBase64(update), markdown: nextMarkdown, actorId, documentId: activeDocumentId })
           .then(() => {
-            setVisibleEventCount((current) => current + 1);
             setSaveStatus('saved');
+            setLastSavedAt(new Date().toISOString());
           })
           .catch((err: Error) => {
             setSaveStatus('error');
@@ -792,8 +815,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setDocuments(next.documents ?? []);
     setActiveDocumentId(next.activeDocumentId ?? next.id ?? documentId ?? 'default');
     setSettingsDraft(next.settings);
-    setVisibleEventCount(next.events.length);
     setSaveStatus('saved');
+    setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id ?? documentId))?.updatedAt ?? new Date().toISOString());
     setActiveAnnotationId(null);
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
@@ -896,7 +919,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           const selection = firstAnnotation ? findAnnotationSelection(editor, firstAnnotation) : null;
           if (selection) setTimeout(() => editor.chain().focus().setTextSelection(selection).run(), 50);
         }
-        setVisibleEventCount((current) => current + result.annotations.length + 2);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -914,7 +936,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         const currentMarkdown = syncEditorMarkdown() ?? markdown;
         const result = (await pa.extension.invoke('writingStudioSendChat', { body, markdown: currentMarkdown, documentId: activeDocumentId })) as { messages: ChatMessage[] };
         setState((current) => (current ? { ...current, chat: result.messages } : current));
-        setVisibleEventCount((current) => current + 2);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -979,8 +1000,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         document: DocumentSummary;
       };
       setDocuments((current) => [result.document, ...current.filter((doc) => doc.id !== result.document.id)]);
-      setVisibleEventCount((current) => current + 1);
       setSaveStatus('saved');
+      setLastSavedAt(result.document.updatedAt ?? new Date().toISOString());
     } catch (err) {
       setSaveStatus('error');
       setError(err instanceof Error ? err.message : String(err));
@@ -995,6 +1016,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     setMarkdown(next.markdown);
     setMarkdownSilently(next.markdown);
     setSaveStatus('saved');
+    setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString());
     editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
   }, [editor, pa, setMarkdownSilently]);
 
@@ -1013,6 +1035,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       setMarkdown(next.markdown);
       setMarkdownSilently(next.markdown);
       setSaveStatus('saved');
+      setLastSavedAt((next.documents ?? []).find((doc) => doc.id === (next.activeDocumentId ?? next.id))?.updatedAt ?? new Date().toISOString());
       editor?.commands.setContent(next.markdown, { contentType: 'markdown' });
     },
     [editor, pa, setMarkdownSilently],
@@ -1088,25 +1111,26 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   }
 
   const openAnnotations = (state?.annotations ?? []).filter((annotation) => annotation.status === 'open');
-  const resolvedCount = (state?.annotations ?? []).filter((annotation) => annotation.status === 'resolved').length;
-  const eventCount = visibleEventCount;
   const chatMessages: ChatViewMessage[] = (state?.chat ?? []).map((message) => ({
     type: message.role === 'user' ? 'user' : 'text',
     id: message.id,
     ts: message.createdAt,
     text: message.body,
   }));
-  const saveStatusLabel = saveStatus === 'saved' ? 'Saved' : saveStatus === 'saving' ? 'Saving...' : saveStatus === 'unsaved' ? 'Unsaved' : 'Save failed';
+  const saveTooltip =
+    saveStatus === 'saved'
+      ? `Saved${lastSavedAt ? ` at ${formatTime(lastSavedAt)}` : ''}`
+      : saveStatus === 'saving'
+        ? 'Saving...'
+        : saveStatus === 'unsaved'
+          ? `Unsaved changes${lastSavedAt ? ` · Last saved ${formatTime(lastSavedAt)}` : ''}`
+          : `Save failed${lastSavedAt ? ` · Last saved ${formatTime(lastSavedAt)}` : ''}`;
   const layoutStyle = { '--writing-studio-rail-width': `${railWidth}px` } as CSSProperties;
 
   return (
     <main className={`writing-studio ${railCollapsed ? 'has-collapsed-rail' : ''}`} style={layoutStyle}>
       <section className="writing-studio-main">
-        <div className="writing-studio-meta">
-          <span>{eventCount} replay events · Last review {formatTime(state?.lastAgentRunAt ?? null)} · {resolvedCount} resolved</span>
-          <span className={`writing-studio-save-status is-${saveStatus}`}>{saveStatusLabel}</span>
-        </div>
-        <WritingFormatBar editor={editor} />
+        <WritingFormatBar editor={editor} saveStatus={saveStatus} saveTooltip={saveTooltip} onSave={() => void saveDocument()} />
         <div className="writing-studio-canvas">
           <div className="writing-studio-editor-frame">
             <EditorContent editor={editor} />
@@ -1180,11 +1204,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             {!railCollapsed && (
               <button className="writing-studio-icon-button" type="button" aria-label="New document" data-tooltip="New document" onClick={() => void createDocument()}>
                 <WritingIcon name="new" />
-              </button>
-            )}
-            {!railCollapsed && (
-              <button className="writing-studio-icon-button" type="button" aria-label="Save document" data-tooltip="Save document" onClick={() => void saveDocument()}>
-                <WritingIcon name="save" />
               </button>
             )}
             {!railCollapsed && (
