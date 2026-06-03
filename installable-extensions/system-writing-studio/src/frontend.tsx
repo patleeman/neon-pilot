@@ -20,6 +20,7 @@ import {
 } from '@neon-pilot/extensions/ui';
 import {
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   useCallback,
@@ -933,6 +934,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [models, setModels] = useState<WritingModelInfo[]>([]);
   const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState(() => readStringSetting(thinkingLevelStorageKey));
+  const documentsRef = useRef<DocumentSummary[]>([]);
+  const selectedTreePathRef = useRef<string | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({ reviewIntervalSeconds: 12, reviewPrompt: '' });
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
@@ -1242,8 +1245,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   );
 
   const handleTreeSelectionChange = useCallback((paths: readonly string[]) => {
-    const selectedPath = paths[0];
-    setSelectedTreePath(selectedPath ?? null);
+    const selectedPath = paths[0] ?? null;
+    selectedTreePathRef.current = selectedPath;
+    setSelectedTreePath(selectedPath);
     setDocumentModalMode('idle');
     setDocumentModalValue('');
   }, []);
@@ -1265,6 +1269,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   useEffect(() => {
     documentTreeModel.setIcons({ set: 'minimal', colored: false });
   }, [documentTreeModel]);
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
 
   useEffect(() => {
     load()
@@ -1525,10 +1533,40 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   );
 
   const openSelectedDocument = useCallback(() => {
-    if (!selectedDocument) return;
+    const selectedPath = selectedTreePathRef.current ?? selectedTreePath;
+    const selectedDocumentId = selectedPath ? documentIdByTreePathRef.current.get(selectedPath) : undefined;
+    const documentToOpen = selectedDocumentId
+      ? (documentsRef.current.find((doc) => doc.id === selectedDocumentId) ?? selectedDocument)
+      : selectedDocument;
+    if (!documentToOpen) return;
     setDocumentsOpen(false);
-    void load(selectedDocument.id);
-  }, [load, selectedDocument]);
+    void load(documentToOpen.id);
+  }, [load, selectedDocument, selectedTreePath]);
+
+  const openDocumentFromDoubleClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      const row = event.nativeEvent
+        .composedPath()
+        .find((entry): entry is HTMLElement => entry instanceof HTMLElement && entry.getAttribute('role') === 'treeitem');
+      const rowLabel = row?.getAttribute('aria-label') ?? '';
+      const clickedDocument = rowLabel.includes('.') ? (documentsRef.current.find((doc) => doc.fileName === rowLabel) ?? null) : null;
+
+      if (clickedDocument) {
+        setDocumentsOpen(false);
+        void load(clickedDocument.id);
+        return;
+      }
+
+      openSelectedDocument();
+    },
+    [load, openSelectedDocument],
+  );
+
+  const closeDocumentsModal = useCallback(() => {
+    setDocumentsOpen(false);
+    setDocumentModalMode('idle');
+    setDocumentModalValue('');
+  }, []);
 
   const beginDocumentModalMode = useCallback(
     (mode: DocumentModalMode) => {
@@ -1940,8 +1978,16 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       </aside>
 
       {settingsOpen && (
-        <div className="writing-studio-modal-backdrop" role="dialog" aria-modal="true" aria-label="Writing Studio settings">
-          <div className="writing-studio-modal">
+        <div
+          className="writing-studio-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Writing Studio settings"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSettingsOpen(false);
+          }}
+        >
+          <div className="writing-studio-modal" onMouseDown={(event) => event.stopPropagation()}>
             <div className="writing-studio-modal-header">
               <h2>Writing Studio settings</h2>
               <button
@@ -1992,8 +2038,16 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       )}
 
       {documentsOpen && (
-        <div className="writing-studio-modal-backdrop" role="dialog" aria-modal="true" aria-label="Open writing document">
-          <div className="writing-studio-modal is-docs">
+        <div
+          className="writing-studio-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Open writing document"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeDocumentsModal();
+          }}
+        >
+          <div className="writing-studio-modal is-docs" onMouseDown={(event) => event.stopPropagation()}>
             <div className="writing-studio-modal-header">
               <h2>Open document</h2>
               <button
@@ -2001,11 +2055,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                 type="button"
                 aria-label="Close documents"
                 data-tooltip="Close"
-                onClick={() => {
-                  setDocumentsOpen(false);
-                  setDocumentModalMode('idle');
-                  setDocumentModalValue('');
-                }}
+                onClick={closeDocumentsModal}
               >
                 <WritingIcon name="close" />
               </button>
@@ -2132,7 +2182,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
                 aria-label="Search documents"
                 autoFocus
               />
-              <div className="writing-studio-doc-list">
+              <div className="writing-studio-doc-list" onDoubleClick={openDocumentFromDoubleClick}>
                 {filteredDocuments.length === 0 ? (
                   <p className="writing-studio-muted writing-studio-doc-empty">No documents match that search.</p>
                 ) : (
