@@ -4,9 +4,9 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.10.1-rc.0** — release candidate being prepared.
+**v0.10.1-rc.1** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.1-rc.0
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.1-rc.1
 
 Highlights in this train:
 

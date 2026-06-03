@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.1-rc.1 — 2026-06-03
+
+### Highlights
+
+- Installs the Browser extension by default for new runtime profiles while keeping it removable through Extension Manager.
+- Removes the Code Mode installable extension from the first-party catalog and package set.
+- Lets local development catalog installs use already-packed extension bundles when release assets are not available yet.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.10.1-rc.0 — 2026-06-03
 
 ### Highlights
