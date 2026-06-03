@@ -1,4 +1,13 @@
-import { type ClipboardEventHandler, type KeyboardEventHandler, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ClipboardEventHandler,
+  type KeyboardEventHandler,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { buildSlashMenuItems, type SlashMenuItem } from '../../commands/slashMenu';
 import { type MentionItem } from '../../conversation/conversationMentions';
@@ -60,6 +69,7 @@ export function ChatRailComposer({
   onSelectModel,
   onSelectThinkingLevel,
   composerMeta,
+  externalDraft,
 }: {
   conversationId: string | null;
   workspaceCwd: string | null;
@@ -79,6 +89,7 @@ export function ChatRailComposer({
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
   composerMeta?: ReactNode;
+  externalDraft?: { id: string; text: string } | null;
 }) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
@@ -91,6 +102,7 @@ export function ChatRailComposer({
   const composerSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const composerMenuStateRef = useRef<Pick<UseConversationComposerMenusState, 'resetMenus'> | null>(null);
   const latestInputRef = useRef(input);
+  const lastExternalDraftIdRef = useRef<string | null>(null);
   const { composerAltHeld } = useComposerModifierKeys();
 
   useEffect(() => {
@@ -114,6 +126,22 @@ export function ChatRailComposer({
   useEffect(() => {
     latestInputRef.current = input;
   }, [input]);
+
+  useEffect(() => {
+    if (!externalDraft || externalDraft.id === lastExternalDraftIdRef.current) return;
+    lastExternalDraftIdRef.current = externalDraft.id;
+    const nextDraft = externalDraft.text.trim();
+    if (!nextDraft) return;
+    setInput((current) => (current.trim() ? `${current.trimEnd()}\n\n${nextDraft}` : nextDraft));
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      const end = textarea.value.length;
+      textarea.setSelectionRange(end, end);
+      composerSelectionRef.current = { start: end, end };
+    });
+  }, [externalDraft]);
 
   useEffect(() => {
     textareaRef.current?.focus();

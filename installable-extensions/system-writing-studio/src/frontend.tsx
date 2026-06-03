@@ -970,6 +970,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   });
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
+  const [chatDraftInsertion, setChatDraftInsertion] = useState<{ id: string; text: string } | null>(null);
   const [, setFormatStateVersion] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1414,13 +1415,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [editor],
   );
 
-  const discussAnnotation = useCallback(
-    (annotation: Annotation) => {
-      const lines = ['Can we discuss this annotation?', '', `> ${annotation.quote}`, '', `${annotation.kind}: ${annotation.body}`];
-      void sendChat(lines.join('\n'));
-    },
-    [sendChat],
-  );
+  const discussAnnotation = useCallback((annotation: Annotation) => {
+    const lines = ['Can we discuss this annotation?', '', quoteForChat(annotation.quote), '', `${annotation.kind}: ${annotation.body}`];
+    setChatDraftInsertion({ id: `annotation-${annotation.id}-${Date.now()}`, text: lines.join('\n') });
+  }, []);
 
   const sendSelectionToChat = useCallback(
     (intent: 'discuss' | 'enhance') => {
@@ -1431,9 +1429,9 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         intent === 'enhance'
           ? 'Can you suggest a stronger version of this passage? Preserve my voice, then explain the tradeoffs.'
           : 'Can we discuss this passage?';
-      void sendChat([prompt, '', quoteForChat(text)].join('\n'));
+      setChatDraftInsertion({ id: `selection-${intent}-${Date.now()}`, text: [prompt, '', quoteForChat(text)].join('\n') });
     },
-    [clearSelectionMenu, selectionMenu?.text, sendChat],
+    [clearSelectionMenu, selectionMenu?.text],
   );
 
   const reviewSelection = useCallback(() => {
@@ -2058,6 +2056,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
               onSelectModel={handleSelectModel}
               onSelectThinkingLevel={handleSelectThinkingLevel}
               composerMeta={<></>}
+              externalDraft={chatDraftInsertion}
             />
           </div>
         </section>
