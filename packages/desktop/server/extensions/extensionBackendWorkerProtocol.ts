@@ -68,6 +68,7 @@ export interface ExtensionBackendWorkerCapabilityRequest {
   capability: string;
   operation: string;
   input?: unknown;
+  context?: ExtensionBackendWorkerBackendContextOptions;
 }
 
 export type ExtensionBackendWorkerCapabilityResponse =

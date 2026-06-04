@@ -2,6 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const serverModuleMocks = vi.hoisted(() => ({
   permissions: ['agent:run', 'agent:conversations'] as string[],
+  liveSubscribers: [] as Array<(event: unknown) => void>,
+  liveSessionCounter: 0,
+  liveCreated: [] as Array<{ cwd: string; options: unknown }>,
+  liveDestroyed: [] as string[],
+  liveAborted: [] as string[],
+  liveSubmitted: [] as Array<{ sessionId: string; text: string; images: unknown }>,
   callServerModuleExport: vi.fn(async (specifier: string, exportName: string, ...args: unknown[]) => {
     if (specifier === '../../extensions/extensionPermissions.js' && exportName === 'assertExtensionPermission') {
       const [extensionId, permission, capability] = args as [string, string, string];
@@ -11,6 +17,37 @@ const serverModuleMocks = vi.hoisted(() => ({
       return undefined;
     }
     if (specifier === '@neon-pilot/core' && exportName === 'getPiAgentRuntimeDir') return '/runtime';
+    if (specifier === '../../conversations/liveSessions.js' && exportName === 'createSession') {
+      const [cwd, options] = args as [string, unknown];
+      const id = `live-${++serverModuleMocks.liveSessionCounter}`;
+      serverModuleMocks.liveCreated.push({ cwd, options });
+      return { id, sessionFile: `/tmp/${id}.jsonl` };
+    }
+    if (specifier === '../../conversations/liveSessions.js' && exportName === 'subscribe') {
+      const [, listener] = args as [string, (event: unknown) => void];
+      serverModuleMocks.liveSubscribers.push(listener);
+      return () => {
+        serverModuleMocks.liveSubscribers = serverModuleMocks.liveSubscribers.filter((candidate) => candidate !== listener);
+      };
+    }
+    if (specifier === '../../conversations/liveSessions.js' && exportName === 'submitPromptSession') {
+      const [sessionId, text, , images] = args as [string, string, unknown, unknown];
+      serverModuleMocks.liveSubmitted.push({ sessionId, text, images });
+      serverModuleMocks.liveSubscribers.forEach((listener) => listener({ type: 'text_delta', delta: 'probe result' }));
+      serverModuleMocks.liveSubscribers.forEach((listener) => listener({ type: 'agent_end' }));
+      serverModuleMocks.liveSubscribers.forEach((listener) => listener({ type: 'turn_end' }));
+      return { acceptedAs: 'started', completion: Promise.resolve() };
+    }
+    if (specifier === '../../conversations/liveSessions.js' && exportName === 'abortSession') {
+      const [sessionId] = args as [string];
+      serverModuleMocks.liveAborted.push(sessionId);
+      return undefined;
+    }
+    if (specifier === '../../conversations/liveSessions.js' && exportName === 'destroySession') {
+      const [sessionId] = args as [string];
+      serverModuleMocks.liveDestroyed.push(sessionId);
+      return undefined;
+    }
     throw new Error(`unexpected server module export: ${specifier}#${exportName}`);
   }),
   importServerModule: vi.fn(async (specifier: string) => {
@@ -47,9 +84,9 @@ function createSession(overrides?: { prompt?: () => Promise<void>; messages?: un
     prompt: vi.fn(async () => {
       if (overrides?.prompt) return overrides.prompt();
       if (overrides?.emitText === false) return;
-      subscribers.forEach((handler) =>
-        handler({ type: 'message_end', message: { role: 'assistant', content: [{ type: 'text', text: 'probe result' }] } }),
-      );
+      const message = { role: 'assistant', content: [{ type: 'text', text: 'probe result' }] };
+      session.messages.push(message);
+      subscribers.forEach((handler) => handler({ type: 'message_end', message }));
     }),
     abort: vi.fn(),
     dispose: vi.fn(),
@@ -96,6 +133,12 @@ describe('extension agent backend API', () => {
   afterEach(() => {
     resetExtensionAgentDynamicImportForTests();
     serverModuleMocks.permissions = ['agent:run', 'agent:conversations'];
+    serverModuleMocks.liveSubscribers = [];
+    serverModuleMocks.liveSessionCounter = 0;
+    serverModuleMocks.liveCreated = [];
+    serverModuleMocks.liveDestroyed = [];
+    serverModuleMocks.liveAborted = [];
+    serverModuleMocks.liveSubmitted = [];
     vi.clearAllMocks();
     vi.useRealTimers();
   });
@@ -115,7 +158,7 @@ describe('extension agent backend API', () => {
   });
 
   it('keeps extension-owned hidden conversations for multiple sends', async () => {
-    installImporter();
+    const { createAgentSession, session } = installImporter();
     const ctx = createCtx();
 
     const created = await createAgentConversation({ title: 'Probe thread', tools: 'none' }, ctx);
@@ -126,6 +169,10 @@ describe('extension agent backend API', () => {
 
     expect(first.text).toBe('probe result');
     expect(second.text).toBe('probe result');
+    expect(createAgentSession).toHaveBeenCalledTimes(1);
+    expect(createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/workspace', noTools: 'all' }));
+    expect(session.prompt).toHaveBeenCalledWith('first', undefined);
+    expect(session.prompt).toHaveBeenCalledWith('second', undefined);
     expect(listed.map((item) => item.id)).toContain(created.id);
     expect(fetched).toMatchObject({
       id: created.id,
@@ -136,8 +183,7 @@ describe('extension agent backend API', () => {
   });
 
   it('streams hidden extension-owned conversation turns', async () => {
-    const session = createSession();
-    installImporter({ session });
+    const { session } = installImporter();
     const ctx = createCtx();
     const created = await createAgentConversation({ title: 'Streaming probe' }, ctx);
 
@@ -156,6 +202,17 @@ describe('extension agent backend API', () => {
       { type: 'turn_end' },
     ]);
     expect(session.prompt).toHaveBeenCalledWith('stream this', undefined);
+  });
+
+  it('aborts hidden direct agent conversations', async () => {
+    const { session } = installImporter();
+    const ctx = createCtx();
+    const created = await createAgentConversation({ title: 'Abort hidden' }, ctx);
+
+    const aborted = await abortAgentConversation({ conversationId: created.id }, ctx);
+
+    expect(aborted).toMatchObject({ id: created.id, isBusy: false });
+    expect(session.abort).toHaveBeenCalled();
   });
 
   it('rejects streaming visible saved conversations because they use host live-session events', async () => {

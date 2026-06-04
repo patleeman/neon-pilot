@@ -1,8 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 
-import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
+import type { ExtensionBackendContext, ExtensionRouteRequest, ExtensionRouteResponse, ExtensionRouteSseEvent } from '@neon-pilot/extensions';
+import {
+  abortAgentConversation,
+  createAgentConversation,
+  getAgentConversation,
+  runAgentTask,
+  streamAgentMessage,
+} from '@neon-pilot/extensions/backend/agent';
 
 type EventType =
   | 'yjs_update'
@@ -66,6 +72,7 @@ interface StoredState {
   events: WritingEvent[];
   annotations: Annotation[];
   chat: ChatMessage[];
+  chatConversationId?: string;
   lastAgentRunAt: string | null;
   settings: WritingSettings;
 }
@@ -92,6 +99,7 @@ const DEFAULT_DOCUMENT_ID = 'default';
 const INDEX_KEY = 'documents/index';
 const legacyStateKey = 'documents/default';
 const documentKey = (id: string) => `documents/by-id/${id}`;
+const pendingChatKey = (id: string) => `chat/pending/${id}`;
 
 const seedMarkdown = `# Draft
 
@@ -478,7 +486,7 @@ ${reviewMarkdown}`;
   return annotations;
 }
 
-async function buildAgentChatReply(message: string, state: StoredState, ctx: ExtensionBackendContext, modelRef?: string): Promise<string> {
+function buildAgentChatPrompt(message: string, state: StoredState): string {
   const openAnnotations = state.annotations
     .filter((annotation) => annotation.status === 'open')
     .slice(0, 12)
@@ -491,7 +499,7 @@ async function buildAgentChatReply(message: string, state: StoredState, ctx: Ext
     .slice(-8)
     .map((chatMessage) => `${chatMessage.role === 'agent' ? 'assistant' : 'user'}: ${chatMessage.body}`)
     .join('\n\n');
-  const prompt = `You are the Writing Studio collaborator inside Neon Pilot.
+  return `You are the Writing Studio collaborator inside Neon Pilot.
 
 The user is chatting beside a markdown draft. Keep the document in focus: answer the user's request, discuss selected passages, suggest concrete edits, or use tools when useful.
 
@@ -517,10 +525,54 @@ ${recentChat || '(none)'}
 
 User message:
 ${message}`;
+}
+
+async function buildAgentChatReply(message: string, state: StoredState, ctx: ExtensionBackendContext, modelRef?: string): Promise<string> {
+  const prompt = buildAgentChatPrompt(message, state);
   const result = await runWritingStudioAgentTask({ prompt, tools: 'default', timeoutMs: 60_000, modelRef }, ctx);
   const text = result.text.trim();
   if (!text) throw new Error('Writing Studio agent returned an empty response.');
   return text;
+}
+
+async function ensureChatConversation(state: StoredState, ctx: ExtensionBackendContext, modelRef?: string): Promise<string> {
+  if (state.chatConversationId) {
+    try {
+      await getAgentConversation({ conversationId: state.chatConversationId }, ctx);
+      return state.chatConversationId;
+    } catch {
+      state.chatConversationId = undefined;
+    }
+  }
+  try {
+    const conversation = await createAgentConversation(
+      {
+        title: `Writing Studio: ${state.fileName}`,
+        cwd: ctx.toolContext?.cwd,
+        modelRef,
+        tools: 'default',
+        visibility: 'hidden',
+        persistence: 'ephemeral',
+      },
+      ctx,
+    );
+    state.chatConversationId = conversation.id;
+    return conversation.id;
+  } catch (error) {
+    if (!modelRef || !isUnavailableAgentModelError(error)) throw error;
+    const conversation = await createAgentConversation(
+      {
+        title: `Writing Studio: ${state.fileName}`,
+        cwd: ctx.toolContext?.cwd,
+        tools: 'default',
+        visibility: 'hidden',
+        persistence: 'ephemeral',
+      },
+      ctx,
+    );
+    state.chatConversationId = conversation.id;
+    return conversation.id;
+  }
 }
 
 function readDocumentId(input: unknown): string | undefined {
@@ -777,6 +829,94 @@ export async function sendChat(input: unknown, ctx: ExtensionBackendContext): Pr
   state.events.push(event('chat_message', 'user', { message: userMessage }), event('chat_message', 'agent', { message: agentMessage }));
   await writeState(ctx, state);
   return { messages: state.chat };
+}
+
+interface PendingChatTurn {
+  documentId: string;
+  prompt: string;
+  modelRef?: string;
+}
+
+export async function prepareChat(input: unknown, ctx: ExtensionBackendContext): Promise<{ pendingId: string; messages: ChatMessage[] }> {
+  const payload = input as { body?: string; markdown?: string; documentId?: string; modelRef?: string };
+  const body = typeof payload.body === 'string' ? payload.body.trim() : '';
+  if (!body) throw new Error('Chat message is required.');
+  const state = await readState(ctx, payload.documentId);
+  if (typeof payload.markdown === 'string') state.markdown = payload.markdown;
+  const userMessage: ChatMessage = { id: randomUUID(), role: 'user', body, createdAt: nowIso() };
+  const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
+  const prompt = buildAgentChatPrompt(body, { ...state, chat: [...state.chat, userMessage] });
+  state.chat.push(userMessage);
+  state.events.push(event('chat_message', 'user', { message: userMessage }));
+  await writeState(ctx, state);
+  const pendingId = randomUUID();
+  await ctx.storage.put<PendingChatTurn>(pendingChatKey(pendingId), { documentId: state.id, prompt, modelRef });
+  return { pendingId, messages: state.chat };
+}
+
+export async function chatStream(request: ExtensionRouteRequest, ctx: ExtensionBackendContext): Promise<ExtensionRouteResponse> {
+  const pendingIdValue = request.query.pendingId;
+  const pendingId = Array.isArray(pendingIdValue) ? pendingIdValue[0] : pendingIdValue;
+  if (!pendingId) throw new Error('pendingId is required.');
+  const pending = await ctx.storage.get<PendingChatTurn>(pendingChatKey(pendingId)).catch(() => null);
+  if (!pending || typeof pending !== 'object') throw new Error('Pending chat turn not found.');
+
+  async function* events(): AsyncIterable<ExtensionRouteSseEvent> {
+    let assistantText = '';
+    let sawError = false;
+    let saved = false;
+    const saveAssistantMessage = async (): Promise<ChatMessage | null> => {
+      if (saved || sawError) return null;
+      const body = assistantText.trim();
+      if (!body) return null;
+      const state = await readState(ctx, pending.documentId);
+      const agentMessage: ChatMessage = { id: randomUUID(), role: 'agent', body, createdAt: nowIso() };
+      state.chat.push(agentMessage);
+      state.events.push(event('chat_message', 'agent', { message: agentMessage }));
+      await writeState(ctx, state);
+      saved = true;
+      return agentMessage;
+    };
+    const streamOnce = async function* (conversationId: string, timeoutMs: number): AsyncIterable<ExtensionRouteSseEvent> {
+      const result = await streamAgentMessage({ conversationId, text: pending.prompt, timeoutMs }, ctx);
+      for await (const item of result.events) {
+        const data = item.data;
+        if (data?.type === 'user_message') continue;
+        if (data?.type === 'text_delta') assistantText += data.delta;
+        if (data?.type === 'agent_end' && !assistantText.trim() && typeof data.text === 'string') assistantText = data.text;
+        if (data?.type === 'error') sawError = true;
+        if (data?.type === 'turn_end') {
+          const agentMessage = await saveAssistantMessage();
+          if (agentMessage) yield { data: { type: 'writing_studio_chat_saved', message: agentMessage } };
+        }
+        yield item;
+      }
+    };
+    try {
+      const streamState = await readState(ctx, pending.documentId);
+      const selectedConversationId = await ensureChatConversation(streamState, ctx);
+      await writeState(ctx, streamState);
+      for await (const item of streamOnce(selectedConversationId, 90_000)) yield item;
+      const agentMessage = await saveAssistantMessage();
+      if (agentMessage) {
+        yield { data: { type: 'writing_studio_chat_saved', message: agentMessage } };
+      } else if (!sawError && !assistantText.trim()) {
+        yield { data: { type: 'error', message: 'Writing Studio chat finished without an assistant response.' } };
+      }
+    } finally {
+      await ctx.storage.delete(pendingChatKey(pendingId)).catch(() => undefined);
+    }
+  }
+
+  return { stream: 'sse', events: events() };
+}
+
+export async function abortChat(input: unknown, ctx: ExtensionBackendContext): Promise<{ ok: true }> {
+  const state = await readState(ctx, readDocumentId(input));
+  if (state.chatConversationId) {
+    await abortAgentConversation({ conversationId: state.chatConversationId }, ctx).catch(() => undefined);
+  }
+  return { ok: true };
 }
 
 export async function saveSettings(input: unknown, ctx: ExtensionBackendContext): Promise<{ settings: WritingSettings }> {

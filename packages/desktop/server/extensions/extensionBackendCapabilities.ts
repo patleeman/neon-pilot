@@ -31,6 +31,15 @@ import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled 
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
+import {
+  abortAgentConversation,
+  createAgentConversation,
+  disposeAgentConversation,
+  getAgentConversation,
+  listAgentConversations,
+  sendAgentMessage,
+  streamAgentMessage,
+} from './backendApi/agent.js';
 import { refreshHostSkillMcpConfig, type ExtensionRuntimeRefreshSkillMcpConfigInput } from './extensionRuntimeCapability.js';
 import {
   closeTerminalSession,
@@ -1118,6 +1127,71 @@ async function dispatchTerminalCapability(request: ExtensionBackendWorkerCapabil
   throw new Error(`Unsupported terminal capability operation: ${request.operation}`);
 }
 
+async function dispatchAgentCapability(
+  request: ExtensionBackendWorkerCapabilityRequest,
+  emit?: ExtensionBackendCapabilityEventEmitter,
+): Promise<unknown> {
+  const input = normalizeRecordInput(request.input, 'Agent');
+  const ctx = {
+    extensionId: request.extensionId,
+    ...(request.context?.toolContext ? { toolContext: request.context.toolContext } : {}),
+    ...(request.context?.agentToolContext ? { agentToolContext: request.context.agentToolContext } : {}),
+  };
+
+  if (request.operation === 'createConversation') {
+    return createAgentConversation(normalizeRecordInput(input.input, 'Agent create conversation') as never, ctx);
+  }
+  if (request.operation === 'sendMessage') {
+    return sendAgentMessage(normalizeRecordInput(input.input, 'Agent send message') as never, ctx);
+  }
+  if (request.operation === 'getConversation') {
+    return getAgentConversation(normalizeRecordInput(input.input, 'Agent get conversation') as never, ctx);
+  }
+  if (request.operation === 'listConversations') {
+    return listAgentConversations(input.input, ctx);
+  }
+  if (request.operation === 'abortConversation') {
+    return abortAgentConversation(normalizeRecordInput(input.input, 'Agent abort conversation') as never, ctx);
+  }
+  if (request.operation === 'disposeConversation') {
+    return disposeAgentConversation(normalizeRecordInput(input.input, 'Agent dispose conversation') as never, ctx);
+  }
+  if (request.operation === 'streamMessage') {
+    const handleId = requireString(input.handleId, 'Agent stream handle id');
+    try {
+      const result = await streamAgentMessage(normalizeRecordInput(input.input, 'Agent stream message') as never, ctx);
+      for await (const event of result.events) {
+        emit?.({
+          kind: 'capabilityEvent',
+          extensionId: request.extensionId,
+          capability: 'agent',
+          operation: 'streamEvent',
+          input: { handleId, event: event.data },
+        });
+      }
+      emit?.({
+        kind: 'capabilityEvent',
+        extensionId: request.extensionId,
+        capability: 'agent',
+        operation: 'streamEnd',
+        input: { handleId },
+      });
+      return { ok: true };
+    } catch (error) {
+      emit?.({
+        kind: 'capabilityEvent',
+        extensionId: request.extensionId,
+        capability: 'agent',
+        operation: 'streamError',
+        input: { handleId, message: error instanceof Error ? error.message : String(error) },
+      });
+      throw error;
+    }
+  }
+
+  throw new Error(`Unsupported agent capability operation: ${request.operation}`);
+}
+
 async function dispatchBrowserCapability(request: ExtensionBackendWorkerCapabilityRequest): Promise<unknown> {
   const host = getWorkbenchBrowserToolHost();
   if (!host) {
@@ -1504,6 +1578,9 @@ export function createExtensionBackendCapabilityDispatcher(
       listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
   };
   return (request, emit) => {
+    if (request.capability === 'agent') {
+      return dispatchAgentCapability(request, emit);
+    }
     if (request.capability === 'browser') {
       return dispatchBrowserCapability(request);
     }

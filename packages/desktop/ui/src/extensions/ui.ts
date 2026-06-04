@@ -24,6 +24,7 @@ export {
 export { Keycap } from '../components/ui';
 export { type DesktopKnowledgeEntryContextMenuAction, getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 export { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
+export { streamExtensionRouteSse } from './extensionRouteStream';
 export { useApi } from '../hooks/useApi';
 export { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 export {

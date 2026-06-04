@@ -861,6 +861,30 @@ async function runExtensionBackendRouteInWorker(
   );
 }
 
+async function runExtensionBackendRouteInHost(
+  extensionId: string,
+  method: string,
+  routePath: string,
+  exportName: string,
+  request: ExtensionRouteRequest,
+  serverContext?: ExtensionBackendServerContext,
+): Promise<unknown> {
+  return runExtensionBackendExport(
+    extensionId,
+    exportName,
+    extensionBackendOperation('route', `route ${method} ${routePath}`, { target: routePath }),
+    (handler) => handler(request, createBackendContext(extensionId, serverContext)),
+    {
+      createMissingExportError: () =>
+        new ExtensionLoadError({
+          extensionId,
+          code: 'handler_not_found',
+          message: `Extension route handler not found: ${exportName}`,
+        }),
+    },
+  );
+}
+
 function clearWorkerImportBackend(extensionId: string): void {
   workerImportBackendRunner?.clearModule(extensionId);
 }
@@ -963,7 +987,9 @@ export async function invokeExtensionRoute(
   if (!route) return { status: 404, body: { error: 'Extension route not found.' } };
   let result: unknown;
   try {
-    if (canRunRouteInBackendWorker(route)) {
+    if (route.stream === 'sse') {
+      result = await runExtensionBackendRouteInHost(extensionId, method, routePath, route.handler, request, serverContext);
+    } else if (canRunRouteInBackendWorker(route)) {
       result = await runExtensionBackendRouteInWorker(extensionId, method, routePath, route.handler, request, serverContext);
     } else {
       throw new ExtensionLoadError({

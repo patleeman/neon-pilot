@@ -3263,7 +3263,7 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('routes SSE backend routes through the worker runner when worker-declared', async () => {
+  it('runs SSE backend routes in host so async event iterables can stream', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'sse-route-ext');
@@ -3315,10 +3315,10 @@ describe('extension backend action invocation', () => {
 
     await expect(
       invokeExtensionRoute('sse-route-ext', 'GET', '/stream', { method: 'GET', path: '/stream', query: {}, params: {} }),
-    ).resolves.toEqual({ status: 200, body: undefined });
+    ).resolves.toMatchObject({ stream: 'sse', events: [] });
 
-    expect(runExport).not.toHaveBeenCalled();
-    expect(workerRunner.runWorkerExport).toHaveBeenCalled();
+    expect(runExport).toHaveBeenCalled();
+    expect(workerRunner.runWorkerExport).not.toHaveBeenCalled();
   });
 
   it('returns HTTP 500 when a backend route export is missing', async () => {

@@ -28,11 +28,13 @@ const shellHandleCallbacks = new Map<
 let nextCapabilityRequestId = 0;
 let nextShellHandleId = 0;
 let nextRouteStreamHandleId = 0;
-const extensionCapabilityScope = new AsyncLocalStorage<string>();
+const extensionCapabilityScope = new AsyncLocalStorage<{ extensionId: string; contextOptions?: ExtensionBackendWorkerBackendContextOptions }>();
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+const EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS = Symbol.for('neon-pilot.extensionHostCapabilityEventHandlers');
 
 type ExtensionBackendWorkerGlobal = typeof globalThis & {
   [EXTENSION_HOST_CAPABILITY_BRIDGE]?: (capability: string, operation: string, input?: unknown) => Promise<unknown>;
+  [EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS]?: Set<(event: ExtensionBackendWorkerCapabilityEvent) => void>;
 };
 
 if (!parentPort) {
@@ -40,11 +42,11 @@ if (!parentPort) {
 }
 
 (globalThis as ExtensionBackendWorkerGlobal)[EXTENSION_HOST_CAPABILITY_BRIDGE] = (capability, operation, input) => {
-  const extensionId = extensionCapabilityScope.getStore();
-  if (!extensionId) {
+  const scope = extensionCapabilityScope.getStore();
+  if (!scope) {
     throw new Error('Extension host capability bridge is unavailable outside an active extension backend worker request.');
   }
-  return callHostCapability(extensionId, capability, operation, input);
+  return callHostCapability(scope.extensionId, capability, operation, input, scope.contextOptions);
 };
 
 function loadModule(extensionId: string, compiled: { path: string; hash: string }): Promise<ExtensionBackendModule> {
@@ -63,11 +65,25 @@ function loadModule(extensionId: string, compiled: { path: string; hash: string 
   return module;
 }
 
-function callHostCapability(extensionId: string, capability: string, operation: string, input?: unknown): Promise<unknown> {
+function callHostCapability(
+  extensionId: string,
+  capability: string,
+  operation: string,
+  input?: unknown,
+  contextOptions?: ExtensionBackendWorkerBackendContextOptions,
+): Promise<unknown> {
   const id = ++nextCapabilityRequestId;
   return new Promise((resolve, reject) => {
     pendingCapabilities.set(id, { resolve, reject });
-    parentPort!.postMessage({ id, kind: 'capabilityRequest', extensionId, capability, operation, input });
+    parentPort!.postMessage({
+      id,
+      kind: 'capabilityRequest',
+      extensionId,
+      capability,
+      operation,
+      input,
+      ...(contextOptions ? { context: contextOptions } : {}),
+    });
   });
 }
 
@@ -81,6 +97,10 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
 }
 
 function handleCapabilityEvent(event: ExtensionBackendWorkerCapabilityEvent): void {
+  for (const handler of (globalThis as ExtensionBackendWorkerGlobal)[EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS] ?? []) {
+    handler(event);
+  }
+
   if (event.capability !== 'shell') return;
   const input = event.input && typeof event.input === 'object' && !Array.isArray(event.input) ? (event.input as Record<string, unknown>) : null;
   const handleId = typeof input?.handleId === 'string' ? input.handleId : '';
@@ -461,7 +481,9 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
       }
       const contextOptions = typeof request.context === 'object' ? request.context : undefined;
       const args = request.context ? [...request.args, createWorkerBackendContext(request.extensionId, contextOptions)] : request.args;
-      const result = await extensionCapabilityScope.run(request.extensionId, () => (handler as (...args: unknown[]) => unknown)(...args));
+      const result = await extensionCapabilityScope.run({ extensionId: request.extensionId, contextOptions }, () =>
+        (handler as (...args: unknown[]) => unknown)(...args),
+      );
       return { id: request.id, ok: true, result: serializeRouteStreamResult(result) };
     }
 

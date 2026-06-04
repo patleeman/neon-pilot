@@ -15,6 +15,7 @@ import {
   ChatView,
   ErrorState,
   LoadingState,
+  streamExtensionRouteSse,
   ToolbarButton,
   useFileTreeModel,
 } from '@neon-pilot/extensions/ui';
@@ -164,6 +165,18 @@ interface ChatViewMessage {
   ts: string;
   text: string;
 }
+
+type ChatStreamEvent =
+  | { type: 'agent_start' }
+  | { type: 'text_delta'; delta: string }
+  | { type: 'thinking_delta'; delta: string }
+  | { type: 'tool_start'; toolCallId: string; toolName: string; args: Record<string, unknown> }
+  | { type: 'tool_update'; toolCallId: string; partialResult: unknown }
+  | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean; durationMs: number; output: string; details?: unknown }
+  | { type: 'agent_end'; text?: string }
+  | { type: 'turn_end' }
+  | { type: 'error'; message: string }
+  | { type: 'writing_studio_chat_saved'; message: ChatMessage };
 
 type WritingIconName =
   | 'open'
@@ -988,6 +1001,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const reviewStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
   const chatRunToken = useRef(0);
+  const chatAbortController = useRef<AbortController | null>(null);
+  const chatStreamingMessageId = useRef<string | null>(null);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const folderPathByTreePathRef = useRef(new Map<string, string>());
   const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
@@ -1480,29 +1495,99 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       if (!body.trim()) return;
       const runToken = chatRunToken.current + 1;
       chatRunToken.current = runToken;
-      const optimisticMessage: ChatMessage = {
-        id: `local-user-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        role: 'user',
-        body: body.trim(),
-        createdAt: new Date().toISOString(),
-      };
+      chatAbortController.current?.abort();
+      chatAbortController.current = null;
+      chatStreamingMessageId.current = null;
       setBusy('chat');
-      setState((current) => (current ? { ...current, chat: [...current.chat, optimisticMessage] } : current));
       try {
         const currentMarkdown = syncEditorMarkdown() ?? markdown;
-        const result = (await pa.extension.invoke('writingStudioSendChat', {
+        const prepared = (await pa.extension.invoke('writingStudioPrepareChat', {
           body: body.trim(),
           markdown: currentMarkdown,
           documentId: activeDocumentId,
-          modelRef: currentModel || undefined,
-        })) as { messages: ChatMessage[] };
+        })) as { pendingId: string; messages: ChatMessage[] };
         if (chatRunToken.current !== runToken) return;
-        setState((current) => (current ? { ...current, chat: result.messages } : current));
+        const streamingMessageId = `stream-agent-${prepared.pendingId}`;
+        chatStreamingMessageId.current = streamingMessageId;
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                chat: [...prepared.messages, { id: streamingMessageId, role: 'agent', body: '', createdAt: new Date().toISOString() }],
+              }
+            : current,
+        );
+        const abortController = new AbortController();
+        chatAbortController.current = abortController;
+        let streamedText = '';
+        for await (const data of streamExtensionRouteSse<ChatStreamEvent>(
+          'system-writing-studio',
+          `/chat/stream?pendingId=${encodeURIComponent(prepared.pendingId)}`,
+          { signal: abortController.signal },
+        )) {
+          if (chatRunToken.current !== runToken) return;
+          if (data.type === 'text_delta') {
+            streamedText += data.delta;
+            setState((current) =>
+              current
+                ? {
+                    ...current,
+                    chat: current.chat.map((message) =>
+                      message.id === streamingMessageId ? { ...message, body: streamedText } : message,
+                    ),
+                  }
+                : current,
+            );
+            continue;
+          }
+          if (data.type === 'error') {
+            setError(data.message);
+            abortController.abort();
+            if (chatAbortController.current === abortController) chatAbortController.current = null;
+            chatStreamingMessageId.current = null;
+            setState((current) =>
+              current ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) } : current,
+            );
+            setBusy((current) => (current === 'chat' ? null : current));
+            return;
+          }
+          if (data.type === 'writing_studio_chat_saved') {
+            chatStreamingMessageId.current = null;
+            setState((current) =>
+              current
+                ? {
+                    ...current,
+                    chat: current.chat.map((message) => (message.id === streamingMessageId ? data.message : message)),
+                  }
+                : current,
+            );
+            continue;
+          }
+          if (data.type === 'turn_end') {
+            abortController.abort();
+            if (chatAbortController.current === abortController) chatAbortController.current = null;
+            chatStreamingMessageId.current = null;
+            setState((current) =>
+              current ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) } : current,
+            );
+            setBusy((current) => (current === 'chat' ? null : current));
+          }
+        }
       } catch (err) {
         if (chatRunToken.current !== runToken) return;
-        setError(err instanceof Error ? err.message : String(err));
+        if (!(err instanceof DOMException && err.name === 'AbortError')) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+        const streamingMessageId = chatStreamingMessageId.current;
+        chatStreamingMessageId.current = null;
+        setState((current) =>
+          current && streamingMessageId
+            ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) }
+            : current,
+        );
+        setBusy((current) => (current === 'chat' ? null : current));
       } finally {
-        if (chatRunToken.current === runToken) setBusy(null);
+        if (chatRunToken.current === runToken) chatAbortController.current = null;
       }
     },
     [activeDocumentId, currentModel, markdown, pa, syncEditorMarkdown],
@@ -1510,8 +1595,18 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
 
   const abortChat = useCallback(() => {
     chatRunToken.current += 1;
+    chatAbortController.current?.abort();
+    chatAbortController.current = null;
+    const streamingMessageId = chatStreamingMessageId.current;
+    chatStreamingMessageId.current = null;
+    if (streamingMessageId) {
+      setState((current) =>
+        current ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) } : current,
+      );
+    }
+    void pa.extension.invoke('writingStudioAbortChat', { documentId: activeDocumentId }).catch(() => undefined);
     setBusy((current) => (current === 'chat' ? null : current));
-  }, []);
+  }, [activeDocumentId, pa]);
 
   const selectAnnotation = useCallback(
     (annotation: Annotation) => {

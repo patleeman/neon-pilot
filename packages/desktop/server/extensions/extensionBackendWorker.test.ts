@@ -225,6 +225,83 @@ export async function doThing(_input, ctx) {
     await waitForPostMessage({ id: 15, ok: true, result: { ok: true } });
   });
 
+  it('streams host agent capability events into backend exports', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+import { streamAgentMessage } from '@neon-pilot/extensions/backend/agent';
+
+export async function doThing(_input, ctx) {
+  const result = await streamAgentMessage({ conversationId: 'agent-1', text: 'hello' }, ctx);
+  const events = [];
+  for await (const item of result.events) {
+    events.push(item.data);
+  }
+  return events;
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 151,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-agent-stream' },
+      exportName: 'doThing',
+      args: [{}],
+      context: {
+        type: 'backend',
+        toolContext: { cwd: '/repo' },
+        agentToolContext: { cwd: '/repo', model: { id: 'mimo-v2.5', provider: 'opencode-go' } },
+      },
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'agent',
+      operation: 'streamMessage',
+    });
+    const request = workerThreads.parentPort.postMessage.mock.calls
+      .map(([message]) => message)
+      .find((message) => {
+        const candidate = message as { id?: number; capability?: string; operation?: string };
+        return candidate.id === 1 && candidate.capability === 'agent' && candidate.operation === 'streamMessage';
+    }) as { input?: { handleId?: string; input?: unknown } };
+    expect(request.input).toMatchObject({ input: { conversationId: 'agent-1', text: 'hello' } });
+    expect(request).toMatchObject({
+      context: {
+        toolContext: { cwd: '/repo' },
+        agentToolContext: { cwd: '/repo', model: { id: 'mimo-v2.5', provider: 'opencode-go' } },
+      },
+    });
+    const handleId = request.input?.handleId;
+    expect(handleId).toEqual(expect.stringMatching(/^agent-stream-/));
+
+    workerThreads.messageHandler?.({
+      kind: 'capabilityEvent',
+      extensionId: 'worker-ext',
+      capability: 'agent',
+      operation: 'streamEvent',
+      input: { handleId, event: { type: 'text_delta', delta: 'hi' } },
+    });
+    workerThreads.messageHandler?.({
+      kind: 'capabilityEvent',
+      extensionId: 'worker-ext',
+      capability: 'agent',
+      operation: 'streamEnd',
+      input: { handleId },
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { ok: true } });
+
+    await waitForPostMessage({ id: 151, ok: true, result: [{ type: 'text_delta', delta: 'hi' }] });
+  });
+
   it('runs backend exports with host-mediated conversation metadata capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

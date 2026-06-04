@@ -68,6 +68,18 @@
         "worker": { "enabled": true, "timeoutMs": 90000 }
       },
       {
+        "id": "writingStudioPrepareChat",
+        "handler": "prepareChat",
+        "title": "Prepare writing chat stream",
+        "worker": { "enabled": true, "timeoutMs": 90000 }
+      },
+      {
+        "id": "writingStudioAbortChat",
+        "handler": "abortChat",
+        "title": "Abort writing chat stream",
+        "worker": { "enabled": true }
+      },
+      {
         "id": "writingStudioSaveSettings",
         "handler": "saveSettings",
         "title": "Save writing studio settings",
@@ -114,6 +126,16 @@
         "id": "writingStudioApplyAnnotationEdit",
         "handler": "applyAnnotationEdit",
         "title": "Apply Writing Studio annotation edit",
+        "worker": { "enabled": true }
+      }
+    ],
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/chat/stream",
+        "handler": "chatStream",
+        "title": "Stream Writing Studio chat",
+        "stream": "sse",
         "worker": { "enabled": true }
       }
     ]

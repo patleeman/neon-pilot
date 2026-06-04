@@ -105,6 +105,7 @@ interface ExtensionAgentConversationRecord {
   cwd: string;
   model: unknown;
   modelRegistry?: unknown;
+  liveSessionId?: string;
   tools: 'none' | 'default';
   visibility: 'hidden' | 'visible';
   persistence: 'ephemeral' | 'saved';
@@ -123,6 +124,21 @@ const defaultDynamicImport = importServerModule;
 let dynamicImport = defaultDynamicImport;
 const PI_CODING_AGENT_PACKAGE = '@earendil-works/pi-coding-agent';
 const NEON_PILOT_CORE_PACKAGE = '@neon-pilot/core';
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+const EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS = Symbol.for('neon-pilot.extensionHostCapabilityEventHandlers');
+
+interface ExtensionBackendWorkerCapabilityEventLike {
+  kind: 'capabilityEvent';
+  extensionId: string;
+  capability: string;
+  operation: string;
+  input?: unknown;
+}
+
+type ExtensionBackendApiGlobal = typeof globalThis & {
+  [EXTENSION_HOST_CAPABILITY_BRIDGE]?: (capability: string, operation: string, input?: unknown) => Promise<unknown>;
+  [EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS]?: Set<(event: ExtensionBackendWorkerCapabilityEventLike) => void>;
+};
 
 export function setExtensionAgentDynamicImportForTests(importer: typeof dynamicImport): void {
   dynamicImport = importer;
@@ -136,6 +152,16 @@ export function resetExtensionAgentDynamicImportForTests(): void {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function workerBridge(): ExtensionBackendApiGlobal[typeof EXTENSION_HOST_CAPABILITY_BRIDGE] {
+  return (globalThis as ExtensionBackendApiGlobal)[EXTENSION_HOST_CAPABILITY_BRIDGE];
+}
+
+function workerCapabilityEventHandlers(): Set<(event: ExtensionBackendWorkerCapabilityEventLike) => void> {
+  const target = globalThis as ExtensionBackendApiGlobal;
+  target[EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS] ??= new Set();
+  return target[EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS]!;
 }
 
 function ownerExtensionId(ctx: ExtensionBackendContextLike): string {
@@ -208,6 +234,38 @@ function normalizeSessionEvent(event: unknown): ExtensionAgentConversationStream
     if (assistantEvent.type === 'thinking_delta' && typeof assistantEvent.delta === 'string')
       return { type: 'thinking_delta', delta: assistantEvent.delta };
   }
+  if (event.type === 'tool_start' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {
+    return {
+      type: 'tool_start',
+      toolCallId: event.toolCallId,
+      toolName: event.toolName,
+      args: isRecord(event.args) ? event.args : {},
+    };
+  }
+  if (event.type === 'tool_update' && typeof event.toolCallId === 'string') {
+    return { type: 'tool_update', toolCallId: event.toolCallId, partialResult: event.partialResult };
+  }
+  if (event.type === 'tool_end' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {
+    return {
+      type: 'tool_end',
+      toolCallId: event.toolCallId,
+      toolName: event.toolName,
+      isError: event.isError === true,
+      durationMs: typeof event.durationMs === 'number' ? event.durationMs : 0,
+      output: typeof event.output === 'string' ? event.output : '',
+      ...(event.details !== undefined ? { details: event.details } : {}),
+    };
+  }
+  return null;
+}
+
+function normalizeLiveSessionEvent(event: unknown): ExtensionAgentConversationStreamEvent | null {
+  if (!isRecord(event)) return null;
+  if (event.type === 'text_delta' && typeof event.delta === 'string') return { type: 'text_delta', delta: event.delta };
+  if (event.type === 'thinking_delta' && typeof event.delta === 'string') return { type: 'thinking_delta', delta: event.delta };
+  if (event.type === 'agent_end') return { type: 'agent_end' };
+  if (event.type === 'turn_end') return { type: 'turn_end' };
+  if (event.type === 'error' && typeof event.message === 'string') return { type: 'error', message: event.message };
   if (event.type === 'tool_start' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {
     return {
       type: 'tool_start',
@@ -354,12 +412,74 @@ function disposeRecord(record: ExtensionAgentConversationRecord): void {
   record.pendingAbort?.abort();
   record.unsubscribe();
   record.session?.dispose();
+  if (record.liveSessionId) {
+    void callServerModuleExport('../../conversations/liveSessions.js', 'destroySession', record.liveSessionId).catch(() => undefined);
+  }
+}
+
+async function streamAgentMessageThroughWorkerBridge(
+  bridge: NonNullable<ReturnType<typeof workerBridge>>,
+  input: ExtensionAgentConversationSendInput,
+): Promise<ExtensionAgentConversationStreamResult> {
+  const handleId = `agent-stream-${randomUUID()}`;
+  async function* events(): AsyncIterable<{ event?: string; data?: ExtensionAgentConversationStreamEvent }> {
+    const queue: ExtensionAgentConversationStreamEvent[] = [];
+    let notify: (() => void) | null = null;
+    let done = false;
+    let failure: Error | null = null;
+    const handlers = workerCapabilityEventHandlers();
+    const listener = (event: ExtensionBackendWorkerCapabilityEventLike) => {
+      if (event.capability !== 'agent') return;
+      const eventInput = isRecord(event.input) ? event.input : {};
+      if (eventInput.handleId !== handleId) return;
+      if (event.operation === 'streamEvent') {
+        queue.push(eventInput.event as ExtensionAgentConversationStreamEvent);
+        notify?.();
+        notify = null;
+      } else if (event.operation === 'streamError') {
+        failure = new Error(typeof eventInput.message === 'string' ? eventInput.message : 'Agent stream failed.');
+        queue.push({ type: 'error', message: failure.message });
+        notify?.();
+        notify = null;
+      } else if (event.operation === 'streamEnd') {
+        done = true;
+        notify?.();
+        notify = null;
+      }
+    };
+    handlers.add(listener);
+    void bridge('agent', 'streamMessage', { handleId, input }).catch((error: unknown) => {
+      failure = error instanceof Error ? error : new Error(String(error));
+      queue.push({ type: 'error', message: failure.message });
+      done = true;
+      notify?.();
+      notify = null;
+    });
+    try {
+      while (!done || queue.length > 0) {
+        if (queue.length === 0) {
+          await new Promise<void>((resolve) => {
+            notify = resolve;
+          });
+          continue;
+        }
+        yield { data: queue.shift()! };
+      }
+      if (failure) return;
+    } finally {
+      handlers.delete(listener);
+    }
+  }
+  return { stream: 'sse', events: events() };
 }
 
 export async function createAgentConversation(
   input: ExtensionAgentConversationCreateInput,
   ctx: ExtensionBackendContextLike,
 ): Promise<ExtensionAgentConversationSummary> {
+  const bridge = workerBridge();
+  if (bridge) return bridge('agent', 'createConversation', { input }) as Promise<ExtensionAgentConversationSummary>;
+
   await assertPermission(ctx, 'agent:conversations');
   const owner = ownerExtensionId(ctx);
   const mode = validateConversationMode(input);
@@ -422,6 +542,9 @@ export async function sendAgentMessage(
   input: ExtensionAgentConversationSendInput,
   ctx: ExtensionBackendContextLike,
 ): Promise<ExtensionAgentConversationMessageResult> {
+  const bridge = workerBridge();
+  if (bridge) return bridge('agent', 'sendMessage', { input }) as Promise<ExtensionAgentConversationMessageResult>;
+
   await assertPermission(ctx, 'agent:conversations');
   const record = getOwnedRecord(input.conversationId, ctx);
   if (record.isBusy) throw new Error(`Agent conversation is already busy: ${input.conversationId}`);
@@ -440,6 +563,40 @@ export async function sendAgentMessage(
       record.updatedAt = new Date().toISOString();
       return { ...summarize(record), text: '' };
     } finally {
+      record.isBusy = false;
+    }
+  }
+
+  if (record.liveSessionId) {
+    record.isBusy = true;
+    let streamedText = '';
+    const unsubscribe =
+      (await callServerModuleExport<(() => void) | null>(
+        '../../conversations/liveSessions.js',
+        'subscribe',
+        record.liveSessionId,
+        (event: unknown) => {
+          const normalized = normalizeLiveSessionEvent(event);
+          if (normalized?.type === 'text_delta') streamedText += normalized.delta;
+        },
+      )) ?? (() => undefined);
+    try {
+      const submitted = await callServerModuleExport<{ completion: Promise<void> }>(
+        '../../conversations/liveSessions.js',
+        'submitPromptSession',
+        record.liveSessionId,
+        text,
+        undefined,
+        input.images,
+      );
+      await runWithTimeout(submitted.completion, input.timeoutMs, () => {
+        void callServerModuleExport('../../conversations/liveSessions.js', 'abortSession', record.liveSessionId);
+      });
+      if (streamedText.trim()) record.assistantTexts.push(streamedText.trim());
+      record.updatedAt = new Date().toISOString();
+      return { ...summarize(record), text: streamedText.trim() };
+    } finally {
+      unsubscribe();
       record.isBusy = false;
     }
   }
@@ -468,13 +625,16 @@ export async function streamAgentMessage(
   input: ExtensionAgentConversationSendInput,
   ctx: ExtensionBackendContextLike,
 ): Promise<ExtensionAgentConversationStreamResult> {
+  const bridge = workerBridge();
+  if (bridge) return streamAgentMessageThroughWorkerBridge(bridge, input);
+
   await assertPermission(ctx, 'agent:conversations');
   const record = getOwnedRecord(input.conversationId, ctx);
   if (record.visibility === 'visible') {
     throw new Error('Visible saved extension conversations stream through the host live-session events endpoint.');
   }
   if (record.isBusy) throw new Error(`Agent conversation is already busy: ${input.conversationId}`);
-  if (!record.session) throw new Error(`Agent conversation session is not available: ${record.id}`);
+  if (!record.session && !record.liveSessionId) throw new Error(`Agent conversation session is not available: ${record.id}`);
   const text = typeof input.text === 'string' ? input.text.trim() : '';
   if (!text) throw new Error('Agent conversation message text is required.');
   if ((input.images?.length ?? 0) > 0 && !modelAcceptsImages(record.model))
@@ -492,29 +652,55 @@ export async function streamAgentMessage(
       notify?.();
       notify = null;
     };
-    const unsubscribe = record.session!.subscribe((event) => {
-      const normalized = normalizeSessionEvent(event);
-      if (normalized) enqueue(normalized);
-      if (isRecord(event) && event.type === 'message_end' && isRecord(event.message) && event.message.role === 'assistant') {
-        const finalText = extractTextContent(event.message.content).trim();
-        if (finalText && !streamedText) enqueue({ type: 'text_delta', delta: finalText });
-      }
-    });
+  const unsubscribe =
+      record.liveSessionId
+        ? ((await callServerModuleExport<(() => void) | null>(
+            '../../conversations/liveSessions.js',
+            'subscribe',
+            record.liveSessionId,
+            (event: unknown) => {
+              const normalized = normalizeLiveSessionEvent(event);
+              if (normalized?.type === 'error') failure = new Error(normalized.message);
+              if (normalized && normalized.type !== 'agent_end' && normalized.type !== 'turn_end') enqueue(normalized);
+            },
+            { deferInitialReplayMs: 0 },
+          )) ?? (() => undefined))
+        : record.session!.subscribe((event) => {
+            const normalized = normalizeSessionEvent(event);
+            if (normalized) enqueue(normalized);
+            if (isRecord(event) && event.type === 'message_end' && isRecord(event.message) && event.message.role === 'assistant') {
+              const finalText = extractTextContent(event.message.content).trim();
+              if (finalText && !streamedText) enqueue({ type: 'text_delta', delta: finalText });
+            }
+          });
+    if (!record.liveSessionId) {
+      // Direct Pi sessions do not emit host snapshot events, so the direct subscription above is enough.
+    }
     record.isBusy = true;
     enqueue({ type: 'user_message', text, ts: new Date().toISOString() });
     enqueue({ type: 'agent_start' });
-    void runWithTimeout(
-      record.session!.prompt(text, input.images?.length ? { images: input.images } : undefined),
-      input.timeoutMs,
-      () => void record.session?.abort?.(),
-    )
+    const promptOperation = record.liveSessionId
+      ? callServerModuleExport<{ completion: Promise<void> }>(
+          '../../conversations/liveSessions.js',
+          'submitPromptSession',
+          record.liveSessionId,
+          text,
+          undefined,
+          input.images,
+        ).then((submitted) => submitted.completion)
+      : record.session!.prompt(text, input.images?.length ? { images: input.images } : undefined);
+    void runWithTimeout(promptOperation, input.timeoutMs, () => {
+      if (record.liveSessionId) void callServerModuleExport('../../conversations/liveSessions.js', 'abortSession', record.liveSessionId);
+      else void record.session?.abort?.();
+    })
       .then(() => {
-        const assistantError = getAssistantErrorMessage(record.session!);
+        const assistantError = record.session ? getAssistantErrorMessage(record.session) : null;
         if (assistantError) throw new Error(assistantError);
-        if (!streamedText) {
+        if (!streamedText && record.session) {
           const fallback = collectAssistantTexts(record.session!).at(-1)?.trim();
           if (fallback) enqueue({ type: 'text_delta', delta: fallback });
         }
+        if (streamedText.trim()) record.assistantTexts.push(streamedText.trim());
         record.updatedAt = new Date().toISOString();
         enqueue({ type: 'agent_end', text: streamedText || record.assistantTexts.at(-1)?.trim() });
         enqueue({ type: 'turn_end' });
@@ -547,6 +733,9 @@ export async function streamAgentMessage(
 }
 
 export async function getAgentConversation(input: { conversationId: string }, ctx: ExtensionBackendContextLike) {
+  const bridge = workerBridge();
+  if (bridge) return bridge('agent', 'getConversation', { input });
+
   await assertPermission(ctx, 'agent:conversations');
   const record = getOwnedRecord(input.conversationId, ctx);
   if (record.visibility === 'visible' && ctx.conversations) {
@@ -562,6 +751,9 @@ export async function getAgentConversation(input: { conversationId: string }, ct
 }
 
 export async function listAgentConversations(_input: unknown, ctx: ExtensionBackendContextLike) {
+  const bridge = workerBridge();
+  if (bridge) return bridge('agent', 'listConversations', { input: {} });
+
   await assertPermission(ctx, 'agent:conversations');
   const owner = ownerExtensionId(ctx);
   return Array.from(conversations.values())
@@ -570,11 +762,16 @@ export async function listAgentConversations(_input: unknown, ctx: ExtensionBack
 }
 
 export async function abortAgentConversation(input: { conversationId: string }, ctx: ExtensionBackendContextLike) {
+  const bridge = workerBridge();
+  if (bridge) return bridge('agent', 'abortConversation', { input });
+
   await assertPermission(ctx, 'agent:conversations');
   const record = getOwnedRecord(input.conversationId, ctx);
   if (record.visibility === 'visible') {
     if (!ctx.conversations?.abort) throw new Error('Visible saved extension agent conversations do not support abort in this host.');
     await ctx.conversations.abort(record.id);
+  } else if (record.liveSessionId) {
+    await callServerModuleExport('../../conversations/liveSessions.js', 'abortSession', record.liveSessionId);
   } else {
     await record.session?.abort?.();
   }
@@ -584,6 +781,9 @@ export async function abortAgentConversation(input: { conversationId: string }, 
 }
 
 export async function disposeAgentConversation(input: { conversationId: string }, ctx: ExtensionBackendContextLike) {
+  const bridge = workerBridge();
+  if (bridge) return bridge('agent', 'disposeConversation', { input });
+
   await assertPermission(ctx, 'agent:conversations');
   const record = getOwnedRecord(input.conversationId, ctx);
   disposeRecord(record);

@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockRunAgentTask = vi.hoisted(() => vi.fn());
+const mockCreateAgentConversation = vi.hoisted(() => vi.fn());
+const mockGetAgentConversation = vi.hoisted(() => vi.fn());
+const mockStreamAgentMessage = vi.hoisted(() => vi.fn());
+const mockAbortAgentConversation = vi.hoisted(() => vi.fn());
 
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({
+  abortAgentConversation: mockAbortAgentConversation,
+  createAgentConversation: mockCreateAgentConversation,
+  getAgentConversation: mockGetAgentConversation,
   runAgentTask: mockRunAgentTask,
+  streamAgentMessage: mockStreamAgentMessage,
 }));
 
 import {
@@ -19,11 +27,14 @@ import {
   getAgentInstructions,
   importDocument,
   load,
+  prepareChat,
   renameDocument,
   renameFolder,
   resolveAnnotation,
   runReview,
   sendChat,
+  chatStream,
+  abortChat,
   updateAnnotation,
   updateAgentInstructions,
   updateCanvas,
@@ -48,7 +59,27 @@ describe('Writing Studio backend', () => {
   beforeEach(() => {
     vi.useRealTimers();
     mockRunAgentTask.mockReset();
+    mockCreateAgentConversation.mockReset();
+    mockGetAgentConversation.mockReset();
+    mockStreamAgentMessage.mockReset();
+    mockAbortAgentConversation.mockReset();
     mockRunAgentTask.mockRejectedValue(new Error('No model in unit test.'));
+    mockCreateAgentConversation.mockResolvedValue({
+      id: 'agent-chat-1',
+      ownerExtensionId: 'system-writing-studio',
+      title: 'Writing Studio',
+      cwd: 'Writing Studio',
+      visibility: 'hidden',
+      persistence: 'ephemeral',
+      tools: 'default',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isBusy: false,
+      disposed: false,
+      messageCount: 0,
+    });
+    mockGetAgentConversation.mockRejectedValue(new Error('not found'));
+    mockAbortAgentConversation.mockResolvedValue({});
   });
 
   it('persists Yjs update events with latest markdown', async () => {
@@ -253,6 +284,109 @@ describe('Writing Studio backend', () => {
     expect(chat.messages[1].body).toBe('The fallback agent answer.');
     expect(mockRunAgentTask).toHaveBeenNthCalledWith(1, expect.objectContaining({ modelRef: 'mrs-mcmodel-face' }), ctx);
     expect(mockRunAgentTask).toHaveBeenNthCalledWith(2, expect.objectContaining({ modelRef: undefined }), ctx);
+  });
+
+  it('streams chat through a hidden agent conversation and persists the assistant reply', async () => {
+    const ctx = context();
+    mockStreamAgentMessage.mockResolvedValueOnce({
+      stream: 'sse',
+      events: (async function* () {
+        yield { data: { type: 'user_message', text: 'hidden prompt' } };
+        yield { data: { type: 'agent_start' } };
+        yield { data: { type: 'text_delta', delta: 'The draft has ' } };
+        yield { data: { type: 'text_delta', delta: 'a live answer.' } };
+        yield { data: { type: 'turn_end' } };
+      })(),
+    });
+
+    const prepared = await prepareChat({ body: 'Help with this.', markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx);
+    const route = await chatStream(
+      { method: 'GET', path: '/chat/stream', query: { pendingId: prepared.pendingId }, params: {} },
+      ctx,
+    );
+    const events = [];
+    for await (const item of route.events ?? []) events.push(item.data);
+    const state = await load({}, ctx);
+
+    expect(route.stream).toBe('sse');
+    expect(events).not.toContainEqual(expect.objectContaining({ type: 'user_message' }));
+    expect(events).toContainEqual(expect.objectContaining({ type: 'writing_studio_chat_saved' }));
+    expect(state.chat.map((message) => message.role)).toEqual(['user', 'agent']);
+    expect(state.chat[0].body).toBe('Help with this.');
+    expect(state.chat[1].body).toBe('The draft has a live answer.');
+    expect(mockCreateAgentConversation).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'hidden', tools: 'default' }), ctx);
+    expect(mockStreamAgentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'agent-chat-1', text: expect.stringContaining('Writing Studio collaborator') }),
+      ctx,
+    );
+  });
+
+  it('reports no-output chat streams without saving an empty assistant reply', async () => {
+    const ctx = context();
+    mockStreamAgentMessage.mockResolvedValueOnce({
+      stream: 'sse',
+      events: (async function* () {
+        yield { data: { type: 'agent_start' } };
+        yield { data: { type: 'turn_end' } };
+      })(),
+    });
+
+    const prepared = await prepareChat({ body: 'Help with this.', markdown: '# Draft' }, ctx);
+    const route = await chatStream(
+      { method: 'GET', path: '/chat/stream', query: { pendingId: prepared.pendingId }, params: {} },
+      ctx,
+    );
+    const events = [];
+    for await (const item of route.events ?? []) events.push(item.data);
+    const state = await load({}, ctx);
+
+    expect(events).toContainEqual({ type: 'error', message: 'Writing Studio chat finished without an assistant response.' });
+    expect(events).not.toContainEqual(expect.objectContaining({ type: 'writing_studio_chat_saved' }));
+    expect(state.chat.map((message) => message.role)).toEqual(['user']);
+  });
+
+  it('streams writing chat through the default hidden agent model even when the UI provides a selected model', async () => {
+    const ctx = context();
+    mockStreamAgentMessage.mockResolvedValueOnce({
+      stream: 'sse',
+      events: (async function* () {
+        yield { data: { type: 'agent_start' } };
+        yield { data: { type: 'text_delta', delta: 'Default model answered.' } };
+        yield { data: { type: 'turn_end' } };
+      })(),
+    });
+
+    const prepared = await prepareChat({ body: 'Help with this.', markdown: '# Draft', modelRef: 'mrs-mcmodel-face' }, ctx);
+    const route = await chatStream(
+      { method: 'GET', path: '/chat/stream', query: { pendingId: prepared.pendingId }, params: {} },
+      ctx,
+    );
+    const events = [];
+    for await (const item of route.events ?? []) events.push(item.data);
+    const state = await load({}, ctx);
+
+    expect(events).toContainEqual(expect.objectContaining({ type: 'writing_studio_chat_saved' }));
+    expect(state.chat.map((message) => message.role)).toEqual(['user', 'agent']);
+    expect(state.chat[1].body).toBe('Default model answered.');
+    expect(mockCreateAgentConversation).toHaveBeenCalledWith(expect.not.objectContaining({ modelRef: expect.anything() }), ctx);
+    expect(mockStreamAgentMessage).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 90_000 }), ctx);
+  });
+
+  it('aborts the hidden writing chat conversation', async () => {
+    const ctx = context();
+    mockStreamAgentMessage.mockResolvedValueOnce({
+      stream: 'sse',
+      events: (async function* () {
+        yield { data: { type: 'agent_start' } };
+      })(),
+    });
+    const prepared = await prepareChat({ body: 'Start a run.', markdown: '# Draft' }, ctx);
+    const route = await chatStream({ method: 'GET', path: '/chat/stream', query: { pendingId: prepared.pendingId }, params: {} }, ctx);
+    await route.events?.[Symbol.asyncIterator]().next();
+
+    await abortChat({}, ctx);
+
+    expect(mockAbortAgentConversation).toHaveBeenCalledWith({ conversationId: 'agent-chat-1' }, ctx);
   });
 
   it('lets the agent inspect and update its own writing instructions', async () => {
