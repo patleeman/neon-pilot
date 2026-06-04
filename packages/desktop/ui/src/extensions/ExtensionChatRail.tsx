@@ -171,7 +171,7 @@ export function ExtensionChatRail({
       if (!conversationId) return;
       setCurrentModel(modelId);
       try {
-        await api.changeConversationModel(conversationId, modelId);
+        await api.updateConversationModelPreferences(conversationId, { model: modelId });
       } catch (error) {
         onError?.(error instanceof Error ? error.message : String(error));
       }

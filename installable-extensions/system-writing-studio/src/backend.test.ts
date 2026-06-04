@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockRunAgentTask = vi.hoisted(() => vi.fn());
-
-vi.mock('@neon-pilot/extensions/backend/agent', () => ({
-  runAgentTask: mockRunAgentTask,
-}));
+const mockRunTurn = vi.hoisted(() => vi.fn());
+const mockCreateConversation = vi.hoisted(() => vi.fn());
 
 import {
   addAnnotation,
@@ -33,6 +30,15 @@ import {
 
 function context(options?: { conversations?: Record<string, unknown> }) {
   const store = new Map<string, unknown>();
+  const conversations =
+    options?.conversations ??
+    ({
+      create: mockCreateConversation,
+      runTurn: mockRunTurn,
+      ensureLive: vi.fn(),
+      setActiveTools: vi.fn(),
+      appendCustomEntry: vi.fn(),
+    } satisfies Record<string, unknown>);
   return {
     storage: {
       get: vi.fn(async (key: string) => store.get(key)),
@@ -43,15 +49,17 @@ function context(options?: { conversations?: Record<string, unknown> }) {
         store.delete(key);
       }),
     },
-    ...(options?.conversations ? { conversations: options.conversations } : {}),
+    conversations,
   } as never;
 }
 
 describe('Writing Studio backend', () => {
   beforeEach(() => {
     vi.useRealTimers();
-    mockRunAgentTask.mockReset();
-    mockRunAgentTask.mockRejectedValue(new Error('No model in unit test.'));
+    mockCreateConversation.mockReset();
+    mockCreateConversation.mockImplementation(async () => ({ id: `review-chat-${mockCreateConversation.mock.calls.length}`, conversationId: `review-chat-${mockCreateConversation.mock.calls.length}` }));
+    mockRunTurn.mockReset();
+    mockRunTurn.mockRejectedValue(new Error('No model in unit test.'));
   });
 
   it('persists Yjs update events with latest markdown', async () => {
@@ -72,7 +80,7 @@ describe('Writing Studio backend', () => {
 
   it('adds review annotations and replay events', async () => {
     const ctx = context();
-    mockRunAgentTask.mockResolvedValueOnce({
+    mockRunTurn.mockResolvedValueOnce({
       text: JSON.stringify([
         {
           quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
@@ -103,7 +111,7 @@ describe('Writing Studio backend', () => {
 
   it('can produce more than three review annotations for longer drafts', async () => {
     const ctx = context();
-    mockRunAgentTask.mockResolvedValueOnce({
+    mockRunTurn.mockResolvedValueOnce({
       text: JSON.stringify([
         {
           quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
@@ -174,8 +182,8 @@ describe('Writing Studio backend', () => {
       'A second long sentence keeps adding context and qualifiers and momentum until the useful phrase at the center starts to disappear from view.',
       'Another strong line gives the reader a concrete image and a reason to keep going.',
     ].join('\n\n');
-    mockRunAgentTask.mockResolvedValue({ text: '[]' });
-    mockRunAgentTask.mockResolvedValueOnce({
+    mockRunTurn.mockResolvedValue({ text: '[]' });
+    mockRunTurn.mockResolvedValueOnce({
       text: JSON.stringify([
         {
           quote: 'A paragraph near the top has a live wire and enough detail to earn one focused margin note from the reviewer.',
@@ -184,7 +192,7 @@ describe('Writing Studio backend', () => {
         },
       ]),
     });
-    mockRunAgentTask.mockResolvedValueOnce({
+    mockRunTurn.mockResolvedValueOnce({
       text: JSON.stringify([
         {
           quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
@@ -196,11 +204,43 @@ describe('Writing Studio backend', () => {
 
     const result = await runReview({ markdown }, ctx);
 
-    expect(mockRunAgentTask.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(mockRunTurn.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(result.annotations.map((annotation) => annotation.body)).toEqual([
       'This opening has enough charge to deserve a note.',
       'This later sentence has a live wire in it.',
     ]);
+  });
+
+  it('advances full-document review across chunks on repeated runs', async () => {
+    const ctx = context();
+    const firstQuote = 'The opening section has enough concrete texture to deserve a focused first-pass annotation from the agent.';
+    const laterQuote = 'The later section has enough specific language to show that the review cursor moved down the draft.';
+    const markdown = [
+      '# Cursor Review',
+      '',
+      firstQuote,
+      Array.from(
+        { length: 36 },
+        () => 'This filler sentence keeps the first chunk large enough that the next useful sentence lands in a later chunk.',
+      ).join(' '),
+      '',
+      laterQuote,
+      'This closing sentence gives the later section a little more room and keeps the quote anchored in real text.',
+    ].join('\n\n');
+    mockRunTurn.mockResolvedValue({ text: '[]' });
+    mockRunTurn.mockResolvedValueOnce({
+      text: JSON.stringify([{ quote: firstQuote, body: 'First chunk note.', kind: 'suggestion' }]),
+    });
+    mockRunTurn.mockResolvedValueOnce({ text: '[]' });
+    mockRunTurn.mockResolvedValueOnce({
+      text: JSON.stringify([{ quote: laterQuote, body: 'Later chunk note.', kind: 'reaction' }]),
+    });
+
+    const first = await runReview({ markdown }, ctx);
+    const second = await runReview({ markdown }, ctx);
+
+    expect(first.annotations.map((annotation) => annotation.body)).toContain('First chunk note.');
+    expect(second.annotations.map((annotation) => annotation.body)).toContain('Later chunk note.');
   });
 
   it('fails review instead of fabricating annotations when the agent fails', async () => {
@@ -211,14 +251,14 @@ describe('Writing Studio backend', () => {
 
   it('fails review instead of fabricating annotations when the agent returns invalid annotations', async () => {
     const ctx = context();
-    mockRunAgentTask.mockResolvedValueOnce({ text: 'not json' });
+    mockRunTurn.mockResolvedValueOnce({ text: 'not json' });
 
     await expect(runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx)).rejects.toThrow('no valid annotations');
   });
 
   it('resolves annotations without using the private chat path', async () => {
     const ctx = context();
-    mockRunAgentTask.mockResolvedValueOnce({
+    mockRunTurn.mockResolvedValueOnce({
       text: JSON.stringify([
         {
           quote: 'Maybe this can be clearer.',
@@ -318,7 +358,7 @@ describe('Writing Studio backend', () => {
 
   it('reviews only selected writing text', async () => {
     const ctx = context();
-    mockRunAgentTask.mockResolvedValueOnce({
+    mockRunTurn.mockResolvedValueOnce({
       text: JSON.stringify([
         {
           quote: 'selected passage with enough words for a focused annotation',
@@ -338,9 +378,10 @@ describe('Writing Studio backend', () => {
 
     expect(result.annotations).toHaveLength(1);
     expect(result.annotations[0].quote).toBe('selected passage with enough words for a focused annotation');
-    expect(mockRunAgentTask).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: expect.stringContaining('Do not review the whole document') }),
-      ctx,
+    expect(mockRunTurn).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining('Do not review the whole document'),
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
     );
   });
 

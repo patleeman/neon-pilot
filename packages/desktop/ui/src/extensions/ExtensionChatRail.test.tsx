@@ -11,7 +11,6 @@ const sendMock = vi.hoisted(() => vi.fn());
 const abortMock = vi.hoisted(() => vi.fn());
 const reconnectMock = vi.hoisted(() => vi.fn());
 const desktopConversationStateMock = vi.hoisted(() => vi.fn());
-const changeConversationModelMock = vi.hoisted(() => vi.fn());
 const updateConversationModelPreferencesMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../hooks/useDesktopConversationState', () => ({
@@ -37,7 +36,6 @@ vi.mock('../client/api', () => ({
     conversationModelPreferences: vi.fn(async () => ({ currentModel: 'model-a', currentThinkingLevel: 'medium' })),
     models: vi.fn(async () => ({ models: [{ provider: 'test', model: 'model-a', label: 'Model A' }] })),
     desktopConversationState: desktopConversationStateMock,
-    changeConversationModel: changeConversationModelMock,
     updateConversationModelPreferences: updateConversationModelPreferencesMock,
   },
 }));
@@ -86,7 +84,6 @@ describe('ExtensionChatRail', () => {
         tokens: null,
       },
     });
-    changeConversationModelMock.mockReset();
     updateConversationModelPreferencesMock.mockReset();
   });
 
@@ -114,7 +111,7 @@ describe('ExtensionChatRail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'model' }));
 
     await waitFor(() => {
-      expect(changeConversationModelMock).toHaveBeenCalledWith('conversation-1', 'model-b');
+      expect(updateConversationModelPreferencesMock).toHaveBeenCalledWith('conversation-1', { model: 'model-b' });
     });
   });
 

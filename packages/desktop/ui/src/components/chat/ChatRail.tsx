@@ -228,7 +228,7 @@ export function ChatRail({ conversationId, workspaceCwd }: { conversationId: str
     async (modelId: string) => {
       setCurrentModel(modelId);
       try {
-        await api.changeConversationModel(conversationId, modelId);
+        await api.updateConversationModelPreferences(conversationId, { model: modelId });
       } catch {
         // Ignore model change errors.
       }

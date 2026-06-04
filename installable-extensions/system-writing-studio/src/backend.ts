@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 
 type EventType =
   | 'yjs_update'
@@ -69,6 +68,7 @@ interface StoredState {
   chat: ChatMessage[];
   chatConversationId?: string;
   lastAgentRunAt: string | null;
+  reviewCursorChunk?: number;
   settings: WritingSettings;
 }
 
@@ -116,19 +116,51 @@ function isUnavailableAgentModelError(error: unknown): boolean {
   return error instanceof Error && /Agent conversation model is not available/i.test(error.message);
 }
 
+interface WritingStudioAgentTaskInput {
+  cwd?: string;
+  modelRef?: string;
+  prompt: string;
+  tools?: 'none' | 'default';
+  timeoutMs?: number;
+}
+
+function readAgentTurnText(result: unknown): string {
+  if (typeof result !== 'object' || result === null) return '';
+  const text = (result as { text?: unknown }).text;
+  return typeof text === 'string' ? text.trim() : '';
+}
+
 async function runWritingStudioAgentTask(
-  input: Parameters<typeof runAgentTask>[0],
+  input: WritingStudioAgentTaskInput,
   ctx: ExtensionBackendContext,
-): ReturnType<typeof runAgentTask> {
+): Promise<{ text: string }> {
+  if (!ctx.conversations?.create || !ctx.conversations.runTurn) {
+    throw new Error('Writing Studio review requires the host conversation capability.');
+  }
   try {
-    return await runAgentTask(input, ctx);
+    const conversation = await ctx.conversations.create({
+      ...(input.cwd ?? ctx.toolContext?.cwd ? { cwd: input.cwd ?? ctx.toolContext?.cwd } : {}),
+      live: true,
+      title: 'Writing Studio Review',
+      model: input.modelRef ?? null,
+      ...(input.tools === 'none' ? { allowedToolNames: [] } : {}),
+    });
+    const conversationId = conversation.conversationId;
+    const result = await ctx.conversations.runTurn(conversationId, input.prompt, {
+      ...(input.cwd ?? ctx.toolContext?.cwd ? { cwd: input.cwd ?? ctx.toolContext?.cwd } : {}),
+      timeoutMs: input.timeoutMs,
+    });
+    const text = readAgentTurnText(result);
+    if (!text) throw new Error('Agent review returned no text.');
+    return { text };
   } catch (error) {
     if (!input.modelRef || !isUnavailableAgentModelError(error)) throw error;
-    return runAgentTask({ ...input, modelRef: undefined }, ctx);
+    return runWritingStudioAgentTask({ ...input, modelRef: undefined }, ctx);
   }
 }
 const reviewChunkCharacterLimit = 2_400;
 const reviewMaxChunks = 5;
+const reviewChunksPerRun = 2;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -205,6 +237,7 @@ function defaultState(
     annotations: [],
     chat: [],
     lastAgentRunAt: null,
+    reviewCursorChunk: 0,
     settings: defaultSettings,
   };
 }
@@ -326,6 +359,10 @@ function normalizeState(id: string, stored: Partial<StoredState>): StoredState {
         )
       : [],
     chat: Array.isArray(stored.chat) ? stored.chat : [],
+    reviewCursorChunk:
+      typeof stored.reviewCursorChunk === 'number' && Number.isSafeInteger(stored.reviewCursorChunk) && stored.reviewCursorChunk >= 0
+        ? stored.reviewCursorChunk
+        : 0,
     settings: normalizeSettings(stored.settings),
   };
 }
@@ -439,14 +476,21 @@ async function buildAgentReviewAnnotations(
   settings: WritingSettings,
   ctx: ExtensionBackendContext,
   modelRef?: string,
-): Promise<Annotation[]> {
+  cursorChunk = 0,
+): Promise<{ annotations: Annotation[]; nextReviewCursorChunk: number }> {
   const chunks = reviewDraftChunks(markdown);
   const annotations: Annotation[] = [];
   const seenQuotes = new Set<string>();
-  for (const [index, reviewMarkdown] of chunks.entries()) {
+  if (chunks.length === 0) return { annotations, nextReviewCursorChunk: 0 };
+
+  const startIndex = cursorChunk % chunks.length;
+  const chunkIndexes = Array.from({ length: Math.min(reviewChunksPerRun, chunks.length) }, (_, offset) => (startIndex + offset) % chunks.length);
+
+  for (const index of chunkIndexes) {
+    const reviewMarkdown = chunks[index];
     const remaining = maxReviewAnnotations - annotations.length;
     if (remaining <= 0) break;
-    const targetCount = Math.min(4, Math.max(2, remaining));
+    const targetCount = Math.min(5, Math.max(3, remaining));
     const prompt = `You are reviewing a markdown draft in Writing Studio.
 
 Return only JSON: an array of ${targetCount}-${targetCount + 1} objects with keys quote, body, kind, optional emoji, and optional suggestedReplacement.
@@ -466,7 +510,7 @@ ${settings.agentInstructions}
 Draft chunk:
 ${reviewMarkdown}`;
     try {
-      const result = await runWritingStudioAgentTask({ prompt, tools: 'none', timeoutMs: 90_000, modelRef }, ctx);
+      const result = await runWritingStudioAgentTask({ prompt, tools: 'none', timeoutMs: 45_000, modelRef }, ctx);
       for (const annotation of parseAgentAnnotations(result.text, markdown, runId)) {
         if (seenQuotes.has(annotation.quote)) continue;
         seenQuotes.add(annotation.quote);
@@ -477,7 +521,8 @@ ${reviewMarkdown}`;
       throw new Error(`Writing Studio review failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  return annotations;
+
+  return { annotations, nextReviewCursorChunk: (startIndex + chunkIndexes.length) % chunks.length };
 }
 
 async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBackendContext, modelRef?: string): Promise<string> {
@@ -605,7 +650,8 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   const runId = randomUUID();
   state.events.push(event('agent_run_started', 'agent', { runId, trigger: payload.trigger ?? 'manual' }));
   const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
-  const annotations = await buildAgentReviewAnnotations(state.markdown, runId, reviewSettings, ctx, modelRef);
+  const review = await buildAgentReviewAnnotations(state.markdown, runId, reviewSettings, ctx, modelRef, state.reviewCursorChunk ?? 0);
+  const annotations = review.annotations;
   if (annotations.length === 0) throw new Error('Writing Studio review returned no valid annotations.');
   const refreshedQuotes = new Set(annotations.map((annotation) => annotation.quote));
   state.annotations = state.annotations.filter(
@@ -616,6 +662,7 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
   state.annotations.unshift(...annotations);
   for (const annotation of annotations) state.events.push(event('annotation_added', 'agent', { annotation }));
   state.lastAgentRunAt = nowIso();
+  state.reviewCursorChunk = review.nextReviewCursorChunk;
   state.events.push(event('agent_run_completed', 'agent', { runId, annotationCount: annotations.length }));
   await writeState(ctx, state);
   return { annotations, runId };

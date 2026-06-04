@@ -124,6 +124,18 @@ interface ExtensionBackendCapabilityConversations {
     text: string,
     options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
   ): Promise<unknown> | unknown;
+  runTurn?(
+    extensionId: string,
+    conversationId: string,
+    text: string,
+    options?: {
+      cwd?: string;
+      steer?: boolean;
+      images?: Array<{ data: string; mimeType: string; name?: string }>;
+      timeoutMs?: number;
+      onEvent?: (event: unknown) => void;
+    },
+  ): Promise<unknown> | unknown;
   abort?(extensionId: string, conversationId: string): Promise<unknown> | unknown;
   compact?(extensionId: string, conversationId: string, customInstructions?: string): Promise<unknown> | unknown;
   fork?(
@@ -510,6 +522,42 @@ function dispatchConversationsCapability(
       requireString(input.text, 'Conversation message text'),
       normalizeConversationSendOptions(input),
     );
+  }
+
+  if (request.operation === 'runTurn') {
+    if (!conversations.runTurn) {
+      throw new Error('Conversation runTurn capability is unavailable.');
+    }
+    const textDeltas: string[] = [];
+    return Promise.resolve(
+      conversations.runTurn(
+        request.extensionId,
+        requireString(input.conversationId, 'Conversation id'),
+        requireString(input.text, 'Conversation message text'),
+        {
+          ...normalizeConversationSendOptions(input),
+          ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Conversation cwd') } : {}),
+          ...(input.timeoutMs !== undefined ? { timeoutMs: requireNumber(input.timeoutMs, 'Conversation runTurn timeoutMs') } : {}),
+          onEvent(event: unknown) {
+            const record = typeof event === 'object' && event !== null ? (event as Record<string, unknown>) : undefined;
+            if (!record) return;
+            if (record.type === 'text_delta' && typeof record.delta === 'string') {
+              textDeltas.push(record.delta);
+              return;
+            }
+            const assistantMessageEvent =
+              record.type === 'message_update' &&
+              typeof record.assistantMessageEvent === 'object' &&
+              record.assistantMessageEvent !== null
+                ? (record.assistantMessageEvent as Record<string, unknown>)
+                : undefined;
+            if (assistantMessageEvent?.type === 'text_delta' && typeof assistantMessageEvent.delta === 'string') {
+              textDeltas.push(assistantMessageEvent.delta);
+            }
+          },
+        },
+      ),
+    ).then((result) => ({ ...(typeof result === 'object' && result !== null ? result : { accepted: true }), text: textDeltas.join('') }));
   }
 
   if (request.operation === 'abort') {
@@ -1458,6 +1506,18 @@ export function createExtensionBackendCapabilityDispatcher(
       text: string,
       options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
     ) => createExtensionConversationsCapability().sendMessage(conversationId, text, options),
+    runTurn: (
+      _extensionId: string,
+      conversationId: string,
+      text: string,
+      options?: {
+        cwd?: string;
+        steer?: boolean;
+        images?: Array<{ data: string; mimeType: string; name?: string }>;
+        timeoutMs?: number;
+        onEvent?: (event: unknown) => void;
+      },
+    ) => createExtensionConversationsCapability().runTurn(conversationId, text, options),
     abort: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().abort(conversationId),
     compact: (_extensionId: string, conversationId: string, customInstructions?: string) =>
       createExtensionConversationsCapability().compact(conversationId, customInstructions),

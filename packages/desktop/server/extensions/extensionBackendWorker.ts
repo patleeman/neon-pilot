@@ -247,6 +247,16 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
         text: string,
         options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
       ) => callHostCapability(extensionId, 'conversations', 'sendMessage', { conversationId, text, ...(options ?? {}) }),
+      runTurn: (
+        conversationId: string,
+        text: string,
+        options?: {
+          cwd?: string;
+          steer?: boolean;
+          images?: Array<{ data: string; mimeType: string; name?: string }>;
+          timeoutMs?: number;
+        },
+      ) => callHostCapability(extensionId, 'conversations', 'runTurn', { conversationId, text, ...(options ?? {}) }),
       abort: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'abort', { conversationId }),
       compact: (conversationId: string, customInstructions?: string) =>
         callHostCapability(extensionId, 'conversations', 'compact', {
