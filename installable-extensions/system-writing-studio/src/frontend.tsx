@@ -61,14 +61,19 @@ const writingStudioCss = `
 .writing-studio-chat-shell{min-height:0}.writing-studio-extension-chat{display:flex;height:100%;min-height:0;flex-direction:column;background:rgb(var(--color-surface));color:rgb(var(--color-primary));user-select:text}.writing-studio-extension-chat [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-extension-chat [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-muted{margin:.9rem .75rem;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
 .writing-studio-format-actions{position:relative}.writing-studio-format-actions .writing-studio-export-menu{left:0;right:auto;top:2.05rem}.writing-studio-review-status.is-error{color:rgb(var(--color-danger))}
 .writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.56)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:.65rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}
-.writing-studio-sidebar{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);height:100%;min-height:0;padding:.5rem .35rem .65rem;background:transparent;color:rgb(var(--color-primary));gap:.38rem}.writing-studio-sidebar-header{display:flex;align-items:center;justify-content:space-between;gap:.35rem}.writing-studio-sidebar-title{font-size:.72rem;font-weight:680;letter-spacing:.04em;text-transform:uppercase;color:rgb(var(--color-secondary))}.writing-studio-sidebar-actions{display:flex;align-items:center;gap:.08rem}.writing-studio-sidebar-search,.writing-studio-doc-form input{width:100%;min-width:0;border:1px solid rgb(var(--color-border-subtle));border-radius:7px;background:rgb(var(--color-base));color:rgb(var(--color-primary));font:inherit;font-size:.78rem;padding:.38rem .45rem}.writing-studio-sidebar-search:focus,.writing-studio-doc-form input:focus{outline:1px solid rgb(var(--color-accent));border-color:rgb(var(--color-accent))}.writing-studio-doc-error{min-height:1rem;padding:0 .1rem;color:rgb(var(--color-danger));font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.writing-studio-doc-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.28rem;align-items:center}.writing-studio-doc-form.is-danger{grid-template-columns:minmax(0,1fr) auto auto;color:rgb(var(--color-danger,255 96 96));font-size:.76rem}.writing-studio-doc-form button{border:0;border-radius:6px;background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary));font:inherit;font-size:.72rem;padding:.34rem .42rem;cursor:pointer}.writing-studio-doc-form button:hover{background:rgb(var(--color-border-subtle))}.writing-studio-doc-form button.is-danger{background:color-mix(in srgb,rgb(var(--color-danger,255 96 96)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}.writing-studio-doc-list{display:flex;flex-direction:column;gap:.22rem;min-height:0;overflow:hidden;border:0;border-radius:0;background:transparent}.writing-studio-doc-list file-tree-container{height:100%;font-size:.78rem;background:transparent}.writing-studio-doc-empty{margin:.2rem 0;padding:.35rem .3rem;color:rgb(var(--color-dim));font-size:.78rem}.writing-studio-doc-import input[type=file]{display:none}.writing-studio-doc-inline-action{flex:0 0 auto;margin:0}.writing-studio-doc-tree{flex:1 1 auto;height:100%;min-height:0;background:transparent}
+.writing-studio-sidebar{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);height:100%;min-height:0;padding:.5rem 0 .65rem;background:rgb(var(--color-base));color:rgb(var(--color-primary));gap:.38rem}.writing-studio-sidebar-header{display:flex;align-items:center;justify-content:space-between;gap:.35rem;padding:0 .45rem}.writing-studio-sidebar-title{font-size:.72rem;font-weight:680;letter-spacing:.04em;text-transform:uppercase;color:rgb(var(--color-secondary))}.writing-studio-sidebar-actions{display:flex;align-items:center;gap:.08rem}.writing-studio-sidebar-search,.writing-studio-doc-form input{width:100%;min-width:0;border:1px solid rgb(var(--color-border-subtle));border-radius:7px;background:rgb(var(--color-surface));color:rgb(var(--color-primary));font:inherit;font-size:.78rem;padding:.38rem .45rem}.writing-studio-sidebar-search{width:calc(100% - .9rem);margin:0 .45rem}.writing-studio-sidebar-search:focus,.writing-studio-doc-form input:focus{outline:1px solid rgb(var(--color-accent));border-color:rgb(var(--color-accent))}.writing-studio-doc-error{min-height:1rem;margin:0 .45rem;color:rgb(var(--color-danger));font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.writing-studio-doc-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.28rem;align-items:center;margin:0 .45rem}.writing-studio-doc-form.is-danger{grid-template-columns:minmax(0,1fr) auto auto;color:rgb(var(--color-danger,255 96 96));font-size:.76rem}.writing-studio-doc-form button{border:0;border-radius:6px;background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary));font:inherit;font-size:.72rem;padding:.34rem .42rem;cursor:pointer}.writing-studio-doc-form button:hover{background:rgb(var(--color-border-subtle))}.writing-studio-doc-form button.is-danger{background:color-mix(in srgb,rgb(var(--color-danger,255 96 96)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}.writing-studio-doc-list{display:flex;flex-direction:column;gap:.22rem;min-height:0;overflow:hidden;border:0;border-radius:0;background:transparent}.writing-studio-doc-list file-tree-container{height:100%;font-size:.78rem;background:transparent}.writing-studio-doc-empty{margin:.2rem .45rem;padding:.35rem 0;color:rgb(var(--color-dim));font-size:.78rem}.writing-studio-doc-import input[type=file]{display:none}.writing-studio-doc-inline-action{flex:0 0 auto}.writing-studio-doc-tree{flex:1 1 auto;height:100%;min-height:0;background:transparent}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
 @media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;display:grid;gap:.65rem;min-height:0;padding-top:0}.writing-studio-comment{position:static!important;max-width:48rem}}
 @media(max-width:860px){.writing-studio,.writing-studio.has-collapsed-rail{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-rail-resizer{display:none}}
 `;
 
 function ensureWritingStudioStyle(): void {
-  if (typeof document === 'undefined' || document.getElementById(styleElementId)) return;
+  if (typeof document === 'undefined') return;
+  const existing = document.getElementById(styleElementId);
+  if (existing) {
+    if (existing.textContent !== writingStudioCss) existing.textContent = writingStudioCss;
+    return;
+  }
   const style = document.createElement('style');
   style.id = styleElementId;
   style.textContent = writingStudioCss;
@@ -598,24 +603,6 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function renderInlineMarkdown(value: string): string {
-  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g;
-  let html = '';
-  let lastIndex = 0;
-  for (const match of value.matchAll(imagePattern)) {
-    html += escapeHtml(value.slice(lastIndex, match.index));
-    const [, alt = '', src = '', title] = match;
-    html += `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${title ? ` title="${escapeHtml(title)}"` : ''}>`;
-    lastIndex = (match.index ?? 0) + match[0].length;
-  }
-  html += escapeHtml(value.slice(lastIndex));
-  return html;
-}
-
 function downloadFile(fileName: string, mimeType: string, content: string | Uint8Array): void {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -624,25 +611,6 @@ function downloadFile(fileName: string, mimeType: string, content: string | Uint
   link.download = fileName;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function printPdf(title: string, markdown: string): void {
-  const html = markdown
-    .split(/\n{2,}/)
-    .map((block) => {
-      const text = block.trim();
-      const heading = text.match(/^(#{1,6})\s+(.+)$/);
-      if (heading) return `<h${heading[1].length}>${renderInlineMarkdown(heading[2])}</h${heading[1].length}>`;
-      return `<p>${renderInlineMarkdown(text).replace(/\n/g, '<br>')}</p>`;
-    })
-    .join('');
-  const win = window.open('', '_blank');
-  if (!win) return;
-  win.document.write(
-    `<!doctype html><title>${escapeHtml(title)}</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:760px;margin:48px auto;color:#111}img{display:block;max-width:100%;height:auto;margin:1rem 0}</style>${html}`,
-  );
-  win.document.close();
-  setTimeout(() => win.print(), 250);
 }
 
 function formatTime(value: string | null): string {
@@ -988,6 +956,7 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
   const [error, setError] = useState<string | null>(null);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const folderPathByTreePathRef = useRef(new Map<string, string>());
+  const previousActiveDocumentIdRef = useRef(activeDocumentId);
 
   const handleTreeSelectionChange = useCallback((paths: readonly string[]) => {
     setSelectedTreePath(paths[0] ?? null);
@@ -1061,6 +1030,7 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
   }, [refreshDocuments]);
 
   const documentTree = useMemo(() => buildDocumentTreeState(documents, folders, search, activeDocumentId), [activeDocumentId, documents, folders, search]);
+  const activeTreePath = documentTree.selectedPaths[0] ?? null;
 
   useEffect(() => {
     documentIdByTreePathRef.current = documentTree.documentIdByPath;
@@ -1070,6 +1040,19 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
       initialSelectedPaths: documentTree.selectedPaths,
     });
   }, [documentTree, resetDocumentTree]);
+
+  useEffect(() => {
+    const selectionStillExists =
+      selectedTreePath &&
+      (documentTree.documentIdByPath.has(selectedTreePath) || documentTree.folderPathByPath.has(selectedTreePath));
+    if (!selectionStillExists) setSelectedTreePath(activeTreePath);
+  }, [activeTreePath, documentTree.documentIdByPath, documentTree.folderPathByPath, selectedTreePath]);
+
+  useEffect(() => {
+    if (previousActiveDocumentIdRef.current === activeDocumentId) return;
+    previousActiveDocumentIdRef.current = activeDocumentId;
+    setSelectedTreePath(activeTreePath);
+  }, [activeDocumentId, activeTreePath]);
 
   const selectedDocument = useMemo(() => {
     const documentId = selectedTreePath ? documentIdByTreePathRef.current.get(selectedTreePath) : undefined;
@@ -1178,7 +1161,6 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
         setDocuments(index.documents ?? []);
         setFolders(index.folders ?? []);
       }
-      setSelectedTreePath(null);
       setActionMode('idle');
       setActionValue('');
     } catch (err) {
@@ -2043,12 +2025,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   );
 
   const exportDocument = useCallback(
-    async (format: 'markdown' | 'html' | 'rtf' | 'docx' | 'pdf') => {
-      const currentMarkdown = syncEditorMarkdown() ?? markdown;
-      if (format === 'pdf') {
-        printPdf(state?.title ?? 'Draft', currentMarkdown);
-        return;
-      }
+    async (format: 'markdown' | 'html' | 'rtf' | 'docx') => {
+      syncEditorMarkdown();
       await saveDocument();
       const result = (await pa.extension.invoke('writingStudioExportDocument', { documentId: activeDocumentId, format })) as {
         fileName: string;
@@ -2058,7 +2036,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       };
       downloadFile(result.fileName, result.mimeType, result.encoding === 'base64' ? base64ToBytes(result.content) : result.content);
     },
-    [activeDocumentId, markdown, pa, saveDocument, state?.title, syncEditorMarkdown],
+    [activeDocumentId, pa, saveDocument, syncEditorMarkdown],
   );
 
   if (loading) {
@@ -2139,7 +2117,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           exportMenuOpen={exportMenuOpen}
         >
           <div className="writing-studio-export-menu">
-            {(['markdown', 'html', 'rtf', 'docx', 'pdf'] as const).map((format) => (
+            {(['markdown', 'html', 'rtf', 'docx'] as const).map((format) => (
               <button
                 key={format}
                 type="button"
