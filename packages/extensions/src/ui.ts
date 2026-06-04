@@ -3,6 +3,23 @@ export type { ExtensionSurfaceProps } from './index.js';
 export type HostComponent = (...args: never[]) => unknown;
 export type DesktopKnowledgeEntryContextMenuAction = unknown;
 export type ExtensionChatViewLayout = 'default' | 'compact';
+export type ActivityTreeDropPosition = 'before' | 'after';
+
+export type ActivityTreeItemStatus = 'idle' | 'running' | 'queued' | 'failed' | 'done';
+
+export interface ActivityTreeItem {
+  id: string;
+  kind: 'conversation' | 'execution' | 'run' | 'terminal' | 'artifact' | 'checkpoint' | 'group';
+  parentId?: string;
+  title: string;
+  subtitle?: string;
+  status: ActivityTreeItemStatus;
+  route?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+}
 
 export interface ExtensionChatImage {
   alt: string;
@@ -104,6 +121,30 @@ export declare const AppPageToc: HostComponent;
 export declare const CheckpointInlineDiff: (...args: never[]) => unknown;
 export declare const ChatRailComposer: (props: ChatRailComposerProps) => unknown;
 export declare const ChatView: (props: ChatViewProps) => unknown;
+export declare const ActivityTreeView: (props: {
+  items: readonly ActivityTreeItem[];
+  activeItemId?: string | null;
+  className?: string;
+  style?: unknown;
+  canDragItem?: (item: ActivityTreeItem) => boolean;
+  canDropItem?: (
+    draggedItem: ActivityTreeItem,
+    targetItem: ActivityTreeItem,
+    position: ActivityTreeDropPosition,
+    event: unknown,
+  ) => boolean;
+  collapsedGroupItemIds?: ReadonlySet<string>;
+  onToggleGroupItem?: (item: ActivityTreeItem) => void;
+  inlineActions?: Array<{ id: string; title: string; icon?: string }>;
+  onInlineAction?: (actionId: string, item: ActivityTreeItem) => void;
+  onArchiveItem?: (item: ActivityTreeItem) => void;
+  onCreateChildItem?: (item: ActivityTreeItem) => void;
+  onOpenItem?: (item: ActivityTreeItem) => void;
+  onDragStartItem?: (item: ActivityTreeItem, event: unknown) => void;
+  onDropItem?: (draggedItem: ActivityTreeItem, targetItem: ActivityTreeItem, position: ActivityTreeDropPosition, event: unknown) => void;
+  onDragEndItem?: () => void;
+  renderContextMenu?: (item: ActivityTreeItem, context: unknown) => unknown;
+}) => unknown;
 export declare const DiffActionButton: (...args: never[]) => unknown;
 export declare const GitDiffIcon: HostComponent;
 export declare const ContextMenuWrapper: HostComponent;

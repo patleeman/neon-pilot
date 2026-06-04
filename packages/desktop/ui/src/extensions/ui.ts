@@ -1,4 +1,6 @@
 export { buildApiPath } from '../client/apiBase';
+export { ActivityTreeView, type ActivityTreeDropPosition } from '../activity/ActivityTreeView';
+export type { ActivityTreeItem } from '../activity/activityTree';
 export { ChatRailComposer, type ChatRailComposerProps } from '../components/chat/ChatRailComposer';
 export { ChatView, type ChatViewProps } from '../components/chat/ChatView';
 export type { ChatViewLayout } from '../components/chat/chatViewTypes';

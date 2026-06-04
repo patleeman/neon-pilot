@@ -1,12 +1,14 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   AppPageLayout,
+  ActivityTreeView,
   ChatRailComposer,
   ChatView,
   EmptyState,
   ErrorState,
   LoadingState,
   cx,
+  type ActivityTreeItem,
   type ExtensionChatMessageBlock,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
@@ -54,6 +56,7 @@ type HealthState = {
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8642';
 const SESSION_CACHE_KEY = 'system-hermes-agent:last-sessions';
+const HIDDEN_SESSIONS_KEY = 'system-hermes-agent:hidden-sessions';
 const DISCONNECTED_MESSAGE = 'Hermes is not reachable at the configured URL.';
 
 function getErrorMessage(error: unknown): string {
@@ -217,20 +220,25 @@ function writeCachedSessions(sessions: HermesSession[]) {
   }
 }
 
-function formatCompactDate(value?: unknown): string {
-  const text = safeString(value).trim();
-  if (!text) return '';
-  const date = new Date(text);
-  if (Number.isNaN(date.getTime())) return '';
-  const diff = Date.now() - date.getTime();
-  const minutes = Math.max(0, Math.floor(diff / 60_000));
-  if (minutes < 1) return 'now';
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 10) return `${days}d`;
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+function readHiddenSessionIds(): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_SESSIONS_KEY);
+    if (!raw) return new Set();
+    const parsed: unknown = JSON.parse(raw);
+    return new Set(
+      Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : [],
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function writeHiddenSessionIds(ids: Set<string>) {
+  try {
+    window.localStorage.setItem(HIDDEN_SESSIONS_KEY, JSON.stringify([...ids]));
+  } catch {
+    // Best-effort local sidebar preference only.
+  }
 }
 
 function messageTimestamp(value: unknown): string {
@@ -263,6 +271,10 @@ function selectedSessionIdFromSearch(search: string): string | null {
 
 function buildSessionRoute(sessionId: string): string {
   return `/ext/hermes?session=${encodeURIComponent(safeString(sessionId))}`;
+}
+
+function buildSessionActivityId(id: string): string {
+  return `hermes-session:${id}`;
 }
 
 function newSessionTitle(): string {
@@ -530,82 +542,60 @@ function SessionList({
   activeSessionId,
   loading,
   error,
-  compact,
+  onCloseSession,
   onSelect,
 }: {
   sessions: HermesSession[];
   activeSessionId: string | null;
   loading: boolean;
   error: string | null;
-  compact?: boolean;
+  onCloseSession: (sessionId: string) => void;
   onSelect: (session: HermesSession) => void;
 }) {
   if (loading) return <LoadingState label="Loading Hermes sessions…" className="h-28 justify-center" />;
   if (error && sessions.length === 0) {
-    return compact ? (
-      <p className="px-4 py-3 text-[12px] leading-5 text-dim">{error}</p>
-    ) : (
-      <EmptyState title="Hermes unavailable" body={error} />
-    );
+    return <p className="px-4 py-3 text-[12px] leading-5 text-dim">{error}</p>;
   }
   if (sessions.length === 0) {
-    return compact ? (
-      <p className="px-4 py-3 text-[12px] text-dim">No Hermes sessions yet.</p>
-    ) : (
-      <EmptyState title="No Hermes sessions" body="Create a session to start talking to the remote Hermes agent." />
-    );
+    return <p className="px-4 py-3 text-[12px] text-dim">No open Hermes sessions.</p>;
   }
 
-  return (
-    <div className={compact ? 'space-y-px px-1' : 'grid gap-1'}>
-      {error ? <p className="px-3 pb-2 pt-1 text-[11px] leading-4 text-dim">{error}</p> : null}
-      {sessions.map((session) => {
-        const id = sessionId(session);
-        const active = id === activeSessionId;
-        const meta = `${session.message_count ?? 0} messages${session.tool_call_count ? ` · ${session.tool_call_count} tools` : ''}`;
-        if (compact) {
-          return (
-            <div key={id || sessionTitle(session)} className="relative" data-sidebar-session-id={id}>
-              <button
-                type="button"
-                onClick={() => onSelect(session)}
-                className={cx('ui-sidebar-session-row select-none text-left', active && 'ui-sidebar-session-row-active')}
-                title={`${sessionTitle(session)} · ${meta}`}
-              >
-                <span className="flex w-3 shrink-0 items-center justify-center self-stretch" />
-                <span className="min-w-0 flex-1 pr-[4.5rem]">
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="ui-row-title truncate text-[12px] leading-tight">{sessionTitle(session)}</span>
-                  </span>
-                </span>
-              </button>
-              <span className="pointer-events-none absolute inset-y-0 right-2.5 flex w-[3.75rem] items-center justify-end pr-1">
-                <span className="ui-sidebar-session-meta ui-sidebar-session-time shrink-0 whitespace-nowrap">
-                  {formatCompactDate(session.last_active ?? session.started_at)}
-                </span>
-              </span>
-            </div>
-          );
-        }
+  const items: ActivityTreeItem[] = sessions.map((session) => {
+    const id = sessionId(session);
+    const meta = `${session.message_count ?? 0} messages${session.tool_call_count ? ` · ${session.tool_call_count} tools` : ''}`;
+    return {
+      id: buildSessionActivityId(id),
+      kind: 'conversation',
+      title: sessionTitle(session),
+      subtitle: meta,
+      status: 'idle',
+      route: buildSessionRoute(id),
+      updatedAt: safeString(session.last_active ?? session.started_at) || undefined,
+      metadata: {
+        conversationId: id,
+        canArchive: false,
+        tooltip: `${sessionTitle(session)} · ${meta}`,
+      },
+    };
+  });
 
-        return (
-          <button
-            key={id || sessionTitle(session)}
-            type="button"
-            onClick={() => onSelect(session)}
-            className={cx(
-              'w-full rounded-md px-3 py-2 text-left transition-colors',
-              active ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-elevated/70 hover:text-primary',
-            )}
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{sessionTitle(session)}</span>
-              <span className="shrink-0 text-[11px] text-dim">{formatCompactDate(session.last_active ?? session.started_at)}</span>
-            </span>
-            <span className="mt-1 block truncate text-[11px] text-dim">{meta}</span>
-          </button>
-        );
-      })}
+  return (
+    <div>
+      {error ? <p className="px-3 pb-2 pt-1 text-[11px] leading-4 text-dim">{error}</p> : null}
+      <ActivityTreeView
+        items={items}
+        activeItemId={activeSessionId ? buildSessionActivityId(activeSessionId) : null}
+        inlineActions={[{ id: 'close', title: 'Close Hermes session', icon: '×' }]}
+        onInlineAction={(actionId, item) => {
+          const id = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
+          if (actionId === 'close' && id) onCloseSession(id);
+        }}
+        onOpenItem={(item) => {
+          const id = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
+          const session = id ? sessions.find((candidate) => sessionId(candidate) === id) : null;
+          if (session) onSelect(session);
+        }}
+      />
     </div>
   );
 }
@@ -683,9 +673,15 @@ function sanitizeChatBlock(block: ExtensionChatMessageBlock, index: number): Ext
 export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
   const activeSessionId = selectedSessionIdFromSearch(context.search);
   const [sessions, setSessions] = useState<HermesSession[]>(readCachedSessions);
+  const [hiddenSessionIds, setHiddenSessionIds] = useState<Set<string>>(readHiddenSessionIds);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const visibleSessions = useMemo(
+    () => sessions.filter((session) => !hiddenSessionIds.has(sessionId(session))),
+    [hiddenSessionIds, sessions],
+  );
+  const hiddenCount = Math.max(0, sessions.length - visibleSessions.length);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -741,6 +737,22 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
     }
   }
 
+  function closeSession(id: string) {
+    setHiddenSessionIds((current) => {
+      const next = new Set(current);
+      next.add(id);
+      writeHiddenSessionIds(next);
+      return next;
+    });
+    if (id === activeSessionId) void navigateTo(pa, '/ext/hermes');
+  }
+
+  function showHiddenSessions() {
+    const next = new Set<string>();
+    writeHiddenSessionIds(next);
+    setHiddenSessionIds(next);
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-transparent">
       <div className="px-4 pb-0.5 pt-1">
@@ -756,13 +768,22 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-3">
         <SessionList
-          sessions={sessions}
+          sessions={visibleSessions}
           activeSessionId={activeSessionId}
           loading={loading}
           error={error}
-          compact
+          onCloseSession={closeSession}
           onSelect={(session) => void navigateTo(pa, buildSessionRoute(sessionId(session)))}
         />
+        {hiddenCount > 0 ? (
+          <button
+            type="button"
+            onClick={showHiddenSessions}
+            className="mx-2 mt-2 rounded px-2 py-1 text-left text-[11px] text-dim hover:bg-surface-hover hover:text-secondary"
+          >
+            Show {hiddenCount} hidden {hiddenCount === 1 ? 'session' : 'sessions'}
+          </button>
+        ) : null}
       </div>
     </div>
   );
