@@ -35,13 +35,13 @@ type HermesSession = {
 };
 
 type HermesMessage = {
-  id?: string;
-  role?: string;
+  id?: unknown;
+  role?: unknown;
   content?: unknown;
-  tool_name?: string | null;
-  timestamp?: string | null;
-  reasoning?: string | null;
-  reasoning_content?: string | null;
+  tool_name?: unknown;
+  timestamp?: unknown;
+  reasoning?: unknown;
+  reasoning_content?: unknown;
 };
 
 type HealthState = {
@@ -91,7 +91,8 @@ function messageText(content: unknown): string {
       .join('\n');
   }
   if (content == null) return '';
-  return JSON.stringify(content, null, 2);
+  const serialized = JSON.stringify(content, null, 2);
+  return typeof serialized === 'string' ? serialized : String(content);
 }
 
 function sessionTitle(session: HermesSession): string {
@@ -111,6 +112,32 @@ function formatCompactDate(value?: string | null): string {
   const days = Math.floor(hours / 24);
   if (days < 10) return `${days}d`;
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function messageTimestamp(value: unknown): string {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || new Date(0).toISOString();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? new Date(0).toISOString() : date.toISOString();
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? new Date(0).toISOString() : value.toISOString();
+  }
+  if (isRecord(value)) {
+    const candidate = value.iso ?? value.date ?? value.value ?? value.timestamp;
+    return messageTimestamp(candidate);
+  }
+  return new Date(0).toISOString();
+}
+
+function messageString(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
+  if (value == null) return fallback;
+  return messageText(value);
 }
 
 function selectedSessionIdFromSearch(search: string): string | null {
@@ -293,9 +320,59 @@ function ConfigForm({
         <ToolbarButton onClick={() => void save()} disabled={saving}>
           {saving ? 'Saving…' : 'Connect Hermes'}
         </ToolbarButton>
-        <p className="text-[12px] text-dim">You can change this later from the Hermes page.</p>
+        <p className="text-[12px] text-dim">You can change this later in Extension settings.</p>
         {error ? <span className="text-[12px] text-danger">{error}</span> : null}
       </div>
+    </div>
+  );
+}
+
+export function HermesSettingsPanel({ pa }: ExtensionSurfaceProps) {
+  const [config, setConfig] = useState<PublicHermesConfig | null>(null);
+  const [health, setHealth] = useState<HealthState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [configResult, healthResult] = await Promise.allSettled([pa.extension.invoke('readConfig'), pa.extension.invoke('health')]);
+      if (configResult.status === 'fulfilled') {
+        setConfig(
+          isRecord(configResult.value) && isRecord(configResult.value.config) ? (configResult.value.config as PublicHermesConfig) : null,
+        );
+      } else {
+        setError(humanErrorMessage(configResult.reason));
+      }
+      setHealth(healthResult.status === 'fulfilled' ? (healthResult.value as HealthState) : null);
+    } catch (err) {
+      setError(humanErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [pa]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-[18px] font-semibold text-primary">Hermes Agent</h2>
+        <p className="mt-1 text-[13px] leading-6 text-secondary">
+          Connect Neon Pilot to a running Hermes API server. Sessions, tools, memory, and model execution stay inside Hermes.
+        </p>
+      </div>
+      {error ? <ErrorState message={error} /> : null}
+      {loading ? <LoadingState label="Loading Hermes settings…" className="h-16 justify-center" /> : null}
+      <ConfigForm pa={pa} initial={config} onSaved={() => void load()} />
+      {config?.baseUrl ? (
+        <p className={cx('text-[12px]', health?.ok ? 'text-success' : 'text-dim')}>
+          {health?.ok ? `Connected to ${config.baseUrl}.` : `Not connected to ${config.baseUrl}.`}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -438,18 +515,18 @@ function SessionList({
 function toChatBlocks(messages: HermesMessage[], pending: boolean): ExtensionChatMessageBlock[] {
   const blocks: ExtensionChatMessageBlock[] = [];
   messages.forEach((message, index) => {
-    const ts = message.timestamp ?? new Date(0).toISOString();
-    const id = message.id ?? `hermes-${index}`;
-    const reasoning = message.reasoning ?? message.reasoning_content;
+    const ts = messageTimestamp(message.timestamp);
+    const id = messageString(message.id, `hermes-${index}`) || `hermes-${index}`;
+    const reasoning = messageString(message.reasoning ?? message.reasoning_content);
     if (reasoning) {
       blocks.push({ type: 'thinking', id: `${id}-reasoning`, ts, text: reasoning });
     }
-    const role = message.role ?? 'assistant';
+    const role = messageString(message.role, 'assistant');
     const text = messageText(message.content);
     if (role === 'user') {
       blocks.push({ type: 'user', id, ts, text });
     } else if (role === 'tool' || message.tool_name) {
-      blocks.push({ type: 'context', id, ts, customType: message.tool_name ?? 'tool', text });
+      blocks.push({ type: 'context', id, ts, customType: messageString(message.tool_name, 'tool') || 'tool', text });
     } else {
       blocks.push({ type: 'text', id, ts, text });
     }
@@ -659,32 +736,91 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     await navigateTo(pa, '/ext/hermes');
   }
 
-  return (
-    <div className={showSetup ? 'h-full overflow-y-auto bg-base' : 'h-full overflow-hidden bg-base'}>
-      <AppPageLayout
-        shellClassName={showSetup ? 'max-w-[72rem]' : 'flex h-full max-w-[76rem] flex-col'}
-        contentClassName={showSetup ? 'flex min-h-full flex-col gap-10' : 'flex min-h-0 flex-1 flex-col gap-4'}
-      >
-        <header className="flex shrink-0 items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1
-              className={
-                showSetup ? 'text-[40px] font-semibold leading-tight text-primary' : 'text-[30px] font-semibold leading-tight text-primary'
-              }
-            >
-              Hermes Agent
-            </h1>
-            <p className="mt-1 text-[13px] text-secondary">
-              Use Neon Pilot as a client for a running Hermes Agent. Hermes owns the tools, memory, skills, and sessions.
-            </p>
+  if (!showSetup) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-base">
+        {error ? <ErrorState message={error} /> : null}
+        {sessionsError ? (
+          <div className="mx-auto mt-4 w-full max-w-[68rem] rounded-md border border-border-subtle bg-elevated/35 px-3 py-2 text-[13px] text-secondary">
+            {sessionsError}
           </div>
-          <div className={cx('shrink-0 items-center gap-2', showSetup ? 'hidden' : 'flex')}>
+        ) : null}
+        <header className="mx-auto flex w-full max-w-[68rem] shrink-0 items-start justify-between gap-4 px-8 pb-2 pt-9 sm:px-10">
+          <div className="min-w-0">
+            <h1 className="truncate text-[40px] font-semibold leading-tight text-primary">
+              {activeSession ? sessionTitle(activeSession) : 'New Conversation'}
+            </h1>
+            {activeSession ? (
+              <p className="mt-1 truncate text-[12px] text-dim">
+                {activeSession.message_count ?? 0} messages
+                {activeSession.tool_call_count ? ` · ${activeSession.tool_call_count} tools` : ''}
+                {health?.ok ? ' · Connected' : ''}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-2 pt-1">
             <ToolbarButton onClick={() => void loadShell()} disabled={loading}>
               Refresh
             </ToolbarButton>
             <ToolbarButton onClick={() => void createSession()} disabled={creating}>
               New Session
             </ToolbarButton>
+            {activeSession ? (
+              <>
+                <SmallButton onClick={() => void rename()}>Rename</SmallButton>
+                <SmallButton onClick={() => void fork()}>Fork</SmallButton>
+                <SmallButton onClick={() => void remove()}>Delete</SmallButton>
+              </>
+            ) : null}
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          {!activeSessionId ? (
+            <EmptyState title="No session selected" body="Use the Hermes sidebar to open or create a remote agent session." />
+          ) : messagesLoading || loading ? (
+            <LoadingState label="Loading messages…" />
+          ) : chatBlocks.length === 0 ? (
+            <EmptyState title="Empty Hermes session" body="Send the first message to this remote agent session." />
+          ) : (
+            <ChatView messages={chatBlocks} conversationId={activeSessionId} isStreaming={sending} remoteControlled />
+          )}
+        </div>
+
+        {activeSessionId ? (
+          <div className="shrink-0" aria-label="Hermes chat composer">
+            <ChatRailComposer
+              conversationId={activeSessionId}
+              workspaceCwd="Hermes"
+              isStreaming={sending}
+              models={[{ id: 'hermes-agent', name: 'Hermes Agent', label: 'Hermes Agent' }]}
+              currentModel="hermes-agent"
+              currentThinkingLevel="unset"
+              tokens={null}
+              contextUsage={null}
+              onSubmit={(text: string) => {
+                void send(text);
+              }}
+              onAbortStream={() => {}}
+              onSelectModel={() => {}}
+              onSelectThinkingLevel={() => {}}
+              composerPlaceholder="Message Hermes…   /  commands · @ notes · ⇧↵ newline"
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto bg-base">
+      <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="flex min-h-full flex-col gap-10">
+        <header className="flex shrink-0 items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[40px] font-semibold leading-tight text-primary">Hermes Agent</h1>
+            <p className="mt-1 text-[13px] text-secondary">
+              Use Neon Pilot as a client for a running Hermes Agent. Hermes owns the tools, memory, skills, and sessions.
+            </p>
           </div>
         </header>
 
@@ -694,88 +830,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
         ) : null}
         {loading ? <LoadingState label="Loading Hermes…" className="h-20 justify-center" /> : null}
 
-        {showSetup ? (
-          <HermesSetupSection pa={pa} config={config} connected={connected} onSaved={() => void loadShell()} />
-        ) : (
-          <div className="border-b border-border-subtle pb-3">
-            <div className="min-w-0">
-              <p className="text-[12px] font-semibold text-secondary">Connection</p>
-              <p className="truncate text-[12px] text-dim">
-                {config?.baseUrl ?? DEFAULT_BASE_URL} · {connected ? 'Connected' : 'Not connected'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {!showSetup ? (
-          <section className="flex min-h-0 flex-1 flex-col">
-            <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
-              <div className="min-w-0">
-                <div className="mb-1 flex items-center gap-2">
-                  <h2 className="truncate text-[18px] font-semibold text-primary">
-                    {activeSession ? sessionTitle(activeSession) : 'Select a Hermes session'}
-                  </h2>
-                  <span className={cx('text-[12px]', health?.ok ? 'text-success' : 'text-dim')}>
-                    {health?.ok ? 'Connected' : 'Not connected'}
-                  </span>
-                </div>
-                {activeSession ? (
-                  <p className="text-[12px] text-dim">
-                    {activeSession.id} · {activeSession.message_count ?? 0} messages
-                  </p>
-                ) : (
-                  <p className="text-[12px] text-dim">Pick a session from the Hermes sidebar or create a new one.</p>
-                )}
-              </div>
-              {activeSession ? (
-                <div className="flex items-center gap-2">
-                  <SmallButton onClick={() => void rename()}>Rename</SmallButton>
-                  <SmallButton onClick={() => void fork()}>Fork</SmallButton>
-                  <SmallButton onClick={() => void remove()}>Delete</SmallButton>
-                </div>
-              ) : null}
-            </header>
-
-            <div className="min-h-0 flex-1 overflow-y-auto py-4">
-              {!activeSessionId ? (
-                <EmptyState title="No session selected" body="Use the Hermes sidebar to open or create a remote agent session." />
-              ) : messagesLoading ? (
-                <LoadingState label="Loading messages…" />
-              ) : chatBlocks.length === 0 ? (
-                <EmptyState title="Empty Hermes Session" body="Send the first message to this remote agent session." />
-              ) : (
-                <ChatView messages={chatBlocks} conversationId={activeSessionId} isStreaming={sending} remoteControlled />
-              )}
-            </div>
-
-            {activeSessionId ? (
-              <div className="shrink-0 border-t border-border-subtle pt-1" aria-label="Hermes chat composer">
-                <ChatRailComposer
-                  conversationId={activeSessionId}
-                  workspaceCwd="Hermes"
-                  isStreaming={sending}
-                  models={[{ id: 'hermes-agent', name: 'Hermes Agent', label: 'Hermes Agent' }]}
-                  currentModel="hermes-agent"
-                  currentThinkingLevel="unset"
-                  tokens={null}
-                  contextUsage={null}
-                  onSubmit={(text: string) => {
-                    void send(text);
-                  }}
-                  onAbortStream={() => {}}
-                  onSelectModel={() => {}}
-                  onSelectThinkingLevel={() => {}}
-                  composerPlaceholder="Message Hermes…   /  commands · @ notes · ⇧↵ newline"
-                  composerMeta={
-                    <div className="conversation-composer-meta mt-1.5 px-3 text-[10.5px] font-mono tracking-[0.02em] text-dim/80">
-                      Turns run inside Hermes with its configured model, tools, memory, and skills.
-                    </div>
-                  }
-                />
-              </div>
-            ) : null}
-          </section>
-        ) : null}
+        <HermesSetupSection pa={pa} config={config} connected={connected} onSaved={() => void loadShell()} />
       </AppPageLayout>
     </div>
   );

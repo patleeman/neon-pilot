@@ -54,7 +54,15 @@
         "location": "sidebar",
         "component": "HermesSessionsSidebar"
       }
-    ]
+    ],
+    "settingsComponent": {
+      "id": "hermes-settings",
+      "component": "HermesSettingsPanel",
+      "sectionId": "settings-hermes",
+      "label": "Hermes Agent",
+      "description": "Configure the Hermes Agent API connection.",
+      "order": 40
+    }
   },
   "permissions": ["storage:readwrite", "ui:notify"]
 }
