@@ -54,13 +54,45 @@ describe('system-hermes-agent backend', () => {
     );
 
     await expect(readConfig(null, ctx)).resolves.toEqual({
+      activeDeploymentId: 'local',
       config: {
+        id: 'local',
+        name: 'Local Hermes',
         baseUrl: 'http://127.0.0.1:8642',
         sessionKey: 'agent:main',
         hasApiKey: true,
       },
+      deployments: [
+        {
+          id: 'local',
+          name: 'Local Hermes',
+          baseUrl: 'http://127.0.0.1:8642',
+          sessionKey: 'agent:main',
+          hasApiKey: true,
+        },
+      ],
     });
     expect(ctx.ui.invalidate).toHaveBeenCalledWith(['extensions:system-hermes-agent']);
+  });
+
+  it('stores multiple deployments and routes requests to the selected deployment', async () => {
+    const ctx = createContext();
+    await updateConfig({ id: 'local', name: 'Local Hermes', baseUrl: 'http://127.0.0.1:8642', apiKey: 'local-token' }, ctx);
+    await updateConfig({ id: 'bender', name: 'Bender', baseUrl: 'http://bender.tail.ts.net:8642', apiKey: 'bender-token' }, ctx);
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ object: 'list', data: [] }));
+
+    await listSessions({ deploymentId: 'bender', limit: 10 }, ctx);
+
+    const [url, init] = fetchCalls()[0];
+    expect(url).toBe('http://bender.tail.ts.net:8642/api/sessions?limit=10&offset=0&include_children=false');
+    expect((init?.headers as Headers).get('Authorization')).toBe('Bearer bender-token');
+    await expect(readConfig(null, ctx)).resolves.toMatchObject({
+      activeDeploymentId: 'bender',
+      deployments: [
+        { id: 'local', name: 'Local Hermes', baseUrl: 'http://127.0.0.1:8642', hasApiKey: true },
+        { id: 'bender', name: 'Bender', baseUrl: 'http://bender.tail.ts.net:8642', hasApiKey: true },
+      ],
+    });
   });
 
   it('maps listSessions to the Hermes sessions endpoint with auth headers', async () => {

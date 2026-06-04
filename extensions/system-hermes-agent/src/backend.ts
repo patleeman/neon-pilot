@@ -3,6 +3,8 @@ import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 type JsonRecord = Record<string, unknown>;
 
 type HermesConfig = {
+  id: string;
+  name: string;
   baseUrl: string;
   apiKey?: string;
   sessionKey?: string;
@@ -12,7 +14,19 @@ type PublicHermesConfig = Omit<HermesConfig, 'apiKey'> & {
   hasApiKey: boolean;
 };
 
+type HermesConfigState = {
+  activeDeploymentId: string;
+  deployments: HermesConfig[];
+};
+
+type PublicHermesConfigState = {
+  activeDeploymentId: string;
+  deployments: PublicHermesConfig[];
+};
+
 const CONFIG_KEY = 'connection';
+const DEFAULT_DEPLOYMENT_ID = 'local';
+const DEFAULT_DEPLOYMENT_NAME = 'Local Hermes';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8642';
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -41,25 +55,76 @@ function normalizeBaseUrl(value: unknown): string {
   return baseUrl.replace(/\/+$/, '');
 }
 
-function normalizeConfig(value: unknown): HermesConfig {
+function normalizeDeploymentId(value: unknown, fallback = DEFAULT_DEPLOYMENT_ID): string {
+  const normalized = (readString(value) ?? fallback)
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
+
+function normalizeConfig(value: unknown, fallbackId = DEFAULT_DEPLOYMENT_ID): HermesConfig {
   const record = isRecord(value) ? value : {};
+  const id = normalizeDeploymentId(record.id, fallbackId);
   return {
+    id,
+    name: readString(record.name) ?? (id === DEFAULT_DEPLOYMENT_ID ? DEFAULT_DEPLOYMENT_NAME : id),
     baseUrl: normalizeBaseUrl(record.baseUrl),
     apiKey: readString(record.apiKey),
     sessionKey: readString(record.sessionKey),
   };
 }
 
+function normalizeConfigState(value: unknown): HermesConfigState {
+  const record = isRecord(value) ? value : {};
+  const rawDeployments = Array.isArray(record.deployments) ? record.deployments : [];
+  const deployments =
+    rawDeployments.length > 0 ? rawDeployments.map((deployment, index) => normalizeConfig(deployment, `hermes-${index + 1}`)) : [];
+  if (deployments.length === 0) deployments.push(normalizeConfig(record, DEFAULT_DEPLOYMENT_ID));
+
+  const deduped = new Map<string, HermesConfig>();
+  for (const deployment of deployments) {
+    if (!deduped.has(deployment.id)) deduped.set(deployment.id, deployment);
+  }
+  const activeDeploymentId = normalizeDeploymentId(record.activeDeploymentId, deduped.keys().next().value ?? DEFAULT_DEPLOYMENT_ID);
+  return {
+    activeDeploymentId: deduped.has(activeDeploymentId) ? activeDeploymentId : deduped.keys().next().value,
+    deployments: [...deduped.values()],
+  };
+}
+
 function publicConfig(config: HermesConfig): PublicHermesConfig {
   return {
+    id: config.id,
+    name: config.name,
     baseUrl: config.baseUrl,
     sessionKey: config.sessionKey,
     hasApiKey: Boolean(config.apiKey),
   };
 }
 
-async function loadConfig(ctx: ExtensionBackendContext): Promise<HermesConfig> {
-  return normalizeConfig(await ctx.storage.get(CONFIG_KEY).catch(() => null));
+function publicConfigState(state: HermesConfigState): PublicHermesConfigState {
+  return {
+    activeDeploymentId: state.activeDeploymentId,
+    deployments: state.deployments.map(publicConfig),
+  };
+}
+
+async function loadConfigState(ctx: ExtensionBackendContext): Promise<HermesConfigState> {
+  return normalizeConfigState(await ctx.storage.get(CONFIG_KEY).catch(() => null));
+}
+
+function selectConfig(state: HermesConfigState, deploymentId?: unknown): HermesConfig {
+  const requested = readString(deploymentId);
+  return (
+    state.deployments.find((deployment) => deployment.id === requested) ??
+    state.deployments.find((deployment) => deployment.id === state.activeDeploymentId) ??
+    state.deployments[0]
+  );
+}
+
+async function loadConfig(ctx: ExtensionBackendContext, deploymentId?: unknown): Promise<HermesConfig> {
+  return selectConfig(await loadConfigState(ctx), deploymentId);
 }
 
 function timeoutSignal(ms = 20_000): AbortSignal | undefined {
@@ -86,8 +151,12 @@ function errorMessageFromBody(body: unknown, fallback: string): string {
   return fallback;
 }
 
-async function hermesFetch<T>(ctx: ExtensionBackendContext, path: string, init: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
-  const config = await loadConfig(ctx);
+async function hermesFetch<T>(
+  ctx: ExtensionBackendContext,
+  path: string,
+  init: RequestInit & { timeoutMs?: number; deploymentId?: unknown } = {},
+): Promise<T> {
+  const config = await loadConfig(ctx, init.deploymentId);
   const response = await fetch(`${config.baseUrl}${path}`, {
     ...init,
     headers: buildHeaders(config, init.headers),
@@ -202,27 +271,53 @@ function compactRunResponse(value: unknown): JsonRecord {
 }
 
 export async function readConfig(_input: unknown, ctx: ExtensionBackendContext) {
-  return { config: publicConfig(await loadConfig(ctx)) };
+  const state = await loadConfigState(ctx);
+  return { config: publicConfig(selectConfig(state)), ...publicConfigState(state) };
 }
 
 export async function updateConfig(input: unknown, ctx: ExtensionBackendContext) {
-  const current = await loadConfig(ctx);
+  const state = await loadConfigState(ctx);
   const patch = isRecord(input) ? input : {};
+  const requestedId = normalizeDeploymentId(patch.id ?? patch.deploymentId, state.activeDeploymentId);
+  const current =
+    state.deployments.find((deployment) => deployment.id === requestedId) ?? normalizeConfig({ id: requestedId }, requestedId);
   const next: HermesConfig = {
+    id: requestedId,
+    name: patch.name === undefined ? current.name : (readString(patch.name) ?? current.name),
     baseUrl: patch.baseUrl === undefined ? current.baseUrl : normalizeBaseUrl(patch.baseUrl),
     apiKey: patch.apiKey === undefined ? current.apiKey : readString(patch.apiKey),
     sessionKey: patch.sessionKey === undefined ? current.sessionKey : readString(patch.sessionKey),
   };
-  await ctx.storage.put(CONFIG_KEY, next);
+  const deployments = state.deployments.filter((deployment) => deployment.id !== requestedId);
+  deployments.push(next);
+  const activeDeploymentId = patch.makeActive === false ? state.activeDeploymentId : requestedId;
+  const nextState = { activeDeploymentId, deployments };
+  await ctx.storage.put(CONFIG_KEY, nextState);
   ctx.ui.invalidate(['extensions:system-hermes-agent']);
-  return { config: publicConfig(next) };
+  return { config: publicConfig(next), ...publicConfigState(nextState) };
 }
 
-export async function health(_input: unknown, ctx: ExtensionBackendContext) {
-  const config = await loadConfig(ctx);
+export async function deleteDeployment(input: unknown, ctx: ExtensionBackendContext) {
+  const state = await loadConfigState(ctx);
+  const record = isRecord(input) ? input : {};
+  const id = requiredString(record.id ?? record.deploymentId, 'deploymentId');
+  const deployments = state.deployments.filter((deployment) => deployment.id !== id);
+  const nextDeployments = deployments.length > 0 ? deployments : [normalizeConfig(null, DEFAULT_DEPLOYMENT_ID)];
+  const nextState = {
+    activeDeploymentId: state.activeDeploymentId === id ? nextDeployments[0].id : state.activeDeploymentId,
+    deployments: nextDeployments,
+  };
+  await ctx.storage.put(CONFIG_KEY, nextState);
+  ctx.ui.invalidate(['extensions:system-hermes-agent']);
+  return publicConfigState(nextState);
+}
+
+export async function health(input: unknown, ctx: ExtensionBackendContext) {
+  const record = isRecord(input) ? input : {};
+  const config = await loadConfig(ctx, record.deploymentId);
   const [basic, detailed] = await Promise.allSettled([
-    hermesFetch<JsonRecord>(ctx, '/health', { method: 'GET', timeoutMs: 4000 }),
-    hermesFetch<JsonRecord>(ctx, '/health/detailed', { method: 'GET', timeoutMs: 5000 }),
+    hermesFetch<JsonRecord>(ctx, '/health', { method: 'GET', timeoutMs: 4000, deploymentId: config.id }),
+    hermesFetch<JsonRecord>(ctx, '/health/detailed', { method: 'GET', timeoutMs: 5000, deploymentId: config.id }),
   ]);
   return {
     config: publicConfig(config),
@@ -245,7 +340,7 @@ export async function listSessions(input: unknown, ctx: ExtensionBackendContext)
   return hermesFetch<JsonRecord>(
     ctx,
     `/api/sessions${query({ limit, offset, source, include_children: record.includeChildren === true })}`,
-    { method: 'GET', timeoutMs: 10_000 },
+    { method: 'GET', timeoutMs: 10_000, deploymentId: record.deploymentId },
   );
 }
 
@@ -260,6 +355,7 @@ export async function createSession(input: unknown, ctx: ExtensionBackendContext
     method: 'POST',
     body: JSON.stringify(body),
     timeoutMs: 10_000,
+    deploymentId: record.deploymentId,
   });
 }
 
@@ -268,6 +364,7 @@ export async function getMessages(input: unknown, ctx: ExtensionBackendContext) 
   return hermesFetch<JsonRecord>(ctx, `/api/sessions/${encodedId(record.sessionId)}/messages`, {
     method: 'GET',
     timeoutMs: 10_000,
+    deploymentId: record.deploymentId,
   });
 }
 
@@ -282,6 +379,7 @@ export async function sendMessage(input: unknown, ctx: ExtensionBackendContext) 
     method: 'POST',
     body: JSON.stringify(body),
     timeoutMs: 120_000,
+    deploymentId: record.deploymentId,
   });
   return compactChatResponse(result);
 }
@@ -297,6 +395,7 @@ export async function startSessionRun(input: unknown, ctx: ExtensionBackendConte
     method: 'POST',
     body: JSON.stringify(body),
     timeoutMs: 10_000,
+    deploymentId: record.deploymentId,
   });
   return compactRunResponse(result);
 }
@@ -307,6 +406,7 @@ export async function getRun(input: unknown, ctx: ExtensionBackendContext) {
   const result = await hermesFetch<JsonRecord>(ctx, `/v1/runs/${runId}`, {
     method: 'GET',
     timeoutMs: 10_000,
+    deploymentId: record.deploymentId,
   });
   return compactRunResponse(result);
 }
@@ -317,6 +417,7 @@ export async function renameSession(input: unknown, ctx: ExtensionBackendContext
     method: 'PATCH',
     body: JSON.stringify({ title: requiredString(record.title, 'title') }),
     timeoutMs: 10_000,
+    deploymentId: record.deploymentId,
   });
 }
 
@@ -329,6 +430,7 @@ export async function forkSession(input: unknown, ctx: ExtensionBackendContext) 
     method: 'POST',
     body: JSON.stringify(body),
     timeoutMs: 15_000,
+    deploymentId: record.deploymentId,
   });
 }
 
@@ -337,5 +439,6 @@ export async function deleteSession(input: unknown, ctx: ExtensionBackendContext
   return hermesFetch<JsonRecord>(ctx, `/api/sessions/${encodedId(record.sessionId)}`, {
     method: 'DELETE',
     timeoutMs: 10_000,
+    deploymentId: record.deploymentId,
   });
 }

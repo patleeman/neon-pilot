@@ -15,9 +15,17 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type PublicHermesConfig = {
+  id: string;
+  name: string;
   baseUrl: string;
   sessionKey?: string;
   hasApiKey: boolean;
+};
+
+type PublicHermesConfigState = {
+  activeDeploymentId: string;
+  deployments: PublicHermesConfig[];
+  config?: PublicHermesConfig;
 };
 
 type HermesSession = {
@@ -55,6 +63,7 @@ type HealthState = {
 };
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8642';
+const DEFAULT_DEPLOYMENT_NAME = 'Local Hermes';
 const SESSION_CACHE_KEY = 'system-hermes-agent:last-sessions';
 const HIDDEN_SESSIONS_KEY = 'system-hermes-agent:hidden-sessions';
 const DISCONNECTED_MESSAGE = 'Hermes is not reachable at the configured URL.';
@@ -137,6 +146,24 @@ function unwrapSession(value: unknown): HermesSession | null {
   return null;
 }
 
+function unwrapConfigState(value: unknown): PublicHermesConfigState {
+  const record = isRecord(value) ? value : {};
+  const deployments = Array.isArray(record.deployments) ? (record.deployments as PublicHermesConfig[]) : [];
+  const config = isRecord(record.config) ? (record.config as PublicHermesConfig) : deployments[0];
+  const resolvedDeployments =
+    deployments.length > 0
+      ? deployments
+      : config
+        ? [config]
+        : [{ id: 'local', name: 'Local Hermes', baseUrl: DEFAULT_BASE_URL, hasApiKey: false }];
+  return {
+    activeDeploymentId:
+      safeString(record.activeDeploymentId, resolvedDeployments[0]?.id ?? 'local').trim() || resolvedDeployments[0]?.id || 'local',
+    deployments: resolvedDeployments,
+    config,
+  };
+}
+
 function messageText(content: unknown): string {
   if (Array.isArray(content)) {
     return content
@@ -200,7 +227,19 @@ function preserveNonEmptySessions(current: HermesSession[], next: HermesSession[
   return next.length === 0 && current.length > 0 ? current : next;
 }
 
-function readCachedSessions(): HermesSession[] {
+function readCachedSessions(deploymentId = 'local'): HermesSession[] {
+  try {
+    const raw = window.sessionStorage.getItem(`${SESSION_CACHE_KEY}:${deploymentId}`);
+    if (!raw && deploymentId === 'local') return readLegacyCachedSessions();
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as HermesSession[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function readLegacyCachedSessions(): HermesSession[] {
   try {
     const raw = window.sessionStorage.getItem(SESSION_CACHE_KEY);
     if (!raw) return [];
@@ -211,10 +250,10 @@ function readCachedSessions(): HermesSession[] {
   }
 }
 
-function writeCachedSessions(sessions: HermesSession[]) {
+function writeCachedSessions(deploymentId: string, sessions: HermesSession[]) {
   if (sessions.length === 0) return;
   try {
-    window.sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(sessions));
+    window.sessionStorage.setItem(`${SESSION_CACHE_KEY}:${deploymentId}`, JSON.stringify(sessions));
   } catch {
     // Best-effort UI cache only.
   }
@@ -269,12 +308,25 @@ function selectedSessionIdFromSearch(search: string): string | null {
   return id?.trim() || null;
 }
 
-function buildSessionRoute(sessionId: string): string {
-  return `/ext/hermes?session=${encodeURIComponent(safeString(sessionId))}`;
+function selectedDeploymentIdFromSearch(search: string): string | null {
+  const id = new URLSearchParams(search).get('deployment');
+  return id?.trim() || null;
 }
 
-function buildSessionActivityId(id: string): string {
-  return `hermes-session:${id}`;
+function buildDeploymentRoute(deploymentId: string): string {
+  return `/ext/hermes?deployment=${encodeURIComponent(safeString(deploymentId))}`;
+}
+
+function buildSessionRoute(deploymentId: string, sessionId: string): string {
+  return `/ext/hermes?deployment=${encodeURIComponent(safeString(deploymentId))}&session=${encodeURIComponent(safeString(sessionId))}`;
+}
+
+function buildDeploymentActivityId(id: string): string {
+  return `hermes-deployment:${id}`;
+}
+
+function buildSessionActivityId(deploymentId: string, id: string): string {
+  return `hermes-session:${deploymentId}:${id}`;
 }
 
 function newSessionTitle(): string {
@@ -332,12 +384,16 @@ function SidebarSvgIcon({ path }: { path: string }) {
 function ConfigForm({
   pa,
   initial,
+  deployments = [],
   onSaved,
 }: {
   pa: ExtensionSurfaceProps['pa'];
   initial?: PublicHermesConfig | null;
+  deployments?: PublicHermesConfig[];
   onSaved: () => void;
 }) {
+  const [deploymentId, setDeploymentId] = useState(initial?.id ?? deployments[0]?.id ?? 'local');
+  const [name, setName] = useState(initial?.name ?? deployments[0]?.name ?? DEFAULT_DEPLOYMENT_NAME);
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? DEFAULT_BASE_URL);
   const [apiKey, setApiKey] = useState('');
   const [sessionKey, setSessionKey] = useState(initial?.sessionKey ?? '');
@@ -346,6 +402,8 @@ function ConfigForm({
 
   useEffect(() => {
     if (!initial) return;
+    setDeploymentId(initial.id || 'local');
+    setName(initial.name || DEFAULT_DEPLOYMENT_NAME);
     setBaseUrl(initial.baseUrl || DEFAULT_BASE_URL);
     setSessionKey(initial.sessionKey ?? '');
   }, [initial]);
@@ -355,6 +413,8 @@ function ConfigForm({
     setError(null);
     try {
       await pa.extension.invoke('updateConfig', {
+        id: deploymentId,
+        name,
         baseUrl,
         sessionKey,
         ...(apiKey.trim() ? { apiKey } : {}),
@@ -369,41 +429,119 @@ function ConfigForm({
     }
   }
 
+  async function deleteCurrentDeployment() {
+    if (!deploymentId || deployments.length <= 1) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await pa.extension.invoke('deleteDeployment', { deploymentId });
+      onSaved();
+      pa.ui.toast('Hermes deployment removed.');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function startNewDeployment() {
+    const id = `hermes-${deployments.length + 1}`;
+    setDeploymentId(id);
+    setName(`Hermes ${deployments.length + 1}`);
+    setBaseUrl(DEFAULT_BASE_URL);
+    setSessionKey('');
+    setApiKey('');
+  }
+
   return (
     <div className="space-y-4">
-      <label className="block space-y-2">
-        <span className="text-[12px] font-semibold text-secondary">Hermes URL</span>
-        <input
-          value={baseUrl}
-          onChange={(event) => setBaseUrl(event.currentTarget.value)}
-          placeholder="http://127.0.0.1:8642"
-          type="url"
-          name="hermes-url"
-          autoComplete="off"
-          spellCheck={false}
-          className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
-        />
-        <span className="block text-[12px] leading-5 text-dim">
-          Use the local server URL or a reachable Tailscale URL such as http://bender.tail5a01ec.ts.net:8642.
-        </span>
-      </label>
+      {deployments.length > 0 ? (
+        <div className="flex items-end gap-3">
+          <label className="block min-w-0 flex-1 space-y-2">
+            <span className="text-[12px] font-semibold text-secondary">Deployment</span>
+            <select
+              value={deploymentId}
+              onChange={(event) => {
+                const next = deployments.find((deployment) => deployment.id === event.currentTarget.value);
+                if (!next) return;
+                setDeploymentId(next.id);
+                setName(next.name);
+                setBaseUrl(next.baseUrl);
+                setSessionKey(next.sessionKey ?? '');
+                setApiKey('');
+              }}
+              className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+            >
+              {deployments.map((deployment) => (
+                <option key={deployment.id} value={deployment.id}>
+                  {deployment.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ToolbarButton onClick={startNewDeployment}>New deployment</ToolbarButton>
+        </div>
+      ) : null}
 
-      <label className="block space-y-2">
-        <span className="text-[12px] font-semibold text-secondary">API Key</span>
-        <input
-          value={apiKey}
-          onChange={(event) => setApiKey(event.currentTarget.value)}
-          placeholder={initial?.hasApiKey ? 'Saved; enter a new key to replace' : 'API_SERVER_KEY'}
-          type="password"
-          name="hermes-api-key"
-          autoComplete="off"
-          spellCheck={false}
-          className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
-        />
-        <span className="block text-[12px] leading-5 text-dim">
-          Paste the raw API_SERVER_KEY value from ~/.hermes/.env. Do not include Bearer.
-        </span>
-      </label>
+      <div className="grid gap-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <label className="block space-y-2">
+          <span className="text-[12px] font-semibold text-secondary">Name</span>
+          <input
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+            placeholder="Bender"
+            name="hermes-deployment-name"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+          />
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-[12px] font-semibold text-secondary">Deployment ID</span>
+          <input
+            value={deploymentId}
+            onChange={(event) => setDeploymentId(event.currentTarget.value)}
+            placeholder="bender"
+            name="hermes-deployment-id"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block space-y-2">
+          <span className="text-[12px] font-semibold text-secondary">Base URL</span>
+          <input
+            value={baseUrl}
+            onChange={(event) => setBaseUrl(event.currentTarget.value)}
+            placeholder="http://127.0.0.1:8642"
+            type="url"
+            name="hermes-url"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+          />
+          <span className="block text-[12px] leading-5 text-dim">Local or tailnet URL for the Hermes API server.</span>
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-[12px] font-semibold text-secondary">API key</span>
+          <input
+            value={apiKey}
+            onChange={(event) => setApiKey(event.currentTarget.value)}
+            placeholder={initial?.hasApiKey ? 'Saved; enter a new key to replace' : 'API_SERVER_KEY'}
+            type="password"
+            name="hermes-api-key"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+          />
+          <span className="block text-[12px] leading-5 text-dim">Raw API_SERVER_KEY value from Hermes. Do not include Bearer.</span>
+        </label>
+      </div>
 
       <details className="space-y-3">
         <summary className="cursor-pointer text-[12px] font-semibold text-secondary">Advanced</summary>
@@ -428,6 +566,11 @@ function ConfigForm({
         <ToolbarButton onClick={() => void save()} disabled={saving}>
           {saving ? 'Saving…' : 'Connect Hermes'}
         </ToolbarButton>
+        {deployments.length > 1 ? (
+          <ToolbarButton onClick={() => void deleteCurrentDeployment()} disabled={saving}>
+            Delete deployment
+          </ToolbarButton>
+        ) : null}
         <p className="text-[12px] text-dim">You can change this later in Extension settings.</p>
         {error ? <span className="text-[12px] text-danger">{error}</span> : null}
       </div>
@@ -437,6 +580,7 @@ function ConfigForm({
 
 export function HermesSettingsPanel({ pa }: ExtensionSurfaceProps) {
   const [config, setConfig] = useState<PublicHermesConfig | null>(null);
+  const [deployments, setDeployments] = useState<PublicHermesConfig[]>([]);
   const [health, setHealth] = useState<HealthState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -447,8 +591,13 @@ export function HermesSettingsPanel({ pa }: ExtensionSurfaceProps) {
     try {
       const [configResult, healthResult] = await Promise.allSettled([pa.extension.invoke('readConfig'), pa.extension.invoke('health')]);
       if (configResult.status === 'fulfilled') {
+        const state = unwrapConfigState(configResult.value);
+        setDeployments(state.deployments);
         setConfig(
-          isRecord(configResult.value) && isRecord(configResult.value.config) ? (configResult.value.config as PublicHermesConfig) : null,
+          state.config ??
+            state.deployments.find((deployment) => deployment.id === state.activeDeploymentId) ??
+            state.deployments[0] ??
+            null,
         );
       } else {
         setError(humanErrorMessage(configResult.reason));
@@ -475,7 +624,7 @@ export function HermesSettingsPanel({ pa }: ExtensionSurfaceProps) {
       </div>
       {error ? <ErrorState message={error} /> : null}
       {loading ? <LoadingState label="Loading Hermes settings…" className="h-16 justify-center" /> : null}
-      <ConfigForm pa={pa} initial={config} onSaved={() => void load()} />
+      <ConfigForm pa={pa} initial={config} deployments={deployments} onSaved={() => void load()} />
       {config?.baseUrl ? (
         <p className={cx('text-[12px]', health?.ok ? 'text-success' : 'text-dim')}>
           {health?.ok ? `Connected to ${config.baseUrl}.` : `Not connected to ${config.baseUrl}.`}
@@ -488,11 +637,13 @@ export function HermesSettingsPanel({ pa }: ExtensionSurfaceProps) {
 function HermesSetupSection({
   pa,
   config,
+  deployments,
   connected,
   onSaved,
 }: {
   pa: ExtensionSurfaceProps['pa'];
   config: PublicHermesConfig | null;
+  deployments: PublicHermesConfig[];
   connected: boolean;
   onSaved: () => void;
 }) {
@@ -510,8 +661,8 @@ function HermesSetupSection({
           </p>
         </div>
 
-        <div className="rounded-xl border border-border-subtle bg-surface p-5 shadow-sm">
-          <ConfigForm pa={pa} initial={config} onSaved={onSaved} />
+        <div className="rounded-md border border-border-subtle bg-surface p-5 shadow-sm">
+          <ConfigForm pa={pa} initial={config} deployments={deployments} onSaved={onSaved} />
           {connected ? <p className="mt-4 text-[12px] text-success">Connected to Hermes.</p> : null}
         </div>
       </div>
@@ -538,59 +689,86 @@ function HermesSetupSection({
 }
 
 function SessionList({
+  deployment,
   sessions,
   activeSessionId,
+  activeDeploymentId,
   loading,
   error,
   onCloseSession,
+  onSelectDeployment,
   onSelect,
 }: {
+  deployment: PublicHermesConfig;
   sessions: HermesSession[];
   activeSessionId: string | null;
+  activeDeploymentId: string | null;
   loading: boolean;
   error: string | null;
-  onCloseSession: (sessionId: string) => void;
+  onCloseSession: (deploymentId: string, sessionId: string) => void;
+  onSelectDeployment: () => void;
   onSelect: (session: HermesSession) => void;
 }) {
   if (loading) return <LoadingState label="Loading Hermes sessions…" className="h-28 justify-center" />;
   if (error && sessions.length === 0) {
     return <p className="px-4 py-3 text-[12px] leading-5 text-dim">{error}</p>;
   }
-  if (sessions.length === 0) {
-    return <p className="px-4 py-3 text-[12px] text-dim">No open Hermes sessions.</p>;
-  }
 
   const items: ActivityTreeItem[] = sessions.map((session) => {
     const id = sessionId(session);
     const meta = `${session.message_count ?? 0} messages${session.tool_call_count ? ` · ${session.tool_call_count} tools` : ''}`;
     return {
-      id: buildSessionActivityId(id),
+      id: buildSessionActivityId(deployment.id, id),
       kind: 'conversation',
+      parentId: buildDeploymentActivityId(deployment.id),
       title: sessionTitle(session),
       subtitle: meta,
       status: 'idle',
-      route: buildSessionRoute(id),
+      route: buildSessionRoute(deployment.id, id),
       updatedAt: safeString(session.last_active ?? session.started_at) || undefined,
       metadata: {
         conversationId: id,
-        canArchive: false,
+        deploymentId: deployment.id,
+        canArchive: true,
         tooltip: `${sessionTitle(session)} · ${meta}`,
       },
     };
   });
+  const treeItems: ActivityTreeItem[] = [
+    {
+      id: buildDeploymentActivityId(deployment.id),
+      kind: 'group',
+      title: deployment.name,
+      subtitle: deployment.baseUrl,
+      status: 'idle',
+      route: buildDeploymentRoute(deployment.id),
+      metadata: { deploymentId: deployment.id },
+    },
+    ...items,
+  ];
 
   return (
     <div>
       {error ? <p className="px-3 pb-2 pt-1 text-[11px] leading-4 text-dim">{error}</p> : null}
       <ActivityTreeView
-        items={items}
-        activeItemId={activeSessionId ? buildSessionActivityId(activeSessionId) : null}
-        inlineActions={[{ id: 'close', title: 'Close Hermes session', icon: '×' }]}
-        onInlineAction={(actionId, item) => {
+        items={treeItems}
+        activeItemId={
+          activeDeploymentId === deployment.id && activeSessionId
+            ? buildSessionActivityId(deployment.id, activeSessionId)
+            : activeDeploymentId === deployment.id
+              ? buildDeploymentActivityId(deployment.id)
+              : null
+        }
+        onArchiveItem={(item) => {
           const id = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
-          if (actionId === 'close' && id) onCloseSession(id);
+          const deploymentId = typeof item.metadata?.deploymentId === 'string' ? item.metadata.deploymentId : deployment.id;
+          if (id) onCloseSession(deploymentId, id);
         }}
         onOpenItem={(item) => {
+          if (item.kind === 'group') {
+            onSelectDeployment();
+            return;
+          }
           const id = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
           const session = id ? sessions.find((candidate) => sessionId(candidate) === id) : null;
           if (session) onSelect(session);
@@ -671,40 +849,47 @@ function sanitizeChatBlock(block: ExtensionChatMessageBlock, index: number): Ext
 }
 
 export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
+  const routeDeploymentId = selectedDeploymentIdFromSearch(context.search);
   const activeSessionId = selectedSessionIdFromSearch(context.search);
-  const [sessions, setSessions] = useState<HermesSession[]>(readCachedSessions);
+  const [deployments, setDeployments] = useState<PublicHermesConfig[]>([]);
+  const [activeDeploymentId, setActiveDeploymentId] = useState<string | null>(routeDeploymentId);
+  const [sessionsByDeployment, setSessionsByDeployment] = useState<Record<string, HermesSession[]>>({});
   const [hiddenSessionIds, setHiddenSessionIds] = useState<Set<string>>(readHiddenSessionIds);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const visibleSessions = useMemo(
-    () => sessions.filter((session) => !hiddenSessionIds.has(sessionId(session))),
-    [hiddenSessionIds, sessions],
-  );
-  const hiddenCount = Math.max(0, sessions.length - visibleSessions.length);
+  const resolvedActiveDeploymentId = routeDeploymentId ?? activeDeploymentId ?? deployments[0]?.id ?? 'local';
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await pa.extension.invoke('listSessions', { limit: 100, includeChildren: true });
-      if (hasListPayload(result)) {
-        const nextSessions = unwrapList<HermesSession>(result);
-        setSessions((current) => {
-          const resolved = preserveNonEmptySessions(current, nextSessions);
-          writeCachedSessions(resolved);
-          return resolved;
-        });
-        if (nextSessions.length === 0) setError('Hermes returned an empty session list. Keeping the existing sidebar sessions.');
-      } else {
-        setError('Hermes returned an unrecognized session list response.');
-      }
+      const configState = unwrapConfigState(await pa.extension.invoke('readConfig'));
+      setDeployments(configState.deployments);
+      const nextActiveDeploymentId = routeDeploymentId ?? configState.activeDeploymentId;
+      setActiveDeploymentId(nextActiveDeploymentId);
+      const entries = await Promise.all(
+        configState.deployments.map(async (deployment) => {
+          try {
+            const result = await pa.extension.invoke('listSessions', { deploymentId: deployment.id, limit: 100, includeChildren: true });
+            if (!hasListPayload(result)) throw new Error('Hermes returned an unrecognized session list response.');
+            const nextSessions = unwrapList<HermesSession>(result);
+            const resolved = preserveNonEmptySessions(readCachedSessions(deployment.id), nextSessions);
+            writeCachedSessions(deployment.id, resolved);
+            return [deployment.id, resolved] as const;
+          } catch (err) {
+            setError(humanErrorMessage(err));
+            return [deployment.id, readCachedSessions(deployment.id)] as const;
+          }
+        }),
+      );
+      setSessionsByDeployment(Object.fromEntries(entries));
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [pa]);
+  }, [pa, routeDeploymentId]);
 
   useEffect(() => {
     void load();
@@ -713,23 +898,22 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
   async function create() {
     setCreating(true);
     try {
-      const previousSessions = sessions;
-      const result = await pa.extension.invoke('createSession', { title: newSessionTitle() });
+      const deploymentId = resolvedActiveDeploymentId;
+      const previousSessions = sessionsByDeployment[deploymentId] ?? [];
+      const result = await pa.extension.invoke('createSession', { deploymentId, title: newSessionTitle() });
       let session = unwrapSession(result);
-      const sessionsResult = await pa.extension.invoke('listSessions', { limit: 100, includeChildren: true });
+      const sessionsResult = await pa.extension.invoke('listSessions', { deploymentId, limit: 100, includeChildren: true });
       if (hasListPayload(sessionsResult)) {
         const nextSessions = unwrapList<HermesSession>(sessionsResult);
-        setSessions((current) => {
-          const resolved = preserveNonEmptySessions(current, nextSessions);
-          writeCachedSessions(resolved);
-          return resolved;
-        });
+        const resolved = preserveNonEmptySessions(previousSessions, nextSessions);
+        writeCachedSessions(deploymentId, resolved);
+        setSessionsByDeployment((current) => ({ ...current, [deploymentId]: resolved }));
         session ??= firstNewSession(previousSessions, nextSessions);
         if (nextSessions.length === 0) setError('Hermes returned an empty session list after creating the session.');
       } else {
         setError('Hermes returned an unrecognized session list response.');
       }
-      if (session) await navigateTo(pa, buildSessionRoute(sessionId(session)));
+      if (session) await navigateTo(pa, buildSessionRoute(deploymentId, sessionId(session)));
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {
@@ -737,14 +921,15 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
     }
   }
 
-  function closeSession(id: string) {
+  function closeSession(deploymentId: string, id: string) {
+    const key = `${deploymentId}:${id}`;
     setHiddenSessionIds((current) => {
       const next = new Set(current);
-      next.add(id);
+      next.add(key);
       writeHiddenSessionIds(next);
       return next;
     });
-    if (id === activeSessionId) void navigateTo(pa, '/ext/hermes');
+    if (deploymentId === resolvedActiveDeploymentId && id === activeSessionId) void navigateTo(pa, buildDeploymentRoute(deploymentId));
   }
 
   function showHiddenSessions() {
@@ -767,33 +952,47 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-3">
-        <SessionList
-          sessions={visibleSessions}
-          activeSessionId={activeSessionId}
-          loading={loading}
-          error={error}
-          onCloseSession={closeSession}
-          onSelect={(session) => void navigateTo(pa, buildSessionRoute(sessionId(session)))}
-        />
-        {hiddenCount > 0 ? (
-          <button
-            type="button"
-            onClick={showHiddenSessions}
-            className="mx-2 mt-2 rounded px-2 py-1 text-left text-[11px] text-dim hover:bg-surface-hover hover:text-secondary"
-          >
-            Show {hiddenCount} hidden {hiddenCount === 1 ? 'session' : 'sessions'}
-          </button>
-        ) : null}
+        {deployments.map((deployment) => {
+          const sessions = sessionsByDeployment[deployment.id] ?? readCachedSessions(deployment.id);
+          const visibleSessions = sessions.filter((session) => !hiddenSessionIds.has(`${deployment.id}:${sessionId(session)}`));
+          const hiddenCount = Math.max(0, sessions.length - visibleSessions.length);
+          return (
+            <div key={deployment.id}>
+              <SessionList
+                deployment={deployment}
+                sessions={visibleSessions}
+                activeSessionId={activeSessionId}
+                activeDeploymentId={resolvedActiveDeploymentId}
+                loading={loading}
+                error={error}
+                onCloseSession={closeSession}
+                onSelectDeployment={() => void navigateTo(pa, buildDeploymentRoute(deployment.id))}
+                onSelect={(session) => void navigateTo(pa, buildSessionRoute(deployment.id, sessionId(session)))}
+              />
+              {hiddenCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={showHiddenSessions}
+                  className="mx-2 mt-2 rounded px-2 py-1 text-left text-[11px] text-dim hover:bg-surface-hover hover:text-secondary"
+                >
+                  Show {hiddenCount} hidden {hiddenCount === 1 ? 'session' : 'sessions'}
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
+  const routeDeploymentId = selectedDeploymentIdFromSearch(context.search);
   const activeSessionId = selectedSessionIdFromSearch(context.search);
   const [config, setConfig] = useState<PublicHermesConfig | null>(null);
+  const [deployments, setDeployments] = useState<PublicHermesConfig[]>([]);
   const [health, setHealth] = useState<HealthState | null>(null);
-  const [sessions, setSessions] = useState<HermesSession[]>(readCachedSessions);
+  const [sessions, setSessions] = useState<HermesSession[]>(() => readCachedSessions(routeDeploymentId ?? 'local'));
   const [messages, setMessages] = useState<HermesMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
@@ -801,6 +1000,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [activeRun, setActiveRun] = useState<{ id: string; sessionId: string; startedAt: number } | null>(null);
+  const activeDeploymentId = routeDeploymentId ?? config?.id ?? deployments[0]?.id ?? 'local';
 
   const activeSession = useMemo(
     () => sessions.find((session) => sessionId(session) === activeSessionId) ?? null,
@@ -819,13 +1019,15 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     try {
       const [configResult, healthResult, sessionsResult] = await Promise.allSettled([
         pa.extension.invoke('readConfig'),
-        pa.extension.invoke('health'),
-        pa.extension.invoke('listSessions', { limit: 100, includeChildren: true }),
+        pa.extension.invoke('health', { deploymentId: activeDeploymentId }),
+        pa.extension.invoke('listSessions', { deploymentId: activeDeploymentId, limit: 100, includeChildren: true }),
       ]);
       if (configResult.status === 'fulfilled') {
-        setConfig(
-          isRecord(configResult.value) && isRecord(configResult.value.config) ? (configResult.value.config as PublicHermesConfig) : null,
-        );
+        const state = unwrapConfigState(configResult.value);
+        setDeployments(state.deployments);
+        const selected =
+          state.deployments.find((deployment) => deployment.id === activeDeploymentId) ?? state.config ?? state.deployments[0] ?? null;
+        setConfig(selected);
       } else {
         setError(humanErrorMessage(configResult.reason));
       }
@@ -839,7 +1041,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
           const nextSessions = unwrapList<HermesSession>(sessionsResult.value);
           setSessions((current) => {
             const resolved = preserveNonEmptySessions(current, nextSessions);
-            writeCachedSessions(resolved);
+            writeCachedSessions(activeDeploymentId, resolved);
             return resolved;
           });
           if (nextSessions.length === 0) {
@@ -857,7 +1059,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     } finally {
       setLoading(false);
     }
-  }, [pa]);
+  }, [activeDeploymentId, pa]);
 
   const loadMessages = useCallback(async () => {
     if (!activeSessionId) {
@@ -866,7 +1068,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     }
     setMessagesLoading(true);
     try {
-      const result = await pa.extension.invoke('getMessages', { sessionId: activeSessionId });
+      const result = await pa.extension.invoke('getMessages', { deploymentId: activeDeploymentId, sessionId: activeSessionId });
       if (hasListPayload(result)) {
         const nextMessages = unwrapList<HermesMessage>(result);
         setMessages((current) => (nextMessages.length === 0 && current.length > 0 ? current : nextMessages));
@@ -878,7 +1080,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     } finally {
       setMessagesLoading(false);
     }
-  }, [activeSessionId, pa]);
+  }, [activeDeploymentId, activeSessionId, pa]);
 
   useEffect(() => {
     void loadShell();
@@ -900,7 +1102,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
           }
           return;
         }
-        const result = await pa.extension.invoke('getRun', { runId: activeRun.id });
+        const result = await pa.extension.invoke('getRun', { deploymentId: activeDeploymentId, runId: activeRun.id });
         if (cancelled) return;
         const status = runStatus(result);
         const errorMessage = runError(result);
@@ -945,7 +1147,11 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     const optimistic: HermesMessage = { role: 'user', content: text, timestamp: new Date().toISOString() };
     setMessages((current) => [...current, optimistic]);
     try {
-      const result = await pa.extension.invoke('startSessionRun', { sessionId: runSessionId, message: text });
+      const result = await pa.extension.invoke('startSessionRun', {
+        deploymentId: activeDeploymentId,
+        sessionId: runSessionId,
+        message: text,
+      });
       const id = runId(result);
       if (!id) throw new Error('Hermes did not return a run id.');
       const status = runStatus(result);
@@ -1006,7 +1212,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
           <div className="shrink-0" aria-label="Hermes chat composer">
             <ChatRailComposer
               conversationId={activeSessionId}
-              workspaceCwd="Hermes"
+              workspaceCwd={config?.name ?? 'Hermes'}
               isStreaming={sending}
               models={[{ id: 'hermes-agent', name: 'Hermes Agent', label: 'Hermes Agent' }]}
               currentModel="hermes-agent"
@@ -1045,7 +1251,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
         ) : null}
         {loading ? <LoadingState label="Loading Hermes…" className="h-20 justify-center" /> : null}
 
-        <HermesSetupSection pa={pa} config={config} connected={connected} onSaved={() => void loadShell()} />
+        <HermesSetupSection pa={pa} config={config} deployments={deployments} connected={connected} onSaved={() => void loadShell()} />
       </AppPageLayout>
     </div>
   );

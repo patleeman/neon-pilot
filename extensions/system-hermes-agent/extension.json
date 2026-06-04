@@ -15,6 +15,7 @@
     "actions": [
       { "id": "readConfig", "handler": "readConfig", "title": "Read Hermes connection", "worker": { "enabled": true } },
       { "id": "updateConfig", "handler": "updateConfig", "title": "Update Hermes connection", "worker": { "enabled": true } },
+      { "id": "deleteDeployment", "handler": "deleteDeployment", "title": "Delete Hermes deployment", "worker": { "enabled": true } },
       { "id": "health", "handler": "health", "title": "Check Hermes health", "worker": { "enabled": true } },
       { "id": "capabilities", "handler": "capabilities", "title": "Read Hermes capabilities", "worker": { "enabled": true } },
       { "id": "listSessions", "handler": "listSessions", "title": "List Hermes sessions", "worker": { "enabled": true } },
