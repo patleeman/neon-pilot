@@ -274,30 +274,6 @@ async function navigateTo(pa: ExtensionSurfaceProps['pa'], to: string) {
   if (!handled && typeof window !== 'undefined') window.location.href = to;
 }
 
-function SmallButton({
-  children,
-  disabled,
-  onClick,
-  title,
-}: {
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick: () => void;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      title={title}
-      onClick={onClick}
-      className="rounded-md border border-border-subtle bg-elevated/60 px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {children}
-    </button>
-  );
-}
-
 function SidebarIconButton({
   children,
   disabled,
@@ -804,7 +780,6 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [activeRun, setActiveRun] = useState<{ id: string; sessionId: string; startedAt: number } | null>(null);
-  const [creating, setCreating] = useState(false);
 
   const activeSession = useMemo(
     () => sessions.find((session) => sessionId(session) === activeSessionId) ?? null,
@@ -940,35 +915,6 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     };
   }, [activeRun, activeSessionId, loadMessages, loadShell, pa]);
 
-  async function createSession() {
-    setCreating(true);
-    setError(null);
-    try {
-      const previousSessions = sessions;
-      const result = await pa.extension.invoke('createSession', { title: newSessionTitle() });
-      let session = unwrapSession(result);
-      const sessionsResult = await pa.extension.invoke('listSessions', { limit: 100, includeChildren: true });
-      if (hasListPayload(sessionsResult)) {
-        const nextSessions = unwrapList<HermesSession>(sessionsResult);
-        setSessions((current) => {
-          const resolved = preserveNonEmptySessions(current, nextSessions);
-          writeCachedSessions(resolved);
-          return resolved;
-        });
-        session ??= firstNewSession(previousSessions, nextSessions);
-        if (nextSessions.length === 0) setSessionsError('Hermes returned an empty session list after creating the session.');
-      } else {
-        setSessionsError('Hermes returned an unrecognized session list response.');
-      }
-      await loadShell();
-      if (session) await navigateTo(pa, buildSessionRoute(sessionId(session)));
-    } catch (err) {
-      setError(humanErrorMessage(err));
-    } finally {
-      setCreating(false);
-    }
-  }
-
   async function send(textInput: string) {
     const text = textInput.trim();
     if (!text || !activeSessionId || activeRun) return;
@@ -999,30 +945,6 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     }
   }
 
-  async function rename() {
-    if (!activeSessionId) return;
-    const title = window.prompt('Session title', activeSession?.title ?? '');
-    if (title == null) return;
-    await pa.extension.invoke('renameSession', { sessionId: activeSessionId, title });
-    await loadShell();
-  }
-
-  async function fork() {
-    if (!activeSessionId) return;
-    const result = await pa.extension.invoke('forkSession', { sessionId: activeSessionId });
-    const session = unwrapSession(result);
-    await loadShell();
-    if (session) await navigateTo(pa, buildSessionRoute(sessionId(session)));
-  }
-
-  async function remove() {
-    if (!activeSessionId || !(await pa.ui.confirm({ title: 'Delete Hermes session?', message: 'This deletes the session in Hermes.' })))
-      return;
-    await pa.extension.invoke('deleteSession', { sessionId: activeSessionId });
-    await loadShell();
-    await navigateTo(pa, '/ext/hermes');
-  }
-
   if (!showSetup) {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-base">
@@ -1032,7 +954,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
             {sessionsError}
           </div>
         ) : null}
-        <header className="mx-auto flex w-full max-w-[68rem] shrink-0 items-start justify-between gap-4 px-8 pb-2 pt-9 sm:px-10">
+        <header className="mx-auto w-full max-w-[68rem] shrink-0 px-8 pb-2 pt-9 sm:px-10">
           <div className="min-w-0">
             <h1 className="truncate text-[40px] font-semibold leading-tight text-primary">
               {activeSession ? sessionTitle(activeSession) : 'New Conversation'}
@@ -1043,21 +965,6 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
                 {activeSession.tool_call_count ? ` · ${activeSession.tool_call_count} tools` : ''}
                 {health?.ok ? ' · Connected' : ''}
               </p>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 items-center gap-2 pt-1">
-            <ToolbarButton onClick={() => void loadShell()} disabled={loading}>
-              Refresh
-            </ToolbarButton>
-            <ToolbarButton onClick={() => void createSession()} disabled={creating}>
-              New Session
-            </ToolbarButton>
-            {activeSession ? (
-              <>
-                <SmallButton onClick={() => void rename()}>Rename</SmallButton>
-                <SmallButton onClick={() => void fork()}>Fork</SmallButton>
-                <SmallButton onClick={() => void remove()}>Delete</SmallButton>
-              </>
             ) : null}
           </div>
         </header>
