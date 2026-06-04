@@ -122,6 +122,15 @@ const writingStudioAgentToolNames = [
   'writing_studio_get_agent_instructions',
   'writing_studio_update_agent_instructions',
 ];
+const reviewChunkTargetLength = 3200;
+
+interface ReviewChunk {
+  index: number;
+  total: number;
+  start: number;
+  end: number;
+  text: string;
+}
 
 function isUnavailableAgentModelError(error: unknown): boolean {
   return error instanceof Error && /Agent conversation model is not available/i.test(error.message);
@@ -169,6 +178,56 @@ async function runWritingStudioToolTask(
     if (!input.modelRef || !isUnavailableAgentModelError(error)) throw error;
     return runWritingStudioToolTask({ ...input, modelRef: undefined }, ctx);
   }
+}
+
+function buildReviewChunks(markdown: string, targetLength = reviewChunkTargetLength): ReviewChunk[] {
+  const trimmed = markdown.trim();
+  if (!trimmed) return [{ index: 0, total: 1, start: 0, end: 0, text: '' }];
+  if (markdown.length <= targetLength) return [{ index: 0, total: 1, start: 0, end: markdown.length, text: markdown }];
+
+  const chunks: Array<Omit<ReviewChunk, 'index' | 'total'>> = [];
+  let start = 0;
+  while (start < markdown.length) {
+    const idealEnd = Math.min(markdown.length, start + targetLength);
+    let end = idealEnd;
+    if (idealEnd < markdown.length) {
+      const paragraphBreak = markdown.lastIndexOf('\n\n', idealEnd);
+      const sentenceBreak = markdown.lastIndexOf('. ', idealEnd);
+      const candidate =
+        paragraphBreak > start + targetLength * 0.55
+          ? paragraphBreak + 2
+          : sentenceBreak > start + targetLength * 0.55
+            ? sentenceBreak + 2
+            : idealEnd;
+      end = Math.max(start + 1, candidate);
+    }
+    const text = markdown.slice(start, end).trim();
+    if (text) chunks.push({ start, end, text });
+    start = end;
+  }
+  const total = Math.max(1, chunks.length);
+  return chunks.map((chunk, index) => ({ ...chunk, index, total }));
+}
+
+function reviewChunkForState(state: StoredState, selectedText?: string): ReviewChunk {
+  if (selectedText?.trim()) {
+    const from = state.markdown.indexOf(selectedText);
+    return {
+      index: 0,
+      total: 1,
+      start: Math.max(0, from),
+      end: Math.max(0, from) + selectedText.length,
+      text: selectedText,
+    };
+  }
+  const chunks = buildReviewChunks(state.markdown);
+  const cursor = state.reviewCursorChunk % chunks.length;
+  return chunks[cursor] ?? chunks[0];
+}
+
+function nextReviewCursor(current: number, total: number): number {
+  if (total <= 1) return 0;
+  return (current + 1) % total;
 }
 function nowIso(): string {
   return new Date().toISOString();
@@ -521,7 +580,7 @@ async function runReviewThroughChat(
   const existingIds = new Set(state.annotations.map((annotation) => annotation.id));
   const reviewPrompt = input.reviewPrompt?.trim() || state.settings.reviewPrompt;
   const selectedText = input.selectedText?.trim();
-  const reviewDocumentChunk = state.markdown.length > 3200 ? state.markdown.slice(0, 3200) : state.markdown;
+  const reviewChunk = reviewChunkForState(state, selectedText);
   const agentInstructions = state.settings.agentInstructions.slice(0, 800);
   const prompt = selectedText
     ? `Review this selected passage from the active Writing Studio document.
@@ -537,12 +596,15 @@ Agent instructions:
 ${agentInstructions}
 
 Selected passage:
-${selectedText}`
+${reviewChunk.text}`
     : `Review the active Writing Studio document.
 
 Use the Writing Studio tools, not JSON. Do not call writing_studio_get_canvas; the document excerpt is included below. Do not describe annotations in prose. Emit raw function calls only, using this shape:
 <function_calls><invoke name="writing_studio_add_annotation"><parameter name="quote">exact quote from the excerpt</parameter><parameter name="body">your comment</parameter><parameter name="kind">comment</parameter></invoke></function_calls>
-Add 3-6 useful margin comments across the excerpt, starting near the top and moving downward. Each call must use an exact quote from the excerpt. If you suggest a concrete replacement, include a suggestedReplacement parameter. Your task is not complete until at least 3 writing_studio_add_annotation tool calls succeed, unless the excerpt is too short for that many distinct comments.
+Add 3-6 useful margin comments across this excerpt, starting near the top and moving downward. Each call must use an exact quote from the excerpt. If you suggest a concrete replacement, include a suggestedReplacement parameter. Your task is not complete until at least 3 writing_studio_add_annotation tool calls succeed, unless the excerpt is too short for that many distinct comments.
+
+Review region: ${reviewChunk.index + 1} of ${reviewChunk.total}
+Excerpt character range: [${reviewChunk.start}, ${reviewChunk.end})
 
 Review prompt:
 ${reviewPrompt}
@@ -551,7 +613,7 @@ Agent instructions:
 ${agentInstructions}
 
 Document excerpt:
-${reviewDocumentChunk}`;
+${reviewChunk.text}`;
 
   let resultText = '';
   try {
@@ -577,11 +639,22 @@ ${reviewDocumentChunk}`;
     throw new Error(`Writing Studio review did not add any annotations.${diagnostic}`);
   }
   for (const annotation of annotations) annotation.agentRunId = input.runId;
+  const nextCursor = selectedText ? refreshed.reviewCursorChunk : nextReviewCursor(reviewChunk.index, reviewChunk.total);
   refreshed.annotations = refreshed.annotations.map((annotation) =>
     annotations.some((added) => added.id === annotation.id) ? { ...annotation, agentRunId: input.runId } : annotation,
   );
+  refreshed.reviewCursorChunk = nextCursor;
   refreshed.lastAgentRunAt = nowIso();
-  refreshed.events.push(event('agent_run_completed', 'agent', { runId: input.runId, trigger: input.trigger, annotationCount: annotations.length }));
+  refreshed.events.push(
+    event('agent_run_completed', 'agent', {
+      runId: input.runId,
+      trigger: input.trigger,
+      annotationCount: annotations.length,
+      reviewChunk: selectedText
+        ? { selected: true, start: reviewChunk.start, end: reviewChunk.end }
+        : { index: reviewChunk.index, total: reviewChunk.total, start: reviewChunk.start, end: reviewChunk.end, nextCursor },
+    }),
+  );
   await writeState(ctx, refreshed);
   await Promise.resolve(
     ctx.conversations?.appendTranscriptBlock?.({

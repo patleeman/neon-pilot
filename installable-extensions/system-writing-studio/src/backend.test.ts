@@ -245,7 +245,7 @@ describe('Writing Studio backend', () => {
     expect(result.annotations).toHaveLength(4);
   });
 
-  it('fans review across document chunks when early output is sparse', async () => {
+  it('reviews the current document chunk instead of always sending the document head', async () => {
     const ctx = context();
     const markdown = [
       '# Sparse Agent',
@@ -278,18 +278,17 @@ describe('Writing Studio backend', () => {
         body: 'This opening has enough charge to deserve a note.',
         kind: 'reaction',
       },
-      {
-        quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
-        body: 'This later sentence has a live wire in it.',
-        kind: 'reaction',
-      },
     ]);
 
     const result = await runReview({ markdown }, ctx);
+    const prompt = (mockRunAgentTask.mock.calls[0]?.[0] as { prompt?: string }).prompt ?? '';
 
     expect(mockRunAgentTask).toHaveBeenCalledTimes(1);
+    expect(prompt).toContain('Review region: 1 of');
+    expect(prompt).toContain('A paragraph near the top has a live wire');
+    expect(prompt).not.toContain('The strongest idea arrives when the draft names the actual user');
     expect(result.annotations.map((annotation) => annotation.body)).toEqual(
-      expect.arrayContaining(['This opening has enough charge to deserve a note.', 'This later sentence has a live wire in it.']),
+      expect.arrayContaining(['This opening has enough charge to deserve a note.']),
     );
   });
 
@@ -314,9 +313,18 @@ describe('Writing Studio backend', () => {
 
     const first = await runReview({ markdown }, ctx);
     const second = await runReview({ markdown }, ctx);
+    const firstPrompt = (mockRunAgentTask.mock.calls[0]?.[0] as { prompt?: string }).prompt ?? '';
+    const secondPrompt = (mockRunAgentTask.mock.calls[1]?.[0] as { prompt?: string }).prompt ?? '';
+    const state = await load({}, ctx);
 
     expect(first.annotations.map((annotation) => annotation.body)).toContain('First chunk note.');
     expect(second.annotations.map((annotation) => annotation.body)).toContain('Later chunk note.');
+    expect(firstPrompt).toContain('Review region: 1 of');
+    expect(firstPrompt).toContain(firstQuote);
+    expect(firstPrompt).not.toContain(laterQuote);
+    expect(secondPrompt).toContain('Review region: 2 of');
+    expect(secondPrompt).toContain(laterQuote);
+    expect(state.reviewCursorChunk).toBe(0);
   });
 
   it('fails review instead of fabricating annotations when the agent fails', async () => {
