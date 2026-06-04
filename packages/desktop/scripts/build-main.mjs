@@ -8,7 +8,21 @@ import { build } from 'esbuild';
 const dir = resolve(fileURLToPath(import.meta.url), '..', '..');
 const packageNodeModules = resolve(dir, 'node_modules');
 const rootNodeModules = resolve(dir, '..', '..', 'node_modules');
+const extensionsPackageRoot = resolve(dir, '..', 'extensions');
 const nodePaths = [packageNodeModules, rootNodeModules];
+
+const extensionApiAliasPlugin = {
+  name: 'extension-api-aliases',
+  setup(build) {
+    build.onResolve({ filter: /^@neon-pilot\/extensions\/host-view-components$/ }, () => ({
+      path: resolve(extensionsPackageRoot, 'src', 'host-view-components.ts'),
+    }));
+  },
+};
+
+const sharedNodeBuildOptions = {
+  plugins: [extensionApiAliasPlugin],
+};
 
 // Build main process bundle
 await build({
@@ -27,6 +41,7 @@ await build({
   external: ['electron', 'fsevents', 'node-pty'],
   logLevel: 'info',
   nodePaths,
+  ...sharedNodeBuildOptions,
 });
 
 // Build preload script (must be CommonJS for Electron sandbox)
@@ -40,6 +55,7 @@ await build({
   external: ['electron'],
   logLevel: 'info',
   nodePaths,
+  ...sharedNodeBuildOptions,
 });
 
 // Build local API workers (runs the server bundle in worker threads)
@@ -53,6 +69,7 @@ await build({
   external: ['electron'],
   logLevel: 'info',
   nodePaths,
+  ...sharedNodeBuildOptions,
 });
 await build({
   entryPoints: [resolve(dir, 'src', 'readonly-local-api-worker.ts')],
@@ -64,6 +81,7 @@ await build({
   external: ['electron'],
   logLevel: 'info',
   nodePaths,
+  ...sharedNodeBuildOptions,
 });
 
 // Build local backend child process. Electron main supervises this process; it
@@ -81,6 +99,7 @@ await build({
   external: ['electron', 'fsevents', 'node-pty'],
   logLevel: 'info',
   nodePaths,
+  ...sharedNodeBuildOptions,
 });
 
 // Build extension host child process. This is the future extension backend
@@ -99,6 +118,7 @@ await build({
   external: ['electron', 'fsevents', 'node-pty'],
   logLevel: 'info',
   nodePaths,
+  ...sharedNodeBuildOptions,
 });
 
 // Build extension backend worker. The extension host will use this lane for
@@ -117,4 +137,5 @@ await build({
   external: ['electron', 'fsevents', 'node-pty'],
   logLevel: 'info',
   nodePaths,
+  ...sharedNodeBuildOptions,
 });
