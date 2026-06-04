@@ -440,12 +440,18 @@ function replayMarkdownFromEvents(events: WritingEvent[]): string {
   return markdown;
 }
 
-async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBackendContext, modelRef?: string): Promise<string> {
+async function ensureHostChatConversation(
+  state: StoredState,
+  ctx: ExtensionBackendContext,
+  modelRef?: string,
+  options: { configureTools?: boolean } = {},
+): Promise<string> {
   if (!ctx.conversations?.create) {
     throw new Error('Writing Studio chat requires the host conversation capability.');
   }
+  const configureTools = options.configureTools !== false;
   const applyConversationContext = async (conversationId: string): Promise<boolean> => {
-    if (ctx.conversations?.setActiveTools) {
+    if (configureTools && ctx.conversations?.setActiveTools) {
       try {
         await ctx.conversations.setActiveTools(conversationId, writingStudioAgentToolNames);
       } catch {
@@ -484,10 +490,10 @@ async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBack
       live: true,
       title: `Writing Studio: ${state.fileName}`,
       model: modelRef ?? null,
-      allowedToolNames: writingStudioAgentToolNames,
+      ...(configureTools ? { allowedToolNames: writingStudioAgentToolNames } : {}),
     });
   } catch (error) {
-    if (!isUnsupportedActiveToolUpdateError(error)) throw error;
+    if (!configureTools || !isUnsupportedActiveToolUpdateError(error)) throw error;
     conversation = await ctx.conversations.create({
       ...(cwd ? { cwd } : {}),
       live: true,
@@ -511,7 +517,7 @@ async function runReviewThroughChat(
     reviewPrompt?: string;
   },
 ): Promise<{ annotations: Annotation[] }> {
-  await ensureHostChatConversation(state, ctx, input.modelRef);
+  await ensureHostChatConversation(state, ctx, input.modelRef, { configureTools: false });
   const existingIds = new Set(state.annotations.map((annotation) => annotation.id));
   const reviewPrompt = input.reviewPrompt?.trim() || state.settings.reviewPrompt;
   const selectedText = input.selectedText?.trim();

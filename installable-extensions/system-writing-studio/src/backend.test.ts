@@ -173,6 +173,34 @@ describe('Writing Studio backend', () => {
     expect(state.events.some((event) => event.type === 'agent_run_completed')).toBe(true);
   });
 
+  it('does not request active tool updates when creating the review transcript conversation', async () => {
+    const conversations = {
+      create: vi.fn(async () => ({ id: 'host-chat-1', conversationId: 'host-chat-1' })),
+      ensureLive: vi.fn(),
+      setActiveTools: vi.fn(async () => {
+        throw new Error('Conversation "host-chat-1" does not support active tool updates.');
+      }),
+      appendCustomEntry: vi.fn(),
+      appendTranscriptBlock: vi.fn(),
+    };
+    const ctx = context({ conversations });
+    mockReviewToolAnnotations([
+      {
+        quote: 'This selected sentence has enough surface area for a review note.',
+        body: 'This is anchored review feedback.',
+        kind: 'comment',
+      },
+    ]);
+
+    await expect(
+      runReview({ markdown: '# Draft\n\nThis selected sentence has enough surface area for a review note.' }, ctx),
+    ).resolves.toMatchObject({ annotations: [expect.objectContaining({ body: 'This is anchored review feedback.' })] });
+
+    expect(conversations.create).toHaveBeenCalledWith(expect.not.objectContaining({ allowedToolNames: expect.any(Array) }));
+    expect(conversations.setActiveTools).not.toHaveBeenCalled();
+    expect(conversations.appendTranscriptBlock).toHaveBeenCalledWith(expect.objectContaining({ title: 'Reviewed 1' }));
+  });
+
   it('can produce more than three review annotations for longer drafts', async () => {
     const ctx = context();
     mockReviewToolAnnotations([
