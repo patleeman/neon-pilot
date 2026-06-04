@@ -1,7 +1,7 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { listSessions, readConfig, sendMessage, updateConfig } from './backend';
+import { createSession, listSessions, readConfig, sendMessage, updateConfig } from './backend';
 
 function createContext(): ExtensionBackendContext {
   const storage = new Map<string, unknown>();
@@ -93,8 +93,21 @@ describe('system-hermes-agent backend', () => {
     const [url, init] = fetchCalls()[0];
     expect(url).toBe('http://127.0.0.1:8642/api/sessions/session-id/chat');
     expect(init?.method).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual({ message: 'hi', instructions: 'be terse' });
+    expect(JSON.parse(String(init?.body))).toEqual({ input: 'hi', instructions: 'be terse' });
     expect(result).toMatchObject({ session_id: 'session-id', message: { content: 'hello' } });
+  });
+
+  it('creates Hermes API sessions with an optional title', async () => {
+    const ctx = createContext();
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ session_id: 'new-session', title: 'Neon Pilot session' }));
+
+    const result = await createSession({ title: 'Neon Pilot session' }, ctx);
+
+    const [url, init] = fetchCalls()[0];
+    expect(url).toBe('http://127.0.0.1:8642/api/sessions');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({ title: 'Neon Pilot session' });
+    expect(result).toMatchObject({ session_id: 'new-session' });
   });
 
   it('surfaces Hermes error messages from non-OK responses', async () => {

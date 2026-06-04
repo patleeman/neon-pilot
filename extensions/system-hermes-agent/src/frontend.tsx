@@ -53,6 +53,7 @@ type HealthState = {
 };
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8642';
+const SESSION_CACHE_KEY = 'system-hermes-agent:last-sessions';
 const DISCONNECTED_MESSAGE = 'Hermes is not reachable at the configured URL.';
 
 function getErrorMessage(error: unknown): string {
@@ -88,11 +89,26 @@ function safeString(value: unknown, fallback = ''): string {
 
 function unwrapList<T>(value: unknown): T[] {
   if (isRecord(value) && Array.isArray(value.data)) return value.data as T[];
+  if (isRecord(value) && Array.isArray(value.sessions)) return value.sessions as T[];
+  if (isRecord(value) && Array.isArray(value.messages)) return value.messages as T[];
+  if (Array.isArray(value)) return value as T[];
   return [];
+}
+
+function hasListPayload(value: unknown): boolean {
+  return (
+    Array.isArray(value) ||
+    (isRecord(value) && (Array.isArray(value.data) || Array.isArray(value.sessions) || Array.isArray(value.messages)))
+  );
 }
 
 function unwrapSession(value: unknown): HermesSession | null {
   if (isRecord(value) && isRecord(value.session)) return value.session as HermesSession;
+  if (isRecord(value) && isRecord(value.data)) return value.data as HermesSession;
+  if (isRecord(value)) {
+    const id = value.id ?? value.session_id ?? value.sessionId;
+    if (safeString(id).trim()) return { ...value, id: safeString(id).trim() } as HermesSession;
+  }
   return null;
 }
 
@@ -114,7 +130,49 @@ function sessionTitle(session: HermesSession): string {
 }
 
 function sessionId(session: HermesSession): string {
-  return safeString(session.id).trim();
+  return safeString(
+    session.id ?? (session as { session_id?: unknown }).session_id ?? (session as { sessionId?: unknown }).sessionId,
+  ).trim();
+}
+
+function sessionKeySet(sessions: HermesSession[]): Set<string> {
+  return new Set(sessions.map((session) => sessionId(session)).filter(Boolean));
+}
+
+function firstNewSession(previous: HermesSession[], next: HermesSession[]): HermesSession | null {
+  const previousIds = sessionKeySet(previous);
+  return (
+    next.find((session) => {
+      const id = sessionId(session);
+      return id && !previousIds.has(id);
+    }) ??
+    next[0] ??
+    null
+  );
+}
+
+function preserveNonEmptySessions(current: HermesSession[], next: HermesSession[]): HermesSession[] {
+  return next.length === 0 && current.length > 0 ? current : next;
+}
+
+function readCachedSessions(): HermesSession[] {
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_CACHE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as HermesSession[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedSessions(sessions: HermesSession[]) {
+  if (sessions.length === 0) return;
+  try {
+    window.sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(sessions));
+  } catch {
+    // Best-effort UI cache only.
+  }
 }
 
 function formatCompactDate(value?: unknown): string {
@@ -163,6 +221,10 @@ function selectedSessionIdFromSearch(search: string): string | null {
 
 function buildSessionRoute(sessionId: string): string {
   return `/ext/hermes?session=${encodeURIComponent(safeString(sessionId))}`;
+}
+
+function newSessionTitle(): string {
+  return `Neon Pilot ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
 }
 
 async function navigateTo(pa: ExtensionSurfaceProps['pa'], to: string) {
@@ -461,7 +523,7 @@ function SessionList({
   onSelect: (session: HermesSession) => void;
 }) {
   if (loading) return <LoadingState label="Loading Hermes sessions…" className="h-28 justify-center" />;
-  if (error) {
+  if (error && sessions.length === 0) {
     return compact ? (
       <p className="px-4 py-3 text-[12px] leading-5 text-dim">{error}</p>
     ) : (
@@ -478,6 +540,7 @@ function SessionList({
 
   return (
     <div className={compact ? 'space-y-px px-1' : 'grid gap-1'}>
+      {error ? <p className="px-3 pb-2 pt-1 text-[11px] leading-4 text-dim">{error}</p> : null}
       {sessions.map((session) => {
         const id = sessionId(session);
         const active = id === activeSessionId;
@@ -601,7 +664,7 @@ function sanitizeChatBlock(block: ExtensionChatMessageBlock, index: number): Ext
 
 export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
   const activeSessionId = selectedSessionIdFromSearch(context.search);
-  const [sessions, setSessions] = useState<HermesSession[]>([]);
+  const [sessions, setSessions] = useState<HermesSession[]>(readCachedSessions);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -611,7 +674,17 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
     setError(null);
     try {
       const result = await pa.extension.invoke('listSessions', { limit: 100, includeChildren: true });
-      setSessions(unwrapList<HermesSession>(result));
+      if (hasListPayload(result)) {
+        const nextSessions = unwrapList<HermesSession>(result);
+        setSessions((current) => {
+          const resolved = preserveNonEmptySessions(current, nextSessions);
+          writeCachedSessions(resolved);
+          return resolved;
+        });
+        if (nextSessions.length === 0) setError('Hermes returned an empty session list. Keeping the existing sidebar sessions.');
+      } else {
+        setError('Hermes returned an unrecognized session list response.');
+      }
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {
@@ -626,10 +699,23 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
   async function create() {
     setCreating(true);
     try {
-      const result = await pa.extension.invoke('createSession', { title: 'Neon Pilot session' });
-      const session = unwrapSession(result);
-      await load();
-      if (session) await navigateTo(pa, buildSessionRoute(session.id));
+      const previousSessions = sessions;
+      const result = await pa.extension.invoke('createSession', { title: newSessionTitle() });
+      let session = unwrapSession(result);
+      const sessionsResult = await pa.extension.invoke('listSessions', { limit: 100, includeChildren: true });
+      if (hasListPayload(sessionsResult)) {
+        const nextSessions = unwrapList<HermesSession>(sessionsResult);
+        setSessions((current) => {
+          const resolved = preserveNonEmptySessions(current, nextSessions);
+          writeCachedSessions(resolved);
+          return resolved;
+        });
+        session ??= firstNewSession(previousSessions, nextSessions);
+        if (nextSessions.length === 0) setError('Hermes returned an empty session list after creating the session.');
+      } else {
+        setError('Hermes returned an unrecognized session list response.');
+      }
+      if (session) await navigateTo(pa, buildSessionRoute(sessionId(session)));
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {
@@ -668,7 +754,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const activeSessionId = selectedSessionIdFromSearch(context.search);
   const [config, setConfig] = useState<PublicHermesConfig | null>(null);
   const [health, setHealth] = useState<HealthState | null>(null);
-  const [sessions, setSessions] = useState<HermesSession[]>([]);
+  const [sessions, setSessions] = useState<HermesSession[]>(readCachedSessions);
   const [messages, setMessages] = useState<HermesMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
@@ -709,7 +795,19 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
         setHealth(null);
       }
       if (sessionsResult.status === 'fulfilled') {
-        setSessions(unwrapList<HermesSession>(sessionsResult.value));
+        if (hasListPayload(sessionsResult.value)) {
+          const nextSessions = unwrapList<HermesSession>(sessionsResult.value);
+          setSessions((current) => {
+            const resolved = preserveNonEmptySessions(current, nextSessions);
+            writeCachedSessions(resolved);
+            return resolved;
+          });
+          if (nextSessions.length === 0) {
+            setSessionsError('Hermes returned an empty session list. Keeping the existing sessions.');
+          }
+        } else {
+          setSessionsError('Hermes returned an unrecognized session list response.');
+        }
       } else {
         setSessions([]);
         setSessionsError(humanErrorMessage(sessionsResult.reason));
@@ -729,7 +827,11 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     setMessagesLoading(true);
     try {
       const result = await pa.extension.invoke('getMessages', { sessionId: activeSessionId });
-      setMessages(unwrapList<HermesMessage>(result));
+      if (hasListPayload(result)) {
+        setMessages(unwrapList<HermesMessage>(result));
+      } else {
+        setError('Hermes returned an unrecognized message list response.');
+      }
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {
@@ -749,10 +851,24 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     setCreating(true);
     setError(null);
     try {
-      const result = await pa.extension.invoke('createSession', { title: 'Neon Pilot session' });
-      const session = unwrapSession(result);
+      const previousSessions = sessions;
+      const result = await pa.extension.invoke('createSession', { title: newSessionTitle() });
+      let session = unwrapSession(result);
+      const sessionsResult = await pa.extension.invoke('listSessions', { limit: 100, includeChildren: true });
+      if (hasListPayload(sessionsResult)) {
+        const nextSessions = unwrapList<HermesSession>(sessionsResult);
+        setSessions((current) => {
+          const resolved = preserveNonEmptySessions(current, nextSessions);
+          writeCachedSessions(resolved);
+          return resolved;
+        });
+        session ??= firstNewSession(previousSessions, nextSessions);
+        if (nextSessions.length === 0) setSessionsError('Hermes returned an empty session list after creating the session.');
+      } else {
+        setSessionsError('Hermes returned an unrecognized session list response.');
+      }
       await loadShell();
-      if (session) await navigateTo(pa, buildSessionRoute(session.id));
+      if (session) await navigateTo(pa, buildSessionRoute(sessionId(session)));
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {
@@ -790,7 +906,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     const result = await pa.extension.invoke('forkSession', { sessionId: activeSessionId });
     const session = unwrapSession(result);
     await loadShell();
-    if (session) await navigateTo(pa, buildSessionRoute(session.id));
+    if (session) await navigateTo(pa, buildSessionRoute(sessionId(session)));
   }
 
   async function remove() {

@@ -191,7 +191,7 @@ export async function sendMessage(input: unknown, ctx: ExtensionBackendContext) 
   const record = isRecord(input) ? input : {};
   const sessionId = encodedId(record.sessionId);
   const message = requiredString(record.message ?? record.input, 'message');
-  const body: JsonRecord = { message };
+  const body: JsonRecord = { input: message };
   const instructions = readString(record.instructions);
   if (instructions) body.instructions = instructions;
   return hermesFetch<JsonRecord>(ctx, `/api/sessions/${sessionId}/chat`, {
