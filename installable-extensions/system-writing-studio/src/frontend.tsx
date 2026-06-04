@@ -47,7 +47,7 @@ const writingStudioCss = `
 .writing-studio-main{min-width:0;overflow:auto;padding:2.25rem clamp(1.25rem,3vw,3rem) 4rem}
 .writing-studio-filebar{display:flex;align-items:center;max-width:68rem;margin:0 auto .55rem}.writing-studio-file-name{width:min(24rem,100%);min-width:0;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.28rem .4rem;font:inherit;font-size:.86rem;font-weight:560;line-height:1.2}.writing-studio-file-name:hover,.writing-studio-file-name:focus{background:rgb(var(--color-surface));color:rgb(var(--color-primary));outline:1px solid rgb(var(--color-border-subtle))}.writing-studio-file-name::placeholder{color:rgb(var(--color-dim))}
 .writing-studio-inline-error{max-width:68rem;margin:0 auto .55rem;border:1px solid color-mix(in srgb,rgb(var(--color-danger)) 38%,rgb(var(--color-border-default)));border-radius:7px;background:color-mix(in srgb,rgb(var(--color-danger)) 8%,transparent);color:rgb(var(--color-danger));font-size:.78rem;line-height:1.4;padding:.45rem .6rem}
-.writing-studio-formatbar{position:sticky;top:.75rem;z-index:30;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-hidden-file{display:none}.writing-studio-format-spacer{flex:1 1 auto;min-width:.5rem}.writing-studio-format-save,.writing-studio-format-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-format-save:hover,.writing-studio-format-icon:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-save:disabled,.writing-studio-format-icon:disabled{cursor:default;opacity:.55}.writing-studio-format-save::after{content:"";position:absolute;right:.16rem;top:.16rem;width:.34rem;height:.34rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-format-save.is-saved::after{background:rgb(var(--color-success))}.writing-studio-format-save.is-saving::after{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-format-save.is-unsaved::after{background:rgb(var(--color-warning))}.writing-studio-format-save.is-error::after{background:rgb(var(--color-danger))}.writing-studio-format-icon.is-running{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-accent));opacity:1}.writing-studio-format-icon.is-running svg{animation:writing-studio-review-spin 1.1s linear infinite}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
+.writing-studio-formatbar{position:sticky;top:.75rem;z-index:30;display:flex;flex-wrap:wrap;align-items:center;gap:.16rem;max-width:68rem;margin:0 auto .8rem;padding:.32rem;border:1px solid rgb(var(--color-border-subtle));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 10px 26px rgba(0,0,0,.12)}.writing-studio-hidden-file{display:none}.writing-studio-format-spacer{flex:1 1 auto;min-width:.5rem}.writing-studio-format-save,.writing-studio-format-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-format-save:hover,.writing-studio-format-icon:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-save:disabled,.writing-studio-format-icon:disabled{cursor:default;opacity:.55}.writing-studio-format-save::after{content:"";position:absolute;right:.16rem;top:.16rem;width:.34rem;height:.34rem;border-radius:999px;background:rgb(var(--color-dim))}.writing-studio-format-save.is-saved::after{background:rgb(var(--color-success))}.writing-studio-format-save.is-saving::after{background:rgb(var(--color-accent));animation:writing-studio-pulse 1s ease-in-out infinite}.writing-studio-format-save.is-unsaved::after{background:rgb(var(--color-warning))}.writing-studio-format-save.is-error::after{background:rgb(var(--color-danger))}.writing-studio-format-icon.is-running{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-accent));opacity:1}.writing-studio-format-icon.is-running svg{animation:writing-studio-review-spin 1.1s linear infinite}.writing-studio-format-status{max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgb(var(--color-dim));font-size:.72rem;line-height:1}.writing-studio-format-status.is-running{color:rgb(var(--color-accent))}.writing-studio-format-status.is-complete{color:rgb(var(--color-success))}.writing-studio-format-status.is-error{color:rgb(var(--color-danger))}@keyframes writing-studio-pulse{0%,100%{opacity:.45}50%{opacity:1}}.writing-studio-format-group{display:flex;align-items:center;gap:.1rem;padding-right:.32rem;margin-right:.16rem;border-right:1px solid rgb(var(--color-border-subtle))}.writing-studio-format-group:last-child{padding-right:0;margin-right:0;border-right:0}.writing-studio-format-button{display:inline-flex;align-items:center;justify-content:center;min-width:1.58rem;height:1.55rem;border:0;border-radius:5px;background:transparent;color:rgb(var(--color-secondary));font:inherit;font-size:.67rem;font-weight:650;cursor:pointer;white-space:nowrap}.writing-studio-format-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-format-button.is-active{background:color-mix(in srgb,rgb(var(--color-accent)) 18%,transparent);color:rgb(var(--color-accent))}.writing-studio-format-button:disabled{cursor:default;opacity:.42}.writing-studio-link-popover{position:absolute;left:.32rem;top:calc(100% + .35rem);z-index:30;display:flex;align-items:center;gap:.35rem;width:min(24rem,calc(100vw - 3rem));padding:.45rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 40px rgba(0,0,0,.3)}.writing-studio-link-popover input{min-width:0;flex:1;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.42rem .5rem;font:inherit;font-size:.78rem}.writing-studio-link-popover button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.38rem .5rem;font:inherit;font-size:.74rem;cursor:pointer}.writing-studio-link-popover button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
 .writing-studio-canvas{display:grid;grid-template-columns:minmax(0,48rem) minmax(13rem,18rem);align-items:start;gap:1.25rem;max-width:68rem;margin:0 auto}
 .writing-studio-editor-frame{position:relative}.writing-studio-editor{min-height:76vh;padding:.25rem 0 5rem;outline:none;font-size:1rem;line-height:1.72}.writing-studio-editor h1,.writing-studio-editor h2,.writing-studio-editor h3{line-height:1.25}.writing-studio-editor h1{margin:0 0 1.35rem;font-size:2.15rem;font-weight:680}.writing-studio-editor h2{margin:1.8rem 0 .75rem;font-size:1.45rem;font-weight:650}.writing-studio-editor h3{margin:1.5rem 0 .65rem;font-size:1.08rem;font-weight:650}.writing-studio-editor p{margin:.9rem 0}.writing-studio-editor img{display:block;max-width:100%;height:auto;margin:1rem 0;border-radius:6px}.writing-studio-editor blockquote{margin:1.2rem 0;padding-left:1rem;border-left:2px solid rgb(var(--color-accent));color:rgb(var(--color-secondary))}
 .writing-studio-selection-menu{position:absolute;z-index:35;display:flex;align-items:center;gap:.18rem;padding:.25rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 14px 36px rgba(0,0,0,.28);transform:translateX(-50%)}.writing-studio-selection-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.36rem .52rem;font:inherit;font-size:.72rem;font-weight:590;line-height:1;cursor:pointer;white-space:nowrap}.writing-studio-selection-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-selection-menu button:first-child{color:rgb(var(--color-accent))}
@@ -316,6 +316,8 @@ function WritingFormatBar({
   editor,
   saveStatus,
   saveTooltip,
+  reviewStatus,
+  reviewStatusText,
   onSave,
   onExport,
   onReview,
@@ -327,6 +329,8 @@ function WritingFormatBar({
   editor: Editor | null;
   saveStatus: SaveStatus;
   saveTooltip: string;
+  reviewStatus: ReviewStatus;
+  reviewStatusText: string;
   onSave: () => void;
   onExport: () => void;
   onReview: () => void;
@@ -408,6 +412,7 @@ function WritingFormatBar({
         >
           <WritingIcon name="review" />
         </button>
+        {reviewStatusText ? <span className={`writing-studio-format-status is-${reviewStatus}`}>{reviewStatusText}</span> : null}
         <button
           className="writing-studio-format-icon"
           type="button"
@@ -1315,6 +1320,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState<ReviewStatus>('idle');
   const [lastReviewCount, setLastReviewCount] = useState(0);
+  const [reviewStartedAt, setReviewStartedAt] = useState<number | null>(null);
+  const [reviewElapsedSeconds, setReviewElapsedSeconds] = useState(0);
   const [fileNameDraft, setFileNameDraft] = useState('');
   const [railWidth, setRailWidth] = useState(readRailWidth);
   const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
@@ -1351,6 +1358,15 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       if (reviewStatusTimer.current) clearTimeout(reviewStatusTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (reviewStatus !== 'running' || reviewStartedAt === null) return;
+    setReviewElapsedSeconds(Math.max(0, Math.floor((Date.now() - reviewStartedAt) / 1000)));
+    const timer = window.setInterval(() => {
+      setReviewElapsedSeconds(Math.max(0, Math.floor((Date.now() - reviewStartedAt) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [reviewStartedAt, reviewStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1732,6 +1748,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     async (trigger: string, options?: { reviewPrompt?: string }) => {
       setBusy('review');
       setReviewStatus('running');
+      setReviewStartedAt(Date.now());
+      setReviewElapsedSeconds(0);
       setError(null);
       if (reviewStatusTimer.current) clearTimeout(reviewStatusTimer.current);
       try {
@@ -1744,7 +1762,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             modelRef: currentModel || undefined,
             reviewPrompt: options?.reviewPrompt,
           }) as Promise<{ annotations: Annotation[] }>,
-          105_000,
+          65_000,
           'Writing Studio review timed out before the agent returned comments.',
         )) as { annotations: Annotation[] };
         if (result.annotations.length === 0) throw new Error('Writing Studio review returned no comments.');
@@ -1768,8 +1786,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         setActiveAnnotationId(result.annotations[0]?.id ?? null);
         setLastReviewCount(result.annotations.length);
         setReviewStatus('complete');
+        setReviewStartedAt(null);
       } catch (err) {
         setReviewStatus('error');
+        setReviewStartedAt(null);
         reviewStatusTimer.current = setTimeout(() => setReviewStatus('idle'), 5000);
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -1890,7 +1910,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     clearSelectionMenu();
     setBusy('review');
     setReviewStatus('running');
+    setReviewStartedAt(Date.now());
+    setReviewElapsedSeconds(0);
     setError(null);
+    if (reviewStatusTimer.current) clearTimeout(reviewStatusTimer.current);
     const currentMarkdown = syncEditorMarkdown() ?? markdown;
     void pa.extension
       .invoke('writingStudioReviewSelection', {
@@ -1914,9 +1937,11 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         setActiveAnnotationId(annotations[0]?.id ?? null);
         setLastReviewCount(annotations.length);
         setReviewStatus('complete');
+        setReviewStartedAt(null);
       })
       .catch((err) => {
         setReviewStatus('error');
+        setReviewStartedAt(null);
         reviewStatusTimer.current = setTimeout(() => setReviewStatus('idle'), 5000);
         setError(err instanceof Error ? err.message : String(err));
       })
@@ -2063,7 +2088,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           : `Save failed${lastSavedAt ? ` · Last saved ${formatTime(lastSavedAt)}` : ''}`;
   const reviewStatusText =
     reviewStatus === 'running'
-      ? 'Reviewing...'
+      ? `Reviewing ${reviewElapsedSeconds}s`
       : reviewStatus === 'complete'
         ? `Reviewed ${lastReviewCount}`
         : reviewStatus === 'error'
@@ -2103,6 +2128,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           editor={editor}
           saveStatus={saveStatus}
           saveTooltip={saveTooltip}
+          reviewStatus={reviewStatus}
+          reviewStatusText={reviewStatusText}
           onSave={() => void saveDocument()}
           onExport={() => setExportMenuOpen((open) => !open)}
           onReview={() => void runReview('manual')}

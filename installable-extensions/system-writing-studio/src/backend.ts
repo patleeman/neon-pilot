@@ -123,6 +123,8 @@ const writingStudioAgentToolNames = [
   'writing_studio_update_agent_instructions',
 ];
 const reviewChunkTargetLength = 3200;
+const fullReviewTimeoutMs = 55_000;
+const selectionReviewTimeoutMs = 35_000;
 
 interface ReviewChunk {
   index: number;
@@ -620,7 +622,7 @@ ${reviewChunk.text}`;
     const result = await runWritingStudioToolTask(
       {
         prompt,
-        timeoutMs: selectedText ? 45_000 : 90_000,
+        timeoutMs: selectedText ? selectionReviewTimeoutMs : fullReviewTimeoutMs,
         modelRef: input.modelRef,
         thinkingLevel: 'low',
         allowedToolNames: ['writing_studio_add_annotation'],
