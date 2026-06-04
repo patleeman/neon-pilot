@@ -89,6 +89,46 @@ describe('ExtensionChatRail', () => {
 
   it('submits through the shared desktop conversation state with extension context messages', async () => {
     const onTurnComplete = vi.fn();
+    desktopConversationStateMock
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        sessionDetail: { meta: { cwd: null } },
+        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
+        stream: {
+          blocks: [],
+          isStreaming: false,
+          isCompacting: false,
+          contextUsage: null,
+          tokens: null,
+        },
+      })
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        sessionDetail: { meta: { cwd: null } },
+        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: true },
+        stream: {
+          blocks: [{ type: 'text', id: 'user-1', text: 'Review this draft', ts: '2026-06-03T00:00:00.000Z' }],
+          isStreaming: true,
+          isCompacting: false,
+          contextUsage: null,
+          tokens: null,
+        },
+      })
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        sessionDetail: { meta: { cwd: null } },
+        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
+        stream: {
+          blocks: [
+            { type: 'text', id: 'user-1', text: 'Review this draft', ts: '2026-06-03T00:00:00.000Z' },
+            { type: 'text', id: 'assistant-1', text: 'Done.', ts: '2026-06-03T00:00:01.000Z' },
+          ],
+          isStreaming: false,
+          isCompacting: false,
+          contextUsage: null,
+          tokens: null,
+        },
+      });
     render(
       <ExtensionChatRail
         conversationId="conversation-1"
@@ -105,6 +145,13 @@ describe('ExtensionChatRail', () => {
       ]);
     });
     expect(reconnectMock).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+    });
+    expect(onTurnComplete).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(desktopConversationStateMock).toHaveBeenCalledTimes(3);
+    }, { timeout: 2500 });
     await waitFor(() => {
       expect(onTurnComplete).toHaveBeenCalled();
     });
