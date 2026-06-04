@@ -372,7 +372,8 @@
         "id": "knowledge",
         "label": "Knowledge",
         "route": "/knowledge",
-        "icon": "file"
+        "icon": "file",
+        "sidebarView": "knowledge-sidebar"
       }
     ],
     "views": [
@@ -383,6 +384,16 @@
         "route": "/knowledge",
         "component": "KnowledgePageSurface",
         "routeCapabilities": ["knowledgeFiles"],
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "knowledge-sidebar",
+        "title": "Knowledge",
+        "location": "sidebar",
+        "component": "KnowledgeTreePanel",
+        "icon": "file",
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"

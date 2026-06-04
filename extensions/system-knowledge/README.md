@@ -5,6 +5,7 @@ This extension owns the Knowledge workbench surfaces and knowledge-file mention 
 ## What it contributes
 
 - A left-nav **Knowledge** destination backed by the native `knowledge-page` extension view.
+- A Knowledge left-sidebar browser while the Knowledge destination is active.
 - A tab-local **Knowledge** tree for browsing local knowledge directories in the workbench.
 - A paired workbench detail view for opening and editing knowledge files beside a conversation.
 - A `knowledge-files` mention provider that adds knowledge folders and files to the conversation `@` menu.
@@ -17,7 +18,8 @@ This extension owns the Knowledge workbench surfaces and knowledge-file mention 
 
 The extension renders native React surfaces declared in `extension.json`:
 
-- `knowledge-page` renders the main `/knowledge` page with its own file tree and editor.
+- `knowledge-page` renders the main `/knowledge` page and editor.
+- `knowledge-sidebar` renders the left-sidebar file browser while `/knowledge` is active.
 - `knowledge-tree` renders the tab-local rail browser.
 - `knowledge-file` renders the workbench detail panel for the selected file.
 

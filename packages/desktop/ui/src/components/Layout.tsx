@@ -1480,19 +1480,8 @@ export function Layout() {
     );
   }, [extensionRegistry.surfaces, extensionRightToolPanels, location.pathname, showWorkbench]);
   const showRoutePrimaryRail = routePrimaryRailSurface !== null && railOpen;
-  const showKnowledgeRouteRail =
-    !showWorkbench &&
-    !routePrimaryRailSurface &&
-    routeIsKnowledge(location.pathname, extensionRegistry.surfaces) &&
-    railOpen &&
-    systemKnowledgeExtensionSurface !== null;
   const knowledgeRouteFileId =
     !showWorkbench && routeIsKnowledge(location.pathname, extensionRegistry.surfaces) ? (searchParams.get('file') ?? null) : null;
-  const canToggleKnowledgeRouteRail =
-    !showWorkbench &&
-    !routePrimaryRailSurface &&
-    routeIsKnowledge(location.pathname, extensionRegistry.surfaces) &&
-    systemKnowledgeExtensionSurface !== null;
   const activeExtensionWorkbenchSurface = useMemo(
     () => resolveActiveExtensionWorkbenchSurface({ activeWorkbenchTool, extensionRightToolPanels, extensionWorkbenchSurfaces }),
     [activeWorkbenchTool, extensionRightToolPanels, extensionWorkbenchSurfaces],
@@ -2008,9 +1997,9 @@ export function Layout() {
           toggleRail: toggleWorkbenchExplorer,
         }
       : null
-    : routePrimaryRailSurface || showKnowledgeRouteRail || routeIsKnowledge(location.pathname, extensionRegistry.surfaces)
+    : routePrimaryRailSurface
       ? {
-          railOpen: showRoutePrimaryRail || showKnowledgeRouteRail,
+          railOpen: showRoutePrimaryRail,
           toggleRail: () => setRailOpen((current) => !current),
         }
       : registeredRightRailControl;
@@ -2337,8 +2326,8 @@ export function Layout() {
                     {knowledgeRouteFileId ? (
                       <FileDocumentBar
                         filePath={knowledgeRouteFileId}
-                        railOpen={showKnowledgeRouteRail}
-                        canToggleRail={canToggleKnowledgeRouteRail}
+                        railOpen={false}
+                        canToggleRail={false}
                         onRailOpenChange={setRailOpen}
                       />
                     ) : null}
@@ -2347,7 +2336,7 @@ export function Layout() {
                         <Outlet />
                       </main>
 
-                      {(showRoutePrimaryRail && routePrimaryRailSurface) || (showKnowledgeRouteRail && systemKnowledgeExtensionSurface) ? (
+                      {showRoutePrimaryRail && routePrimaryRailSurface ? (
                         <>
                           <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
                           <aside
@@ -2355,7 +2344,7 @@ export function Layout() {
                             className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
                           >
                             <NativeExtensionSurfaceHost
-                              surface={routePrimaryRailSurface ?? systemKnowledgeExtensionSurface}
+                              surface={routePrimaryRailSurface}
                               pathname={location.pathname}
                               search={location.search}
                               hash={location.hash}

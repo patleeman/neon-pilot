@@ -75,7 +75,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### `/knowledge` and knowledge rail/detail (`system-knowledge`)
 
 - Nav item: Knowledge.
-- Views: Knowledge page, Knowledge tree tab-local rail, Knowledge file workbench detail.
+- Views: Knowledge page, Knowledge left-sidebar file browser, Knowledge tree tab-local rail, Knowledge file workbench detail.
 - Actions: `readState`, `updateState`, `sync`, `knowledgeListFiles`, `knowledgeTree`, `knowledgeReadFile`, `knowledgeWriteFile`, `knowledgeCreateFolder`, `knowledgeDeleteFile`, `knowledgeRename`, `knowledgeMove`, `knowledgeBacklinks`, `knowledgeSearch`, `knowledgeUploadImage`, `knowledgeImportUrl`, `resolvePromptReferences`.
 - Prompt reference provider: `knowledge-files`.
 - Quick open provider: `knowledge-files` in the command palette files section.
@@ -394,7 +394,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-knowledge — Knowledge
 
-- views: knowledge-page (/knowledge), knowledge-tree, knowledge-file
+- views: knowledge-page (/knowledge), knowledge-sidebar, knowledge-tree, knowledge-file
 - nav: knowledge (/knowledge)
 - promptReferences: knowledge-files
 - quickOpen: knowledge-files
