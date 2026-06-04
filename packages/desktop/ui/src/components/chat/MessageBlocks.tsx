@@ -56,6 +56,10 @@ function formatSystemEventLabel(customType?: string): string {
   }
 }
 
+function optionalTrimmedString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value.trim() || undefined : undefined;
+}
+
 const AUTO_RESUME_CONTEXT_TYPES = new Set([
   'goal-continuation',
   'background_auto_resume',
@@ -332,7 +336,7 @@ export const ContextShelf = memo(function ContextShelf({
         </details>
       ) : null}
       {blocks.map((block, index) => {
-        const blockId = block.id?.trim() || undefined;
+        const blockId = optionalTrimmedString(block.id);
         const replySelectionScopeProps = buildReplySelectionScopeProps(
           typeof messageIndexOffset === 'number' ? messageIndexOffset + index : undefined,
           blockId,
@@ -477,7 +481,7 @@ export const UserMessage = memo(function UserMessage({
           {hasImages && (
             <div className="space-y-2">
               {block.images?.map((image, index) => {
-                const blockId = block.id?.trim();
+                const blockId = optionalTrimmedString(block.id);
                 const loading = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
                 const canHydrate = Boolean(image.deferred && blockId && onHydrateMessage);
 
@@ -597,7 +601,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   showCursor?: boolean;
 }) {
   const shouldShowCursor = showCursor || !!block.streaming;
-  const blockId = block.id?.trim() || undefined;
+  const blockId = optionalTrimmedString(block.id);
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
   const handleRewind = useCallback(() => {
     if (typeof messageIndex !== 'number') {
@@ -814,7 +818,7 @@ export const SystemEventMessage = memo(function SystemEventMessage({
   onToggleInlineRun?: (inlineRunKey: string) => void;
 }) {
   const label = formatSystemEventLabel(block.customType);
-  const blockId = block.id?.trim() || undefined;
+  const blockId = optionalTrimmedString(block.id);
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
   const rawRunCallbackRuns = useMemo(() => readRawRunCallbackLinkedRuns(block.text), [block.text]);
   const showRawRunCallbackCard = rawRunCallbackRuns.length > 0;
@@ -983,7 +987,7 @@ export const SummaryMessage = memo(function SummaryMessage({
         };
     }
   })();
-  const blockId = block.id?.trim() || undefined;
+  const blockId = optionalTrimmedString(block.id);
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
 
   if (block.kind === 'compaction') {

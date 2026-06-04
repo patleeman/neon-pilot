@@ -69,6 +69,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function safeString(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
+  if (value == null) return fallback;
+  try {
+    const serialized = JSON.stringify(value, null, 2);
+    if (typeof serialized === 'string') return serialized;
+  } catch {
+    // Fall back to String below for cyclic or otherwise unserializable Hermes payloads.
+  }
+  try {
+    return String(value);
+  } catch {
+    return fallback;
+  }
+}
+
 function unwrapList<T>(value: unknown): T[] {
   if (isRecord(value) && Array.isArray(value.data)) return value.data as T[];
   return [];
@@ -80,28 +97,30 @@ function unwrapSession(value: unknown): HermesSession | null {
 }
 
 function messageText(content: unknown): string {
-  if (typeof content === 'string') return content;
   if (Array.isArray(content)) {
     return content
       .map((part) => {
-        if (typeof part === 'string') return part;
-        if (isRecord(part)) return typeof part.text === 'string' ? part.text : JSON.stringify(part);
-        return String(part);
+        if (isRecord(part) && 'text' in part) return safeString(part.text);
+        return safeString(part);
       })
+      .filter(Boolean)
       .join('\n');
   }
-  if (content == null) return '';
-  const serialized = JSON.stringify(content, null, 2);
-  return typeof serialized === 'string' ? serialized : String(content);
+  return safeString(content);
 }
 
 function sessionTitle(session: HermesSession): string {
-  return session.title?.trim() || session.preview?.trim()?.slice(0, 64) || session.id;
+  return safeString(session.title).trim() || safeString(session.preview).trim().slice(0, 64) || safeString(session.id, 'Hermes session');
 }
 
-function formatCompactDate(value?: string | null): string {
-  if (!value) return '';
-  const date = new Date(value);
+function sessionId(session: HermesSession): string {
+  return safeString(session.id).trim();
+}
+
+function formatCompactDate(value?: unknown): string {
+  const text = safeString(value).trim();
+  if (!text) return '';
+  const date = new Date(text);
   if (Number.isNaN(date.getTime())) return '';
   const diff = Date.now() - date.getTime();
   const minutes = Math.max(0, Math.floor(diff / 60_000));
@@ -134,10 +153,7 @@ function messageTimestamp(value: unknown): string {
 }
 
 function messageString(value: unknown, fallback = ''): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
-  if (value == null) return fallback;
-  return messageText(value);
+  return safeString(value, fallback);
 }
 
 function selectedSessionIdFromSearch(search: string): string | null {
@@ -146,7 +162,7 @@ function selectedSessionIdFromSearch(search: string): string | null {
 }
 
 function buildSessionRoute(sessionId: string): string {
-  return `/ext/hermes?session=${encodeURIComponent(sessionId)}`;
+  return `/ext/hermes?session=${encodeURIComponent(safeString(sessionId))}`;
 }
 
 async function navigateTo(pa: ExtensionSurfaceProps['pa'], to: string) {
@@ -463,11 +479,12 @@ function SessionList({
   return (
     <div className={compact ? 'space-y-px px-1' : 'grid gap-1'}>
       {sessions.map((session) => {
-        const active = session.id === activeSessionId;
+        const id = sessionId(session);
+        const active = id === activeSessionId;
         const meta = `${session.message_count ?? 0} messages${session.tool_call_count ? ` · ${session.tool_call_count} tools` : ''}`;
         if (compact) {
           return (
-            <div key={session.id} className="relative" data-sidebar-session-id={session.id}>
+            <div key={id || sessionTitle(session)} className="relative" data-sidebar-session-id={id}>
               <button
                 type="button"
                 onClick={() => onSelect(session)}
@@ -492,7 +509,7 @@ function SessionList({
 
         return (
           <button
-            key={session.id}
+            key={id || sessionTitle(session)}
             type="button"
             onClick={() => onSelect(session)}
             className={cx(
@@ -516,17 +533,18 @@ function toChatBlocks(messages: HermesMessage[], pending: boolean): ExtensionCha
   const blocks: ExtensionChatMessageBlock[] = [];
   messages.forEach((message, index) => {
     const ts = messageTimestamp(message.timestamp);
-    const id = messageString(message.id, `hermes-${index}`) || `hermes-${index}`;
+    const id = messageString(message.id, `hermes-${index}`).trim() || `hermes-${index}`;
     const reasoning = messageString(message.reasoning ?? message.reasoning_content);
     if (reasoning) {
       blocks.push({ type: 'thinking', id: `${id}-reasoning`, ts, text: reasoning });
     }
-    const role = messageString(message.role, 'assistant');
+    const role = messageString(message.role, 'assistant').trim().toLowerCase();
     const text = messageText(message.content);
     if (role === 'user') {
       blocks.push({ type: 'user', id, ts, text });
     } else if (role === 'tool' || message.tool_name) {
-      blocks.push({ type: 'context', id, ts, customType: messageString(message.tool_name, 'tool') || 'tool', text });
+      const toolName = messageString(message.tool_name, 'tool').trim() || 'tool';
+      blocks.push({ type: 'text', id, ts, text: text ? `**${toolName}**\n\n${text}` : `**${toolName}**` });
     } else {
       blocks.push({ type: 'text', id, ts, text });
     }
@@ -534,7 +552,51 @@ function toChatBlocks(messages: HermesMessage[], pending: boolean): ExtensionCha
   if (pending) {
     blocks.push({ type: 'text', id: 'hermes-pending', ts: new Date().toISOString(), text: 'Hermes is working…', streaming: true });
   }
-  return blocks;
+  return blocks.map(sanitizeChatBlock);
+}
+
+function sanitizeChatBlock(block: ExtensionChatMessageBlock, index: number): ExtensionChatMessageBlock {
+  const id = safeString((block as { id?: unknown }).id).trim() || `hermes-${index}`;
+  const ts = messageTimestamp((block as { ts?: unknown }).ts);
+  switch (block.type) {
+    case 'user':
+      return {
+        ...block,
+        id,
+        ts,
+        text: safeString(block.text),
+        images: block.images?.map((image) => ({
+          ...image,
+          alt: safeString(image.alt, 'Hermes image'),
+          src: typeof image.src === 'string' ? image.src : undefined,
+          mimeType: typeof image.mimeType === 'string' ? image.mimeType : undefined,
+          caption: typeof image.caption === 'string' ? image.caption : undefined,
+        })),
+      };
+    case 'context':
+      return {
+        ...block,
+        id,
+        ts,
+        text: safeString(block.text),
+        customType: safeString(block.customType, 'hermes_context').trim() || 'hermes_context',
+      };
+    case 'thinking':
+    case 'text':
+      return { ...block, id, ts, text: safeString(block.text) };
+    case 'image':
+      return {
+        ...block,
+        id,
+        ts,
+        alt: safeString(block.alt, 'Hermes image'),
+        src: typeof block.src === 'string' ? block.src : undefined,
+        mimeType: typeof block.mimeType === 'string' ? block.mimeType : undefined,
+        caption: typeof block.caption === 'string' ? block.caption : undefined,
+      };
+    case 'error':
+      return { ...block, id, ts, tool: typeof block.tool === 'string' ? block.tool : undefined, message: safeString(block.message) };
+  }
 }
 
 export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
@@ -595,7 +657,7 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
           loading={loading}
           error={error}
           compact
-          onSelect={(session) => void navigateTo(pa, buildSessionRoute(session.id))}
+          onSelect={(session) => void navigateTo(pa, buildSessionRoute(sessionId(session)))}
         />
       </div>
     </div>
@@ -615,7 +677,10 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const [sending, setSending] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const activeSession = useMemo(() => sessions.find((session) => session.id === activeSessionId) ?? null, [activeSessionId, sessions]);
+  const activeSession = useMemo(
+    () => sessions.find((session) => sessionId(session) === activeSessionId) ?? null,
+    [activeSessionId, sessions],
+  );
   const chatBlocks = useMemo(() => toChatBlocks(messages, sending), [messages, sending]);
   const configured = Boolean(config?.baseUrl && config.hasApiKey);
   const connected = health?.ok ?? false;

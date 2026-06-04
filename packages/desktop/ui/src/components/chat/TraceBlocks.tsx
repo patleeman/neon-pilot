@@ -534,7 +534,7 @@ export const ErrorBlock = memo(function ErrorBlock({
   onOpenFilePath?: (path: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
 }) {
-  const blockId = block.id?.trim() || undefined;
+  const blockId = typeof block.id === 'string' ? block.id.trim() || undefined : undefined;
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
 
   return (

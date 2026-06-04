@@ -26,7 +26,7 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
 
   const isRunning = block.status === 'running' || !!block.running;
   const isError = block.status === 'error' || !!block.error || ((presentation.exitCode ?? 0) !== 0 && presentation.exitCode !== undefined);
-  const blockId = block.id?.trim();
+  const blockId = typeof block.id === 'string' ? block.id.trim() : '';
   const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
   const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
   const prefetchDeferredOutput = () => {

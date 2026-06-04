@@ -167,7 +167,7 @@ export const ImageBlock = memo(function ImageBlock({
   hydratingMessageBlockIds?: ReadonlySet<string>;
   onInspectImage?: (image: InspectableImage) => void;
 }) {
-  const blockId = block.id?.trim();
+  const blockId = typeof block.id === 'string' ? block.id.trim() : '';
   const canHydrate = Boolean(block.deferred && blockId && onHydrateMessage);
   const loading = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
 

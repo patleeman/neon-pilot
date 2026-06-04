@@ -269,7 +269,7 @@ export function ToolBlock({
 
   // Normalise tool state across streamed and persisted entries.
   const output = stripAnsiForTranscript(block.output ?? '');
-  const blockId = block.id?.trim();
+  const blockId = typeof block.id === 'string' ? block.id.trim() : '';
   const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
   const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
   const prefetchDeferredOutput = () => {
