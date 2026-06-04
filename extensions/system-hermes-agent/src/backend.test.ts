@@ -1,7 +1,7 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSession, listSessions, readConfig, sendMessage, updateConfig } from './backend';
+import { createSession, getRun, listSessions, readConfig, sendMessage, startSessionRun, updateConfig } from './backend';
 
 function createContext(): ExtensionBackendContext {
   const storage = new Map<string, unknown>();
@@ -97,6 +97,27 @@ describe('system-hermes-agent backend', () => {
     expect(result).toMatchObject({ session_id: 'session-id', message: { content: 'hello' } });
   });
 
+  it('compacts chat responses before returning them across the extension boundary', async () => {
+    const ctx = createContext();
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({
+        object: 'hermes.session.chat.completion',
+        session_id: 'session-id',
+        message: { id: 'msg-1', role: 'assistant', content: 'hello', private_blob: 'omit me' },
+        events: [{ payload: 'large internal run event' }],
+        tools: [{ result: 'large tool payload' }],
+      }),
+    );
+
+    const result = await sendMessage({ sessionId: 'session-id', message: 'hi' }, ctx);
+
+    expect(result).toEqual({
+      object: 'hermes.session.chat.completion',
+      session_id: 'session-id',
+      message: { id: 'msg-1', role: 'assistant', content: 'hello' },
+    });
+  });
+
   it('creates Hermes API sessions with an optional title', async () => {
     const ctx = createContext();
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ session_id: 'new-session', title: 'Neon Pilot session' }));
@@ -108,6 +129,39 @@ describe('system-hermes-agent backend', () => {
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({ title: 'Neon Pilot session' });
     expect(result).toMatchObject({ session_id: 'new-session' });
+  });
+
+  it('starts Hermes runs with the selected session id', async () => {
+    const ctx = createContext();
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ run_id: 'run-1', status: 'started', session_id: 'session-id' }));
+
+    const result = await startSessionRun({ sessionId: 'session-id', message: 'hi' }, ctx);
+
+    const [url, init] = fetchCalls()[0];
+    expect(url).toBe('http://127.0.0.1:8642/v1/runs');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({ input: 'hi', session_id: 'session-id' });
+    expect(result).toMatchObject({ run_id: 'run-1', status: 'started', session_id: 'session-id' });
+  });
+
+  it('reads and compacts Hermes run output', async () => {
+    const ctx = createContext();
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ run_id: 'run-1', status: 'completed', session_id: 'session-id', output: 'five tidy words only', events: [] }),
+    );
+
+    const result = await getRun({ runId: 'run-1' }, ctx);
+
+    const [url, init] = fetchCalls()[0];
+    expect(url).toBe('http://127.0.0.1:8642/v1/runs/run-1');
+    expect(init?.method).toBe('GET');
+    expect(result).toEqual({
+      run_id: 'run-1',
+      status: 'completed',
+      session_id: 'session-id',
+      output: 'five tidy words only',
+      message: { role: 'assistant', content: 'five tidy words only' },
+    });
   });
 
   it('surfaces Hermes error messages from non-OK responses', async () => {

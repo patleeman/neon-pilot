@@ -21,6 +21,8 @@
       { "id": "createSession", "handler": "createSession", "title": "Create Hermes session", "worker": { "enabled": true } },
       { "id": "getMessages", "handler": "getMessages", "title": "Read Hermes session messages", "worker": { "enabled": true } },
       { "id": "sendMessage", "handler": "sendMessage", "title": "Send Hermes session message", "worker": { "enabled": true } },
+      { "id": "startSessionRun", "handler": "startSessionRun", "title": "Start Hermes session run", "worker": { "enabled": true } },
+      { "id": "getRun", "handler": "getRun", "title": "Read Hermes run status", "worker": { "enabled": true } },
       { "id": "renameSession", "handler": "renameSession", "title": "Rename Hermes session", "worker": { "enabled": true } },
       { "id": "forkSession", "handler": "forkSession", "title": "Fork Hermes session", "worker": { "enabled": true } },
       { "id": "deleteSession", "handler": "deleteSession", "title": "Delete Hermes session", "worker": { "enabled": true } }

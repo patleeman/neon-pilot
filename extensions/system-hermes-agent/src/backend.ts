@@ -24,6 +24,18 @@ function readString(value: unknown): string | undefined {
   return text || undefined;
 }
 
+function readLooseString(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return undefined;
+}
+
+function compactString(value: unknown, maxLength = 20_000): string | undefined {
+  const text = readLooseString(value);
+  if (text === undefined) return undefined;
+  return text.length > maxLength ? `${text.slice(0, maxLength)}\n\n[truncated]` : text;
+}
+
 function normalizeBaseUrl(value: unknown): string {
   const baseUrl = readString(value) ?? DEFAULT_BASE_URL;
   return baseUrl.replace(/\/+$/, '');
@@ -117,6 +129,78 @@ function encodedId(value: unknown, label = 'sessionId'): string {
   return encodeURIComponent(requiredString(value, label));
 }
 
+function compactMessage(value: unknown): JsonRecord | null {
+  if (!isRecord(value)) return null;
+  const content = compactString(value.content ?? value.text ?? value.output ?? value.response);
+  const message: JsonRecord = {};
+  for (const key of ['id', 'role', 'name', 'tool_name', 'timestamp', 'created_at']) {
+    const text = compactString(value[key], 1000);
+    if (text !== undefined) message[key] = text;
+  }
+  if (content !== undefined) message.content = content;
+  const reasoning = compactString(value.reasoning ?? value.reasoning_content);
+  if (reasoning !== undefined) message.reasoning = reasoning;
+  if (!message.role) message.role = 'assistant';
+  return Object.keys(message).length > 0 ? message : null;
+}
+
+function compactMessages(value: unknown): JsonRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(compactMessage).filter((message): message is JsonRecord => message !== null);
+}
+
+function compactChatResponse(value: unknown): JsonRecord {
+  if (!isRecord(value)) return {};
+  const result: JsonRecord = {};
+  for (const key of ['id', 'session_id', 'sessionId', 'object', 'status']) {
+    const text = compactString(value[key], 1000);
+    if (text !== undefined) result[key] = text;
+  }
+
+  const directMessage = compactMessage(value.message);
+  const dataMessage = isRecord(value.data) ? compactMessage(value.data.message ?? value.data) : null;
+  const textMessage = compactMessage({
+    role: 'assistant',
+    content: value.text ?? value.output ?? value.response,
+    timestamp: value.timestamp ?? value.created_at,
+  });
+
+  const messages =
+    compactMessages(value.messages).length > 0
+      ? compactMessages(value.messages)
+      : Array.isArray(value.data)
+        ? compactMessages(value.data)
+        : [];
+
+  if (messages.length > 0) result.messages = messages;
+  const message = directMessage ?? dataMessage ?? (messages.length === 0 ? textMessage : null);
+  if (message) result.message = message;
+  return result;
+}
+
+function compactRunResponse(value: unknown): JsonRecord {
+  if (!isRecord(value)) return {};
+  const result: JsonRecord = {};
+  for (const key of ['id', 'run_id', 'session_id', 'sessionId', 'object', 'status', 'model']) {
+    const text = compactString(value[key], 1000);
+    if (text !== undefined) result[key] = text;
+  }
+  const output = compactString(value.output ?? value.text ?? value.response);
+  if (output !== undefined) {
+    result.output = output;
+    result.message = { role: 'assistant', content: output };
+  }
+  if (isRecord(value.error)) {
+    result.error = {
+      message: compactString(value.error.message ?? value.error, 2000) ?? 'Hermes run failed.',
+    };
+  } else {
+    const error = compactString(value.error, 2000);
+    if (error !== undefined) result.error = { message: error };
+  }
+  return result;
+}
+
 export async function readConfig(_input: unknown, ctx: ExtensionBackendContext) {
   return { config: publicConfig(await loadConfig(ctx)) };
 }
@@ -194,11 +278,37 @@ export async function sendMessage(input: unknown, ctx: ExtensionBackendContext) 
   const body: JsonRecord = { input: message };
   const instructions = readString(record.instructions);
   if (instructions) body.instructions = instructions;
-  return hermesFetch<JsonRecord>(ctx, `/api/sessions/${sessionId}/chat`, {
+  const result = await hermesFetch<JsonRecord>(ctx, `/api/sessions/${sessionId}/chat`, {
     method: 'POST',
     body: JSON.stringify(body),
     timeoutMs: 120_000,
   });
+  return compactChatResponse(result);
+}
+
+export async function startSessionRun(input: unknown, ctx: ExtensionBackendContext) {
+  const record = isRecord(input) ? input : {};
+  const sessionId = requiredString(record.sessionId, 'sessionId');
+  const message = requiredString(record.message ?? record.input, 'message');
+  const body: JsonRecord = { input: message, session_id: sessionId };
+  const instructions = readString(record.instructions);
+  if (instructions) body.instructions = instructions;
+  const result = await hermesFetch<JsonRecord>(ctx, '/v1/runs', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    timeoutMs: 10_000,
+  });
+  return compactRunResponse(result);
+}
+
+export async function getRun(input: unknown, ctx: ExtensionBackendContext) {
+  const record = isRecord(input) ? input : {};
+  const runId = encodedId(record.runId, 'runId');
+  const result = await hermesFetch<JsonRecord>(ctx, `/v1/runs/${runId}`, {
+    method: 'GET',
+    timeoutMs: 10_000,
+  });
+  return compactRunResponse(result);
 }
 
 export async function renameSession(input: unknown, ctx: ExtensionBackendContext) {

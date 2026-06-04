@@ -95,6 +95,32 @@ function unwrapList<T>(value: unknown): T[] {
   return [];
 }
 
+function unwrapMessageList(value: unknown): HermesMessage[] {
+  if (isRecord(value) && isRecord(value.message)) return [value.message as HermesMessage];
+  if (isRecord(value) && isRecord(value.data) && isRecord(value.data.message)) return [value.data.message as HermesMessage];
+  return unwrapList<HermesMessage>(value);
+}
+
+function runId(value: unknown): string {
+  if (!isRecord(value)) return '';
+  return safeString(value.run_id ?? value.id).trim();
+}
+
+function runStatus(value: unknown): string {
+  if (!isRecord(value)) return '';
+  return safeString(value.status).trim().toLowerCase();
+}
+
+function runError(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  if (isRecord(value.error)) return safeString(value.error.message, 'Hermes run failed.').trim() || 'Hermes run failed.';
+  return safeString(value.error).trim() || null;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function hasListPayload(value: unknown): boolean {
   return (
     Array.isArray(value) ||
@@ -123,6 +149,26 @@ function messageText(content: unknown): string {
       .join('\n');
   }
   return safeString(content);
+}
+
+function messageFingerprint(message: HermesMessage): string {
+  const id = messageString(message.id).trim();
+  if (id) return `id:${id}`;
+  return `${messageString(message.role).trim().toLowerCase()}|${messageText(message.content).trim()}|${messageString(
+    message.timestamp ?? (message as { created_at?: unknown }).created_at,
+  ).trim()}`;
+}
+
+function mergeMessages(current: HermesMessage[], incoming: HermesMessage[]): HermesMessage[] {
+  const seen = new Set(current.map(messageFingerprint));
+  const next = [...current];
+  incoming.forEach((message) => {
+    const key = messageFingerprint(message);
+    if (seen.has(key)) return;
+    seen.add(key);
+    next.push(message);
+  });
+  return next;
 }
 
 function sessionTitle(session: HermesSession): string {
@@ -828,7 +874,8 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     try {
       const result = await pa.extension.invoke('getMessages', { sessionId: activeSessionId });
       if (hasListPayload(result)) {
-        setMessages(unwrapList<HermesMessage>(result));
+        const nextMessages = unwrapList<HermesMessage>(result);
+        setMessages((current) => (nextMessages.length === 0 && current.length > 0 ? current : nextMessages));
       } else {
         setError('Hermes returned an unrecognized message list response.');
       }
@@ -884,8 +931,27 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     const optimistic: HermesMessage = { role: 'user', content: text, timestamp: new Date().toISOString() };
     setMessages((current) => [...current, optimistic]);
     try {
-      await pa.extension.invoke('sendMessage', { sessionId: activeSessionId, message: text });
-      await Promise.all([loadMessages(), loadShell()]);
+      let result = await pa.extension.invoke('startSessionRun', { sessionId: activeSessionId, message: text });
+      const id = runId(result);
+      if (!id) throw new Error('Hermes did not return a run id.');
+
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < 180_000) {
+        const status = runStatus(result);
+        const errorMessage = runError(result);
+        if (status === 'failed' || status === 'cancelled') throw new Error(errorMessage ?? `Hermes run ${status}.`);
+        if (status === 'completed') break;
+        await sleep(10_000);
+        result = await pa.extension.invoke('getRun', { runId: id });
+      }
+
+      if (runStatus(result) !== 'completed') {
+        throw new Error('Hermes is still running this turn. Refresh the session in a moment to pick up the result.');
+      }
+      const returnedMessages = unwrapMessageList(result);
+      setMessages((current) => mergeMessages(current, returnedMessages));
+      await loadMessages();
+      void loadShell();
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {
