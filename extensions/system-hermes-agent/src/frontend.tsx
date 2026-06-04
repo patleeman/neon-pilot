@@ -117,10 +117,6 @@ function runError(value: unknown): string | null {
   return safeString(value.error).trim() || null;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
 function hasListPayload(value: unknown): boolean {
   return (
     Array.isArray(value) ||
@@ -807,13 +803,15 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [activeRun, setActiveRun] = useState<{ id: string; sessionId: string; startedAt: number } | null>(null);
   const [creating, setCreating] = useState(false);
 
   const activeSession = useMemo(
     () => sessions.find((session) => sessionId(session) === activeSessionId) ?? null,
     [activeSessionId, sessions],
   );
-  const chatBlocks = useMemo(() => toChatBlocks(messages, sending), [messages, sending]);
+  const runPending = sending || activeRun !== null;
+  const chatBlocks = useMemo(() => toChatBlocks(messages, runPending), [messages, runPending]);
   const configured = Boolean(config?.baseUrl && config.hasApiKey);
   const connected = health?.ok ?? false;
   const showSetup = !configured || !connected;
@@ -894,6 +892,54 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     void loadMessages();
   }, [loadMessages]);
 
+  useEffect(() => {
+    if (!activeRun) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        if (Date.now() - activeRun.startedAt >= 180_000) {
+          if (!cancelled) {
+            setActiveRun(null);
+            setError('Hermes is still running this turn. Refresh the session in a moment to pick up the result.');
+          }
+          return;
+        }
+        const result = await pa.extension.invoke('getRun', { runId: activeRun.id });
+        if (cancelled) return;
+        const status = runStatus(result);
+        const errorMessage = runError(result);
+        if (status === 'failed' || status === 'cancelled') {
+          setActiveRun(null);
+          setError(errorMessage ?? `Hermes run ${status}.`);
+          return;
+        }
+        if (status === 'completed') {
+          const returnedMessages = unwrapMessageList(result);
+          if (activeRun.sessionId === activeSessionId) {
+            setMessages((current) => mergeMessages(current, returnedMessages));
+          }
+          setActiveRun(null);
+          if (activeRun.sessionId === activeSessionId) {
+            await loadMessages();
+          }
+          void loadShell();
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setActiveRun(null);
+          setError(humanErrorMessage(err));
+        }
+      }
+    };
+    const timeout = window.setTimeout(() => {
+      void poll();
+    }, 10_000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [activeRun, activeSessionId, loadMessages, loadShell, pa]);
+
   async function createSession() {
     setCreating(true);
     setError(null);
@@ -925,33 +971,27 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
 
   async function send(textInput: string) {
     const text = textInput.trim();
-    if (!text || !activeSessionId) return;
+    if (!text || !activeSessionId || activeRun) return;
+    const runSessionId = activeSessionId;
     setSending(true);
     setError(null);
     const optimistic: HermesMessage = { role: 'user', content: text, timestamp: new Date().toISOString() };
     setMessages((current) => [...current, optimistic]);
     try {
-      let result = await pa.extension.invoke('startSessionRun', { sessionId: activeSessionId, message: text });
+      const result = await pa.extension.invoke('startSessionRun', { sessionId: runSessionId, message: text });
       const id = runId(result);
       if (!id) throw new Error('Hermes did not return a run id.');
-
-      const startedAt = Date.now();
-      while (Date.now() - startedAt < 180_000) {
-        const status = runStatus(result);
-        const errorMessage = runError(result);
-        if (status === 'failed' || status === 'cancelled') throw new Error(errorMessage ?? `Hermes run ${status}.`);
-        if (status === 'completed') break;
-        await sleep(10_000);
-        result = await pa.extension.invoke('getRun', { runId: id });
+      const status = runStatus(result);
+      const errorMessage = runError(result);
+      if (status === 'failed' || status === 'cancelled') throw new Error(errorMessage ?? `Hermes run ${status}.`);
+      if (status === 'completed') {
+        const returnedMessages = unwrapMessageList(result);
+        setMessages((current) => mergeMessages(current, returnedMessages));
+        await loadMessages();
+        void loadShell();
+      } else {
+        setActiveRun({ id, sessionId: runSessionId, startedAt: Date.now() });
       }
-
-      if (runStatus(result) !== 'completed') {
-        throw new Error('Hermes is still running this turn. Refresh the session in a moment to pick up the result.');
-      }
-      const returnedMessages = unwrapMessageList(result);
-      setMessages((current) => mergeMessages(current, returnedMessages));
-      await loadMessages();
-      void loadShell();
     } catch (err) {
       setError(humanErrorMessage(err));
     } finally {

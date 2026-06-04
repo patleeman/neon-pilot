@@ -58,6 +58,23 @@ describe('message block hydration helpers', () => {
     expect(mergeHydratedStreamBlocks([streamBlock], { 'block-1': hydrated })).toEqual([hydrated]);
   });
 
+  it('ignores non-string stream block ids while hydrating', () => {
+    const streamBlock = {
+      type: 'text',
+      id: { value: 'block-1' },
+      ts: '2026-04-01T00:00:00.000Z',
+      text: 'placeholder',
+    } as unknown as Extract<MessageBlock, { type: 'text' }>;
+    const hydrated: Extract<MessageBlock, { type: 'text' }> = {
+      type: 'text',
+      id: 'block-1',
+      ts: '2026-04-01T00:00:00.000Z',
+      text: 'hydrated',
+    };
+
+    expect(mergeHydratedStreamBlocks([streamBlock], { 'block-1': hydrated })).toEqual([streamBlock]);
+  });
+
   it('flattens precomputed transcript render items without rebuilding message blocks', () => {
     const text: Extract<MessageBlock, { type: 'text' }> = {
       type: 'text',
@@ -103,5 +120,16 @@ describe('message block hydration helpers', () => {
       historicalBlocks[1],
       streamBlocks[1],
     ]);
+  });
+
+  it('keeps malformed non-string ids from crashing historical stream merging', () => {
+    const historicalBlocks = [
+      { type: 'text', id: { value: 'assistant-1' }, ts: '2026-04-01T00:00:00.000Z', text: 'historical' },
+    ] as unknown as MessageBlock[];
+    const streamBlocks = [
+      { type: 'text', id: { value: 'assistant-1' }, ts: '2026-04-01T00:00:00.000Z', text: 'stream' },
+    ] as unknown as MessageBlock[];
+
+    expect(mergeHistoricalAndStreamBlocks(historicalBlocks, streamBlocks)).toEqual([...historicalBlocks, ...streamBlocks]);
   });
 });

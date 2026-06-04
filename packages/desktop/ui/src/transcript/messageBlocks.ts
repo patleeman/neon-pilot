@@ -160,7 +160,7 @@ export function hydrateTranscriptRenderItems(
 
 export function mergeHydratedStreamBlocks(blocks: MessageBlock[], hydratedBlocks: Record<string, MessageBlock>): MessageBlock[] {
   return blocks.map((block) => {
-    const normalizedId = block.id?.trim();
+    const normalizedId = typeof block.id === 'string' ? block.id.trim() : '';
     return normalizedId ? (hydratedBlocks[normalizedId] ?? block) : block;
   });
 }
@@ -170,11 +170,17 @@ export function mergeHistoricalAndStreamBlocks(historicalBlocks: MessageBlock[],
   if (streamBlocks.length === 0) return historicalBlocks;
 
   const historicalIds = new Set(
-    historicalBlocks.map((block) => block.id?.trim()).filter((id): id is string => typeof id === 'string' && id.length > 0),
+    historicalBlocks.map((block) => (typeof block.id === 'string' ? block.id.trim() : '')).filter((id): id is string => id.length > 0),
   );
   if (historicalIds.size === 0) {
     return [...historicalBlocks, ...streamBlocks];
   }
 
-  return [...historicalBlocks, ...streamBlocks.filter((block) => !block.id?.trim() || !historicalIds.has(block.id.trim()))];
+  return [
+    ...historicalBlocks,
+    ...streamBlocks.filter((block) => {
+      const normalizedId = typeof block.id === 'string' ? block.id.trim() : '';
+      return !normalizedId || !historicalIds.has(normalizedId);
+    }),
+  ];
 }
