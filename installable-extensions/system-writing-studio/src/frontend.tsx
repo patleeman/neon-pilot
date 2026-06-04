@@ -19,7 +19,6 @@ import {
 } from '@neon-pilot/extensions/ui';
 import {
   type CSSProperties,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   useCallback,
@@ -62,8 +61,7 @@ const writingStudioCss = `
 .writing-studio-chat-shell{min-height:0}.writing-studio-extension-chat{display:flex;height:100%;min-height:0;flex-direction:column;background:rgb(var(--color-surface));color:rgb(var(--color-primary));user-select:text}.writing-studio-extension-chat [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-extension-chat [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-muted{margin:.9rem .75rem;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
 .writing-studio-format-actions{position:relative}.writing-studio-format-actions .writing-studio-export-menu{left:0;right:auto;top:2.05rem}.writing-studio-review-status.is-error{color:rgb(var(--color-danger))}
 .writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.56)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:.65rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}
-.writing-studio-sidebar{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);height:100%;min-height:0;padding:.6rem .55rem .8rem;background:rgb(var(--color-base));color:rgb(var(--color-primary));gap:.55rem}.writing-studio-sidebar-header{display:flex;align-items:center;justify-content:space-between;gap:.45rem}.writing-studio-sidebar-title{font-size:.72rem;font-weight:680;letter-spacing:.04em;text-transform:uppercase;color:rgb(var(--color-secondary))}.writing-studio-sidebar-actions{display:flex;align-items:center;gap:.12rem}.writing-studio-sidebar-search,.writing-studio-doc-form input{width:100%;min-width:0;border:1px solid rgb(var(--color-border-subtle));border-radius:7px;background:rgb(var(--color-surface));color:rgb(var(--color-primary));font:inherit;font-size:.78rem;padding:.42rem .5rem}.writing-studio-sidebar-search:focus,.writing-studio-doc-form input:focus{outline:1px solid rgb(var(--color-accent));border-color:rgb(var(--color-accent))}.writing-studio-doc-selection{min-height:1rem;color:rgb(var(--color-dim));font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.writing-studio-doc-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.32rem;align-items:center}.writing-studio-doc-form.is-danger{grid-template-columns:minmax(0,1fr) auto auto;color:rgb(var(--color-danger,255 96 96));font-size:.76rem}.writing-studio-doc-form button{border:0;border-radius:6px;background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary));font:inherit;font-size:.72rem;padding:.4rem .48rem;cursor:pointer}.writing-studio-doc-form button:hover{background:rgb(var(--color-border-subtle))}.writing-studio-doc-form button.is-danger{background:color-mix(in srgb,rgb(var(--color-danger,255 96 96)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}.writing-studio-doc-list{min-height:0;overflow:hidden;border:0;border-radius:0;background:transparent}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{margin:.2rem 0;padding:.35rem .3rem;color:rgb(var(--color-dim));font-size:.78rem}.writing-studio-doc-import input[type=file]{display:none}
-.writing-studio-sidebar{padding:.5rem .35rem .65rem;background:transparent;gap:.42rem}.writing-studio-sidebar-search{background:color-mix(in srgb,rgb(var(--color-surface)) 76%,transparent);padding:.38rem .45rem}.writing-studio-doc-selection{padding:0 .15rem}.writing-studio-doc-list{display:flex;flex-direction:column;gap:.22rem;margin-left:-.08rem}.writing-studio-doc-inline-action{flex:0 0 auto;margin:.05rem .12rem .18rem}.writing-studio-doc-inline-action input{padding:.38rem .45rem}.writing-studio-doc-inline-action button{padding:.34rem .42rem}.writing-studio-doc-tree{flex:1 1 auto;height:100%;min-height:0}
+.writing-studio-sidebar{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);height:100%;min-height:0;padding:.5rem .45rem .65rem;background:transparent;color:rgb(var(--color-primary));gap:.42rem}.writing-studio-sidebar-header{display:flex;align-items:center;justify-content:space-between;gap:.35rem}.writing-studio-sidebar-title{font-size:.72rem;font-weight:680;letter-spacing:.04em;text-transform:uppercase;color:rgb(var(--color-secondary))}.writing-studio-sidebar-actions{display:flex;align-items:center;gap:.08rem}.writing-studio-sidebar-search,.writing-studio-doc-form input{width:100%;min-width:0;border:1px solid rgb(var(--color-border-subtle));border-radius:7px;background:color-mix(in srgb,rgb(var(--color-surface)) 76%,transparent);color:rgb(var(--color-primary));font:inherit;font-size:.78rem;padding:.38rem .45rem}.writing-studio-sidebar-search:focus,.writing-studio-doc-form input:focus{outline:1px solid rgb(var(--color-accent));border-color:rgb(var(--color-accent))}.writing-studio-doc-selection{min-height:1rem;padding:0 .1rem;color:rgb(var(--color-dim));font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.writing-studio-doc-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.28rem;align-items:center}.writing-studio-doc-form.is-danger{grid-template-columns:minmax(0,1fr) auto auto;color:rgb(var(--color-danger,255 96 96));font-size:.76rem}.writing-studio-doc-form button{border:0;border-radius:6px;background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary));font:inherit;font-size:.72rem;padding:.34rem .42rem;cursor:pointer}.writing-studio-doc-form button:hover{background:rgb(var(--color-border-subtle))}.writing-studio-doc-form button.is-danger{background:color-mix(in srgb,rgb(var(--color-danger,255 96 96)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}.writing-studio-doc-list{display:flex;flex-direction:column;gap:.22rem;min-height:0;overflow:hidden;border:0;border-radius:0;background:transparent;margin-left:-.1rem}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{margin:.2rem 0;padding:.35rem .3rem;color:rgb(var(--color-dim));font-size:.78rem}.writing-studio-doc-import input[type=file]{display:none}.writing-studio-doc-inline-action{flex:0 0 auto;margin:.05rem .12rem .18rem}.writing-studio-doc-tree{flex:1 1 auto;height:100%;min-height:0}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
 @media(max-width:1100px){.writing-studio-canvas{grid-template-columns:minmax(0,1fr)}.writing-studio-comments{position:static;display:grid;gap:.65rem;min-height:0;padding-top:0}.writing-studio-comment{position:static!important;max-width:48rem}}
 @media(max-width:860px){.writing-studio,.writing-studio.has-collapsed-rail{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(18rem,42vh)}.writing-studio-rail{border-left:0;border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-rail-resizer{display:none}}
@@ -983,7 +981,6 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
   const [actionMode, setActionMode] = useState<DocumentActionMode>('idle');
   const [actionValue, setActionValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const documentsRef = useRef<DocumentSummary[]>([]);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const folderPathByTreePathRef = useRef(new Map<string, string>());
 
@@ -1006,9 +1003,9 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
         --trees-selected-bg-override:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);
         --trees-border-color-override:transparent;
         --trees-padding-inline-override:0px;
-        --trees-item-padding-x-override:4px;
+        --trees-item-padding-x-override:2px;
         --trees-item-margin-x-override:0px;
-        --trees-level-gap-override:6px;
+        --trees-level-gap-override:4px;
         --trees-font-size-override:12px;
         --trees-item-height:24px;
         --trees-icon-width-override:14px;
@@ -1016,7 +1013,7 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
         color:rgb(var(--color-primary));
         background:transparent;
       }
-      button[data-type='item']{font-size:12px;color:rgb(var(--color-primary))}
+      button[data-type='item']{font-size:12px;color:rgb(var(--color-primary));padding-inline-start:2px}
       button[data-type='item']:hover{background:rgb(var(--color-surface-hover))}
       button[data-type='item'][data-item-selected]{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-primary))}
       [data-item-section='icon']{color:rgb(var(--color-secondary))}
@@ -1026,10 +1023,6 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
   useEffect(() => {
     documentTreeModel.setIcons({ set: 'minimal', colored: false });
   }, [documentTreeModel]);
-
-  useEffect(() => {
-    documentsRef.current = documents;
-  }, [documents]);
 
   const refreshDocuments = useCallback(
     async (nextActiveDocumentId?: string) => {
@@ -1088,22 +1081,9 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
     emitDocumentSelected(documentId);
   }, [selectedTreePath]);
 
-  const openDocumentFromDoubleClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      const row = event.nativeEvent
-        .composedPath()
-        .find((entry): entry is HTMLElement => entry instanceof HTMLElement && entry.getAttribute('role') === 'treeitem');
-      const rowLabel = row?.getAttribute('aria-label') ?? '';
-      const clickedDocument = rowLabel.includes('.') ? (documentsRef.current.find((doc) => doc.fileName === rowLabel) ?? null) : null;
-      if (clickedDocument) {
-        setActiveDocumentId(clickedDocument.id);
-        emitDocumentSelected(clickedDocument.id);
-        return;
-      }
-      openSelectedDocument();
-    },
-    [openSelectedDocument],
-  );
+  const openDocumentFromDoubleClick = useCallback(() => {
+    openSelectedDocument();
+  }, [openSelectedDocument]);
 
   const importDocument = useCallback(
     async (file: File) => {
