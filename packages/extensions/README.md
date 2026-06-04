@@ -294,7 +294,7 @@ import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 const result = await runAgentTask({ prompt: 'Summarize this image', images, tools: 'none', timeoutMs: 30_000 }, ctx);
 ```
 
-The host owns model lookup, auth storage, session creation, timeout cleanup, and runtime policy. Extension code owns only the workflow request and result handling. Extensions must declare `agent:run` before using this seam.
+The host owns model lookup, auth storage, session creation, timeout cleanup, and runtime policy. Extension code owns only the workflow request and result handling. When `allowedToolNames` is set, `runAgentTask` can continue through multiple allowlisted tool calls and stops early only if a tool result returns `terminate: true`. Extensions must declare `agent:run` before using this seam.
 
 For multi-turn agent work, use extension-owned conversations:
 

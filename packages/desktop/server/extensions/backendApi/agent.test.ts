@@ -214,11 +214,18 @@ describe('extension agent backend API', () => {
       createCtx({ extensionId: 'system-writing-studio' }),
     );
 
-    expect(result.text).toBe('tool result for writing_studio_add_annotation');
+    expect(result.text).toBe('annotated');
     expect(serverModuleMocks.toolInvocations).toEqual([
       { name: 'writing_studio_add_annotation', input: { quote: 'Hello', body: 'Needs a sharper verb.' } },
     ]);
-    expect(serverModuleMocks.liveSubmitted).toEqual([{ sessionId: 'live-1', text: 'Annotate', images: undefined }]);
+    expect(serverModuleMocks.liveSubmitted).toEqual([
+      { sessionId: 'live-1', text: 'Annotate', images: undefined },
+      {
+        sessionId: 'live-1',
+        text: expect.stringContaining('Tool writing_studio_add_annotation result:'),
+        images: undefined,
+      },
+    ]);
   });
 
   it('keeps extension-owned hidden conversations for multiple live-session sends', async () => {

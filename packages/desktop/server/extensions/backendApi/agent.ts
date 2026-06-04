@@ -979,7 +979,7 @@ export async function runAgentTask(
             },
           },
         );
-        if (call.toolName === 'writing_studio_add_annotation' || (isRecord(toolResult) && toolResult.terminate === true)) {
+        if (isRecord(toolResult) && toolResult.terminate === true) {
           return { text: toolResultText(toolResult), model: result.model, provider: result.provider };
         }
         result = await sendAgentMessage(

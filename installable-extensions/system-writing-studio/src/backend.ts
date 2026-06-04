@@ -112,7 +112,6 @@ const defaultSettings: WritingSettings = {
   reviewPrompt: defaultReviewPrompt,
   agentInstructions: defaultAgentInstructions,
 };
-const maxReviewAnnotations = 12;
 const writingStudioAgentToolNames = [
   'writing_studio_get_canvas',
   'writing_studio_update_canvas',
@@ -148,32 +147,6 @@ function readAgentTurnText(result: unknown): string {
   return typeof text === 'string' ? text.trim() : '';
 }
 
-async function runWritingStudioAgentTask(
-  input: WritingStudioAgentTaskInput,
-  ctx: ExtensionBackendContext,
-): Promise<{ text: string }> {
-  try {
-    const result = await runAgentTask(
-      {
-        ...(input.cwd ?? ctx.toolContext?.cwd ? { cwd: input.cwd ?? ctx.toolContext?.cwd } : {}),
-        prompt: input.prompt,
-        ...(input.modelRef ? { modelRef: input.modelRef } : {}),
-        ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
-        ...(input.tools ? { tools: input.tools } : {}),
-        ...(input.allowedToolNames ? { allowedToolNames: input.allowedToolNames } : {}),
-        ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
-      },
-      ctx,
-    );
-    const text = readAgentTurnText(result);
-    if (!text && input.tools === 'none') throw new Error('Agent review returned no text.');
-    return { text };
-  } catch (error) {
-    if (!input.modelRef || !isUnavailableAgentModelError(error)) throw error;
-    return runWritingStudioAgentTask({ ...input, modelRef: undefined }, ctx);
-  }
-}
-
 async function runWritingStudioToolTask(
   input: WritingStudioAgentTaskInput,
   ctx: ExtensionBackendContext,
@@ -197,10 +170,6 @@ async function runWritingStudioToolTask(
     return runWritingStudioToolTask({ ...input, modelRef: undefined }, ctx);
   }
 }
-const reviewChunkCharacterLimit = 2_400;
-const reviewMaxChunks = 5;
-const reviewChunksPerRun = 2;
-
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -471,136 +440,6 @@ function replayMarkdownFromEvents(events: WritingEvent[]): string {
   return markdown;
 }
 
-function parseAgentAnnotations(text: string, markdown: string, runId: string): Annotation[] {
-  const jsonText = text.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? text.match(/\[[\s\S]*\]/)?.[0] ?? text;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(parsed) && parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).annotations)) {
-    parsed = (parsed as { annotations: unknown[] }).annotations;
-  }
-  if (!Array.isArray(parsed)) return [];
-  const createdAt = nowIso();
-  return parsed
-    .map((item): Annotation | null => {
-      if (!item || typeof item !== 'object') return null;
-      const record = item as Record<string, unknown>;
-      const quote = typeof record.quote === 'string' ? record.quote.trim() : '';
-      const body = typeof record.body === 'string' ? record.body.trim() : '';
-      if (!quote || !body) return null;
-      const from = markdown.indexOf(quote);
-      if (from < 0) return null;
-      const rawKind = typeof record.kind === 'string' ? record.kind : 'comment';
-      const kind: AnnotationKind = rawKind === 'suggestion' || rawKind === 'reaction' || rawKind === 'warning' ? rawKind : 'comment';
-      const emoji = typeof record.emoji === 'string' && record.emoji.trim() ? record.emoji.trim().slice(0, 8) : undefined;
-      const suggestedReplacement =
-        typeof record.suggestedReplacement === 'string' && record.suggestedReplacement.trim()
-          ? record.suggestedReplacement.trim()
-          : undefined;
-      return {
-        id: randomUUID(),
-        kind,
-        body,
-        ...(emoji ? { emoji } : {}),
-        ...(suggestedReplacement ? { suggestedReplacement } : {}),
-        quote,
-        anchor: textAnchorForQuote(markdown, from, quote),
-        from,
-        to: from + quote.length,
-        status: 'open',
-        createdAt,
-        agentRunId: runId,
-      };
-    })
-    .filter((annotation): annotation is Annotation => annotation !== null)
-    .slice(0, maxReviewAnnotations);
-}
-
-function reviewDraftChunks(markdown: string): string[] {
-  const paragraphs = markdown.split(/(\n{2,})/);
-  const chunks: string[] = [];
-  let chunk = '';
-  for (let index = 0; index < paragraphs.length; index += 2) {
-    const paragraph = paragraphs[index] ?? '';
-    const separator = paragraphs[index + 1] ?? '\n\n';
-    const next = chunk ? `${chunk}${separator}${paragraph}` : paragraph;
-    if (next.length > reviewChunkCharacterLimit && chunk.trim()) {
-      chunks.push(chunk.trim());
-      chunk = paragraph;
-    } else {
-      chunk = next;
-    }
-    while (chunk.length > reviewChunkCharacterLimit) {
-      const slice = chunk.slice(0, reviewChunkCharacterLimit);
-      const sentenceBreak = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('? '), slice.lastIndexOf('! '));
-      const cut = sentenceBreak > 800 ? sentenceBreak + 1 : reviewChunkCharacterLimit;
-      chunks.push(chunk.slice(0, cut).trim());
-      chunk = chunk.slice(cut).trimStart();
-    }
-    if (chunks.length >= reviewMaxChunks) break;
-  }
-  if (chunk.trim() && chunks.length < reviewMaxChunks) chunks.push(chunk.trim());
-  return chunks.filter(Boolean).slice(0, reviewMaxChunks);
-}
-
-async function buildAgentReviewAnnotations(
-  markdown: string,
-  runId: string,
-  settings: WritingSettings,
-  ctx: ExtensionBackendContext,
-  modelRef?: string,
-  cursorChunk = 0,
-): Promise<{ annotations: Annotation[]; nextReviewCursorChunk: number }> {
-  const chunks = reviewDraftChunks(markdown);
-  const annotations: Annotation[] = [];
-  const seenQuotes = new Set<string>();
-  if (chunks.length === 0) return { annotations, nextReviewCursorChunk: 0 };
-
-  const startIndex = cursorChunk % chunks.length;
-  const chunkIndexes = Array.from({ length: Math.min(reviewChunksPerRun, chunks.length) }, (_, offset) => (startIndex + offset) % chunks.length);
-
-  for (const index of chunkIndexes) {
-    const reviewMarkdown = chunks[index];
-    const remaining = maxReviewAnnotations - annotations.length;
-    if (remaining <= 0) break;
-    const targetCount = Math.min(5, Math.max(3, remaining));
-    const prompt = `You are reviewing a markdown draft in Writing Studio.
-
-Return only JSON: an array of ${targetCount}-${targetCount + 1} objects with keys quote, body, kind, optional emoji, and optional suggestedReplacement.
-kind must be one of comment, suggestion, reaction, warning.
-quote must be an exact substring from the draft.
-Choose quotes by copying 8-30 consecutive words directly from the draft text. Do not paraphrase quotes.
-When you are proposing a concrete rewrite, include suggestedReplacement as the exact replacement text for quote. Only include it when the user could approve it directly.
-Write like a generous collaborator with personality. Avoid generic proofreading.
-This is chunk ${index + 1} of ${chunks.length}. Review this chunk only, so the document gets useful margin coverage from top to bottom.
-
-Review prompt:
-${settings.reviewPrompt}
-
-Agent instructions:
-${settings.agentInstructions}
-
-Draft chunk:
-${reviewMarkdown}`;
-    try {
-      const result = await runWritingStudioAgentTask({ prompt, tools: 'none', timeoutMs: 45_000, modelRef }, ctx);
-      for (const annotation of parseAgentAnnotations(result.text, markdown, runId)) {
-        if (seenQuotes.has(annotation.quote)) continue;
-        seenQuotes.add(annotation.quote);
-        annotations.push(annotation);
-        if (annotations.length >= maxReviewAnnotations) break;
-      }
-    } catch (error) {
-      throw new Error(`Writing Studio review failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  return { annotations, nextReviewCursorChunk: (startIndex + chunkIndexes.length) % chunks.length };
-}
-
 async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBackendContext, modelRef?: string): Promise<string> {
   if (!ctx.conversations?.create) {
     throw new Error('Writing Studio chat requires the host conversation capability.');
@@ -676,7 +515,7 @@ async function runReviewThroughChat(
   const existingIds = new Set(state.annotations.map((annotation) => annotation.id));
   const reviewPrompt = input.reviewPrompt?.trim() || state.settings.reviewPrompt;
   const selectedText = input.selectedText?.trim();
-  const reviewDocumentChunk = state.markdown.length > 1800 ? state.markdown.slice(0, 1800) : state.markdown;
+  const reviewDocumentChunk = state.markdown.length > 3200 ? state.markdown.slice(0, 3200) : state.markdown;
   const agentInstructions = state.settings.agentInstructions.slice(0, 800);
   const prompt = selectedText
     ? `Review this selected passage from the active Writing Studio document.
@@ -693,11 +532,11 @@ ${agentInstructions}
 
 Selected passage:
 ${selectedText}`
-    : `Review the first pass of the active Writing Studio document.
+    : `Review the active Writing Studio document.
 
 Use the Writing Studio tools, not JSON. Do not call writing_studio_get_canvas; the document excerpt is included below. Do not describe annotations in prose. Emit raw function calls only, using this shape:
 <function_calls><invoke name="writing_studio_add_annotation"><parameter name="quote">exact quote from the excerpt</parameter><parameter name="body">your comment</parameter><parameter name="kind">comment</parameter></invoke></function_calls>
-Call writing_studio_add_annotation once, anchored to an exact quote from this excerpt. Pick the highest-value comment near the top of the excerpt. If you suggest a concrete replacement, include a suggestedReplacement parameter. Your task is not complete until the writing_studio_add_annotation tool call succeeds.
+Add 3-6 useful margin comments across the excerpt, starting near the top and moving downward. Each call must use an exact quote from the excerpt. If you suggest a concrete replacement, include a suggestedReplacement parameter. Your task is not complete until at least 3 writing_studio_add_annotation tool calls succeed, unless the excerpt is too short for that many distinct comments.
 
 Review prompt:
 ${reviewPrompt}
@@ -713,7 +552,7 @@ ${reviewDocumentChunk}`;
     const result = await runWritingStudioToolTask(
       {
         prompt,
-        timeoutMs: selectedText ? 45_000 : 60_000,
+        timeoutMs: selectedText ? 45_000 : 90_000,
         modelRef: input.modelRef,
         thinkingLevel: 'low',
         allowedToolNames: ['writing_studio_add_annotation'],
@@ -913,7 +752,7 @@ export async function updateCanvas(input: unknown, ctx: ExtensionBackendContext)
 export async function addAnnotation(
   input: unknown,
   ctx: ExtensionBackendContext,
-): Promise<{ annotation: Annotation; annotations: Annotation[]; terminate: true }> {
+): Promise<{ annotation: Annotation; annotations: Annotation[] }> {
   const payload = input as {
     documentId?: string;
     quote?: string;
@@ -951,7 +790,7 @@ export async function addAnnotation(
   state.annotations.unshift(annotation);
   state.events.push(event('annotation_added', 'agent', { annotation }));
   await writeState(ctx, state);
-  return { annotation, annotations: state.annotations, terminate: true };
+  return { annotation, annotations: state.annotations };
 }
 
 export async function updateAnnotation(
