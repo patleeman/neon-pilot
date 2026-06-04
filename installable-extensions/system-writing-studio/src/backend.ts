@@ -128,6 +128,10 @@ function isUnavailableAgentModelError(error: unknown): boolean {
   return error instanceof Error && /Agent conversation model is not available/i.test(error.message);
 }
 
+function isUnsupportedActiveToolUpdateError(error: unknown): boolean {
+  return error instanceof Error && /does not support active tool updates/i.test(error.message);
+}
+
 interface WritingStudioAgentTaskInput {
   cwd?: string;
   modelRef?: string;
@@ -634,13 +638,24 @@ async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBack
   }
 
   const cwd = ctx.toolContext?.cwd;
-  const conversation = await ctx.conversations.create({
-    ...(cwd ? { cwd } : {}),
-    live: true,
-    title: `Writing Studio: ${state.fileName}`,
-    model: modelRef ?? null,
-    allowedToolNames: writingStudioAgentToolNames,
-  });
+  let conversation;
+  try {
+    conversation = await ctx.conversations.create({
+      ...(cwd ? { cwd } : {}),
+      live: true,
+      title: `Writing Studio: ${state.fileName}`,
+      model: modelRef ?? null,
+      allowedToolNames: writingStudioAgentToolNames,
+    });
+  } catch (error) {
+    if (!isUnsupportedActiveToolUpdateError(error)) throw error;
+    conversation = await ctx.conversations.create({
+      ...(cwd ? { cwd } : {}),
+      live: true,
+      title: `Writing Studio: ${state.fileName}`,
+      model: modelRef ?? null,
+    });
+  }
   state.chatConversationId = conversation.conversationId;
   await applyConversationContext(conversation.conversationId);
   return conversation.conversationId;

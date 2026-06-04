@@ -371,6 +371,27 @@ describe('Writing Studio backend', () => {
     expect(conversations.setActiveTools).toHaveBeenCalled();
   });
 
+  it('retries host chat creation without tool selection when creation rejects active tool updates', async () => {
+    const conversations = {
+      create: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('Conversation "host-chat-1" does not support active tool updates.'))
+        .mockResolvedValueOnce({ id: 'host-chat-1', conversationId: 'host-chat-1' }),
+      ensureLive: vi.fn(),
+      setActiveTools: vi.fn(),
+      appendCustomEntry: vi.fn(),
+    };
+    const ctx = context({ conversations });
+
+    const ensured = await ensureChatSession({}, ctx);
+    const state = await load({}, ctx);
+
+    expect(ensured.conversationId).toBe('host-chat-1');
+    expect(state.chatConversationId).toBe('host-chat-1');
+    expect(conversations.create).toHaveBeenNthCalledWith(1, expect.objectContaining({ allowedToolNames: expect.any(Array) }));
+    expect(conversations.create).toHaveBeenNthCalledWith(2, expect.not.objectContaining({ allowedToolNames: expect.any(Array) }));
+  });
+
   it('updates the stored host chat id when ensureLive resumes to a new conversation id', async () => {
     const conversations = {
       create: vi.fn(async () => ({ id: 'host-chat-1', conversationId: 'host-chat-1' })),
