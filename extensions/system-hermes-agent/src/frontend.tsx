@@ -1,5 +1,15 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, EmptyState, ErrorState, LoadingState, ToolbarButton, cx } from '@neon-pilot/extensions/ui';
+import {
+  AppPageLayout,
+  ChatRailComposer,
+  ChatView,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  ToolbarButton,
+  cx,
+  type ExtensionChatMessageBlock,
+} from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type PublicHermesConfig = {
@@ -141,6 +151,25 @@ function SmallButton({
   );
 }
 
+function ChevronIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="transition-transform group-open:rotate-90"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
 function SidebarIconButton({
   children,
   disabled,
@@ -187,10 +216,12 @@ function SidebarSvgIcon({ path }: { path: string }) {
 function ConfigForm({
   pa,
   initial,
+  connected,
   onSaved,
 }: {
   pa: ExtensionSurfaceProps['pa'];
   initial?: PublicHermesConfig | null;
+  connected: boolean;
   onSaved: () => void;
 }) {
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? DEFAULT_BASE_URL);
@@ -224,48 +255,98 @@ function ConfigForm({
     }
   }
 
+  const configured = Boolean(initial?.baseUrl && initial.hasApiKey);
+
   return (
-    <section className="space-y-3 border-b border-border-subtle pb-5">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <label className="space-y-1.5">
-          <span className="text-[12px] font-medium text-secondary">Hermes URL</span>
-          <input
-            value={baseUrl}
-            onChange={(event) => setBaseUrl(event.currentTarget.value)}
-            placeholder={DEFAULT_BASE_URL}
-            className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-          />
-        </label>
-        <label className="space-y-1.5">
-          <span className="text-[12px] font-medium text-secondary">API key</span>
-          <input
-            value={apiKey}
-            onChange={(event) => setApiKey(event.currentTarget.value)}
-            placeholder={initial?.hasApiKey ? 'Saved; enter a new key to replace' : 'Bearer token'}
-            type="password"
-            className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-          />
-          <span className="block text-[11px] leading-4 text-dim">
-            Use the Hermes API server key from API_SERVER_KEY in ~/.hermes/.env; paste the raw value, not Bearer.
-          </span>
-        </label>
+    <details className="group border-b border-border-subtle pb-4" open={!configured || !connected}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-left marker:hidden">
+        <ChevronIcon />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[14px] font-semibold text-primary">Connection</h2>
+          <p className="truncate text-[12px] text-dim">
+            {configured
+              ? `${initial?.baseUrl ?? DEFAULT_BASE_URL} · ${connected ? 'Connected' : 'Not connected'}`
+              : 'Add your Hermes API server URL and key.'}
+          </p>
+        </div>
+        <span className={cx('text-[12px]', connected ? 'text-success' : 'text-dim')}>{connected ? 'Connected' : 'Setup'}</span>
+      </summary>
+
+      <div className="mt-3 space-y-4 pl-5">
+        <div className="rounded-md border border-border-subtle bg-elevated/30 px-3 py-2 text-[12px] leading-5 text-secondary">
+          <p className="font-medium text-primary">Hermes API Server Setup</p>
+          <ol className="mt-1 list-decimal space-y-1 pl-4">
+            <li>
+              On the machine running Hermes, set <code>API_SERVER_ENABLED=true</code>, <code>API_SERVER_KEY</code>, and, for Tailscale
+              access, <code>API_SERVER_HOST=0.0.0.0</code> in <code>~/.hermes/.env</code>.
+            </li>
+            <li>
+              Restart Hermes with <code>hermes gateway</code>.
+            </li>
+            <li>Paste the raw API key below, not the word Bearer.</li>
+          </ol>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          <label className="space-y-1.5">
+            <span className="text-[12px] font-medium text-secondary">Hermes URL</span>
+            <input
+              value={baseUrl}
+              onChange={(event) => setBaseUrl(event.currentTarget.value)}
+              placeholder="http://127.0.0.1:8642"
+              type="url"
+              name="hermes-url"
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+            />
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-[12px] font-medium text-secondary">API key</span>
+            <input
+              value={apiKey}
+              onChange={(event) => setApiKey(event.currentTarget.value)}
+              placeholder={initial?.hasApiKey ? 'Saved; enter a new key to replace' : 'API_SERVER_KEY'}
+              type="password"
+              name="hermes-api-key"
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+            />
+            <span className="block text-[11px] leading-4 text-dim">
+              Use the Hermes API server key from API_SERVER_KEY in ~/.hermes/.env; paste the raw value, not Bearer.
+            </span>
+          </label>
+        </div>
+
+        <details className="space-y-2">
+          <summary className="cursor-pointer text-[12px] font-medium text-secondary">Advanced</summary>
+          <label className="block space-y-1.5">
+            <span className="text-[12px] font-medium text-secondary">Memory Session Key</span>
+            <input
+              value={sessionKey}
+              onChange={(event) => setSessionKey(event.currentTarget.value)}
+              placeholder="agent:main:neon-pilot:dm:local"
+              name="hermes-memory-session-key"
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+            />
+            <span className="block text-[11px] leading-4 text-dim">
+              Optional. Hermes uses this as a stable long-term memory scope across sessions. Leave it alone unless you want a separate
+              memory identity.
+            </span>
+          </label>
+        </details>
+
+        <div className="flex items-center gap-3">
+          <ToolbarButton onClick={() => void save()} disabled={saving}>
+            {saving ? 'Saving…' : 'Save & Refresh'}
+          </ToolbarButton>
+          {error ? <span className="text-[12px] text-danger">{error}</span> : null}
+        </div>
       </div>
-      <label className="block space-y-1.5">
-        <span className="text-[12px] font-medium text-secondary">Memory session key</span>
-        <input
-          value={sessionKey}
-          onChange={(event) => setSessionKey(event.currentTarget.value)}
-          placeholder="agent:main:neon-pilot:dm:local"
-          className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-        />
-      </label>
-      <div className="flex items-center gap-3">
-        <ToolbarButton onClick={() => void save()} disabled={saving}>
-          {saving ? 'Saving...' : 'Save connection'}
-        </ToolbarButton>
-        {error ? <span className="text-[12px] text-danger">{error}</span> : null}
-      </div>
-    </section>
+    </details>
   );
 }
 
@@ -284,7 +365,7 @@ function SessionList({
   compact?: boolean;
   onSelect: (session: HermesSession) => void;
 }) {
-  if (loading) return <LoadingState label="Loading Hermes sessions..." className="h-28 justify-center" />;
+  if (loading) return <LoadingState label="Loading Hermes sessions…" className="h-28 justify-center" />;
   if (error) {
     return compact ? (
       <p className="px-4 py-3 text-[12px] leading-5 text-dim">{error}</p>
@@ -304,24 +385,40 @@ function SessionList({
     <div className={compact ? 'space-y-px px-1' : 'grid gap-1'}>
       {sessions.map((session) => {
         const active = session.id === activeSessionId;
+        const meta = `${session.message_count ?? 0} messages${session.tool_call_count ? ` · ${session.tool_call_count} tools` : ''}`;
         return (
           <button
             key={session.id}
             type="button"
             onClick={() => onSelect(session)}
             className={cx(
-              'w-full rounded-md px-3 py-2 text-left transition-colors',
-              active ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-elevated/70 hover:text-primary',
+              compact
+                ? 'ui-sidebar-session-row group w-[calc(100%-0.5rem)] select-none text-left'
+                : 'w-full rounded-md px-3 py-2 text-left transition-colors',
+              active && (compact ? 'ui-sidebar-session-row-active' : 'bg-accent/15 text-primary'),
+              !compact && !active && 'text-secondary hover:bg-elevated/70 hover:text-primary',
             )}
           >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{sessionTitle(session)}</span>
-              <span className="shrink-0 text-[11px] text-dim">{formatCompactDate(session.last_active ?? session.started_at)}</span>
-            </span>
-            <span className="mt-1 block truncate text-[11px] text-dim">
-              {session.message_count ?? 0} messages
-              {session.tool_call_count ? ` · ${session.tool_call_count} tools` : ''}
-            </span>
+            {compact ? (
+              <>
+                <span className="flex w-3 shrink-0 items-center justify-center self-stretch" />
+                <span className="min-w-0 flex-1 pr-[3.25rem]">
+                  <span className="ui-row-title block truncate text-[12px] leading-tight">{sessionTitle(session)}</span>
+                  <span className="ui-sidebar-session-meta mt-1 block truncate">{meta}</span>
+                </span>
+                <span className="ui-sidebar-session-meta ui-sidebar-session-time pointer-events-none absolute inset-y-0 right-2.5 flex items-center whitespace-nowrap">
+                  {formatCompactDate(session.last_active ?? session.started_at)}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{sessionTitle(session)}</span>
+                  <span className="shrink-0 text-[11px] text-dim">{formatCompactDate(session.last_active ?? session.started_at)}</span>
+                </span>
+                <span className="mt-1 block truncate text-[11px] text-dim">{meta}</span>
+              </>
+            )}
           </button>
         );
       })}
@@ -329,50 +426,29 @@ function SessionList({
   );
 }
 
-function MessagesView({ messages, pending }: { messages: HermesMessage[]; pending: boolean }) {
-  if (messages.length === 0 && !pending) {
-    return <EmptyState title="Empty Hermes session" body="Send the first message to this remote agent session." />;
+function toChatBlocks(messages: HermesMessage[], pending: boolean): ExtensionChatMessageBlock[] {
+  const blocks: ExtensionChatMessageBlock[] = [];
+  messages.forEach((message, index) => {
+    const ts = message.timestamp ?? new Date(0).toISOString();
+    const id = message.id ?? `hermes-${index}`;
+    const reasoning = message.reasoning ?? message.reasoning_content;
+    if (reasoning) {
+      blocks.push({ type: 'thinking', id: `${id}-reasoning`, ts, text: reasoning });
+    }
+    const role = message.role ?? 'assistant';
+    const text = messageText(message.content);
+    if (role === 'user') {
+      blocks.push({ type: 'user', id, ts, text });
+    } else if (role === 'tool' || message.tool_name) {
+      blocks.push({ type: 'context', id, ts, customType: message.tool_name ?? 'tool', text });
+    } else {
+      blocks.push({ type: 'text', id, ts, text });
+    }
+  });
+  if (pending) {
+    blocks.push({ type: 'text', id: 'hermes-pending', ts: new Date().toISOString(), text: 'Hermes is working…', streaming: true });
   }
-
-  return (
-    <div className="space-y-3">
-      {messages.map((message, index) => {
-        const role = message.role ?? 'message';
-        const isUser = role === 'user';
-        const isTool = role === 'tool' || Boolean(message.tool_name);
-        return (
-          <article
-            key={message.id ?? `${role}-${index}`}
-            className={cx(
-              'rounded-md border px-4 py-3',
-              isUser
-                ? 'ml-auto max-w-[78%] border-accent/30 bg-accent/10'
-                : isTool
-                  ? 'border-border-subtle bg-elevated/35'
-                  : 'mr-auto max-w-[86%] border-border-subtle bg-surface',
-            )}
-          >
-            <div className="mb-1 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.08em] text-dim">
-              <span>{message.tool_name || role}</span>
-              <span>{formatCompactDate(message.timestamp)}</span>
-            </div>
-            <div className="whitespace-pre-wrap text-[13px] leading-6 text-primary">{messageText(message.content)}</div>
-            {message.reasoning || message.reasoning_content ? (
-              <details className="mt-2 text-[12px] text-secondary">
-                <summary className="cursor-pointer text-dim">Reasoning</summary>
-                <pre className="mt-2 whitespace-pre-wrap rounded-md bg-base p-3">{message.reasoning ?? message.reasoning_content}</pre>
-              </details>
-            ) : null}
-          </article>
-        );
-      })}
-      {pending ? (
-        <div className="rounded-md border border-border-subtle bg-elevated/40 px-4 py-3 text-[13px] text-secondary">
-          Hermes is working...
-        </div>
-      ) : null}
-    </div>
-  );
+  return blocks;
 }
 
 export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
@@ -450,11 +526,11 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [composer, setComposer] = useState('');
   const [sending, setSending] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const activeSession = useMemo(() => sessions.find((session) => session.id === activeSessionId) ?? null, [activeSessionId, sessions]);
+  const chatBlocks = useMemo(() => toChatBlocks(messages, sending), [messages, sending]);
 
   const loadShell = useCallback(async () => {
     setLoading(true);
@@ -530,12 +606,11 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
     }
   }
 
-  async function send() {
-    const text = composer.trim();
+  async function send(textInput: string) {
+    const text = textInput.trim();
     if (!text || !activeSessionId) return;
     setSending(true);
     setError(null);
-    setComposer('');
     const optimistic: HermesMessage = { role: 'user', content: text, timestamp: new Date().toISOString() };
     setMessages((current) => [...current, optimistic]);
     try {
@@ -543,7 +618,6 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
       await Promise.all([loadMessages(), loadShell()]);
     } catch (err) {
       setError(humanErrorMessage(err));
-      setComposer(text);
     } finally {
       setSending(false);
     }
@@ -574,33 +648,35 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-base">
-      <AppPageLayout shellClassName="max-w-[76rem]" contentClassName="space-y-5">
-        <AppPageIntro
-          title="Hermes Agent"
-          summary="A bespoke interface over a running Hermes Agent instance. Hermes owns tools, memory, skills, and sessions."
-          actions={
-            <div className="flex items-center gap-2">
-              <ToolbarButton onClick={() => void loadShell()} disabled={loading}>
-                Refresh
-              </ToolbarButton>
-              <ToolbarButton onClick={() => void createSession()} disabled={creating}>
-                New session
-              </ToolbarButton>
-            </div>
-          }
-        />
+    <div className="h-full overflow-hidden bg-base">
+      <AppPageLayout shellClassName="flex h-full max-w-[76rem] flex-col" contentClassName="flex min-h-0 flex-1 flex-col gap-4">
+        <header className="flex shrink-0 items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[30px] font-semibold leading-tight text-primary">Hermes Agent</h1>
+            <p className="mt-1 text-[13px] text-secondary">
+              Use Neon Pilot as a client for a running Hermes Agent. Hermes owns the tools, memory, skills, and sessions.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <ToolbarButton onClick={() => void loadShell()} disabled={loading}>
+              Refresh
+            </ToolbarButton>
+            <ToolbarButton onClick={() => void createSession()} disabled={creating}>
+              New Session
+            </ToolbarButton>
+          </div>
+        </header>
 
-        <ConfigForm pa={pa} initial={config} onSaved={() => void loadShell()} />
+        <ConfigForm pa={pa} initial={config} connected={health?.ok ?? false} onSaved={() => void loadShell()} />
 
         {error ? <ErrorState message={error} /> : null}
         {sessionsError ? (
           <div className="rounded-md border border-border-subtle bg-elevated/35 px-3 py-2 text-[13px] text-secondary">{sessionsError}</div>
         ) : null}
-        {loading ? <LoadingState label="Loading Hermes..." className="h-20 justify-center" /> : null}
+        {loading ? <LoadingState label="Loading Hermes…" className="h-20 justify-center" /> : null}
 
-        <section className="flex min-h-[34rem] flex-col">
-          <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
+        <section className="flex min-h-0 flex-1 flex-col">
+          <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
             <div className="min-w-0">
               <div className="mb-1 flex items-center gap-2">
                 <h2 className="truncate text-[18px] font-semibold text-primary">
@@ -627,37 +703,43 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
             ) : null}
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+          <div className="min-h-0 flex-1 overflow-y-auto py-4">
             {!activeSessionId ? (
               <EmptyState title="No session selected" body="Use the Hermes sidebar to open or create a remote agent session." />
             ) : messagesLoading ? (
-              <LoadingState label="Loading messages..." />
+              <LoadingState label="Loading messages…" />
+            ) : chatBlocks.length === 0 ? (
+              <EmptyState title="Empty Hermes Session" body="Send the first message to this remote agent session." />
             ) : (
-              <MessagesView messages={messages} pending={sending} />
+              <ChatView messages={chatBlocks} conversationId={activeSessionId} isStreaming={sending} remoteControlled />
             )}
           </div>
 
-          <form
-            className="border-t border-border-subtle pt-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send();
-            }}
-          >
-            <textarea
-              value={composer}
-              onChange={(event) => setComposer(event.currentTarget.value)}
-              disabled={!activeSessionId || sending}
-              placeholder={activeSessionId ? 'Message Hermes...' : 'Select or create a Hermes session first'}
-              className="min-h-[5.5rem] w-full resize-y rounded-md border border-border-subtle bg-elevated/50 px-3 py-2 text-[13px] leading-6 text-primary outline-none focus:border-accent disabled:opacity-50"
-            />
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-[12px] text-dim">Turns run inside Hermes with its configured model, tools, memory, and skills.</p>
-              <ToolbarButton disabled={!activeSessionId || sending || !composer.trim()} onClick={() => void send()}>
-                {sending ? 'Sending...' : 'Send'}
-              </ToolbarButton>
+          {activeSessionId ? (
+            <div className="shrink-0 border-t border-border-subtle pt-1" aria-label="Hermes chat composer">
+              <ChatRailComposer
+                conversationId={activeSessionId}
+                workspaceCwd="Hermes"
+                isStreaming={sending}
+                models={[{ id: 'hermes-agent', name: 'Hermes Agent', label: 'Hermes Agent' }]}
+                currentModel="hermes-agent"
+                currentThinkingLevel="unset"
+                tokens={null}
+                contextUsage={null}
+                onSubmit={(text: string) => {
+                  void send(text);
+                }}
+                onAbortStream={() => {}}
+                onSelectModel={() => {}}
+                onSelectThinkingLevel={() => {}}
+                composerMeta={
+                  <div className="conversation-composer-meta mt-1.5 px-3 text-[10.5px] font-mono tracking-[0.02em] text-dim/80">
+                    Turns run inside Hermes with its configured model, tools, memory, and skills.
+                  </div>
+                }
+              />
             </div>
-          </form>
+          ) : null}
         </section>
       </AppPageLayout>
     </div>
