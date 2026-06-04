@@ -141,6 +141,14 @@
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"
+      },
+      {
+        "id": "documents-sidebar",
+        "title": "Writing Studio Documents",
+        "location": "sidebar",
+        "component": "WritingStudioSidebar",
+        "scope": "global",
+        "activation": "on-route"
       }
     ],
     "nav": [
@@ -148,7 +156,8 @@
         "id": "nav",
         "label": "Writing Studio",
         "route": "/ext/writing-studio",
-        "icon": "sparkle"
+        "icon": "sparkle",
+        "sidebarView": "documents-sidebar"
       }
     ],
     "tools": [
