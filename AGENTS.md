@@ -24,6 +24,7 @@ neon-pilot is Patrick's personal AI agent runtime. Keep core small and build use
 ## Validation and checkpoints
 
 - Validate the actual work before calling it done. Use the narrowest meaningful check first, then broader checks when risk warrants it.
+- Run the relevant build before saying a task is complete. For desktop/app or shared package changes, include the affected package build or `node packages/desktop/scripts/build-main.mjs`/`pnpm --dir packages/desktop run build:ui` as appropriate; for extension changes, build the affected extension and reinstall it when validating through the app.
 - When changing behavior a user reaches through the desktop app, an extension page, a sidebar route, settings, transcript rendering, or a tool, validate the same path the user will use. Open the route/page/control or invoke the tool through the app/extension host, verify the rendered UI or visible output, and cover empty/error/loading states when relevant.
 - Do not treat backend/unit tests, manifest checks, or worker smokes as substitutes for user-visible validation. They are necessary support checks, not proof that the user-facing path works.
 - If full user-visible validation is impossible, say exactly what was not validated and why. Do not imply manual or app-path validation happened when only lower-level checks ran.
