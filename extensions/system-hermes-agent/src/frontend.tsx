@@ -141,6 +141,49 @@ function SmallButton({
   );
 }
 
+function SidebarIconButton({
+  children,
+  disabled,
+  onClick,
+  title,
+}: {
+  children: React.ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+  title: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className="ui-icon-button ui-icon-button-compact shrink-0"
+    >
+      {children}
+    </button>
+  );
+}
+
+function SidebarSvgIcon({ path }: { path: string }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
 function ConfigForm({
   pa,
   initial,
@@ -361,23 +404,23 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
       await load();
       if (session) await navigateTo(pa, buildSessionRoute(session.id));
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(humanErrorMessage(err));
     } finally {
       setCreating(false);
     }
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-base">
-      <div className="px-4 pb-2 pt-2">
-        <div className="flex items-center gap-2">
+    <div className="flex h-full min-h-0 flex-col bg-transparent">
+      <div className="px-4 pb-0.5 pt-1">
+        <div className="flex items-center gap-1">
           <p className="ui-section-label flex-1">Hermes Sessions</p>
-          <SmallButton onClick={() => void load()} disabled={loading} title="Refresh sessions">
-            Refresh
-          </SmallButton>
-          <SmallButton onClick={() => void create()} disabled={creating} title="Create session">
-            +
-          </SmallButton>
+          <SidebarIconButton onClick={() => void load()} disabled={loading} title="Refresh sessions">
+            <SidebarSvgIcon path="M20 6v5h-5M4 18v-5h5M18.4 9A7 7 0 0 0 6.2 6.8L4 9m2 6a7 7 0 0 0 11.8 2.2L20 15" />
+          </SidebarIconButton>
+          <SidebarIconButton onClick={() => void create()} disabled={creating} title="Create session">
+            <SidebarSvgIcon path="M12 5v14M5 12h14" />
+          </SidebarIconButton>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-3">
