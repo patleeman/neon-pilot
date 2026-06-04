@@ -245,6 +245,9 @@ function ConfigForm({
             type="password"
             className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
           />
+          <span className="block text-[11px] leading-4 text-dim">
+            Use the Hermes API server key from API_SERVER_KEY in ~/.hermes/.env; paste the raw value, not Bearer.
+          </span>
         </label>
       </div>
       <label className="block space-y-1.5">
