@@ -46,6 +46,7 @@ function context(options?: { conversations?: Record<string, unknown> }) {
       ensureLive: vi.fn(),
       setActiveTools: vi.fn(),
       appendCustomEntry: vi.fn(),
+      appendTranscriptBlock: vi.fn(),
     } satisfies Record<string, unknown>);
   return {
     storage: {
@@ -153,6 +154,18 @@ describe('Writing Studio backend', () => {
     expect(result.annotations[0].body).toBe('This is the live review note.');
     expect(result.annotations[0].anchor).toEqual(expect.objectContaining({ before: '# Draft', after: '' }));
     expect(result.annotations[0].suggestedReplacement).toBe('This sentence has enough substance to show a concrete approved edit.');
+    expect(ctx.conversations.appendTranscriptBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blockType: 'writing_studio_review',
+        title: 'Reviewed 1',
+        blockId: `writing-studio-review:${result.runId}`,
+        data: expect.objectContaining({
+          documentId: 'default',
+          runId: result.runId,
+          annotationCount: 1,
+        }),
+      }),
+    );
     const state = await load({}, ctx);
     expect(state.annotations.length).toBe(result.annotations.length);
     expect(state.events.some((event) => event.type === 'agent_run_started')).toBe(true);

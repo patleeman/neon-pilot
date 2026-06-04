@@ -738,6 +738,27 @@ ${reviewDocumentChunk}`;
   refreshed.lastAgentRunAt = nowIso();
   refreshed.events.push(event('agent_run_completed', 'agent', { runId: input.runId, trigger: input.trigger, annotationCount: annotations.length }));
   await writeState(ctx, refreshed);
+  await Promise.resolve(
+    ctx.conversations?.appendTranscriptBlock?.({
+      conversationId: refreshed.chatConversationId ?? state.chatConversationId ?? '',
+      blockType: 'writing_studio_review',
+      title: `Reviewed ${annotations.length}`,
+      blockId: `writing-studio-review:${input.runId}`,
+      data: {
+        documentId: refreshed.id,
+        runId: input.runId,
+        trigger: input.trigger,
+        annotationCount: annotations.length,
+        annotations: annotations.map((annotation) => ({
+          id: annotation.id,
+          kind: annotation.kind,
+          quote: annotation.quote,
+          body: annotation.body,
+          suggestedReplacement: annotation.suggestedReplacement,
+        })),
+      },
+    }),
+  ).catch(() => undefined);
   return { annotations };
 }
 
