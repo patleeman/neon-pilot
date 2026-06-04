@@ -22,6 +22,7 @@ export interface ExtensionChatRailProps {
   externalDraft?: { id: string; text: string } | null;
   getContextMessages?: (text: string) => ExtensionChatContextMessage[] | Promise<ExtensionChatContextMessage[]>;
   onError?: (message: string) => void;
+  onTurnComplete?: () => void | Promise<void>;
 }
 
 /**
@@ -38,6 +39,7 @@ export function ExtensionChatRail({
   externalDraft,
   getContextMessages,
   onError,
+  onTurnComplete,
 }: ExtensionChatRailProps) {
   const desktopState = useDesktopConversationState(conversationId, { tailBlocks });
   const [hydratedState, setHydratedState] = useState<DesktopConversationState | null>(null);
@@ -57,6 +59,7 @@ export function ExtensionChatRail({
   const [currentThinkingLevel, setCurrentThinkingLevel] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentConversationIdRef = useRef<string | null>(conversationId);
+  const pendingTurnRefreshRef = useRef(false);
 
   useEffect(() => {
     currentConversationIdRef.current = conversationId;
@@ -77,6 +80,18 @@ export function ExtensionChatRail({
       return null;
     }
   }, [conversationId, onError, tailBlocks]);
+
+  const refreshAfterTurn = useCallback(async () => {
+    const nextState = await hydrateConversationState();
+    await onTurnComplete?.();
+    return nextState;
+  }, [hydrateConversationState, onTurnComplete]);
+
+  useEffect(() => {
+    if (!pendingTurnRefreshRef.current || isStreaming) return;
+    pendingTurnRefreshRef.current = false;
+    void refreshAfterTurn();
+  }, [isStreaming, messages.length, refreshAfterTurn]);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,16 +161,18 @@ export function ExtensionChatRail({
       if (!conversationId || (!text.trim() && !images?.length && !attachmentRefs?.length)) return;
       try {
         const contextMessages = getContextMessages ? await getContextMessages(text) : undefined;
+        pendingTurnRefreshRef.current = true;
         await desktopState.send(text, behavior, images, attachmentRefs, contextMessages);
-        void hydrateConversationState();
-        window.setTimeout(() => void hydrateConversationState(), 1500);
-        window.setTimeout(() => void hydrateConversationState(), 5000);
+        void refreshAfterTurn();
+        window.setTimeout(() => void refreshAfterTurn(), 1500);
+        window.setTimeout(() => void refreshAfterTurn(), 5000);
         desktopState.reconnect();
       } catch (error) {
+        pendingTurnRefreshRef.current = false;
         onError?.(error instanceof Error ? error.message : String(error));
       }
     },
-    [conversationId, desktopState, getContextMessages, hydrateConversationState, onError],
+    [conversationId, desktopState, getContextMessages, onError, refreshAfterTurn],
   );
 
   const handleAbort = useCallback(async () => {

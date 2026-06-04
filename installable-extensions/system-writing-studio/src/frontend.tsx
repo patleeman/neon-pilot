@@ -2286,6 +2286,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             emptyState={<p className="writing-studio-muted">Ask for help with the draft, or ask the agent to add comments to the canvas.</p>}
             externalDraft={chatDraftInsertion}
             getContextMessages={getChatContextMessages}
+            onTurnComplete={() => load(activeDocumentId)}
             onError={setError}
           />
         </section>

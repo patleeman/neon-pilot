@@ -88,10 +88,12 @@ describe('ExtensionChatRail', () => {
   });
 
   it('submits through the shared desktop conversation state with extension context messages', async () => {
+    const onTurnComplete = vi.fn();
     render(
       <ExtensionChatRail
         conversationId="conversation-1"
         getContextMessages={(text) => [{ customType: 'writing_studio_context', content: `Context for ${text}` }]}
+        onTurnComplete={onTurnComplete}
       />,
     );
 
@@ -103,6 +105,9 @@ describe('ExtensionChatRail', () => {
       ]);
     });
     expect(reconnectMock).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onTurnComplete).toHaveBeenCalled();
+    });
   });
 
   it('routes model changes through the host conversation model API', async () => {
