@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const serverModuleMocks = vi.hoisted(() => ({
   permissions: ['agent:run', 'agent:conversations'] as string[],
   disableLiveSessionCreate: false,
+  rejectNextAllowedToolLiveSessionCreate: false,
   liveSubscribers: [] as Array<(event: unknown) => void>,
   liveSessionCounter: 0,
   liveCreated: [] as Array<{ cwd: string; options: unknown }>,
@@ -23,6 +24,15 @@ const serverModuleMocks = vi.hoisted(() => ({
     if (specifier === '../../conversations/liveSessions.js' && exportName === 'createSession') {
       if (serverModuleMocks.disableLiveSessionCreate) throw new Error('live sessions unavailable');
       const [cwd, options] = args as [string, unknown];
+      if (
+        serverModuleMocks.rejectNextAllowedToolLiveSessionCreate &&
+        options &&
+        typeof options === 'object' &&
+        Array.isArray((options as { allowedToolNames?: unknown }).allowedToolNames)
+      ) {
+        serverModuleMocks.rejectNextAllowedToolLiveSessionCreate = false;
+        throw new Error('Conversation "live-1" does not support active tool updates.');
+      }
       const id = `live-${++serverModuleMocks.liveSessionCounter}`;
       serverModuleMocks.liveCreated.push({ cwd, options });
       return { id, sessionFile: `/tmp/${id}.jsonl` };
@@ -144,6 +154,7 @@ describe('extension agent backend API', () => {
     resetExtensionAgentDynamicImportForTests();
     serverModuleMocks.permissions = ['agent:run', 'agent:conversations'];
     serverModuleMocks.disableLiveSessionCreate = false;
+    serverModuleMocks.rejectNextAllowedToolLiveSessionCreate = false;
     serverModuleMocks.liveSubscribers = [];
     serverModuleMocks.liveSessionCounter = 0;
     serverModuleMocks.liveCreated = [];
@@ -225,6 +236,37 @@ describe('extension agent backend API', () => {
         text: expect.stringContaining('Tool writing_studio_add_annotation result:'),
         images: undefined,
       },
+    ]);
+  });
+
+  it('retries allowlisted hidden agent tasks when active tool updates are unsupported', async () => {
+    installImporter();
+    serverModuleMocks.rejectNextAllowedToolLiveSessionCreate = true;
+    serverModuleMocks.liveResponses = [
+      '<FunctionCalls><Invoke name="writing_studio_add_annotation"><parameter name="quote" string="true">Hello</parameter><parameter name="body" string="true">Needs a sharper verb.</parameter></Invoke></FunctionCalls>',
+      'annotated',
+    ];
+
+    const result = await runAgentTask(
+      {
+        prompt: 'Annotate',
+        modelRef: 'ds4/deepseek-v4-flash',
+        allowedToolNames: ['writing_studio_add_annotation'],
+      },
+      createCtx({ extensionId: 'system-writing-studio' }),
+    );
+
+    expect(result.text).toBe('annotated');
+    const createAttempts = serverModuleMocks.callServerModuleExport.mock.calls.filter(
+      ([specifier, exportName]) => specifier === '../../conversations/liveSessions.js' && exportName === 'createSession',
+    );
+    expect(createAttempts.map((call) => call[3])).toEqual([
+      { initialModel: 'ds4/deepseek-v4-flash', allowedToolNames: ['writing_studio_add_annotation'] },
+      { initialModel: 'ds4/deepseek-v4-flash' },
+    ]);
+    expect(serverModuleMocks.liveCreated).toEqual([{ cwd: '/workspace', options: { initialModel: 'ds4/deepseek-v4-flash' } }]);
+    expect(serverModuleMocks.toolInvocations).toEqual([
+      { name: 'writing_studio_add_annotation', input: { quote: 'Hello', body: 'Needs a sharper verb.' } },
     ]);
   });
 

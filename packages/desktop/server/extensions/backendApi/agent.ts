@@ -394,6 +394,10 @@ function validateConversationMode(input: ExtensionAgentConversationCreateInput):
   return { visibility, persistence };
 }
 
+function isUnsupportedActiveToolUpdateError(error: unknown): boolean {
+  return error instanceof Error && /does not support active tool updates/i.test(error.message);
+}
+
 async function createSession(input: ExtensionAgentConversationCreateInput, ctx: ExtensionBackendContextLike) {
   const mode = validateConversationMode(input);
   if (mode.visibility !== 'hidden' || mode.persistence !== 'ephemeral')
@@ -589,8 +593,11 @@ export async function createAgentConversation(
     return summarize(record);
   }
 
-  const created = await createHiddenLiveSession(input, ctx).catch((error) => {
-    if (input.allowedToolNames && input.allowedToolNames.length > 0) throw error;
+  const created = await createHiddenLiveSession(input, ctx).catch(async (error) => {
+    if (input.allowedToolNames && input.allowedToolNames.length > 0) {
+      if (!isUnsupportedActiveToolUpdateError(error)) throw error;
+      return createHiddenLiveSession({ ...input, allowedToolNames: undefined }, ctx);
+    }
     return null;
   });
   if (created) {
