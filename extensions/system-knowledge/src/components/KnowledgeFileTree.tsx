@@ -81,16 +81,21 @@ const TREE_HOST_STYLE = {
   height: '100%',
   '--trees-accent-override': 'rgb(var(--color-accent))',
   '--trees-bg-override': 'transparent',
-  '--trees-bg-muted-override': 'transparent',
+  '--trees-bg-muted-override': 'rgb(var(--color-hover))',
   '--trees-border-color-override': 'rgb(var(--color-border-subtle))',
-  '--trees-fg-override': 'rgb(var(--color-secondary))',
-  '--trees-fg-muted-override': 'rgb(var(--color-dim))',
-  '--trees-focus-ring-color-override': 'rgb(var(--color-accent) / 0.35)',
+  '--trees-fg-override': 'rgb(var(--color-primary))',
+  '--trees-fg-muted-override': 'rgb(var(--color-secondary))',
+  '--trees-focus-ring-color-override': 'rgb(var(--color-accent) / 0.55)',
+  '--trees-font-size-override': '12px',
+  '--trees-font-family-override': '"Geist", "DM Sans Variable", "DM Sans", system-ui, sans-serif',
   '--trees-item-margin-x-override': '4px',
   '--trees-item-padding-x-override': '8px',
   '--trees-padding-inline-override': '0px',
-  '--trees-selected-bg-override': 'rgb(var(--color-accent) / 0.14)',
+  '--trees-selected-bg-override': 'rgb(var(--color-accent) / 0.24)',
   '--trees-selected-fg-override': 'rgb(var(--color-primary))',
+  '--trees-selected-focused-border-color-override': 'rgb(var(--color-accent) / 0.7)',
+  '--trees-scrollbar-thumb-override': 'rgb(var(--color-border-default))',
+  '--trees-file-icon-color-default': 'rgb(var(--color-steel))',
 } satisfies CSSProperties & Record<string, string | number>;
 
 export interface FileTreeProps {
@@ -1451,7 +1456,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
     <div ref={rootRef} className="flex h-full flex-col">
       {knowledgeBaseDisabled ? (
         <>
-          <div ref={headerRef} className="shrink-0 border-b border-border-subtle bg-surface px-3 py-2">
+          <div ref={headerRef} className="shrink-0 px-3 pb-1 pt-3">
             <div className="flex items-center gap-1">
               <p className="ui-section-label flex-1">Knowledge</p>
               <span
@@ -1466,10 +1471,10 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
               />
             </div>
           </div>
-          <div className="flex flex-1 min-h-0 items-start px-3 pb-3 pt-2">
-            <div className="space-y-2 text-[12px] leading-5 text-secondary">
-              <p className="font-medium text-primary">Connect a git repo to use Knowledge.</p>
-              <p>
+          <div className="min-h-0 flex-1 px-3 py-2">
+            <div className="space-y-1.5 text-[12px] leading-5 text-dim">
+              <p className="truncate font-medium text-secondary">Connect a git repo to use Knowledge.</p>
+              <p className="max-w-[13rem]">
                 Neon Pilot needs a git repo to store and sync durable docs. Add a repo URL in{' '}
                 <Link to="/settings#settings-knowledge-base" className="text-accent hover:underline">
                   Settings
@@ -1481,7 +1486,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
         </>
       ) : (
         <>
-          <div ref={headerRef} className="shrink-0 border-b border-border-subtle bg-surface px-3 py-2">
+          <div ref={headerRef} className="shrink-0 px-3 pb-1 pt-3">
             <div className="flex items-center gap-1">
               <p className="ui-section-label flex-1">Knowledge</p>
               <span
@@ -1536,7 +1541,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
             </div>
           </div>
 
-          <div ref={treeHostWrapperRef} className="flex-1 min-h-0 overflow-hidden px-1 pb-3">
+          <div ref={treeHostWrapperRef} className="min-h-0 flex-1 overflow-hidden px-1 pb-3">
             {knowledgeBaseError && !knowledgeBaseState && !loading ? (
               <p className="px-3 py-2 text-[12px] leading-5 text-danger">Knowledge unavailable · {knowledgeBaseError}</p>
             ) : loading ? (
