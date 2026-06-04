@@ -758,6 +758,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
                   onAbortStream={() => {}}
                   onSelectModel={() => {}}
                   onSelectThinkingLevel={() => {}}
+                  composerPlaceholder="Message Hermes…   /  commands · @ notes · ⇧↵ newline"
                   composerMeta={
                     <div className="conversation-composer-meta mt-1.5 px-3 text-[10.5px] font-mono tracking-[0.02em] text-dim/80">
                       Turns run inside Hermes with its configured model, tools, memory, and skills.

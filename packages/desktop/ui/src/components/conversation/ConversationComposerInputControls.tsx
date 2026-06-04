@@ -48,6 +48,7 @@ function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps
     prev.composerQuestionSubmitting === next.composerQuestionSubmitting &&
     prev.composerSubmitLabel === next.composerSubmitLabel &&
     prev.composerAltHeld === next.composerAltHeld &&
+    prev.composerPlaceholder === next.composerPlaceholder &&
     prev.onFilesSelected === next.onFilesSelected &&
     prev.onInputChange === next.onInputChange &&
     prev.onRememberComposerSelection === next.onRememberComposerSelection &&
@@ -87,6 +88,7 @@ interface ConversationComposerInputControlsProps {
   composerQuestionSubmitting: boolean;
   composerSubmitLabel: ConversationComposerSubmitLabel;
   composerAltHeld: boolean;
+  composerPlaceholder?: string;
   onFilesSelected: (files: File[]) => void;
   onInputChange: (value: string, textarea: HTMLTextAreaElement) => void;
   onRememberComposerSelection: (textarea: HTMLTextAreaElement) => void;
@@ -123,6 +125,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   composerQuestionSubmitting,
   composerSubmitLabel,
   composerAltHeld,
+  composerPlaceholder,
   onFilesSelected,
   onInputChange,
   onRememberComposerSelection,
@@ -277,7 +280,9 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             disabled={composerDisabled}
             className="w-full resize-none overscroll-contain bg-transparent text-[14px] leading-relaxed text-primary outline-none placeholder:text-dim disabled:cursor-default disabled:text-dim"
             placeholder={
-              pendingAskUserQuestion ? 'Answer 1-9, or type to skip…' : 'Message Neon Pilot…   /  commands · @ notes · ⇧↵ newline'
+              pendingAskUserQuestion
+                ? 'Answer 1-9, or type to skip…'
+                : (composerPlaceholder ?? 'Message Neon Pilot…   /  commands · @ notes · ⇧↵ newline')
             }
             title={
               pendingAskUserQuestion

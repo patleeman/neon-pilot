@@ -92,6 +92,7 @@ export interface ChatRailComposerProps {
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
   composerMeta?: unknown;
+  composerPlaceholder?: string;
   externalDraft?: { id: string; text: string } | null;
 }
 

@@ -74,6 +74,7 @@ export interface ChatRailComposerProps {
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
   composerMeta?: ReactNode;
+  composerPlaceholder?: string;
   externalDraft?: { id: string; text: string } | null;
 }
 
@@ -91,6 +92,7 @@ export function ChatRailComposer({
   onSelectModel,
   onSelectThinkingLevel,
   composerMeta,
+  composerPlaceholder,
   externalDraft,
 }: ChatRailComposerProps) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
@@ -453,6 +455,7 @@ export function ChatRailComposer({
           composerQuestionSubmitting={false}
           composerSubmitLabel={isStreaming ? 'Steer' : 'Send'}
           composerAltHeld={composerAltHeld}
+          composerPlaceholder={composerPlaceholder}
           onFilesSelected={(files) => {
             void handleFilesSelected(files);
           }}
