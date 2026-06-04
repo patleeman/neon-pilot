@@ -477,7 +477,7 @@ describe('useDesktopConversationState', () => {
 
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.sessionDetail?.meta.id).toBe('conv-created');
-    expect(desktopConversationState).not.toHaveBeenCalled();
+    expect(desktopConversationState).toHaveBeenCalledWith('conv-created', { tailBlocks: 20 });
   });
 
   it('seeds saved desktop conversations from the bootstrap cache while refreshing desktop state', async () => {
@@ -526,10 +526,11 @@ describe('useDesktopConversationState', () => {
 
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.sessionDetail?.blocks).toEqual([expect.objectContaining({ text: 'Cached reply' })]);
+    expect(latestState?.state?.stream.blocks).toEqual([expect.objectContaining({ text: 'Cached reply' })]);
     expect(desktopConversationState).toHaveBeenCalledWith('conv-cached', { tailBlocks: 20, includeToolBlocks: false });
   });
 
-  it('uses a primed reserved conversation as live state without fetching before subscription', async () => {
+  it('uses a primed reserved conversation as live state while refreshing desktop state and subscribing', async () => {
     const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
 
     primeReservedDesktopConversationStateCache(
@@ -567,7 +568,7 @@ describe('useDesktopConversationState', () => {
         sessionFile: '/repo/reserved.jsonl',
       }),
     );
-    expect(desktopConversationState).not.toHaveBeenCalled();
+    expect(desktopConversationState).toHaveBeenCalledWith('conv-reserved', { tailBlocks: 20 });
     expect(eventSources).toHaveLength(1);
   });
 

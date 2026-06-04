@@ -4,6 +4,7 @@ export { ChatView, type ChatViewProps } from '../components/chat/ChatView';
 export type { ChatViewLayout } from '../components/chat/chatViewTypes';
 export { CheckpointInlineDiff } from '../components/chat/CheckpointInlineDiff';
 export { DiffActionButton, GitDiffIcon } from '../components/chat/DiffActionButton';
+export { ExtensionChatRail, type ExtensionChatContextMessage, type ExtensionChatRailProps } from './ExtensionChatRail';
 export { ContextMenuWrapper } from '../components/shared/ContextMenuWrapper';
 export { canDropAllPaths, getTopLevelDraggedPaths, useFileTreeModel } from '../components/shared/useFileTreeModel';
 export {

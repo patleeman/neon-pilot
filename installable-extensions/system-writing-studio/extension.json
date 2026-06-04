@@ -4,7 +4,7 @@
   "name": "Writing Studio",
   "packageType": "system",
   "description": "Document-first collaborative markdown editor with CRDT replay, agent annotations, reactions, suggestions, and chat.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "defaultEnabled": false,
   "frontend": {
     "entry": "dist/frontend.js",
@@ -62,21 +62,21 @@
         "worker": { "enabled": true, "timeoutMs": 120000 }
       },
       {
-        "id": "writingStudioSendChat",
-        "handler": "sendChat",
-        "title": "Send writing chat message",
-        "worker": { "enabled": true, "timeoutMs": 90000 }
+        "id": "writingStudioReviewSelection",
+        "handler": "reviewSelection",
+        "title": "Review selected writing text",
+        "worker": { "enabled": true, "timeoutMs": 60000 }
       },
       {
-        "id": "writingStudioPrepareChat",
-        "handler": "prepareChat",
-        "title": "Prepare writing chat stream",
-        "worker": { "enabled": true, "timeoutMs": 90000 }
+        "id": "writingStudioEnsureChatSession",
+        "handler": "ensureChatSession",
+        "title": "Ensure Writing Studio chat session",
+        "worker": { "enabled": true }
       },
       {
-        "id": "writingStudioAbortChat",
-        "handler": "abortChat",
-        "title": "Abort writing chat stream",
+        "id": "writingStudioClearChat",
+        "handler": "clearChat",
+        "title": "Clear Writing Studio chat",
         "worker": { "enabled": true }
       },
       {
@@ -126,16 +126,6 @@
         "id": "writingStudioApplyAnnotationEdit",
         "handler": "applyAnnotationEdit",
         "title": "Apply Writing Studio annotation edit",
-        "worker": { "enabled": true }
-      }
-    ],
-    "routes": [
-      {
-        "method": "GET",
-        "path": "/chat/stream",
-        "handler": "chatStream",
-        "title": "Stream Writing Studio chat",
-        "stream": "sse",
         "worker": { "enabled": true }
       }
     ]

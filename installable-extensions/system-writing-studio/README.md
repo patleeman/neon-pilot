@@ -10,13 +10,15 @@ The document is the primary workspace. Chat stays in a narrow rail and agent fee
 - A Yjs `Y.Text` named `markdown` is the canonical CRDT document.
 - Every local document change is encoded as a Yjs update and appended to backend storage.
 - Backend storage keeps an append-only event log plus periodic latest-state metadata.
-- Replay reconstructs document state by applying stored Yjs update events in order and then layering annotations and chat events.
+- Replay reconstructs document state by applying stored Yjs update events in order and then layering annotations and settings events.
+- Chat is hosted by a first-class live conversation created through the extension backend context and rendered with the shared `ExtensionChatRail` UI primitive. Writing Studio injects document context into sends, but streaming, model selection, aborts, and transcript rendering use the same host conversation path as the main chat surfaces.
 
 ## Actions
 
 - `writingStudioLoad` loads the latest snapshot and replay log.
 - `writingStudioAppendUpdate` appends a base64 Yjs update.
 - `writingStudioRunReview` adds structured commentary, suggestion, or reaction annotations for the latest text.
-- `writingStudioSendChat` persists a chat message and returns a document-aware agent reply.
+- `writingStudioReviewSelection` reviews only the selected passage and anchors comments to that selected text.
+- `writingStudioEnsureChatSession` creates or verifies the hosted live conversation used by the shared chat rail.
+- `writingStudioClearChat` aborts the current hosted chat conversation and starts a fresh one.
 - `writingStudioResolveAnnotation` marks an annotation resolved.
-

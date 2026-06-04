@@ -11,11 +11,9 @@ import StarterKit from '@tiptap/starter-kit';
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import {
   buildApiPath,
-  ChatRailComposer,
-  ChatView,
   ErrorState,
+  ExtensionChatRail,
   LoadingState,
-  streamExtensionRouteSse,
   ToolbarButton,
   useFileTreeModel,
 } from '@neon-pilot/extensions/ui';
@@ -61,7 +59,7 @@ const writingStudioCss = `
 .writing-studio-rail-resizer{position:absolute;left:-4px;top:0;bottom:0;z-index:25;width:8px;cursor:col-resize}.writing-studio-rail-resizer::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:transparent}.writing-studio-rail-resizer:hover::after,.writing-studio-rail-resizer:focus-visible::after{background:rgb(var(--color-accent))}
 .writing-studio-rail.is-collapsed{grid-template-columns:3rem;width:3rem}.writing-studio-rail.is-collapsed .writing-studio-chat-shell{display:none}.writing-studio-rail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:2.8rem;padding:.55rem .75rem;border-bottom:1px solid rgb(var(--color-border-subtle))}
 .writing-studio-rail-title{color:rgb(var(--color-secondary));font-size:.74rem;font-weight:650;text-transform:uppercase}.writing-studio-rail-heading{display:flex;align-items:center;gap:.55rem;min-width:0}.writing-studio-review-status{color:rgb(var(--color-dim));font-size:.72rem;white-space:nowrap}.writing-studio-review-status.is-running{color:rgb(var(--color-accent))}.writing-studio-review-status.is-complete{color:rgb(var(--color-success))}.writing-studio-rail-tools{display:flex;align-items:center;gap:.25rem}.writing-studio-icon-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.85rem;height:1.85rem;border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));cursor:pointer}.writing-studio-icon-button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}.writing-studio-icon-button:disabled{cursor:default;opacity:.45}.writing-studio-icon-button.is-running{background:color-mix(in srgb,rgb(var(--color-accent)) 16%,transparent);color:rgb(var(--color-accent));opacity:1}.writing-studio-icon-button.is-running svg{animation:writing-studio-review-spin 1.1s linear infinite}@keyframes writing-studio-review-spin{to{transform:rotate(360deg)}}.writing-studio-icon-button[data-tooltip]::after{content:attr(data-tooltip);position:absolute;right:0;top:calc(100% + .4rem);z-index:50;pointer-events:none;max-width:12rem;white-space:nowrap;border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-surface));box-shadow:0 10px 28px rgba(0,0,0,.28);color:rgb(var(--color-primary));font-size:.72rem;font-weight:500;line-height:1;padding:.42rem .5rem;opacity:0;transform:translateY(-2px);transition:opacity .12s ease,transform .12s ease}.writing-studio-icon-button[data-tooltip]:hover::after,.writing-studio-icon-button[data-tooltip]:focus-visible::after{opacity:1;transform:translateY(0)}.writing-studio-tool-menu{position:relative}.writing-studio-export-menu{position:absolute;right:0;top:2.2rem;z-index:20;display:grid;min-width:8.5rem;border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 12px 32px rgba(0,0,0,.28);padding:.25rem}.writing-studio-export-menu button{border:0;border-radius:6px;background:transparent;color:rgb(var(--color-secondary));padding:.45rem .55rem;text-align:left;font:inherit;font-size:.78rem;cursor:pointer}.writing-studio-export-menu button:hover{background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary))}
-.writing-studio-chat-shell{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}.writing-studio-chat-view{min-height:0;overflow:auto;padding:.9rem .75rem}.writing-studio-chat-composer{border-top:1px solid rgb(var(--color-border-subtle))}.writing-studio-chat-composer [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-composer [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-chat-meta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:1rem;padding:.25rem .9rem .75rem;color:rgb(var(--color-dim));font-size:.66rem;font-family:var(--font-mono,monospace)}.writing-studio-muted{margin:0;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
+.writing-studio-chat-shell{min-height:0}.writing-studio-extension-chat{display:flex;height:100%;min-height:0;flex-direction:column;background:rgb(var(--color-surface));color:rgb(var(--color-primary));user-select:text}.writing-studio-extension-chat [class*="px-8"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-extension-chat [class*="sm:px-10"]{padding-left:.75rem;padding-right:.75rem}.writing-studio-muted{margin:.9rem .75rem;color:rgb(var(--color-dim));font-size:.84rem;line-height:1.55}
 .writing-studio-format-actions{position:relative}.writing-studio-format-actions .writing-studio-export-menu{left:0;right:auto;top:2.05rem}.writing-studio-review-status.is-error{color:rgb(var(--color-danger))}
 .writing-studio-modal-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.56)}.writing-studio-modal{width:min(34rem,calc(100vw - 2rem));border:1px solid rgb(var(--color-border-default));border-radius:8px;background:rgb(var(--color-surface));box-shadow:0 24px 80px rgba(0,0,0,.35)}.writing-studio-modal.is-docs{width:min(42rem,calc(100vw - 2rem))}.writing-studio-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-bottom:1px solid rgb(var(--color-border-subtle))}.writing-studio-modal-header h2{margin:0;font-size:1rem}.writing-studio-modal-body{display:grid;gap:.65rem;padding:1rem}.writing-studio-field{display:grid;gap:.4rem}.writing-studio-field label{color:rgb(var(--color-secondary));font-size:.8rem}.writing-studio-field input,.writing-studio-field textarea,.writing-studio-doc-search,.writing-studio-doc-form input{border:1px solid rgb(var(--color-border-default));border-radius:6px;background:rgb(var(--color-base));color:rgb(var(--color-primary));padding:.55rem .65rem;font:inherit;font-size:.86rem}.writing-studio-field textarea{min-height:7rem;resize:vertical}.writing-studio-modal-actions{display:flex;justify-content:flex-end;gap:.5rem;padding:0 1rem 1rem}.writing-studio-doc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.writing-studio-doc-toolbar-group{display:flex;align-items:center;gap:.2rem}.writing-studio-doc-selection{min-height:1rem;color:rgb(var(--color-secondary));font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.writing-studio-doc-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.4rem;align-items:center}.writing-studio-doc-form.is-danger{grid-template-columns:minmax(0,1fr) auto auto;color:rgb(var(--color-danger,255 96 96));font-size:.82rem}.writing-studio-doc-form button{border:0;border-radius:6px;background:rgb(var(--color-surface-hover));color:rgb(var(--color-primary));font:inherit;font-size:.76rem;padding:.48rem .65rem;cursor:pointer}.writing-studio-doc-form button:hover{background:rgb(var(--color-border-subtle))}.writing-studio-doc-form button.is-danger{background:color-mix(in srgb,rgb(var(--color-danger,255 96 96)) 16%,rgb(var(--color-surface)));color:rgb(var(--color-primary))}.writing-studio-doc-list{height:min(52vh,28rem);min-height:14rem;overflow:hidden;border:1px solid rgb(var(--color-border-subtle));border-radius:7px;background:rgb(var(--color-base))}.writing-studio-doc-list file-tree-container{height:100%;font-size:.8rem}.writing-studio-doc-empty{padding:.35rem .75rem}.writing-studio-doc-import input[type=file]{display:none}
 .writing-studio-center{display:flex;align-items:center;justify-content:center;height:100%;padding:2rem}
@@ -130,7 +128,6 @@ interface WritingModelInfo {
 
 interface WritingModelState {
   currentModel?: string;
-  currentThinkingLevel?: string;
   models?: WritingModelInfo[];
 }
 
@@ -152,31 +149,13 @@ interface StoredState {
   events: WritingEvent[];
   annotations: Annotation[];
   chat: ChatMessage[];
+  chatConversationId?: string;
   lastAgentRunAt: string | null;
   settings: WritingSettings;
   documents?: DocumentSummary[];
   activeDocumentId?: string;
   folders?: string[];
 }
-
-interface ChatViewMessage {
-  type: 'user' | 'text';
-  id: string;
-  ts: string;
-  text: string;
-}
-
-type ChatStreamEvent =
-  | { type: 'agent_start' }
-  | { type: 'text_delta'; delta: string }
-  | { type: 'thinking_delta'; delta: string }
-  | { type: 'tool_start'; toolCallId: string; toolName: string; args: Record<string, unknown> }
-  | { type: 'tool_update'; toolCallId: string; partialResult: unknown }
-  | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean; durationMs: number; output: string; details?: unknown }
-  | { type: 'agent_end'; text?: string }
-  | { type: 'turn_end' }
-  | { type: 'error'; message: string }
-  | { type: 'writing_studio_chat_saved'; message: ChatMessage };
 
 type WritingIconName =
   | 'open'
@@ -190,6 +169,7 @@ type WritingIconName =
   | 'settings'
   | 'rename'
   | 'delete'
+  | 'clearChat'
   | 'collapse'
   | 'expand'
   | 'close';
@@ -223,7 +203,6 @@ interface CommentLayout {
 const actorId = `writer-${Math.random().toString(16).slice(2)}`;
 const railWidthStorageKey = 'writing-studio:rail-width';
 const modelStorageKey = 'writing-studio:model';
-const thinkingLevelStorageKey = 'writing-studio:thinking-level';
 const defaultRailWidth = 352;
 const minRailWidth = 288;
 const maxRailWidth = 620;
@@ -278,6 +257,7 @@ const iconPaths: Record<WritingIconName, string> = {
     'M8.5 2.8 9.8 5l2.5.5.3 2.5 2 1.6-1.2 2.2.7 2.4-2.3 1.2-2-1.5-2 .8-2-1.3-2.4.6-1.1-2.4 1.5-1.9-.9-2.3 2.1-1.5.4-2.5 2.5-.5z M8.5 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
   rename: 'M3.5 13.5h3.2l7-7a1.6 1.6 0 0 0-2.2-2.2l-7 7z M10.8 5.2l2 2',
   delete: 'M4.5 5h9 M7 5V3.5h4V5 M6 7v8h6V7 M8 8.5v4 M10.5 8.5v4',
+  clearChat: 'M3.5 4.5h10v7h-5l-4 3.5v-3.5h-1z M6 7.5h5 M6 9.8h3.5 M12.5 3.5l2 2 M14.5 3.5l-2 2',
   collapse: 'M6.5 4.5 10.5 8.5l-4 4',
   expand: 'M10.5 4.5 6.5 8.5l4 4',
   close: 'M4.5 4.5 12.5 12.5 M12.5 4.5 4.5 12.5',
@@ -979,9 +959,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const [lastReviewCount, setLastReviewCount] = useState(0);
   const [fileNameDraft, setFileNameDraft] = useState('');
   const [railWidth, setRailWidth] = useState(readRailWidth);
-  const [models, setModels] = useState<WritingModelInfo[]>([]);
   const [currentModel, setCurrentModel] = useState(() => readStringSetting(modelStorageKey));
-  const [currentThinkingLevel, setCurrentThinkingLevel] = useState(() => readStringSetting(thinkingLevelStorageKey));
   const documentsRef = useRef<DocumentSummary[]>([]);
   const selectedTreePathRef = useRef<string | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<WritingSettings>({
@@ -1000,9 +978,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reviewStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applyingEditorContent = useRef(false);
-  const chatRunToken = useRef(0);
-  const chatAbortController = useRef<AbortController | null>(null);
-  const chatStreamingMessageId = useRef<string | null>(null);
   const documentIdByTreePathRef = useRef(new Map<string, string>());
   const folderPathByTreePathRef = useRef(new Map<string, string>());
   const activeHighlightRef = useRef<AnnotationHighlight | null>(null);
@@ -1033,23 +1008,14 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
       .then((result) => {
         if (cancelled) return;
         const nextModels = Array.isArray(result.models) ? result.models : [];
-        setModels(nextModels);
         setCurrentModel((current) => {
           const stored = current || readStringSetting(modelStorageKey);
           const next = stored || result.currentModel || (nextModels[0] ? modelSelectionValue(nextModels[0], nextModels) : '');
           writeStringSetting(modelStorageKey, next);
           return next;
         });
-        setCurrentThinkingLevel((current) => {
-          const stored = current || readStringSetting(thinkingLevelStorageKey);
-          const next = stored || result.currentThinkingLevel || '';
-          writeStringSetting(thinkingLevelStorageKey, next);
-          return next;
-        });
       })
-      .catch(() => {
-        if (!cancelled) setModels([]);
-      });
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -1076,16 +1042,6 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     document.body.style.userSelect = 'none';
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', stopResize, { once: true });
-  }, []);
-
-  const handleSelectModel = useCallback((modelId: string) => {
-    setCurrentModel(modelId);
-    writeStringSetting(modelStorageKey, modelId);
-  }, []);
-
-  const handleSelectThinkingLevel = useCallback((thinkingLevel: string) => {
-    setCurrentThinkingLevel(thinkingLevel);
-    writeStringSetting(thinkingLevelStorageKey, thinkingLevel);
   }, []);
 
   const persistUpdate = useCallback(
@@ -1490,123 +1446,83 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     [activeDocumentId, currentModel, editor, markdown, pa, syncEditorMarkdown],
   );
 
-  const sendChat = useCallback(
-    async (body: string) => {
-      if (!body.trim()) return;
-      const runToken = chatRunToken.current + 1;
-      chatRunToken.current = runToken;
-      chatAbortController.current?.abort();
-      chatAbortController.current = null;
-      chatStreamingMessageId.current = null;
-      setBusy('chat');
-      try {
-        const currentMarkdown = syncEditorMarkdown() ?? markdown;
-        const prepared = (await pa.extension.invoke('writingStudioPrepareChat', {
-          body: body.trim(),
-          markdown: currentMarkdown,
-          documentId: activeDocumentId,
-        })) as { pendingId: string; messages: ChatMessage[] };
-        if (chatRunToken.current !== runToken) return;
-        const streamingMessageId = `stream-agent-${prepared.pendingId}`;
-        chatStreamingMessageId.current = streamingMessageId;
-        setState((current) =>
-          current
-            ? {
-                ...current,
-                chat: [...prepared.messages, { id: streamingMessageId, role: 'agent', body: '', createdAt: new Date().toISOString() }],
-              }
-            : current,
-        );
-        const abortController = new AbortController();
-        chatAbortController.current = abortController;
-        let streamedText = '';
-        for await (const data of streamExtensionRouteSse<ChatStreamEvent>(
-          'system-writing-studio',
-          `/chat/stream?pendingId=${encodeURIComponent(prepared.pendingId)}`,
-          { signal: abortController.signal },
-        )) {
-          if (chatRunToken.current !== runToken) return;
-          if (data.type === 'text_delta') {
-            streamedText += data.delta;
-            setState((current) =>
-              current
-                ? {
-                    ...current,
-                    chat: current.chat.map((message) =>
-                      message.id === streamingMessageId ? { ...message, body: streamedText } : message,
-                    ),
-                  }
-                : current,
-            );
-            continue;
-          }
-          if (data.type === 'error') {
-            setError(data.message);
-            abortController.abort();
-            if (chatAbortController.current === abortController) chatAbortController.current = null;
-            chatStreamingMessageId.current = null;
-            setState((current) =>
-              current ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) } : current,
-            );
-            setBusy((current) => (current === 'chat' ? null : current));
-            return;
-          }
-          if (data.type === 'writing_studio_chat_saved') {
-            chatStreamingMessageId.current = null;
-            setState((current) =>
-              current
-                ? {
-                    ...current,
-                    chat: current.chat.map((message) => (message.id === streamingMessageId ? data.message : message)),
-                  }
-                : current,
-            );
-            continue;
-          }
-          if (data.type === 'turn_end') {
-            abortController.abort();
-            if (chatAbortController.current === abortController) chatAbortController.current = null;
-            chatStreamingMessageId.current = null;
-            setState((current) =>
-              current ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) } : current,
-            );
-            setBusy((current) => (current === 'chat' ? null : current));
-          }
-        }
-      } catch (err) {
-        if (chatRunToken.current !== runToken) return;
-        if (!(err instanceof DOMException && err.name === 'AbortError')) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-        const streamingMessageId = chatStreamingMessageId.current;
-        chatStreamingMessageId.current = null;
-        setState((current) =>
-          current && streamingMessageId
-            ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) }
-            : current,
-        );
-        setBusy((current) => (current === 'chat' ? null : current));
-      } finally {
-        if (chatRunToken.current === runToken) chatAbortController.current = null;
-      }
-    },
-    [activeDocumentId, currentModel, markdown, pa, syncEditorMarkdown],
-  );
+  const ensureChatSession = useCallback(async () => {
+    const result = (await pa.extension.invoke('writingStudioEnsureChatSession', {
+      documentId: activeDocumentId,
+      modelRef: currentModel || undefined,
+    })) as { conversationId: string };
+    setState((current) => (current ? { ...current, chatConversationId: result.conversationId } : current));
+    return result.conversationId;
+  }, [activeDocumentId, currentModel, pa]);
 
-  const abortChat = useCallback(() => {
-    chatRunToken.current += 1;
-    chatAbortController.current?.abort();
-    chatAbortController.current = null;
-    const streamingMessageId = chatStreamingMessageId.current;
-    chatStreamingMessageId.current = null;
-    if (streamingMessageId) {
-      setState((current) =>
-        current ? { ...current, chat: current.chat.filter((message) => message.id !== streamingMessageId || message.body.trim()) } : current,
-      );
+  const clearChat = useCallback(async () => {
+    setBusy('clear-chat');
+    setError(null);
+    try {
+      const result = (await pa.extension.invoke('writingStudioClearChat', {
+        documentId: activeDocumentId,
+        modelRef: currentModel || undefined,
+      })) as { messages: ChatMessage[]; conversationId: string };
+      setState((current) => (current ? { ...current, chat: result.messages, chatConversationId: result.conversationId } : current));
+      setChatDraftInsertion(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy((current) => (current === 'clear-chat' ? null : current));
     }
-    void pa.extension.invoke('writingStudioAbortChat', { documentId: activeDocumentId }).catch(() => undefined);
-    setBusy((current) => (current === 'chat' ? null : current));
-  }, [activeDocumentId, pa]);
+  }, [activeDocumentId, currentModel, pa]);
+
+  useEffect(() => {
+    if (!state || state.chatConversationId) return;
+    let cancelled = false;
+    ensureChatSession()
+      .then((conversationId) => {
+        if (cancelled) return;
+        setState((current) => (current ? { ...current, chatConversationId: conversationId } : current));
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureChatSession, state?.chatConversationId, state?.id]);
+
+  const getChatContextMessages = useCallback(
+    async () => {
+      const currentMarkdown = syncEditorMarkdown() ?? markdown;
+      const openAnnotations = (state?.annotations ?? [])
+        .filter((annotation) => annotation.status === 'open')
+        .slice(0, 16)
+        .map((annotation) => {
+          const replacement = annotation.suggestedReplacement ? ` Suggested replacement: "${annotation.suggestedReplacement}"` : '';
+          return `- ${annotation.kind} (${annotation.id}): "${annotation.quote}" — ${annotation.body}${replacement}`;
+        })
+        .join('\n');
+      return [
+        {
+          customType: 'writing_studio_context',
+          content: [
+            'Writing Studio context for this turn.',
+            `Document id: ${activeDocumentId}`,
+            `File: ${state?.fileName ?? 'untitled.md'}`,
+            '',
+            'Agent instructions:',
+            state?.settings.agentInstructions ?? '',
+            '',
+            'Current markdown:',
+            currentMarkdown,
+            '',
+            'Open comments:',
+            openAnnotations || '(none)',
+            '',
+            'Use Writing Studio tools when the user asks to edit the canvas, add/update/dismiss comments, apply approved edits, review the draft, or update your Writing Studio instructions.',
+          ].join('\n'),
+        },
+      ];
+    },
+    [activeDocumentId, markdown, state?.annotations, state?.fileName, state?.settings.agentInstructions, syncEditorMarkdown],
+  );
 
   const selectAnnotation = useCallback(
     (annotation: Annotation) => {
@@ -1639,16 +1555,42 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     const text = selectionMenu?.text.trim();
     if (!text) return;
     clearSelectionMenu();
-    const reviewPrompt = [
-      'Focus this review only on the selected passage below.',
-      'Add useful margin comments when there is something specific to say. Prefer lively editorial commentary, concrete options, and reactions over generic critique.',
-      'Anchor annotations to exact text from the selected passage when possible.',
-      '',
-      'Selected passage:',
-      text,
-    ].join('\n');
-    void runReview('selection', { reviewPrompt });
-  }, [clearSelectionMenu, runReview, selectionMenu?.text]);
+    setBusy('review');
+    setReviewStatus('running');
+    setError(null);
+    const currentMarkdown = syncEditorMarkdown() ?? markdown;
+    void pa.extension
+      .invoke('writingStudioReviewSelection', {
+        markdown: currentMarkdown,
+        selectedText: text,
+        documentId: activeDocumentId,
+        modelRef: currentModel || undefined,
+      })
+      .then((result) => {
+        const annotations = (result as { annotations?: Annotation[] }).annotations ?? [];
+        if (annotations.length === 0) throw new Error('Writing Studio selected-text review returned no comments.');
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                annotations: [...annotations, ...current.annotations.filter((annotation) => !annotations.some((next) => next.quote === annotation.quote))],
+                lastAgentRunAt: new Date().toISOString(),
+              }
+            : current,
+        );
+        setActiveAnnotationId(annotations[0]?.id ?? null);
+        setLastReviewCount(annotations.length);
+        setReviewStatus('complete');
+      })
+      .catch((err) => {
+        setReviewStatus('error');
+        reviewStatusTimer.current = setTimeout(() => setReviewStatus('idle'), 5000);
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        setBusy(null);
+      });
+  }, [activeDocumentId, clearSelectionMenu, currentModel, markdown, pa, selectionMenu?.text, syncEditorMarkdown]);
 
   const resolveAnnotation = useCallback(
     async (id: string) => {
@@ -2023,12 +1965,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   }
 
   const openAnnotations = (state?.annotations ?? []).filter((annotation) => annotation.status === 'open');
-  const chatMessages: ChatViewMessage[] = (state?.chat ?? []).map((message) => ({
-    type: message.role === 'user' ? 'user' : 'text',
-    id: message.id,
-    ts: message.createdAt,
-    text: message.body,
-  }));
+  const chatConversationId = state?.chatConversationId ?? null;
   const saveTooltip =
     saveStatus === 'saved'
       ? `Saved${lastSavedAt ? ` at ${formatTime(lastSavedAt)}` : ''}`
@@ -2238,6 +2175,16 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             <button
               className="writing-studio-icon-button"
               type="button"
+              aria-label="Start new chat"
+              data-tooltip="Start new chat"
+              disabled={busy === 'clear-chat' || !chatConversationId}
+              onClick={() => void clearChat()}
+            >
+              <WritingIcon name="clearChat" />
+            </button>
+            <button
+              className="writing-studio-icon-button"
+              type="button"
               aria-label={railCollapsed ? 'Expand chat' : 'Collapse chat'}
               data-tooltip={railCollapsed ? 'Expand chat' : 'Collapse chat'}
               onClick={() => setRailCollapsed((collapsed) => !collapsed)}
@@ -2247,33 +2194,15 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
           </div>
         </div>
         <section className="writing-studio-chat-shell">
-          <div className="writing-studio-chat-view">
-            {chatMessages.length === 0 ? (
-              <p className="writing-studio-muted">Ask for help with the draft, or ask the agent to add comments to the canvas.</p>
-            ) : (
-              <ChatView messages={chatMessages} isStreaming={busy === 'chat'} layout="compact" />
-            )}
-          </div>
-          <div className="writing-studio-chat-composer" aria-label="Writing Studio chat composer">
-            <ChatRailComposer
-              conversationId={null}
-              workspaceCwd={null}
-              isStreaming={busy === 'chat'}
-              models={models}
-              currentModel={currentModel}
-              currentThinkingLevel={currentThinkingLevel}
-              tokens={null}
-              contextUsage={null}
-              onSubmit={(text: string) => {
-                void sendChat(text);
-              }}
-              onAbortStream={abortChat}
-              onSelectModel={handleSelectModel}
-              onSelectThinkingLevel={handleSelectThinkingLevel}
-              composerMeta={<></>}
-              externalDraft={chatDraftInsertion}
-            />
-          </div>
+          <ExtensionChatRail
+            conversationId={chatConversationId}
+            workspaceCwd={null}
+            className="writing-studio-extension-chat"
+            emptyState={<p className="writing-studio-muted">Ask for help with the draft, or ask the agent to add comments to the canvas.</p>}
+            externalDraft={chatDraftInsertion}
+            getContextMessages={getChatContextMessages}
+            onError={setError}
+          />
         </section>
       </aside>
 

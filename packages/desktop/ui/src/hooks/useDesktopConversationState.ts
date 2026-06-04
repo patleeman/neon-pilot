@@ -433,6 +433,7 @@ function createDesktopConversationStateFromBootstrap(
     stream: sessionDetail
       ? {
           ...stream,
+          blocks: sessionDetail.blocks,
           blockOffset: sessionDetail.blockOffset,
           totalBlocks: sessionDetail.totalBlocks,
           contextUsage: sessionDetail.contextUsage,
@@ -488,7 +489,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const bridge = getDesktopBridge();
   const surfaceId = useMemo(() => getOrCreateConversationSurfaceId(), []);
   const surfaceType = useMemo(() => detectConversationSurfaceType(), []);
-  const [mode, setMode] = useState<'local' | 'inactive'>(enabled && bridge ? 'local' : 'inactive');
+  const [mode, setMode] = useState<'local' | 'inactive'>(enabled ? 'local' : 'inactive');
   const [state, setState] = useState<DesktopConversationState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connectVersion, setConnectVersion] = useState(0);
@@ -501,7 +502,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const matchedState = state?.conversationId === conversationId ? state : null;
 
   useEffect(() => {
-    if (!enabled || !bridge) {
+    if (!enabled) {
       setMode('inactive');
       setState(null);
       setError(null);
@@ -512,7 +513,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   }, [bridge, enabled, connectVersion]);
 
   useEffect(() => {
-    if (!bridge || mode !== 'local' || !conversationId) {
+    if (mode !== 'local' || !conversationId) {
       return;
     }
 
@@ -533,12 +534,6 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
     setState((current) => (current?.conversationId === conversationId ? current : (cachedState ?? bootstrapState)));
     setError(null);
-
-    if (cachedState?.conversationId === conversationId && cachedState.liveSession?.live) {
-      return () => {
-        closed = true;
-      };
-    }
 
     if (!cachedState && !bootstrapState) {
       void readCachedOrPersistedConversationBootstrap(conversationId, requestOptions)
@@ -579,7 +574,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
   }, [bridge, conversationId, mode, options?.includeToolBlocks, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
 
   useEffect(() => {
-    if (!bridge || mode !== 'local' || !conversationId || !matchedState?.liveSession?.live) {
+    if (mode !== 'local' || !conversationId || !matchedState?.liveSession?.live) {
       return;
     }
 

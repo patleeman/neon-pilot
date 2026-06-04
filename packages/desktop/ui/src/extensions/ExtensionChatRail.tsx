@@ -1,0 +1,231 @@
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { api } from '../client/api';
+import type { DesktopConversationState, MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
+import { useDesktopConversationState } from '../hooks/useDesktopConversationState';
+import { getModelSelectionValue } from '../model/modelPreferences';
+import { ChatRailComposer } from '../components/chat/ChatRailComposer';
+import { ChatView } from '../components/chat/ChatView';
+
+export interface ExtensionChatContextMessage {
+  customType: string;
+  content: string;
+}
+
+export interface ExtensionChatRailProps {
+  conversationId: string | null;
+  workspaceCwd?: string | null;
+  tailBlocks?: number;
+  className?: string;
+  emptyState?: ReactNode;
+  externalDraft?: { id: string; text: string } | null;
+  getContextMessages?: (text: string) => ExtensionChatContextMessage[] | Promise<ExtensionChatContextMessage[]>;
+  onError?: (message: string) => void;
+}
+
+/**
+ * Extension-facing chat surface backed by the same live conversation runtime as
+ * main chat and side chat. Extensions provide a host conversation id; the host
+ * owns streaming, model selection, abort, transcript rendering, and composer UX.
+ */
+export function ExtensionChatRail({
+  conversationId,
+  workspaceCwd = null,
+  tailBlocks = 400,
+  className,
+  emptyState,
+  externalDraft,
+  getContextMessages,
+  onError,
+}: ExtensionChatRailProps) {
+  const desktopState = useDesktopConversationState(conversationId, { tailBlocks });
+  const [hydratedState, setHydratedState] = useState<DesktopConversationState | null>(null);
+  const activeState =
+    hydratedState && (!desktopState.state || hydratedState.stream.blocks.length > desktopState.state.stream.blocks.length)
+      ? hydratedState
+      : desktopState.state;
+  const stream = activeState?.stream ?? null;
+  const messages: MessageBlock[] = stream?.blocks ?? [];
+  const isStreaming = stream?.isStreaming ?? false;
+  const isCompacting = stream?.isCompacting ?? false;
+  const contextUsage = stream?.contextUsage ?? null;
+  const tokens = stream?.tokens ?? null;
+
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [currentModel, setCurrentModel] = useState('');
+  const [currentThinkingLevel, setCurrentThinkingLevel] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentConversationIdRef = useRef<string | null>(conversationId);
+
+  useEffect(() => {
+    currentConversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  const hydrateConversationState = useCallback(async () => {
+    if (!conversationId) {
+      setHydratedState(null);
+      return null;
+    }
+
+    try {
+      const nextState = await api.desktopConversationState(conversationId, { tailBlocks });
+      if (currentConversationIdRef.current === conversationId) setHydratedState(nextState);
+      return nextState;
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : String(error));
+      return null;
+    }
+  }, [conversationId, onError, tailBlocks]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!conversationId) {
+      setHydratedState(null);
+      return;
+    }
+
+    api
+      .desktopConversationState(conversationId, { tailBlocks })
+      .then((nextState) => {
+        if (!cancelled) setHydratedState(nextState);
+      })
+      .catch((error) => {
+        if (!cancelled) onError?.(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId, onError, tailBlocks]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    let cancelled = false;
+    api
+      .conversationModelPreferences(conversationId)
+      .then((preferences) => {
+        if (cancelled) return;
+        setCurrentModel(preferences.currentModel ?? '');
+        setCurrentThinkingLevel(preferences.currentThinkingLevel ?? '');
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .models(true)
+      .then((result) => {
+        if (cancelled) return;
+        setModels(result.models ?? []);
+        if (!currentModel && result.models.length > 0) {
+          setCurrentModel(getModelSelectionValue(result.models[0], result.models));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentModel]);
+
+  const handleFocusComposerRequest = useCallback(() => {
+    const textarea = scrollRef.current?.closest('[data-extension-chat-rail]')?.querySelector('textarea');
+    if (textarea instanceof HTMLTextAreaElement && textarea !== document.activeElement) {
+      textarea.focus();
+    }
+  }, []);
+
+  const handleSubmit = useCallback(
+    async (text: string, behavior?: 'steer' | 'followUp', images?: PromptImageInput[], attachmentRefs?: PromptAttachmentRefInput[]) => {
+      if (!conversationId || (!text.trim() && !images?.length && !attachmentRefs?.length)) return;
+      try {
+        const contextMessages = getContextMessages ? await getContextMessages(text) : undefined;
+        await desktopState.send(text, behavior, images, attachmentRefs, contextMessages);
+        void hydrateConversationState();
+        window.setTimeout(() => void hydrateConversationState(), 1500);
+        window.setTimeout(() => void hydrateConversationState(), 5000);
+        desktopState.reconnect();
+      } catch (error) {
+        onError?.(error instanceof Error ? error.message : String(error));
+      }
+    },
+    [conversationId, desktopState, getContextMessages, hydrateConversationState, onError],
+  );
+
+  const handleAbort = useCallback(async () => {
+    try {
+      await desktopState.abort();
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : String(error));
+    }
+  }, [desktopState, onError]);
+
+  const handleModelSelect = useCallback(
+    async (modelId: string) => {
+      if (!conversationId) return;
+      setCurrentModel(modelId);
+      try {
+        await api.changeConversationModel(conversationId, modelId);
+      } catch (error) {
+        onError?.(error instanceof Error ? error.message : String(error));
+      }
+    },
+    [conversationId, onError],
+  );
+
+  const handleThinkingLevelSelect = useCallback(
+    async (thinkingLevel: string) => {
+      if (!conversationId) return;
+      setCurrentThinkingLevel(thinkingLevel);
+      try {
+        await api.updateConversationModelPreferences(conversationId, { thinkingLevel });
+      } catch (error) {
+        onError?.(error instanceof Error ? error.message : String(error));
+      }
+    },
+    [conversationId, onError],
+  );
+
+  return (
+    <div className={className ?? 'flex h-full min-h-0 flex-col bg-base select-text'} data-extension-chat-rail="1">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        {messages.length === 0 && emptyState ? (
+          emptyState
+        ) : (
+          <ChatView
+            conversationId={conversationId ?? undefined}
+            messages={messages}
+            isStreaming={isStreaming}
+            isCompacting={isCompacting}
+            scrollContainerRef={scrollRef}
+            performanceMode="default"
+            onFocusComposerRequest={handleFocusComposerRequest}
+          />
+        )}
+      </div>
+      <div className="shrink-0" aria-label="Extension chat composer">
+        <ChatRailComposer
+          conversationId={conversationId}
+          workspaceCwd={activeState?.sessionDetail?.meta?.cwd ?? workspaceCwd}
+          isStreaming={isStreaming}
+          models={models}
+          currentModel={currentModel}
+          currentThinkingLevel={currentThinkingLevel}
+          tokens={tokens}
+          contextUsage={contextUsage}
+          onSubmit={handleSubmit}
+          onAbortStream={handleAbort}
+          onSelectModel={handleModelSelect}
+          onSelectThinkingLevel={handleThinkingLevelSelect}
+          externalDraft={externalDraft}
+        />
+      </div>
+    </div>
+  );
+}
