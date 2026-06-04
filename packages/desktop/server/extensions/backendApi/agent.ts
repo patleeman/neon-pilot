@@ -12,9 +12,11 @@ interface ImageInput {
 export interface ExtensionAgentRunTaskInput {
   cwd?: string;
   modelRef?: string;
+  thinkingLevel?: string | null;
   prompt: string;
   images?: ImageInput[];
   tools?: 'none' | 'default';
+  allowedToolNames?: string[];
   timeoutMs?: number;
 }
 
@@ -28,7 +30,9 @@ export interface ExtensionAgentConversationCreateInput {
   title?: string;
   cwd?: string;
   modelRef?: string;
+  thinkingLevel?: string | null;
   tools?: 'none' | 'default';
+  allowedToolNames?: string[];
   visibility?: 'hidden' | 'visible';
   persistence?: 'ephemeral' | 'saved';
 }
@@ -84,7 +88,7 @@ interface ExtensionBackendContextLike {
   toolContext?: { cwd?: string };
   agentToolContext?: unknown;
   conversations?: {
-    create(input?: { cwd?: string; model?: string | null }): Promise<{ id: string }>;
+    create(input?: { cwd?: string; model?: string | null; thinkingLevel?: string | null }): Promise<{ id: string }>;
     sendMessage(conversationId: string, text: string): Promise<{ accepted: boolean }>;
     getMeta(conversationId: string): Promise<unknown>;
     list(): Promise<unknown>;
@@ -178,6 +182,46 @@ function resolveOptionalAgentToolContext(ctx: ExtensionBackendContextLike): Reco
 function modelAcceptsImages(model: unknown): boolean {
   const input = (model as { input?: unknown } | undefined)?.input;
   return Array.isArray(input) && input.includes('image');
+}
+
+function extractDs4ToolParameter(text: string, name: string): string | null {
+  const match = text.match(new RegExp(`<[^>]*parameter\\s+name="${name}"[^>]*>([\\s\\S]*?)<[^>]*\\/[^>]*parameter>`, 'i'));
+  return match?.[1]?.trim() ?? null;
+}
+
+function parseDs4RunToolCall(text: string): { toolName: string; params: unknown } | null {
+  const directInvoke = text.match(/<Invoke\s+name="([^"]+)"\s*>([\s\S]*?)<\/Invoke>/i);
+  if (directInvoke?.[1]) {
+    const params: Record<string, string> = {};
+    const body = directInvoke[2] ?? '';
+    const parameterPattern = /<parameter\s+name="([^"]+)"[^>]*>([\s\S]*?)<\/parameter>/gi;
+    for (const match of body.matchAll(parameterPattern)) {
+      const name = match[1]?.trim();
+      if (name) params[name] = (match[2] ?? '').trim();
+    }
+    return { toolName: directInvoke[1].trim(), params };
+  }
+  if (!text.includes('run_tool') || !text.includes('toolName')) return null;
+  const toolName = extractDs4ToolParameter(text, 'toolName');
+  if (!toolName) return null;
+  const rawParams = extractDs4ToolParameter(text, 'params');
+  if (!rawParams) return { toolName, params: {} };
+  try {
+    return { toolName, params: JSON.parse(rawParams) };
+  } catch {
+    return { toolName, params: rawParams };
+  }
+}
+
+function toolResultText(result: unknown): string {
+  if (isRecord(result) && Array.isArray(result.content)) {
+    const text = result.content
+      .map((entry) => (isRecord(entry) && (entry.type === 'text' || entry.type === undefined) && typeof entry.text === 'string' ? entry.text : ''))
+      .filter(Boolean)
+      .join('\n');
+    if (text.trim()) return text.trim();
+  }
+  return JSON.stringify(result, null, 2);
 }
 
 function resolveModel(models: unknown[], modelRef: string): unknown | null {
@@ -345,6 +389,8 @@ function validateConversationMode(input: ExtensionAgentConversationCreateInput):
     throw new Error('Extension agent conversations support hidden+ephemeral or visible+saved modes.');
   if (input.tools && input.tools !== 'none' && input.tools !== 'default')
     throw new Error('Extension agent conversations support tools="none" or tools="default".');
+  if (input.tools === 'none' && input.allowedToolNames && input.allowedToolNames.length > 0)
+    throw new Error('Extension agent conversations cannot combine tools="none" with allowedToolNames.');
   return { visibility, persistence };
 }
 
@@ -352,6 +398,8 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
   const mode = validateConversationMode(input);
   if (mode.visibility !== 'hidden' || mode.persistence !== 'ephemeral')
     throw new Error('createSession only supports hidden+ephemeral mode.');
+  if (input.allowedToolNames && input.allowedToolNames.length > 0)
+    throw new Error('Direct extension agent sessions do not support allowedToolNames.');
   const agentCtx = resolveOptionalAgentToolContext(ctx);
   const pi = await dynamicImport<PiModule>(PI_CODING_AGENT_PACKAGE);
   const runtimeDir = await callServerModuleExport<string>(NEON_PILOT_CORE_PACKAGE, 'getPiAgentRuntimeDir');
@@ -373,6 +421,34 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
     ...(input.tools === 'none' ? { noTools: 'all' as const } : {}),
   });
   return { cwd, model, modelRegistry, session: session as AgentSessionLike };
+}
+
+async function createHiddenLiveSession(input: ExtensionAgentConversationCreateInput, ctx: ExtensionBackendContextLike) {
+  const mode = validateConversationMode(input);
+  if (mode.visibility !== 'hidden' || mode.persistence !== 'ephemeral')
+    throw new Error('createHiddenLiveSession only supports hidden+ephemeral mode.');
+  const agentCtx = resolveOptionalAgentToolContext(ctx);
+  const cwd = input.cwd ?? ctx.toolContext?.cwd ?? (typeof agentCtx?.cwd === 'string' ? agentCtx.cwd : process.cwd());
+  const options: Record<string, unknown> = {
+    ...(input.modelRef ? { initialModel: input.modelRef } : {}),
+    ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
+    ...(input.tools === 'none'
+      ? { allowedToolNames: [] }
+      : input.allowedToolNames
+        ? { allowedToolNames: input.allowedToolNames }
+        : {}),
+  };
+  const created = await callServerModuleExport<{ id: string; sessionFile: string }>(
+    '../../conversations/liveSessions.js',
+    'createSession',
+    cwd,
+    options,
+  );
+  return {
+    cwd,
+    liveSessionId: created.id,
+    model: input.modelRef ? { id: input.modelRef } : (agentCtx?.model ?? {}),
+  };
 }
 
 function summarize(record: ExtensionAgentConversationRecord): ExtensionAgentConversationSummary {
@@ -487,7 +563,12 @@ export async function createAgentConversation(
   if (mode.visibility === 'visible') {
     if (!ctx.conversations) throw new Error('Visible saved extension agent conversations require the host conversations capability.');
     const cwd = input.cwd ?? ctx.toolContext?.cwd ?? process.cwd();
-    const created = await ctx.conversations.create({ cwd, model: input.modelRef ?? null });
+    const created = await ctx.conversations.create({
+      cwd,
+      model: input.modelRef ?? null,
+      ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
+      ...(input.allowedToolNames ? { allowedToolNames: input.allowedToolNames } : {}),
+    });
     const record: ExtensionAgentConversationRecord = {
       id: created.id,
       ownerExtensionId: owner,
@@ -508,27 +589,54 @@ export async function createAgentConversation(
     return summarize(record);
   }
 
-  const created = await createSession(input, ctx);
+  const created = await createHiddenLiveSession(input, ctx).catch((error) => {
+    if (input.allowedToolNames && input.allowedToolNames.length > 0) throw error;
+    return null;
+  });
+  if (created) {
+    const id = `agent_${randomUUID()}`;
+    const record: ExtensionAgentConversationRecord = {
+      id,
+      ownerExtensionId: owner,
+      title: input.title?.trim() || 'Extension agent conversation',
+      cwd: created.cwd,
+      model: created.model,
+      liveSessionId: created.liveSessionId,
+      tools: input.tools ?? 'default',
+      visibility: 'hidden',
+      persistence: 'ephemeral',
+      createdAt: now,
+      updatedAt: now,
+      unsubscribe: () => undefined,
+      isBusy: false,
+      disposed: false,
+      assistantTexts: [],
+    };
+    conversations.set(id, record);
+    return summarize(record);
+  }
+
+  const direct = await createSession(input, ctx);
   const id = `agent_${randomUUID()}`;
   const record: ExtensionAgentConversationRecord = {
     id,
     ownerExtensionId: owner,
     title: input.title?.trim() || 'Extension agent conversation',
-    cwd: created.cwd,
-    model: created.model,
-    modelRegistry: created.modelRegistry,
+    cwd: direct.cwd,
+    model: direct.model,
+    modelRegistry: direct.modelRegistry,
     tools: input.tools ?? 'default',
     visibility: 'hidden',
     persistence: 'ephemeral',
     createdAt: now,
     updatedAt: now,
-    session: created.session,
+    session: direct.session,
     unsubscribe: () => undefined,
     isBusy: false,
     disposed: false,
     assistantTexts: [],
   };
-  record.unsubscribe = created.session.subscribe((event) => {
+  record.unsubscribe = direct.session.subscribe((event) => {
     if (event.type === 'message_end' && event.message.role === 'assistant') {
       const text = extractTextContent(event.message.content).trim();
       if (text) record.assistantTexts.push(text);
@@ -717,10 +825,32 @@ export async function streamAgentMessage(
         notify = null;
       });
 
+    const streamStartedAt = Date.now();
     while (!done || queue.length > 0) {
       if (queue.length === 0) {
+        const remainingMs =
+          input.timeoutMs === undefined ? undefined : Math.max(0, input.timeoutMs - (Date.now() - streamStartedAt));
+        if (remainingMs !== undefined && remainingMs <= 0) {
+          failure = new Error(`Agent task timed out after ${input.timeoutMs}ms.`);
+          if (record.liveSessionId) void callServerModuleExport('../../conversations/liveSessions.js', 'abortSession', record.liveSessionId);
+          else void record.session?.abort?.();
+          done = true;
+          record.isBusy = false;
+          enqueue({ type: 'error', message: failure.message });
+          continue;
+        }
         await new Promise<void>((resolve) => {
-          notify = resolve;
+          let timeout: ReturnType<typeof setTimeout> | undefined;
+          notify = () => {
+            if (timeout) clearTimeout(timeout);
+            resolve();
+          };
+          if (remainingMs !== undefined) {
+            timeout = setTimeout(() => {
+              notify = null;
+              resolve();
+            }, remainingMs);
+          }
         });
         continue;
       }
@@ -795,11 +925,82 @@ export async function runAgentTask(
   input: ExtensionAgentRunTaskInput,
   ctx: ExtensionBackendContextLike,
 ): Promise<ExtensionAgentRunTaskResult> {
+  const bridge = workerBridge();
+  if (bridge) return bridge('agent', 'runTask', { input }) as Promise<ExtensionAgentRunTaskResult>;
+
   await assertPermission(ctx, 'agent:run');
   const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : '';
   if (!prompt) throw new Error('Agent task prompt is required.');
   if (input.tools && input.tools !== 'none' && input.tools !== 'default')
     throw new Error('Extension agent tasks support tools="none" or tools="default".');
+  if (input.tools === 'none' && input.allowedToolNames && input.allowedToolNames.length > 0)
+    throw new Error('Extension agent tasks cannot combine tools="none" with allowedToolNames.');
+  if (input.allowedToolNames && input.allowedToolNames.length > 0) {
+    const allowedToolNames = new Set(input.allowedToolNames);
+    const conversation = await createAgentConversation(
+      {
+        title: 'Extension agent task',
+        cwd: input.cwd,
+        modelRef: input.modelRef,
+        thinkingLevel: input.thinkingLevel,
+        tools: input.tools,
+        allowedToolNames: input.allowedToolNames,
+        visibility: 'hidden',
+        persistence: 'ephemeral',
+      },
+      ctx,
+    );
+    try {
+      let result = await sendAgentMessage(
+        { conversationId: conversation.id, text: prompt, images: input.images, timeoutMs: input.timeoutMs },
+        ctx,
+      );
+      for (let index = 0; index < 16; index += 1) {
+        const call = parseDs4RunToolCall(result.text);
+        if (!call) break;
+        if (!allowedToolNames.has(call.toolName)) {
+          throw new Error(`Extension agent task attempted unavailable tool: ${call.toolName}`);
+        }
+        const record = getOwnedRecord(conversation.id, ctx);
+        const toolResult = await callServerModuleExport(
+          '../../tools/toolGateway.js',
+          'invokeToolByName',
+          {
+            name: call.toolName,
+            input: call.params,
+            runtime: {
+              ...(input.modelRef ? { modelRef: input.modelRef } : {}),
+              directToolNames: ['bash', 'read', 'edit'],
+            },
+            toolContext: {
+              conversationId: record.liveSessionId ?? record.id,
+              sessionId: record.liveSessionId ?? record.id,
+              cwd: record.cwd,
+            },
+          },
+        );
+        if (call.toolName === 'writing_studio_add_annotation' || (isRecord(toolResult) && toolResult.terminate === true)) {
+          return { text: toolResultText(toolResult), model: result.model, provider: result.provider };
+        }
+        result = await sendAgentMessage(
+          {
+            conversationId: conversation.id,
+            text: [
+              `Tool ${call.toolName} result:`,
+              toolResultText(toolResult),
+              '',
+              'Continue the task. If more tool calls are needed, call the next tool. If the task is complete, answer briefly.',
+            ].join('\n'),
+            timeoutMs: input.timeoutMs,
+          },
+          ctx,
+        );
+      }
+      return { text: result.text, model: result.model, provider: result.provider };
+    } finally {
+      await disposeAgentConversation({ conversationId: conversation.id }, ctx).catch(() => undefined);
+    }
+  }
   const created = await createSession({ ...input, title: 'Extension agent task', visibility: 'hidden', persistence: 'ephemeral' }, ctx);
   const now = new Date().toISOString();
   const record: ExtensionAgentConversationRecord = {

@@ -2,12 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const serverModuleMocks = vi.hoisted(() => ({
   permissions: ['agent:run', 'agent:conversations'] as string[],
+  disableLiveSessionCreate: false,
   liveSubscribers: [] as Array<(event: unknown) => void>,
   liveSessionCounter: 0,
   liveCreated: [] as Array<{ cwd: string; options: unknown }>,
   liveDestroyed: [] as string[],
   liveAborted: [] as string[],
   liveSubmitted: [] as Array<{ sessionId: string; text: string; images: unknown }>,
+  liveResponses: [] as string[],
+  toolInvocations: [] as Array<{ name: string; input: unknown }>,
   callServerModuleExport: vi.fn(async (specifier: string, exportName: string, ...args: unknown[]) => {
     if (specifier === '../../extensions/extensionPermissions.js' && exportName === 'assertExtensionPermission') {
       const [extensionId, permission, capability] = args as [string, string, string];
@@ -18,6 +21,7 @@ const serverModuleMocks = vi.hoisted(() => ({
     }
     if (specifier === '@neon-pilot/core' && exportName === 'getPiAgentRuntimeDir') return '/runtime';
     if (specifier === '../../conversations/liveSessions.js' && exportName === 'createSession') {
+      if (serverModuleMocks.disableLiveSessionCreate) throw new Error('live sessions unavailable');
       const [cwd, options] = args as [string, unknown];
       const id = `live-${++serverModuleMocks.liveSessionCounter}`;
       serverModuleMocks.liveCreated.push({ cwd, options });
@@ -33,7 +37,8 @@ const serverModuleMocks = vi.hoisted(() => ({
     if (specifier === '../../conversations/liveSessions.js' && exportName === 'submitPromptSession') {
       const [sessionId, text, , images] = args as [string, string, unknown, unknown];
       serverModuleMocks.liveSubmitted.push({ sessionId, text, images });
-      serverModuleMocks.liveSubscribers.forEach((listener) => listener({ type: 'text_delta', delta: 'probe result' }));
+      const response = serverModuleMocks.liveResponses.shift() ?? 'probe result';
+      serverModuleMocks.liveSubscribers.forEach((listener) => listener({ type: 'text_delta', delta: response }));
       serverModuleMocks.liveSubscribers.forEach((listener) => listener({ type: 'agent_end' }));
       serverModuleMocks.liveSubscribers.forEach((listener) => listener({ type: 'turn_end' }));
       return { acceptedAs: 'started', completion: Promise.resolve() };
@@ -47,6 +52,11 @@ const serverModuleMocks = vi.hoisted(() => ({
       const [sessionId] = args as [string];
       serverModuleMocks.liveDestroyed.push(sessionId);
       return undefined;
+    }
+    if (specifier === '../../tools/toolGateway.js' && exportName === 'invokeToolByName') {
+      const [input] = args as [{ name: string; input: unknown }];
+      serverModuleMocks.toolInvocations.push({ name: input.name, input: input.input });
+      return { content: [{ type: 'text', text: `tool result for ${input.name}` }] };
     }
     throw new Error(`unexpected server module export: ${specifier}#${exportName}`);
   }),
@@ -133,12 +143,15 @@ describe('extension agent backend API', () => {
   afterEach(() => {
     resetExtensionAgentDynamicImportForTests();
     serverModuleMocks.permissions = ['agent:run', 'agent:conversations'];
+    serverModuleMocks.disableLiveSessionCreate = false;
     serverModuleMocks.liveSubscribers = [];
     serverModuleMocks.liveSessionCounter = 0;
     serverModuleMocks.liveCreated = [];
     serverModuleMocks.liveDestroyed = [];
     serverModuleMocks.liveAborted = [];
     serverModuleMocks.liveSubmitted = [];
+    serverModuleMocks.liveResponses = [];
+    serverModuleMocks.toolInvocations = [];
     vi.clearAllMocks();
     vi.useRealTimers();
   });
@@ -157,7 +170,58 @@ describe('extension agent backend API', () => {
     expect(session.dispose).toHaveBeenCalled();
   });
 
-  it('keeps extension-owned hidden conversations for multiple sends', async () => {
+  it('executes DS4 run_tool text calls for allowlisted hidden agent tasks', async () => {
+    installImporter();
+    serverModuleMocks.liveResponses = [
+      '<｜｜DSML｜｜tool_calls> <｜｜DSML｜｜invoke name="run_tool"> <｜｜DSML｜｜parameter name="toolName" string="true">writing_studio_get_canvas</｜｜DSML｜｜parameter> <｜｜DSML｜｜parameter name="params" string="true">{"documentId":"doc-1"}</｜｜DSML｜｜parameter> </｜｜DSML｜｜invoke> </｜｜DSML｜｜tool_calls>',
+      'done',
+    ];
+
+    const result = await runAgentTask(
+      {
+        prompt: 'Review',
+        modelRef: 'ds4/deepseek-v4-flash',
+        allowedToolNames: ['writing_studio_get_canvas'],
+      },
+      createCtx({ extensionId: 'system-writing-studio' }),
+    );
+
+    expect(result.text).toBe('done');
+    expect(serverModuleMocks.toolInvocations).toEqual([{ name: 'writing_studio_get_canvas', input: { documentId: 'doc-1' } }]);
+    expect(serverModuleMocks.liveSubmitted).toEqual([
+      { sessionId: 'live-1', text: 'Review', images: undefined },
+      {
+        sessionId: 'live-1',
+        text: expect.stringContaining('Tool writing_studio_get_canvas result:'),
+        images: undefined,
+      },
+    ]);
+  });
+
+  it('executes raw FunctionCalls invoke text for allowlisted hidden agent tasks', async () => {
+    installImporter();
+    serverModuleMocks.liveResponses = [
+      '<FunctionCalls><Invoke name="writing_studio_add_annotation"><parameter name="quote" string="true">Hello</parameter><parameter name="body" string="true">Needs a sharper verb.</parameter></Invoke></FunctionCalls>',
+      'annotated',
+    ];
+
+    const result = await runAgentTask(
+      {
+        prompt: 'Annotate',
+        modelRef: 'ds4/deepseek-v4-flash',
+        allowedToolNames: ['writing_studio_add_annotation'],
+      },
+      createCtx({ extensionId: 'system-writing-studio' }),
+    );
+
+    expect(result.text).toBe('tool result for writing_studio_add_annotation');
+    expect(serverModuleMocks.toolInvocations).toEqual([
+      { name: 'writing_studio_add_annotation', input: { quote: 'Hello', body: 'Needs a sharper verb.' } },
+    ]);
+    expect(serverModuleMocks.liveSubmitted).toEqual([{ sessionId: 'live-1', text: 'Annotate', images: undefined }]);
+  });
+
+  it('keeps extension-owned hidden conversations for multiple live-session sends', async () => {
     const { createAgentSession, session } = installImporter();
     const ctx = createCtx();
 
@@ -169,10 +233,13 @@ describe('extension agent backend API', () => {
 
     expect(first.text).toBe('probe result');
     expect(second.text).toBe('probe result');
-    expect(createAgentSession).toHaveBeenCalledTimes(1);
-    expect(createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/workspace', noTools: 'all' }));
-    expect(session.prompt).toHaveBeenCalledWith('first', undefined);
-    expect(session.prompt).toHaveBeenCalledWith('second', undefined);
+    expect(createAgentSession).not.toHaveBeenCalled();
+    expect(session.prompt).not.toHaveBeenCalled();
+    expect(serverModuleMocks.liveCreated).toEqual([{ cwd: '/workspace', options: { allowedToolNames: [] } }]);
+    expect(serverModuleMocks.liveSubmitted).toEqual([
+      { sessionId: 'live-1', text: 'first', images: undefined },
+      { sessionId: 'live-1', text: 'second', images: undefined },
+    ]);
     expect(listed.map((item) => item.id)).toContain(created.id);
     expect(fetched).toMatchObject({
       id: created.id,
@@ -201,10 +268,11 @@ describe('extension agent backend API', () => {
       { type: 'agent_end', text: 'probe result' },
       { type: 'turn_end' },
     ]);
-    expect(session.prompt).toHaveBeenCalledWith('stream this', undefined);
+    expect(session.prompt).not.toHaveBeenCalled();
+    expect(serverModuleMocks.liveSubmitted).toEqual([{ sessionId: 'live-1', text: 'stream this', images: undefined }]);
   });
 
-  it('aborts hidden direct agent conversations', async () => {
+  it('aborts hidden live-session agent conversations', async () => {
     const { session } = installImporter();
     const ctx = createCtx();
     const created = await createAgentConversation({ title: 'Abort hidden' }, ctx);
@@ -212,7 +280,21 @@ describe('extension agent backend API', () => {
     const aborted = await abortAgentConversation({ conversationId: created.id }, ctx);
 
     expect(aborted).toMatchObject({ id: created.id, isBusy: false });
-    expect(session.abort).toHaveBeenCalled();
+    expect(session.abort).not.toHaveBeenCalled();
+    expect(serverModuleMocks.liveAborted).toEqual(['live-1']);
+  });
+
+  it('falls back to direct hidden sessions when live-session creation is unavailable', async () => {
+    serverModuleMocks.disableLiveSessionCreate = true;
+    const { createAgentSession, session } = installImporter();
+    const ctx = createCtx();
+
+    const created = await createAgentConversation({ title: 'Direct fallback', tools: 'none' }, ctx);
+    const sent = await sendAgentMessage({ conversationId: created.id, text: 'fallback' }, ctx);
+
+    expect(sent.text).toBe('probe result');
+    expect(createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/workspace', noTools: 'all' }));
+    expect(session.prompt).toHaveBeenCalledWith('fallback', undefined);
   });
 
   it('rejects streaming visible saved conversations because they use host live-session events', async () => {
@@ -316,7 +398,8 @@ describe('extension agent backend API', () => {
       ok: true,
       conversationId: created.id,
     });
-    expect(session.dispose).toHaveBeenCalled();
+    expect(session.dispose).not.toHaveBeenCalled();
+    expect(serverModuleMocks.liveDestroyed).toEqual(['live-1']);
     await expect(getAgentConversation({ conversationId: created.id }, createCtx())).rejects.toThrow('not found');
   });
 

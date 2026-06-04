@@ -251,6 +251,8 @@ export async function createPreparedLiveAgentSession(input: {
       : options,
   );
   const loaderAtMs = performance.now();
+  const explicitAllowedToolNames = options.allowedToolNames;
+  const initialToolNames = explicitAllowedToolNames ?? modelProfilePolicy.activeTools;
   const { session } = await createAgentSession({
     cwd: input.cwd,
     agentDir,
@@ -259,7 +261,7 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
-    ...(modelProfilePolicy.activeTools ?? options.allowedToolNames ? { tools: modelProfilePolicy.activeTools ?? options.allowedToolNames } : {}),
+    ...(initialToolNames ? { tools: initialToolNames } : {}),
   });
   const agentSessionAtMs = performance.now();
 
@@ -299,7 +301,7 @@ export async function createPreparedLiveAgentSession(input: {
     resolveConversationPreferenceStateForSession(input.settingsFile, session.sessionManager, availableModels).currentServiceTier,
   );
 
-  if (!modelProfilePolicy.activeTools) {
+  if (!modelProfilePolicy.activeTools && !explicitAllowedToolNames) {
     await applyExtensionToolSelection(session, input.settingsFile, effectiveModelRef);
   }
   const doneAtMs = performance.now();

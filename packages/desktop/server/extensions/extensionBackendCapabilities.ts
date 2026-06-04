@@ -37,6 +37,7 @@ import {
   disposeAgentConversation,
   getAgentConversation,
   listAgentConversations,
+  runAgentTask,
   sendAgentMessage,
   streamAgentMessage,
 } from './backendApi/agent.js';
@@ -1191,6 +1192,9 @@ async function dispatchAgentCapability(
   }
   if (request.operation === 'sendMessage') {
     return sendAgentMessage(normalizeRecordInput(input.input, 'Agent send message') as never, ctx);
+  }
+  if (request.operation === 'runTask') {
+    return runAgentTask(normalizeRecordInput(input.input, 'Agent run task') as never, ctx);
   }
   if (request.operation === 'getConversation') {
     return getAgentConversation(normalizeRecordInput(input.input, 'Agent get conversation') as never, ctx);

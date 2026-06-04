@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockRunTurn = vi.hoisted(() => vi.fn());
 const mockCreateConversation = vi.hoisted(() => vi.fn());
+const mockRunAgentTask = vi.hoisted(() => vi.fn());
+
+vi.mock('@neon-pilot/extensions/backend/agent', () => ({
+  runAgentTask: mockRunAgentTask,
+}));
 
 import {
   addAnnotation,
@@ -53,6 +58,32 @@ function context(options?: { conversations?: Record<string, unknown> }) {
   } as never;
 }
 
+function mockReviewToolAnnotations(
+  annotations: Array<{
+    quote: string;
+    body: string;
+    kind?: 'comment' | 'suggestion' | 'reaction' | 'warning';
+    suggestedReplacement?: string;
+    emoji?: string;
+  }>,
+) {
+  mockRunAgentTask.mockImplementationOnce(async (_input: unknown, ctx: never) => {
+    for (const annotation of annotations) {
+      await addAnnotation(
+        {
+          quote: annotation.quote,
+          body: annotation.body,
+          kind: annotation.kind ?? 'comment',
+          suggestedReplacement: annotation.suggestedReplacement,
+          emoji: annotation.emoji,
+        },
+        ctx,
+      );
+    }
+    return { text: 'Reviewed with Writing Studio tools.' };
+  });
+}
+
 describe('Writing Studio backend', () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -60,6 +91,8 @@ describe('Writing Studio backend', () => {
     mockCreateConversation.mockImplementation(async () => ({ id: `review-chat-${mockCreateConversation.mock.calls.length}`, conversationId: `review-chat-${mockCreateConversation.mock.calls.length}` }));
     mockRunTurn.mockReset();
     mockRunTurn.mockRejectedValue(new Error('No model in unit test.'));
+    mockRunAgentTask.mockReset();
+    mockRunAgentTask.mockRejectedValue(new Error('No model in unit test.'));
   });
 
   it('persists Yjs update events with latest markdown', async () => {
@@ -80,16 +113,14 @@ describe('Writing Studio backend', () => {
 
   it('adds review annotations and replay events', async () => {
     const ctx = context();
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([
-        {
-          quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
-          body: 'This is the live review note.',
-          kind: 'suggestion',
-          suggestedReplacement: 'This sentence has enough substance to show a concrete approved edit.',
-        },
-      ]),
-    });
+    mockReviewToolAnnotations([
+      {
+        quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
+        body: 'This is the live review note.',
+        kind: 'suggestion',
+        suggestedReplacement: 'This sentence has enough substance to show a concrete approved edit.',
+      },
+    ]);
     const result = await runReview(
       {
         markdown:
@@ -111,31 +142,29 @@ describe('Writing Studio backend', () => {
 
   it('can produce more than three review annotations for longer drafts', async () => {
     const ctx = context();
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([
-        {
-          quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
-          body: 'First live note.',
-          kind: 'suggestion',
-        },
-        {
-          quote: 'Maybe this section wants a clearer promise for the person reading it.',
-          body: 'Second live note.',
-          kind: 'warning',
-        },
-        {
-          quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
-          body: 'Third live note.',
-          kind: 'reaction',
-        },
-        {
-          quote:
-            'This sentence keeps accumulating clauses and side roads until the original point has to fight its way back into view for the reader.',
-          body: 'Fourth live note.',
-          kind: 'comment',
-        },
-      ]),
-    });
+    mockReviewToolAnnotations([
+      {
+        quote: 'This is basically a sentence with enough substance to trigger feedback from the reviewer and show an annotation.',
+        body: 'First live note.',
+        kind: 'suggestion',
+      },
+      {
+        quote: 'Maybe this section wants a clearer promise for the person reading it.',
+        body: 'Second live note.',
+        kind: 'warning',
+      },
+      {
+        quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
+        body: 'Third live note.',
+        kind: 'reaction',
+      },
+      {
+        quote:
+          'This sentence keeps accumulating clauses and side roads until the original point has to fight its way back into view for the reader.',
+        body: 'Fourth live note.',
+        kind: 'comment',
+      },
+    ]);
     const result = await runReview(
       {
         markdown: [
@@ -182,33 +211,25 @@ describe('Writing Studio backend', () => {
       'A second long sentence keeps adding context and qualifiers and momentum until the useful phrase at the center starts to disappear from view.',
       'Another strong line gives the reader a concrete image and a reason to keep going.',
     ].join('\n\n');
-    mockRunTurn.mockResolvedValue({ text: '[]' });
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([
-        {
-          quote: 'A paragraph near the top has a live wire and enough detail to earn one focused margin note from the reviewer.',
-          body: 'This opening has enough charge to deserve a note.',
-          kind: 'reaction',
-        },
-      ]),
-    });
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([
-        {
-          quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
-          body: 'This later sentence has a live wire in it.',
-          kind: 'reaction',
-        },
-      ]),
-    });
+    mockReviewToolAnnotations([
+      {
+        quote: 'A paragraph near the top has a live wire and enough detail to earn one focused margin note from the reviewer.',
+        body: 'This opening has enough charge to deserve a note.',
+        kind: 'reaction',
+      },
+      {
+        quote: 'The strongest idea arrives when the draft names the actual user and the actual moment.',
+        body: 'This later sentence has a live wire in it.',
+        kind: 'reaction',
+      },
+    ]);
 
     const result = await runReview({ markdown }, ctx);
 
-    expect(mockRunTurn.mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(result.annotations.map((annotation) => annotation.body)).toEqual([
-      'This opening has enough charge to deserve a note.',
-      'This later sentence has a live wire in it.',
-    ]);
+    expect(mockRunAgentTask).toHaveBeenCalledTimes(1);
+    expect(result.annotations.map((annotation) => annotation.body)).toEqual(
+      expect.arrayContaining(['This opening has enough charge to deserve a note.', 'This later sentence has a live wire in it.']),
+    );
   });
 
   it('advances full-document review across chunks on repeated runs', async () => {
@@ -227,14 +248,8 @@ describe('Writing Studio backend', () => {
       laterQuote,
       'This closing sentence gives the later section a little more room and keeps the quote anchored in real text.',
     ].join('\n\n');
-    mockRunTurn.mockResolvedValue({ text: '[]' });
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([{ quote: firstQuote, body: 'First chunk note.', kind: 'suggestion' }]),
-    });
-    mockRunTurn.mockResolvedValueOnce({ text: '[]' });
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([{ quote: laterQuote, body: 'Later chunk note.', kind: 'reaction' }]),
-    });
+    mockReviewToolAnnotations([{ quote: firstQuote, body: 'First chunk note.', kind: 'suggestion' }]);
+    mockReviewToolAnnotations([{ quote: laterQuote, body: 'Later chunk note.', kind: 'reaction' }]);
 
     const first = await runReview({ markdown }, ctx);
     const second = await runReview({ markdown }, ctx);
@@ -251,22 +266,20 @@ describe('Writing Studio backend', () => {
 
   it('fails review instead of fabricating annotations when the agent returns invalid annotations', async () => {
     const ctx = context();
-    mockRunTurn.mockResolvedValueOnce({ text: 'not json' });
+    mockRunAgentTask.mockResolvedValueOnce({ text: 'Reviewed without tool calls.' });
 
-    await expect(runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx)).rejects.toThrow('no valid annotations');
+    await expect(runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx)).rejects.toThrow('did not add any annotations');
   });
 
   it('resolves annotations without using the private chat path', async () => {
     const ctx = context();
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([
-        {
-          quote: 'Maybe this can be clearer.',
-          body: 'This is a live review note.',
-          kind: 'comment',
-        },
-      ]),
-    });
+    mockReviewToolAnnotations([
+      {
+        quote: 'Maybe this can be clearer.',
+        body: 'This is a live review note.',
+        kind: 'comment',
+      },
+    ]);
     const review = await runReview({ markdown: '# Draft\n\nMaybe this can be clearer.' }, ctx);
     const resolved = await resolveAnnotation({ id: review.annotations[0].id }, ctx);
 
@@ -358,15 +371,13 @@ describe('Writing Studio backend', () => {
 
   it('reviews only selected writing text', async () => {
     const ctx = context();
-    mockRunTurn.mockResolvedValueOnce({
-      text: JSON.stringify([
-        {
-          quote: 'selected passage with enough words for a focused annotation',
-          body: 'This selected bit wants one sharper image.',
-          kind: 'suggestion',
-        },
-      ]),
-    });
+    mockReviewToolAnnotations([
+      {
+        quote: 'selected passage with enough words for a focused annotation',
+        body: 'This selected bit wants one sharper image.',
+        kind: 'suggestion',
+      },
+    ]);
 
     const result = await reviewSelection(
       {
@@ -378,10 +389,12 @@ describe('Writing Studio backend', () => {
 
     expect(result.annotations).toHaveLength(1);
     expect(result.annotations[0].quote).toBe('selected passage with enough words for a focused annotation');
-    expect(mockRunTurn).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.stringContaining('Do not review the whole document'),
-      expect.objectContaining({ timeoutMs: expect.any(Number) }),
+    expect(mockRunAgentTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Do not review text outside the selected passage'),
+        allowedToolNames: expect.arrayContaining(['writing_studio_add_annotation']),
+      }),
+      expect.anything(),
     );
   });
 

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 
 type EventType =
   | 'yjs_update'
@@ -111,6 +112,16 @@ const defaultSettings: WritingSettings = {
   agentInstructions: defaultAgentInstructions,
 };
 const maxReviewAnnotations = 12;
+const writingStudioAgentToolNames = [
+  'writing_studio_get_canvas',
+  'writing_studio_update_canvas',
+  'writing_studio_add_annotation',
+  'writing_studio_update_annotation',
+  'writing_studio_resolve_annotation',
+  'writing_studio_apply_annotation_edit',
+  'writing_studio_get_agent_instructions',
+  'writing_studio_update_agent_instructions',
+];
 
 function isUnavailableAgentModelError(error: unknown): boolean {
   return error instanceof Error && /Agent conversation model is not available/i.test(error.message);
@@ -119,8 +130,10 @@ function isUnavailableAgentModelError(error: unknown): boolean {
 interface WritingStudioAgentTaskInput {
   cwd?: string;
   modelRef?: string;
+  thinkingLevel?: string | null;
   prompt: string;
   tools?: 'none' | 'default';
+  allowedToolNames?: string[];
   timeoutMs?: number;
 }
 
@@ -134,28 +147,49 @@ async function runWritingStudioAgentTask(
   input: WritingStudioAgentTaskInput,
   ctx: ExtensionBackendContext,
 ): Promise<{ text: string }> {
-  if (!ctx.conversations?.create || !ctx.conversations.runTurn) {
-    throw new Error('Writing Studio review requires the host conversation capability.');
-  }
   try {
-    const conversation = await ctx.conversations.create({
-      ...(input.cwd ?? ctx.toolContext?.cwd ? { cwd: input.cwd ?? ctx.toolContext?.cwd } : {}),
-      live: true,
-      title: 'Writing Studio Review',
-      model: input.modelRef ?? null,
-      ...(input.tools === 'none' ? { allowedToolNames: [] } : {}),
-    });
-    const conversationId = conversation.conversationId;
-    const result = await ctx.conversations.runTurn(conversationId, input.prompt, {
-      ...(input.cwd ?? ctx.toolContext?.cwd ? { cwd: input.cwd ?? ctx.toolContext?.cwd } : {}),
-      timeoutMs: input.timeoutMs,
-    });
+    const result = await runAgentTask(
+      {
+        ...(input.cwd ?? ctx.toolContext?.cwd ? { cwd: input.cwd ?? ctx.toolContext?.cwd } : {}),
+        prompt: input.prompt,
+        ...(input.modelRef ? { modelRef: input.modelRef } : {}),
+        ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
+        ...(input.tools ? { tools: input.tools } : {}),
+        ...(input.allowedToolNames ? { allowedToolNames: input.allowedToolNames } : {}),
+        ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
+      },
+      ctx,
+    );
     const text = readAgentTurnText(result);
-    if (!text) throw new Error('Agent review returned no text.');
+    if (!text && input.tools === 'none') throw new Error('Agent review returned no text.');
     return { text };
   } catch (error) {
     if (!input.modelRef || !isUnavailableAgentModelError(error)) throw error;
     return runWritingStudioAgentTask({ ...input, modelRef: undefined }, ctx);
+  }
+}
+
+async function runWritingStudioToolTask(
+  input: WritingStudioAgentTaskInput,
+  ctx: ExtensionBackendContext,
+): Promise<{ text: string }> {
+  try {
+    const result = await runAgentTask(
+      {
+        ...(input.cwd ?? ctx.toolContext?.cwd ? { cwd: input.cwd ?? ctx.toolContext?.cwd } : {}),
+        prompt: input.prompt,
+        ...(input.modelRef ? { modelRef: input.modelRef } : {}),
+        ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
+        tools: 'default',
+        allowedToolNames: input.allowedToolNames ?? writingStudioAgentToolNames,
+        ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
+      },
+      ctx,
+    );
+    return { text: readAgentTurnText(result) };
+  } catch (error) {
+    if (!input.modelRef || !isUnavailableAgentModelError(error)) throw error;
+    return runWritingStudioToolTask({ ...input, modelRef: undefined }, ctx);
   }
 }
 const reviewChunkCharacterLimit = 2_400;
@@ -529,20 +563,14 @@ async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBack
   if (!ctx.conversations?.create) {
     throw new Error('Writing Studio chat requires the host conversation capability.');
   }
-  const applyConversationContext = async (conversationId: string) => {
-    await Promise.resolve(
-      ctx.conversations?.setActiveTools?.(conversationId, [
-        'writing_studio_get_canvas',
-        'writing_studio_update_canvas',
-        'writing_studio_add_annotation',
-        'writing_studio_update_annotation',
-        'writing_studio_resolve_annotation',
-        'writing_studio_apply_annotation_edit',
-        'writing_studio_review_canvas',
-        'writing_studio_get_agent_instructions',
-        'writing_studio_update_agent_instructions',
-      ]),
-    ).catch(() => undefined);
+  const applyConversationContext = async (conversationId: string): Promise<boolean> => {
+    if (ctx.conversations?.setActiveTools) {
+      try {
+        await ctx.conversations.setActiveTools(conversationId, writingStudioAgentToolNames);
+      } catch {
+        return false;
+      }
+    }
     await Promise.resolve(
       ctx.conversations?.appendCustomEntry?.(conversationId, 'writing_studio_agent_context', {
         documentId: state.id,
@@ -551,6 +579,7 @@ async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBack
         createdAt: nowIso(),
       }),
     ).catch(() => undefined);
+    return true;
   };
   if (state.chatConversationId) {
     try {
@@ -559,8 +588,8 @@ async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBack
         ctx.toolContext?.cwd ? { cwd: ctx.toolContext.cwd } : undefined,
       );
       if (ensured?.conversationId) state.chatConversationId = ensured.conversationId;
-      await applyConversationContext(state.chatConversationId);
-      return state.chatConversationId;
+      if (await applyConversationContext(state.chatConversationId)) return state.chatConversationId;
+      state.chatConversationId = undefined;
     } catch {
       state.chatConversationId = undefined;
     }
@@ -572,10 +601,91 @@ async function ensureHostChatConversation(state: StoredState, ctx: ExtensionBack
     live: true,
     title: `Writing Studio: ${state.fileName}`,
     model: modelRef ?? null,
+    allowedToolNames: writingStudioAgentToolNames,
   });
   state.chatConversationId = conversation.conversationId;
   await applyConversationContext(conversation.conversationId);
   return conversation.conversationId;
+}
+
+async function runReviewThroughChat(
+  state: StoredState,
+  ctx: ExtensionBackendContext,
+  input: {
+    runId: string;
+    trigger: string;
+    modelRef?: string;
+    selectedText?: string;
+    reviewPrompt?: string;
+  },
+): Promise<{ annotations: Annotation[] }> {
+  await ensureHostChatConversation(state, ctx, input.modelRef);
+  const existingIds = new Set(state.annotations.map((annotation) => annotation.id));
+  const reviewPrompt = input.reviewPrompt?.trim() || state.settings.reviewPrompt;
+  const selectedText = input.selectedText?.trim();
+  const reviewDocumentChunk = state.markdown.length > 1800 ? state.markdown.slice(0, 1800) : state.markdown;
+  const agentInstructions = state.settings.agentInstructions.slice(0, 800);
+  const prompt = selectedText
+    ? `Review this selected passage from the active Writing Studio document.
+
+Use the Writing Studio tools, not JSON. Do not call writing_studio_get_canvas; the selected passage is included below. Do not describe annotations in prose. Emit raw function calls only, using this shape:
+<function_calls><invoke name="writing_studio_add_annotation"><parameter name="quote">exact quote from the passage</parameter><parameter name="body">your comment</parameter><parameter name="kind">comment</parameter></invoke></function_calls>
+Call writing_studio_add_annotation once, anchored to an exact quote from the selected passage. Do not review text outside the selected passage. If you suggest a concrete replacement, include a suggestedReplacement parameter. Your task is not complete until the writing_studio_add_annotation tool call succeeds.
+
+Review prompt:
+${reviewPrompt}
+
+Agent instructions:
+${agentInstructions}
+
+Selected passage:
+${selectedText}`
+    : `Review the first pass of the active Writing Studio document.
+
+Use the Writing Studio tools, not JSON. Do not call writing_studio_get_canvas; the document excerpt is included below. Do not describe annotations in prose. Emit raw function calls only, using this shape:
+<function_calls><invoke name="writing_studio_add_annotation"><parameter name="quote">exact quote from the excerpt</parameter><parameter name="body">your comment</parameter><parameter name="kind">comment</parameter></invoke></function_calls>
+Call writing_studio_add_annotation once, anchored to an exact quote from this excerpt. Pick the highest-value comment near the top of the excerpt. If you suggest a concrete replacement, include a suggestedReplacement parameter. Your task is not complete until the writing_studio_add_annotation tool call succeeds.
+
+Review prompt:
+${reviewPrompt}
+
+Agent instructions:
+${agentInstructions}
+
+Document excerpt:
+${reviewDocumentChunk}`;
+
+  let resultText = '';
+  try {
+    const result = await runWritingStudioToolTask(
+      {
+        prompt,
+        timeoutMs: selectedText ? 45_000 : 60_000,
+        modelRef: input.modelRef,
+        thinkingLevel: 'low',
+        allowedToolNames: ['writing_studio_add_annotation'],
+      },
+      ctx,
+    );
+    resultText = result.text.trim();
+  } catch (error) {
+    throw new Error(`Writing Studio review failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const refreshed = await readState(ctx, state.id);
+  const annotations = refreshed.annotations.filter((annotation) => annotation.status === 'open' && !existingIds.has(annotation.id));
+  if (annotations.length === 0) {
+    const diagnostic = resultText ? ` Agent response: ${resultText.slice(0, 500)}` : '';
+    throw new Error(`Writing Studio review did not add any annotations.${diagnostic}`);
+  }
+  for (const annotation of annotations) annotation.agentRunId = input.runId;
+  refreshed.annotations = refreshed.annotations.map((annotation) =>
+    annotations.some((added) => added.id === annotation.id) ? { ...annotation, agentRunId: input.runId } : annotation,
+  );
+  refreshed.lastAgentRunAt = nowIso();
+  refreshed.events.push(event('agent_run_completed', 'agent', { runId: input.runId, trigger: input.trigger, annotationCount: annotations.length }));
+  await writeState(ctx, refreshed);
+  return { annotations };
 }
 
 export async function ensureChatSession(input: unknown, ctx: ExtensionBackendContext): Promise<{ conversationId: string }> {
@@ -648,23 +758,16 @@ export async function runReview(input: unknown, ctx: ExtensionBackendContext): P
       ? normalizeSettings({ ...state.settings, reviewPrompt: payload.reviewPrompt })
       : state.settings;
   const runId = randomUUID();
-  state.events.push(event('agent_run_started', 'agent', { runId, trigger: payload.trigger ?? 'manual' }));
   const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
-  const review = await buildAgentReviewAnnotations(state.markdown, runId, reviewSettings, ctx, modelRef, state.reviewCursorChunk ?? 0);
-  const annotations = review.annotations;
-  if (annotations.length === 0) throw new Error('Writing Studio review returned no valid annotations.');
-  const refreshedQuotes = new Set(annotations.map((annotation) => annotation.quote));
-  state.annotations = state.annotations.filter(
-    (annotation) =>
-      annotation.status !== 'open' ||
-      (annotation.quote && state.markdown.includes(annotation.quote) && !refreshedQuotes.has(annotation.quote)),
-  );
-  state.annotations.unshift(...annotations);
-  for (const annotation of annotations) state.events.push(event('annotation_added', 'agent', { annotation }));
-  state.lastAgentRunAt = nowIso();
-  state.reviewCursorChunk = review.nextReviewCursorChunk;
-  state.events.push(event('agent_run_completed', 'agent', { runId, annotationCount: annotations.length }));
+  state.events.push(event('agent_run_started', 'agent', { runId, trigger: payload.trigger ?? 'manual' }));
+  state.settings = reviewSettings;
   await writeState(ctx, state);
+  const { annotations } = await runReviewThroughChat(state, ctx, {
+    runId,
+    trigger: payload.trigger ?? 'manual',
+    modelRef,
+    reviewPrompt: reviewSettings.reviewPrompt,
+  });
   return { annotations, runId };
 }
 
@@ -681,42 +784,14 @@ export async function reviewSelection(input: unknown, ctx: ExtensionBackendConte
   const runId = randomUUID();
   state.events.push(event('agent_run_started', 'agent', { runId, trigger: 'selection' }));
   const modelRef = typeof payload.modelRef === 'string' && payload.modelRef.trim() ? payload.modelRef.trim() : undefined;
-  const prompt = `You are reviewing one selected passage in Writing Studio.
-
-Return only JSON: an array of 1-3 objects with keys quote, body, kind, optional emoji, and optional suggestedReplacement.
-kind must be one of comment, suggestion, reaction, warning.
-quote must be an exact substring from the selected passage. Choose 5-24 consecutive words when possible.
-Do not review the whole document. Do not comment on text outside the selected passage.
-When you are proposing a concrete rewrite, include suggestedReplacement as the exact replacement text for quote. Only include it when the user could approve it directly.
-Write like a generous collaborator with personality. Avoid generic proofreading unless the selected text truly needs it.
-
-Review prompt:
-${typeof payload.reviewPrompt === 'string' && payload.reviewPrompt.trim() ? payload.reviewPrompt.trim() : state.settings.reviewPrompt}
-
-Agent instructions:
-${state.settings.agentInstructions}
-
-Selected passage:
-${selectedText}`;
-  let annotations: Annotation[];
-  try {
-    const result = await runWritingStudioAgentTask({ prompt, tools: 'none', timeoutMs: 45_000, modelRef }, ctx);
-    annotations = parseAgentAnnotations(result.text, state.markdown, runId).slice(0, 3);
-  } catch (error) {
-    throw new Error(`Writing Studio selected-text review failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  if (annotations.length === 0) throw new Error('Writing Studio selected-text review returned no valid annotations.');
-  const currentQuotes = new Set(annotations.map((annotation) => annotation.quote));
-  state.annotations = state.annotations.filter(
-    (annotation) =>
-      annotation.status !== 'open' ||
-      (annotation.quote && state.markdown.includes(annotation.quote) && !currentQuotes.has(annotation.quote)),
-  );
-  state.annotations.unshift(...annotations);
-  for (const annotation of annotations) state.events.push(event('annotation_added', 'agent', { annotation }));
-  state.lastAgentRunAt = nowIso();
-  state.events.push(event('agent_run_completed', 'agent', { runId, annotationCount: annotations.length }));
   await writeState(ctx, state);
+  const { annotations } = await runReviewThroughChat(state, ctx, {
+    runId,
+    trigger: 'selection',
+    modelRef,
+    selectedText,
+    reviewPrompt: typeof payload.reviewPrompt === 'string' && payload.reviewPrompt.trim() ? payload.reviewPrompt.trim() : undefined,
+  });
   return { annotations, runId };
 }
 
@@ -765,7 +840,7 @@ export async function updateCanvas(input: unknown, ctx: ExtensionBackendContext)
 export async function addAnnotation(
   input: unknown,
   ctx: ExtensionBackendContext,
-): Promise<{ annotation: Annotation; annotations: Annotation[] }> {
+): Promise<{ annotation: Annotation; annotations: Annotation[]; terminate: true }> {
   const payload = input as {
     documentId?: string;
     quote?: string;
@@ -803,7 +878,7 @@ export async function addAnnotation(
   state.annotations.unshift(annotation);
   state.events.push(event('annotation_added', 'agent', { annotation }));
   await writeState(ctx, state);
-  return { annotation, annotations: state.annotations };
+  return { annotation, annotations: state.annotations, terminate: true };
 }
 
 export async function updateAnnotation(

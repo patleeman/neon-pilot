@@ -160,10 +160,10 @@ describe('live session factory', () => {
       [{ id: 'model-1', provider: 'provider' }],
     );
     expect(liveModels.applyLiveSessionServiceTier).toHaveBeenCalledWith(s, 'flex');
-    expect(s.setActiveTools).toHaveBeenCalledWith(['bash', 'web_search', 'artifact']);
+    expect(s.setActiveTools).not.toHaveBeenCalled();
   });
 
-  it('uses exact active tools declared by the selected model profile at session creation', async () => {
+  it('lets explicit allowed tools override selected model profile tools at session creation', async () => {
     const s = session();
     modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
     extensionRegistry.resolveModelProfile.mockResolvedValue({
@@ -185,7 +185,7 @@ describe('live session factory', () => {
       '/repo',
       expect.objectContaining({ additionalSkillPaths: [], noSkills: true, progressiveDisclosure: true, skillDiscoveryPaths: [] }),
     );
-    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['bash', 'read', 'edit'] }));
+    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['artifact'] }));
     expect(s.setActiveTools).not.toHaveBeenCalled();
   });
 
@@ -254,8 +254,8 @@ describe('live session factory', () => {
       });
 
       expect(loader.makeLoader).toHaveBeenCalledWith('/repo', expect.not.objectContaining({ progressiveDisclosure: true, noSkills: true }));
-      expect(agent.createAgentSession).toHaveBeenCalledWith(expect.not.objectContaining({ tools: ['bash', 'read', 'edit'] }));
-      expect(s.setActiveTools).toHaveBeenCalledWith(expect.arrayContaining(['artifact']));
+      expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ tools: ['artifact'] }));
+      expect(s.setActiveTools).not.toHaveBeenCalled();
     } finally {
       if (previousMode === undefined) delete process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE;
       else process.env.NEON_PILOT_DS4_OPTIMIZATION_MODE = previousMode;

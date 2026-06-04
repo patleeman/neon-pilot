@@ -82,6 +82,7 @@ const backendApiLazyModuleEntries = [
   ['traces/appTelemetry.js', 'server/traces/appTelemetry.ts'],
   ['traces/tracePersistence.js', 'server/traces/tracePersistence.ts'],
   ['extensions/extensionBackend.js', 'server/extensions/extensionBackend.ts'],
+  ['extensions/extensionBackendWorker.js', 'server/extensions/extensionBackendWorker.ts'],
   ['extensions/extensionCatalog.js', 'server/extensions/extensionCatalog.ts'],
   ['extensions/extensionConversationMetadata.js', 'server/extensions/extensionConversationMetadata.ts'],
   ['extensions/extensionDoctor.js', 'server/extensions/extensionDoctor.ts'],

@@ -9,9 +9,11 @@ export interface ExtensionAgentImageInput {
 export interface ExtensionAgentRunTaskInput {
   cwd?: string;
   modelRef?: string;
+  thinkingLevel?: string | null;
   prompt: string;
   images?: ExtensionAgentImageInput[];
   tools?: 'none' | 'default';
+  allowedToolNames?: string[];
   timeoutMs?: number;
 }
 
@@ -25,7 +27,9 @@ export interface ExtensionAgentConversationCreateInput {
   title?: string;
   cwd?: string;
   modelRef?: string;
+  thinkingLevel?: string | null;
   tools?: 'none' | 'default';
+  allowedToolNames?: string[];
   visibility?: 'hidden' | 'visible';
   persistence?: 'ephemeral' | 'saved';
 }
