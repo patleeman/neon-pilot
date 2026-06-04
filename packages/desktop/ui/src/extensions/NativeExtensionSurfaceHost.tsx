@@ -172,7 +172,7 @@ export function NativeExtensionSurfaceHost({
 
   return (
     <section
-      className="h-full min-h-0 overflow-auto bg-base"
+      className={surface.location === 'sidebar' ? 'h-full min-h-0 overflow-auto bg-transparent' : 'h-full min-h-0 overflow-auto bg-base'}
       data-extension-id={surface.extensionId}
       data-extension-surface-id={surface.id}
     >

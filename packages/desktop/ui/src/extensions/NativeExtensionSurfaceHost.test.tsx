@@ -52,6 +52,29 @@ afterEach(() => {
 });
 
 describe('NativeExtensionSurfaceHost', () => {
+  it('uses transparent chrome for sidebar extension surfaces', async () => {
+    const surface: NativeExtensionViewSummary = {
+      extensionId: 'system-automations',
+      id: 'sidebar',
+      title: 'Automations Sidebar',
+      location: 'sidebar',
+      component: 'AutomationsPage',
+      frontend: { entry: 'dist/frontend.js' },
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/automations" search="" hash="" />);
+    });
+
+    const host = container.querySelector('[data-extension-surface-id="sidebar"]');
+    expect(host?.className).toContain('bg-transparent');
+    expect(host?.className).not.toContain('bg-base');
+  });
+
   it('lazy-loads a native system extension component with PA props', async () => {
     const surface: NativeExtensionViewSummary = {
       extensionId: 'system-automations',
