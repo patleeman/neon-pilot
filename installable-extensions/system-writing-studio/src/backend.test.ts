@@ -459,6 +459,82 @@ describe('Writing Studio backend', () => {
     expect(conversations.setActiveTools).toHaveBeenCalledWith('host-chat-resumed', expect.arrayContaining(['writing_studio_get_canvas']));
   });
 
+  it('keeps a resumed chat session when Writing Studio tools are already active', async () => {
+    const conversations = {
+      create: vi.fn(async () => ({ id: 'host-chat-1', conversationId: 'host-chat-1' })),
+      ensureLive: vi.fn(async () => ({ id: 'host-chat-resumed', conversationId: 'host-chat-resumed' })),
+      get: vi.fn(async () => ({
+        toolNames: [
+          'writing_studio_get_canvas',
+          'writing_studio_update_canvas',
+          'writing_studio_add_annotation',
+          'writing_studio_update_annotation',
+          'writing_studio_resolve_annotation',
+          'writing_studio_apply_annotation_edit',
+          'writing_studio_get_agent_instructions',
+          'writing_studio_update_agent_instructions',
+        ],
+      })),
+      setActiveTools: vi.fn(async () => {
+        throw new Error('Conversation "host-chat-resumed" does not support active tool updates.');
+      }),
+      appendCustomEntry: vi.fn(),
+    };
+    const ctx = context({ conversations });
+
+    await ensureChatSession({}, ctx);
+    const ensured = await ensureChatSession({}, ctx);
+    const state = await load({}, ctx);
+
+    expect(ensured.conversationId).toBe('host-chat-resumed');
+    expect(state.chatConversationId).toBe('host-chat-resumed');
+    expect(conversations.create).toHaveBeenCalledTimes(1);
+    expect(conversations.setActiveTools).not.toHaveBeenCalled();
+  });
+
+  it('replaces a resumed chat session when Writing Studio tools are provably missing and cannot be patched', async () => {
+    const conversations = {
+      create: vi
+        .fn()
+        .mockResolvedValueOnce({ id: 'host-chat-1', conversationId: 'host-chat-1' })
+        .mockResolvedValueOnce({ id: 'host-chat-2', conversationId: 'host-chat-2' }),
+      ensureLive: vi.fn(async (conversationId: string) =>
+        conversationId === 'host-chat-1'
+          ? { id: 'host-chat-resumed', conversationId: 'host-chat-resumed' }
+          : { id: conversationId, conversationId },
+      ),
+      get: vi.fn(async (conversationId: string) => ({
+        toolNames:
+          conversationId === 'host-chat-resumed'
+            ? ['bash']
+            : [
+                'writing_studio_get_canvas',
+                'writing_studio_update_canvas',
+                'writing_studio_add_annotation',
+                'writing_studio_update_annotation',
+                'writing_studio_resolve_annotation',
+                'writing_studio_apply_annotation_edit',
+                'writing_studio_get_agent_instructions',
+                'writing_studio_update_agent_instructions',
+              ],
+      })),
+      setActiveTools: vi.fn(async () => {
+        throw new Error('Conversation "host-chat-resumed" does not support active tool updates.');
+      }),
+      appendCustomEntry: vi.fn(),
+    };
+    const ctx = context({ conversations });
+
+    await ensureChatSession({}, ctx);
+    const ensured = await ensureChatSession({}, ctx);
+    const state = await load({}, ctx);
+
+    expect(ensured.conversationId).toBe('host-chat-2');
+    expect(state.chatConversationId).toBe('host-chat-2');
+    expect(conversations.create).toHaveBeenCalledTimes(2);
+    expect(conversations.create).toHaveBeenLastCalledWith(expect.objectContaining({ allowedToolNames: expect.any(Array) }));
+  });
+
   it('reviews only selected writing text', async () => {
     const ctx = context();
     mockReviewToolAnnotations([

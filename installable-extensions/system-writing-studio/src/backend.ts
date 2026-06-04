@@ -511,14 +511,33 @@ async function ensureHostChatConversation(
     throw new Error('Writing Studio chat requires the host conversation capability.');
   }
   const configureTools = options.configureTools !== false;
-  const applyConversationContext = async (conversationId: string): Promise<boolean> => {
-    if (configureTools && ctx.conversations?.setActiveTools) {
+  const conversationHasWritingStudioTools = async (conversationId: string): Promise<boolean | null> => {
+    if (!configureTools || !ctx.conversations?.get) return null;
+    try {
+      const detail = await ctx.conversations.get(conversationId);
+      const toolNames = detail && typeof detail === 'object' ? (detail as { toolNames?: unknown }).toolNames : undefined;
+      if (!Array.isArray(toolNames)) return null;
+      const activeTools = new Set(toolNames.filter((toolName): toolName is string => typeof toolName === 'string'));
+      return writingStudioAgentToolNames.every((toolName) => activeTools.has(toolName));
+    } catch {
+      return null;
+    }
+  };
+  const applyConversationTools = async (conversationId: string): Promise<boolean> => {
+    if (!configureTools) return true;
+    const hasRequiredTools = await conversationHasWritingStudioTools(conversationId);
+    if (hasRequiredTools === true) return true;
+    if (ctx.conversations?.setActiveTools) {
       try {
         await ctx.conversations.setActiveTools(conversationId, writingStudioAgentToolNames);
+        return true;
       } catch {
-        return false;
+        return hasRequiredTools !== false;
       }
     }
+    return hasRequiredTools !== false;
+  };
+  const appendConversationContext = async (conversationId: string): Promise<void> => {
     await Promise.resolve(
       ctx.conversations?.appendCustomEntry?.(conversationId, 'writing_studio_agent_context', {
         documentId: state.id,
@@ -527,7 +546,6 @@ async function ensureHostChatConversation(
         createdAt: nowIso(),
       }),
     ).catch(() => undefined);
-    return true;
   };
   if (state.chatConversationId) {
     try {
@@ -536,7 +554,10 @@ async function ensureHostChatConversation(
         ctx.toolContext?.cwd ? { cwd: ctx.toolContext.cwd } : undefined,
       );
       if (ensured?.conversationId) state.chatConversationId = ensured.conversationId;
-      if (await applyConversationContext(state.chatConversationId)) return state.chatConversationId;
+      if (await applyConversationTools(state.chatConversationId)) {
+        await appendConversationContext(state.chatConversationId);
+        return state.chatConversationId;
+      }
       state.chatConversationId = undefined;
     } catch {
       state.chatConversationId = undefined;
@@ -563,7 +584,7 @@ async function ensureHostChatConversation(
     });
   }
   state.chatConversationId = conversation.conversationId;
-  await applyConversationContext(conversation.conversationId);
+  await appendConversationContext(conversation.conversationId);
   return conversation.conversationId;
 }
 
