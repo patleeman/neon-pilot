@@ -255,7 +255,7 @@ export type ExtensionComponentReference = string | ExtensionHostComponentReferen
 export interface ExtensionViewContribution {
   id: string;
   title: string;
-  location: 'main' | 'rightRail' | 'workbench';
+  location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
@@ -284,6 +284,8 @@ export interface ExtensionNavContribution {
   route: string;
   icon?: ExtensionIconName;
   badgeAction?: string;
+  /** Optional view id to render in the left sidebar body while this nav item is active. */
+  sidebarView?: string;
   /** Nav section. Default 'primary'. Use 'settings' for items in the settings area. */
   section?: 'primary' | 'settings';
 }

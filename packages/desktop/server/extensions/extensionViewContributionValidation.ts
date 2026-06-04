@@ -19,7 +19,7 @@ export function validateViewContributions(value: unknown): void {
   for (const [index, view] of assertRecordArray(value, 'contributes.views').entries()) {
     requireString(view.id, `contributes.views[${index}].id`);
     requireString(view.title, `contributes.views[${index}].title`);
-    validateEnum(view.location, ['main', 'rightRail', 'workbench'], `contributes.views[${index}].location`);
+    validateEnum(view.location, ['main', 'rightRail', 'workbench', 'sidebar'], `contributes.views[${index}].location`);
     validateViewComponent(view.component, `contributes.views[${index}].component`);
     validateOptionalString(view.route, `contributes.views[${index}].route`);
     if (view.scope !== undefined) validateEnum(view.scope, EXTENSION_RIGHT_SURFACE_SCOPES, `contributes.views[${index}].scope`);

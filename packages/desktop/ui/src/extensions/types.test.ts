@@ -6,6 +6,7 @@ import {
   getExtensionViewScope,
   isNativeExtensionPageSurface,
   isNativeExtensionRightRailSurface,
+  isNativeExtensionSidebarSurface,
   isNativeExtensionWorkbenchSurface,
   type NativeExtensionViewSummary,
 } from './types';
@@ -50,6 +51,19 @@ describe('extension surface type guards', () => {
     };
 
     expect(isNativeExtensionWorkbenchSurface(surface)).toBe(true);
+  });
+
+  it('recognizes native sidebar surfaces', () => {
+    const surface: NativeExtensionViewSummary = {
+      extensionId: 'hermes-remote-agent',
+      id: 'sessions',
+      title: 'Hermes Sessions',
+      location: 'sidebar',
+      component: 'HermesSessionsSidebar',
+      frontend: { entry: 'dist/frontend.js' },
+    };
+
+    expect(isNativeExtensionSidebarSurface(surface)).toBe(true);
   });
 
   it('rejects incomplete native surfaces', () => {

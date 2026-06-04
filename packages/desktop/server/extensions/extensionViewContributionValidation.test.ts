@@ -10,6 +10,7 @@ import {
 describe('extensionViewContributionValidation', () => {
   it('validates view-adjacent contribution groups', () => {
     expect(validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View' }])).toBeUndefined();
+    expect(validateViewContributions([{ id: 'sidebar', title: 'Sidebar', location: 'sidebar', component: 'Sidebar' }])).toBeUndefined();
     expect(validatePromptReferenceContributions([{ id: 'ref', handler: 'resolve' }])).toBeUndefined();
     expect(
       validateTranscriptRendererContributions([{ id: 'renderer', tool: 'tool', component: 'Renderer', standalone: true }]),
@@ -19,7 +20,7 @@ describe('extensionViewContributionValidation', () => {
 
   it('preserves validation errors', () => {
     expect(() => validateViewContributions([{ id: 'view', title: 'View', location: 'bad', component: 'View' }])).toThrow(
-      'Extension manifest contributes.views[0].location must be one of: main, rightRail, workbench.',
+      'Extension manifest contributes.views[0].location must be one of: main, rightRail, workbench, sidebar.',
     );
     expect(() =>
       validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View', routeCapabilities: ['bad'] }]),

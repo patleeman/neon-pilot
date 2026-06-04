@@ -479,7 +479,7 @@ export type ExtensionComponentReference = string | ExtensionHostComponentReferen
 export interface ExtensionViewContribution {
   id: string;
   title: string;
-  location: 'main' | 'rightRail' | 'workbench';
+  location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
@@ -500,6 +500,7 @@ export interface ExtensionNavContribution {
   route: string;
   icon?: ExtensionIconName;
   badgeAction?: string;
+  sidebarView?: string;
   section?: 'primary' | 'settings';
 }
 

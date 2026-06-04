@@ -15,6 +15,51 @@ import type { DurableRunListResult, ExecutionListResult, ScheduledTaskSummary, S
 import { executionStore, runStore, sessionStore, taskStore } from '../store';
 import { Sidebar } from './Sidebar.js';
 
+const extensionRegistryMock = vi.hoisted(() => ({
+  state: {
+    extensions: [],
+    routes: [],
+    surfaces: [],
+    topBarElements: [],
+    messageActions: [],
+    composerShelves: [],
+    newConversationPanels: [],
+    settingsComponent: null,
+    settingsComponents: [],
+    composerControls: [],
+    composerButtons: [],
+    composerInputTools: [],
+    toolbarActions: [],
+    contextMenus: [],
+    selectionActions: [],
+    threadHeaderActions: [],
+    statusBarItems: [],
+    conversationHeaderElements: [],
+    conversationDecorators: [],
+    activityTreeItemElements: [],
+    activityTreeItemStyles: [],
+    conversationLifecycle: [],
+    composerAttachmentProviders: [],
+    composerAttachmentRenderers: [],
+    composerAttachmentResolvers: [],
+    activityTreeItemActions: [],
+    loading: false,
+    error: null,
+  },
+}));
+
+vi.mock('../extensions/useExtensionRegistry', () => ({
+  useExtensionRegistry: () => extensionRegistryMock.state,
+}));
+
+vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
+  NativeExtensionSurfaceHost: ({ surface, instanceId }: { surface: { id: string; title?: string }; instanceId?: string }) => (
+    <div data-testid="mock-sidebar-extension-surface" data-surface-id={surface.id} data-instance-id={instanceId}>
+      {surface.title ?? surface.id}
+    </div>
+  ),
+}));
+
 const OPEN_NOTE_IDS_STORAGE_KEY = 'pa:open-note-ids';
 const OPEN_SKILL_IDS_STORAGE_KEY = 'pa:open-skill-ids';
 const PINNED_NOTE_IDS_STORAGE_KEY = 'pa:pinned-note-ids';
@@ -67,6 +112,12 @@ describe('Sidebar', () => {
     storage.clear();
     storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123']));
     storage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    extensionRegistryMock.state.extensions = [];
+    extensionRegistryMock.state.surfaces = [];
+    extensionRegistryMock.state.threadHeaderActions = [];
+    extensionRegistryMock.state.contextMenus = [];
+    extensionRegistryMock.state.activityTreeItemActions = [];
+    extensionRegistryMock.state.activityTreeItemStyles = [];
     Object.defineProperty(globalThis, 'localStorage', {
       configurable: true,
       value: storage,
@@ -870,6 +921,47 @@ describe('Sidebar', () => {
     expect(html).not.toContain('Open Files');
     expect(html).not.toContain('aria-label="Open file AGENTS.md"');
     expect(html).toContain('Threads');
+  });
+
+  it('replaces the thread list with an active extension sidebar surface', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'hermes-remote-agent',
+        enabled: true,
+        packageType: 'user',
+        contributes: {
+          nav: [
+            {
+              id: 'nav',
+              label: 'Hermes',
+              route: '/ext/hermes',
+              icon: 'sparkle',
+              sidebarView: 'sessions-sidebar',
+            },
+          ],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'hermes-remote-agent',
+        id: 'sessions-sidebar',
+        title: 'Hermes Sessions',
+        location: 'sidebar',
+        component: 'HermesSessionsSidebar',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    const html = renderSidebar('/ext/hermes');
+
+    expect(html).toContain('Hermes');
+    expect(html).toContain('data-testid="mock-sidebar-extension-surface"');
+    expect(html).toContain('data-surface-id="sessions-sidebar"');
+    expect(html).toContain('data-instance-id="left-sidebar"');
+    expect(html).toContain('Hermes Sessions');
+    expect(html).not.toContain('ui-section-label flex-1">Threads');
+    expect(html).not.toContain('aria-label="Find threads and archived conversations"');
   });
 
   it('keeps Chat neutral on conversation routes while the selected thread owns the active chrome', () => {

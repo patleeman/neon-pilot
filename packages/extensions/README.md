@@ -111,7 +111,7 @@ Supported top-level fields:
 - `id`, `name`, `description`, `version`. Runtime derives `packageType` from install location: repo/app-bundled packages are system extensions; runtime-installed packages are user extensions.
 - `frontend`: native React bundle entry and optional styles.
 - `backend`: backend module entry, backend actions, backend protocol entrypoints, and optional agent lifecycle factory.
-- `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, secrets, and settings metadata.
+- `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, sidebar views, secrets, and settings metadata.
 - `dependsOn`: required or optional extension dependencies surfaced by diagnostics and available for runtime discovery.
 - `permissions`: declared capability intent.
 
@@ -145,6 +145,25 @@ Minimal example:
     "nav": [{ "id": "nav", "label": "Agent Board", "icon": "kanban", "route": "/ext/agent-board" }]
   },
   "permissions": ["storage:readwrite"]
+}
+```
+
+Nav items can also replace the left sidebar body with an extension-owned view while their route is active:
+
+```json
+{
+  "contributes": {
+    "views": [{ "id": "sessions-sidebar", "title": "Sessions", "location": "sidebar", "component": "SessionsSidebar" }],
+    "nav": [
+      {
+        "id": "nav",
+        "label": "Remote Agent",
+        "icon": "sparkle",
+        "route": "/ext/remote-agent",
+        "sidebarView": "sessions-sidebar"
+      }
+    ]
+  }
 }
 ```
 

@@ -143,8 +143,8 @@ The manifest declares what your extension contributes:
 
 | Field                         | Purpose                                                                                       | Docs                                                                                      |
 | ----------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `views`                       | UI surfaces (pages, panels)                                                                   | See `docs/views.md`                                                                       |
-| `nav`                         | Left sidebar navigation items                                                                 |                                                                                           |
+| `views`                       | UI surfaces (pages, panels, sidebar replacements)                                             | See `docs/views.md`                                                                       |
+| `nav`                         | Left sidebar navigation items; can reference a sidebar view with `sidebarView`                 |                                                                                           |
 | `commands`                    | Extension actions invokable by command IDs                                                    | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `keybindings`                 | Keyboard shortcuts that execute commands                                                      | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `slashCommands`               | `/command` in composer                                                                        |                                                                                           |
@@ -794,6 +794,34 @@ Add compact component buttons beside the left sidebar conversation header. Use t
 ```
 
 The component receives `{ pa, actionContext }`; `actionContext` includes `activeConversationId` and `cwd` when available.
+
+### Sidebar Views (`views[].location: "sidebar"`)
+
+Add a native extension surface that replaces the thread list area in the left sidebar while an extension nav item is active. Use this for extension-owned navigation models such as remote-agent sessions, external task lists, or project-specific explorers.
+
+```json
+{
+  "views": [
+    {
+      "id": "sessions-sidebar",
+      "title": "Hermes Sessions",
+      "location": "sidebar",
+      "component": "HermesSessionsSidebar"
+    }
+  ],
+  "nav": [
+    {
+      "id": "hermes",
+      "label": "Hermes",
+      "icon": "sparkle",
+      "route": "/ext/hermes",
+      "sidebarView": "sessions-sidebar"
+    }
+  ]
+}
+```
+
+The host still owns the fixed app navigation stack and bottom settings area. The sidebar view owns only the body below the nav item list, so it should render its own header, filters, empty/loading/error states, and row actions.
 
 ### Status Bar Items (`statusBarItems`)
 

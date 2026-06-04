@@ -51,8 +51,9 @@ import { writeClipboardText } from '../desktop/clipboard';
 import { getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 import { ConversationDecoratorHost } from '../extensions/ConversationDecoratorHost';
 import { createNativeExtensionClient } from '../extensions/nativePaClient';
+import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import { ThreadHeaderActionHost } from '../extensions/ThreadHeaderActionHost';
-import { type ExtensionSurfaceSummary, isExtensionLeftNavItemSurface } from '../extensions/types';
+import { type ExtensionSurfaceSummary, isExtensionLeftNavItemSurface, isNativeExtensionSidebarSurface } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { GATEWAY_STATE_CHANGED_EVENT } from '../gateways/gatewayEvents';
 import { getOrCreateConversationSurfaceId } from '../hooks/sessionStream';
@@ -253,6 +254,7 @@ type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
   route: string;
   label: string;
   icon?: string;
+  sidebarView?: string;
   section?: 'primary' | 'settings';
 };
 
@@ -3984,6 +3986,20 @@ export function Sidebar() {
   }, [extensionRegistry.extensions, extensionRegistry.surfaces]);
   const primaryNavItems = useMemo(() => extensionNavItems.filter((item) => (item.section ?? 'primary') === 'primary'), [extensionNavItems]);
   const settingsNavItems = useMemo(() => extensionNavItems.filter((item) => item.section === 'settings'), [extensionNavItems]);
+  const activeSidebarSurface = useMemo(() => {
+    const activeNavItem = extensionNavItems.find(
+      (item) => item.sidebarView && routeMatchesPrefix(location.pathname, item.route) && item.extensionId,
+    );
+    if (!activeNavItem?.sidebarView) return null;
+    return (
+      extensionRegistry.surfaces.find(
+        (surface) =>
+          surface.extensionId === activeNavItem.extensionId &&
+          surface.id === activeNavItem.sidebarView &&
+          isNativeExtensionSidebarSurface(surface),
+      ) ?? null
+    );
+  }, [extensionNavItems, extensionRegistry.surfaces, location.pathname]);
   const newConversationHotkeyLabel = getNewConversationHotkeyLabel();
   const chatButtonActive = location.pathname === DRAFT_CONVERSATION_ROUTE;
   return (
@@ -3999,363 +4015,393 @@ export function Sidebar() {
           }}
         />
 
-        <div className="px-4 pt-1 pb-0.5">
-          <div className="flex items-center gap-1">
-            <p className="ui-section-label flex-1">Threads</p>
-            {extensionRegistry.threadHeaderActions.map((action) => (
-              <ThreadHeaderActionHost
-                key={`${action.extensionId}:${action.id}`}
-                registration={action}
-                actionContext={{ activeConversationId, cwd: draftCwd }}
-              />
-            ))}
-            <ThreadsFilterButton
-              organizeMode={threadsOrganizeMode}
-              filterMode={threadsFilterMode}
-              sortMode={threadsSortMode}
-              onChangeOrganizeMode={handleThreadsOrganizeModeChange}
-              onChangeFilterMode={handleThreadsFilterModeChange}
-              onChangeSortMode={handleThreadsSortModeChange}
+        {activeSidebarSurface ? (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <NativeExtensionSurfaceHost
+              surface={activeSidebarSurface}
+              pathname={location.pathname}
+              search={location.search}
+              hash={location.hash}
+              instanceId="left-sidebar"
             />
-            <button
-              type="button"
-              onClick={handleOpenThreadSwitcher}
-              className="ui-icon-button ui-icon-button-compact shrink-0"
-              title="Find threads and archived conversations"
-              aria-label="Find threads and archived conversations"
-            >
-              <Ico d={PATH.search} size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={handleAddWorkspace}
-              className="ui-icon-button ui-icon-button-compact -mr-1 shrink-0"
-              title={addWorkspaceBusy ? 'Choosing workspace…' : 'Add workspace'}
-              aria-label={addWorkspaceBusy ? 'Choosing workspace…' : 'Add workspace'}
-              disabled={addWorkspaceBusy}
-            >
-              <Ico d={PATH.workspaceAdd} size={12} />
-            </button>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="px-4 pt-1 pb-0.5">
+              <div className="flex items-center gap-1">
+                <p className="ui-section-label flex-1">Threads</p>
+                {extensionRegistry.threadHeaderActions.map((action) => (
+                  <ThreadHeaderActionHost
+                    key={`${action.extensionId}:${action.id}`}
+                    registration={action}
+                    actionContext={{ activeConversationId, cwd: draftCwd }}
+                  />
+                ))}
+                <ThreadsFilterButton
+                  organizeMode={threadsOrganizeMode}
+                  filterMode={threadsFilterMode}
+                  sortMode={threadsSortMode}
+                  onChangeOrganizeMode={handleThreadsOrganizeModeChange}
+                  onChangeFilterMode={handleThreadsFilterModeChange}
+                  onChangeSortMode={handleThreadsSortModeChange}
+                />
+                <button
+                  type="button"
+                  onClick={handleOpenThreadSwitcher}
+                  className="ui-icon-button ui-icon-button-compact shrink-0"
+                  title="Find threads and archived conversations"
+                  aria-label="Find threads and archived conversations"
+                >
+                  <Ico d={PATH.search} size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddWorkspace}
+                  className="ui-icon-button ui-icon-button-compact -mr-1 shrink-0"
+                  title={addWorkspaceBusy ? 'Choosing workspace…' : 'Add workspace'}
+                  aria-label={addWorkspaceBusy ? 'Choosing workspace…' : 'Add workspace'}
+                  disabled={addWorkspaceBusy}
+                >
+                  <Ico d={PATH.workspaceAdd} size={12} />
+                </button>
+              </div>
+            </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0 pb-3">
-          <div className="py-0.5 space-y-0.5">
-            {!loading &&
-            renderedConversationItems.length === 0 &&
-            !(threadsOrganizeMode === 'project' && groupedConversationRows.length > 0) ? (
-              <p className="px-4 py-2 text-[12px] text-dim">
-                {threadsFilterMode === 'automation'
-                  ? 'No automation threads yet.'
-                  : threadsFilterMode === 'human'
-                    ? 'No human threads yet.'
-                    : 'No open conversations yet.'}
-              </p>
-            ) : null}
+            <div className="flex-1 overflow-y-auto min-h-0 pb-3">
+              <div className="py-0.5 space-y-0.5">
+                {!loading &&
+                renderedConversationItems.length === 0 &&
+                !(threadsOrganizeMode === 'project' && groupedConversationRows.length > 0) ? (
+                  <p className="px-4 py-2 text-[12px] text-dim">
+                    {threadsFilterMode === 'automation'
+                      ? 'No automation threads yet.'
+                      : threadsFilterMode === 'human'
+                        ? 'No human threads yet.'
+                        : 'No open conversations yet.'}
+                  </p>
+                ) : null}
 
-            {!LEGACY_THREAD_LIST_ENABLED ? (
-              <ActivityTreeView
-                items={activityTreeItems}
-                activeItemId={activeActivityTreeItemId}
-                className="min-h-0"
-                canDragItem={canDragActivityTreeItem}
-                canDropItem={canDropActivityTreeItem}
-                collapsedGroupItemIds={collapsedActivityTreeGroupItemIds}
-                inlineActions={activityTreeExtensionActions.map((action) => ({ id: action.id, title: action.title, icon: action.icon }))}
-                onInlineAction={(actionId, item) => {
-                  void handleActivityTreeExtensionAction(actionId, item);
-                }}
-                onToggleGroupItem={(item) => {
-                  const groupKey = getActivityTreeGroupKey(item);
-                  if (groupKey) {
-                    toggleConversationGroupCollapsed(groupKey);
-                  }
-                }}
-                onDragStartItem={handleActivityTreeDragStart}
-                onDropItem={handleActivityTreeDrop}
-                onDragEndItem={clearDragState}
-                onArchiveItem={(item) => {
-                  const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
-                  if (conversationId) {
-                    handleArchiveConversation(conversationId);
-                  }
-                }}
-                onCreateChildItem={(item) => {
-                  const cwd = typeof item.metadata?.cwd === 'string' ? item.metadata.cwd : null;
-                  void handleNewConversation(cwd);
-                }}
-                onOpenItem={(item) => {
-                  if (item.route) {
-                    navigate(item.route);
-                  }
-                }}
-                renderContextMenu={(item, context) => {
-                  const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
-                  const conversationItem = conversationId ? conversationItemBySessionId.get(conversationId) : null;
-                  const parentConversationId = conversationItem?.session.parentSessionId;
-                  const parentConversation = parentConversationId ? conversationItemBySessionId.get(parentConversationId) : null;
-                  const groupKey = typeof item.metadata?.groupKey === 'string' ? item.metadata.groupKey : null;
-                  const conversationGroup = groupKey ? conversationGroupByKey.get(groupKey) : null;
-                  const isConversation = item.kind === 'conversation' && conversationId && conversationItem;
-                  const isGroup = item.kind === 'group' && conversationGroup;
-                  const groupSessionIds = conversationGroup?.items
-                    .map(({ session }) => session.id)
-                    .filter((sessionId) => sessionId !== DRAFT_CONVERSATION_ID);
-                  const groupIncludesDraft = Boolean(conversationGroup?.items.some(({ session }) => session.id === DRAFT_CONVERSATION_ID));
-                  return (
-                    <div
-                      className="ui-menu-shell ui-context-menu-shell static bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
-                      role="menu"
-                    >
-                      {item.route ? (
-                        <button
-                          type="button"
-                          className="ui-context-menu-item"
-                          role="menuitem"
-                          onClick={() => {
-                            context.close();
-                            navigate(item.route!);
-                          }}
-                        >
-                          Open
-                        </button>
-                      ) : null}
-                      {isGroup ? (
-                        <>
-                          {conversationGroup.cwd ? (
-                            <button
-                              type="button"
-                              className="ui-context-menu-item"
-                              role="menuitem"
-                              onClick={() => {
-                                context.close();
-                                void handleOpenConversationGroupInFinder(conversationGroup.cwd!, conversationGroup.label);
-                              }}
-                            >
-                              Open in Finder
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="ui-context-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              handleRenameConversationGroup(conversationGroup.key, conversationGroup.defaultLabel, conversationGroup.label);
-                            }}
-                          >
-                            Edit Name
-                          </button>
-                          {groupSessionIds && groupSessionIds.length > 0 ? (
-                            <button
-                              type="button"
-                              className="ui-context-menu-item"
-                              role="menuitem"
-                              onClick={() => {
-                                context.close();
-                                void handleArchiveConversationGroup(conversationGroup.label, groupSessionIds);
-                              }}
-                            >
-                              Archive Threads
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="ui-context-menu-item text-danger hover:bg-danger/10 focus-visible:bg-danger/10"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              handleRemoveConversationGroup(
-                                conversationGroup.key,
-                                conversationGroup.label,
-                                conversationGroup.cwd,
-                                groupSessionIds ?? [],
-                                groupIncludesDraft,
-                              );
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </>
-                      ) : isConversation ? (
-                        <>
-                          {parentConversation ? (
-                            <button
-                              type="button"
-                              className="ui-context-menu-item"
-                              role="menuitem"
-                              onClick={() => {
-                                context.close();
-                                navigate(`/conversations/${encodeURIComponent(parentConversation.session.id)}`);
-                              }}
-                            >
-                              Go to Parent Thread
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="ui-context-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              if (conversationItem.pinned) {
-                                unpinSession(conversationId);
-                              } else {
-                                pinSession(conversationId);
-                              }
-                            }}
-                          >
-                            {conversationItem.pinned ? 'Unpin Thread' : 'Pin Thread'}
-                          </button>
-                          <button
-                            type="button"
-                            className="ui-context-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              if (conversationItem.pinned) {
-                                handleClosePinnedConversation(conversationId);
-                              } else {
-                                handleCloseConversation(conversationId);
-                              }
-                            }}
-                          >
-                            Close Thread
-                          </button>
-                          <button
-                            type="button"
-                            className="ui-context-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              void handleDuplicateConversation(conversationItem.session);
-                            }}
-                          >
-                            Duplicate Thread
-                          </button>
-                          <button
-                            type="button"
-                            className="ui-context-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              handleArchiveConversation(conversationId);
-                            }}
-                          >
-                            Archive Thread
-                          </button>
-                          <button
-                            type="button"
-                            className="ui-context-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              void handleCopyConversationId(conversationId);
-                            }}
-                          >
-                            Copy Session ID
-                          </button>
-                          <button
-                            type="button"
-                            className="ui-context-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              context.close();
-                              void handleCopyConversationDeeplink(conversationId);
-                            }}
-                          >
-                            Copy Deeplink
-                          </button>
-                          {conversationItem.session.cwd?.trim() ? (
-                            <button
-                              type="button"
-                              className="ui-context-menu-item"
-                              role="menuitem"
-                              onClick={() => {
-                                context.close();
-                                void handleCopyConversationWorkingDirectory(conversationItem.session.cwd);
-                              }}
-                            >
-                              Copy Working Directory
-                            </button>
-                          ) : null}
-                          {activityTreeExtensionContextMenus.map((menu) => (
-                            <button
-                              key={`${menu.extensionId}:${menu.id}`}
-                              type="button"
-                              className="ui-context-menu-item"
-                              role="menuitem"
-                              onClick={() => {
-                                context.close();
-                                void handleActivityTreeExtensionContextMenu(menu, {
-                                  conversationId,
-                                  sessionTitle: conversationItem.session.title,
-                                  cwd: conversationItem.session.cwd,
-                                });
-                              }}
-                            >
-                              {menu.title}
-                            </button>
-                          ))}
-                        </>
-                      ) : null}
-                    </div>
-                  );
-                }}
-              />
-            ) : threadsOrganizeMode === 'project' ? (
-              groupedConversationRows.map((group) => {
-                const collapsed = collapsedConversationGroupKeySet.has(group.key);
-                const groupSessionIds = group.items
-                  .map(({ session }) => session.id)
-                  .filter((sessionId) => sessionId !== DRAFT_CONVERSATION_ID);
-                const groupIncludesDraft = group.items.some(({ session }) => session.id === DRAFT_CONVERSATION_ID);
-                const groupDropPosition =
-                  canReorderConversationGroups && groupDropTarget?.groupKey === group.key && draggingGroupKey !== group.key
-                    ? groupDropTarget.position
-                    : null;
-
-                return (
-                  <div key={`cwd:${group.key}`} className="space-y-0.5 pt-1.5 first:pt-0">
-                    <ConversationCwdGroupHeader
-                      label={group.label}
-                      cwd={group.cwd}
-                      collapsed={collapsed}
-                      canDrag={canReorderConversationGroups}
-                      isDragging={canReorderConversationGroups && draggingGroupKey === group.key}
-                      isConversationDropTarget={conversationCwdDropTargetGroupKey === group.key}
-                      dropPosition={groupDropPosition}
-                      dragId={group.key}
-                      onToggleCollapsed={() => toggleConversationGroupCollapsed(group.key)}
-                      onNewConversation={() => {
-                        void handleNewConversation(group.cwd);
-                      }}
-                      onOpenInFinder={group.cwd ? () => handleOpenConversationGroupInFinder(group.cwd, group.label) : undefined}
-                      onEditName={() => handleRenameConversationGroup(group.key, group.defaultLabel, group.label)}
-                      onArchiveThreads={
-                        groupSessionIds.length > 0 ? () => handleArchiveConversationGroup(group.label, groupSessionIds) : undefined
+                {!LEGACY_THREAD_LIST_ENABLED ? (
+                  <ActivityTreeView
+                    items={activityTreeItems}
+                    activeItemId={activeActivityTreeItemId}
+                    className="min-h-0"
+                    canDragItem={canDragActivityTreeItem}
+                    canDropItem={canDropActivityTreeItem}
+                    collapsedGroupItemIds={collapsedActivityTreeGroupItemIds}
+                    inlineActions={activityTreeExtensionActions.map((action) => ({
+                      id: action.id,
+                      title: action.title,
+                      icon: action.icon,
+                    }))}
+                    onInlineAction={(actionId, item) => {
+                      void handleActivityTreeExtensionAction(actionId, item);
+                    }}
+                    onToggleGroupItem={(item) => {
+                      const groupKey = getActivityTreeGroupKey(item);
+                      if (groupKey) {
+                        toggleConversationGroupCollapsed(groupKey);
                       }
-                      onRemove={() => handleRemoveConversationGroup(group.key, group.label, group.cwd, groupSessionIds, groupIncludesDraft)}
-                      onDragStart={canReorderConversationGroups ? (event) => handleConversationGroupDragStart(group.key, event) : undefined}
-                      onDragOver={canReorderConversationGroups ? (event) => handleConversationGroupDragOver(group.key, event) : undefined}
-                      onDrop={canReorderConversationGroups ? (event) => handleConversationGroupDrop(group.key, event) : undefined}
-                      onDragEnd={canReorderConversationGroups ? () => clearDragState() : undefined}
-                    />
-                    {!collapsed ? (
-                      group.items.length > 0 ? (
-                        group.items.map(renderConversationRow)
-                      ) : (
-                        <p className="px-4 pb-1 text-[12px] text-dim">No threads yet.</p>
-                      )
-                    ) : null}
-                  </div>
-                );
-              })
-            ) : (
-              filteredConversationItems.map(renderConversationRow)
-            )}
-          </div>
-        </div>
+                    }}
+                    onDragStartItem={handleActivityTreeDragStart}
+                    onDropItem={handleActivityTreeDrop}
+                    onDragEndItem={clearDragState}
+                    onArchiveItem={(item) => {
+                      const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
+                      if (conversationId) {
+                        handleArchiveConversation(conversationId);
+                      }
+                    }}
+                    onCreateChildItem={(item) => {
+                      const cwd = typeof item.metadata?.cwd === 'string' ? item.metadata.cwd : null;
+                      void handleNewConversation(cwd);
+                    }}
+                    onOpenItem={(item) => {
+                      if (item.route) {
+                        navigate(item.route);
+                      }
+                    }}
+                    renderContextMenu={(item, context) => {
+                      const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
+                      const conversationItem = conversationId ? conversationItemBySessionId.get(conversationId) : null;
+                      const parentConversationId = conversationItem?.session.parentSessionId;
+                      const parentConversation = parentConversationId ? conversationItemBySessionId.get(parentConversationId) : null;
+                      const groupKey = typeof item.metadata?.groupKey === 'string' ? item.metadata.groupKey : null;
+                      const conversationGroup = groupKey ? conversationGroupByKey.get(groupKey) : null;
+                      const isConversation = item.kind === 'conversation' && conversationId && conversationItem;
+                      const isGroup = item.kind === 'group' && conversationGroup;
+                      const groupSessionIds = conversationGroup?.items
+                        .map(({ session }) => session.id)
+                        .filter((sessionId) => sessionId !== DRAFT_CONVERSATION_ID);
+                      const groupIncludesDraft = Boolean(
+                        conversationGroup?.items.some(({ session }) => session.id === DRAFT_CONVERSATION_ID),
+                      );
+                      return (
+                        <div
+                          className="ui-menu-shell ui-context-menu-shell static bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
+                          role="menu"
+                        >
+                          {item.route ? (
+                            <button
+                              type="button"
+                              className="ui-context-menu-item"
+                              role="menuitem"
+                              onClick={() => {
+                                context.close();
+                                navigate(item.route!);
+                              }}
+                            >
+                              Open
+                            </button>
+                          ) : null}
+                          {isGroup ? (
+                            <>
+                              {conversationGroup.cwd ? (
+                                <button
+                                  type="button"
+                                  className="ui-context-menu-item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    context.close();
+                                    void handleOpenConversationGroupInFinder(conversationGroup.cwd!, conversationGroup.label);
+                                  }}
+                                >
+                                  Open in Finder
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="ui-context-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  handleRenameConversationGroup(
+                                    conversationGroup.key,
+                                    conversationGroup.defaultLabel,
+                                    conversationGroup.label,
+                                  );
+                                }}
+                              >
+                                Edit Name
+                              </button>
+                              {groupSessionIds && groupSessionIds.length > 0 ? (
+                                <button
+                                  type="button"
+                                  className="ui-context-menu-item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    context.close();
+                                    void handleArchiveConversationGroup(conversationGroup.label, groupSessionIds);
+                                  }}
+                                >
+                                  Archive Threads
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="ui-context-menu-item text-danger hover:bg-danger/10 focus-visible:bg-danger/10"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  handleRemoveConversationGroup(
+                                    conversationGroup.key,
+                                    conversationGroup.label,
+                                    conversationGroup.cwd,
+                                    groupSessionIds ?? [],
+                                    groupIncludesDraft,
+                                  );
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </>
+                          ) : isConversation ? (
+                            <>
+                              {parentConversation ? (
+                                <button
+                                  type="button"
+                                  className="ui-context-menu-item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    context.close();
+                                    navigate(`/conversations/${encodeURIComponent(parentConversation.session.id)}`);
+                                  }}
+                                >
+                                  Go to Parent Thread
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="ui-context-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  if (conversationItem.pinned) {
+                                    unpinSession(conversationId);
+                                  } else {
+                                    pinSession(conversationId);
+                                  }
+                                }}
+                              >
+                                {conversationItem.pinned ? 'Unpin Thread' : 'Pin Thread'}
+                              </button>
+                              <button
+                                type="button"
+                                className="ui-context-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  if (conversationItem.pinned) {
+                                    handleClosePinnedConversation(conversationId);
+                                  } else {
+                                    handleCloseConversation(conversationId);
+                                  }
+                                }}
+                              >
+                                Close Thread
+                              </button>
+                              <button
+                                type="button"
+                                className="ui-context-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  void handleDuplicateConversation(conversationItem.session);
+                                }}
+                              >
+                                Duplicate Thread
+                              </button>
+                              <button
+                                type="button"
+                                className="ui-context-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  handleArchiveConversation(conversationId);
+                                }}
+                              >
+                                Archive Thread
+                              </button>
+                              <button
+                                type="button"
+                                className="ui-context-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  void handleCopyConversationId(conversationId);
+                                }}
+                              >
+                                Copy Session ID
+                              </button>
+                              <button
+                                type="button"
+                                className="ui-context-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  context.close();
+                                  void handleCopyConversationDeeplink(conversationId);
+                                }}
+                              >
+                                Copy Deeplink
+                              </button>
+                              {conversationItem.session.cwd?.trim() ? (
+                                <button
+                                  type="button"
+                                  className="ui-context-menu-item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    context.close();
+                                    void handleCopyConversationWorkingDirectory(conversationItem.session.cwd);
+                                  }}
+                                >
+                                  Copy Working Directory
+                                </button>
+                              ) : null}
+                              {activityTreeExtensionContextMenus.map((menu) => (
+                                <button
+                                  key={`${menu.extensionId}:${menu.id}`}
+                                  type="button"
+                                  className="ui-context-menu-item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    context.close();
+                                    void handleActivityTreeExtensionContextMenu(menu, {
+                                      conversationId,
+                                      sessionTitle: conversationItem.session.title,
+                                      cwd: conversationItem.session.cwd,
+                                    });
+                                  }}
+                                >
+                                  {menu.title}
+                                </button>
+                              ))}
+                            </>
+                          ) : null}
+                        </div>
+                      );
+                    }}
+                  />
+                ) : threadsOrganizeMode === 'project' ? (
+                  groupedConversationRows.map((group) => {
+                    const collapsed = collapsedConversationGroupKeySet.has(group.key);
+                    const groupSessionIds = group.items
+                      .map(({ session }) => session.id)
+                      .filter((sessionId) => sessionId !== DRAFT_CONVERSATION_ID);
+                    const groupIncludesDraft = group.items.some(({ session }) => session.id === DRAFT_CONVERSATION_ID);
+                    const groupDropPosition =
+                      canReorderConversationGroups && groupDropTarget?.groupKey === group.key && draggingGroupKey !== group.key
+                        ? groupDropTarget.position
+                        : null;
+
+                    return (
+                      <div key={`cwd:${group.key}`} className="space-y-0.5 pt-1.5 first:pt-0">
+                        <ConversationCwdGroupHeader
+                          label={group.label}
+                          cwd={group.cwd}
+                          collapsed={collapsed}
+                          canDrag={canReorderConversationGroups}
+                          isDragging={canReorderConversationGroups && draggingGroupKey === group.key}
+                          isConversationDropTarget={conversationCwdDropTargetGroupKey === group.key}
+                          dropPosition={groupDropPosition}
+                          dragId={group.key}
+                          onToggleCollapsed={() => toggleConversationGroupCollapsed(group.key)}
+                          onNewConversation={() => {
+                            void handleNewConversation(group.cwd);
+                          }}
+                          onOpenInFinder={group.cwd ? () => handleOpenConversationGroupInFinder(group.cwd, group.label) : undefined}
+                          onEditName={() => handleRenameConversationGroup(group.key, group.defaultLabel, group.label)}
+                          onArchiveThreads={
+                            groupSessionIds.length > 0 ? () => handleArchiveConversationGroup(group.label, groupSessionIds) : undefined
+                          }
+                          onRemove={() =>
+                            handleRemoveConversationGroup(group.key, group.label, group.cwd, groupSessionIds, groupIncludesDraft)
+                          }
+                          onDragStart={
+                            canReorderConversationGroups ? (event) => handleConversationGroupDragStart(group.key, event) : undefined
+                          }
+                          onDragOver={
+                            canReorderConversationGroups ? (event) => handleConversationGroupDragOver(group.key, event) : undefined
+                          }
+                          onDrop={canReorderConversationGroups ? (event) => handleConversationGroupDrop(group.key, event) : undefined}
+                          onDragEnd={canReorderConversationGroups ? () => clearDragState() : undefined}
+                        />
+                        {!collapsed ? (
+                          group.items.length > 0 ? (
+                            group.items.map(renderConversationRow)
+                          ) : (
+                            <p className="px-4 pb-1 text-[12px] text-dim">No threads yet.</p>
+                          )
+                        ) : null}
+                      </div>
+                    );
+                  })
+                ) : (
+                  filteredConversationItems.map(renderConversationRow)
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         <SidebarSettingsNav items={settingsNavItems} notice={sidebarNotice?.text ?? null} />
       </aside>

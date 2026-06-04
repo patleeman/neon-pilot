@@ -6,7 +6,12 @@ import { join } from 'node:path';
 import express from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createInProcessExtensionHostClient, getExtensionHostClient, setExtensionHostClient, type ExtensionHostClient } from '../extensions/extensionHostClient.js';
+import {
+  createInProcessExtensionHostClient,
+  getExtensionHostClient,
+  setExtensionHostClient,
+  type ExtensionHostClient,
+} from '../extensions/extensionHostClient.js';
 import { registerServerRoutes, type ServerRouteContext } from './index.js';
 
 function startServer(app: express.Express): Promise<{ baseUrl: string; close: () => Promise<void> }> {
@@ -184,7 +189,7 @@ describe('registerServerRoutes smoke test', () => {
     for (const surface of body) {
       expect(typeof surface.extensionId).toBe('string');
       expect(typeof surface.component === 'string' || (surface.component && typeof surface.component.host === 'string')).toBe(true);
-      expect(surface.location).toMatch(/^(main|rightRail|workbench)$/);
+      expect(surface.location).toMatch(/^(main|rightRail|workbench|sidebar)$/);
     }
   });
 

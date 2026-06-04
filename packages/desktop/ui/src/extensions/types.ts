@@ -70,7 +70,7 @@ interface ExtensionSearchProviderContribution {
 interface ExtensionViewContribution {
   id: string;
   title: string;
-  location: 'main' | 'rightRail' | 'workbench';
+  location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
@@ -90,6 +90,7 @@ interface ExtensionNavContribution {
   route: string;
   icon?: ExtensionIconName;
   badgeAction?: string;
+  sidebarView?: string;
   section?: 'primary' | 'settings';
 }
 
@@ -717,6 +718,10 @@ export function isNativeExtensionRightRailSurface(
   surface: unknown,
 ): surface is NativeExtensionViewSummary & { location: 'rightRail'; scope: ExtensionRightSurfaceScope } {
   return isNativeExtensionViewSurface(surface) && surface.location === 'rightRail' && typeof surface.scope === 'string';
+}
+
+export function isNativeExtensionSidebarSurface(surface: unknown): surface is NativeExtensionViewSummary & { location: 'sidebar' } {
+  return isNativeExtensionViewSurface(surface) && surface.location === 'sidebar';
 }
 
 export function getExtensionViewPlacement(surface: Pick<NativeExtensionViewSummary, 'location' | 'placement'>): ExtensionViewPlacement {
