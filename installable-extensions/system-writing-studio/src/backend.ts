@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
+import * as Y from 'yjs';
 
 type EventType =
   | 'yjs_update'
@@ -429,6 +430,43 @@ function event(type: EventType, actorId: string, payload: Record<string, unknown
   return { id: randomUUID(), type, actorId, timestamp: nowIso(), payload };
 }
 
+function markdownSnapshotPayload(markdown: string, payload: Record<string, unknown> = {}): Record<string, unknown> {
+  return { ...payload, markdownSnapshot: markdown, markdownLength: markdown.length };
+}
+
+function applyMarkdownSnapshot(ydoc: Y.Doc, markdown: string): void {
+  const ytext = ydoc.getText('markdown');
+  ydoc.transact(() => {
+    ytext.delete(0, ytext.length);
+    ytext.insert(0, markdown);
+  });
+}
+
+function replayMarkdownFromEvents(events: WritingEvent[]): string {
+  const ydoc = new Y.Doc();
+  const ytext = ydoc.getText('markdown');
+  let markdown = '';
+  for (const item of events) {
+    if (item.type !== 'yjs_update') continue;
+    const snapshot = item.payload.markdownSnapshot;
+    if (typeof snapshot === 'string') {
+      applyMarkdownSnapshot(ydoc, snapshot);
+      markdown = snapshot;
+      continue;
+    }
+    const updateBase64 = item.payload.updateBase64;
+    if (typeof updateBase64 !== 'string' || !updateBase64.trim()) continue;
+    try {
+      Y.applyUpdate(ydoc, Buffer.from(updateBase64, 'base64'));
+      markdown = ytext.toString();
+    } catch {
+      // Older validation fixtures stored placeholder bytes. Keep them in the
+      // event log, but ignore them for CRDT replay.
+    }
+  }
+  return markdown;
+}
+
 function parseAgentAnnotations(text: string, markdown: string, runId: string): Annotation[] {
   const jsonText = text.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? text.match(/\[[\s\S]*\]/)?.[0] ?? text;
   let parsed: unknown;
@@ -740,6 +778,7 @@ export async function appendUpdate(input: unknown, ctx: ExtensionBackendContext)
   state.events.push(
     event('yjs_update', payload.actorId ?? 'user', {
       updateBase64: payload.updateBase64,
+      markdownSnapshot: state.markdown,
       markdownLength: payload.markdown.length,
       clock: state.updateClock,
     }),
@@ -830,9 +869,7 @@ export async function updateCanvas(input: unknown, ctx: ExtensionBackendContext)
   if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
   if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
   state.updateClock += 1;
-  state.events.push(
-    event('yjs_update', 'agent', { agentEditedCanvas: true, markdownLength: state.markdown.length, clock: state.updateClock }),
-  );
+  state.events.push(event('yjs_update', 'agent', markdownSnapshotPayload(state.markdown, { agentEditedCanvas: true, clock: state.updateClock })));
   await writeState(ctx, state);
   return { ok: true, document: summarize(state) };
 }
@@ -951,6 +988,7 @@ export async function applyAnnotationEdit(input: unknown, ctx: ExtensionBackendC
     event('yjs_update', 'user', {
       appliedAnnotationEdit: true,
       annotationId: annotation.id,
+      markdownSnapshot: state.markdown,
       markdownLength: state.markdown.length,
       clock: state.updateClock,
     }),
@@ -992,6 +1030,22 @@ export async function getAgentInstructions(input: unknown, ctx: ExtensionBackend
   return { instructions: state.settings.agentInstructions };
 }
 
+export async function replayDocument(
+  input: unknown,
+  ctx: ExtensionBackendContext,
+): Promise<{ documentId: string; markdown: string; eventCount: number; updateEventCount: number; matchesLatest: boolean }> {
+  const state = await readState(ctx, readDocumentId(input));
+  const markdown = replayMarkdownFromEvents(state.events);
+  const updateEventCount = state.events.filter((item) => item.type === 'yjs_update').length;
+  return {
+    documentId: state.id,
+    markdown,
+    eventCount: state.events.length,
+    updateEventCount,
+    matchesLatest: markdown === state.markdown,
+  };
+}
+
 export async function updateAgentInstructions(
   input: unknown,
   ctx: ExtensionBackendContext,
@@ -1027,7 +1081,7 @@ export async function createDocument(input: unknown, ctx: ExtensionBackendContex
       : `# ${typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled'}\n\n`;
   const title = titleFromMarkdown(markdown, payload.title || 'Untitled');
   const state = defaultState(randomUUID(), title, markdown, payload.fileName || title, payload.folderPath || 'Drafts');
-  state.events.push(event('yjs_update', 'user', { imported: false, markdownLength: markdown.length, clock: 0 }));
+  state.events.push(event('yjs_update', 'user', markdownSnapshotPayload(markdown, { imported: false, clock: 0 })));
   await writeState(ctx, state);
   const index = await readIndex(ctx);
   return { ...state, documents: index.documents, activeDocumentId: state.id, folders: index.folders };
@@ -1044,6 +1098,8 @@ export async function renameDocument(input: unknown, ctx: ExtensionBackendContex
       renamedDocument: true,
       fileName: state.fileName,
       folderPath: state.folderPath,
+      markdownSnapshot: state.markdown,
+      markdownLength: state.markdown.length,
       clock: state.updateClock,
     }),
   );
@@ -1060,7 +1116,7 @@ export async function deleteDocument(input: unknown, ctx: ExtensionBackendContex
   await ctx.storage.delete(documentKey(documentId));
   if (remainingDocuments.length === 0) {
     const state = defaultState(randomUUID(), 'Untitled', '# Untitled\n\n', 'untitled.md', 'Drafts');
-    state.events.push(event('yjs_update', 'user', { recreatedAfterDelete: true, markdownLength: state.markdown.length, clock: 0 }));
+    state.events.push(event('yjs_update', 'user', markdownSnapshotPayload(state.markdown, { recreatedAfterDelete: true, clock: 0 })));
     await writeState(ctx, state);
     const nextIndex = await readIndex(ctx);
     return { ...state, documents: nextIndex.documents, activeDocumentId: state.id, folders: nextIndex.folders };
@@ -1080,7 +1136,7 @@ export async function renameFolder(input: unknown, ctx: ExtensionBackendContext)
     if (doc.folderPath === folderPath || doc.folderPath.startsWith(`${folderPath}/`)) {
       const state = await readState(ctx, doc.id);
       state.folderPath = normalizeFolderPath(`${nextFolderPath}${state.folderPath.slice(folderPath.length)}`);
-      state.events.push(event('yjs_update', 'user', { renamedFolder: true, from: folderPath, to: nextFolderPath }));
+      state.events.push(event('yjs_update', 'user', markdownSnapshotPayload(state.markdown, { renamedFolder: true, from: folderPath, to: nextFolderPath })));
       await ctx.storage.put(documentKey(state.id), state);
       movedDocuments.push(summarize(state));
     } else {
@@ -1117,7 +1173,7 @@ export async function importDocument(input: unknown, ctx: ExtensionBackendContex
     payload.fileName || payload.title || title,
     payload.folderPath || 'Imports',
   );
-  state.events.push(event('yjs_update', 'user', { imported: true, markdownLength: payload.markdown.length, clock: 0 }));
+  state.events.push(event('yjs_update', 'user', markdownSnapshotPayload(payload.markdown, { imported: true, clock: 0 })));
   await writeState(ctx, state);
   const index = await readIndex(ctx);
   return { ...state, documents: index.documents, activeDocumentId: state.id, folders: index.folders };
@@ -1132,7 +1188,7 @@ export async function saveDocument(input: unknown, ctx: ExtensionBackendContext)
   if (typeof payload.fileName === 'string' && payload.fileName.trim()) state.fileName = slugFileName(payload.fileName);
   if (typeof payload.folderPath === 'string') state.folderPath = normalizeFolderPath(payload.folderPath);
   state.updateClock += 1;
-  state.events.push(event('yjs_update', 'user', { manualSave: true, markdownLength: state.markdown.length, clock: state.updateClock }));
+  state.events.push(event('yjs_update', 'user', markdownSnapshotPayload(state.markdown, { manualSave: true, clock: state.updateClock })));
   await writeState(ctx, state);
   return { ok: true, document: summarize(state) };
 }

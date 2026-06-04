@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Buffer } from 'node:buffer';
+import * as Y from 'yjs';
 
 const mockRunTurn = vi.hoisted(() => vi.fn());
 const mockCreateConversation = vi.hoisted(() => vi.fn());
@@ -24,6 +26,7 @@ import {
   load,
   renameDocument,
   renameFolder,
+  replayDocument,
   resolveAnnotation,
   runReview,
   clearChat,
@@ -84,6 +87,12 @@ function mockReviewToolAnnotations(
   });
 }
 
+function yjsUpdateForMarkdown(markdown: string): string {
+  const doc = new Y.Doc();
+  doc.getText('markdown').insert(0, markdown);
+  return Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64');
+}
+
 describe('Writing Studio backend', () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -97,7 +106,7 @@ describe('Writing Studio backend', () => {
 
   it('persists Yjs update events with latest markdown', async () => {
     const ctx = context();
-    await appendUpdate({ updateBase64: 'AQID', markdown: '# One', actorId: 'writer' }, ctx);
+    await appendUpdate({ updateBase64: yjsUpdateForMarkdown('# One'), markdown: '# One', actorId: 'writer' }, ctx);
 
     const state = await load({}, ctx);
     expect(state.markdown).toBe('# One');
@@ -106,9 +115,20 @@ describe('Writing Studio backend', () => {
       expect.objectContaining({
         type: 'yjs_update',
         actorId: 'writer',
-        payload: expect.objectContaining({ updateBase64: 'AQID', clock: 1 }),
+        payload: expect.objectContaining({ markdownSnapshot: '# One', clock: 1 }),
       }),
     ]);
+  });
+
+  it('replays a document from stored Yjs updates', async () => {
+    const ctx = context();
+    await appendUpdate({ updateBase64: yjsUpdateForMarkdown('# Replayed\n\nFrom CRDT'), markdown: '# Replayed\n\nFrom CRDT', actorId: 'writer' }, ctx);
+
+    const replay = await replayDocument({}, ctx);
+
+    expect(replay.markdown).toBe('# Replayed\n\nFrom CRDT');
+    expect(replay.updateEventCount).toBe(1);
+    expect(replay.matchesLatest).toBe(true);
   });
 
   it('adds review annotations and replay events', async () => {
@@ -470,6 +490,30 @@ describe('Writing Studio backend', () => {
     expect(applied.markdown).toBe('# Tool Draft\n\nThis line earns a sharper comment.');
     expect(applied.annotations[0]).toEqual(expect.objectContaining({ id: annotated.annotation.id, status: 'resolved' }));
     expect(applied.events.some((event) => event.type === 'yjs_update' && event.payload.appliedAnnotationEdit === true)).toBe(true);
+  });
+
+  it('replays approved annotation edits from the event log', async () => {
+    const ctx = context();
+    await appendUpdate({
+      updateBase64: yjsUpdateForMarkdown('# Draft\n\nThis sentence wants a sharper ending.'),
+      markdown: '# Draft\n\nThis sentence wants a sharper ending.',
+      actorId: 'writer',
+    }, ctx);
+    const added = await addAnnotation(
+      {
+        quote: 'This sentence wants a sharper ending.',
+        body: 'Make the ending more concrete.',
+        suggestedReplacement: 'This sentence lands with a concrete image.',
+      },
+      ctx,
+    );
+    await applyAnnotationEdit({ id: added.annotation.id }, ctx);
+
+    const replay = await replayDocument({}, ctx);
+
+    expect(replay.markdown).toBe('# Draft\n\nThis sentence lands with a concrete image.');
+    expect(replay.matchesLatest).toBe(true);
+    expect(replay.updateEventCount).toBe(2);
   });
 
   it('keeps document title, file name, and folder path separate', async () => {

@@ -56,6 +56,12 @@
         "worker": { "enabled": true }
       },
       {
+        "id": "writingStudioReplayDocument",
+        "handler": "replayDocument",
+        "title": "Replay writing document",
+        "worker": { "enabled": true }
+      },
+      {
         "id": "writingStudioRunReview",
         "handler": "runReview",
         "title": "Review writing document",

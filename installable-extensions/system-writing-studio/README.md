@@ -17,6 +17,7 @@ The document is the primary workspace. Chat stays in a narrow rail and agent fee
 
 - `writingStudioLoad` loads the latest snapshot and replay log.
 - `writingStudioAppendUpdate` appends a base64 Yjs update.
+- `writingStudioReplayDocument` reconstructs the markdown from the replay log and reports whether it matches the latest stored state.
 - `writingStudioRunReview` adds structured commentary, suggestion, or reaction annotations for the latest text.
 - `writingStudioReviewSelection` reviews only the selected passage and anchors comments to that selected text.
 - `writingStudioEnsureChatSession` creates or verifies the hosted live conversation used by the shared chat rail.
