@@ -6,9 +6,9 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
-  ToolbarButton,
   cx,
   type ExtensionChatMessageBlock,
+  ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -151,25 +151,6 @@ function SmallButton({
   );
 }
 
-function ChevronIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="transition-transform group-open:rotate-90"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
-}
-
 function SidebarIconButton({
   children,
   disabled,
@@ -216,12 +197,10 @@ function SidebarSvgIcon({ path }: { path: string }) {
 function ConfigForm({
   pa,
   initial,
-  connected,
   onSaved,
 }: {
   pa: ExtensionSurfaceProps['pa'];
   initial?: PublicHermesConfig | null;
-  connected: boolean;
   onSaved: () => void;
 }) {
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? DEFAULT_BASE_URL);
@@ -255,98 +234,121 @@ function ConfigForm({
     }
   }
 
-  const configured = Boolean(initial?.baseUrl && initial.hasApiKey);
-
   return (
-    <details className="group border-b border-border-subtle pb-4" open={!configured || !connected}>
-      <summary className="flex cursor-pointer list-none items-center gap-2 py-1 text-left marker:hidden">
-        <ChevronIcon />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-[14px] font-semibold text-primary">Connection</h2>
-          <p className="truncate text-[12px] text-dim">
-            {configured
-              ? `${initial?.baseUrl ?? DEFAULT_BASE_URL} · ${connected ? 'Connected' : 'Not connected'}`
-              : 'Add your Hermes API server URL and key.'}
+    <div className="space-y-4">
+      <label className="block space-y-2">
+        <span className="text-[12px] font-semibold text-secondary">Hermes URL</span>
+        <input
+          value={baseUrl}
+          onChange={(event) => setBaseUrl(event.currentTarget.value)}
+          placeholder="http://127.0.0.1:8642"
+          type="url"
+          name="hermes-url"
+          autoComplete="off"
+          spellCheck={false}
+          className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+        />
+        <span className="block text-[12px] leading-5 text-dim">
+          Use the local server URL or a reachable Tailscale URL such as http://bender.tail5a01ec.ts.net:8642.
+        </span>
+      </label>
+
+      <label className="block space-y-2">
+        <span className="text-[12px] font-semibold text-secondary">API Key</span>
+        <input
+          value={apiKey}
+          onChange={(event) => setApiKey(event.currentTarget.value)}
+          placeholder={initial?.hasApiKey ? 'Saved; enter a new key to replace' : 'API_SERVER_KEY'}
+          type="password"
+          name="hermes-api-key"
+          autoComplete="off"
+          spellCheck={false}
+          className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+        />
+        <span className="block text-[12px] leading-5 text-dim">
+          Paste the raw API_SERVER_KEY value from ~/.hermes/.env. Do not include Bearer.
+        </span>
+      </label>
+
+      <details className="space-y-3">
+        <summary className="cursor-pointer text-[12px] font-semibold text-secondary">Advanced</summary>
+        <label className="block space-y-2">
+          <span className="text-[12px] font-semibold text-secondary">Memory Session Key</span>
+          <input
+            value={sessionKey}
+            onChange={(event) => setSessionKey(event.currentTarget.value)}
+            placeholder="agent:main:neon-pilot:dm:local"
+            name="hermes-memory-session-key"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2.5 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
+          />
+          <span className="block text-[12px] leading-5 text-dim">
+            Optional. Hermes uses this as a stable long-term memory scope across sessions.
+          </span>
+        </label>
+      </details>
+
+      <div className="flex flex-wrap items-center gap-3 pt-1">
+        <ToolbarButton onClick={() => void save()} disabled={saving}>
+          {saving ? 'Saving…' : 'Connect Hermes'}
+        </ToolbarButton>
+        <p className="text-[12px] text-dim">You can change this later from the Hermes page.</p>
+        {error ? <span className="text-[12px] text-danger">{error}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function HermesSetupSection({
+  pa,
+  config,
+  connected,
+  onSaved,
+}: {
+  pa: ExtensionSurfaceProps['pa'];
+  config: PublicHermesConfig | null;
+  connected: boolean;
+  onSaved: () => void;
+}) {
+  return (
+    <section className="grid w-full gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
+      <div className="space-y-7">
+        <div className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Set Up Hermes</p>
+          <h2 className="text-balance text-[34px] font-semibold leading-tight tracking-[-0.02em] text-primary">
+            Connect to a full remote agent.
+          </h2>
+          <p className="max-w-2xl text-[14px] leading-7 text-secondary">
+            Hermes runs its own model, tools, memory, skills, and sessions. Neon Pilot is the interface: it stores the connection, lists
+            remote sessions, and sends turns into the Hermes API server.
           </p>
         </div>
-        <span className={cx('text-[12px]', connected ? 'text-success' : 'text-dim')}>{connected ? 'Connected' : 'Setup'}</span>
-      </summary>
 
-      <div className="mt-3 space-y-4 pl-5">
-        <div className="rounded-md border border-border-subtle bg-elevated/30 px-3 py-2 text-[12px] leading-5 text-secondary">
-          <p className="font-medium text-primary">Hermes API Server Setup</p>
-          <ol className="mt-1 list-decimal space-y-1 pl-4">
-            <li>
-              On the machine running Hermes, set <code>API_SERVER_ENABLED=true</code>, <code>API_SERVER_KEY</code>, and, for Tailscale
-              access, <code>API_SERVER_HOST=0.0.0.0</code> in <code>~/.hermes/.env</code>.
-            </li>
-            <li>
-              Restart Hermes with <code>hermes gateway</code>.
-            </li>
-            <li>Paste the raw API key below, not the word Bearer.</li>
-          </ol>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-          <label className="space-y-1.5">
-            <span className="text-[12px] font-medium text-secondary">Hermes URL</span>
-            <input
-              value={baseUrl}
-              onChange={(event) => setBaseUrl(event.currentTarget.value)}
-              placeholder="http://127.0.0.1:8642"
-              type="url"
-              name="hermes-url"
-              autoComplete="off"
-              spellCheck={false}
-              className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-[12px] font-medium text-secondary">API key</span>
-            <input
-              value={apiKey}
-              onChange={(event) => setApiKey(event.currentTarget.value)}
-              placeholder={initial?.hasApiKey ? 'Saved; enter a new key to replace' : 'API_SERVER_KEY'}
-              type="password"
-              name="hermes-api-key"
-              autoComplete="off"
-              spellCheck={false}
-              className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
-            />
-            <span className="block text-[11px] leading-4 text-dim">
-              Use the Hermes API server key from API_SERVER_KEY in ~/.hermes/.env; paste the raw value, not Bearer.
-            </span>
-          </label>
-        </div>
-
-        <details className="space-y-2">
-          <summary className="cursor-pointer text-[12px] font-medium text-secondary">Advanced</summary>
-          <label className="block space-y-1.5">
-            <span className="text-[12px] font-medium text-secondary">Memory Session Key</span>
-            <input
-              value={sessionKey}
-              onChange={(event) => setSessionKey(event.currentTarget.value)}
-              placeholder="agent:main:neon-pilot:dm:local"
-              name="hermes-memory-session-key"
-              autoComplete="off"
-              spellCheck={false}
-              className="w-full rounded-md border border-border-subtle bg-elevated/60 px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus-visible:ring-1 focus-visible:ring-accent/30"
-            />
-            <span className="block text-[11px] leading-4 text-dim">
-              Optional. Hermes uses this as a stable long-term memory scope across sessions. Leave it alone unless you want a separate
-              memory identity.
-            </span>
-          </label>
-        </details>
-
-        <div className="flex items-center gap-3">
-          <ToolbarButton onClick={() => void save()} disabled={saving}>
-            {saving ? 'Saving…' : 'Save & Refresh'}
-          </ToolbarButton>
-          {error ? <span className="text-[12px] text-danger">{error}</span> : null}
+        <div className="rounded-xl border border-border-subtle bg-surface p-5 shadow-sm">
+          <ConfigForm pa={pa} initial={config} onSaved={onSaved} />
+          {connected ? <p className="mt-4 text-[12px] text-success">Connected to Hermes.</p> : null}
         </div>
       </div>
-    </details>
+
+      <aside className="space-y-5 border-t border-border-subtle pt-5 lg:border-t-0 lg:pt-0">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dim/85">On this page</div>
+        <div className="space-y-3 text-[13px] leading-6 text-secondary">
+          <div>
+            <h3 className="text-[13px] font-semibold text-primary">What Hermes Owns</h3>
+            <p className="mt-1">The agent runtime, tools, memory, skills, provider, and remote sessions all stay inside Hermes.</p>
+          </div>
+          <div>
+            <h3 className="text-[13px] font-semibold text-primary">How Connection Works</h3>
+            <p className="mt-1">Enable the Hermes API server, restart Hermes, then paste the reachable URL and raw API key here.</p>
+          </div>
+          <div>
+            <h3 className="text-[13px] font-semibold text-primary">Using Tailscale?</h3>
+            <p className="mt-1">Set API_SERVER_HOST=0.0.0.0 on the Hermes machine so the tailnet URL can reach port 8642.</p>
+          </div>
+        </div>
+      </aside>
+    </section>
   );
 }
 
@@ -531,6 +533,9 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
 
   const activeSession = useMemo(() => sessions.find((session) => session.id === activeSessionId) ?? null, [activeSessionId, sessions]);
   const chatBlocks = useMemo(() => toChatBlocks(messages, sending), [messages, sending]);
+  const configured = Boolean(config?.baseUrl && config.hasApiKey);
+  const connected = health?.ok ?? false;
+  const showSetup = !configured || !connected;
 
   const loadShell = useCallback(async () => {
     setLoading(true);
@@ -648,16 +653,25 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   }
 
   return (
-    <div className="h-full overflow-hidden bg-base">
-      <AppPageLayout shellClassName="flex h-full max-w-[76rem] flex-col" contentClassName="flex min-h-0 flex-1 flex-col gap-4">
+    <div className={showSetup ? 'h-full overflow-y-auto bg-base' : 'h-full overflow-hidden bg-base'}>
+      <AppPageLayout
+        shellClassName={showSetup ? 'max-w-[72rem]' : 'flex h-full max-w-[76rem] flex-col'}
+        contentClassName={showSetup ? 'flex min-h-full flex-col gap-10' : 'flex min-h-0 flex-1 flex-col gap-4'}
+      >
         <header className="flex shrink-0 items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-[30px] font-semibold leading-tight text-primary">Hermes Agent</h1>
+            <h1
+              className={
+                showSetup ? 'text-[40px] font-semibold leading-tight text-primary' : 'text-[30px] font-semibold leading-tight text-primary'
+              }
+            >
+              Hermes Agent
+            </h1>
             <p className="mt-1 text-[13px] text-secondary">
               Use Neon Pilot as a client for a running Hermes Agent. Hermes owns the tools, memory, skills, and sessions.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className={cx('shrink-0 items-center gap-2', showSetup ? 'hidden' : 'flex')}>
             <ToolbarButton onClick={() => void loadShell()} disabled={loading}>
               Refresh
             </ToolbarButton>
@@ -667,80 +681,93 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
           </div>
         </header>
 
-        <ConfigForm pa={pa} initial={config} connected={health?.ok ?? false} onSaved={() => void loadShell()} />
-
         {error ? <ErrorState message={error} /> : null}
         {sessionsError ? (
           <div className="rounded-md border border-border-subtle bg-elevated/35 px-3 py-2 text-[13px] text-secondary">{sessionsError}</div>
         ) : null}
         {loading ? <LoadingState label="Loading Hermes…" className="h-20 justify-center" /> : null}
 
-        <section className="flex min-h-0 flex-1 flex-col">
-          <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
+        {showSetup ? (
+          <HermesSetupSection pa={pa} config={config} connected={connected} onSaved={() => void loadShell()} />
+        ) : (
+          <div className="border-b border-border-subtle pb-3">
             <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2">
-                <h2 className="truncate text-[18px] font-semibold text-primary">
-                  {activeSession ? sessionTitle(activeSession) : 'Select a Hermes session'}
-                </h2>
-                <span className={cx('text-[12px]', health?.ok ? 'text-success' : 'text-dim')}>
-                  {health?.ok ? 'Connected' : 'Not connected'}
-                </span>
+              <p className="text-[12px] font-semibold text-secondary">Connection</p>
+              <p className="truncate text-[12px] text-dim">
+                {config?.baseUrl ?? DEFAULT_BASE_URL} · {connected ? 'Connected' : 'Not connected'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!showSetup ? (
+          <section className="flex min-h-0 flex-1 flex-col">
+            <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
+              <div className="min-w-0">
+                <div className="mb-1 flex items-center gap-2">
+                  <h2 className="truncate text-[18px] font-semibold text-primary">
+                    {activeSession ? sessionTitle(activeSession) : 'Select a Hermes session'}
+                  </h2>
+                  <span className={cx('text-[12px]', health?.ok ? 'text-success' : 'text-dim')}>
+                    {health?.ok ? 'Connected' : 'Not connected'}
+                  </span>
+                </div>
+                {activeSession ? (
+                  <p className="text-[12px] text-dim">
+                    {activeSession.id} · {activeSession.message_count ?? 0} messages
+                  </p>
+                ) : (
+                  <p className="text-[12px] text-dim">Pick a session from the Hermes sidebar or create a new one.</p>
+                )}
               </div>
               {activeSession ? (
-                <p className="text-[12px] text-dim">
-                  {activeSession.id} · {activeSession.message_count ?? 0} messages
-                </p>
+                <div className="flex items-center gap-2">
+                  <SmallButton onClick={() => void rename()}>Rename</SmallButton>
+                  <SmallButton onClick={() => void fork()}>Fork</SmallButton>
+                  <SmallButton onClick={() => void remove()}>Delete</SmallButton>
+                </div>
+              ) : null}
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto py-4">
+              {!activeSessionId ? (
+                <EmptyState title="No session selected" body="Use the Hermes sidebar to open or create a remote agent session." />
+              ) : messagesLoading ? (
+                <LoadingState label="Loading messages…" />
+              ) : chatBlocks.length === 0 ? (
+                <EmptyState title="Empty Hermes Session" body="Send the first message to this remote agent session." />
               ) : (
-                <p className="text-[12px] text-dim">Pick a session from the Hermes sidebar or create a new one.</p>
+                <ChatView messages={chatBlocks} conversationId={activeSessionId} isStreaming={sending} remoteControlled />
               )}
             </div>
-            {activeSession ? (
-              <div className="flex items-center gap-2">
-                <SmallButton onClick={() => void rename()}>Rename</SmallButton>
-                <SmallButton onClick={() => void fork()}>Fork</SmallButton>
-                <SmallButton onClick={() => void remove()}>Delete</SmallButton>
+
+            {activeSessionId ? (
+              <div className="shrink-0 border-t border-border-subtle pt-1" aria-label="Hermes chat composer">
+                <ChatRailComposer
+                  conversationId={activeSessionId}
+                  workspaceCwd="Hermes"
+                  isStreaming={sending}
+                  models={[{ id: 'hermes-agent', name: 'Hermes Agent', label: 'Hermes Agent' }]}
+                  currentModel="hermes-agent"
+                  currentThinkingLevel="unset"
+                  tokens={null}
+                  contextUsage={null}
+                  onSubmit={(text: string) => {
+                    void send(text);
+                  }}
+                  onAbortStream={() => {}}
+                  onSelectModel={() => {}}
+                  onSelectThinkingLevel={() => {}}
+                  composerMeta={
+                    <div className="conversation-composer-meta mt-1.5 px-3 text-[10.5px] font-mono tracking-[0.02em] text-dim/80">
+                      Turns run inside Hermes with its configured model, tools, memory, and skills.
+                    </div>
+                  }
+                />
               </div>
             ) : null}
-          </header>
-
-          <div className="min-h-0 flex-1 overflow-y-auto py-4">
-            {!activeSessionId ? (
-              <EmptyState title="No session selected" body="Use the Hermes sidebar to open or create a remote agent session." />
-            ) : messagesLoading ? (
-              <LoadingState label="Loading messages…" />
-            ) : chatBlocks.length === 0 ? (
-              <EmptyState title="Empty Hermes Session" body="Send the first message to this remote agent session." />
-            ) : (
-              <ChatView messages={chatBlocks} conversationId={activeSessionId} isStreaming={sending} remoteControlled />
-            )}
-          </div>
-
-          {activeSessionId ? (
-            <div className="shrink-0 border-t border-border-subtle pt-1" aria-label="Hermes chat composer">
-              <ChatRailComposer
-                conversationId={activeSessionId}
-                workspaceCwd="Hermes"
-                isStreaming={sending}
-                models={[{ id: 'hermes-agent', name: 'Hermes Agent', label: 'Hermes Agent' }]}
-                currentModel="hermes-agent"
-                currentThinkingLevel="unset"
-                tokens={null}
-                contextUsage={null}
-                onSubmit={(text: string) => {
-                  void send(text);
-                }}
-                onAbortStream={() => {}}
-                onSelectModel={() => {}}
-                onSelectThinkingLevel={() => {}}
-                composerMeta={
-                  <div className="conversation-composer-meta mt-1.5 px-3 text-[10.5px] font-mono tracking-[0.02em] text-dim/80">
-                    Turns run inside Hermes with its configured model, tools, memory, and skills.
-                  </div>
-                }
-              />
-            </div>
-          ) : null}
-        </section>
+          </section>
+        ) : null}
       </AppPageLayout>
     </div>
   );
