@@ -789,7 +789,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const chatBlocks = useMemo(() => toChatBlocks(messages, runPending), [messages, runPending]);
   const configured = Boolean(config?.baseUrl && config.hasApiKey);
   const connected = health?.ok ?? false;
-  const showSetup = !configured || !connected;
+  const showSetup = !loading && !configured;
 
   const loadShell = useCallback(async () => {
     setLoading(true);
