@@ -388,39 +388,46 @@ function SessionList({
       {sessions.map((session) => {
         const active = session.id === activeSessionId;
         const meta = `${session.message_count ?? 0} messages${session.tool_call_count ? ` · ${session.tool_call_count} tools` : ''}`;
+        if (compact) {
+          return (
+            <div key={session.id} className="relative" data-sidebar-session-id={session.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(session)}
+                className={cx('ui-sidebar-session-row select-none text-left', active && 'ui-sidebar-session-row-active')}
+                title={`${sessionTitle(session)} · ${meta}`}
+              >
+                <span className="flex w-3 shrink-0 items-center justify-center self-stretch" />
+                <span className="min-w-0 flex-1 pr-[4.5rem]">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="ui-row-title truncate text-[12px] leading-tight">{sessionTitle(session)}</span>
+                  </span>
+                </span>
+              </button>
+              <span className="pointer-events-none absolute inset-y-0 right-2.5 flex w-[3.75rem] items-center justify-end pr-1">
+                <span className="ui-sidebar-session-meta ui-sidebar-session-time shrink-0 whitespace-nowrap">
+                  {formatCompactDate(session.last_active ?? session.started_at)}
+                </span>
+              </span>
+            </div>
+          );
+        }
+
         return (
           <button
             key={session.id}
             type="button"
             onClick={() => onSelect(session)}
             className={cx(
-              compact
-                ? 'ui-sidebar-session-row group w-[calc(100%-0.5rem)] select-none text-left'
-                : 'w-full rounded-md px-3 py-2 text-left transition-colors',
-              active && (compact ? 'ui-sidebar-session-row-active' : 'bg-accent/15 text-primary'),
-              !compact && !active && 'text-secondary hover:bg-elevated/70 hover:text-primary',
+              'w-full rounded-md px-3 py-2 text-left transition-colors',
+              active ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-elevated/70 hover:text-primary',
             )}
           >
-            {compact ? (
-              <>
-                <span className="flex w-3 shrink-0 items-center justify-center self-stretch" />
-                <span className="min-w-0 flex-1 pr-[3.25rem]">
-                  <span className="ui-row-title block truncate text-[12px] leading-tight">{sessionTitle(session)}</span>
-                  <span className="ui-sidebar-session-meta mt-1 block truncate">{meta}</span>
-                </span>
-                <span className="ui-sidebar-session-meta ui-sidebar-session-time pointer-events-none absolute inset-y-0 right-2.5 flex items-center whitespace-nowrap">
-                  {formatCompactDate(session.last_active ?? session.started_at)}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{sessionTitle(session)}</span>
-                  <span className="shrink-0 text-[11px] text-dim">{formatCompactDate(session.last_active ?? session.started_at)}</span>
-                </span>
-                <span className="mt-1 block truncate text-[11px] text-dim">{meta}</span>
-              </>
-            )}
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{sessionTitle(session)}</span>
+              <span className="shrink-0 text-[11px] text-dim">{formatCompactDate(session.last_active ?? session.started_at)}</span>
+            </span>
+            <span className="mt-1 block truncate text-[11px] text-dim">{meta}</span>
           </button>
         );
       })}
