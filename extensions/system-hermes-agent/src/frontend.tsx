@@ -43,9 +43,16 @@ type HealthState = {
 };
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8642';
+const DISCONNECTED_MESSAGE = 'Hermes is not reachable at the configured URL.';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function humanErrorMessage(error: unknown): string {
+  const message = getErrorMessage(error);
+  if (message.includes('fetch failed')) return DISCONNECTED_MESSAGE;
+  return message.replace(/^Extension "[^"]+" action "[^"]+" failed:\s*/, '');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -232,7 +239,13 @@ function SessionList({
   onSelect: (session: HermesSession) => void;
 }) {
   if (loading) return <LoadingState label="Loading Hermes sessions..." className="h-28 justify-center" />;
-  if (error) return <ErrorState message={error} className={compact ? 'm-3' : ''} />;
+  if (error) {
+    return compact ? (
+      <p className="px-4 py-3 text-[12px] leading-5 text-dim">{error}</p>
+    ) : (
+      <EmptyState title="Hermes unavailable" body={error} />
+    );
+  }
   if (sessions.length === 0) {
     return compact ? (
       <p className="px-4 py-3 text-[12px] text-dim">No Hermes sessions yet.</p>
@@ -330,7 +343,7 @@ export function HermesSessionsSidebar({ pa, context }: ExtensionSurfaceProps) {
       const result = await pa.extension.invoke('listSessions', { limit: 100, includeChildren: true });
       setSessions(unwrapList<HermesSession>(result));
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(humanErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -388,6 +401,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const [sessions, setSessions] = useState<HermesSession[]>([]);
   const [messages, setMessages] = useState<HermesMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [composer, setComposer] = useState('');
@@ -399,17 +413,33 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
   const loadShell = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setSessionsError(null);
     try {
-      const [configResult, healthResult, sessionsResult] = await Promise.all([
+      const [configResult, healthResult, sessionsResult] = await Promise.allSettled([
         pa.extension.invoke('readConfig'),
         pa.extension.invoke('health'),
         pa.extension.invoke('listSessions', { limit: 100, includeChildren: true }),
       ]);
-      setConfig(isRecord(configResult) && isRecord(configResult.config) ? (configResult.config as PublicHermesConfig) : null);
-      setHealth(healthResult as HealthState);
-      setSessions(unwrapList<HermesSession>(sessionsResult));
+      if (configResult.status === 'fulfilled') {
+        setConfig(
+          isRecord(configResult.value) && isRecord(configResult.value.config) ? (configResult.value.config as PublicHermesConfig) : null,
+        );
+      } else {
+        setError(humanErrorMessage(configResult.reason));
+      }
+      if (healthResult.status === 'fulfilled') {
+        setHealth(healthResult.value as HealthState);
+      } else {
+        setHealth(null);
+      }
+      if (sessionsResult.status === 'fulfilled') {
+        setSessions(unwrapList<HermesSession>(sessionsResult.value));
+      } else {
+        setSessions([]);
+        setSessionsError(humanErrorMessage(sessionsResult.reason));
+      }
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(humanErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -425,7 +455,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
       const result = await pa.extension.invoke('getMessages', { sessionId: activeSessionId });
       setMessages(unwrapList<HermesMessage>(result));
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(humanErrorMessage(err));
     } finally {
       setMessagesLoading(false);
     }
@@ -448,7 +478,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
       await loadShell();
       if (session) await navigateTo(pa, buildSessionRoute(session.id));
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(humanErrorMessage(err));
     } finally {
       setCreating(false);
     }
@@ -466,7 +496,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
       await pa.extension.invoke('sendMessage', { sessionId: activeSessionId, message: text });
       await Promise.all([loadMessages(), loadShell()]);
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(humanErrorMessage(err));
       setComposer(text);
     } finally {
       setSending(false);
@@ -499,7 +529,7 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full overflow-y-auto bg-base">
-      <AppPageLayout shellClassName="max-w-[88rem]" contentClassName="space-y-6">
+      <AppPageLayout shellClassName="max-w-[76rem]" contentClassName="space-y-5">
         <AppPageIntro
           title="Hermes Agent"
           summary="A bespoke interface over a running Hermes Agent instance. Hermes owns tools, memory, skills, and sessions."
@@ -518,80 +548,70 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
         <ConfigForm pa={pa} initial={config} onSaved={() => void loadShell()} />
 
         {error ? <ErrorState message={error} /> : null}
-        {loading ? <LoadingState label="Loading Hermes..." /> : null}
+        {sessionsError ? (
+          <div className="rounded-md border border-border-subtle bg-elevated/35 px-3 py-2 text-[13px] text-secondary">{sessionsError}</div>
+        ) : null}
+        {loading ? <LoadingState label="Loading Hermes..." className="h-20 justify-center" /> : null}
 
-        <section className="grid min-h-[34rem] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <aside className="min-h-0 border-r border-border-subtle pr-3">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-[14px] font-semibold text-primary">Sessions</h2>
-                <p className={cx('text-[12px]', health?.ok ? 'text-success' : 'text-warning')}>
-                  {health?.ok ? 'Connected' : health?.error || 'Not connected'}
-                </p>
-              </div>
-            </div>
-            <SessionList
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              loading={loading}
-              error={null}
-              onSelect={(session) => void navigateTo(pa, buildSessionRoute(session.id))}
-            />
-          </aside>
-
-          <main className="flex min-h-0 flex-col">
-            <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
-              <div className="min-w-0">
+        <section className="flex min-h-[34rem] flex-col">
+          <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-3">
+            <div className="min-w-0">
+              <div className="mb-1 flex items-center gap-2">
                 <h2 className="truncate text-[18px] font-semibold text-primary">
                   {activeSession ? sessionTitle(activeSession) : 'Select a Hermes session'}
                 </h2>
-                {activeSession ? (
-                  <p className="mt-1 text-[12px] text-dim">
-                    {activeSession.id} · {activeSession.message_count ?? 0} messages
-                  </p>
-                ) : null}
+                <span className={cx('text-[12px]', health?.ok ? 'text-success' : 'text-dim')}>
+                  {health?.ok ? 'Connected' : 'Not connected'}
+                </span>
               </div>
               {activeSession ? (
-                <div className="flex items-center gap-2">
-                  <SmallButton onClick={() => void rename()}>Rename</SmallButton>
-                  <SmallButton onClick={() => void fork()}>Fork</SmallButton>
-                  <SmallButton onClick={() => void remove()}>Delete</SmallButton>
-                </div>
-              ) : null}
-            </header>
-
-            <div className="min-h-0 flex-1 overflow-y-auto pb-4">
-              {!activeSessionId ? (
-                <EmptyState title="Select a Hermes session" body="Choose a session from the sidebar or create a new one." />
-              ) : messagesLoading ? (
-                <LoadingState label="Loading messages..." />
+                <p className="text-[12px] text-dim">
+                  {activeSession.id} · {activeSession.message_count ?? 0} messages
+                </p>
               ) : (
-                <MessagesView messages={messages} pending={sending} />
+                <p className="text-[12px] text-dim">Pick a session from the Hermes sidebar or create a new one.</p>
               )}
             </div>
-
-            <form
-              className="border-t border-border-subtle pt-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void send();
-              }}
-            >
-              <textarea
-                value={composer}
-                onChange={(event) => setComposer(event.currentTarget.value)}
-                disabled={!activeSessionId || sending}
-                placeholder={activeSessionId ? 'Message Hermes...' : 'Select or create a Hermes session first'}
-                className="min-h-[5.5rem] w-full resize-y rounded-md border border-border-subtle bg-elevated/50 px-3 py-2 text-[13px] leading-6 text-primary outline-none focus:border-accent disabled:opacity-50"
-              />
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-[12px] text-dim">Turns run inside Hermes with its configured model, tools, memory, and skills.</p>
-                <ToolbarButton disabled={!activeSessionId || sending || !composer.trim()} onClick={() => void send()}>
-                  {sending ? 'Sending...' : 'Send'}
-                </ToolbarButton>
+            {activeSession ? (
+              <div className="flex items-center gap-2">
+                <SmallButton onClick={() => void rename()}>Rename</SmallButton>
+                <SmallButton onClick={() => void fork()}>Fork</SmallButton>
+                <SmallButton onClick={() => void remove()}>Delete</SmallButton>
               </div>
-            </form>
-          </main>
+            ) : null}
+          </header>
+
+          <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+            {!activeSessionId ? (
+              <EmptyState title="No session selected" body="Use the Hermes sidebar to open or create a remote agent session." />
+            ) : messagesLoading ? (
+              <LoadingState label="Loading messages..." />
+            ) : (
+              <MessagesView messages={messages} pending={sending} />
+            )}
+          </div>
+
+          <form
+            className="border-t border-border-subtle pt-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void send();
+            }}
+          >
+            <textarea
+              value={composer}
+              onChange={(event) => setComposer(event.currentTarget.value)}
+              disabled={!activeSessionId || sending}
+              placeholder={activeSessionId ? 'Message Hermes...' : 'Select or create a Hermes session first'}
+              className="min-h-[5.5rem] w-full resize-y rounded-md border border-border-subtle bg-elevated/50 px-3 py-2 text-[13px] leading-6 text-primary outline-none focus:border-accent disabled:opacity-50"
+            />
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="text-[12px] text-dim">Turns run inside Hermes with its configured model, tools, memory, and skills.</p>
+              <ToolbarButton disabled={!activeSessionId || sending || !composer.trim()} onClick={() => void send()}>
+                {sending ? 'Sending...' : 'Send'}
+              </ToolbarButton>
+            </div>
+          </form>
         </section>
       </AppPageLayout>
     </div>
