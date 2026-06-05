@@ -536,6 +536,39 @@ body {
   background: rgb(var(--color-elevated) / 0.7);
 }
 
+.ui-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgb(var(--color-border-subtle));
+  padding: 0.75rem 1rem;
+}
+
+.ui-panel-header-title {
+  min-width: 0;
+  color: rgb(var(--color-primary));
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+}
+
+.ui-panel-header-meta {
+  margin-left: auto;
+  border-radius: 0.375rem;
+  background: rgb(var(--color-elevated));
+  padding: 0.125rem 0.5rem;
+  color: rgb(var(--color-dim));
+  font-size: 0.625rem;
+  line-height: 1rem;
+}
+
+.ui-panel-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .ui-stat-grid {
   display: grid;
   gap: 0.5rem;

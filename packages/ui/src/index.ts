@@ -41,6 +41,7 @@ export {
   Notice,
   type NoticeTone,
   PageHeader,
+  PanelHeader,
   Pill,
   type PillTone,
   PositionedMenu,

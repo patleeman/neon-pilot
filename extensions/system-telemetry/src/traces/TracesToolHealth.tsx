@@ -3,18 +3,15 @@
  */
 
 import type { TraceToolHealth } from '@neon-pilot/extensions/data';
-import { ProgressBar } from '@neon-pilot/extensions/ui';
+import { PanelHeader, ProgressBar, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">Tool Telemetry</span>
-          <span className="ml-auto text-[10px] text-dim">No tool data yet</span>
-        </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader title="Tool Telemetry" meta="No tool data yet" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Tool calls will appear here as agents execute tools.</div>
-      </div>
+      </SurfacePanel>
     );
   }
 
@@ -22,20 +19,18 @@ export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   const totalErrors = tools.reduce((a, t) => a + t.errors, 0);
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">Tool Telemetry</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
-          {totalCalls} calls · {totalErrors} errors ({((totalErrors / Math.max(totalCalls, 1)) * 100).toFixed(1)}%)
-        </span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader
+        title="Tool Telemetry"
+        meta={`${totalCalls} calls · ${totalErrors} errors (${((totalErrors / Math.max(totalCalls, 1)) * 100).toFixed(1)}%)`}
+      />
       <div className="p-4 grid grid-cols-2 gap-2.5">
         {tools.map((tool) => (
           <ToolCard key={tool.toolName} tool={tool} />
         ))}
       </div>
       <BashBreakdown tools={tools} />
-    </div>
+    </SurfacePanel>
   );
 }
 

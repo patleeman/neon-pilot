@@ -46,6 +46,7 @@ export {
   MenuSeparator,
   MenuShell,
   Notice,
+  PanelHeader,
   Pill,
   PositionedMenu,
   ProgressBar,

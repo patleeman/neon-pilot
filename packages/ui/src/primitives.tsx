@@ -322,6 +322,31 @@ export function SurfacePanel({ className, muted = false, children, ...props }: H
   );
 }
 
+export function PanelHeader({
+  title,
+  meta,
+  actions,
+  className,
+  titleClassName,
+  metaClassName,
+  ...props
+}: {
+  title: ReactNode;
+  meta?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+  titleClassName?: string;
+  metaClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-panel-header', className)} {...props}>
+      <span className={cx('ui-panel-header-title', titleClassName)}>{title}</span>
+      {meta ? <span className={cx('ui-panel-header-meta', metaClassName)}>{meta}</span> : null}
+      {actions ? <div className="ui-panel-header-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
 export function StatGrid({ children, className, compact = false, ...props }: HTMLAttributes<HTMLDivElement> & { compact?: boolean }) {
   return (
     <div className={cx('ui-stat-grid', compact && 'ui-stat-grid-compact', className)} {...props}>

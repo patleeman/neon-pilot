@@ -2,27 +2,21 @@
  * Auto Mode tracking display
  */
 
+import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+
 export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
   if (!data || data.recentEvents.length === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">Auto Mode</span>
-          <span className="ml-auto text-[10px] text-dim">No auto mode activity</span>
-        </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader title="Auto Mode" meta="No auto mode activity" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Auto mode state changes will appear here.</div>
-      </div>
+      </SurfacePanel>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">Auto Mode</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
-          {data.currentActive} active · {data.enabledCount} enabled · {data.disabledCount} stopped
-        </span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader title="Auto Mode" meta={`${data.currentActive} active · ${data.enabledCount} enabled · ${data.disabledCount} stopped`} />
       <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
         {/* Cell 1: Summary stats */}
         <div className="p-4">
@@ -68,7 +62,7 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
           </div>
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }
 

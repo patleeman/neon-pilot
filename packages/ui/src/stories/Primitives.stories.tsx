@@ -29,6 +29,7 @@ import {
   MenuSeparator,
   MenuShell,
   Notice,
+  PanelHeader,
   Pill,
   PositionedMenu,
   ProgressBar,
@@ -178,6 +179,7 @@ const meta = {
       <section style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Data Display</h2>
         <SurfacePanel style={{ display: 'grid', gap: 16, padding: 16 }}>
+          <PanelHeader title="Panel header" meta="12 items" className="-m-4 mb-0" />
           <div style={{ display: 'grid', gap: 6 }}>
             <SectionLabel>Artifacts</SectionLabel>
             <SupportingText>Use supporting text for secondary settings copy, empty hints, paths, and status details.</SupportingText>

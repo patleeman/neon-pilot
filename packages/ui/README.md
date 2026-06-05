@@ -17,7 +17,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 - Actions: `Button`, `ToolbarButton`, `IconButton`, `CheckButton`
 - Status: `Pill`, `Keycap`, `Tooltip`, `Notice`
-- Surfaces: `SurfacePanel`
+- Surfaces: `SurfacePanel`, `PanelHeader`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
@@ -77,6 +77,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `MenuShell`, `MenuItem`, `MenuGroupLabel`, and `MenuSeparator` for menu contents. Use `PositionedMenu` when a menu needs fixed, absolute, or static placement without rebuilding menu chrome.
 - Use `Dialog` and its header/body/footer pieces for modal shells before creating local fixed overlays.
 - Use `Notice`, `LoadingState`, `ErrorState`, and `EmptyState` for feedback. Avoid page-specific loading/error markup unless the layout requires it.
+- Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.
 - Use `ProgressBar`, `StatGrid`, `KeyValueList`, `DataTable`, `ResourceListItem`, `CodeBlock`, and `Disclosure` for data display before composing raw rows or panels.
 
 ## Proven Replacement Targets

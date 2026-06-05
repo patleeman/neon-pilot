@@ -52,7 +52,7 @@ The initial package includes:
 
 - Actions: `Button`, `ToolbarButton`, `IconButton`, `CheckButton`
 - Status: `Pill`, `Keycap`, `Tooltip`, `Notice`
-- Surfaces: `SurfacePanel`
+- Surfaces: `SurfacePanel`, `PanelHeader`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
@@ -86,4 +86,5 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Local search/filter header rows -> `FilterToolbar`
 - Local fixed/absolute menu shells -> `PositionedMenu` with `MenuItem`
 - Local loading/error/empty messages -> `LoadingState`, `ErrorState`, `EmptyState`, or `Notice`
+- Local bordered section cards with title/meta rows -> `SurfacePanel` with `PanelHeader`
 - Local bordered data cards -> `SurfacePanel`, `ResourceListItem`, `KeyValueList`, `DataTable`, or `Disclosure`

@@ -3,29 +3,24 @@
  */
 
 import type { ToolFlowResult } from '@neon-pilot/extensions/data';
-import { ProgressBar } from '@neon-pilot/extensions/ui';
+import { PanelHeader, ProgressBar, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">🔀 Tool Flow &amp; Trajectories</span>
-          <span className="ml-auto text-[10px] text-dim">No tool sequences yet</span>
-        </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader title="🔀 Tool Flow & Trajectories" meta="No tool sequences yet" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Appears after multiple tool calls are recorded.</div>
-      </div>
+      </SurfacePanel>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">🔀 Tool Flow &amp; Trajectories</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
-          {data.transitions.length} transitions · {data.coOccurrences.length} co-occurrences
-        </span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader
+        title="🔀 Tool Flow & Trajectories"
+        meta={`${data.transitions.length} transitions · ${data.coOccurrences.length} co-occurrences`}
+      />
       <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
         {/* Cell 1: Top transitions — Sankey-like flow */}
         <div className="p-4">
@@ -104,6 +99,6 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
           )}
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }

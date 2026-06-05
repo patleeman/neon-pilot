@@ -3,6 +3,7 @@
  */
 
 import type { TraceCompactionAggs, TraceCompactionEvent, TraceContextSession } from '@neon-pilot/extensions/data';
+import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesContextPressure({
   sessions,
@@ -15,13 +16,10 @@ export function TracesContextPressure({
 }) {
   if ((!sessions || sessions.length === 0) && (!compactions || compactions.length === 0)) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">Context Pressure</span>
-          <span className="ml-auto text-[10px] text-dim">Waiting for data</span>
-        </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader title="Context Pressure" meta="Waiting for data" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Context snapshots appear after agent turns complete.</div>
-      </div>
+      </SurfacePanel>
     );
   }
 
@@ -30,13 +28,8 @@ export function TracesContextPressure({
   const lowCount = sessions.filter((s) => s.pct <= 70).length;
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">Context Pressure &amp; Session Activity</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
-          {sessions.length} sessions · {highCount + medCount} above 70%
-        </span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader title="Context Pressure & Session Activity" meta={`${sessions.length} sessions · ${highCount + medCount} above 70%`} />
       <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
         {/* Cell 1: Session gauges */}
         <div className="p-4">
@@ -118,7 +111,7 @@ export function TracesContextPressure({
           )}
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }
 

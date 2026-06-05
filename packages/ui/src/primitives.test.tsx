@@ -23,6 +23,7 @@ import {
   MenuSeparator,
   MenuShell,
   Notice,
+  PanelHeader,
   Pill,
   ProgressBar,
   ResourceListItem,
@@ -115,6 +116,14 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-filter-toolbar');
     expect(html).toContain('ui-filter-toolbar-filters');
     expect(html).toContain('ui-filter-toolbar-search');
+  });
+
+  it('renders panel headers with title and meta slots', () => {
+    const html = renderToStaticMarkup(createElement(PanelHeader, { title: 'Telemetry', meta: '24h' }));
+
+    expect(html).toContain('ui-panel-header');
+    expect(html).toContain('ui-panel-header-title');
+    expect(html).toContain('ui-panel-header-meta');
   });
 
   it('renders section labels and resource list rows', () => {
