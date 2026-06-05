@@ -157,6 +157,25 @@ export function ResourceListItem({
   );
 }
 
+export function CodeBlock({
+  children,
+  className,
+  compact = false,
+  wrap = true,
+  ...props
+}: {
+  children: ReactNode;
+  className?: string;
+  compact?: boolean;
+  wrap?: boolean;
+} & HTMLAttributes<HTMLPreElement>) {
+  return (
+    <pre className={cx('ui-code-block', compact && 'ui-code-block-compact', wrap && 'ui-code-block-wrap', className)} {...props}>
+      {children}
+    </pre>
+  );
+}
+
 export function SurfacePanel({ className, muted = false, children, ...props }: HTMLAttributes<HTMLDivElement> & { muted?: boolean }) {
   return (
     <div className={cx(muted ? 'ui-panel-muted' : 'ui-panel', className)} {...props}>

@@ -9,7 +9,7 @@ import { useApi } from '../hooks/useApi';
 import { formatDate } from '../shared/utils';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { cx, ErrorState, LoadingState } from './ui';
+import { CodeBlock, cx, ErrorState, LoadingState, SectionLabel } from './ui';
 
 function formatArtifactLoadError(error: string | null): string | null {
   if (!error) {
@@ -298,10 +298,10 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
 
             {showSource && artifact && artifact.kind !== 'latex' ? (
               <div className="max-h-[38%] overflow-auto border-t border-border-subtle px-4 py-3">
-                <p className="ui-section-label">Source</p>
-                <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-secondary">
+                <SectionLabel>Source</SectionLabel>
+                <CodeBlock compact className="mt-2 border-0 bg-transparent p-0 text-secondary">
                   {artifact.content}
-                </pre>
+                </CodeBlock>
               </div>
             ) : null}
           </div>

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   Button,
+  CodeBlock,
   cx,
   DataTable,
   DataTableBody,
@@ -96,6 +97,14 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-resource-list-item-selected');
     expect(html).toContain('Architecture diagram');
     expect(html).toContain('mermaid');
+  });
+
+  it('renders code blocks with wrapping controls', () => {
+    const html = renderToStaticMarkup(createElement(CodeBlock, { compact: true, wrap: false }, 'const value = 1;'));
+
+    expect(html).toContain('ui-code-block');
+    expect(html).toContain('ui-code-block-compact');
+    expect(html).not.toContain('ui-code-block-wrap');
   });
 
   it('renders dialog semantics', () => {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import type { ConversationArtifactRecord } from '../shared/types';
-import { ErrorState } from './ui';
+import { CodeBlock, ErrorState, SectionLabel } from './ui';
 
 function buildArtifactDocument(content: string): string {
   const trimmed = content.trim();
@@ -46,15 +46,13 @@ function SourceArtifactViewer({ artifact, label }: { artifact: ConversationArtif
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto px-5 py-5">
       <div className="mb-3 min-w-0">
-        <p className="ui-section-label">{label}</p>
+        <SectionLabel>{label}</SectionLabel>
         <p className="mt-1 text-[12px] leading-relaxed text-secondary">
           The system-artifacts extension owns rendered artifact previews. Core fallback shows source.
         </p>
       </div>
 
-      <pre className="min-h-0 overflow-auto rounded-xl border border-border-subtle bg-elevated px-4 py-4 font-mono text-[11px] leading-relaxed text-primary">
-        {artifact.content}
-      </pre>
+      <CodeBlock>{artifact.content}</CodeBlock>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { ResourceListItem, SectionLabel } from '@neon-pilot/extensions/ui';
+import { CodeBlock, ResourceListItem, SectionLabel } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -141,14 +141,12 @@ function LatexArtifactViewer({ artifact }: { artifact: ArtifactRecord }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto px-5 py-5">
       <div className="mb-3 min-w-0">
-        <p className="ui-section-label">LaTeX source</p>
+        <SectionLabel>LaTeX source</SectionLabel>
         <p className="mt-1 text-[12px] leading-relaxed text-secondary">
           LaTeX artifacts are shown as raw source so the entire file remains visible and copyable.
         </p>
       </div>
-      <pre className="min-h-0 overflow-auto rounded-xl border border-border-subtle bg-elevated px-4 py-4 font-mono text-[11px] leading-relaxed text-primary">
-        {artifact.content}
-      </pre>
+      <CodeBlock>{artifact.content}</CodeBlock>
     </div>
   );
 }

@@ -329,6 +329,30 @@ body {
   white-space: nowrap;
 }
 
+.ui-code-block {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid rgb(var(--color-border-subtle));
+  border-radius: 0.75rem;
+  background: rgb(var(--color-elevated));
+  padding: 1rem;
+  color: rgb(var(--color-primary));
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.65;
+}
+
+.ui-code-block-compact {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+
+.ui-code-block-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .ui-panel,
 .ui-panel-muted {
   border-radius: 0.75rem;

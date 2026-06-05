@@ -179,6 +179,7 @@ export declare const ActivityTreeView: (props: {
 export declare const DiffActionButton: (...args: never[]) => unknown;
 export declare const GitDiffIcon: HostComponent;
 export declare const ContextMenuWrapper: HostComponent;
+export declare const CodeBlock: HostComponent;
 export declare const EmptyState: HostComponent;
 export declare const ErrorState: HostComponent;
 export declare const Field: HostComponent;

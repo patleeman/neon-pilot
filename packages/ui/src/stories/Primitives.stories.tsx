@@ -4,6 +4,7 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
+  CodeBlock,
   DataTable,
   DataTableBody,
   DataTableCell,
@@ -146,6 +147,7 @@ const meta = {
             <KeyValueItem label="Package" value="installable-extensions/system-example" action={<Button variant="ghost">Open</Button>} />
             <KeyValueItem label="Permissions" value="Filesystem, shell, notifications" />
           </KeyValueList>
+          <CodeBlock>{'pa.extension.invoke("readState", { id: "system-example" })'}</CodeBlock>
           <DataTable>
             <DataTableHead>
               <DataTableRow>
