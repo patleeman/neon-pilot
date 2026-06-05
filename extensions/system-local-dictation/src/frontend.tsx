@@ -1,10 +1,19 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
-import { cx, Field, Select, SettingToggleRow, SettingsSection, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  cx,
+  Field,
+  LoadingState,
+  Notice,
+  Select,
+  SettingToggleRow,
+  SettingsSection,
+  TextInput,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { bytesToBase64, type ComposerDictationCapture, startComposerDictationCapture } from './capture.js';
 
-const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-lg px-3 py-1.5 text-[12px] shadow-none';
 const CUSTOM_MODEL_VALUE = '__custom__';
 const TRANSCRIPTION_MODEL_OPTIONS = [
   { id: 'tiny.en', label: 'Tiny English · fastest' },
@@ -351,7 +360,7 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
           </>
         }
       >
-        {!settings ? <p className="ui-card-meta">Loading dictation settings…</p> : null}
+        {!settings ? <LoadingState label="Loading dictation settings..." /> : null}
         {settings ? (
           <div className="space-y-3">
             <SettingToggleRow
@@ -416,7 +425,7 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
                 <p className={cx('text-[12px]', status?.installed ? 'text-success' : 'text-dim')}>{statusLabel}</p>
                 <ToolbarButton
                   type="button"
-                  className={ACTION_BUTTON_CLASS}
+                  className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
                   disabled={Boolean(busy) || !model.trim()}
                   onClick={() => void install()}
                 >
@@ -426,8 +435,8 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
             ) : (
               <p className="ui-card-meta">Dictation is disabled.</p>
             )}
-            {busy === 'Saving…' ? <p className="ui-card-meta">Saving…</p> : null}
-            {message ? <p className="text-[12px] text-secondary">{message}</p> : null}
+            {busy === 'Saving…' ? <LoadingState label="Saving..." /> : null}
+            {message ? <Notice>{message}</Notice> : null}
           </div>
         ) : null}
       </SettingsSection>
