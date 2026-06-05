@@ -15,7 +15,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 ## Current Components
 
-- Actions: `Button`, `ToolbarButton`, `IconButton`
+- Actions: `Button`, `ToolbarButton`, `IconButton`, `CheckButton`
 - Status: `Pill`, `Keycap`, `Notice`
 - Surfaces: `SurfacePanel`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`

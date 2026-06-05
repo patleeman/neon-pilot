@@ -8,6 +8,7 @@ export {
   Button,
   type ButtonTone,
   type ButtonVariant,
+  CheckButton,
   CodeBlock,
   cx,
   DataTable,

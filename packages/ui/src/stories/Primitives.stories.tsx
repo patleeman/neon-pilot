@@ -4,6 +4,7 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
+  CheckButton,
   CodeBlock,
   DataTable,
   DataTableBody,
@@ -59,6 +60,8 @@ const meta = {
           <Button tone="accent">Save</Button>
           <Button tone="danger">Delete</Button>
           <IconButton aria-label="More actions">•••</IconButton>
+          <CheckButton checked aria-label="Completed" />
+          <CheckButton checked={false} aria-label="Incomplete" />
         </div>
       </section>
 

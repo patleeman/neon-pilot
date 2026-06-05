@@ -132,6 +132,7 @@ body {
 .ui-action-button:focus-visible,
 .ui-ghost-button:focus-visible,
 .ui-icon-button:focus-visible,
+.ui-check-button:focus-visible,
 .ui-switch:focus-visible,
 .ui-text-input:focus-visible,
 .ui-search-input:focus-visible,
@@ -145,6 +146,7 @@ body {
 .ui-action-button:disabled,
 .ui-ghost-button:disabled,
 .ui-icon-button:disabled,
+.ui-check-button:disabled,
 .ui-switch:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -172,6 +174,35 @@ body {
 
 .ui-icon-button-compact {
   padding: 0.25rem;
+}
+
+.ui-check-button {
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--color-border-strong));
+  background: transparent;
+  color: transparent;
+  font: inherit;
+  font-size: 0.625rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.ui-check-button:hover {
+  border-color: rgb(var(--color-accent) / 0.6);
+  color: rgb(var(--color-secondary));
+}
+
+.ui-check-button-checked {
+  border-color: rgb(var(--color-success));
+  color: rgb(var(--color-success));
 }
 
 .ui-pill {

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   Button,
+  CheckButton,
   CodeBlock,
   cx,
   DataTable,
@@ -48,6 +49,13 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-action-button');
     expect(html).toContain('text-danger');
     expect(html).toContain('type="button"');
+  });
+
+  it('renders check button pressed state', () => {
+    const html = renderToStaticMarkup(createElement(CheckButton, { checked: true, 'aria-label': 'Mark complete' }));
+    expect(html).toContain('ui-check-button');
+    expect(html).toContain('ui-check-button-checked');
+    expect(html).toContain('aria-pressed="true"');
   });
 
   it('renders notice semantics from tone', () => {

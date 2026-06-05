@@ -1,3 +1,4 @@
+import { CheckButton, IconButton, Notice, ToolbarButton, cx } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type TodoStatus = 'todo' | 'done';
@@ -172,59 +173,65 @@ export function TodoShelf({
   return (
     <div className="border-b border-border-subtle/60 px-3 py-1.5 text-[12px] text-primary">
       <div className="flex h-6 items-center gap-2 text-secondary">
-        <button type="button" className="text-[11px] text-dim hover:text-primary" onClick={() => setCollapsed((value) => !value)}>
+        <IconButton
+          compact
+          type="button"
+          className="text-[11px] text-dim hover:text-primary"
+          onClick={() => setCollapsed((value) => !value)}
+          aria-label={collapsed ? 'Expand todos' : 'Collapse todos'}
+        >
           {collapsed ? '▸' : '▾'}
-        </button>
+        </IconButton>
         <span className="font-medium text-primary">Todos</span>
         <span className="text-dim">{`${openItems.length} open${doneItems.length ? ` · ${doneItems.length} done` : ''}`}</span>
         <span className="flex-1" />
         {doneItems.length > 0 ? (
-          <button
-            type="button"
-            className="rounded-md px-1.5 py-0.5 text-[11px] text-secondary hover:bg-base hover:text-primary disabled:opacity-50"
+          <ToolbarButton
+            className="min-h-0 px-1.5 py-0.5 text-[11px] shadow-none"
             disabled={Boolean(busyId)}
             onClick={() => void run('clear-done', () => invoke<TodoState>('clearItems', { scope: 'done' }))}
           >
             Clear done
-          </button>
+          </ToolbarButton>
         ) : null}
       </div>
 
       {!collapsed ? (
         <div className="max-h-28 overflow-y-auto py-0.5">
-          {error ? <div className="rounded-md bg-danger/10 px-2 py-1.5 text-[11px] text-danger">{error}</div> : null}
+          {error ? (
+            <Notice tone="danger" className="px-2 py-1.5 text-[11px]">
+              {error}
+            </Notice>
+          ) : null}
           {visibleItems.map((item) => (
             <div
               key={item.id}
               className="group grid min-h-7 grid-cols-[1.4rem_minmax(0,1fr)_auto] items-center gap-1 rounded-md hover:bg-base/60"
             >
-              <button
-                type="button"
-                className={`grid h-4 w-4 place-items-center rounded-full border text-[10px] ${
-                  isDone(item) ? 'border-success text-success' : 'border-border-strong text-transparent hover:text-secondary'
-                }`}
+              <CheckButton
+                checked={isDone(item)}
                 disabled={Boolean(busyId)}
                 title={isDone(item) ? 'Reopen todo' : 'Mark complete'}
+                aria-label={isDone(item) ? 'Reopen todo' : 'Mark complete'}
                 onClick={() =>
                   void run(item.id, () => invoke<TodoState>('updateItem', { id: item.id, status: isDone(item) ? 'todo' : 'done' }))
                 }
-              >
-                ✓
-              </button>
+              />
               <div className="min-w-0">
-                <div className={`truncate ${isDone(item) ? 'text-dim line-through' : 'text-primary'}`}>{item.text}</div>
+                <div className={cx('truncate', isDone(item) ? 'text-dim line-through' : 'text-primary')}>{item.text}</div>
                 {item.note ? <div className="truncate text-[10px] text-dim">{item.note}</div> : null}
               </div>
               <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                <button
-                  type="button"
-                  className="rounded-md px-1.5 py-0.5 text-[12px] text-secondary hover:bg-surface hover:text-danger"
+                <IconButton
+                  compact
+                  className="text-[12px] text-secondary hover:bg-surface hover:text-danger"
                   disabled={Boolean(busyId)}
                   title="Delete todo"
+                  aria-label="Delete todo"
                   onClick={() => void run(item.id, () => invoke<TodoState>('deleteItem', { id: item.id }))}
                 >
                   ×
-                </button>
+                </IconButton>
               </div>
             </div>
           ))}

@@ -16,6 +16,7 @@ export {
   AppPageSection,
   AppPageToc,
   Button,
+  CheckButton,
   CodeBlock,
   cx,
   DataTable,

@@ -98,6 +98,25 @@ export function IconButton({
   );
 }
 
+export function CheckButton({
+  checked,
+  className,
+  children = '✓',
+  type = 'button',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean }) {
+  return (
+    <button
+      type={type}
+      aria-pressed={checked}
+      className={cx('ui-check-button', checked && 'ui-check-button-checked', className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function Pill({
   tone = 'muted',
   mono = false,

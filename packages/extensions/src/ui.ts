@@ -138,6 +138,7 @@ export declare const AppPageLayout: HostComponent;
 export declare const AppPageSection: HostComponent;
 export declare const AppPageToc: HostComponent;
 export declare const Button: HostComponent;
+export declare const CheckButton: HostComponent;
 export declare const DataTable: HostComponent;
 export declare const DataTableBody: HostComponent;
 export declare const DataTableCell: HostComponent;
