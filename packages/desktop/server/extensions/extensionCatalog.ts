@@ -123,11 +123,6 @@ export function resolveInstalledAppVersion(): string {
   return '0.0.0';
 }
 
-function bundleUrlFor(id: string, version: string): string {
-  const tag = `v${version}`;
-  return bundleUrlForRepo(FIRST_PARTY_REPO, id, tag);
-}
-
 function bundleUrlForRepo(repo: GithubExtensionSourceRepo, id: string, tag: string): string {
   return `https://github.com/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.repo)}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(id)}.neon-extension.zip`;
 }
