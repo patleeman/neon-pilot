@@ -52,7 +52,7 @@ The initial package includes:
 - Status: `Pill`, `Keycap`, `Notice`
 - Surfaces: `SurfacePanel`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
-- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`
+- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
 - Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection: `SegmentedControl`, `TabList`, `TabButton`
 - Data display: `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`

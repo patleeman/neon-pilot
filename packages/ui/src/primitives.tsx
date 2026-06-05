@@ -633,6 +633,41 @@ export function SettingsSection({
   );
 }
 
+export function SettingToggleRow({
+  title,
+  description,
+  checked,
+  disabled = false,
+  onCheckedChange,
+  className,
+  switchLabel,
+  ...props
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  className?: string;
+  switchLabel?: ReactNode;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-setting-toggle-row', disabled && 'ui-setting-toggle-row-disabled', className)} {...props}>
+      <div className="ui-setting-toggle-row-copy">
+        <div className="ui-setting-toggle-row-title">{title}</div>
+        {description ? <div className="ui-setting-toggle-row-description">{description}</div> : null}
+      </div>
+      <Switch
+        checked={checked}
+        disabled={disabled}
+        label={switchLabel}
+        aria-label={switchLabel ? undefined : typeof title === 'string' ? title : 'Toggle setting'}
+        onClick={() => onCheckedChange(!checked)}
+      />
+    </div>
+  );
+}
+
 export function Switch({
   checked,
   disabled = false,

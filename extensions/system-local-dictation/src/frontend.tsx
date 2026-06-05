@@ -1,11 +1,9 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
-import { cx, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { cx, Field, Select, SettingToggleRow, SettingsSection, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { bytesToBase64, type ComposerDictationCapture, startComposerDictationCapture } from './capture.js';
 
-const INPUT_CLASS =
-  'w-full rounded-lg border border-border-subtle bg-surface/70 px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
 const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-lg px-3 py-1.5 text-[12px] shadow-none';
 const CUSTOM_MODEL_VALUE = '__custom__';
 const TRANSCRIPTION_MODEL_OPTIONS = [
@@ -339,44 +337,35 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
 
   return (
     <div className="space-y-0">
-      <section className="scroll-mt-24 grid gap-5 py-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:items-start lg:gap-8">
-        <div className="min-w-0 space-y-2">
-          <div className="space-y-1.5">
-            <h3 className="text-[15px] font-medium tracking-tight text-primary">Local Dictation</h3>
-            <p className="max-w-sm text-[12px] leading-5 text-secondary">
-              Record audio from the composer mic button and transcribe it locally via Whisper.cpp.
-            </p>
+      <SettingsSection
+        title="Local Dictation"
+        description={
+          <>
+            Record audio from the composer mic button and transcribe it locally via Whisper.cpp.
             {settingsContext?.extensionId ? (
-              <p className="max-w-sm text-[12px] leading-5 text-secondary">
+              <>
+                {' '}
                 Injected by <span className="font-mono text-primary">{settingsContext.extensionId}</span>.
-              </p>
+              </>
             ) : null}
-          </div>
-        </div>
-        <div className="min-w-0 space-y-3.5">
-          {!settings ? <p className="ui-card-meta">Loading dictation settings…</p> : null}
-          {settings ? (
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="settings-dictation-enabled"
-                  checked={enabled}
-                  onChange={(event) => {
-                    const next = event.target.checked;
-                    setEnabled(next);
-                    void saveFields(next, model);
-                  }}
-                  className="h-4 w-4 rounded border-border-subtle text-accent focus:ring-accent/30"
-                />
-                <span className="text-[13px] text-primary select-none">Enable local dictation</span>
-              </label>
-              {enabled ? (
-                <>
-                  <label className="ui-card-meta pt-1" htmlFor="settings-dictation-model">
-                    Model
-                  </label>
-                  <select
+          </>
+        }
+      >
+        {!settings ? <p className="ui-card-meta">Loading dictation settings…</p> : null}
+        {settings ? (
+          <div className="space-y-3">
+            <SettingToggleRow
+              title="Enable local dictation"
+              checked={enabled}
+              onCheckedChange={(next) => {
+                setEnabled(next);
+                void saveFields(next, model);
+              }}
+            />
+            {enabled ? (
+              <>
+                <Field label="Model" className="pt-1">
+                  <Select
                     id="settings-dictation-model"
                     value={TRANSCRIPTION_MODEL_IDS.has(model) ? model : CUSTOM_MODEL_VALUE}
                     onChange={(event) => {
@@ -390,7 +379,6 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
                       setModel(next);
                       void saveFields(enabled, next);
                     }}
-                    className={INPUT_CLASS}
                   >
                     {TRANSCRIPTION_MODEL_OPTIONS.map((option) => (
                       <option key={option.id} value={option.id}>
@@ -398,50 +386,51 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
                       </option>
                     ))}
                     <option value={CUSTOM_MODEL_VALUE}>Custom Hugging Face URL…</option>
-                  </select>
-                  {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
-                    <div className="space-y-1.5">
-                      <label className="ui-card-meta" htmlFor="settings-dictation-custom-model">
-                        Custom model URL
-                      </label>
-                      <input
-                        id="settings-dictation-custom-model"
-                        value={customModelUrl}
-                        onChange={(event) => {
-                          setCustomModelUrl(event.target.value);
-                          setModel(event.target.value);
-                        }}
-                        onBlur={() => void saveFields(enabled, customModelUrl)}
-                        className={`${INPUT_CLASS} font-mono text-[13px]`}
-                        placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                      <p className="text-[12px] leading-5 text-dim">
+                  </Select>
+                </Field>
+                {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
+                  <Field
+                    label="Custom model URL"
+                    hint={
+                      <>
                         Use a direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
                         <span className="font-mono">ggml-*.bin</span> file.
-                      </p>
-                    </div>
-                  ) : null}
-                  <p className={cx('text-[12px]', status?.installed ? 'text-success' : 'text-dim')}>{statusLabel}</p>
-                  <ToolbarButton
-                    type="button"
-                    className={ACTION_BUTTON_CLASS}
-                    disabled={Boolean(busy) || !model.trim()}
-                    onClick={() => void install()}
+                      </>
+                    }
                   >
-                    {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}
-                  </ToolbarButton>
-                </>
-              ) : (
-                <p className="ui-card-meta">Dictation is disabled.</p>
-              )}
-              {busy === 'Saving…' ? <p className="ui-card-meta">Saving…</p> : null}
-              {message ? <p className="text-[12px] text-secondary">{message}</p> : null}
-            </div>
-          ) : null}
-        </div>
-      </section>
+                    <TextInput
+                      id="settings-dictation-custom-model"
+                      value={customModelUrl}
+                      onChange={(event) => {
+                        setCustomModelUrl(event.target.value);
+                        setModel(event.target.value);
+                      }}
+                      onBlur={() => void saveFields(enabled, customModelUrl)}
+                      className="font-mono text-[13px]"
+                      placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </Field>
+                ) : null}
+                <p className={cx('text-[12px]', status?.installed ? 'text-success' : 'text-dim')}>{statusLabel}</p>
+                <ToolbarButton
+                  type="button"
+                  className={ACTION_BUTTON_CLASS}
+                  disabled={Boolean(busy) || !model.trim()}
+                  onClick={() => void install()}
+                >
+                  {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}
+                </ToolbarButton>
+              </>
+            ) : (
+              <p className="ui-card-meta">Dictation is disabled.</p>
+            )}
+            {busy === 'Saving…' ? <p className="ui-card-meta">Saving…</p> : null}
+            {message ? <p className="text-[12px] text-secondary">{message}</p> : null}
+          </div>
+        ) : null}
+      </SettingsSection>
     </div>
   );
 }

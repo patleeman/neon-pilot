@@ -20,7 +20,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Surfaces: `SurfacePanel`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
-- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`
+- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
 - Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection: `SegmentedControl`, `TabList`, `TabButton`
 - Data display: `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`

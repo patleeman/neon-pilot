@@ -43,6 +43,7 @@ export {
   SegmentedControl,
   type SegmentedControlOption,
   Select,
+  SettingToggleRow,
   SettingsSection,
   Stat,
   StatGrid,

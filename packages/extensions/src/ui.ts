@@ -198,6 +198,7 @@ export declare const Pill: HostComponent;
 export declare const SearchInput: HostComponent;
 export declare const SegmentedControl: HostComponent;
 export declare const Select: HostComponent;
+export declare const SettingToggleRow: HostComponent;
 export declare const SettingsSection: HostComponent;
 export declare const Stat: HostComponent;
 export declare const StatGrid: HostComponent;

@@ -21,6 +21,7 @@ import {
   Pill,
   SearchInput,
   SegmentedControl,
+  SettingToggleRow,
   Stat,
   StatGrid,
   Switch,
@@ -53,6 +54,22 @@ describe('design-system primitives', () => {
 
   it('renders switch semantics', () => {
     const html = renderToStaticMarkup(createElement(Switch, { checked: true, label: 'Enabled' }));
+    expect(html).toContain('role="switch"');
+    expect(html).toContain('aria-checked="true"');
+  });
+
+  it('renders setting toggle rows with switch semantics', () => {
+    const html = renderToStaticMarkup(
+      createElement(SettingToggleRow, {
+        title: 'External access',
+        description: 'Allow this entrypoint to launch agents.',
+        checked: true,
+        onCheckedChange: () => undefined,
+      }),
+    );
+
+    expect(html).toContain('ui-setting-toggle-row');
+    expect(html).toContain('External access');
     expect(html).toContain('role="switch"');
     expect(html).toContain('aria-checked="true"');
   });

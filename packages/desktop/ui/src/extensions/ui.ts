@@ -46,6 +46,7 @@ export {
   SearchInput,
   SegmentedControl,
   Select,
+  SettingToggleRow,
   SettingsSection,
   Stat,
   StatGrid,

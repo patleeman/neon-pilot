@@ -29,6 +29,7 @@ import {
   SearchInput,
   SegmentedControl,
   Select,
+  SettingToggleRow,
   SettingsSection,
   Stat,
   StatGrid,
@@ -161,6 +162,12 @@ const meta = {
         <h2 style={{ margin: 0, fontSize: 18 }}>Settings Section</h2>
         <SurfacePanel style={{ padding: 16 }}>
           <SettingsSection title="Runtime" description="Use this pattern for extension settings and editor forms.">
+            <SettingToggleRow
+              title="Enable workflow"
+              description="Use toggle rows for settings that need a title, supporting copy, and switch control."
+              checked
+              onCheckedChange={() => undefined}
+            />
             <Field label="Working Directory">
               <TextInput placeholder="~/workingdir/repo…" />
             </Field>
