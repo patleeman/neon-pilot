@@ -7,7 +7,9 @@ import {
   Disclosure,
   Field,
   Notice,
+  PanelHeader,
   Pill,
+  ResourceListItem,
   SectionLabel,
   SurfacePanel,
   Textarea,
@@ -157,21 +159,14 @@ function parseDraft(draft: SavedWorkflowDraft) {
 function WorkflowCard({ workflow, selected, onSelect }: { workflow: WorkflowSummary; selected: boolean; onSelect: () => void }) {
   const agents = workflow.agents;
   return (
-    <button
-      type="button"
-      className={cx(
-        'w-full rounded-md border px-3 py-2 text-left transition-colors',
-        selected ? 'border-accent/60 bg-accent/10' : 'border-border-subtle bg-surface/40 hover:bg-surface/70',
-      )}
+    <ResourceListItem
+      label={workflow.name}
+      meta={<Pill tone={statusTone(workflow.status)}>{workflow.status}</Pill>}
+      detail={workflow.activePhase || workflow.cwd}
+      selected={selected}
+      className={cx('px-3 py-2', selected && 'bg-accent/10')}
       onClick={onSelect}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-[13px] font-medium text-primary">{workflow.name}</div>
-          <div className="truncate text-[12px] text-secondary">{workflow.activePhase || workflow.cwd}</div>
-        </div>
-        <Pill tone={statusTone(workflow.status)}>{workflow.status}</Pill>
-      </div>
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-dim">
         <span>{formatDate(workflow.createdAt)}</span>
         {agents ? (
@@ -181,7 +176,7 @@ function WorkflowCard({ workflow, selected, onSelect }: { workflow: WorkflowSumm
         ) : null}
         {workflow.model ? <span>{workflow.model}</span> : null}
       </div>
-    </button>
+    </ResourceListItem>
   );
 }
 
@@ -190,35 +185,38 @@ export function DynamicWorkflowTranscriptBlock({ block }: { block: { details?: u
   const agents = details?.agents;
   const modelText = details?.models?.length ? details.models.join(', ') : details?.model;
   return (
-    <div className="rounded-md border border-border-subtle bg-surface/50 px-3 py-2">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-[13px] font-medium text-primary">{details?.name ?? block.text ?? 'Dynamic workflow'}</div>
-          <div className="truncate text-[12px] text-secondary">
-            {details?.activePhase ? `Phase: ${details.activePhase}` : (details?.cwd ?? '')}
+    <SurfacePanel muted className="overflow-hidden shadow-none">
+      <PanelHeader
+        title={details?.name ?? block.text ?? 'Dynamic workflow'}
+        meta={details?.status ? <Pill tone={statusTone(details.status)}>{details.status}</Pill> : undefined}
+        className="px-3 py-2"
+      />
+      <div className="px-3 py-2">
+        {details?.activePhase || details?.cwd ? (
+          <div className="mb-2 truncate text-[12px] text-secondary">
+            {details?.activePhase ? `Phase: ${details.activePhase}` : details.cwd}
           </div>
+        ) : null}
+        <div className="flex flex-wrap gap-2 text-[11px] text-dim">
+          {agents ? (
+            <span>
+              {agents.completed}/{agents.total} agents
+            </span>
+          ) : null}
+          {agents?.running ? <span>{agents.running} running</span> : null}
+          {agents?.failed ? <span>{agents.failed} failed</span> : null}
+          {agents?.cancelled ? <span>{agents.cancelled} cancelled</span> : null}
+          {modelText ? <span>{modelText}</span> : null}
+          {details?.completedAt ? (
+            <span>Completed {formatDate(details.completedAt)}</span>
+          ) : details?.updatedAt ? (
+            <span>Updated {formatDate(details.updatedAt)}</span>
+          ) : null}
         </div>
-        {details?.status ? <Pill tone={statusTone(details.status)}>{details.status}</Pill> : null}
+        {details?.resultText ? <p className="mt-2 line-clamp-3 text-[12px] text-secondary">{details.resultText}</p> : null}
+        {details?.error ? <p className="mt-2 line-clamp-3 text-[12px] text-danger">{details.error}</p> : null}
       </div>
-      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-dim">
-        {agents ? (
-          <span>
-            {agents.completed}/{agents.total} agents
-          </span>
-        ) : null}
-        {agents?.running ? <span>{agents.running} running</span> : null}
-        {agents?.failed ? <span>{agents.failed} failed</span> : null}
-        {agents?.cancelled ? <span>{agents.cancelled} cancelled</span> : null}
-        {modelText ? <span>{modelText}</span> : null}
-        {details?.completedAt ? (
-          <span>Completed {formatDate(details.completedAt)}</span>
-        ) : details?.updatedAt ? (
-          <span>Updated {formatDate(details.updatedAt)}</span>
-        ) : null}
-      </div>
-      {details?.resultText ? <p className="mt-2 line-clamp-3 text-[12px] text-secondary">{details.resultText}</p> : null}
-      {details?.error ? <p className="mt-2 line-clamp-3 text-[12px] text-danger">{details.error}</p> : null}
-    </div>
+    </SurfacePanel>
   );
 }
 
