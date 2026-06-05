@@ -90,6 +90,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Telemetry extension](../extensions/system-telemetry/README.md)
 - [Video Probe](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe)
 - [Web Fetch](../extensions/system-web-tools/README.md)
+- [Writing Studio](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio) — document-first collaborative writing surface
 
 ## Sections
 
