@@ -4,6 +4,7 @@ import {
   AppPageIntro,
   AppPageLayout,
   CodeBlock,
+  Disclosure,
   Field,
   Notice,
   Pill,
@@ -513,12 +514,16 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                           <div className="mt-1 text-dim">{[node.phase, node.model, node.runId].filter(Boolean).join(' · ')}</div>
                           {node.allowedTools?.length ? <div className="mt-1 text-dim">Tools: {node.allowedTools.join(', ')}</div> : null}
                           {node.prompt ? (
-                            <details className="mt-2">
-                              <summary className="cursor-pointer text-dim">Prompt</summary>
-                              <CodeBlock compact className="mt-2 max-h-48 border-0 bg-transparent p-0 text-secondary">
+                            <Disclosure
+                              summary="Prompt"
+                              className="mt-2 border-0 bg-transparent"
+                              summaryClassName="px-0 py-0 text-dim hover:text-secondary"
+                              bodyClassName="border-0 p-0 pt-2"
+                            >
+                              <CodeBlock compact className="max-h-48 border-0 bg-transparent p-0 text-secondary">
                                 {node.prompt}
                               </CodeBlock>
-                            </details>
+                            </Disclosure>
                           ) : null}
                           {node.resultText ? <p className="mt-2 text-secondary">{node.resultText}</p> : null}
                           {node.error ? <p className="mt-2 text-danger">{node.error}</p> : null}
@@ -551,20 +556,18 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 ) : null}
                 {detail ? (
-                  <details className="rounded-md border border-border-subtle bg-surface/30 p-3">
-                    <summary className="cursor-pointer text-[13px] font-medium text-primary">Args</summary>
-                    <CodeBlock compact className="mt-3 max-h-72 border-0 bg-transparent p-0 text-secondary">
+                  <Disclosure summary="Args" className="bg-surface/30">
+                    <CodeBlock compact className="max-h-72 border-0 bg-transparent p-0 text-secondary">
                       {JSON.stringify(detail.args, null, 2)}
                     </CodeBlock>
-                  </details>
+                  </Disclosure>
                 ) : null}
                 {detail?.script ? (
-                  <details className="rounded-md border border-border-subtle bg-surface/30 p-3">
-                    <summary className="cursor-pointer text-[13px] font-medium text-primary">Script</summary>
-                    <CodeBlock compact className="mt-3 max-h-96 border-0 bg-transparent p-0 text-secondary">
+                  <Disclosure summary="Script" className="bg-surface/30">
+                    <CodeBlock compact className="max-h-96 border-0 bg-transparent p-0 text-secondary">
                       {detail.script}
                     </CodeBlock>
-                  </details>
+                  </Disclosure>
                 ) : null}
               </div>
             ) : null}

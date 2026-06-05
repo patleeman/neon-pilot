@@ -137,7 +137,8 @@ body {
 .ui-text-input:focus-visible,
 .ui-search-input:focus-visible,
 .ui-textarea:focus-visible,
-.ui-select:focus-visible {
+.ui-select:focus-visible,
+.ui-disclosure-summary:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
 }
@@ -389,6 +390,50 @@ body {
 .ui-code-block-wrap {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.ui-disclosure {
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--color-border-subtle));
+  background: rgb(var(--color-surface) / 0.3);
+}
+
+.ui-disclosure-summary {
+  display: flex;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  color: rgb(var(--color-primary));
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+  transition: color 140ms ease;
+}
+
+.ui-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ui-disclosure-summary::before {
+  content: '▸';
+  color: rgb(var(--color-dim));
+  transition: transform 140ms ease;
+}
+
+.ui-disclosure[open] .ui-disclosure-summary::before {
+  transform: rotate(90deg);
+}
+
+.ui-disclosure-summary:hover {
+  color: rgb(var(--color-accent));
+}
+
+.ui-disclosure-body {
+  border-top: 1px solid rgb(var(--color-border-subtle));
+  padding: 0.75rem;
 }
 
 .ui-panel,

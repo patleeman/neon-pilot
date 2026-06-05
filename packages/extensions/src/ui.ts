@@ -145,6 +145,7 @@ export declare const DataTableCell: HostComponent;
 export declare const DataTableHead: HostComponent;
 export declare const DataTableHeaderCell: HostComponent;
 export declare const DataTableRow: HostComponent;
+export declare const Disclosure: HostComponent;
 export declare const Dialog: HostComponent;
 export declare const DialogBody: HostComponent;
 export declare const DialogFooter: HostComponent;

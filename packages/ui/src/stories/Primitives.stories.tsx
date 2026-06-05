@@ -12,6 +12,7 @@ import {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
+  Disclosure,
   DialogBody,
   DialogFooter,
   DialogHeader,
@@ -152,6 +153,9 @@ const meta = {
             <KeyValueItem label="Package" value="installable-extensions/system-example" action={<Button variant="ghost">Open</Button>} />
             <KeyValueItem label="Permissions" value="Filesystem, shell, notifications" />
           </KeyValueList>
+          <Disclosure summary="Invocation payload" open>
+            <CodeBlock compact>{'{\n  "cwd": "/Users/patrick/workingdir/neon-pilot",\n  "mode": "review"\n}'}</CodeBlock>
+          </Disclosure>
           <CodeBlock>{'pa.extension.invoke("readState", { id: "system-example" })'}</CodeBlock>
           <DataTable>
             <DataTableHead>

@@ -25,6 +25,7 @@ export {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
+  Disclosure,
   Dialog,
   DialogBody,
   DialogFooter,

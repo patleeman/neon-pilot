@@ -13,6 +13,7 @@ import {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
+  Disclosure,
   Dialog,
   KeyValueItem,
   KeyValueList,
@@ -115,6 +116,16 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-code-block');
     expect(html).toContain('ui-code-block-compact');
     expect(html).not.toContain('ui-code-block-wrap');
+  });
+
+  it('renders disclosure anatomy', () => {
+    const html = renderToStaticMarkup(createElement(Disclosure, { summary: 'Details', open: true }, 'Expanded content'));
+
+    expect(html).toContain('<details');
+    expect(html).toContain('open=""');
+    expect(html).toContain('ui-disclosure');
+    expect(html).toContain('ui-disclosure-summary');
+    expect(html).toContain('ui-disclosure-body');
   });
 
   it('renders dialog semantics', () => {

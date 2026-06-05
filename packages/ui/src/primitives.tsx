@@ -1,5 +1,6 @@
 import {
   type ButtonHTMLAttributes,
+  type DetailsHTMLAttributes,
   forwardRef,
   type HTMLAttributes,
   type InputHTMLAttributes,
@@ -200,6 +201,27 @@ export function CodeBlock({
     <pre className={cx('ui-code-block', compact && 'ui-code-block-compact', wrap && 'ui-code-block-wrap', className)} {...props}>
       {children}
     </pre>
+  );
+}
+
+export function Disclosure({
+  summary,
+  children,
+  className,
+  summaryClassName,
+  bodyClassName,
+  ...props
+}: {
+  summary: ReactNode;
+  summaryClassName?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+} & DetailsHTMLAttributes<HTMLDetailsElement>) {
+  return (
+    <details className={cx('ui-disclosure', className)} {...props}>
+      <summary className={cx('ui-disclosure-summary', summaryClassName)}>{summary}</summary>
+      <div className={cx('ui-disclosure-body', bodyClassName)}>{children}</div>
+    </details>
   );
 }
 
