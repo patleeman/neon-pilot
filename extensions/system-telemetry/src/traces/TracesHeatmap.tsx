@@ -3,17 +3,15 @@
  */
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
+import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">Token Activity — All Retained History</span>
-          <span className="ml-auto text-[10px] text-dim">No data yet</span>
-        </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader title="Token Activity — All Retained History" meta="No data yet" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Data accumulates after sessions produce tokens.</div>
-      </div>
+      </SurfacePanel>
     );
   }
 
@@ -44,13 +42,11 @@ export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
   const dateRange = firstDate && lastDate ? `${firstDate} → ${lastDate}` : 'All retained history';
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">Token Activity — All Retained History</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
-          {dateRange} · {formatNumber(total)} total · {formatNumber(avg)} avg/active day
-        </span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader
+        title="Token Activity — All Retained History"
+        meta={`${dateRange} · ${formatNumber(total)} total · ${formatNumber(avg)} avg/active day`}
+      />
       <div className="p-4 overflow-x-auto">
         <div className="flex gap-0.5 min-w-[500px]">
           {weeks.map((week, wi) => (
@@ -116,7 +112,7 @@ export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
           </span>
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }
 

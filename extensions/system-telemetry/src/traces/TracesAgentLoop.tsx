@@ -3,26 +3,21 @@
  */
 
 import type { TraceAgentLoop } from '@neon-pilot/extensions/data';
+import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">🔄 Agent Loop Health</span>
-          <span className="ml-auto text-[10px] text-dim">No data yet</span>
-        </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader title="🔄 Agent Loop Health" meta="No data yet" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Loop metrics appear after agent runs complete.</div>
-      </div>
+      </SurfacePanel>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">🔄 Agent Loop Health</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">Selected range</span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader title="🔄 Agent Loop Health" meta="Selected range" />
       <div className="p-4">
         {/* Loop stats grid */}
         <div className="grid grid-cols-4 gap-2.5 mb-4">
@@ -80,7 +75,7 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
           )}
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }
 

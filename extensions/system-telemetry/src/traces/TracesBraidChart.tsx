@@ -3,16 +3,18 @@
  */
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
+import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length < 2) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">🧶 Time Series — Last {data?.length ?? 0} Days</span>
-          <span className="ml-auto text-[10px] text-dim">Need 2+ data points</span>
-        </div>
-      </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader
+          title={`🧶 Time Series — Last ${data?.length ?? 0} Days`}
+          meta="Need 2+ data points"
+          metaClassName="bg-transparent px-0"
+        />
+      </SurfacePanel>
     );
   }
 
@@ -47,11 +49,12 @@ export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   const errPath = line(errorSeries, scaleErr);
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">🧶 Time Series — Last {data.length} Days</span>
-        <span className="ml-auto text-[10px] text-dim">{hasErrors ? '4' : '3'} metrics overlaid</span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader
+        title={`🧶 Time Series — Last ${data.length} Days`}
+        meta={`${hasErrors ? '4' : '3'} metrics overlaid`}
+        metaClassName="bg-transparent px-0"
+      />
       <div className="p-3">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[100px]" preserveAspectRatio="none">
           {/* Grid */}
@@ -103,7 +106,7 @@ export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
           <span className="ml-auto">Peak: {formatNumber(maxVal)} tokens</span>
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }
 

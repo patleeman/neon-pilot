@@ -6,17 +6,15 @@
  */
 
 import type { ContextPointerUsageResult } from '@neon-pilot/extensions/data';
+import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
   if (!data || data.summary.totalSuggested === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-          <span className="text-[12px] font-semibold">🔍 Suggested Context Usage</span>
-          <span className="ml-auto text-[10px] text-dim">No data yet</span>
-        </div>
+      <SurfacePanel className="overflow-hidden">
+        <PanelHeader title="🔍 Suggested Context Usage" meta="No data yet" metaClassName="bg-transparent px-0" />
         <div className="p-6 text-center text-[12px] text-dim">Tracks how often agents inspect suggested related-conversation pointers.</div>
-      </div>
+      </SurfacePanel>
     );
   }
 
@@ -24,13 +22,8 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
   const usageRateColor = summary.usageRate >= 50 ? 'text-success' : summary.usageRate >= 20 ? 'text-warning' : 'text-danger';
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">🔍 Suggested Context Usage</span>
-        <span className="ml-auto text-[10px] text-dim bg-elevated px-2 py-0.5 rounded-md">
-          {summary.usageRate}% of sessions used suggestions
-        </span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader title="🔍 Suggested Context Usage" meta={`${summary.usageRate}% of sessions used suggestions`} />
 
       <div className="grid grid-cols-4 divide-x divide-border-subtle border-b border-border-subtle">
         <Stat value={`${summary.usageRate}%`} label="Usage Rate" cls={usageRateColor} sub="sessions that inspected a pointer" />
@@ -55,7 +48,7 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
           <DailyBars daily={daily} />
         </div>
       )}
-    </div>
+    </SurfacePanel>
   );
 }
 
