@@ -22,6 +22,7 @@ const {
   sessionManagerForkFromMock,
   sessionManagerInMemoryMock,
   sessionManagerOpenMock,
+  runtimePathsMock,
   settingsManagerApplyOverridesMock,
   settingsManagerCreateMock,
   syncWebLiveConversationRunMock,
@@ -55,6 +56,10 @@ const {
     sessionManagerForkFromMock: vi.fn(),
     sessionManagerInMemoryMock: vi.fn(),
     sessionManagerOpenMock: vi.fn(),
+    runtimePathsMock: {
+      durableSessionsDir: '/tmp/durable-sessions',
+      piAgentRuntimeDir: '/tmp/agent-runtime',
+    },
     settingsManagerApplyOverridesMock: vi.fn(),
     settingsManagerCreateMock: vi.fn(),
     syncWebLiveConversationRunMock: vi.fn(),
@@ -65,8 +70,8 @@ vi.mock('@neon-pilot/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@neon-pilot/core')>();
   return {
     ...actual,
-    getDurableSessionsDir: () => '/tmp/durable-sessions',
-    getPiAgentRuntimeDir: () => '/tmp/agent-runtime',
+    getDurableSessionsDir: () => runtimePathsMock.durableSessionsDir,
+    getPiAgentRuntimeDir: () => runtimePathsMock.piAgentRuntimeDir,
     resolveChildProcessEnv: resolveChildProcessEnvMock,
   };
 });
@@ -300,6 +305,8 @@ describe('liveSessions bootstrap helpers', () => {
     sessionManagerForkFromMock.mockReset();
     sessionManagerInMemoryMock.mockReset();
     sessionManagerOpenMock.mockReset();
+    runtimePathsMock.durableSessionsDir = '/tmp/durable-sessions';
+    runtimePathsMock.piAgentRuntimeDir = '/tmp/agent-runtime';
     settingsManagerApplyOverridesMock.mockReset();
     settingsManagerCreateMock.mockReset();
     syncWebLiveConversationRunMock.mockReset();
@@ -456,6 +463,44 @@ describe('liveSessions bootstrap helpers', () => {
 
     expect(DefaultResourceLoaderMock).toHaveBeenCalledTimes(1);
     expect(defaultResourceLoaderReloadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves runtime paths when a live session starts instead of caching import-time defaults', async () => {
+    const runtimeRegistry = {
+      getAvailable: vi.fn(() => []),
+    };
+    runtimePathsMock.durableSessionsDir = '/tmp/import-time-sessions';
+    runtimePathsMock.piAgentRuntimeDir = '/tmp/import-time-runtime';
+
+    const manager = createMockManager({
+      sessionFile: '/tmp/rc-sessions/--tmp-workspace--/session-runtime.jsonl',
+    });
+    const createdSession = createMockSession({
+      sessionId: 'session-runtime',
+      cwd: '/tmp/workspace',
+      manager,
+      model: { id: 'gpt-5', provider: 'openai' },
+      sessionFile: '/tmp/rc-sessions/--tmp-workspace--/session-runtime.jsonl',
+      tools: [],
+    });
+
+    createRuntimeModelRegistryMock.mockReturnValue(runtimeRegistry);
+    sessionManagerCreateMock.mockReturnValue(manager);
+    createAgentSessionMock.mockResolvedValue({ session: createdSession.session });
+
+    runtimePathsMock.durableSessionsDir = '/tmp/rc-sessions';
+    runtimePathsMock.piAgentRuntimeDir = '/tmp/rc-runtime';
+
+    await expect(createSession('/tmp/workspace')).resolves.toEqual(
+      expect.objectContaining({
+        id: 'session-runtime',
+        sessionFile: '/tmp/rc-sessions/--tmp-workspace--/session-runtime.jsonl',
+      }),
+    );
+
+    expect(sessionManagerCreateMock).toHaveBeenCalledWith('/tmp/workspace', '/tmp/rc-sessions/--tmp-workspace--');
+    expect(authCreateMock).toHaveBeenCalledWith('/tmp/rc-runtime/auth.json');
+    expect(settingsManagerCreateMock).toHaveBeenCalledWith('/tmp/workspace', '/tmp/rc-runtime');
   });
 
   it('creates a new live session, repairs provider mismatches, and applies initial model preferences', async () => {

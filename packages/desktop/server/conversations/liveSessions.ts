@@ -139,23 +139,31 @@ export { type PromptImageAttachment, type QueuedPromptPreview } from './liveSess
 export { isPlaceholderConversationTitle, resolveStableSessionTitle } from './liveSessionTitle.js';
 
 export function prewarmLiveSessionToolSelection(): void {
-  void warmLiveSessionToolSelection(SETTINGS_FILE);
+  void warmLiveSessionToolSelection(resolveSettingsFile());
 }
 
-const AGENT_DIR = getPiAgentRuntimeDir();
-const SETTINGS_FILE = join(AGENT_DIR, 'settings.json');
-const SESSIONS_DIR = getDurableSessionsDir();
+function resolveAgentDir(): string {
+  return getPiAgentRuntimeDir();
+}
+
+function resolveSettingsFile(): string {
+  return join(resolveAgentDir(), 'settings.json');
+}
+
+function resolveSessionsDir(): string {
+  return getDurableSessionsDir();
+}
 
 export function resolvePersistentSessionDir(cwd: string): string {
   const safePath = `--${cwd.replace(/^[/\\]/, '').replace(/[/\\:]/g, '-')}--`;
-  return join(SESSIONS_DIR, safePath);
+  return join(resolveSessionsDir(), safePath);
 }
 
 function resolveConversationPreferenceStateForSession(
   sessionManager: Parameters<typeof resolveConversationPreferenceStateForSessionWithSettings>[1],
   availableModels: Parameters<typeof resolveConversationPreferenceStateForSessionWithSettings>[2],
 ): ReturnType<typeof resolveConversationPreferenceStateForSessionWithSettings> {
-  return resolveConversationPreferenceStateForSessionWithSettings(SETTINGS_FILE, sessionManager, availableModels);
+  return resolveConversationPreferenceStateForSessionWithSettings(resolveSettingsFile(), sessionManager, availableModels);
 }
 
 // ── SSE event types sent to clients ──────────────────────────────────────────
@@ -454,7 +462,7 @@ export function getLiveSessionForkEntries(sessionId: string): unknown[] | null {
 }
 
 export async function getAvailableModelObjects() {
-  const auth = makeFactoryAuth(AGENT_DIR);
+  const auth = makeFactoryAuth(resolveAgentDir());
   const registry = makeRegistry(auth);
   return registry.getAvailable();
 }
@@ -486,7 +494,7 @@ export async function inspectAvailableTools(
 }> {
   return inspectAvailableLiveSessionTools({
     cwd,
-    agentDir: options.agentDir ?? AGENT_DIR,
+    agentDir: options.agentDir ?? resolveAgentDir(),
     options,
   });
 }
@@ -506,8 +514,8 @@ export async function createSession(
 ): Promise<{ id: string; sessionFile: string; perf?: Record<string, number> }> {
   return createLiveSessionWithCallbacks({
     cwd,
-    agentDir: AGENT_DIR,
-    settingsFile: SETTINGS_FILE,
+    agentDir: resolveAgentDir(),
+    settingsFile: resolveSettingsFile(),
     options,
     persistentSessionDir: resolvePersistentSessionDir(cwd),
     wireSession,
@@ -523,8 +531,8 @@ export async function createSessionFromExisting(
   return createLiveSessionFromExistingWithCallbacks({
     sessionFile,
     cwd,
-    agentDir: AGENT_DIR,
-    settingsFile: SETTINGS_FILE,
+    agentDir: resolveAgentDir(),
+    settingsFile: resolveSettingsFile(),
     options,
     persistentSessionDir: resolvePersistentSessionDir(cwd),
     wireSession,
@@ -594,8 +602,8 @@ export async function resumeSession(
 ): Promise<{ id: string; perf?: Record<string, number> }> {
   return resumeLiveSessionWithCallbacks({
     sessionFile,
-    agentDir: AGENT_DIR,
-    settingsFile: SETTINGS_FILE,
+    agentDir: resolveAgentDir(),
+    settingsFile: resolveSettingsFile(),
     options,
     findLiveSessionByFile: (candidateFile) => {
       for (const [id, entry] of registry.entries()) {
@@ -1041,7 +1049,7 @@ export async function updateLiveSessionModelPreferences(
     entry,
     preferences: input,
     availableModels: models,
-    settingsFile: SETTINGS_FILE,
+    settingsFile: resolveSettingsFile(),
     publishSessionMetaChanged,
   });
 }
