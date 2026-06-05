@@ -63,6 +63,15 @@ function parseModelRef(modelRef: string): { provider: string; model: string } | 
   return { provider: modelRef.slice(0, separator), model: modelRef.slice(separator + 1) };
 }
 
+function resolveInitialModel(modelRef: string, models: ReturnType<ModelRegistry['getAvailable']>) {
+  const parsed = parseModelRef(modelRef);
+  if (parsed) {
+    return models.find((model) => model.provider === parsed.provider && model.id === parsed.model) ?? null;
+  }
+  const matches = models.filter((model) => model.id === modelRef);
+  return matches.length === 1 ? matches[0]! : null;
+}
+
 async function resolveModelProfileSessionPolicy(modelRef: string): Promise<ResolvedModelProfileSessionPolicy> {
   const parsed = parseModelRef(modelRef);
   if (!parsed) return { activeTools: null, progressiveSkillDiscovery: false, ds4Profile: false };
@@ -229,8 +238,10 @@ export async function createPreparedLiveAgentSession(input: {
   const registryAtMs = performance.now();
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const settingsAtMs = performance.now();
-  const savedModelRef = readSavedModelRef(input.settingsFile, modelRegistry.getAvailable());
+  const availableModels = modelRegistry.getAvailable();
+  const savedModelRef = readSavedModelRef(input.settingsFile, availableModels);
   const effectiveModelRef = options.initialModel ?? savedModelRef;
+  const initialModel = resolveInitialModel(effectiveModelRef, availableModels);
   const modelProfilePolicy = await resolveModelProfileSessionPolicy(effectiveModelRef);
   const ds4CliBinDir = modelProfilePolicy.ds4Profile ? resolveDs4CliBinDir(options) : null;
   publishDs4CliToHostPath(ds4CliBinDir);
@@ -257,6 +268,7 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
+    ...(initialModel ? { model: initialModel } : {}),
     ...(initialToolNames ? { tools: initialToolNames } : {}),
   });
   const agentSessionAtMs = performance.now();
@@ -268,7 +280,6 @@ export async function createPreparedLiveAgentSession(input: {
   }
   const persistenceAtMs = performance.now();
 
-  const availableModels = modelRegistry.getAvailable();
   await repairSessionModelProvider(session, availableModels);
   const modelRepairAtMs = performance.now();
 

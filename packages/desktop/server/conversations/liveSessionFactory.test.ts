@@ -77,6 +77,7 @@ describe('live session factory', () => {
     else process.env.DS4_CLI_BIN = originalDs4CliBin;
     extensionRegistry.resolveModelProfile.mockResolvedValue({ kind: 'none' });
     modelPrefs.readSavedModelRef.mockReturnValue('provider/model');
+    modelRegistry.createRuntimeModelRegistry.mockReturnValue({ getAvailable: vi.fn(() => [{ id: 'model-1', provider: 'provider' }]) });
   });
 
   function session() {
@@ -161,6 +162,36 @@ describe('live session factory', () => {
     );
     expect(liveModels.applyLiveSessionServiceTier).toHaveBeenCalledWith(s, 'flex');
     expect(s.setActiveTools).not.toHaveBeenCalled();
+  });
+
+  it('creates the Pi session with the selected provider-qualified initial model', async () => {
+    const s = session();
+    const ds4Model = { id: 'deepseek-v4-flash', provider: 'ds4' };
+    const opencodeModel = { id: 'deepseek-v4-flash', provider: 'opencode-go' };
+    modelRegistry.createRuntimeModelRegistry.mockReturnValue({
+      getAvailable: vi.fn(() => [ds4Model, opencodeModel]),
+    });
+    modelPrefs.readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+    agent.createAgentSession.mockResolvedValueOnce({ session: s });
+
+    await createPreparedLiveAgentSession({
+      cwd: '/repo',
+      agentDir: '/agent',
+      settingsFile: '/settings.json',
+      sessionManager: {} as never,
+      options: { initialModel: 'opencode-go/deepseek-v4-flash' },
+      applyInitialPreferences: true,
+    });
+
+    expect(extensionRegistry.resolveModelProfile).toHaveBeenCalledWith({ provider: 'opencode-go', model: 'deepseek-v4-flash' });
+    expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ model: opencodeModel }));
+    expect(liveModels.repairSessionModelProvider).toHaveBeenCalledWith(s, [ds4Model, opencodeModel]);
+    expect(prefs.applyConversationModelPreferencesToLiveSession).toHaveBeenCalledWith(
+      s,
+      { model: 'opencode-go/deepseek-v4-flash' },
+      expect.any(Object),
+      [ds4Model, opencodeModel],
+    );
   });
 
   it('lets explicit allowed tools override selected model profile tools at session creation', async () => {
