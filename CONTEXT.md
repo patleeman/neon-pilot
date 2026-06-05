@@ -61,6 +61,10 @@ The small stable platform: agent/conversation runtime, transcript/event stream, 
 
 Do not use **core** for product workflows that should live in extensions.
 
+### Design system
+
+The shared UI component and documentation system used by the desktop app and extensions. Prefer **design system** for reusable components, Storybook examples, and agent-facing UI guidance.
+
 ### Extension
 
 A package that contributes product features on top of core: pages, panels, tools, skills, commands, context providers, integrations, diagnostics, settings, and workflow UX.

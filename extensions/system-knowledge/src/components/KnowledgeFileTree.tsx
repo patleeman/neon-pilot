@@ -1,10 +1,16 @@
 import type { KnowledgeEntry } from '@neon-pilot/extensions/data';
 import {
+  Button,
   canDropAllPaths,
   collapseExpandedFolderIds,
   ContextMenuWrapper,
   cx,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
   type DesktopKnowledgeEntryContextMenuAction,
+  Field,
   getDesktopBridge,
   getTopLevelDraggedPaths,
   normalizeOpenFileIds,
@@ -15,7 +21,9 @@ import {
   removeOpenFileId,
   renameExpandedFolderIds,
   renameOpenFileIds,
+  Select,
   shouldUseNativeAppContextMenus,
+  TextInput,
   useApi,
   useFileTreeModel,
   useInvalidateOnTopics,
@@ -328,22 +336,14 @@ function MoveModal({
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState('');
+  const title = paths.length === 1 ? `Move "${entryMap.get(paths[0] ?? '')?.name ?? ''}"` : `Move ${paths.length} items`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-elevated border border-border-default rounded-xl shadow-2xl w-80 p-5" onClick={(event) => event.stopPropagation()}>
-        <h3 className="text-[13px] font-semibold text-primary mb-1">
-          {paths.length === 1 ? `Move "${entryMap.get(paths[0] ?? '')?.name ?? ''}"` : `Move ${paths.length} items`}
-        </h3>
-        <p className="text-[11px] text-dim mb-3">Select destination folder.</p>
-        <label className="block space-y-1">
-          <span className="text-[11px] text-dim">Destination</span>
-          <select
-            aria-label="Move destination"
-            className="w-full rounded-lg border border-border-default bg-surface text-[12px] text-primary px-3 py-2 outline-none focus:border-accent"
-            value={selected}
-            onChange={(event) => setSelected(event.target.value)}
-          >
+    <Dialog onClose={onClose} labelledBy="knowledge-move-title" className="max-w-[20rem]">
+      <DialogHeader title={title} titleId="knowledge-move-title" description="Select destination folder." />
+      <DialogBody>
+        <Field label="Destination">
+          <Select aria-label="Move destination" value={selected} onChange={(event) => setSelected(event.target.value)}>
             {folderOptions.map((folder) => (
               <option
                 key={folder.id}
@@ -358,25 +358,25 @@ function MoveModal({
                 {folder.label}
               </option>
             ))}
-          </select>
-        </label>
-        <div className="flex justify-end gap-2 pt-4">
-          <button type="button" className="ui-action-button text-[12px]" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="ui-action-button text-[12px] bg-accent text-white hover:bg-accent/90"
-            onClick={() => {
-              onConfirm(selected);
-              onClose();
-            }}
-          >
-            Move
-          </button>
-        </div>
-      </div>
-    </div>
+          </Select>
+        </Field>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="action" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          variant="action"
+          tone="accent"
+          onClick={() => {
+            onConfirm(selected);
+            onClose();
+          }}
+        >
+          Move
+        </Button>
+      </DialogFooter>
+    </Dialog>
   );
 }
 
@@ -427,80 +427,61 @@ function ImportUrlModal({
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={() => {
-        if (!submitting) onClose();
-      }}
-    >
-      <div
-        className="bg-elevated border border-border-default rounded-xl shadow-2xl w-[min(34rem,calc(100vw-2rem))] p-5"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h3 className="text-[13px] font-semibold text-primary mb-1">Import URL</h3>
-        <p className="text-[11px] text-dim mb-3">Paste a web URL and Neon Pilot will fetch readable content into a new knowledge note.</p>
+    <Dialog onClose={submitting ? undefined : onClose} closeOnBackdrop={!submitting} labelledBy="knowledge-import-url-title">
+      <DialogHeader
+        title="Import URL"
+        titleId="knowledge-import-url-title"
+        description="Paste a web URL and Neon Pilot will fetch readable content into a new knowledge note."
+      />
+      <DialogBody>
         <form
           className="space-y-3"
           onSubmit={(event) => {
             void handleSubmit(event);
           }}
         >
-          <label className="block space-y-1">
-            <span className="text-[11px] text-dim">URL</span>
-            <input
+          <Field label="URL">
+            <TextInput
               ref={urlRef}
               type="url"
               value={url}
               onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://example.com/article"
-              className="w-full rounded-lg border border-border-default bg-surface text-[12px] text-primary px-3 py-2 outline-none focus:border-accent"
+              placeholder="https://example.com/article…"
               spellCheck={false}
               autoComplete="off"
             />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-[11px] text-dim">
-              Title override <span className="text-dim/70">optional</span>
-            </span>
-            <input
+          </Field>
+          <Field label="Title override" hint="Optional. Leave blank to use the page title.">
+            <TextInput
               type="text"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Leave blank to use the page title"
-              className="w-full rounded-lg border border-border-default bg-surface text-[12px] text-primary px-3 py-2 outline-none focus:border-accent"
+              placeholder="Leave blank to use the page title…"
               autoComplete="off"
             />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-[11px] text-dim">
-              Target folder <span className="text-dim/70">optional</span>
-            </span>
-            <input
+          </Field>
+          <Field label="Target folder" hint="Optional.">
+            <TextInput
               type="text"
               value={directoryId}
               onChange={(event) => setDirectoryId(event.target.value)}
-              placeholder="Inbox"
-              className="w-full rounded-lg border border-border-default bg-surface text-[12px] text-primary px-3 py-2 outline-none focus:border-accent"
+              placeholder="Inbox…"
               spellCheck={false}
               autoComplete="off"
             />
-          </label>
+          </Field>
           {error ? <p className="text-[12px] text-danger">{error}</p> : null}
-          <div className="flex justify-end gap-2 pt-1">
-            <button type="button" className="ui-action-button text-[12px]" onClick={onClose} disabled={submitting}>
+          <DialogFooter className="border-t-0 px-0 pb-0">
+            <Button variant="action" onClick={onClose} disabled={submitting}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="ui-action-button text-[12px] bg-accent text-white hover:bg-accent/90 disabled:opacity-70"
-              disabled={submitting}
-            >
-              {submitting ? 'Importing...' : 'Import URL'}
-            </button>
-          </div>
+            </Button>
+            <Button type="submit" variant="action" tone="accent" disabled={submitting}>
+              {submitting ? 'Importing…' : 'Import URL'}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogBody>
+    </Dialog>
   );
 }
 
@@ -550,55 +531,47 @@ function CreateEntryModal({
   const targetLabel = state.directoryId || 'knowledge root';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={() => {
-        if (!submitting) onClose();
-      }}
+    <Dialog
+      onClose={submitting ? undefined : onClose}
+      closeOnBackdrop={!submitting}
+      labelledBy="knowledge-create-entry-title"
+      className="max-w-[28rem]"
     >
-      <div
-        className="bg-elevated border border-border-default rounded-xl shadow-2xl w-[min(28rem,calc(100vw-2rem))] p-5"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h3 className="text-[13px] font-semibold text-primary mb-1">{title}</h3>
-        <p className="text-[11px] text-dim mb-3">
-          Create a new {state.kind === 'file' ? 'markdown file' : 'folder'} in {targetLabel}.
-        </p>
+      <DialogHeader
+        title={title}
+        titleId="knowledge-create-entry-title"
+        description={`Create a new ${state.kind === 'file' ? 'markdown file' : 'folder'} in ${targetLabel}.`}
+      />
+      <DialogBody>
         <form
           className="space-y-3"
           onSubmit={(event) => {
             void handleSubmit(event);
           }}
         >
-          <label className="block space-y-1">
-            <span className="text-[11px] text-dim">{label}</span>
-            <input
+          <Field label={label}>
+            <TextInput
               ref={inputRef}
               type="text"
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              placeholder={state.kind === 'file' ? 'untitled.md' : 'New Folder'}
-              className="w-full rounded-lg border border-border-default bg-surface text-[12px] text-primary px-3 py-2 outline-none focus:border-accent"
+              placeholder={state.kind === 'file' ? 'untitled.md…' : 'New Folder…'}
               spellCheck={false}
               autoComplete="off"
             />
-          </label>
+          </Field>
           {error ? <p className="text-[12px] text-danger">{error}</p> : null}
-          <div className="flex justify-end gap-2 pt-1">
-            <button type="button" className="ui-action-button text-[12px]" onClick={onClose} disabled={submitting}>
+          <DialogFooter className="border-t-0 px-0 pb-0">
+            <Button variant="action" onClick={onClose} disabled={submitting}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="ui-action-button text-[12px] bg-accent text-white hover:bg-accent/90 disabled:opacity-70"
-              disabled={submitting}
-            >
-              {submitting ? 'Creating...' : title}
-            </button>
-          </div>
+            </Button>
+            <Button type="submit" variant="action" tone="accent" disabled={submitting}>
+              {submitting ? 'Creating…' : title}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogBody>
+    </Dialog>
   );
 }
 

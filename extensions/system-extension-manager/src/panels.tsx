@@ -1,14 +1,7 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
-import {
-  AppPageIntro,
-  AppPageLayout,
-  cx,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, Notice } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
   type CSSProperties,
@@ -79,6 +72,7 @@ type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | '
 type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
 type ExtensionFilter = 'all' | 'attention';
 type ExtensionActionBridge = ExtensionSurfaceProps['pa']['extensions'];
+type ExtensionManagerNotice = { type: 'info' | 'success' | 'error'; message: string; details?: string };
 
 const ACTIONS_MENU_VIEWPORT_MARGIN = 8;
 const ACTIONS_MENU_BUTTON_GAP = 8;
@@ -88,6 +82,14 @@ interface ActionsMenuPosition {
   right: number;
   maxHeight: number;
   visibility?: CSSProperties['visibility'];
+}
+
+function ExtensionNoticeBox({ notice }: { notice: ExtensionManagerNotice }) {
+  return (
+    <Notice tone={notice.type === 'error' ? 'danger' : notice.type} title={notice.message}>
+      {notice.details}
+    </Notice>
+  );
 }
 
 function calculateActionsMenuPosition({
@@ -805,14 +807,14 @@ function installedCatalogItemToSummary(item: InstallableExtensionCatalogItem): E
     enabled,
     status: enabled ? 'enabled' : 'disabled',
     ...(item.description ? { description: item.description } : {}),
-    ...(item.installedVersion ?? item.version ? { version: item.installedVersion ?? item.version } : {}),
+    ...((item.installedVersion ?? item.version) ? { version: item.installedVersion ?? item.version } : {}),
     manifest: {
       schemaVersion: 2,
       id: item.id,
       name: item.name,
       packageType: 'user',
       ...(item.description ? { description: item.description } : {}),
-      ...(item.installedVersion ?? item.version ? { version: item.installedVersion ?? item.version } : {}),
+      ...((item.installedVersion ?? item.version) ? { version: item.installedVersion ?? item.version } : {}),
     },
     permissions: [],
     surfaces: [],
@@ -852,7 +854,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<ExtensionManagerNotice | null>(null);
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ExtensionFilter>('all');
   const location = useLocation();
@@ -884,7 +886,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   const showActionError = useCallback(
     (message: string, details?: string) => {
-      setNotice(message);
+      setNotice({ type: 'error', message, details });
       pa.ui.notify({ message, details, type: 'error', source: 'system-extension-manager' });
     },
     [pa],
@@ -928,7 +930,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
       setBusyId(item.id);
-      setNotice(`Installing ${item.name} from ${item.marketplaceSourceId ?? item.tag}…`);
+      setNotice({ type: 'info', message: `Installing ${item.name} from ${item.marketplaceSourceId ?? item.tag}...` });
       try {
         if (item.packageType && item.packageType !== 'extension') {
           await pa.extensions.callAction('system-extension-manager', 'installMarketplacePackage', {
@@ -936,10 +938,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             ecosystem: item.ecosystem,
             packageType: item.packageType,
           });
-          setNotice(`Installed ${item.name} as an extension-backed package.`);
+          setNotice({ type: 'success', message: `Installed ${item.name} as an extension-backed package.` });
         } else {
           await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
-          setNotice(`Installed ${item.name}. Enable it from the extensions list when you're ready.`);
+          setNotice({ type: 'success', message: `Installed ${item.name}. Enable it from the extensions list when you're ready.` });
         }
         notifyExtensionRegistryChanged();
         await load();
@@ -960,14 +962,14 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       return;
     }
     setBusyId('marketplace-source');
-    setNotice('Importing agent plugin package as a Neon Pilot extension...');
+    setNotice({ type: 'info', message: 'Importing agent plugin package as a Neon Pilot extension...' });
     try {
       await pa.extensions.callAction('system-extension-manager', 'installMarketplacePackage', {
         source,
         ecosystem: marketplaceEcosystem,
         packageType: marketplacePackageType,
       });
-      setNotice('Installed agent plugin package as a Neon Pilot extension.');
+      setNotice({ type: 'success', message: 'Installed agent plugin package as a Neon Pilot extension.' });
       setMarketplaceSource('');
       notifyExtensionRegistryChanged();
       await load();
@@ -990,7 +992,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     try {
       await writeExtensionSources(pa.extensions, nextSources);
       setCatalogSourceInput('');
-      setNotice(`Added ${parsed.owner}/${parsed.repo} to extension repositories.`);
+      setNotice({ type: 'success', message: `Added ${parsed.owner}/${parsed.repo} to extension repositories.` });
       loadCatalog();
     } catch (err) {
       showActionError('Failed to add extension repository', err instanceof Error ? err.message : String(err));
@@ -1006,7 +1008,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       setBusyId(`extension-source:${source.id}`);
       try {
         await writeExtensionSources(pa.extensions, nextSources);
-        setNotice(`Removed ${source.owner}/${source.repo} from extension repositories.`);
+        setNotice({ type: 'success', message: `Removed ${source.owner}/${source.repo} from extension repositories.` });
         loadCatalog();
       } catch (err) {
         showActionError('Failed to remove extension repository', err instanceof Error ? err.message : String(err));
@@ -1128,10 +1130,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       );
       if (!confirmed) return;
       setBusyId(extension.id);
-      setNotice(`Updating ${extension.name}…`);
+      setNotice({ type: 'info', message: `Updating ${extension.name}...` });
       try {
         await pa.extensions.callAction('system-extension-manager', 'updateCatalogExtension', { id: extension.id });
-        setNotice(`Updated ${extension.name} to ${targetVersion}.`);
+        setNotice({ type: 'success', message: `Updated ${extension.name} to ${targetVersion}.` });
         await load();
         await loadCatalog();
         notifyExtensionRegistryChanged();
@@ -1148,12 +1150,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     if (!extension.packageRoot) return;
     const bridge = getDesktopBridge();
     if (!bridge) {
-      setNotice(extension.packageRoot);
+      setNotice({ type: 'info', message: extension.packageRoot });
       return;
     }
     void bridge.openPath(extension.packageRoot).then((result) => {
       if (!result.opened) {
-        setNotice(result.error ?? extension.packageRoot ?? 'Could not open extension folder.');
+        setNotice({ type: 'error', message: result.error ?? extension.packageRoot ?? 'Could not open extension folder.' });
       }
     });
   }, []);
@@ -1179,6 +1181,59 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     }
     return [...byId.values()];
   }, [catalog, extensions]);
+
+  const updatableExtensions = useMemo(() => {
+    return installedExtensions
+      .map((extension) => ({
+        extension,
+        catalogItem: catalog?.extensions.find((item) => item.id === extension.id && item.updateAvailable),
+      }))
+      .filter(
+        (item): item is { extension: ExtensionInstallSummary; catalogItem: InstallableExtensionCatalogItem } =>
+          item.extension.packageType !== 'system' && Boolean(item.catalogItem),
+      );
+  }, [catalog, installedExtensions]);
+
+  const updateAllExtensions = useCallback(async () => {
+    if (updatableExtensions.length === 0) return;
+    const confirmed = window.confirm(`Update ${updatableExtensions.length} extension${updatableExtensions.length === 1 ? '' : 's'} now?`);
+    if (!confirmed) return;
+
+    setBusyId('update-all');
+    setNotice({
+      type: 'info',
+      message: `Updating ${updatableExtensions.length} extension${updatableExtensions.length === 1 ? '' : 's'}...`,
+    });
+
+    const failures: string[] = [];
+    let updatedCount = 0;
+    for (const { extension } of updatableExtensions) {
+      try {
+        await pa.extensions.callAction('system-extension-manager', 'updateCatalogExtension', { id: extension.id });
+        updatedCount += 1;
+      } catch (err) {
+        failures.push(`${extension.name}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    try {
+      await load();
+      await loadCatalog();
+    } finally {
+      setBusyId(null);
+    }
+
+    if (updatedCount > 0) {
+      notifyExtensionRegistryChanged();
+    }
+
+    if (failures.length) {
+      showActionError(`Updated ${updatedCount} extension${updatedCount === 1 ? '' : 's'}; ${failures.length} failed.`, failures.join('\n'));
+      return;
+    }
+
+    setNotice({ type: 'success', message: `Updated ${updatedCount} extension${updatedCount === 1 ? '' : 's'}.` });
+  }, [load, loadCatalog, pa.extensions, showActionError, updatableExtensions]);
 
   const visibleExtensions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -1266,7 +1321,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               ) : null}
               {catalogItem?.updateAvailable ? (
                 <div className="mt-1 text-[12px] text-accent">
-                  Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}{' -> '}
+                  Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}
+                  {' -> '}
                   {catalogItem.availableVersion ?? catalogItem.version}
                 </div>
               ) : null}
@@ -1329,7 +1385,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 busy={busy}
                 onOpenFolder={() => openFolder(extension)}
                 onDelete={() => void deleteExtension(extension)}
-                onUpdate={catalogItem?.updateAvailable && extension.packageType !== 'system' ? () => void updateExtension(extension) : undefined}
+                onUpdate={
+                  catalogItem?.updateAvailable && extension.packageType !== 'system' ? () => void updateExtension(extension) : undefined
+                }
                 onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
               />
             </div>
@@ -1388,6 +1446,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                       aria-label="Reload extensions"
                       title="Reload extensions"
                       className="ui-icon-button"
+                      disabled={busyId === 'update-all'}
                       onClick={() => {
                         notifyExtensionRegistryChanged();
                         void load();
@@ -1396,9 +1455,20 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                     >
                       <RefreshIcon />
                     </button>
+                    {updatableExtensions.length ? (
+                      <button
+                        type="button"
+                        className="rounded-lg border border-border-default bg-elevated px-3 py-2 text-[13px] font-medium text-primary hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={busyId !== null}
+                        onClick={() => void updateAllExtensions()}
+                      >
+                        {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="rounded-lg border border-accent/40 bg-accent/15 px-3 py-2 text-[13px] font-medium text-accent hover:bg-accent/20"
+                      disabled={busyId === 'update-all'}
                       onClick={() => setInstallModalOpen(true)}
                     >
                       Install
@@ -1432,8 +1502,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </div>
 
             {notice ? (
-              <div className="sticky top-0 z-20 border-b border-border-subtle/60 bg-base/95 py-2 text-[13px] text-secondary backdrop-blur">
-                {notice}
+              <div className="sticky top-0 z-20 bg-base/95 py-2 backdrop-blur">
+                <ExtensionNoticeBox notice={notice} />
               </div>
             ) : null}
 
@@ -1452,6 +1522,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   aria-label="Reload extensions"
                   title="Reload extensions"
                   className="ui-icon-button"
+                  disabled={busyId === 'update-all'}
                   onClick={() => {
                     notifyExtensionRegistryChanged();
                     void load();
@@ -1460,9 +1531,20 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 >
                   <RefreshIcon />
                 </button>
+                {updatableExtensions.length ? (
+                  <button
+                    type="button"
+                    className="rounded-lg border border-border-default bg-elevated px-3 py-2 text-[13px] font-medium text-primary hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={busyId !== null}
+                    onClick={() => void updateAllExtensions()}
+                  >
+                    {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="rounded-lg border border-accent/40 bg-accent/15 px-3 py-2 text-[13px] font-medium text-accent hover:bg-accent/20"
+                  disabled={busyId === 'update-all'}
                   onClick={() => setInstallModalOpen(true)}
                 >
                   Install
@@ -1511,12 +1593,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           onClose={() => setInstallModalOpen(false)}
         />
       ) : null}
-      {selectedExtension ? (
-        <ExtensionDetailsModal
-          extensionId={selectedExtension.id}
-          onClose={() => setDetailsExtensionId(null)}
-        />
-      ) : null}
+      {selectedExtension ? <ExtensionDetailsModal extensionId={selectedExtension.id} onClose={() => setDetailsExtensionId(null)} /> : null}
     </>
   );
 }
@@ -1670,13 +1747,7 @@ function InstallExtensionModal({
                           disabled={item.installed || itemBusy || unavailablePackage}
                           onClick={() => onInstallCatalog(item)}
                         >
-                          {itemBusy
-                            ? 'Installing...'
-                            : item.installed
-                              ? 'Installed'
-                              : unavailablePackage
-                              ? 'Planned'
-                              : 'Install'}
+                          {itemBusy ? 'Installing...' : item.installed ? 'Installed' : unavailablePackage ? 'Planned' : 'Install'}
                         </button>
                       </div>
                     );
@@ -1718,22 +1789,12 @@ function ExtensionSettingsPointer({ extension }: { extension: ExtensionInstallSu
           Open settings
         </Link>
       </div>
-      {entries.length ? (
-        <div className="mt-2 font-mono text-[11px] text-dim">
-          {entries.map((entry) => entry.key).join(', ')}
-        </div>
-      ) : null}
+      {entries.length ? <div className="mt-2 font-mono text-[11px] text-dim">{entries.map((entry) => entry.key).join(', ')}</div> : null}
     </div>
   );
 }
 
-function ExtensionDetailsModal({
-  extensionId,
-  onClose,
-}: {
-  extensionId: string;
-  onClose: () => void;
-}) {
+function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; onClose: () => void }) {
   const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);

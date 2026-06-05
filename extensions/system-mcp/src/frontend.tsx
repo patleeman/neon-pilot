@@ -1,5 +1,16 @@
-import { api, cx, Pill, ToolbarButton, useApi } from '@neon-pilot/extensions/settings';
-import React, { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import {
+  api,
+  Field,
+  Notice,
+  Pill,
+  Select,
+  SettingsSection,
+  Textarea,
+  TextInput,
+  ToolbarButton,
+  useApi,
+} from '@neon-pilot/extensions/settings';
+import React, { type FormEvent, useEffect, useMemo, useState } from 'react';
 
 type McpServerConfig = {
   name: string;
@@ -137,32 +148,6 @@ function formatMcpServerCommand(server: McpServerConfig): string {
   return commandLine.length > 0 ? commandLine.join(' ') : 'Local stdio wrapper';
 }
 
-function SettingsPanel({ title, description, children }: { title: ReactNode; description?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="scroll-mt-24 grid gap-5 border-t border-border-subtle/70 py-6 first:border-t-0 first:pt-0 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:items-start lg:gap-8">
-      <div className="min-w-0 space-y-1.5">
-        <h3 className="text-[15px] font-medium tracking-tight text-primary">{title}</h3>
-        {description ? <p className="max-w-sm text-[12px] leading-5 text-secondary">{description}</p> : null}
-      </div>
-      <div className="min-w-0 space-y-3.5">{children}</div>
-    </section>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="space-y-1.5 text-[12px] text-secondary">
-      <span>{label}</span>
-      {children}
-    </label>
-  );
-}
-
-const inputClass =
-  'w-full rounded-md border border-border-subtle bg-elevated/40 px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-border-strong';
-const buttonClass =
-  'rounded-md border border-border-default px-2.5 py-1 text-[12px] text-primary hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50';
-
 export function McpSettingsPanel() {
   const { data: mcpState, loading: mcpLoading, error: mcpError, refetch } = useApi(inspectMcpSettings, 'system-mcp-settings');
   const [explicitConfig, setExplicitConfig] = useState<ExplicitMcpConfig>({ mcpServers: {} });
@@ -245,7 +230,7 @@ export function McpSettingsPanel() {
 
   return (
     <div className="space-y-0">
-      <SettingsPanel
+      <SettingsSection
         title="MCP servers"
         description="Add, edit, remove, test, and authenticate explicit MCP servers. Skill-bundled servers stay read-only here."
       >
@@ -260,68 +245,69 @@ export function McpSettingsPanel() {
                 Explicit config: <span className="font-mono text-[11px]">{mcpState.configPath}</span>
               </p>
               <div className="flex gap-2">
-                <button type="button" className={buttonClass} disabled={mcpLoading} onClick={() => void refetch()}>
+                <ToolbarButton type="button" disabled={mcpLoading} onClick={() => void refetch()}>
                   Refresh
-                </button>
-                <button type="button" className={buttonClass} onClick={() => setDraft({ ...emptyDraft })}>
+                </ToolbarButton>
+                <ToolbarButton type="button" onClick={() => setDraft({ ...emptyDraft })}>
                   Add server
-                </button>
+                </ToolbarButton>
               </div>
             </div>
 
-            {saveState.error ? <p className="text-[12px] text-danger">{saveState.error}</p> : null}
-            {saveState.message ? <p className="text-[12px] text-success">{saveState.message}</p> : null}
+            {saveState.error ? <Notice tone="danger">{saveState.error}</Notice> : null}
+            {saveState.message ? <Notice tone="success">{saveState.message}</Notice> : null}
 
             {draft ? (
               <form className="space-y-3 border-t border-border-subtle/60 pt-3" onSubmit={handleSubmitDraft}>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Name">
-                    <input
-                      className={inputClass}
+                    <TextInput
                       value={draft.name}
                       onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                      autoComplete="off"
                     />
                   </Field>
                   <Field label="Transport">
-                    <select
-                      className={inputClass}
+                    <Select
                       value={draft.transport}
                       onChange={(event) => setDraft({ ...draft, transport: event.target.value as 'stdio' | 'remote' })}
                     >
                       <option value="stdio">Local command</option>
                       <option value="remote">Remote URL</option>
-                    </select>
+                    </Select>
                   </Field>
                   {draft.transport === 'remote' ? (
                     <Field label="URL">
-                      <input
-                        className={inputClass}
+                      <TextInput
                         value={draft.url}
                         onChange={(event) => setDraft({ ...draft, url: event.target.value })}
-                        placeholder="https://example.com/mcp"
+                        placeholder="https://example.com/mcp…"
+                        autoComplete="off"
                       />
                     </Field>
                   ) : (
                     <>
                       <Field label="Command">
-                        <input
-                          className={inputClass}
+                        <TextInput
                           value={draft.command}
                           onChange={(event) => setDraft({ ...draft, command: event.target.value })}
                           placeholder="node, npx, uvx…"
+                          autoComplete="off"
+                          spellCheck={false}
                         />
                       </Field>
                       <Field label="Working directory">
-                        <input
-                          className={inputClass}
+                        <TextInput
                           value={draft.cwd}
                           onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
-                          placeholder="Optional"
+                          placeholder="Optional…"
+                          autoComplete="off"
+                          spellCheck={false}
                         />
                       </Field>
                       <Field label="Args, one per line">
-                        <textarea
-                          className={cx(inputClass, 'min-h-24 resize-y font-mono')}
+                        <Textarea
+                          className="min-h-24 font-mono"
                           value={draft.args}
                           onChange={(event) => setDraft({ ...draft, args: event.target.value })}
                         />
@@ -360,55 +346,47 @@ export function McpSettingsPanel() {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <button
+                        <ToolbarButton
                           type="button"
-                          className={buttonClass}
                           onClick={() => setDraft(server ? draftFromServer(server) : draftFromRawServer(name, rawServer))}
                         >
                           Edit
-                        </button>
-                        <button type="button" className={buttonClass} onClick={() => void toggleServer(name)} disabled={saveState.busy}>
+                        </ToolbarButton>
+                        <ToolbarButton type="button" onClick={() => void toggleServer(name)} disabled={saveState.busy}>
                           {disabled ? 'Enable' : 'Disable'}
-                        </button>
-                        <button
+                        </ToolbarButton>
+                        <ToolbarButton
                           type="button"
-                          className={buttonClass}
                           onClick={() => void handleServerAction('testServer', name)}
                           disabled={status?.busy || disabled}
                         >
                           Test
-                        </button>
+                        </ToolbarButton>
                         {server?.hasOAuth ? (
-                          <button
-                            type="button"
-                            className={buttonClass}
-                            onClick={() => void handleServerAction('authServer', name)}
-                            disabled={status?.busy}
-                          >
+                          <ToolbarButton type="button" onClick={() => void handleServerAction('authServer', name)} disabled={status?.busy}>
                             Auth
-                          </button>
+                          </ToolbarButton>
                         ) : null}
                         {server?.hasOAuth ? (
-                          <button
+                          <ToolbarButton
                             type="button"
-                            className={buttonClass}
                             onClick={() => void handleServerAction('logoutServer', name)}
                             disabled={status?.busy}
                           >
                             Logout
-                          </button>
+                          </ToolbarButton>
                         ) : null}
-                        <button
+                        <ToolbarButton
                           type="button"
-                          className={cx(buttonClass, 'text-danger hover:text-danger')}
+                          className="text-danger hover:text-danger"
                           onClick={() => void removeServer(name)}
                           disabled={saveState.busy}
                         >
                           Remove
-                        </button>
+                        </ToolbarButton>
                       </div>
-                      {status?.message ? <p className="text-[12px] text-success">{status.message}</p> : null}
-                      {status?.error ? <p className="text-[12px] text-danger">{status.error}</p> : null}
+                      {status?.message ? <Notice tone="success">{status.message}</Notice> : null}
+                      {status?.error ? <Notice tone="danger">{status.error}</Notice> : null}
                     </div>
                   );
                 })
@@ -448,7 +426,7 @@ export function McpSettingsPanel() {
             </div>
           </div>
         ) : null}
-      </SettingsPanel>
+      </SettingsSection>
     </div>
   );
 }

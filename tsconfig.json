@@ -17,6 +17,7 @@
       "@neon-pilot/core": ["./packages/core/src"],
       "@neon-pilot/daemon": ["./packages/desktop/server/daemon"],
       "@neon-pilot/extensions": ["./packages/extensions/src"],
+      "@neon-pilot/ui": ["./packages/ui/src"],
       "@neon-pilot/extensions/host": ["./packages/desktop/ui/src/extensions/host"],
       "@neon-pilot/extensions/ui": ["./packages/desktop/ui/src/extensions/ui"],
       "@neon-pilot/extensions/workbench": ["./packages/desktop/ui/src/extensions/workbench"],
@@ -27,7 +28,7 @@
       "@neon-pilot/extensions/backend/*": ["./packages/desktop/server/extensions/backendApi/*"]
     }
   },
-  "references": [{ "path": "./packages/core" }, { "path": "./packages/extensions" }, { "path": "./packages/desktop" }],
+  "references": [{ "path": "./packages/core" }, { "path": "./packages/extensions" }, { "path": "./packages/ui" }, { "path": "./packages/desktop" }],
   "files": [],
   "exclude": ["node_modules", "dist"]
 }

@@ -421,7 +421,84 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(screen.getByText('Update'));
 
     expect(await screen.findByText('Updated Browser to 0.1.0.')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('Updated Browser to 0.1.0.');
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
+    expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
+  });
+
+  it('updates all catalog-installed extensions with available updates', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.10.2',
+          tag: 'v0.10.2',
+          extensions: [
+            {
+              id: 'system-browser',
+              name: 'Browser',
+              description: 'Browse web pages beside a conversation.',
+              version: '0.1.0',
+              availableVersion: '0.1.0',
+              installedVersion: '0.0.1',
+              tag: 'v0.10.2',
+              installed: true,
+              enabled: true,
+              updateAvailable: true,
+            },
+            {
+              id: 'system-ds4',
+              name: 'DS4',
+              description: 'DeepSeek model provider.',
+              version: '0.1.3',
+              availableVersion: '0.1.3',
+              installedVersion: '0.1.2',
+              tag: 'v0.10.2',
+              installed: true,
+              enabled: true,
+              updateAvailable: true,
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      if (action === 'updateCatalogExtension') return { ok: true, updated: true };
+      return { ok: true };
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        description: 'Browse web pages beside a conversation.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.0.1',
+      } as never,
+      {
+        ...createExtension(),
+        id: 'system-ds4',
+        name: 'DS4',
+        description: 'DeepSeek model provider.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.1.2',
+      } as never,
+    ]);
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect(await screen.findByRole('button', { name: 'Update all (2)' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Update all (2)' }));
+
+    expect(await screen.findByText('Updated 2 extensions.')).toBeTruthy();
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-ds4' });
     expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
   });
 
@@ -445,7 +522,14 @@ describe('ExtensionManagerPage', () => {
   it('renders extension repositories as a settings panel', async () => {
     const callAction = vi.fn().mockResolvedValue({
       sources: [
-        { id: 'neon-pilot', type: 'github', owner: 'patleeman', repo: 'neon-pilot-extensions', enabled: true, name: 'Neon Pilot Extensions' },
+        {
+          id: 'neon-pilot',
+          type: 'github',
+          owner: 'patleeman',
+          repo: 'neon-pilot-extensions',
+          enabled: true,
+          name: 'Neon Pilot Extensions',
+        },
       ],
     });
 
@@ -463,7 +547,14 @@ describe('ExtensionManagerPage', () => {
   it('adds extension repositories from the settings panel', async () => {
     const readResult = {
       sources: [
-        { id: 'neon-pilot', type: 'github', owner: 'patleeman', repo: 'neon-pilot-extensions', enabled: true, name: 'Neon Pilot Extensions' },
+        {
+          id: 'neon-pilot',
+          type: 'github',
+          owner: 'patleeman',
+          repo: 'neon-pilot-extensions',
+          enabled: true,
+          name: 'Neon Pilot Extensions',
+        },
       ],
     };
     const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {

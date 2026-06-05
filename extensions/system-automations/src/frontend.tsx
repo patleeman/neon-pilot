@@ -8,8 +8,14 @@ import {
   cx,
   EmptyState,
   ErrorState,
+  Field,
   IconButton,
   LoadingState,
+  Select,
+  SettingsSection,
+  Switch,
+  Textarea,
+  TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -597,16 +603,6 @@ function SchedulerHealthDot({ health }: { health: ScheduledTaskSchedulerHealth |
   );
 }
 
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
-  return (
-    <label className="grid gap-1 text-[12px] text-secondary">
-      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-dim">{label}</span>
-      {children}
-      {hint ? <span className="text-[11px] leading-5 text-dim">{hint}</span> : null}
-    </label>
-  );
-}
-
 function FormSection({
   id,
   title,
@@ -619,18 +615,10 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="grid scroll-mt-8 gap-5 border-t border-border-subtle/70 py-6 md:grid-cols-[11rem_minmax(0,1fr)]">
-      <div className="space-y-2">
-        <h3 className="text-[18px] font-semibold leading-tight text-primary">{title}</h3>
-        <p className="text-[12px] leading-5 text-secondary">{description}</p>
-      </div>
-      <div className="min-w-0">{children}</div>
-    </section>
+    <SettingsSection id={id} title={title} description={description} className="scroll-mt-8 md:grid-cols-[11rem_minmax(0,1fr)]">
+      {children}
+    </SettingsSection>
   );
-}
-
-function fieldClass() {
-  return 'w-full border-0 border-b border-border-subtle/80 bg-transparent px-1 py-1.5 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim hover:border-border-default focus:border-accent';
 }
 
 function schedulePreview(form: AutomationFormState) {
@@ -1396,8 +1384,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
               >
                 <div className="grid gap-4">
                   <Field label="Name">
-                    <input
-                      className={fieldClass()}
+                    <TextInput
                       required
                       autoComplete="off"
                       name="automation-title"
@@ -1406,8 +1393,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     />
                   </Field>
                   <Field label="Instruction" hint="This prompt is sent each time the automation runs.">
-                    <textarea
-                      className={fieldClass()}
+                    <Textarea
                       required
                       name="automation-prompt"
                       rows={7}
@@ -1415,15 +1401,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       onChange={(event) => setForm({ ...form, prompt: event.target.value })}
                     />
                   </Field>
-                  <label className="flex items-center gap-2 text-[13px] text-secondary">
-                    <input
-                      className="h-4 w-4 rounded border-border-default bg-base text-accent focus:outline-none"
-                      type="checkbox"
-                      checked={form.enabled}
-                      onChange={(event) => setForm({ ...form, enabled: event.target.checked })}
-                    />
-                    Enabled
-                  </label>
+                  <Switch checked={form.enabled} label="Enabled" onClick={() => setForm({ ...form, enabled: !form.enabled })} />
                 </div>
               </FormSection>
 
@@ -1472,8 +1450,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     <div className="grid gap-4">
                       <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
                         <Field label="Schedule">
-                          <select
-                            className={fieldClass()}
+                          <Select
                             name="automation-recurring-cadence"
                             value={form.scheduleBuilder.cadence}
                             onChange={(event) => updateScheduleBuilder({ cadence: event.target.value as EasyCadence })}
@@ -1484,15 +1461,14 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                             <option value="weekdays">Weekdays</option>
                             <option value="weekly">Specific weekdays</option>
                             <option value="monthly">Monthly</option>
-                          </select>
+                          </Select>
                         </Field>
 
                         {form.scheduleBuilder.cadence === 'hourly' || form.scheduleBuilder.cadence === 'interval' ? (
                           <div className="grid gap-3 sm:grid-cols-2">
                             {form.scheduleBuilder.cadence === 'interval' ? (
                               <Field label="Every">
-                                <input
-                                  className={fieldClass()}
+                                <TextInput
                                   type="number"
                                   min="1"
                                   max="23"
@@ -1506,8 +1482,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                               </Field>
                             ) : null}
                             <Field label="Minute">
-                              <input
-                                className={fieldClass()}
+                              <TextInput
                                 type="number"
                                 min="0"
                                 max="59"
@@ -1520,8 +1495,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                           </div>
                         ) : (
                           <Field label="Time">
-                            <input
-                              className={fieldClass()}
+                            <TextInput
                               type="time"
                               name="automation-recurring-time"
                               value={formatTimeValue(form.scheduleBuilder)}
@@ -1556,8 +1530,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
 
                         {form.scheduleBuilder.cadence === 'monthly' ? (
                           <Field label="Day of month">
-                            <input
-                              className={fieldClass()}
+                            <TextInput
                               type="number"
                               min="1"
                               max="31"
@@ -1609,8 +1582,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     </div>
                   ) : (
                     <Field label="Run at" hint="ISO timestamp or natural phrase, depending on backend support.">
-                      <input
-                        className={fieldClass()}
+                      <TextInput
                         autoComplete="off"
                         name="automation-at"
                         placeholder="tomorrow 8pm"
@@ -1662,8 +1634,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                 <div className="grid gap-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label="Results">
-                      <select
-                        className={fieldClass()}
+                      <Select
                         name="automation-target"
                         value={form.targetType}
                         onChange={(event) => {
@@ -1673,11 +1644,10 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       >
                         <option value="background-agent">Background job</option>
                         <option value="conversation">Conversation</option>
-                      </select>
+                      </Select>
                     </Field>
                     <Field label="Thread mode">
-                      <select
-                        className={fieldClass()}
+                      <Select
                         name="automation-thread-mode"
                         value={form.threadMode}
                         onChange={(event) =>
@@ -1693,7 +1663,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                         <option value="dedicated">Dedicated thread</option>
                         <option value="existing">Existing thread</option>
                         {form.targetType === 'background-agent' ? <option value="none">No thread</option> : null}
-                      </select>
+                      </Select>
                     </Field>
                   </div>
                   {form.threadMode === 'existing' ? (
@@ -1705,8 +1675,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                           : 'Choose the conversation that should receive automation results.'
                       }
                     >
-                      <select
-                        className={fieldClass()}
+                      <Select
                         name="automation-thread-conversation-id"
                         required
                         value={form.threadConversationId}
@@ -1721,7 +1690,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                             {option.cwd ? `${option.title} · ${option.cwd}` : option.title}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </Field>
                   ) : null}
                   <div className="border-t border-border-subtle/70 pt-3 text-[12px] text-secondary">
@@ -1747,8 +1716,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                 <div className="grid gap-4">
                   <Field label="Working directory" hint="Leave blank to use the current runtime cwd.">
                     <div className="flex gap-2">
-                      <input
-                        className={fieldClass()}
+                      <TextInput
                         autoComplete="off"
                         name="automation-cwd"
                         placeholder="~/workingdir/repo"
@@ -1762,8 +1730,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                   </Field>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label="Model">
-                      <select
-                        className={fieldClass()}
+                      <Select
                         name="automation-model"
                         value={form.model}
                         onChange={(event) => setForm({ ...form, model: event.target.value })}
@@ -1777,11 +1744,10 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                             {option.provider ? `${option.name} · ${option.provider}` : option.name}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </Field>
                     <Field label="Thinking level">
-                      <select
-                        className={fieldClass()}
+                      <Select
                         name="automation-thinking-level"
                         value={form.thinkingLevel}
                         onChange={(event) => setForm({ ...form, thinkingLevel: event.target.value })}
@@ -1791,11 +1757,10 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                             {option.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </Field>
                     <Field label="Timeout seconds">
-                      <input
-                        className={fieldClass()}
+                      <TextInput
                         type="number"
                         min="1"
                         inputMode="numeric"

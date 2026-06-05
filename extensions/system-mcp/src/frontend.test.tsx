@@ -12,7 +12,28 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@neon-pilot/extensions/settings', () => ({
   api: mocks.api,
   cx: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
+  Field: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
+  Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Pill: ({ children }: { children: React.ReactNode }) => children,
+  Select: ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props}>{children}</select>,
+  SettingsSection: ({
+    title,
+    description,
+    children,
+  }: {
+    title: React.ReactNode;
+    description?: React.ReactNode;
+    children: React.ReactNode;
+  }) => (
+    <section>
+      <h3>{title}</h3>
+      {description ? <p>{description}</p> : null}
+      {children}
+    </section>
+  ),
+  Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
+  TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+  ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
   useApi: mocks.useApi,
 }));
 

@@ -14,5 +14,5 @@
   },
   "include": ["src/**/*.ts", "server/**/*.ts", "server/**/*.tsx"],
   "exclude": ["dist", "node_modules", "**/*.test.ts", "**/*.test.tsx", "**/*.d.ts", "**/*.smoke.test.ts", "**/*.integration.test.ts"],
-  "references": [{ "path": "../core" }]
+  "references": [{ "path": "../core" }, { "path": "../ui" }]
 }

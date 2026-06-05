@@ -14,6 +14,7 @@ installable-extensions/system-ds4/bin/
 *.tsbuildinfo
 packages/*/dist/
 packages/*/dist-server/
+packages/*/storybook-static/
 packages/desktop/vendor/
 profiles/**/dist/
 profiles/**/build/

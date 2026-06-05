@@ -1,5 +1,28 @@
 export { api } from '../client/api';
-export { AppPageIntro, AppPageLayout, AppPageSection, AppPageToc, cx, Pill, ToolbarButton } from '../components/ui';
+export {
+  AppPageIntro,
+  AppPageLayout,
+  AppPageSection,
+  AppPageToc,
+  Button,
+  cx,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  Field,
+  FieldError,
+  FieldHint,
+  FieldLabel,
+  Notice,
+  Pill,
+  Select,
+  SettingsSection,
+  Switch,
+  Textarea,
+  TextInput,
+  ToolbarButton,
+} from '../components/ui';
 export { formatContextWindowLabel, formatThinkingLevelLabel } from '../conversation/conversationHeader';
 export { getDesktopBridge, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 export { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
