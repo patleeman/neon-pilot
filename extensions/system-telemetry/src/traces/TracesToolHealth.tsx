@@ -3,6 +3,7 @@
  */
 
 import type { TraceToolHealth } from '@neon-pilot/extensions/data';
+import { ProgressBar } from '@neon-pilot/extensions/ui';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
@@ -61,15 +62,19 @@ function BashBreakdown({ tools }: { tools: TraceToolHealth[] }) {
               <span className="text-right">P95</span>
             </div>
             {rows.map((row) => {
-              const pct = bash.calls > 0 ? Math.max((row.calls / bash.calls) * 100, 2) : 0;
               const hasErrors = row.errors > 0;
               const errorRate = 'errorRate' in row ? row.errorRate : row.calls > 0 ? (row.errors / row.calls) * 100 : 0;
               return (
                 <div key={row.command} className="grid grid-cols-[90px_1fr_76px_64px_64px] items-center gap-3 text-[11px]">
                   <span className="truncate font-mono text-primary">{row.command}</span>
-                  <div className="h-2 overflow-hidden rounded-md bg-elevated">
-                    <div className={hasErrors ? 'h-full bg-warning/80' : 'h-full bg-success/70'} style={{ width: `${pct}%` }} />
-                  </div>
+                  <ProgressBar
+                    value={row.calls}
+                    max={bash.calls}
+                    minPercent={2}
+                    tone={hasErrors ? 'warning' : 'success'}
+                    className="h-2"
+                    label={`${row.command} calls`}
+                  />
                   <span className="text-right font-mono text-secondary">{row.calls} calls</span>
                   <span className={`text-right font-mono ${hasErrors ? 'text-danger' : 'text-dim'}`}>{errorRate.toFixed(1)}%</span>
                   <span className="text-right font-mono text-dim">{formatDuration(row.p95LatencyMs)}</span>
@@ -97,9 +102,7 @@ function BashComplexity({ complexity, totalCalls }: { complexity: NonNullable<Tr
         {complexity.shapeBreakdown.map((row) => (
           <div key={row.shape} className="grid grid-cols-[78px_1fr_54px] items-center gap-2 text-[10px]">
             <span className="capitalize text-secondary">{row.shape}</span>
-            <div className="h-1.5 overflow-hidden rounded-md bg-elevated">
-              <div className="h-full bg-accent/70" style={{ width: `${Math.max((row.calls / shapeTotal) * 100, 2)}%` }} />
-            </div>
+            <ProgressBar value={row.calls} max={shapeTotal} minPercent={2} className="h-1.5" label={`${row.shape} calls`} />
             <span className="text-right font-mono text-dim">{row.calls}</span>
           </div>
         ))}
