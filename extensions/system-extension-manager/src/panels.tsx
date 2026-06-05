@@ -6,8 +6,12 @@ import {
   AppPageLayout,
   Button,
   cx,
+  Dialog,
+  DialogBody,
+  DialogHeader,
   EmptyState,
   ErrorState,
+  IconButton,
   LoadingState,
   MenuItem,
   MenuShell,
@@ -1449,11 +1453,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                       placeholder="Search extensions…"
                       className="h-9 w-72"
                     />
-                    <button
+                    <IconButton
                       type="button"
                       aria-label="Reload extensions"
                       title="Reload extensions"
-                      className="ui-icon-button"
                       disabled={busyId === 'update-all'}
                       onClick={() => {
                         notifyExtensionRegistryChanged();
@@ -1462,25 +1465,25 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                       }}
                     >
                       <RefreshIcon />
-                    </button>
+                    </IconButton>
                     {updatableExtensions.length ? (
-                      <button
-                        type="button"
-                        className="rounded-lg border border-border-default bg-elevated px-3 py-2 text-[13px] font-medium text-primary hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      <Button
+                        className="min-h-9 rounded-lg px-3 py-2 text-[13px]"
                         disabled={busyId !== null}
                         onClick={() => void updateAllExtensions()}
                       >
                         {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
-                      </button>
+                      </Button>
                     ) : null}
-                    <button
-                      type="button"
-                      className="rounded-lg border border-accent/40 bg-accent/15 px-3 py-2 text-[13px] font-medium text-accent hover:bg-accent/20"
+                    <Button
+                      variant="action"
+                      tone="accent"
+                      className="min-h-9 rounded-lg border-accent/40 bg-accent/15 px-3 py-2 text-[13px] hover:bg-accent/20"
                       disabled={busyId === 'update-all'}
                       onClick={() => setInstallModalOpen(true)}
                     >
                       Install
-                    </button>
+                    </Button>
                   </div>
                 }
               />
@@ -1515,11 +1518,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   placeholder="Search extensions…"
                   className="w-full md:w-80"
                 />
-                <button
+                <IconButton
                   type="button"
                   aria-label="Reload extensions"
                   title="Reload extensions"
-                  className="ui-icon-button"
                   disabled={busyId === 'update-all'}
                   onClick={() => {
                     notifyExtensionRegistryChanged();
@@ -1528,25 +1530,25 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   }}
                 >
                   <RefreshIcon />
-                </button>
+                </IconButton>
                 {updatableExtensions.length ? (
-                  <button
-                    type="button"
-                    className="rounded-lg border border-border-default bg-elevated px-3 py-2 text-[13px] font-medium text-primary hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                  <Button
+                    className="min-h-9 rounded-lg px-3 py-2 text-[13px]"
                     disabled={busyId !== null}
                     onClick={() => void updateAllExtensions()}
                   >
                     {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
-                  </button>
+                  </Button>
                 ) : null}
-                <button
-                  type="button"
-                  className="rounded-lg border border-accent/40 bg-accent/15 px-3 py-2 text-[13px] font-medium text-accent hover:bg-accent/20"
+                <Button
+                  variant="action"
+                  tone="accent"
+                  className="min-h-9 rounded-lg border-accent/40 bg-accent/15 px-3 py-2 text-[13px] hover:bg-accent/20"
                   disabled={busyId === 'update-all'}
                   onClick={() => setInstallModalOpen(true)}
                 >
                   Install
-                </button>
+                </Button>
               </div>
             ) : null}
 
@@ -1642,117 +1644,104 @@ function InstallExtensionModal({
     );
   }, [catalogItems, marketplaceQuery]);
 
-  const handleBackdropClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (event.target === event.currentTarget) onClose();
-    },
-    [onClose],
-  );
-
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-16 backdrop-blur-sm"
-      onClick={handleBackdropClick}
+    <Dialog
+      aria-label="Install extension"
+      className="max-w-3xl bg-base"
+      onClose={onClose}
+      style={{ marginBlock: '4rem', alignSelf: 'flex-start' }}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Install extension"
-        className="relative w-full max-w-3xl rounded-2xl border border-border-subtle bg-base shadow-2xl"
-      >
-        <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
-          <div>
-            <h2 className="text-[16px] font-semibold text-primary">Install Extension</h2>
-            <p className="mt-1 text-[12px] text-secondary">
-              Install a Neon Pilot extension or import an agent plugin as a Neon Pilot extension.
-            </p>
-          </div>
-          <button type="button" onClick={onClose} className="ui-icon-button" aria-label="Close install dialog" title="Close">
+      <DialogHeader
+        title="Install Extension"
+        description="Install a Neon Pilot extension or import an agent plugin as a Neon Pilot extension."
+        className="px-6 py-4"
+        actions={
+          <IconButton type="button" onClick={onClose} aria-label="Close install dialog" title="Close">
             <CloseIcon />
-          </button>
+          </IconButton>
+        }
+      />
+
+      <DialogBody className="space-y-5 px-6 py-5">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_auto]">
+          <TextInput
+            className="min-w-0 bg-base"
+            value={source}
+            onChange={(event) => onSourceChange(event.currentTarget.value)}
+            placeholder="Extension, agent plugin, marketplace package, URL, or local path"
+          />
+          <Select
+            className="bg-base"
+            value={packageType}
+            onChange={(event) => onPackageTypeChange(event.currentTarget.value as MarketplaceBehaviorPackageType)}
+            aria-label="Package type"
+          >
+            <option value="skill">Plugin</option>
+            <option value="instruction-pack">Instructions</option>
+            <option value="agent">Agent</option>
+            <option value="template">Template</option>
+          </Select>
+          <Button variant="action" className="px-3 py-2 text-[13px]" disabled={busy} onClick={onInstall}>
+            {busy ? 'Installing...' : 'Install'}
+          </Button>
         </div>
+        <p className="text-[12px] leading-5 text-dim">
+          Neon Pilot extensions install directly. Agent plugins, including Codex and Claude-style packages, are imported as extensions.
+        </p>
 
-        <div className="space-y-5 px-6 py-5">
-          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_auto]">
-            <TextInput
-              className="min-w-0 bg-base"
-              value={source}
-              onChange={(event) => onSourceChange(event.currentTarget.value)}
-              placeholder="Extension, agent plugin, marketplace package, URL, or local path"
-            />
-            <Select
-              className="bg-base"
-              value={packageType}
-              onChange={(event) => onPackageTypeChange(event.currentTarget.value as MarketplaceBehaviorPackageType)}
-              aria-label="Package type"
-            >
-              <option value="skill">Plugin</option>
-              <option value="instruction-pack">Instructions</option>
-              <option value="agent">Agent</option>
-              <option value="template">Template</option>
-            </Select>
-            <Button variant="action" className="px-3 py-2 text-[13px]" disabled={busy} onClick={onInstall}>
-              {busy ? 'Installing...' : 'Install'}
-            </Button>
-          </div>
-          <p className="text-[12px] leading-5 text-dim">
-            Neon Pilot extensions install directly. Agent plugins, including Codex and Claude-style packages, are imported as extensions.
-          </p>
+        <section className="space-y-2">
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Extension repositories</h3>
+          <ExtensionRepositoriesControl
+            sources={catalogSources}
+            sourceErrors={catalogSourceErrors}
+            input={catalogSourceInput}
+            busyId={catalogBusyId}
+            onInputChange={onCatalogSourceInputChange}
+            onAdd={onAddCatalogSource}
+            onRemove={onRemoveCatalogSource}
+          />
+        </section>
 
+        {catalogItems.length ? (
           <section className="space-y-2">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Extension repositories</h3>
-            <ExtensionRepositoriesControl
-              sources={catalogSources}
-              sourceErrors={catalogSourceErrors}
-              input={catalogSourceInput}
-              busyId={catalogBusyId}
-              onInputChange={onCatalogSourceInputChange}
-              onAdd={onAddCatalogSource}
-              onRemove={onRemoveCatalogSource}
-            />
-          </section>
-
-          {catalogItems.length ? (
-            <section className="space-y-2">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Marketplace</h3>
-                <SearchInput
-                  className="h-8 min-w-0 bg-base text-[12px] sm:w-72"
-                  value={marketplaceQuery}
-                  onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
-                  placeholder="Search marketplace"
-                />
-              </div>
-              <div className="max-h-[28rem] overflow-y-auto border-y border-border-subtle/70">
-                <div className="divide-y divide-border-subtle/70">
-                  {visibleCatalogItems.map((item) => {
-                    const itemBusy = catalogBusyId === item.id;
-                    const unavailablePackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
-                    return (
-                      <div key={item.id} className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                        <div className="min-w-0">
-                          <div className="text-[13px] font-medium text-primary">{item.name}</div>
-                          <div className="mt-0.5 text-[12px] text-secondary">{item.description || packageKindLabel(item)}</div>
-                        </div>
-                        <Button
-                          variant="action"
-                          className="px-3 py-1.5 text-[12px]"
-                          disabled={item.installed || itemBusy || unavailablePackage}
-                          onClick={() => onInstallCatalog(item)}
-                        >
-                          {itemBusy ? 'Installing...' : item.installed ? 'Installed' : unavailablePackage ? 'Planned' : 'Install'}
-                        </Button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Marketplace</h3>
+              <SearchInput
+                className="h-8 min-w-0 bg-base text-[12px] sm:w-72"
+                value={marketplaceQuery}
+                onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
+                placeholder="Search marketplace"
+              />
+            </div>
+            <div className="max-h-[28rem] overflow-y-auto border-y border-border-subtle/70">
+              <div className="divide-y divide-border-subtle/70">
+                {visibleCatalogItems.map((item) => {
+                  const itemBusy = catalogBusyId === item.id;
+                  const unavailablePackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
+                  return (
+                    <div key={item.id} className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium text-primary">{item.name}</div>
+                        <div className="mt-0.5 text-[12px] text-secondary">{item.description || packageKindLabel(item)}</div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <Button
+                        variant="action"
+                        className="px-3 py-1.5 text-[12px]"
+                        disabled={item.installed || itemBusy || unavailablePackage}
+                        onClick={() => onInstallCatalog(item)}
+                      >
+                        {itemBusy ? 'Installing...' : item.installed ? 'Installed' : unavailablePackage ? 'Planned' : 'Install'}
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
-              {visibleCatalogItems.length === 0 ? <p className="py-2 text-[12px] text-dim">No marketplace matches.</p> : null}
-            </section>
-          ) : null}
-        </div>
-      </div>
-    </div>
+            </div>
+            {visibleCatalogItems.length === 0 ? <p className="py-2 text-[12px] text-dim">No marketplace matches.</p> : null}
+          </section>
+        ) : null}
+      </DialogBody>
+    </Dialog>
   );
 }
 
@@ -1846,49 +1835,33 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
 
   const extension = extensions.find((e) => e.id === extensionId) ?? null;
 
-  const handleBackdropClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (event.target === event.currentTarget) {
-        onClose();
-      }
-    },
-    [onClose],
-  );
-
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/55 px-4 py-10"
-      onClick={handleBackdropClick}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Extension details"
-        className="relative w-full max-w-3xl rounded-xl border border-border-subtle bg-base shadow-2xl"
-      >
-        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl border-b border-border-subtle bg-base/95 px-6 py-4">
-          <h2 className="text-[16px] font-semibold text-primary">Extension details</h2>
-          <button type="button" onClick={onClose} className="ui-icon-button" aria-label="Close details" title="Close">
+    <Dialog aria-label="Extension details" className="max-w-3xl bg-base" onClose={onClose}>
+      <DialogHeader
+        title="Extension details"
+        className="px-6 py-4"
+        actions={
+          <IconButton type="button" onClick={onClose} aria-label="Close details" title="Close">
             <CloseIcon />
-          </button>
-        </div>
+          </IconButton>
+        }
+      />
 
-        <div className="max-h-[72vh] overflow-y-auto px-6 py-5">
-          {loading ? (
-            <LoadingState label="Loading extension details…" />
-          ) : !extension ? (
-            <p className="text-[13px] text-dim">Extension not found.</p>
-          ) : (
-            <ExtensionDetailsContent
-              extension={extension}
-              notice={notice}
-              onCopyDiagnostics={copyExtensionDiagnostics}
-              onOpenPath={openPath}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+      <DialogBody className="max-h-[72vh] px-6 py-5">
+        {loading ? (
+          <LoadingState label="Loading extension details…" />
+        ) : !extension ? (
+          <p className="text-[13px] text-dim">Extension not found.</p>
+        ) : (
+          <ExtensionDetailsContent
+            extension={extension}
+            notice={notice}
+            onCopyDiagnostics={copyExtensionDiagnostics}
+            onOpenPath={openPath}
+          />
+        )}
+      </DialogBody>
+    </Dialog>
   );
 }
 
