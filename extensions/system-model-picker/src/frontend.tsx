@@ -1,5 +1,5 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
-import { cx } from '@neon-pilot/extensions/ui';
+import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu } from '@neon-pilot/extensions/ui';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -88,26 +88,27 @@ function useDs4Health(
     status?.runtime?.modelSlots?.find((slot) => slot.modelId === selectedModelId || slot.id === selectedModelId) ??
     status?.settings?.modelSlots?.find((slot) => slot.modelId === selectedModelId || slot.id === selectedModelId);
   const selectedSlotId = selectedSlot?.id;
-  const selectedModelInstalled = Boolean(selectedSlot && ('installed' in selectedSlot ? selectedSlot.installed : status?.runtime?.installed));
-  const selectedModelRunning = Boolean(status?.reachable && selectedModelId && status.server?.modelId === selectedModelId);
-  const selectedModelMismatch = Boolean(isDs4 && status?.reachable && selectedModelId && status.server?.modelId && status.server.modelId !== selectedModelId);
-
-  const refresh = useCallback(
-    async () => {
-      if (!isDs4) return;
-      setChecking(true);
-      try {
-        const next = (await pa.extensions.callAction('system-ds4', 'ds4Status', {})) as Ds4Status;
-        setStatus(next);
-        setError('');
-      } catch (refreshError) {
-        setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
-      } finally {
-        setChecking(false);
-      }
-    },
-    [isDs4, pa],
+  const selectedModelInstalled = Boolean(
+    selectedSlot && ('installed' in selectedSlot ? selectedSlot.installed : status?.runtime?.installed),
   );
+  const selectedModelRunning = Boolean(status?.reachable && selectedModelId && status.server?.modelId === selectedModelId);
+  const selectedModelMismatch = Boolean(
+    isDs4 && status?.reachable && selectedModelId && status.server?.modelId && status.server.modelId !== selectedModelId,
+  );
+
+  const refresh = useCallback(async () => {
+    if (!isDs4) return;
+    setChecking(true);
+    try {
+      const next = (await pa.extensions.callAction('system-ds4', 'ds4Status', {})) as Ds4Status;
+      setStatus(next);
+      setError('');
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
+    } finally {
+      setChecking(false);
+    }
+  }, [isDs4, pa]);
 
   useEffect(() => {
     if (!isDs4) {
@@ -132,7 +133,9 @@ function useDs4Health(
     if (!isDs4 || starting) return;
     setStarting(true);
     try {
-      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', { provider: 'ds4', model: selectedModelId })) as { status?: Ds4Status };
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', { provider: 'ds4', model: selectedModelId })) as {
+        status?: Ds4Status;
+      };
       setStatus(result.status ?? null);
       setError('');
       await refresh();
@@ -148,7 +151,9 @@ function useDs4Health(
     if (!isDs4 || settingUp) return;
     setSettingUp(true);
     try {
-      const result = (await pa.extensions.callAction('system-ds4', 'ds4BootstrapRuntime', { provider: 'ds4', model: selectedModelId })) as { status?: Ds4Status };
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4BootstrapRuntime', { provider: 'ds4', model: selectedModelId })) as {
+        status?: Ds4Status;
+      };
       setStatus(result.status ?? null);
       setError('');
       await refresh();
@@ -181,7 +186,9 @@ function useDs4Health(
     setRestarting(true);
     try {
       await pa.extensions.callAction('system-ds4', 'ds4StopServer', {});
-      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', { provider: 'ds4', model: selectedModelId })) as { status?: Ds4Status };
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', { provider: 'ds4', model: selectedModelId })) as {
+        status?: Ds4Status;
+      };
       setStatus(result.status ?? null);
       setError('');
       await refresh();
@@ -202,10 +209,7 @@ function useDs4Health(
     setSavingSetting(key);
     try {
       const current = status?.settings ?? {};
-      const interventionPatch =
-        key === 'shellCompression'
-          ? { shellCompression: value ? 'rtk' : 'off' }
-          : { [key]: value };
+      const interventionPatch = key === 'shellCompression' ? { shellCompression: value ? 'rtk' : 'off' } : { [key]: value };
       const result = (await pa.extensions.callAction('system-ds4', 'ds4SaveSettings', {
         shellCompression: current.shellCompression ?? 'rtk',
         contextWindow: current.contextWindow ?? 1000000,
@@ -279,7 +283,8 @@ function describeDs4Health(health: ReturnType<typeof useDs4Health>, active: bool
       startLabel: 'Switch to selected model',
     };
   }
-  if (health.status?.reachable && health.selectedModelRunning) return { tone: 'ok', label: 'DS4 alive', title: 'DS4 server is reachable for the selected model.', canStart: false };
+  if (health.status?.reachable && health.selectedModelRunning)
+    return { tone: 'ok', label: 'DS4 alive', title: 'DS4 server is reachable for the selected model.', canStart: false };
   if (health.status?.reachable) return { tone: 'ok', label: 'DS4 alive', title: 'DS4 server is reachable.', canStart: false };
   if (health.status?.bootstrap?.running) return { tone: 'warn', label: 'DS4 setup', title: 'DS4 bootstrap is running.', canStart: false };
   if (health.status?.runtime?.installed === false) {
@@ -393,17 +398,22 @@ function Ds4HealthIndicator({
     },
   ];
   const needsLabel =
-    variant === 'menu' || active || description.tone === 'danger' || description.tone === 'warn' || 'canSetup' in description || description.canStart;
+    variant === 'menu' ||
+    active ||
+    description.tone === 'danger' ||
+    description.tone === 'warn' ||
+    'canSetup' in description ||
+    description.canStart;
   const dotClass =
     description.tone === 'active'
       ? 'bg-accent shadow-[0_0_10px_rgba(96,165,250,0.65)] animate-pulse'
       : description.tone === 'ok'
-      ? 'bg-emerald-400'
-      : description.tone === 'danger'
-        ? 'bg-danger'
-        : description.tone === 'warn'
-          ? 'bg-amber-400'
-          : 'bg-dim';
+        ? 'bg-emerald-400'
+        : description.tone === 'danger'
+          ? 'bg-danger'
+          : description.tone === 'warn'
+            ? 'bg-amber-400'
+            : 'bg-dim';
   const compactStatus = (
     <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
       {setupProgress !== null ? (
@@ -435,7 +445,7 @@ function Ds4HealthIndicator({
         {compactStatus}
         {needsLabel ? <span className="min-w-0 truncate">{setupProgress !== null ? 'DS4 setup' : description.label}</span> : null}
       </summary>
-      <div className="absolute bottom-full right-0 z-50 mb-2 w-64 rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl">
+      <PositionedMenu placement="absolute" position={{ right: 0, bottom: '100%' }} className="mb-2 w-64 bg-base p-1.5">
         <MenuButton onClick={() => void health.refresh()} disabled={health.checking}>
           {health.checking ? 'Refreshing' : 'Refresh status'}
         </MenuButton>
@@ -444,7 +454,10 @@ function Ds4HealthIndicator({
             {health.settingUp ? 'Setting up' : 'Run setup'}
           </MenuButton>
         ) : null}
-        <MenuButton onClick={() => void health.start()} disabled={health.starting || (health.status?.reachable === true && !health.selectedModelMismatch)}>
+        <MenuButton
+          onClick={() => void health.start()}
+          disabled={health.starting || (health.status?.reachable === true && !health.selectedModelMismatch)}
+        >
           {health.starting ? 'Starting' : 'startLabel' in description ? description.startLabel : 'Start server'}
         </MenuButton>
         <MenuButton onClick={() => void health.stop()} disabled={health.stopping || health.status?.server?.managedRunning !== true}>
@@ -453,8 +466,8 @@ function Ds4HealthIndicator({
         <MenuButton onClick={() => void health.restart()} disabled={health.restarting || health.status?.runtime?.installed === false}>
           {health.restarting ? 'Restarting' : 'Restart server'}
         </MenuButton>
-        <div className="my-1 border-t border-border-subtle" />
-        <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">Interventions</div>
+        <MenuSeparator />
+        <MenuGroupLabel className="text-[10px] uppercase tracking-[0.12em] text-dim">Interventions</MenuGroupLabel>
         {interventionItems.map((item) => (
           <MenuCheckbox
             key={item.key}
@@ -465,9 +478,9 @@ function Ds4HealthIndicator({
             onChange={(checked) => void health.saveIntervention(item.key, checked)}
           />
         ))}
-        <div className="my-1 border-t border-border-subtle" />
+        <MenuSeparator />
         <MenuButton onClick={() => void health.openSettings()}>Open DS4 settings</MenuButton>
-      </div>
+      </PositionedMenu>
     </details>
   );
 }
@@ -484,12 +497,12 @@ function MenuButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <MenuItem
       className={cx(
-        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] hover:bg-surface/65 hover:text-primary disabled:cursor-default disabled:opacity-40',
+        'gap-2 px-2 py-1.5 text-[11px] disabled:cursor-default disabled:opacity-40',
         checked ? 'text-primary' : 'text-secondary',
       )}
+      closeOnPointerDown={false}
       disabled={disabled}
       onClick={(event) => {
         event.currentTarget.closest('details')?.removeAttribute('open');
@@ -497,10 +510,12 @@ function MenuButton({
       }}
     >
       {checked !== undefined ? (
-        <span className="flex w-3 shrink-0 justify-center">{checked ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : null}</span>
+        <span className="flex w-3 shrink-0 justify-center">
+          {checked ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : null}
+        </span>
       ) : null}
       {children}
-    </button>
+    </MenuItem>
   );
 }
 
@@ -518,12 +533,11 @@ function MenuCheckbox({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <button
-      type="button"
-      className={cx(
-        'flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-[11px] text-primary hover:bg-surface/65',
-        disabled ? 'cursor-default opacity-50' : '',
-      )}
+    <MenuItem
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      className={cx('justify-between gap-3 px-2 py-1.5 text-[11px] text-primary', disabled ? 'cursor-default opacity-50' : '')}
+      closeOnPointerDown={false}
       disabled={disabled}
       onClick={(event) => {
         event.stopPropagation();
@@ -534,17 +548,11 @@ function MenuCheckbox({
       <span className="w-3 shrink-0 text-right text-[12px] leading-none text-accent" aria-hidden="true">
         {checked ? '✓' : ''}
       </span>
-    </button>
+    </MenuItem>
   );
 }
 
-function ModelSelect({
-  context,
-  variant,
-}: {
-  context: ComposerControlContext;
-  variant: 'inline' | 'menu';
-}) {
+function ModelSelect({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
   const selectedModel = resolveModel(context.models, context.currentModel);
   const selectedLabel = formatModelTriggerLabel({ models: context.models, currentModel: context.currentModel });
   const disabled = context.savingPreference !== null || context.models.length === 0;
@@ -569,27 +577,26 @@ function ModelSelect({
         <span className="min-w-0 truncate">{selectedLabel}</span>
         <Chevron className="static shrink-0" />
       </summary>
-      <div
-        className={cx(
-          'absolute bottom-full z-50 mb-2 max-h-80 overflow-auto rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl',
-          variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64',
-        )}
+      <PositionedMenu
+        placement="absolute"
+        position={{ left: 0, bottom: '100%' }}
+        className={cx('mb-2 max-h-80 overflow-auto bg-base p-1.5', variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64')}
       >
-          {groupModels(context.models).map(([provider, providerModels]) => (
-            <div key={provider} className="py-1">
-              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">{provider}</div>
-              {providerModels.map((model) => {
-                const value = modelSelectionValue(model, context.models);
-                const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;
-                return (
-                  <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
-                    <span className="min-w-0 truncate">{model.name}</span>
-                  </MenuButton>
-                );
-              })}
-            </div>
-          ))}
-      </div>
+        {groupModels(context.models).map(([provider, providerModels]) => (
+          <div key={provider} className="py-1">
+            <MenuGroupLabel className="pb-1 text-[10px] uppercase tracking-[0.14em] text-dim/70">{provider}</MenuGroupLabel>
+            {providerModels.map((model) => {
+              const value = modelSelectionValue(model, context.models);
+              const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;
+              return (
+                <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
+                  <span className="min-w-0 truncate">{model.name}</span>
+                </MenuButton>
+              );
+            })}
+          </div>
+        ))}
+      </PositionedMenu>
     </details>
   );
 }
@@ -620,11 +627,10 @@ function ThinkingSelect({ context, variant }: { context: ComposerControlContext;
         <span className="min-w-0 truncate">{selected?.label ?? 'Unset'}</span>
         <Chevron className="static shrink-0" />
       </summary>
-      <div
-        className={cx(
-          'absolute bottom-full z-50 mb-2 rounded-lg border border-border-subtle bg-base p-1.5 shadow-xl',
-          variant === 'menu' ? 'left-0 w-full min-w-44' : 'left-0 w-40',
-        )}
+      <PositionedMenu
+        placement="absolute"
+        position={{ left: 0, bottom: '100%' }}
+        className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-44' : 'w-40')}
       >
         {options.map((option) => (
           <MenuButton
@@ -635,7 +641,7 @@ function ThinkingSelect({ context, variant }: { context: ComposerControlContext;
             {option.label}
           </MenuButton>
         ))}
-      </div>
+      </PositionedMenu>
     </details>
   );
 }
