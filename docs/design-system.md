@@ -51,6 +51,7 @@ The initial package includes:
 - Actions: `Button`, `ToolbarButton`, `IconButton`, `CheckButton`
 - Status: `Pill`, `Keycap`, `Notice`
 - Surfaces: `SurfacePanel`
+- Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
 - Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`

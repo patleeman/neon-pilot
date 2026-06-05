@@ -1,5 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 
+import { Button, Dialog, DialogBody, DialogFooter, DialogHeader, Field, TextInput } from '../ui';
+
 export interface TextPromptDialogProps {
   title: string;
   label: string;
@@ -37,40 +39,23 @@ export function TextPromptDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 py-8 backdrop-blur-sm" onClick={onCancel}>
-      <form
-        className="w-full max-w-md rounded-2xl border border-border-subtle bg-base p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-        onSubmit={submit}
-      >
-        <h2 className="text-[16px] font-semibold text-primary">{title}</h2>
-        <label className="mt-4 block text-[12px] font-medium text-secondary">
-          {label}
-          <input
-            ref={inputRef}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder={placeholder}
-            className="mt-2 w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
-          />
-        </label>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-xl px-4 py-2 text-[13px] text-secondary hover:bg-surface hover:text-primary"
-            onClick={onCancel}
-          >
+    <Dialog onClose={onCancel} labelledBy="text-prompt-dialog-title" className="max-w-md">
+      <form onSubmit={submit}>
+        <DialogHeader title={title} titleId="text-prompt-dialog-title" />
+        <DialogBody>
+          <Field label={label}>
+            <TextInput ref={inputRef} value={value} onChange={(event) => setValue(event.target.value)} placeholder={placeholder} />
+          </Field>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="rounded-xl border border-accent/50 bg-accent/15 px-4 py-2 text-[13px] font-semibold text-accent disabled:cursor-not-allowed disabled:opacity-40"
-          >
+          </Button>
+          <Button type="submit" variant="action" tone="accent" disabled={!canSubmit}>
             {confirmLabel}
-          </button>
-        </div>
+          </Button>
+        </DialogFooter>
       </form>
-    </div>
+    </Dialog>
   );
 }

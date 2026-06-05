@@ -1,6 +1,7 @@
 import { type ComponentType, useCallback, useEffect, useRef, useState } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
+import { Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
 import { createNativeExtensionClient } from './nativePaClient';
 import { systemExtensionModules } from './systemExtensionModules';
 
@@ -127,34 +128,25 @@ export function ExtensionModalHost() {
   const fullscreen = modal.size === 'fullscreen';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose();
-      }}
+    <Dialog
+      onClose={() => handleClose()}
+      labelledBy={modal.title ? 'extension-modal-title' : undefined}
+      aria-label={modal.title ? undefined : 'Extension dialog'}
       onKeyDown={(e) => {
         if (e.key === 'Escape') handleClose();
       }}
-      role="dialog"
-      aria-modal="true"
-      aria-label={modal.title ?? 'Extension dialog'}
+      className={
+        fullscreen
+          ? 'h-[85vh] max-h-[85vh] w-[min(85vw,1600px)] max-w-none rounded-lg border-border-default bg-surface'
+          : 'max-h-[85vh] max-w-2xl rounded-lg border-border-default bg-surface'
+      }
     >
-      <div
-        className={
-          fullscreen
-            ? 'mx-4 flex h-[85vh] max-h-[85vh] w-[min(85vw,1600px)] min-w-0 flex-col overflow-hidden rounded-lg border border-border-default bg-surface shadow-2xl'
-            : 'mx-4 max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border-default bg-surface p-6 shadow-2xl'
-        }
-      >
-        {modal.title ? (
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-primary">{modal.title}</h2>
-            <button
-              type="button"
-              onClick={() => handleClose()}
-              className="ui-icon-button h-7 w-7 rounded-md text-secondary hover:text-primary"
-              aria-label="Close"
-            >
+      {modal.title ? (
+        <DialogHeader
+          title={modal.title}
+          titleId="extension-modal-title"
+          actions={
+            <IconButton onClick={() => handleClose()} aria-label="Close">
               <svg
                 width="14"
                 height="14"
@@ -168,11 +160,13 @@ export function ExtensionModalHost() {
                 <path d="M18 6 6 18" />
                 <path d="m6 6 12 12" />
               </svg>
-            </button>
-          </div>
-        ) : null}
+            </IconButton>
+          }
+        />
+      ) : null}
+      <DialogBody className={fullscreen ? 'p-0' : undefined}>
         <Component pa={pa} props={modal.props} close={handleClose} />
-      </div>
-    </div>
+      </DialogBody>
+    </Dialog>
   );
 }
