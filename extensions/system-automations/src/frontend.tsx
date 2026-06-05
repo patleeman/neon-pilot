@@ -5,13 +5,16 @@ import {
   AppPageIntro,
   AppPageLayout,
   AppPageToc,
+  Button,
   cx,
   EmptyState,
   ErrorState,
   Field,
   IconButton,
   LoadingState,
+  SearchInput,
   Select,
+  SegmentedControl,
   SettingsSection,
   Switch,
   Textarea,
@@ -133,6 +136,16 @@ const FILTER_LABELS: Record<AutomationFilter, string> = {
   failed: 'Failed',
   disabled: 'Disabled',
 };
+
+const SCHEDULE_TYPE_OPTIONS = [
+  { value: 'cron', label: 'Recurring' },
+  { value: 'at', label: 'Once' },
+] as const;
+
+const AUTOMATION_FILTER_OPTIONS = (Object.keys(FILTER_LABELS) as AutomationFilter[]).map((value) => ({
+  value,
+  label: FILTER_LABELS[value],
+}));
 
 const MAX_RENDERED_LOG_CHARS = 20_000;
 
@@ -995,14 +1008,9 @@ function PolicyRuleRow({
           </select>
         </>
       )}
-      <button
-        type="button"
-        className="ml-auto h-7 w-7 rounded-md text-dim opacity-0 transition-opacity hover:bg-elevated hover:text-primary group-hover:opacity-100"
-        aria-label="Remove policy"
-        onClick={() => onRemove(index)}
-      >
+      <IconButton compact className="ml-auto opacity-0 group-hover:opacity-100" aria-label="Remove policy" onClick={() => onRemove(index)}>
         ×
-      </button>
+      </IconButton>
     </div>
   );
 }
@@ -1411,16 +1419,12 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                 description="Choose a human-readable schedule. The app handles the scheduler syntax."
               >
                 <div className="grid gap-4">
-                  <div className="inline-flex w-fit rounded-md border border-border-subtle bg-elevated p-1">
-                    <button
-                      type="button"
-                      className={cx(
-                        'rounded-md px-3 py-1.5 text-[12px]',
-                        form.scheduleType === 'cron'
-                          ? 'bg-accent/10 text-accent ring-1 ring-accent/25'
-                          : 'text-secondary hover:text-primary',
-                      )}
-                      onClick={() => {
+                  <SegmentedControl
+                    value={form.scheduleType}
+                    options={SCHEDULE_TYPE_OPTIONS}
+                    ariaLabel="Automation schedule type"
+                    onChange={(nextScheduleType) => {
+                      if (nextScheduleType === 'cron') {
                         const scheduleBuilder = form.cron
                           ? (easyScheduleFromCron(form.cron) ?? form.scheduleBuilder)
                           : form.scheduleBuilder;
@@ -1430,21 +1434,11 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                           scheduleBuilder,
                           cron: form.cron || buildCronFromEasySchedule(scheduleBuilder),
                         });
-                      }}
-                    >
-                      Recurring
-                    </button>
-                    <button
-                      type="button"
-                      className={cx(
-                        'rounded-md px-3 py-1.5 text-[12px]',
-                        form.scheduleType === 'at' ? 'bg-accent/10 text-accent ring-1 ring-accent/25' : 'text-secondary hover:text-primary',
-                      )}
-                      onClick={() => setForm({ ...form, scheduleType: 'at' })}
-                    >
-                      Once
-                    </button>
-                  </div>
+                        return;
+                      }
+                      setForm({ ...form, scheduleType: nextScheduleType });
+                    }}
+                  />
 
                   {form.scheduleType === 'cron' ? (
                     <div className="grid gap-4">
@@ -1510,20 +1504,20 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                         {form.scheduleBuilder.cadence === 'weekly' ? (
                           <div className="flex flex-wrap gap-2 md:col-span-2">
                             {WEEKDAY_OPTIONS.map((option) => (
-                              <button
+                              <Button
                                 key={option.value}
-                                type="button"
+                                variant="ghost"
                                 className={cx(
-                                  'rounded-md border px-2.5 py-1.5 text-[12px] transition-colors',
+                                  'px-2.5 py-1.5 text-[12px]',
                                   form.scheduleBuilder.weekdays.includes(option.value)
                                     ? 'border-accent/45 bg-accent/10 text-primary'
-                                    : 'border-border-subtle/70 bg-transparent text-secondary hover:text-primary',
+                                    : 'border-border-subtle/70 bg-transparent',
                                 )}
                                 aria-pressed={form.scheduleBuilder.weekdays.includes(option.value)}
                                 onClick={() => toggleScheduleWeekday(option.value)}
                               >
                                 {option.label}
-                              </button>
+                              </Button>
                             ))}
                           </div>
                         ) : null}
@@ -1547,19 +1541,19 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
 
                       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         {form.cron && !CRON_PRESETS.some((preset) => preset.cron === form.cron) && !easyScheduleFromCron(form.cron) ? (
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
                             className="rounded-md border border-accent/45 bg-accent/10 px-3 py-3 text-left text-accent transition-colors"
                             onClick={() => setForm({ ...form, cron: form.cron })}
                           >
                             <span className="block text-[13px] font-semibold">Custom saved schedule</span>
                             <span className="mt-0.5 block text-[11px] text-dim">Keep this existing schedule</span>
-                          </button>
+                          </Button>
                         ) : null}
                         {CRON_PRESETS.map((preset) => (
-                          <button
+                          <Button
                             key={preset.cron}
-                            type="button"
+                            variant="ghost"
                             className={cx(
                               'rounded-md border px-3 py-3 text-left transition-colors',
                               form.cron === preset.cron
@@ -1576,7 +1570,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                           >
                             <span className="block text-[13px] font-semibold">{preset.label}</span>
                             <span className="mt-0.5 block text-[11px] text-dim">{preset.summary}</span>
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -1813,26 +1807,18 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap gap-1 rounded-xl bg-surface/40 p-1">
-                    {(Object.keys(FILTER_LABELS) as AutomationFilter[]).map((nextFilter) => (
-                      <button
-                        key={nextFilter}
-                        type="button"
-                        className={cx(
-                          'rounded-lg px-3 py-1.5 text-[12px] transition-colors',
-                          filter === nextFilter ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-primary',
-                        )}
-                        onClick={() => setFilter(nextFilter)}
-                      >
-                        {FILTER_LABELS[nextFilter]}
-                      </button>
-                    ))}
-                  </div>
-                  <input
+                  <SegmentedControl
+                    value={filter}
+                    options={AUTOMATION_FILTER_OPTIONS}
+                    ariaLabel="Filter automations"
+                    className="flex-wrap"
+                    onChange={setFilter}
+                  />
+                  <SearchInput
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search automations…"
-                    className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
+                    className="w-72 bg-surface/40 text-[13px]"
                   />
                 </div>
 
