@@ -200,10 +200,10 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'All' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Installed' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Built-in' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Available' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'All' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Installed' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Built-in' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Available' })).toBeNull();
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();

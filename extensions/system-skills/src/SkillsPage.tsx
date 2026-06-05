@@ -1,5 +1,15 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, SearchInput } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  cx,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  SearchInput,
+  TabButton,
+  TabList,
+} from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type SkillSource = 'extension' | 'knowledge' | 'project' | string;
@@ -106,21 +116,13 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
       <AppPageIntro title="Skills" summary="Enable or disable agent skills. Disabled skills are hidden from the agent’s context." />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle/70 pb-5">
-        <div className="flex flex-wrap items-center gap-1 text-[12px]">
+        <TabList ariaLabel="Skill filters">
           {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={cx(
-                'rounded-xl px-3 py-2 text-secondary transition-colors',
-                activeTab === tab.id ? 'bg-surface text-primary shadow-sm' : 'hover:bg-surface/60 hover:text-primary',
-              )}
-              onClick={() => setActiveTab(tab.id)}
-            >
+            <TabButton key={tab.id} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}>
               {tab.label} <span className="text-dim">{counts[tab.id]}</span>
-            </button>
+            </TabButton>
           ))}
-        </div>
+        </TabList>
         <SearchInput
           value={query}
           onChange={(event) => setQuery(event.target.value)}

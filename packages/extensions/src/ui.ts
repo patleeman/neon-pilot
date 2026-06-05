@@ -203,6 +203,8 @@ export declare const Stat: HostComponent;
 export declare const StatGrid: HostComponent;
 export declare const SurfacePanel: (...args: never[]) => unknown;
 export declare const Switch: HostComponent;
+export declare const TabButton: HostComponent;
+export declare const TabList: HostComponent;
 export declare const Textarea: HostComponent;
 export declare const TextInput: HostComponent;
 export declare const ToolbarButton: HostComponent;

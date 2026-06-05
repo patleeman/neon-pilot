@@ -16,6 +16,8 @@ import {
   KeyValueList,
   Stat,
   StatGrid,
+  TabButton,
+  TabList,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
@@ -1486,28 +1488,18 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               />
             ) : null}
 
-            <div className="flex flex-wrap items-center gap-5 border-b border-border-subtle/70 text-[12px]">
+            <TabList ariaLabel="Extension filters" variant="underline">
               {(
                 [
                   ['all', 'All'],
                   ['attention', 'Attention'],
                 ] as const
               ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={cx(
-                    'border-b-2 px-0 py-2 font-medium transition-colors',
-                    activeFilter === id
-                      ? 'border-accent text-primary'
-                      : 'border-transparent text-secondary hover:border-border-subtle hover:text-primary',
-                  )}
-                  onClick={() => setActiveFilter(id)}
-                >
+                <TabButton key={id} active={activeFilter === id} onClick={() => setActiveFilter(id)}>
                   {label}
-                </button>
+                </TabButton>
               ))}
-            </div>
+            </TabList>
 
             {notice ? (
               <div className="sticky top-0 z-20 bg-base/95 py-2 backdrop-blur">

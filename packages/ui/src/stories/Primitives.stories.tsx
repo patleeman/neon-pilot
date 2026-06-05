@@ -34,6 +34,8 @@ import {
   StatGrid,
   SurfacePanel,
   Switch,
+  TabButton,
+  TabList,
   Textarea,
   TextInput,
   ToolbarButton,
@@ -112,6 +114,15 @@ const meta = {
             onChange={() => undefined}
           />
         </div>
+        <TabList ariaLabel="Extension filters">
+          <TabButton active>All</TabButton>
+          <TabButton>Enabled</TabButton>
+          <TabButton>Attention</TabButton>
+        </TabList>
+        <TabList ariaLabel="Extension filters underline" variant="underline">
+          <TabButton active>All</TabButton>
+          <TabButton>Attention</TabButton>
+        </TabList>
       </section>
 
       <section style={{ display: 'grid', gap: 12 }}>

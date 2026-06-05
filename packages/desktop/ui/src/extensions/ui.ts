@@ -51,6 +51,8 @@ export {
   StatGrid,
   SurfacePanel,
   Switch,
+  TabButton,
+  TabList,
   Textarea,
   TextInput,
   ToolbarButton,

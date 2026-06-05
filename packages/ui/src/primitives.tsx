@@ -379,6 +379,45 @@ export function MenuItem({
   );
 }
 
+export function TabList({
+  children,
+  className,
+  ariaLabel,
+  variant = 'surface',
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { ariaLabel: string; variant?: 'surface' | 'underline' }) {
+  return (
+    <div
+      className={cx('ui-tab-list', variant === 'underline' && 'ui-tab-list-underline', className)}
+      role="tablist"
+      aria-label={ariaLabel}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function TabButton({
+  active = false,
+  children,
+  className,
+  type = 'button',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
+  return (
+    <button
+      type={type}
+      role="tab"
+      aria-selected={active}
+      className={cx('ui-tab-button', active && 'ui-tab-button-active', className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
 export interface SegmentedControlOption<TValue extends string> {
   value: TValue;
   label: ReactNode;

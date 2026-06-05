@@ -553,6 +553,74 @@ body {
   color: rgb(var(--color-danger));
 }
 
+.ui-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgb(var(--color-secondary));
+  font-size: 0.75rem;
+}
+
+.ui-tab-list-underline {
+  gap: 1.25rem;
+  border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.7);
+}
+
+.ui-tab-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  color: rgb(var(--color-secondary));
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ui-tab-button:hover {
+  background: rgb(var(--color-surface) / 0.6);
+  color: rgb(var(--color-primary));
+}
+
+.ui-tab-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
+}
+
+.ui-tab-button-active {
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-primary));
+  box-shadow: 0 1px 2px rgb(var(--color-primary) / 0.08);
+}
+
+.ui-tab-list-underline .ui-tab-button {
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.ui-tab-list-underline .ui-tab-button:hover {
+  border-bottom-color: rgb(var(--color-border-subtle));
+  background: transparent;
+}
+
+.ui-tab-list-underline .ui-tab-button-active {
+  border-bottom-color: rgb(var(--color-accent));
+  background: transparent;
+  box-shadow: none;
+}
+
 .ui-loading-state,
 .ui-error-state,
 .ui-empty-state {

@@ -24,6 +24,8 @@ import {
   Stat,
   StatGrid,
   Switch,
+  TabButton,
+  TabList,
   TextInput,
 } from './primitives';
 
@@ -99,6 +101,23 @@ describe('design-system primitives', () => {
 
     expect(html).toContain('role="tablist"');
     expect(html).toContain('aria-selected="true"');
+  });
+
+  it('renders tab lists with tab semantics', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        TabList,
+        { ariaLabel: 'Skill filters' },
+        createElement(TabButton, { active: true }, 'All'),
+        createElement(TabButton, null, 'Enabled'),
+      ),
+    );
+
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('aria-label="Skill filters"');
+    expect(html).toContain('role="tab"');
+    expect(html).toContain('aria-selected="true"');
+    expect(html).toContain('ui-tab-button-active');
   });
 
   it('renders search inputs with search semantics', () => {

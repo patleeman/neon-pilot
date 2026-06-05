@@ -35,6 +35,8 @@ export {
   Stat,
   StatGrid,
   Switch,
+  TabButton,
+  TabList,
   Textarea,
   TextInput,
   ToolbarButton,
