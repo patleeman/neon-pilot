@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState } from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, SearchInput } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type SkillSource = 'extension' | 'knowledge' | 'project' | string;
@@ -121,11 +121,11 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
             </button>
           ))}
         </div>
-        <input
+        <SearchInput
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search skills…"
-          className="w-full rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] outline-none transition-colors focus:border-accent md:w-72"
+          className="w-full md:w-72"
         />
       </div>
 

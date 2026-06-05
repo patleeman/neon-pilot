@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import React from 'react';
 
+import { MenuItem, MenuSeparator, MenuShell } from '../ui';
 import type { ReplySelectionContextMenuState, TranscriptSelectionAction } from './useChatReplySelection.js';
 
 void React;
@@ -27,14 +28,11 @@ export function SelectionContextMenu({
   selectionActions?: TranscriptSelectionAction[];
   onAction: (action: 'reply' | 'copy' | TranscriptSelectionAction) => Promise<void> | void;
 }) {
-  const itemClassName = 'ui-context-menu-item';
-
   return (
-    <div
+    <MenuShell
       ref={menuRef}
-      className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
+      className="fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
       style={{ left: menuState.x, top: menuState.y }}
-      role="menu"
       aria-label="Selected transcript text actions"
       data-selection-context-menu="true"
     >
@@ -68,49 +66,27 @@ export function SelectionContextMenu({
                     </button>
                   ))}
                 </div>
-                <div className="mx-1 my-1 h-px bg-border-subtle" role="separator" />
+                <MenuSeparator />
               </>
             ) : null}
-            <button
-              type="button"
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
-              onMouseDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
+            <MenuItem
               onClick={() => {
                 void onAction('reply');
               }}
-              className={itemClassName}
-              role="menuitem"
             >
               Reply with Selection
-            </button>
-            <div className="mx-1 my-1 h-px bg-border-subtle" role="separator" />
+            </MenuItem>
+            <MenuSeparator />
           </>
         ) : null}
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          onMouseDown={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
+        <MenuItem
           onClick={() => {
             void onAction('copy');
           }}
-          className={itemClassName}
-          role="menuitem"
         >
           Copy
-        </button>
+        </MenuItem>
       </div>
-    </div>
+    </MenuShell>
   );
 }

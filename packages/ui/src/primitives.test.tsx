@@ -2,7 +2,20 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { Button, cx, Dialog, Notice, Pill, Switch, TextInput } from './primitives';
+import {
+  Button,
+  cx,
+  Dialog,
+  MenuItem,
+  MenuSeparator,
+  MenuShell,
+  Notice,
+  Pill,
+  SearchInput,
+  SegmentedControl,
+  Switch,
+  TextInput,
+} from './primitives';
 
 describe('design-system primitives', () => {
   it('joins class names with falsey values removed', () => {
@@ -41,5 +54,46 @@ describe('design-system primitives', () => {
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain('aria-labelledby="dialog-title"');
+  });
+
+  it('renders menu anatomy with expected roles', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        MenuShell,
+        { 'aria-label': 'Actions' },
+        createElement(MenuItem, { checked: true }, 'Enabled'),
+        createElement(MenuSeparator),
+        createElement(MenuItem, { tone: 'danger' }, 'Delete'),
+      ),
+    );
+
+    expect(html).toContain('role="menu"');
+    expect(html).toContain('role="menuitemradio"');
+    expect(html).toContain('aria-checked="true"');
+    expect(html).toContain('role="separator"');
+    expect(html).toContain('ui-context-menu-item-danger');
+  });
+
+  it('renders segmented controls as tabs', () => {
+    const html = renderToStaticMarkup(
+      createElement(SegmentedControl, {
+        value: 'split',
+        ariaLabel: 'Diff view',
+        options: [
+          { value: 'split', label: 'Split' },
+          { value: 'unified', label: 'Unified' },
+        ],
+        onChange: () => undefined,
+      }),
+    );
+
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('aria-selected="true"');
+  });
+
+  it('renders search inputs with search semantics', () => {
+    const html = renderToStaticMarkup(createElement(SearchInput, { placeholder: 'Search extensions' }));
+    expect(html).toContain('type="search"');
+    expect(html).toContain('ui-search-input');
   });
 });

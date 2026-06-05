@@ -52,7 +52,9 @@ The initial package includes:
 - Status: `Pill`, `Keycap`, `Notice`
 - Surfaces: `SurfacePanel`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
-- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `Textarea`, `Select`, `Switch`
+- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`
+- Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
+- Selection: `SegmentedControl`
 - Pages: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`
 - Utility: `cx`
 
@@ -61,9 +63,9 @@ The initial package includes:
 Extract in small tranches and migrate real usage each time:
 
 1. Forms and feedback: fields, inputs, switches, notices.
-2. Overlays: dialogs, confirmation dialogs, positioned menus, context menus.
+2. Overlays: confirmation dialogs and positioned menus.
 3. Layout: settings sections, cards, page headers, search/filter bars.
-4. Data display: tables, stat cards, key-value lists, segmented controls.
+4. Data display: tables, stat cards, key-value lists, tabs.
 5. Host-owned app patterns: file trees, activity trees, chat/transcript surfaces, diff/artifact views.
 
 Each tranche should include documentation, Storybook coverage, and at least one app or extension replacement so the component is proven against production usage.

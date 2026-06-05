@@ -12,8 +12,14 @@ import {
   IconButton,
   Keycap,
   LoadingState,
+  MenuGroupLabel,
+  MenuItem,
+  MenuSeparator,
+  MenuShell,
   Notice,
   Pill,
+  SearchInput,
+  SegmentedControl,
   Select,
   SettingsSection,
   SurfacePanel,
@@ -56,6 +62,9 @@ const meta = {
       <section style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Forms</h2>
         <SurfacePanel style={{ display: 'grid', gap: 14, padding: 16 }}>
+          <Field label="Search">
+            <SearchInput placeholder="Search extensions..." />
+          </Field>
           <Field label="Name" hint="Use a concise label users can scan quickly.">
             <TextInput placeholder="Daily repository summary…" />
           </Field>
@@ -71,6 +80,28 @@ const meta = {
           </Field>
           <Switch checked label="Enabled" />
         </SurfacePanel>
+      </section>
+
+      <section style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>Menus and Segments</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 18 }}>
+          <MenuShell className="relative bottom-auto left-auto right-auto mb-0 w-56" aria-label="Story actions">
+            <MenuGroupLabel>Show</MenuGroupLabel>
+            <MenuItem checked>Enabled items</MenuItem>
+            <MenuItem>All items</MenuItem>
+            <MenuSeparator />
+            <MenuItem tone="danger">Delete</MenuItem>
+          </MenuShell>
+          <SegmentedControl
+            ariaLabel="Diff view"
+            value="split"
+            options={[
+              { value: 'split', label: 'Split' },
+              { value: 'unified', label: 'Unified' },
+            ]}
+            onChange={() => undefined}
+          />
+        </div>
       </section>
 
       <section style={{ display: 'grid', gap: 12 }}>

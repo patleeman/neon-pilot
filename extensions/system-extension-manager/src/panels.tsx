@@ -1,7 +1,18 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
-import { AppPageIntro, AppPageLayout, cx, EmptyState, ErrorState, LoadingState, Notice } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  cx,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  MenuItem,
+  MenuShell,
+  Notice,
+  SearchInput,
+} from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
   type CSSProperties,
@@ -272,8 +283,6 @@ function ExtensionActionsMenu({
     setOpen(false);
     action();
   }, []);
-  const menuButtonClass =
-    'w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] text-secondary hover:bg-base hover:text-primary disabled:cursor-not-allowed disabled:opacity-50';
   const canDelete = extension.packageType !== 'system';
 
   return (
@@ -296,9 +305,9 @@ function ExtensionActionsMenu({
       </button>
       {open && menuPosition
         ? createPortal(
-            <div
+            <MenuShell
               ref={menuRef}
-              className="fixed z-[70] w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl"
+              className="fixed bottom-auto left-auto right-auto top-auto z-[70] mb-0 w-40"
               style={{
                 top: menuPosition.top,
                 right: menuPosition.right,
@@ -306,34 +315,29 @@ function ExtensionActionsMenu({
                 overflowY: 'auto',
                 visibility: menuPosition.visibility,
               }}
-              role="menu"
               onClick={(event) => event.stopPropagation()}
             >
               {extension.packageRoot ? (
-                <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
+                <MenuItem disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
                   Open folder
-                </button>
+                </MenuItem>
               ) : null}
               {onUpdate ? (
-                <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onUpdate)}>
+                <MenuItem disabled={busy} onClick={(event) => run(event, onUpdate)}>
                   Update
-                </button>
+                </MenuItem>
               ) : null}
               {onReinstall ? (
-                <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onReinstall)}>
+                <MenuItem disabled={busy} onClick={(event) => run(event, onReinstall)}>
                   Reinstall
-                </button>
+                </MenuItem>
               ) : null}
               {canDelete ? (
-                <button
-                  className={`${menuButtonClass} text-danger hover:text-danger`}
-                  disabled={busy}
-                  onClick={(event) => run(event, onDelete)}
-                >
+                <MenuItem tone="danger" disabled={busy} onClick={(event) => run(event, onDelete)}>
                   Uninstall
-                </button>
+                </MenuItem>
               ) : null}
-            </div>,
+            </MenuShell>,
             document.body,
           )
         : null}
@@ -1435,11 +1439,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 summary="Manage installed extensions and built-in capabilities."
                 actions={
                   <div className="flex min-w-[26rem] items-center gap-2">
-                    <input
+                    <SearchInput
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                       placeholder="Search extensions…"
-                      className="h-9 w-72 rounded-md border border-border-subtle bg-elevated px-3 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface"
+                      className="h-9 w-72"
                     />
                     <button
                       type="button"
@@ -1511,11 +1515,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
             {embedded ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <input
+                <SearchInput
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search extensions…"
-                  className="w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface md:w-80"
+                  className="w-full md:w-80"
                 />
                 <button
                   type="button"

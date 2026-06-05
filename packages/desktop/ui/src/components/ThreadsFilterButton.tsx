@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ThreadsFilterMode, ThreadsOrganizeMode, ThreadsSortMode } from './sidebarThreadModel';
+import { MenuGroupLabel, MenuItem, MenuSeparator, MenuShell } from './ui';
 
 const PATH = {
   automations:
@@ -121,17 +122,14 @@ export function ThreadsFilterButton({
 
   function renderMenuItem({ label, icon, checked, onClick }: { label: string; icon: string; checked: boolean; onClick: () => void }) {
     return (
-      <button
-        type="button"
+      <MenuItem
         onPointerDown={stopMenuEvent}
         onMouseDown={stopMenuEvent}
         onClick={() => {
           onClick();
           setMenuOpen(false);
         }}
-        className="ui-context-menu-item"
-        role="menuitemradio"
-        aria-checked={checked}
+        checked={checked}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <span className="shrink-0 text-secondary">
@@ -142,7 +140,7 @@ export function ThreadsFilterButton({
         <span className="ml-3 flex h-4 w-4 shrink-0 items-center justify-center text-accent">
           {checked ? <Icon d={PATH.check} size={11} /> : null}
         </span>
-      </button>
+      </MenuItem>
     );
   }
 
@@ -161,15 +159,14 @@ export function ThreadsFilterButton({
         <Icon d={PATH.filter} size={12} />
       </button>
       {menuOpen && menuPosition ? (
-        <div
+        <MenuShell
           ref={menuRootRef}
-          className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[172px]"
+          className="fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[172px]"
           style={{ left: menuPosition.x, top: menuPosition.y }}
-          role="menu"
           aria-label="Threads organization options"
         >
           <div className="space-y-px">
-            <div className="px-2.5 pt-2 pb-1 text-[12px] font-medium text-dim">Show</div>
+            <MenuGroupLabel>Show</MenuGroupLabel>
             {renderMenuItem({
               label: 'All threads',
               icon: PATH.list,
@@ -188,8 +185,8 @@ export function ThreadsFilterButton({
               checked: filterMode === 'automation',
               onClick: () => onChangeFilterMode('automation'),
             })}
-            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Organize</div>
+            <MenuSeparator />
+            <MenuGroupLabel>Organize</MenuGroupLabel>
             {renderMenuItem({
               label: 'By project',
               icon: PATH.workspace,
@@ -202,8 +199,8 @@ export function ThreadsFilterButton({
               checked: organizeMode === 'chronological',
               onClick: () => onChangeOrganizeMode('chronological'),
             })}
-            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Order</div>
+            <MenuSeparator />
+            <MenuGroupLabel>Order</MenuGroupLabel>
             {renderMenuItem({
               label: 'Created',
               icon: PATH.clock,
@@ -217,7 +214,7 @@ export function ThreadsFilterButton({
               onClick: () => onChangeSortMode('updated'),
             })}
           </div>
-        </div>
+        </MenuShell>
       ) : null}
     </>
   );

@@ -8,7 +8,7 @@ import { formatDate } from '../shared/utils';
 import { CheckpointDiffSection, fileDisplayPath } from './checkpoints/CheckpointDiffView';
 import { UNCOMMITTED_SENTINEL, useConversationCheckpointSummaries, useUncommittedDiff } from './conversationCheckpointHooks';
 import { addNotification } from './notifications/notificationStore';
-import { cx, ErrorState, LoadingState } from './ui';
+import { cx, ErrorState, LoadingState, SegmentedControl } from './ui';
 
 type DiffViewMode = 'unified' | 'split';
 
@@ -34,25 +34,15 @@ function expandedFilePathSet(files: Array<{ path: string }>): Set<string> {
 
 function DiffViewToggle({ currentView, onChange }: { currentView: DiffViewMode; onChange: (nextView: DiffViewMode) => void }) {
   return (
-    <div className="ui-segmented-control" role="tablist" aria-label="Diff view">
-      {(
-        [
-          ['split', 'Split'],
-          ['unified', 'Unified'],
-        ] as Array<[DiffViewMode, string]>
-      ).map(([value, label]) => (
-        <button
-          key={value}
-          type="button"
-          role="tab"
-          aria-selected={currentView === value}
-          onClick={() => onChange(value)}
-          className={cx('ui-segmented-button', currentView === value && 'ui-segmented-button-active')}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      ariaLabel="Diff view"
+      value={currentView}
+      options={[
+        { value: 'split', label: 'Split' },
+        { value: 'unified', label: 'Unified' },
+      ]}
+      onChange={onChange}
+    />
   );
 }
 

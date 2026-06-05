@@ -20,7 +20,9 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Surfaces: `SurfacePanel`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
-- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `Textarea`, `Select`, `Switch`
+- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`
+- Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
+- Selection: `SegmentedControl`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`
 - Utility: `cx`
 
@@ -64,8 +66,8 @@ export function MyExtensionPage() {
 Next good candidates:
 
 - `ConfirmDialog`
-- `Menu`, `MenuItem`, `MenuSeparator`, `PositionedMenu`
-- `SearchInput`, `FilterToolbar`
-- `SegmentedControl`, `Tabs`
+- `PositionedMenu`
+- `FilterToolbar`
+- `Tabs`
 - `DataTable`, `KeyValueTable`, `Stat`, `StatGrid`
 - `SettingsRow`

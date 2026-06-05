@@ -206,6 +206,111 @@ export function DialogFooter({ children, className, ...props }: HTMLAttributes<H
   );
 }
 
+export const MenuShell = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement> & { role?: 'menu' | 'listbox' | 'group' }>(
+  function MenuShell({ children, className, role = 'menu', ...props }, ref) {
+    return (
+      <div ref={ref} className={cx('ui-menu-shell ui-context-menu-shell', className)} role={role} {...props}>
+        {children}
+      </div>
+    );
+  },
+);
+
+export function MenuGroupLabel({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-menu-group-label', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function MenuSeparator({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cx('ui-menu-separator', className)} role="separator" {...props} />;
+}
+
+export function MenuItem({
+  children,
+  className,
+  tone = 'default',
+  checked,
+  closeOnPointerDown = true,
+  type = 'button',
+  role,
+  onPointerDown,
+  onMouseDown,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  tone?: 'default' | 'danger';
+  checked?: boolean;
+  closeOnPointerDown?: boolean;
+}) {
+  function stopPointerEvent(event: { preventDefault: () => void; stopPropagation: () => void }) {
+    if (!closeOnPointerDown) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const itemRole = role ?? (typeof checked === 'boolean' ? 'menuitemradio' : 'menuitem');
+
+  return (
+    <button
+      type={type}
+      role={itemRole}
+      aria-checked={typeof checked === 'boolean' ? checked : undefined}
+      className={cx('ui-context-menu-item', tone === 'danger' && 'ui-context-menu-item-danger', className)}
+      onPointerDown={(event) => {
+        stopPointerEvent(event);
+        onPointerDown?.(event);
+      }}
+      onMouseDown={(event) => {
+        stopPointerEvent(event);
+        onMouseDown?.(event);
+      }}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+export interface SegmentedControlOption<TValue extends string> {
+  value: TValue;
+  label: ReactNode;
+  disabled?: boolean;
+}
+
+export function SegmentedControl<TValue extends string>({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  className,
+}: {
+  value: TValue;
+  options: readonly SegmentedControlOption<TValue>[];
+  onChange: (nextValue: TValue) => void;
+  ariaLabel: string;
+  className?: string;
+}) {
+  return (
+    <div className={cx('ui-segmented-control', className)} role="tablist" aria-label={ariaLabel}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="tab"
+          aria-selected={value === option.value}
+          disabled={option.disabled}
+          onClick={() => onChange(option.value)}
+          className={cx('ui-segmented-button', value === option.value && 'ui-segmented-button-active')}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function LoadingState({ label, className }: { label: string; className?: string }) {
   return (
     <div className={cx('ui-loading-state', className)} role="status" aria-live="polite">
@@ -282,6 +387,13 @@ export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLIn
   ref,
 ) {
   return <input ref={ref} className={cx('ui-text-input', className)} {...props} />;
+});
+
+export const SearchInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function SearchInput(
+  { className, type = 'search', ...props },
+  ref,
+) {
+  return <input ref={ref} type={type} className={cx('ui-search-input', className)} {...props} />;
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
