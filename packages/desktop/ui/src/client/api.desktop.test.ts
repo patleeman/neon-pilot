@@ -235,6 +235,12 @@ describe('api desktop transport', () => {
       currentServiceTier: '',
       models: [{ id: 'gpt-5.4', provider: 'openai-codex', name: 'GPT-5.4', context: 272_000 }],
     });
+    const readModelPreferences = vi.fn().mockResolvedValue({
+      currentModel: 'gpt-5.4',
+      currentVisionModel: '',
+      currentThinkingLevel: 'high',
+      currentServiceTier: '',
+    });
     const updateModelPreferences = vi.fn().mockResolvedValue({ ok: true });
     const readModelProviders = vi.fn().mockResolvedValue({ providers: [{ id: 'openrouter', models: [] }] });
     const saveModelProvider = vi.fn().mockResolvedValue({ providers: [{ id: 'openrouter', models: [] }] });
@@ -414,6 +420,7 @@ describe('api desktop transport', () => {
         readSessionMeta,
         readSessionSearchIndex,
         readModels,
+        readModelPreferences,
         updateModelPreferences,
         readModelProviders,
         saveModelProvider,
@@ -481,7 +488,9 @@ describe('api desktop transport', () => {
           visibleResults: [{ sessionId: 'conversation-1', title: 'Related', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z' }],
         });
       if (path === '/api/models') return createJsonResponse(await readModels());
-      if (path === '/api/model-preferences') return createJsonResponse(await updateModelPreferences(JSON.parse(String(init?.body))));
+      if (path === '/api/model-preferences' && init?.method === 'PATCH')
+        return createJsonResponse(await updateModelPreferences(JSON.parse(String(init?.body))));
+      if (path === '/api/model-preferences') return createJsonResponse(await readModelPreferences());
       if (path === '/api/model-providers') return createJsonResponse(await readModelProviders());
       if (path === '/api/model-providers/openrouter' && init?.method === 'PATCH')
         return createJsonResponse(await saveModelProvider({ provider: 'openrouter', ...JSON.parse(String(init.body)) }));
@@ -585,6 +594,7 @@ describe('api desktop transport', () => {
       limit: 5,
     });
     const models = await api.models();
+    const globalModelPreferences = await api.modelPreferences();
     const modelPreferenceUpdate = await api.updateModelPreferences({ thinkingLevel: 'medium' });
     const modelProviders = await api.modelProviders();
     const savedModelProvider = await api.saveModelProvider('openrouter', { baseUrl: 'https://openrouter.ai/api' });
@@ -646,6 +656,13 @@ describe('api desktop transport', () => {
     expect(readSessionMeta).toHaveBeenCalledWith('conversation-1');
     expect(readSessionSearchIndex).toHaveBeenCalledWith(['conversation-1']);
     expect(readModels).toHaveBeenCalledTimes(1);
+    expect(globalModelPreferences).toEqual({
+      currentModel: 'gpt-5.4',
+      currentVisionModel: '',
+      currentThinkingLevel: 'high',
+      currentServiceTier: '',
+    });
+    expect(readModelPreferences).toHaveBeenCalledTimes(1);
     expect(updateModelPreferences).toHaveBeenCalledWith({ thinkingLevel: 'medium' });
     expect(readModelProviders).toHaveBeenCalledTimes(1);
     expect(saveModelProvider).toHaveBeenCalledWith({ provider: 'openrouter', baseUrl: 'https://openrouter.ai/api' });

@@ -41,6 +41,11 @@ function resolveModel(models: Model[], modelRef: string): Model | null {
   return null;
 }
 
+export function formatModelTriggerLabel(input: { models: Model[]; currentModel: string }): string {
+  const selected = resolveModel(input.models, input.currentModel);
+  return selected?.name ?? (input.currentModel.trim() || 'Select model');
+}
+
 type Ds4Status = {
   reachable?: boolean;
   settings?: {
@@ -540,7 +545,8 @@ function ModelSelect({
   context: ComposerControlContext;
   variant: 'inline' | 'menu';
 }) {
-  const selected = resolveModel(context.models, context.currentModel);
+  const selectedModel = resolveModel(context.models, context.currentModel);
+  const selectedLabel = formatModelTriggerLabel({ models: context.models, currentModel: context.currentModel });
   const disabled = context.savingPreference !== null || context.models.length === 0;
   const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[11.5rem] min-w-[8.25rem]');
   return (
@@ -560,7 +566,7 @@ function ModelSelect({
         aria-label="Conversation model"
         aria-disabled={disabled}
       >
-        <span className="min-w-0 truncate">{selected?.name ?? 'Select model'}</span>
+        <span className="min-w-0 truncate">{selectedLabel}</span>
         <Chevron className="static shrink-0" />
       </summary>
       <div
@@ -574,7 +580,7 @@ function ModelSelect({
               <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">{provider}</div>
               {providerModels.map((model) => {
                 const value = modelSelectionValue(model, context.models);
-                const checked = selected?.provider === model.provider && selected.id === model.id;
+                const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;
                 return (
                   <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
                     <span className="min-w-0 truncate">{model.name}</span>

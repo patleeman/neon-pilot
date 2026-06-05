@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildLiveSessionPreferenceInput, selectComposerModel } from './conversationModelSelection';
+import { buildLiveSessionPreferenceInput, resolveDraftComposerModelId, selectComposerModel } from './conversationModelSelection';
 
 describe('conversationModelSelection', () => {
   it('selects the current model or falls back to default', () => {
@@ -16,6 +16,16 @@ describe('conversationModelSelection', () => {
       { id: 'deepseek-v4-flash', provider: 'ds4' },
     ];
     expect(selectComposerModel(models, 'ds4/deepseek-v4-flash', '')).toBe(models[1]);
+  });
+
+  it('keeps the default model id before model metadata is loaded', () => {
+    expect(resolveDraftComposerModelId({ storedDraftModel: '', defaultModel: 'gpt-5.4', models: [] })).toBe('gpt-5.4');
+  });
+
+  it('falls back from a stale draft model to the default after metadata loads', () => {
+    expect(resolveDraftComposerModelId({ storedDraftModel: 'missing', defaultModel: 'gpt-5.4', models: [{ id: 'gpt-5.4' }] })).toBe(
+      'gpt-5.4',
+    );
   });
 
   it('builds live session preference input from explicit values', () => {

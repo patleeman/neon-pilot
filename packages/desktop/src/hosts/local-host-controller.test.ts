@@ -32,6 +32,7 @@ function createLocalApiModuleMock(overrides: Partial<LocalApiModule> = {}): Loca
     readDesktopSessionMeta: vi.fn(),
     readDesktopSessionSearchIndex: vi.fn(),
     readDesktopModels: vi.fn(),
+    readDesktopModelPreferences: vi.fn(),
     updateDesktopModelPreferences: vi.fn(),
     readDesktopDefaultCwd: vi.fn(),
     updateDesktopDefaultCwd: vi.fn(),
@@ -522,6 +523,12 @@ describe('LocalHostController', () => {
       currentServiceTier: '',
       models: [],
     });
+    const readDesktopModelPreferences = vi.fn().mockResolvedValue({
+      currentModel: 'gpt-5.4',
+      currentVisionModel: '',
+      currentThinkingLevel: 'high',
+      currentServiceTier: '',
+    });
     const updateDesktopModelPreferences = vi.fn().mockResolvedValue({ ok: true });
     const readDesktopModelProviders = vi.fn().mockResolvedValue({ providers: [{ id: 'openrouter', models: [] }] });
     const saveDesktopModelProvider = vi.fn().mockResolvedValue({ providers: [{ id: 'openrouter', models: [] }] });
@@ -541,6 +548,7 @@ describe('LocalHostController', () => {
     const loadLocalApi = vi.fn().mockResolvedValue(
       createLocalApiModuleMock({
         readDesktopModels,
+        readDesktopModelPreferences,
         updateDesktopModelPreferences,
         readDesktopModelProviders,
         saveDesktopModelProvider,
@@ -566,6 +574,12 @@ describe('LocalHostController', () => {
       currentThinkingLevel: 'high',
       currentServiceTier: '',
       models: [],
+    });
+    await expect(controller.readModelPreferences?.()).resolves.toEqual({
+      currentModel: 'gpt-5.4',
+      currentVisionModel: '',
+      currentThinkingLevel: 'high',
+      currentServiceTier: '',
     });
     await expect(controller.updateModelPreferences?.({ model: 'gpt-5.4', thinkingLevel: 'medium' })).resolves.toEqual({ ok: true });
     await expect(controller.readModelProviders?.()).resolves.toEqual({ providers: [{ id: 'openrouter', models: [] }] });

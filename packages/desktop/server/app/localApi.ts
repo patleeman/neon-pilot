@@ -936,6 +936,8 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
 
   if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
+  if (method === 'GET' && path === '/api/model-preferences')
+    return createDesktopLocalApiJsonResponse(await readDesktopModelPreferences());
   if (method === 'GET' && path === '/api/extensions/slash-commands') {
     return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).slashCommandRegistrations);
   }
@@ -1584,6 +1586,11 @@ export async function readDesktopSessionSearchIndex(sessionIds: string[]) {
 export async function readDesktopModels() {
   const m = await models();
   return await m.readModelState(DEFAULT_RUNTIME_SETTINGS_FILE);
+}
+
+export async function readDesktopModelPreferences() {
+  const m = await models();
+  return m.readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE);
 }
 
 export async function updateDesktopModelPreferences(input: {

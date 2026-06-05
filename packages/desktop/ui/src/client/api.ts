@@ -483,6 +483,8 @@ export const api = {
 
   // ── Models ────────────────────────────────────────────────────────────────
   models: async () => get<ModelState>('/models'),
+  modelPreferences: async () =>
+    get<Pick<ModelState, 'currentModel' | 'currentVisionModel' | 'currentThinkingLevel' | 'currentServiceTier'>>('/model-preferences'),
   modelProviders: async () => get<ModelProviderState>('/model-providers'),
   saveModelProvider: async (
     provider: string,

@@ -244,6 +244,11 @@ export class LocalHostController implements HostController {
     return module.readDesktopModels();
   }
 
+  async readModelPreferences(): Promise<unknown> {
+    const module = await this.loadLocalApi();
+    return module.readDesktopModelPreferences();
+  }
+
   async updateModelPreferences(input: {
     model?: string | null;
     visionModel?: string | null;

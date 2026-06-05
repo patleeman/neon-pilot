@@ -33,6 +33,7 @@ export interface LocalApiModule {
   readDesktopSessionMeta(sessionId: string): Promise<unknown>;
   readDesktopSessionSearchIndex(sessionIds: string[]): Promise<unknown>;
   readDesktopModels(): Promise<unknown>;
+  readDesktopModelPreferences(): Promise<unknown>;
   updateDesktopModelPreferences(input: {
     model?: string | null;
     visionModel?: string | null;

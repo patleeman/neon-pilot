@@ -1,5 +1,5 @@
 import { buildConversationServiceTierPreferenceInput } from './conversationInitialState';
-import { resolveSelectableModel } from '../model/modelPreferences';
+import { resolveSelectableModel, resolveSelectableModelId } from '../model/modelPreferences';
 
 export function selectComposerModel<TModel extends { id: string; provider?: string }>(
   models: TModel[],
@@ -23,4 +23,21 @@ export function buildLiveSessionPreferenceInput(input: {
       hasExplicitServiceTier: input.hasExplicitServiceTier,
     }),
   };
+}
+
+export function resolveDraftComposerModelId<TModel extends { id: string; provider?: string }>(input: {
+  storedDraftModel: string;
+  defaultModel: string;
+  models: TModel[];
+}): string {
+  const storedDraftModel = input.storedDraftModel.trim();
+  if (input.models.length === 0) {
+    return storedDraftModel || input.defaultModel.trim();
+  }
+
+  return resolveSelectableModelId({
+    requestedModel: storedDraftModel,
+    defaultModel: input.defaultModel,
+    models: input.models,
+  });
 }

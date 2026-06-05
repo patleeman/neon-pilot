@@ -109,7 +109,11 @@ import {
   shouldShowEarlierTranscriptBoundary,
 } from '../conversation/conversationMessageWindow';
 import { resolveDraftModelPreferenceUpdate, resolveDraftThinkingPreferenceUpdate } from '../conversation/conversationModelPreferences';
-import { buildLiveSessionPreferenceInput, selectComposerModel } from '../conversation/conversationModelSelection';
+import {
+  buildLiveSessionPreferenceInput,
+  resolveDraftComposerModelId,
+  selectComposerModel,
+} from '../conversation/conversationModelSelection';
 import {
   hasConversationLoadedHistoricalTailBlocks,
   mergeConversationSessionMeta,
@@ -1442,8 +1446,8 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
 
     const syncDraftPreferences = () => {
       setCurrentModel(
-        resolveSelectableModelId({
-          requestedModel: readDraftConversationModel(),
+        resolveDraftComposerModelId({
+          storedDraftModel: readDraftConversationModel(),
           defaultModel,
           models,
         }),
