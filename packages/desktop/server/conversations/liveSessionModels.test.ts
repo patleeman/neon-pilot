@@ -129,7 +129,7 @@ describe('live session models', () => {
     expect(extensionHostClient.client.invokeAction).toHaveBeenCalledWith({
       extensionId: 'system-ds4',
       actionId: 'ds4StartServer',
-      input: {},
+      input: { provider: 'ds4', model: 'deepseek-v4-flash' },
     });
     expect(piAi.stream).toHaveBeenCalledWith(model, [], expect.objectContaining({ apiKey: 'key' }));
   });

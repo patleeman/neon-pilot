@@ -121,7 +121,7 @@ async function runModelProfileStartupAction(model: Model<Api>): Promise<void> {
   const actionId = typeof profile.startupAction === 'string' ? profile.startupAction : '';
   if (!extensionId || !actionId) return;
 
-  const result = await getExtensionHostClient().invokeAction({ extensionId, actionId, input: {} });
+  const result = await getExtensionHostClient().invokeAction({ extensionId, actionId, input: { provider: model.provider, model: model.id } });
   if (!result.ok) {
     throw new Error(result.error || `Model runtime startup action failed: ${extensionId}/${actionId}`);
   }

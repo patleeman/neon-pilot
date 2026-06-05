@@ -110,15 +110,15 @@ describe('SettingsPage — untested panel rendering', () => {
     expect(html).not.toContain('Background runtime');
   });
 
-  it('does not render extension manager settings in core settings', () => {
+  it('does not render extension manager management UI in settings', () => {
     const html = renderPage('/settings');
-    expect(html).not.toContain('Extensions');
+    expect(html).toContain('Extensions');
     expect(html).not.toContain('AGENTS.md files');
   });
 
-  it('does not render the extensions quick link', () => {
+  it('renders the aggregate extensions quick link', () => {
     const html = renderPage('/settings');
-    expect(html).not.toContain('href="#settings-extensions"');
+    expect(html).toContain('href="#settings-extensions"');
     expect(html).not.toContain('Installed extensions, imported plugin packages, instruction files, skills, tools, and extension settings.');
   });
 
