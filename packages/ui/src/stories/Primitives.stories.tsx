@@ -18,6 +18,7 @@ import {
   DialogHeader,
   EmptyState,
   Field,
+  FilterToolbar,
   IconButton,
   Keycap,
   KeyValueItem,
@@ -157,6 +158,21 @@ const meta = {
           <TabButton active>All</TabButton>
           <TabButton>Attention</TabButton>
         </TabList>
+        <FilterToolbar
+          filters={
+            <SegmentedControl
+              ariaLabel="Status filter"
+              value="all"
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'enabled', label: 'Enabled' },
+                { value: 'disabled', label: 'Disabled' },
+              ]}
+              onChange={() => undefined}
+            />
+          }
+          search={<SearchInput placeholder="Search items..." />}
+        />
       </section>
 
       <section style={{ display: 'grid', gap: 12 }}>

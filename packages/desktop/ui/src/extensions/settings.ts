@@ -24,6 +24,7 @@ export {
   FieldError,
   FieldHint,
   FieldLabel,
+  FilterToolbar,
   KeyValueItem,
   KeyValueList,
   LoadingState,

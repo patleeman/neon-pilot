@@ -15,6 +15,7 @@ import {
   DataTableRow,
   Disclosure,
   Dialog,
+  FilterToolbar,
   KeyValueItem,
   KeyValueList,
   MenuItem,
@@ -101,6 +102,19 @@ describe('design-system primitives', () => {
 
   it('renders text input with design-system class', () => {
     expect(renderToStaticMarkup(createElement(TextInput, { value: 'hello', readOnly: true }))).toContain('ui-text-input');
+  });
+
+  it('renders filter toolbars with filters and search slots', () => {
+    const html = renderToStaticMarkup(
+      createElement(FilterToolbar, {
+        filters: createElement('span', null, 'All'),
+        search: createElement(SearchInput, { placeholder: 'Search' }),
+      }),
+    );
+
+    expect(html).toContain('ui-filter-toolbar');
+    expect(html).toContain('ui-filter-toolbar-filters');
+    expect(html).toContain('ui-filter-toolbar-search');
   });
 
   it('renders section labels and resource list rows', () => {

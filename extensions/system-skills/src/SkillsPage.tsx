@@ -6,6 +6,7 @@ import {
   cx,
   EmptyState,
   ErrorState,
+  FilterToolbar,
   LoadingState,
   SearchInput,
   TabButton,
@@ -116,21 +117,26 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
     <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-10">
       <AppPageIntro title="Skills" summary="Enable or disable agent skills. Disabled skills are hidden from the agent’s context." />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle/70 pb-5">
-        <TabList ariaLabel="Skill filters">
-          {TABS.map((tab) => (
-            <TabButton key={tab.id} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}>
-              {tab.label} <span className="text-dim">{counts[tab.id]}</span>
-            </TabButton>
-          ))}
-        </TabList>
-        <SearchInput
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search skills…"
-          className="w-full md:w-72"
-        />
-      </div>
+      <FilterToolbar
+        className="border-b border-border-subtle/70 pb-5"
+        filters={
+          <TabList ariaLabel="Skill filters">
+            {TABS.map((tab) => (
+              <TabButton key={tab.id} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}>
+                {tab.label} <span className="text-dim">{counts[tab.id]}</span>
+              </TabButton>
+            ))}
+          </TabList>
+        }
+        search={
+          <SearchInput
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search skills…"
+            className="w-full md:w-72"
+          />
+        }
+      />
 
       {filtered.length === 0 ? (
         <EmptyState title="No skills" body="No skills match the current filters." />

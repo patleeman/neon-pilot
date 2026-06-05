@@ -361,6 +361,27 @@ body {
   line-height: 1.25rem;
 }
 
+.ui-filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ui-filter-toolbar-filters,
+.ui-filter-toolbar-actions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ui-filter-toolbar-search {
+  min-width: min(100%, 18rem);
+}
+
 .ui-resource-list-item {
   display: block;
   width: 100%;

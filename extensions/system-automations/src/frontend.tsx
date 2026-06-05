@@ -10,6 +10,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  FilterToolbar,
   IconButton,
   LoadingState,
   MenuItem,
@@ -1798,21 +1799,25 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
               />
             ) : (
               <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <SegmentedControl
-                    value={filter}
-                    options={AUTOMATION_FILTER_OPTIONS}
-                    ariaLabel="Filter automations"
-                    className="flex-wrap"
-                    onChange={setFilter}
-                  />
-                  <SearchInput
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search automations…"
-                    className="w-72 bg-surface/40 text-[13px]"
-                  />
-                </div>
+                <FilterToolbar
+                  filters={
+                    <SegmentedControl
+                      value={filter}
+                      options={AUTOMATION_FILTER_OPTIONS}
+                      ariaLabel="Filter automations"
+                      className="flex-wrap"
+                      onChange={setFilter}
+                    />
+                  }
+                  search={
+                    <SearchInput
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search automations…"
+                      className="w-72 bg-surface/40 text-[13px]"
+                    />
+                  }
+                />
 
                 {filteredTasks.length === 0 ? (
                   <EmptyState title="No matching automations" body="Adjust the filter or search query." />

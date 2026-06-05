@@ -225,6 +225,27 @@ export function SupportingText({ children, className, ...props }: HTMLAttributes
   );
 }
 
+export function FilterToolbar({
+  filters,
+  search,
+  actions,
+  className,
+  ...props
+}: {
+  filters?: ReactNode;
+  search?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-filter-toolbar', className)} {...props}>
+      {filters ? <div className="ui-filter-toolbar-filters">{filters}</div> : null}
+      {search ? <div className="ui-filter-toolbar-search">{search}</div> : null}
+      {actions ? <div className="ui-filter-toolbar-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
 export function ResourceListItem({
   label,
   meta,

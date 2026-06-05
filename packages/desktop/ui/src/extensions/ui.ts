@@ -36,6 +36,7 @@ export {
   FieldError,
   FieldHint,
   FieldLabel,
+  FilterToolbar,
   IconButton,
   KeyValueItem,
   KeyValueList,

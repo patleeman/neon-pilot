@@ -57,7 +57,7 @@ The initial package includes:
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
-- Selection: `SegmentedControl`, `TabList`, `TabButton`
+- Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `FilterToolbar`
 - Data display: `SectionLabel`, `SupportingText`, `ResourceListItem`, `CodeBlock`, `Disclosure`, `ProgressBar`, `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`
 - Utility: `cx`
@@ -68,7 +68,7 @@ Extract in small tranches and migrate real usage each time:
 
 1. Forms and feedback: fields, inputs, switches, notices.
 2. Overlays: confirmation dialogs and richer positioned menu behavior.
-3. Layout: settings sections, cards, page headers, search/filter bars.
+3. Layout: settings sections, cards, page headers, richer search/filter bars.
 4. Data display: richer tables, sortable columns, tab panels.
 5. Host-owned app patterns: file trees, activity trees, chat/transcript surfaces, diff/artifact views.
 
@@ -83,6 +83,7 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Boolean settings -> `Switch` or `SettingToggleRow`
 - Local segmented filters -> `SegmentedControl`
 - Local tab rows -> `TabList` and `TabButton`
+- Local search/filter header rows -> `FilterToolbar`
 - Local fixed/absolute menu shells -> `PositionedMenu` with `MenuItem`
 - Local loading/error/empty messages -> `LoadingState`, `ErrorState`, `EmptyState`, or `Notice`
 - Local bordered data cards -> `SurfacePanel`, `ResourceListItem`, `KeyValueList`, `DataTable`, or `Disclosure`

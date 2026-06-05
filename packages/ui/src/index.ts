@@ -28,6 +28,7 @@ export {
   FieldError,
   FieldHint,
   FieldLabel,
+  FilterToolbar,
   IconButton,
   Keycap,
   KeyValueItem,
