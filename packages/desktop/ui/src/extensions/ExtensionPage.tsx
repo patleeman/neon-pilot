@@ -4,10 +4,25 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { addNotification } from '../components/notifications/notificationStore';
 import { ErrorState, LoadingState } from '../components/ui';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
-import { isNativeExtensionPageSurface } from './types';
+import { type NativeExtensionViewSummary, isNativeExtensionPageSurface } from './types';
 import { useExtensionRegistry } from './useExtensionRegistry';
 
 const STALE_EXTENSION_ROUTES = new Set(['/gateways', '/local-models']);
+const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
+  {
+    id: 'extensions-page',
+    title: 'Extensions',
+    location: 'main',
+    route: '/extensions',
+    component: 'ExtensionManagerPage',
+    placement: 'primary',
+    scope: 'global',
+    activation: 'on-route',
+    extensionId: 'system-extension-manager',
+    packageType: 'system',
+    frontend: { entry: 'dist/frontend.js' },
+  },
+];
 
 function routeMatches(route: string, pathname: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`);
@@ -18,7 +33,8 @@ export function ExtensionPage() {
   const registry = useExtensionRegistry();
   const nativeSurface = useMemo(
     () =>
-      registry.surfaces.find((candidate) => isNativeExtensionPageSurface(candidate) && routeMatches(candidate.route, location.pathname)),
+      registry.surfaces.find((candidate) => isNativeExtensionPageSurface(candidate) && routeMatches(candidate.route, location.pathname)) ??
+      CRITICAL_SYSTEM_EXTENSION_PAGES.find((candidate) => routeMatches(candidate.route ?? '', location.pathname)),
     [location.pathname, registry.surfaces],
   );
   const staleExtensionRoute = STALE_EXTENSION_ROUTES.has(location.pathname);
