@@ -20,4 +20,13 @@ describe('release smoke perf budgets', () => {
       expect(source).toContain(arg);
     }
   });
+
+  it('runs a fast release smoke before notarization', () => {
+    const source = readFileSync(new URL('./publish-desktop-release.mjs', import.meta.url), 'utf8');
+    const preSmokeIndex = source.indexOf('requirePreNotarizationSmokeTest(env, releaseDir, buildRoot);');
+    const notarizeIndex = source.indexOf('notarizeDistributionContainers(env, desktopReleaseFiles);');
+
+    expect(preSmokeIndex).toBeGreaterThan(0);
+    expect(notarizeIndex).toBeGreaterThan(preSmokeIndex);
+  });
 });

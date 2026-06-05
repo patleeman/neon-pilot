@@ -696,20 +696,63 @@ function notarizeDistributionContainers(env, files) {
   }
 }
 
+function resolveReleaseSmokePaths(releaseDir, buildRoot) {
+  const appPath = collectPackagedAppPath(releaseDir);
+  if (!appPath) {
+    fail(`Packaged desktop app not found under ${releaseDir}; cannot run release smoke test.`);
+  }
+
+  return {
+    appPath,
+    smokeScriptPath: resolve(buildRoot, 'scripts', 'smoke-desktop-release.mjs'),
+    startupIdleSmokeScriptPath: resolve(buildRoot, 'scripts', 'smoke-startup-idle.mjs'),
+    perfSmokeScriptPath: resolve(buildRoot, 'scripts', 'perf-desktop-smoke.mjs'),
+  };
+}
+
+function requireManualSmokeTestApproval(appPath, reason) {
+  if (!process.stdin.isTTY) {
+    fail(
+      [
+        'Release smoke test is required before pushing/uploading artifacts.',
+        `Test the built app at: ${appPath}`,
+        'Then rerun with NEON_PILOT_RELEASE_SMOKE_TESTED=1 once startup and core app flows pass.',
+        reason,
+      ].join('\n'),
+    );
+  }
+
+  console.log('');
+  console.log('Release smoke test required before publishing.');
+  console.log(`Built app: ${appPath}`);
+  console.log('Suggested check: launch the app, verify it starts, and smoke test one conversation and one knowledge route.');
+  console.log('Press Enter only after the built binary passes the smoke test, or Ctrl-C to abort.');
+  run('bash', ['-lc', 'read -r _ < /dev/tty']);
+}
+
+function requirePreNotarizationSmokeTest(env, releaseDir, buildRoot) {
+  if (isTruthyEnv(env.NEON_PILOT_RELEASE_SMOKE_TESTED)) {
+    console.log('Release smoke test gate acknowledged via NEON_PILOT_RELEASE_SMOKE_TESTED=1.');
+    return;
+  }
+
+  const { appPath, smokeScriptPath } = resolveReleaseSmokePaths(releaseDir, buildRoot);
+  if (!isTruthyEnv(env.NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE)) {
+    console.log('Running pre-notarization release smoke test against the built app...');
+    run('node', [smokeScriptPath, appPath], { cwd: buildRoot, env });
+    return;
+  }
+
+  requireManualSmokeTestApproval(appPath, 'Automated smoke was skipped by NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE=1.');
+}
+
 function requireSmokeTestApproval(env, releaseDir, buildRoot) {
   if (isTruthyEnv(env.NEON_PILOT_RELEASE_SMOKE_TESTED)) {
     console.log('Release smoke test gate acknowledged via NEON_PILOT_RELEASE_SMOKE_TESTED=1.');
     return;
   }
 
-  const appPath = collectPackagedAppPath(releaseDir);
-  if (!appPath) {
-    fail(`Packaged desktop app not found under ${releaseDir}; cannot run release smoke test.`);
-  }
-  const smokeScriptPath = resolve(buildRoot, 'scripts', 'smoke-desktop-release.mjs');
-  const startupIdleSmokeScriptPath = resolve(buildRoot, 'scripts', 'smoke-startup-idle.mjs');
-  const perfSmokeScriptPath = resolve(buildRoot, 'scripts', 'perf-desktop-smoke.mjs');
-
+  const { appPath, smokeScriptPath, startupIdleSmokeScriptPath, perfSmokeScriptPath } = resolveReleaseSmokePaths(releaseDir, buildRoot);
   if (!isTruthyEnv(env.NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE)) {
     console.log('Running automated release smoke test against the built app with isolated daemon state...');
     run('node', [smokeScriptPath, appPath], { cwd: buildRoot, env });
@@ -742,23 +785,7 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
     return;
   }
 
-  if (!process.stdin.isTTY) {
-    fail(
-      [
-        'Release smoke test is required before pushing/uploading artifacts.',
-        `Test the built app at: ${appPath}`,
-        'Then rerun with NEON_PILOT_RELEASE_SMOKE_TESTED=1 once startup and core app flows pass.',
-        'Automated smoke was skipped by NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE=1.',
-      ].join('\n'),
-    );
-  }
-
-  console.log('');
-  console.log('Release smoke test required before publishing.');
-  console.log(`Built app: ${appPath}`);
-  console.log('Suggested check: launch the app, verify it starts, and smoke test one conversation and one knowledge route.');
-  console.log('Press Enter only after the built binary passes the smoke test, or Ctrl-C to abort.');
-  run('bash', ['-lc', 'read -r _ < /dev/tty']);
+  requireManualSmokeTestApproval(appPath, 'Automated smoke was skipped by NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE=1.');
 }
 
 const packageJson = readJsonFile(packageJsonPath);
@@ -792,6 +819,7 @@ if (!packagedAppForExtensionCheck) {
   fail('Packaged desktop app not found; cannot validate packaged extensions.');
 }
 run('node', ['scripts/check-packaged-extensions.mjs', packagedAppForExtensionCheck], { cwd: buildRoot, env });
+requirePreNotarizationSmokeTest(env, releaseDir, buildRoot);
 
 const desktopReleaseFiles = collectReleaseFiles(releaseDir, version);
 const files = desktopReleaseFiles;
