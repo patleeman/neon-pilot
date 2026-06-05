@@ -42,6 +42,8 @@ export {
   PageHeader,
   Pill,
   type PillTone,
+  PositionedMenu,
+  type PositionedMenuPlacement,
   ProgressBar,
   type ProgressBarTone,
   ResourceListItem,

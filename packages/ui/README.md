@@ -21,7 +21,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
-- Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
+- Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection: `SegmentedControl`, `TabList`, `TabButton`
 - Data display: `SectionLabel`, `SupportingText`, `ResourceListItem`, `CodeBlock`, `Disclosure`, `ProgressBar`, `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`
@@ -73,7 +73,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `Switch` or `SettingToggleRow` for boolean settings. `SettingToggleRow` is preferred when a title and description are part of the row.
 - Use `SegmentedControl` for two-to-six mutually exclusive modes or filters. Do not rebuild segmented buttons locally.
 - Use `TabList` and `TabButton` for larger view navigation where content panels change.
-- Use `MenuShell`, `MenuItem`, `MenuGroupLabel`, and `MenuSeparator` for menu contents. Positioning can remain local until a shared positioned menu exists.
+- Use `MenuShell`, `MenuItem`, `MenuGroupLabel`, and `MenuSeparator` for menu contents. Use `PositionedMenu` when a menu needs fixed, absolute, or static placement without rebuilding menu chrome.
 - Use `Dialog` and its header/body/footer pieces for modal shells before creating local fixed overlays.
 - Use `Notice`, `LoadingState`, `ErrorState`, and `EmptyState` for feedback. Avoid page-specific loading/error markup unless the layout requires it.
 - Use `ProgressBar`, `StatGrid`, `KeyValueList`, `DataTable`, `ResourceListItem`, `CodeBlock`, and `Disclosure` for data display before composing raw rows or panels.
@@ -94,7 +94,6 @@ These production areas already use the shared package and are useful examples fo
 Next good candidates:
 
 - `ConfirmDialog`
-- `PositionedMenu`
 - `FilterToolbar`
 - richer tab panels
 - `KeyValueTable`

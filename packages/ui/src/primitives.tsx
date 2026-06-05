@@ -1,5 +1,6 @@
 import {
   type ButtonHTMLAttributes,
+  type CSSProperties,
   type DetailsHTMLAttributes,
   forwardRef,
   type HTMLAttributes,
@@ -492,6 +493,29 @@ export const MenuShell = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElemen
     );
   },
 );
+
+export type PositionedMenuPlacement = 'fixed' | 'absolute' | 'static';
+
+export const PositionedMenu = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement> & {
+    role?: 'menu' | 'listbox' | 'group';
+    placement?: PositionedMenuPlacement;
+    position?: Pick<CSSProperties, 'top' | 'right' | 'bottom' | 'left'>;
+  }
+>(function PositionedMenu({ children, className, placement = 'fixed', position, style, role = 'menu', ...props }, ref) {
+  return (
+    <MenuShell
+      ref={ref}
+      role={role}
+      className={cx('ui-positioned-menu', `ui-positioned-menu-${placement}`, className)}
+      style={{ ...position, ...style }}
+      {...props}
+    >
+      {children}
+    </MenuShell>
+  );
+});
 
 export function MenuGroupLabel({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (

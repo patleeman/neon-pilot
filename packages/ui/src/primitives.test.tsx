@@ -18,6 +18,7 @@ import {
   KeyValueItem,
   KeyValueList,
   MenuItem,
+  PositionedMenu,
   MenuSeparator,
   MenuShell,
   Notice,
@@ -165,6 +166,16 @@ describe('design-system primitives', () => {
     expect(html).toContain('aria-checked="true"');
     expect(html).toContain('role="separator"');
     expect(html).toContain('ui-context-menu-item-danger');
+  });
+
+  it('renders positioned menus with placement and style', () => {
+    const html = renderToStaticMarkup(
+      createElement(PositionedMenu, { 'aria-label': 'Actions', position: { top: 12, right: 24 } }, createElement(MenuItem, null, 'Open')),
+    );
+
+    expect(html).toContain('ui-positioned-menu');
+    expect(html).toContain('ui-positioned-menu-fixed');
+    expect(html).toContain('style="top:12px;right:24px"');
   });
 
   it('renders segmented controls as tabs', () => {

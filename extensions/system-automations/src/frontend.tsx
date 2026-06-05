@@ -12,6 +12,8 @@ import {
   Field,
   IconButton,
   LoadingState,
+  MenuItem,
+  PositionedMenu,
   SearchInput,
   Select,
   SegmentedControl,
@@ -763,9 +765,6 @@ function TaskActionsMenu({
     };
   }, [open, positionMenu]);
 
-  const menuButtonClass =
-    'w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] text-secondary hover:bg-base hover:text-primary disabled:cursor-not-allowed disabled:opacity-50';
-
   return (
     <div ref={rootRef} className="relative" onClick={(event) => event.stopPropagation()}>
       <IconButton
@@ -783,14 +782,8 @@ function TaskActionsMenu({
         <MoreIcon />
       </IconButton>
       {open ? (
-        <div
-          className="fixed z-50 w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl"
-          role="menu"
-          style={menuPosition ? { top: menuPosition.top, right: menuPosition.right } : undefined}
-        >
-          <button
-            type="button"
-            className={menuButtonClass}
+        <PositionedMenu className="w-40" position={menuPosition ?? undefined}>
+          <MenuItem
             onClick={(event) => {
               event.stopPropagation();
               setOpen(false);
@@ -798,10 +791,9 @@ function TaskActionsMenu({
             }}
           >
             {logOpen ? 'Hide log' : 'Show log'}
-          </button>
-          <button
-            type="button"
-            className={cx(menuButtonClass, 'text-danger hover:text-danger')}
+          </MenuItem>
+          <MenuItem
+            tone="danger"
             disabled={busy}
             onClick={(event) => {
               event.stopPropagation();
@@ -810,8 +802,8 @@ function TaskActionsMenu({
             }}
           >
             Delete
-          </button>
-        </div>
+          </MenuItem>
+        </PositionedMenu>
       ) : null}
     </div>
   );

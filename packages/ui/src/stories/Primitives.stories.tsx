@@ -29,6 +29,7 @@ import {
   MenuShell,
   Notice,
   Pill,
+  PositionedMenu,
   ProgressBar,
   ResourceListItem,
   SearchInput,
@@ -132,6 +133,11 @@ const meta = {
             <MenuSeparator />
             <MenuItem tone="danger">Delete</MenuItem>
           </MenuShell>
+          <PositionedMenu placement="static" className="w-56" aria-label="Positioned story actions">
+            <MenuGroupLabel>Positioned</MenuGroupLabel>
+            <MenuItem>Show log</MenuItem>
+            <MenuItem tone="danger">Delete</MenuItem>
+          </PositionedMenu>
           <SegmentedControl
             ariaLabel="Diff view"
             value="split"

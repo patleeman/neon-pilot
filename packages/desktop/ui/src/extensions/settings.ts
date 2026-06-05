@@ -33,6 +33,7 @@ export {
   MenuShell,
   Notice,
   Pill,
+  PositionedMenu,
   ProgressBar,
   ResourceListItem,
   SearchInput,

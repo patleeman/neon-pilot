@@ -750,6 +750,25 @@ body {
   box-shadow: 0 22px 52px rgb(0 0 0 / 0.2);
 }
 
+.ui-positioned-menu {
+  right: auto;
+  bottom: auto;
+  left: auto;
+  margin-bottom: 0;
+}
+
+.ui-positioned-menu-fixed {
+  position: fixed;
+}
+
+.ui-positioned-menu-absolute {
+  position: absolute;
+}
+
+.ui-positioned-menu-static {
+  position: static;
+}
+
 .ui-menu-group-label {
   padding: 0.375rem 0.625rem 0.25rem;
   color: rgb(var(--color-dim));

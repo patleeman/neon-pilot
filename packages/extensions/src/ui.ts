@@ -196,6 +196,7 @@ export declare const MenuGroupLabel: HostComponent;
 export declare const MenuItem: HostComponent;
 export declare const MenuSeparator: HostComponent;
 export declare const MenuShell: HostComponent;
+export declare const PositionedMenu: HostComponent;
 export declare const Notice: HostComponent;
 export declare const Pill: HostComponent;
 export declare const ProgressBar: HostComponent;
