@@ -4,7 +4,7 @@ import { basename, join, resolve } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
-import { importRuntimeExtensionBundle } from './extensionLifecycle.js';
+import { deleteRuntimeExtension, importRuntimeExtensionBundle } from './extensionLifecycle.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { INSTALLABLE_EXTENSION_CATALOG } from './installableExtensionCatalog.generated.js';
 
@@ -97,6 +97,8 @@ export interface InstallableExtensionCatalogItem extends CatalogSeed {
   installed: boolean;
   installedVersion?: string;
   enabled?: boolean;
+  availableVersion?: string;
+  updateAvailable: boolean;
 }
 
 function readJson(path: string): Record<string, unknown> | null {
@@ -149,7 +151,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
 }> {
   const version = resolveInstalledAppVersion();
   const tag = `v${version}`;
-  const summaries = listExtensionInstallSummaries();
+  const summaries = listExtensionInstallSummaries(stateRoot);
   const installedById = new Map(summaries.map((summary) => [summary.id, summary]));
   const configured = readConfiguredExtensionCatalogSources(stateRoot);
   const enabledConfigured = configured.filter((source) => source.enabled);
@@ -170,9 +172,11 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
   ).flat();
   const packages: InstallableExtensionCatalogItem[] = [...INSTALLABLE_EXTENSION_CATALOG, ...remoteSeeds].map((item) => {
     const installed = installedById.get(item.id);
-    const itemVersion = item.version ?? version;
-    const itemTag = item.tag ?? `v${itemVersion}`;
+    const explicitVersion = item.version;
+    const itemVersion = explicitVersion ?? installed?.version ?? version;
+    const itemTag = item.tag ?? (explicitVersion ? `v${explicitVersion}` : tag);
     const sourceRepo = item.sourceRepo ?? FIRST_PARTY_REPO;
+    const updateAvailable = Boolean(explicitVersion && installed?.version && installed.version !== explicitVersion);
     return {
       ...item,
       version: itemVersion,
@@ -187,6 +191,8 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
       installed: Boolean(installed),
       ...(installed?.version ? { installedVersion: installed.version } : {}),
       ...(installed ? { enabled: installed.enabled } : {}),
+      ...(explicitVersion ? { availableVersion: explicitVersion } : {}),
+      updateAvailable,
     };
   });
   const marketplaceSources = [
@@ -395,8 +401,33 @@ export async function installCatalogExtension(input: { id?: unknown }, stateRoot
   const item = (await listInstallableExtensionCatalog(stateRoot)).extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
-  if (findExtensionEntry(id)) throw new Error(`Extension ${id} is already installed.`);
+  if (findExtensionEntry(id, stateRoot)) throw new Error(`Extension ${id} is already installed.`);
   const localBundlePath = localBundlePathFor(id);
   if (localBundlePath) return installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot);
   return installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
+}
+
+export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?: string) {
+  const id = typeof input.id === 'string' ? input.id.trim() : '';
+  if (!id) throw new Error('id is required.');
+  const catalog = await listInstallableExtensionCatalog(stateRoot);
+  const item = catalog.extensions.find((candidate) => candidate.id === id);
+  if (!item) throw new Error(`Unknown installable extension: ${id}`);
+  if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
+  const installed = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
+  if (!installed) throw new Error(`Extension ${id} is not installed.`);
+  if (installed.packageType === 'system') throw new Error('Packaged system extensions cannot be updated from the catalog.');
+  const wasEnabled = installed.enabled;
+
+  await deleteRuntimeExtension(id, stateRoot);
+  const localBundlePath = localBundlePathFor(id);
+  const result = localBundlePath
+    ? installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot)
+    : await installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
+  if (result.extension?.id) {
+    setExtensionEnabled(result.extension.id, wasEnabled, stateRoot);
+    const updated = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
+    return { ...result, updated: true as const, extension: updated ?? result.extension };
+  }
+  return { ...result, updated: true as const };
 }

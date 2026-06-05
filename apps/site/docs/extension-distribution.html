@@ -184,6 +184,12 @@
           compatibility, then install the release artifacts.
         </p>
         <p>
+          Repository-distributed extensions should declare <code>&quot;packageType&quot;: &quot;user&quot;</code> in
+          <code>extension.json</code>, even when the extension is first-party or has a <code>system-*</code> id.
+          <code>&quot;system&quot;</code> is reserved for extensions bundled inside the Neon Pilot app repo; runtime-installed packages need
+          the normal user-extension lifecycle so they can be disabled, uninstalled, reinstalled, and updated from the catalog.
+        </p>
+        <p>
           Use <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a> as the reference
           repository. It includes repo-local scripts that resolve a Neon Pilot checkout from <code>NEON_PILOT_REPO</code> or a sibling
           <code>../neon-pilot</code> checkout:
@@ -201,9 +207,11 @@ pnpm run release:prepare -- --tag v0.9.1-rc.6</code></pre>
   release-artifacts/v0.9.1-rc.6/neon-extension-catalog.json \
   --repo example/example-neon-extensions</code></pre>
         <p>
-          The current installer expects the release asset name <code>&lt;extension-id&gt;.neon-extension.zip</code> on the package tag. If a
-          <code>neon.extensions.json</code> package does not declare a <code>version</code> or <code>tag</code>, Neon Pilot uses the
-          installed app version tag.
+          The current installer expects the release asset name <code>&lt;extension-id&gt;.neon-extension.zip</code> on the package tag.
+          Declare both <code>version</code> and <code>tag</code> in <code>neon.extensions.json</code> when possible. Neon Pilot uses the
+          explicit package <code>version</code> to detect updates and the explicit <code>tag</code> to resolve the release asset. If a
+          package omits those fields, the app can still install it by falling back to the installed app version tag, but it cannot reliably
+          detect package updates.
         </p>
         <h2 id="user-configured-sources">User-configured sources</h2>
         <p>
@@ -226,6 +234,11 @@ pnpm run release:prepare -- --tag v0.9.1-rc.6</code></pre>
           The first-party <code>patleeman/neon-pilot-extensions</code> repo is always present as the built-in source. Additional enabled
           sources are fetched from <code>neon.extensions.json</code> on <code>main</code> or <code>master</code>, then merged into the
           installable extension list.
+        </p>
+        <p>
+          The Extension Manager refreshes the installable catalog when opened, when the window regains focus, after extension registry
+          changes, and periodically while the manager is open. Installed catalog extensions with a newer explicit package version appear in
+          the Attention filter and expose an Update action that reinstalls the release artifact while preserving the enabled state.
         </p>
         <p>
           Use the existing settings file for source configuration. A dedicated persistence table is only warranted once Neon Pilot tracks

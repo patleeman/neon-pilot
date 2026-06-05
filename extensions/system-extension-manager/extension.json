@@ -77,6 +77,14 @@
         }
       },
       {
+        "id": "updateCatalogExtension",
+        "handler": "updateCatalogExtension",
+        "title": "Update catalog extension",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "installMarketplacePackage",
         "handler": "installMarketplacePackage",
         "title": "Install marketplace package source",
@@ -147,6 +155,7 @@
             "hostViewComponents",
             "listInstallable",
             "installCatalog",
+            "updateCatalog",
             "installFromUrl",
             "installMarketplacePackage",
             "readSearchPaths",

@@ -12,6 +12,7 @@ import {
   readExtensionCatalogSources,
   reloadExtensionBackend,
   snapshotRuntimeExtension,
+  updateCatalogExtension as updateCatalogExtensionFromHost,
   validateExtensionPackage,
   writeAdditionalExtensionSearchPaths,
   writeExtensionCatalogSources,
@@ -45,6 +46,11 @@ export async function listInstallableExtensions(_input: unknown, _ctx: Extension
 
 export async function installCatalogExtension(input: unknown, _ctx: ExtensionBackendContext) {
   const result = await installCatalogExtensionFromHost(asRecord(input));
+  return { ok: true, ...result };
+}
+
+export async function updateCatalogExtension(input: unknown, _ctx: ExtensionBackendContext) {
+  const result = await updateCatalogExtensionFromHost(asRecord(input));
   return { ok: true, ...result };
 }
 
@@ -155,6 +161,7 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'hostViewComponents') return listHostViewComponents(input, ctx);
   if (action === 'listInstallable') return listInstallableExtensions(input, ctx);
   if (action === 'installCatalog') return installCatalogExtension(input, ctx);
+  if (action === 'updateCatalog') return updateCatalogExtension(input, ctx);
   if (action === 'installFromUrl') return installExtensionFromUrl(input, ctx);
   if (action === 'installMarketplacePackage') return installMarketplacePackage(input, ctx);
   if (action === 'readSearchPaths') return readSearchPaths(input, ctx);

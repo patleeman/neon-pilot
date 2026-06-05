@@ -120,3 +120,19 @@ export async function writeExtensionCatalogSources(
 ): Promise<{ ok: true; sources: unknown[] }> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
+
+export async function listInstallableExtensionCatalog(): Promise<RuntimeExtensionResult> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function installCatalogExtension(_input: { id?: unknown }): Promise<RuntimeExtensionResult> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function updateCatalogExtension(_input: { id?: unknown }): Promise<RuntimeExtensionResult> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function installExtensionBundleFromUrl(_input: { url?: unknown; expectedId?: unknown }): Promise<RuntimeExtensionResult> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}

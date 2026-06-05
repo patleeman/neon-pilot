@@ -78,7 +78,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Local Models](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models)
 - [MCP](../extensions/system-mcp/README.md)
 - [Model Picker](../extensions/system-model-picker/README.md)
-- [Onboarding](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-onboarding) — first-run onboarding bootstrap and conversation flow
+- [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md)
 - [Runs](../extensions/system-runs/README.md)

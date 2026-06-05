@@ -8,6 +8,7 @@ const summaries = vi.fn(() => []);
 const findExtensionEntry = vi.fn(() => undefined);
 const setExtensionEnabled = vi.fn();
 const importRuntimeExtensionBundle = vi.fn();
+const deleteRuntimeExtension = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({
   listExtensionInstallSummaries: summaries,
@@ -16,6 +17,7 @@ vi.mock('./extensionRegistry.js', () => ({
 }));
 vi.mock('./extensionLifecycle.js', () => ({
   importRuntimeExtensionBundle,
+  deleteRuntimeExtension,
 }));
 
 describe('extension catalog', () => {
@@ -26,14 +28,15 @@ describe('extension catalog', () => {
     findExtensionEntry.mockReset().mockReturnValue(undefined);
     setExtensionEnabled.mockReset();
     importRuntimeExtensionBundle.mockReset();
+    deleteRuntimeExtension.mockReset();
     vi.unstubAllGlobals();
     if (originalRepoRoot === undefined) delete process.env.NEON_PILOT_REPO_ROOT;
     else process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
   });
 
-  it('lists first-party installable bundles for the installed version tag', async () => {
+  it('lists first-party installable bundles for the published package tag', async () => {
     process.env.NEON_PILOT_REPO_ROOT = join(process.cwd());
-    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.1.0' }]);
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1' }]);
 
     const { listInstallableExtensionCatalog, resolveInstalledAppVersion } = await import('./extensionCatalog.js');
     const version = resolveInstalledAppVersion();
@@ -65,17 +68,21 @@ describe('extension catalog', () => {
           marketplaceSourceId: 'neon-pilot-release',
           installed: true,
           enabled: true,
-          bundleUrl: `https://github.com/patleeman/neon-pilot-extensions/releases/download/v${version}/system-browser.neon-extension.zip`,
+          version: '0.1.0',
+          installedVersion: '0.0.1',
+          updateAvailable: true,
+          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-browser.neon-extension.zip',
         }),
         expect.objectContaining({
           id: 'system-suggested-context',
           installed: false,
-          bundleUrl: `https://github.com/patleeman/neon-pilot-extensions/releases/download/v${version}/system-suggested-context.neon-extension.zip`,
+          updateAvailable: false,
+          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-suggested-context.neon-extension.zip',
         }),
         expect.objectContaining({
           id: 'system-ds4',
           installed: false,
-          bundleUrl: `https://github.com/patleeman/neon-pilot-extensions/releases/download/v${version}/system-ds4.neon-extension.zip`,
+          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-ds4.neon-extension.zip',
         }),
       ]),
     );
@@ -174,5 +181,30 @@ describe('extension catalog', () => {
     findExtensionEntry.mockReturnValue({ manifest: { id: 'system-browser' } });
     const { installCatalogExtension } = await import('./extensionCatalog.js');
     await expect(installCatalogExtension({ id: 'system-browser' })).rejects.toThrow('already installed');
+  });
+
+  it('updates catalog extensions and preserves the enabled state', async () => {
+    summaries
+      .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'user' }])
+      .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'user' }])
+      .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: false, version: '0.1.0', packageType: 'user' }])
+      .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.1.0', packageType: 'user' }]);
+    deleteRuntimeExtension.mockResolvedValue({ ok: true, extensionId: 'system-browser', deleted: true });
+    importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-browser', enabled: false }, packageRoot: '/tmp/ext' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        headers: new Headers({ 'content-length': '4' }),
+        arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
+      })),
+    );
+
+    const { updateCatalogExtension } = await import('./extensionCatalog.js');
+    const result = await updateCatalogExtension({ id: 'system-browser' });
+
+    expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-browser', undefined);
+    expect(setExtensionEnabled).toHaveBeenLastCalledWith('system-browser', true, undefined);
+    expect(result).toMatchObject({ ok: true, updated: true, extension: { id: 'system-browser', enabled: true, version: '0.1.0' } });
   });
 });

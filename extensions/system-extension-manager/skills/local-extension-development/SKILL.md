@@ -129,7 +129,9 @@ gh release create v0.9.1-rc.6 \
   --repo owner/repo
 ```
 
-The current GitHub installer resolves `<extension-id>.neon-extension.zip` from the package tag. If `neon.extensions.json` does not specify a package tag, the app uses the installed Neon Pilot app version tag.
+The current GitHub installer resolves `<extension-id>.neon-extension.zip` from the package tag. Declare both `version` and `tag` in `neon.extensions.json`; the app uses the explicit version for update detection and the explicit tag for the release asset. If those fields are missing, install can fall back to the installed Neon Pilot app version tag, but update detection is not reliable.
+
+Repo-distributed extensions should use `"packageType": "user"` in `extension.json`. `"system"` is reserved for extensions bundled with Neon Pilot itself; runtime-installed packages must stay uninstallable and updateable through the Extension Manager.
 
 ## Minimal manifest
 

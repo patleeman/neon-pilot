@@ -131,6 +131,11 @@ export async function installCatalogExtension(input: { id?: unknown }) {
   return module.installCatalogExtension(input);
 }
 
+export async function updateCatalogExtension(input: { id?: unknown }) {
+  const module = await importExtensionCatalog();
+  return module.updateCatalogExtension(input);
+}
+
 export async function installExtensionBundleFromUrl(input: { url?: unknown; expectedId?: unknown }) {
   const module = await importExtensionCatalog();
   return module.installExtensionBundleFromUrl(input);

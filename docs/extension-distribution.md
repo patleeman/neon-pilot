@@ -128,6 +128,8 @@ Source-branch installs are development mode only. They require local build trust
 
 Users install from the GitHub repo URL, inspect the packages it exposes, select the packages they want, review permissions and compatibility, then install the release artifacts.
 
+Repository-distributed extensions should declare `"packageType": "user"` in `extension.json`, even when the extension is first-party or has a `system-*` id. `"system"` is reserved for extensions bundled inside the Neon Pilot app repo; runtime-installed packages need the normal user-extension lifecycle so they can be disabled, uninstalled, reinstalled, and updated from the catalog.
+
 Use [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) as the reference repository. It includes repo-local scripts that resolve a Neon Pilot checkout from `NEON_PILOT_REPO` or a sibling `../neon-pilot` checkout:
 
 ```bash
@@ -146,7 +148,7 @@ gh release create v0.9.1-rc.6 \
   --repo example/example-neon-extensions
 ```
 
-The current installer expects the release asset name `<extension-id>.neon-extension.zip` on the package tag. If a `neon.extensions.json` package does not declare a `version` or `tag`, Neon Pilot uses the installed app version tag.
+The current installer expects the release asset name `<extension-id>.neon-extension.zip` on the package tag. Declare both `version` and `tag` in `neon.extensions.json` when possible. Neon Pilot uses the explicit package `version` to detect updates and the explicit `tag` to resolve the release asset. If a package omits those fields, the app can still install it by falling back to the installed app version tag, but it cannot reliably detect package updates.
 
 ## User-configured sources
 
@@ -167,5 +169,7 @@ Users can add GitHub extension repositories from **Settings -> Extensions -> Ext
 ```
 
 The first-party `patleeman/neon-pilot-extensions` repo is always present as the built-in source. Additional enabled sources are fetched from `neon.extensions.json` on `main` or `master`, then merged into the installable extension list.
+
+The Extension Manager refreshes the installable catalog when opened, when the window regains focus, after extension registry changes, and periodically while the manager is open. Installed catalog extensions with a newer explicit package version appear in the Attention filter and expose an Update action that reinstalls the release artifact while preserving the enabled state.
 
 Use the existing settings file for source configuration. A dedicated persistence table is only warranted once Neon Pilot tracks mutable source state such as refresh timestamps, trust decisions, signature validation, update history, or repeated fetch failures.

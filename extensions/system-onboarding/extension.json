@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "id": "system-onboarding",
+  "name": "Onboarding",
+  "packageType": "system",
+  "description": "Creates a one-time onboarding conversation for new Neon Pilot installs.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "src/backend.ts",
+    "onEnableAction": "ensure",
+    "actions": [
+      {
+        "id": "ensure",
+        "handler": "ensure",
+        "title": "Ensure onboarding conversation",
+        "worker": {
+          "enabled": true
+        }
+      }
+    ]
+  },
+  "contributes": {
+    "topBarElements": [
+      {
+        "id": "onboarding-bootstrap",
+        "label": "Onboarding bootstrap",
+        "component": "OnboardingBootstrap"
+      }
+    ]
+  },
+  "permissions": [
+    "storage:readwrite",
+    "conversations:readwrite"
+  ],
+  "compatibility": {
+    "neonPilot": ">=0.10.0 <0.11.0",
+    "extensionApi": "^2"
+  }
+}

@@ -33,6 +33,8 @@ interface InstallableExtensionCatalogItem {
   installed: boolean;
   installedVersion?: string;
   enabled?: boolean;
+  availableVersion?: string;
+  updateAvailable?: boolean;
 }
 
 interface InstallableExtensionCatalogResponse {
@@ -142,12 +144,14 @@ function ExtensionActionsMenu({
   busy,
   onOpenFolder,
   onDelete,
+  onUpdate,
   onReinstall,
 }: {
   extension: ExtensionInstallSummary;
   busy: boolean;
   onOpenFolder: () => void;
   onDelete: () => void;
+  onUpdate?: () => void;
   onReinstall?: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -233,6 +237,11 @@ function ExtensionActionsMenu({
               {extension.packageRoot ? (
                 <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
                   Open folder
+                </button>
+              ) : null}
+              {onUpdate ? (
+                <button className={menuButtonClass} disabled={busy} onClick={(event) => run(event, onUpdate)}>
+                  Update
                 </button>
               ) : null}
               {onReinstall ? (
@@ -834,10 +843,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
+    const catalogRefreshInterval = window.setInterval(loadCatalog, 30 * 60 * 1000);
     return () => {
       window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, refresh);
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
+      window.clearInterval(catalogRefreshInterval);
     };
   }, [load, loadCatalog]);
 
@@ -1033,6 +1044,33 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     [catalog, load, loadCatalog, pa, showActionError],
   );
 
+  const updateExtension = useCallback(
+    async (extension: ExtensionInstallSummary) => {
+      if (extension.packageType === 'system') return;
+      const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
+      if (!catalogItem?.updateAvailable) return;
+      const targetVersion = catalogItem.availableVersion ?? catalogItem.version;
+      const confirmed = window.confirm(
+        `Update ${extension.name} from ${extension.version ?? 'installed'} to ${targetVersion} using ${catalogItem.tag}?`,
+      );
+      if (!confirmed) return;
+      setBusyId(extension.id);
+      setNotice(`Updating ${extension.name}…`);
+      try {
+        await pa.extensions.callAction('system-extension-manager', 'updateCatalogExtension', { id: extension.id });
+        setNotice(`Updated ${extension.name} to ${targetVersion}.`);
+        await load();
+        await loadCatalog();
+        notifyExtensionRegistryChanged();
+      } catch (err) {
+        showActionError(`Failed to update ${extension.name}`, err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [catalog, load, loadCatalog, pa, showActionError],
+  );
+
   const openFolder = useCallback((extension: ExtensionInstallSummary) => {
     if (!extension.packageRoot) return;
     const bridge = getDesktopBridge();
@@ -1081,6 +1119,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           extension.healthError ||
           extension.buildError ||
           extension.diagnostics?.length ||
+          catalog?.extensions.find((item) => item.id === extension.id)?.updateAvailable ||
           unavailableCatalogItem
         )
       ) {
@@ -1152,6 +1191,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               {unavailableCatalogItem ? (
                 <div className="mt-1 text-[12px] text-warning">No longer available from the installable extension catalog.</div>
               ) : null}
+              {catalogItem?.updateAvailable ? (
+                <div className="mt-1 text-[12px] text-accent">
+                  Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}{' -> '}
+                  {catalogItem.availableVersion ?? catalogItem.version}
+                </div>
+              ) : null}
             </div>
           </td>
           <td className="whitespace-nowrap px-3 py-4 align-middle text-[12px]">
@@ -1211,6 +1256,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 busy={busy}
                 onOpenFolder={() => openFolder(extension)}
                 onDelete={() => void deleteExtension(extension)}
+                onUpdate={catalogItem?.updateAvailable && extension.packageType !== 'system' ? () => void updateExtension(extension) : undefined}
                 onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
               />
             </div>

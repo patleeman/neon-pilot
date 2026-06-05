@@ -337,6 +337,54 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Onboarding')).toBeNull();
   });
 
+  it('updates catalog-installed extensions from the actions menu', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      ok: true,
+      version: '0.10.2',
+      tag: 'v0.10.2',
+      extensions: [
+        {
+          id: 'system-browser',
+          name: 'Browser',
+          description: 'Browse web pages beside a conversation.',
+          version: '0.1.0',
+          availableVersion: '0.1.0',
+          installedVersion: '0.0.1',
+          tag: 'v0.10.2',
+          installed: true,
+          enabled: true,
+          updateAvailable: true,
+        },
+      ],
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        description: 'Browse web pages beside a conversation.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.0.1',
+      } as never,
+    ]);
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect(await screen.findByText('Update available: 0.0.1 -> 0.1.0')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Update'));
+
+    expect(await screen.findByText('Updated Browser to 0.1.0.')).toBeTruthy();
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
+    expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
+  });
+
   it('loads the installable catalog without starting a polling interval', async () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
     const callAction = vi.fn().mockResolvedValue({ ok: true, version: '0.9.1-rc.6', tag: 'v0.9.1-rc.6', extensions: [] });

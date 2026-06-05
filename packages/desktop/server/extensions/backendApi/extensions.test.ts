@@ -71,6 +71,37 @@ describe('backendApi/extensions', () => {
     expect(registry.listExtensionInstallSummaries).toHaveBeenCalledWith();
   });
 
+  it('routes catalog lifecycle operations to the extension catalog module', async () => {
+    const api = await import('./extensions.js');
+    const catalog = {
+      listInstallableExtensionCatalog: vi.fn().mockResolvedValue({ ok: true, extensions: [] }),
+      installCatalogExtension: vi.fn().mockResolvedValue({ ok: true, extension: { id: 'system-browser' } }),
+      updateCatalogExtension: vi.fn().mockResolvedValue({ ok: true, updated: true, extension: { id: 'system-browser' } }),
+      installExtensionBundleFromUrl: vi.fn().mockResolvedValue({ ok: true, extension: { id: 'system-browser' } }),
+    };
+    resolverMocks.importServerExtensionModule.mockResolvedValue(catalog);
+
+    await expect(api.listInstallableExtensionCatalog()).resolves.toEqual({ ok: true, extensions: [] });
+    await expect(api.installCatalogExtension({ id: 'system-browser' })).resolves.toEqual({
+      ok: true,
+      extension: { id: 'system-browser' },
+    });
+    await expect(api.updateCatalogExtension({ id: 'system-browser' })).resolves.toEqual({
+      ok: true,
+      updated: true,
+      extension: { id: 'system-browser' },
+    });
+    await expect(
+      api.installExtensionBundleFromUrl({
+        url: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v1/system-browser.neon-extension.zip',
+      }),
+    ).resolves.toEqual({ ok: true, extension: { id: 'system-browser' } });
+
+    expect(resolverMocks.importServerExtensionModule).toHaveBeenCalledWith('../extensionCatalog.js');
+    expect(catalog.installCatalogExtension).toHaveBeenCalledWith({ id: 'system-browser' });
+    expect(catalog.updateCatalogExtension).toHaveBeenCalledWith({ id: 'system-browser' });
+  });
+
   it('installs marketplace behavior package sources through core', async () => {
     const { installMarketplacePackageSource } = await import('./extensions.js');
 
