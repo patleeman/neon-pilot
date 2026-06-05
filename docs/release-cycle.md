@@ -4,16 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.10.2** — patch release being prepared.
+**v0.10.3-rc.0** — release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.2
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.3-rc.0
 
 Highlights in this train:
 
-- Keeps Browser default-installed and Todos default-enabled while preserving user removals/disables.
-- Fixes Extension Manager catalog/install state for already-installed and uninstalled first-party packages.
-- Fixes Alleycat worker service startup so the mobile pairing host can start without circuit-breaker quarantine.
-- Keeps packaged installable bundles aligned with the app so catalog installs work before release assets are uploaded.
+- Adds Writing Studio as a document-first collaborative editor with inline document management, formatting, comments, review actions, and chat.
+- Exposes shared host chat/view components through the extension SDK for extension-owned UI surfaces.
+- Fixes packaged extension builds for the host view component export.
+- Fixes Extension Manager enablement so enabling one extension starts only that extension's services.
+- Validates the packaged app startup path, packaged extension imports, Writing Studio enable/open flow, and inline document creation.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

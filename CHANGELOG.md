@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.3-rc.0 — 2026-06-05
+
+### Highlights
+
+- Adds Writing Studio as a document-first collaborative editor with inline document management, markdown formatting, image embeds, margin comments, review actions, and a shared chat surface.
+- Exposes shared host chat/view components through the extension SDK so extension-owned chat surfaces can use the same runtime boundary as main and side chat.
+- Fixes packaged extension builds by emitting the host view component export used by desktop extension validation.
+- Fixes Extension Manager enablement so turning on one extension starts only that extension's services instead of restarting every enabled service.
+- Validates the packaged app startup path, packaged extension imports, Writing Studio enable/open flow, and inline document creation against the built Electron app.
+
+### Notes
+
+- 95 commits since the previous release.
+
 ## 0.10.2 — 2026-06-03
 
 ### Highlights
