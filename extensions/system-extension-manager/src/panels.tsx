@@ -4,6 +4,7 @@ import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged }
 import {
   AppPageIntro,
   AppPageLayout,
+  Button,
   cx,
   EmptyState,
   ErrorState,
@@ -12,12 +13,14 @@ import {
   MenuShell,
   Notice,
   SearchInput,
+  Select,
   KeyValueItem,
   KeyValueList,
   Stat,
   StatGrid,
   TabButton,
   TabList,
+  TextInput,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
@@ -668,20 +671,15 @@ function ExtensionRepositoriesControl({
   return (
     <div className="space-y-2">
       <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-        <input
-          className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+        <TextInput
+          className="min-w-0 bg-base"
           value={input}
           onChange={(event) => onInputChange(event.currentTarget.value)}
           placeholder="GitHub repo URL or owner/repo"
         />
-        <button
-          type="button"
-          className="rounded-lg bg-surface px-3 py-2 text-[13px] font-medium text-primary hover:bg-surface/80 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={busyId === 'extension-source'}
-          onClick={onAdd}
-        >
+        <Button variant="action" className="px-3 py-2 text-[13px]" disabled={busyId === 'extension-source'} onClick={onAdd}>
           {busyId === 'extension-source' ? 'Adding...' : 'Add repo'}
-        </button>
+        </Button>
       </div>
       <div className="divide-y divide-border-subtle/70 border-y border-border-subtle/70">
         {sources.map((source) => (
@@ -694,14 +692,14 @@ function ExtensionRepositoriesControl({
               </div>
             </div>
             {source.id !== 'neon-pilot' ? (
-              <button
-                type="button"
-                className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              <Button
+                variant="action"
+                className="px-3 py-1.5 text-[12px]"
                 disabled={busyId === `extension-source:${source.id}`}
                 onClick={() => onRemove(source)}
               >
                 Remove
-              </button>
+              </Button>
             ) : null}
           </div>
         ))}
@@ -1676,14 +1674,14 @@ function InstallExtensionModal({
 
         <div className="space-y-5 px-6 py-5">
           <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem_auto]">
-            <input
-              className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+            <TextInput
+              className="min-w-0 bg-base"
               value={source}
               onChange={(event) => onSourceChange(event.currentTarget.value)}
               placeholder="Extension, agent plugin, marketplace package, URL, or local path"
             />
-            <select
-              className="rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+            <Select
+              className="bg-base"
               value={packageType}
               onChange={(event) => onPackageTypeChange(event.currentTarget.value as MarketplaceBehaviorPackageType)}
               aria-label="Package type"
@@ -1692,15 +1690,10 @@ function InstallExtensionModal({
               <option value="instruction-pack">Instructions</option>
               <option value="agent">Agent</option>
               <option value="template">Template</option>
-            </select>
-            <button
-              type="button"
-              className="rounded-lg bg-surface px-3 py-2 text-[13px] font-medium text-primary hover:bg-surface/80 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={busy}
-              onClick={onInstall}
-            >
+            </Select>
+            <Button variant="action" className="px-3 py-2 text-[13px]" disabled={busy} onClick={onInstall}>
               {busy ? 'Installing...' : 'Install'}
-            </button>
+            </Button>
           </div>
           <p className="text-[12px] leading-5 text-dim">
             Neon Pilot extensions install directly. Agent plugins, including Codex and Claude-style packages, are imported as extensions.
@@ -1723,8 +1716,8 @@ function InstallExtensionModal({
             <section className="space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Marketplace</h3>
-                <input
-                  className="h-8 min-w-0 rounded-lg border border-border-subtle bg-base px-3 text-[12px] text-primary outline-none placeholder:text-dim focus:border-accent sm:w-72"
+                <SearchInput
+                  className="h-8 min-w-0 bg-base text-[12px] sm:w-72"
                   value={marketplaceQuery}
                   onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
                   placeholder="Search marketplace"
@@ -1741,14 +1734,14 @@ function InstallExtensionModal({
                           <div className="text-[13px] font-medium text-primary">{item.name}</div>
                           <div className="mt-0.5 text-[12px] text-secondary">{item.description || packageKindLabel(item)}</div>
                         </div>
-                        <button
-                          type="button"
-                          className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                        <Button
+                          variant="action"
+                          className="px-3 py-1.5 text-[12px]"
                           disabled={item.installed || itemBusy || unavailablePackage}
                           onClick={() => onInstallCatalog(item)}
                         >
                           {itemBusy ? 'Installing...' : item.installed ? 'Installed' : unavailablePackage ? 'Planned' : 'Install'}
-                        </button>
+                        </Button>
                       </div>
                     );
                   })}
