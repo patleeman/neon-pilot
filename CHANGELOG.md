@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.3-rc.2 — 2026-06-05
+
+### Highlights
+
+- Fixes live conversation runtime path resolution in the packaged RC so extension-backed `bash` no longer falls through to `/settings.json` and fails on the read-only app filesystem.
+- Adds regression coverage for runtime roots that change after module import, matching the RC channel startup path.
+
+### Notes
+
+- 1 commit since the previous release.
+
 ## 0.10.3-rc.1 — 2026-06-05
 
 ### Highlights
