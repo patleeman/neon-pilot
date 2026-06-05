@@ -14,6 +14,11 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  Notice,
+  Pill,
+  SearchInput,
+  Switch,
+  Textarea,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -296,15 +301,17 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             </p>
           </div>
           {systemPromptTemplateLoading && !systemPromptTemplateState ? (
-            <p className="text-[13px] text-secondary">Loading system prompt template...</p>
+            <Notice>Loading system prompt template...</Notice>
           ) : systemPromptTemplateError && !systemPromptTemplateState ? (
-            <p className="text-[13px] text-danger">Failed to load system prompt template: {systemPromptTemplateError}</p>
+            <Notice tone="danger" title="Failed to load system prompt template">
+              {systemPromptTemplateError}
+            </Notice>
           ) : systemPromptTemplateState ? (
             <div className="space-y-3">
               <p className="break-all text-[12px] text-dim">
                 Configured in <span className="font-mono text-[11px]">{systemPromptTemplateState.configFile}</span>.
               </p>
-              <textarea
+              <Textarea
                 id="agent-runtime-system-prompt-template"
                 value={systemPromptTemplateDraft}
                 onChange={(event) => {
@@ -313,7 +320,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
                     setSystemPromptTemplateSaveError(null);
                   }
                 }}
-                className="min-h-[340px] w-full resize-y rounded-md border border-border-subtle bg-elevated px-3 py-2 font-mono text-[12px] leading-5 text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50"
+                className="min-h-[340px] font-mono text-[12px] leading-5"
                 spellCheck={false}
                 disabled={savingSystemPromptTemplate}
               />
@@ -335,7 +342,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
               </div>
             </div>
           ) : null}
-          {systemPromptTemplateSaveError ? <p className="text-[12px] text-danger">{systemPromptTemplateSaveError}</p> : null}
+          {systemPromptTemplateSaveError ? <Notice tone="danger">{systemPromptTemplateSaveError}</Notice> : null}
         </section>
 
         <section className="space-y-4 border-t border-border-subtle pt-10">
@@ -348,8 +355,8 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
                 <span className="block text-[12px] text-dim">CWD {data.cwd ?? data.repoRoot}</span>
               </p>
             </div>
-            <input
-              className="w-72 rounded-xl border border-border-subtle bg-surface/40 px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50"
+            <SearchInput
+              className="w-72"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search agent context…"
@@ -468,9 +475,9 @@ function CapabilityTable({
               <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="truncate text-[14px] font-semibold text-primary">{row.title}</div>
-                  <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
+                  <Pill tone="muted" className="shrink-0 text-[10px] uppercase">
                     {labelForKind(row.kind)}
-                  </span>
+                  </Pill>
                 </div>
                 <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
                   {row.description || fallbackDescription(row)}
@@ -530,33 +537,14 @@ function formatDiagnostic(diagnostic: unknown): string {
 function StatusToggle({ row, busy, onToggle }: { row: RuntimeCapability; busy: boolean; onToggle: () => void }) {
   const locked = row.kind === 'extension' && row.id === 'system-extension-manager';
   return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 text-[12px] text-secondary transition-colors hover:text-primary disabled:opacity-50"
+    <Switch
+      checked={row.enabled}
       disabled={busy || locked || row.status === 'invalid'}
       onClick={onToggle}
       aria-label={`${row.enabled ? 'Disable' : 'Enable'} ${row.title}`}
       title={locked ? 'This extension is required by the application.' : undefined}
-    >
-      <span
-        className={cx(
-          'relative h-5 w-9 rounded-full border transition-colors',
-          locked
-            ? 'border-border-subtle bg-surface/40'
-            : row.enabled
-              ? 'border-success/40 bg-success/20'
-              : 'border-border-subtle bg-surface/60',
-        )}
-      >
-        <span
-          className={cx(
-            'absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition-[left,background-color]',
-            locked ? 'left-[18px] bg-dim' : row.enabled ? 'left-[18px] bg-success' : 'left-1 bg-dim',
-          )}
-        />
-      </span>
-      {locked ? <span>Always on</span> : null}
-    </button>
+      label={locked ? 'Always on' : undefined}
+    />
   );
 }
 
