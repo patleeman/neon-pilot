@@ -10,9 +10,26 @@ import { ConversationComposerInputControls } from './ConversationComposerInputCo
 import { ConversationRunModePanel } from './ConversationRunModePanel';
 
 vi.mock('../../extensions/ComposerButtonHost', () => ({
-  ComposerButtonHost: ({ registration }: { registration: { id: string } }) => {
+  ComposerButtonHost: ({
+    buttonContext,
+    registration,
+  }: {
+    buttonContext: { currentModel: string; currentThinkingLevel: string; models: ModelInfo[] };
+    registration: { id: string };
+  }) => {
     if (registration.id === 'attach-files') return <button title="Attach image or file">Attach</button>;
-    if (registration.id === 'model-preferences') return <span>Conversation model</span>;
+    if (registration.id === 'model-preferences') {
+      const selectedModel = buttonContext.models.find((model) => model.id === buttonContext.currentModel);
+      const modelLabel = selectedModel?.name ?? (buttonContext.currentModel.trim() || 'Select model');
+      const thinkingLabel = buttonContext.currentThinkingLevel === 'xhigh' ? 'Extra high' : buttonContext.currentThinkingLevel || 'Unset';
+      return (
+        <span>
+          {modelLabel}
+          {' '}
+          {thinkingLabel}
+        </span>
+      );
+    }
     return <span>{registration.id}</span>;
   },
 }));
@@ -136,8 +153,21 @@ describe('ConversationComposerInputControls', () => {
 
     expect(html).toContain('Message Neon Pilot');
     expect(html).toContain('Attach image or file');
-    expect(html).toContain('Conversation model');
+    expect(html).toContain('Model A');
     expect(html).toContain('aria-label="Send"');
+  });
+
+  it('renders saved model preference labels before model metadata is loaded', () => {
+    const html = renderControls({
+      currentModel: 'openai/gpt-5.4',
+      currentThinkingLevel: 'xhigh',
+      models: [],
+    });
+
+    expect(html).toContain('openai/gpt-5.4');
+    expect(html).toContain('Extra high');
+    expect(html).not.toContain('Select model');
+    expect(html).not.toContain('Unset');
   });
 
   it('renders question-submit states', () => {
