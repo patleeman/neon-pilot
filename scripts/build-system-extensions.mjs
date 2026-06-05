@@ -8,8 +8,6 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionsRoot = join(repoRoot, 'extensions');
-const installableRoot = join(repoRoot, 'installable-extensions');
-const defaultInstallableExtensionIds = new Set(['system-browser', 'system-onboarding']);
 const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 
 function readJson(path) {
@@ -17,19 +15,13 @@ function readJson(path) {
 }
 
 function listSystemExtensionDirs() {
-  const bundledDirs = existsSync(extensionsRoot)
+  return existsSync(extensionsRoot)
     ? readdirSync(extensionsRoot, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => join(extensionsRoot, entry.name))
         .filter((extensionDir) => existsSync(join(extensionDir, 'extension.json')))
+        .sort((left, right) => left.localeCompare(right))
     : [];
-  const defaultInstallableDirs = existsSync(installableRoot)
-    ? readdirSync(installableRoot, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory() && defaultInstallableExtensionIds.has(entry.name))
-        .map((entry) => join(installableRoot, entry.name))
-        .filter((extensionDir) => existsSync(join(extensionDir, 'extension.json')))
-    : [];
-  return [...bundledDirs, ...defaultInstallableDirs].sort((left, right) => left.localeCompare(right));
 }
 
 function assertBuiltEntriesExist(extensionDir) {

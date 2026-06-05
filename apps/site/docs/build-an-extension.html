@@ -35,7 +35,8 @@
         <section>
           <h2>Extensions</h2>
           <a class="active" href="./build-an-extension.html">Build an Extension</a
-          ><a class="" href="./extensions.html">Extension Authoring</a>
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -67,6 +68,35 @@ Implement it with editable source files, build it, reload it, visually test it, 
         <p>
           Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done”
           looks like.
+        </p>
+        <h2 id="production-agent-loop">Production agent loop</h2>
+        <p>Use this as the no-ambiguity loop for an agent building an extension in a repo checkout:</p>
+        <p>
+          1. Read this guide, <a href="./extensions.html"><code>docs/extensions.md</code></a
+          >,
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/../packages/extensions/README.md"
+            ><code>packages/extensions/README.md</code></a
+          >, and the closest existing extension <code>README.md</code>. 2. Inspect existing extension ids, routes, nav labels, action ids,
+          commands, settings components, and tools before choosing names. 3. Pick exactly one primary surface for the first version:
+          <code>main-page</code>, <code>right-rail</code>, <code>workbench-detail</code>, <code>settingsComponent</code>, backend
+          tool/action, or theme. 4. Start from
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/README.md"
+            ><code>docs/extension-templates/</code></a
+          >
+          when the feature matches a template; otherwise copy the closest first-party extension shape. 5. Create editable source files in
+          <code>src/</code>, declare every contribution in <code>extension.json</code>, and keep generated bundles in <code>dist/</code>. 6.
+          Build with <code>pnpm run extension:build -- &lt;extension-dir&gt;</code>. 7. Run
+          <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code> when the CLI is available; for repo extension or boundary work,
+          also run <code>pnpm run check:extensions:static</code>. 8. Reload extensions from Settings -&gt; Extensions, or restart the
+          desktop app when reload is unavailable. 9. Validate through the same surface the user will use: open the route, rail, Settings
+          section, command, composer control, or agent tool. 10. Exercise empty, loading, error, and success states when the surface has UI;
+          for backend tools/actions, run one representative invocation and inspect the transcript or visible result. 11. Update the
+          extension <code>README.md</code> with install/build/use notes and any non-obvious behavior. 12. Checkpoint only the files touched
+          for this extension and its docs.
+        </p>
+        <p>
+          Do not stop after a successful build. A built extension is only ready after its manifest diagnostics are clean and the
+          user-visible path has been exercised.
         </p>
         <h2 id="templates">Templates</h2>
         <p>
@@ -171,9 +201,10 @@ Implement it with editable source files, build it, reload it, visually test it, 
         <p>User-created extensions live in runtime state by default:</p>
         <pre><code>~/.local/state/neon-pilot/extensions/{extension-id}/</code></pre>
         <p>
-          Bundled first-party system extensions live in the repo under <code>extensions/</code>. Optional first-party installable extensions
-          live under <code>installable-extensions/</code>; they are not bundled or auto-loaded and must be installed into runtime state
-          before use.
+          Bundled first-party system extensions live in the repo under <code>extensions/</code>. Optional first-party extensions live in
+          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a> and install from
+          GitHub release artifacts. See <a href="./extension-distribution.html">Extension Distribution</a> before publishing packages for
+          other users.
         </p>
         <p>A normal native extension package looks like:</p>
         <pre><code>my-extension/
@@ -208,6 +239,23 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
           Validation is not optional. The extension doctor catches missing bundles, stale output, bad manifest references, missing
           frontend/backend exports, tool schema problems, forbidden backend imports, non-portable paths, and backend import crashes.
         </p>
+        <p>Acceptance criteria for agent-built extensions:</p>
+        <ul>
+          <li>
+            <code>extension.json</code> uses schema v2, stable kebab-case ids, <code>/ext/{extension-id}</code> routes for main pages, and
+            matching frontend/backend export names.
+          </li>
+          <li>
+            Runtime code imports only from <code>@neon-pilot/extensions</code>, <code>@neon-pilot/extensions/ui</code>, and narrow
+            <code>@neon-pilot/extensions/backend/*</code> subpaths for host access.
+          </li>
+          <li>Backend actions validate their inputs enough to return useful errors instead of crashing on malformed agent/tool calls.</li>
+          <li>UI calls backend actions through <code>pa.actions.call(...)</code> and shows loading, empty, error, and success states.</li>
+          <li>Dist files are current, diagnostics are clean, and the extension has been reloaded in the app.</li>
+          <li>
+            The contributed surface or tool was exercised through the app/extension host, not only by unit tests or direct module imports.
+          </li>
+        </ul>
         <h2 id="troubleshooting">Troubleshooting</h2>
         <ul>
           <li>
@@ -219,6 +267,15 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
           <li>
             <strong>Works from source but not in the app</strong> — build <code>dist/</code>; the app does not compile extensions at
             runtime.
+          </li>
+          <li>
+            <strong>Settings section does not appear</strong> — use one <code>contributes.settingsComponent</code> object with
+            <code>id</code>, <code>component</code>, <code>sectionId</code>, and <code>label</code>; the component export name must match
+            <code>component</code>.
+          </li>
+          <li>
+            <strong>Agent tool returns an opaque failure</strong> — validate action/tool input and return a structured
+            <code>{ text, details }</code> result when the transcript should show more than a raw object.
           </li>
           <li>
             <strong>Need an app capability the SDK lacks</strong> — add the smallest reusable API to <code>@neon-pilot/extensions</code>; do
@@ -237,7 +294,7 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
             >
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions">System extension examples</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions">Installable extension examples</a></li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions">First-party optional extension repo</a></li>
         </ul>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/build-an-extension.md">Edit this page on GitHub →</a>
@@ -245,11 +302,11 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#copy-paste-prompt">Copy-paste prompt</a><a href="#templates">Templates</a
-        ><a href="#pick-the-right-surface">Pick the right surface</a><a href="#what-your-agent-should-do">What your agent should do</a
-        ><a href="#where-files-live">Where files live</a><a href="#good-extension-requests">Good extension requests</a
-        ><a href="#build-reload-validate">Build, reload, validate</a><a href="#troubleshooting">Troubleshooting</a
-        ><a href="#reference">Reference</a>
+        <a href="#copy-paste-prompt">Copy-paste prompt</a><a href="#production-agent-loop">Production agent loop</a
+        ><a href="#templates">Templates</a><a href="#pick-the-right-surface">Pick the right surface</a
+        ><a href="#what-your-agent-should-do">What your agent should do</a><a href="#where-files-live">Where files live</a
+        ><a href="#good-extension-requests">Good extension requests</a><a href="#build-reload-validate">Build, reload, validate</a
+        ><a href="#troubleshooting">Troubleshooting</a><a href="#reference">Reference</a>
       </aside>
     </main>
   </body>

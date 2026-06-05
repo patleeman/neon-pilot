@@ -64,9 +64,6 @@ run('pnpm', ['run', 'check:release']);
 console.log('Building signed desktop artifacts locally without publishing...');
 run('pnpm', ['run', 'desktop:dist']);
 
-console.log('Packing installable extensions locally...');
-run('pnpm', ['run', 'extension:pack:installable']);
-
 const appPath = collectPackagedAppPath();
 if (!appPath) {
   fail(`Packaged desktop app not found under ${releaseDir}.`);

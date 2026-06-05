@@ -94,13 +94,15 @@ neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out
 
 Import/install expects the same shape: one safe top-level directory containing `extension.json`. The desktop runtime unzips into `<state-root>/extensions/{extension-id}` and loads the prebuilt `dist/` files. Packaged desktop releases do **not** compile extensions at install time.
 
-For optional first-party installable extensions under `installable-extensions/`, use the release packer instead:
+Optional first-party extensions are distributed from the separate [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) repo as GitHub release artifacts. Use the same package format for local, catalog, and GitHub installs:
 
 ```bash
-pnpm run extension:pack:installable
+pnpm run extension:build -- <extension-dir>
+neon-pilot-extension doctor <extension-dir>
+neon-pilot-extension pack <extension-dir> --out <extension-id>-<version>.neon-extension.zip
 ```
 
-That writes `{extension-id}.neon-extension.zip` bundles for release upload. The Settings → Extensions **Available** tab downloads those files from the GitHub release tag matching the installed app version.
+See [Extension Distribution](extension-distribution.md) for GitHub repo manifests, release catalogs, compatibility metadata, and publishing guidance.
 
 ## Manifest (`extension.json`)
 
@@ -1741,11 +1743,11 @@ await cacheFiles.writeJson('remote-index.json', index);
 
 ## Examples
 
-See bundled system extensions in `extensions/` and optional installable extensions in `installable-extensions/` for practical examples:
+See bundled system extensions in `extensions/` and optional first-party extensions in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) for practical examples:
 
 - **`system-artifacts`** — Tools + views + transcript renderer + skills
-- **`system-agent-browser`** — agent-browser CLI tool integration (`installable-extensions/system-agent-browser`)
-- **`system-browser`** — Experimental browser automation tool + views (`installable-extensions/system-browser`)
+- **`system-agent-browser`** — agent-browser CLI tool integration (`patleeman/neon-pilot-extensions/system-agent-browser`)
+- **`system-browser`** — Experimental browser automation tool + views (`patleeman/neon-pilot-extensions/system-browser`)
 - **`system-automations`** — Scheduled tasks, follow-up queues, and the Automations page
 - **`system-conversation-tools`** — Agent lifecycle hooks + contextMenus
 - **`system-extension-manager`** — Extension management UI + nav
@@ -1757,4 +1759,4 @@ Each extension has a complete `extension.json` manifest and
 
 Bundled system extensions keep source next to their built output for development. Backend `dist/` output is authoritative by default in both dev and packaged runtimes: if `backend.entry` points at source (`src/backend.ts`), normal app startup loads sibling `dist/backend.mjs`; source recompilation is reserved for explicit extension-authoring mode (`NEON_PILOT_EXTENSION_AUTHORING=1`). If `backend.entry` already points at built output such as `dist/backend.mjs`, both dev and packaged builds load that file directly. System extension frontends are bundled into the desktop renderer from source so they share the app's React singleton; their `dist/frontend.js` bundles are still built and validated as release artifacts.
 
-Installable repo extensions are not bundled or auto-loaded. Users install released optional extensions from **Settings → Extensions → Install**, which downloads the `.neon-extension.zip` bundle from the GitHub release tag matching the installed app version. After install, check the unified list in Settings → Extensions to enable and inspect the extension. For local development, build and install into runtime state with `pnpm --dir installable-extensions run build -- --extension <id>` and `pnpm --dir installable-extensions run install -- --extension <id> --target <state-root|testing|production>`.
+Optional extension repo packages are not bundled or auto-loaded. Users install released optional extensions from **Settings → Extensions → Install**, which downloads `.neon-extension.zip` artifacts from GitHub releases. After install, check the unified list in Settings → Extensions to enable and inspect the extension. For local development, build with `pnpm run extension:build -- <extension-dir>`, validate with `neon-pilot-extension doctor <extension-dir>`, and import the resulting zip or copy the built package into runtime state.

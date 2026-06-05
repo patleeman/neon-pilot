@@ -17,6 +17,7 @@ const pages = [
   { file: 'knowledge-base.md', slug: 'knowledge-base', title: 'Knowledge Base', group: 'Product' },
   { file: 'build-an-extension.md', slug: 'build-an-extension', title: 'Build an Extension', group: 'Extensions' },
   { file: 'extensions.md', slug: 'extensions', title: 'Extension Authoring', group: 'Extensions' },
+  { file: 'extension-distribution.md', slug: 'extension-distribution', title: 'Extension Distribution', group: 'Extensions' },
   { file: 'configuration.md', slug: 'configuration', title: 'Configuration', group: 'Runtime' },
   { file: 'daemon.md', slug: 'daemon', title: 'Daemon', group: 'Runtime' },
   { file: 'telemetry.md', slug: 'telemetry', title: 'Telemetry', group: 'Runtime' },

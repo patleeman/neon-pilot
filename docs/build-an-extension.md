@@ -92,7 +92,7 @@ User-created extensions live in runtime state by default:
 ~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
-Bundled first-party system extensions live in the repo under `extensions/`. Optional first-party installable extensions live under `installable-extensions/`; they are not bundled or auto-loaded and must be installed into runtime state before use.
+Bundled first-party system extensions live in the repo under `extensions/`. Optional first-party extensions live in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) and install from GitHub release artifacts. See [Extension Distribution](extension-distribution.md) before publishing packages for other users.
 
 A normal native extension package looks like:
 
@@ -170,4 +170,4 @@ Acceptance criteria for agent-built extensions:
 - [Extension SDK/API reference](../packages/extensions/README.md)
 - [Extension Manager behavior](../extensions/system-extension-manager/README.md)
 - [System extension examples](../extensions)
-- [Installable extension examples](../installable-extensions)
+- [First-party optional extension repo](https://github.com/patleeman/neon-pilot-extensions)

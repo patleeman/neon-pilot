@@ -102,7 +102,7 @@ The check verifies:
 10. A seeded old-profile startup idle smoke passes with 2,500 synthetic historical conversations, no prebuilt conversation context DB, bounded CPU, and no local model process startup
 11. The full desktop performance smoke reports usable startup readiness (`appUsableMs`, including composer and extension registry availability), draft submit click-to-visible latency, route-switch latency, conversation search latency, model fetch latency, long-transcript open latency, basic interaction timing, idle CPU, and renderer heap delta within the packaged-app gates
 
-Optional first-party extensions are distributed separately from the app bundle. Build their release bundles with `pnpm run extension:pack:installable` and upload the generated `{extension-id}.neon-extension.zip` files to the GitHub release tag. Settings → Extensions downloads from the tag that matches the installed app version.
+Optional first-party extensions are distributed separately from the app bundle from [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions). Build their release bundles with the extension builder/packer, publish `.neon-extension.zip` artifacts to GitHub releases, and keep their `extension.json` compatibility ranges aligned with supported Neon Pilot versions.
 
 `pnpm run build` also verifies the current daemon output under `packages/desktop/dist/server/daemon/` and rebuilds system extension backends with the same backend API alias used by the runtime loader. If a tool extension fails with missing `@neon-pilot/extensions/backend` exports, rerun the full build before cutting the release.
 

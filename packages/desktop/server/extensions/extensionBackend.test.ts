@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,16 +19,30 @@ import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
 import { invalidateExtensionRegistryReadCaches, isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
-const INSTALLABLE_EXTENSIONS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../installable-extensions');
 
 const ORIGINAL_STATE_ROOT = process.env.NEON_PILOT_STATE_ROOT;
 
 function installTestExtension(stateRoot: string, extensionId: string): void {
-  mkdirSync(join(stateRoot, 'extensions'), { recursive: true });
-  cpSync(join(INSTALLABLE_EXTENSIONS_ROOT, extensionId), join(stateRoot, 'extensions', extensionId), { recursive: true });
-  mkdirSync(join(stateRoot, 'extensions', extensionId, 'dist'), { recursive: true });
-  writeFileSync(join(stateRoot, 'extensions', extensionId, 'dist', 'backend.mjs'), 'export {};\n');
-  writeFileSync(join(stateRoot, 'extensions', extensionId, 'dist', 'frontend.js'), 'export {};\n');
+  const extensionRoot = join(stateRoot, 'extensions', extensionId);
+  mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+  writeFileSync(
+    join(extensionRoot, 'extension.json'),
+    JSON.stringify(
+      {
+        schemaVersion: 2,
+        id: extensionId,
+        name: extensionId,
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'ensure', handler: 'ensure', worker: { enabled: true } }],
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export {};\n');
+  writeFileSync(join(extensionRoot, 'dist', 'frontend.js'), 'export {};\n');
   invalidateExtensionRegistryReadCaches(stateRoot);
 }
 

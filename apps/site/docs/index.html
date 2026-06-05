@@ -34,7 +34,8 @@
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -116,6 +117,10 @@ pnpm run desktop:start</code></pre>
             build, reload, validate, and test native extensions
           </li>
           <li>
+            <a href="./extension-distribution.html">Extension distribution</a> — GitHub-backed extension repos, package format,
+            compatibility, release artifacts, and publishing your own extension repo
+          </li>
+          <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extension-templates/README.md">Extension templates</a> — copy-paste
             stubs for data-dashboard, crud-page, and settings-section patterns
           </li>
@@ -132,8 +137,8 @@ pnpm run desktop:start</code></pre>
             implementation packages
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions">Installable extensions</a> — optional
-            first-party extensions that install into runtime state as user extensions
+            <a href="https://github.com/patleeman/neon-pilot-extensions">First-party optional extensions</a> — optional packages distributed
+            from GitHub release artifacts
           </li>
         </ul>
         <h2 id="extension-docs">Extension docs</h2>
@@ -146,28 +151,24 @@ pnpm run desktop:start</code></pre>
           changing extension APIs.
         </p>
         <p>
-          System extensions are bundled under <code>extensions/system-*</code>. Installable extensions live under
-          <code>installable-extensions/*</code> in the repo, are not bundled or auto-loaded, and become normal user extensions only after
-          installation into <code>&lt;state-root&gt;/extensions/{extension-id}</code>. Users install released optional extensions from
-          <strong>Settings → Extensions → Available</strong>; after installing, check the main extension registry to enable and inspect the
+          System extensions are bundled under <code>extensions/system-*</code>. Optional first-party extensions live in
+          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a
+          >, are not bundled or auto-loaded, and become normal user extensions only after installation into
+          <code>&lt;state-root&gt;/extensions/{extension-id}</code>. Users install released optional extensions from
+          <strong>Settings → Extensions → Install</strong>; after installing, check the main extension registry to enable and inspect the
           extension.
         </p>
         <p>Feature-specific documentation lives beside the owning extension package:</p>
         <ul>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-agent-browser/README.md"
-              >Agent Browser</a
-            >
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser">Agent Browser</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-artifacts/README.md">Artifacts</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-auto-mode/README.md">Auto Mode</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-automations/README.md">Automations</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-browser/README.md">Browser</a>
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser">Browser</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-caffeinate/README.md">Caffeinate</a></li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-codex-profile/README.md">Codex Profile</a>
+            <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-codex-profile/README.md">Codex Profile</a> —
+            Codex/OpenAI tool profile, including <code>apply_patch</code> and image generation
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-composer-attachments/README.md"
@@ -189,13 +190,14 @@ pnpm run desktop:start</code></pre>
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-diffs/README.md">Diffs</a></li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-duckduckgo-search/README.md"
-              >DuckDuckGo Search</a
-            >
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search">DuckDuckGo Search</a> — web
+            search using DuckDuckGo's HTML page
           </li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-exa-search/README.md">Exa Search</a>
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4">DS4</a> — local DeepSeek V4 Flash
+            provider/profile for antirez/ds4
           </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search">Exa Search</a></li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-excalidraw-input/README.md">Excalidraw Input</a>
           </li>
@@ -208,25 +210,17 @@ pnpm run desktop:start</code></pre>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-git-status/README.md">Git Status</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/host-view-components.md">Host view components</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-image-probe/README.md">Image Probe</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-alleycat/README.md"
-              >Kitty Litter Mobile Pairing</a
-            >
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat">Kitty Litter Mobile Pairing</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-knowledge/README.md">Knowledge</a></li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-local-dictation/README.md">Local Dictation</a>
           </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-local-models/README.md"
-              >Local Models</a
-            >
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models">Local Models</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-mcp/README.md">MCP</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-model-picker/README.md">Model Picker</a></li>
           <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-onboarding/README.md">Onboarding</a> — first-run
-            onboarding bootstrap and conversation flow
+            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-onboarding">Onboarding</a> — first-run onboarding
+            bootstrap and conversation flow
           </li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-prompt-assembly/README.md">Prompt Assembly</a> —
@@ -236,26 +230,14 @@ pnpm run desktop:start</code></pre>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-reply-actions/README.md">Reply Actions</a>
           </li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-runs/README.md">Runs</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-self-preservation/README.md"
-              >Self Preservation</a
-            >
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation">Self Preservation</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-settings/README.md">Settings</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-skills/README.md">Skills</a></li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-suggested-context/README.md"
-              >Suggested Context</a
-            >
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context">Suggested Context</a></li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-telemetry/README.md">Telemetry extension</a>
           </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/../installable-extensions/system-video-probe/README.md"
-              >Video Probe</a
-            >
-          </li>
+          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe">Video Probe</a></li>
           <li><a href="https://github.com/patleeman/neon-pilot/blob/main/../extensions/system-web-tools/README.md">Web Fetch</a></li>
         </ul>
         <h2 id="sections">Sections</h2>

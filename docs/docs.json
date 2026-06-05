@@ -46,6 +46,7 @@
       "items": [
         { "title": "Build an Extension", "path": "build-an-extension.md" },
         { "title": "Extension Authoring", "path": "extensions.md" },
+        { "title": "Extension Distribution", "path": "extension-distribution.md" },
         { "title": "Extension Templates", "path": "extension-templates/README.md" }
       ]
     },

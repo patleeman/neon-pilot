@@ -570,14 +570,10 @@ function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot()): stri
   return join(getRuntimeExtensionsRoot(stateRoot), 'startup-marker.json');
 }
 
-const DEFAULT_INSTALLED_EXTENSION_IDS = ['system-browser', 'system-onboarding'];
+const DEFAULT_INSTALLED_EXTENSION_IDS: string[] = [];
 
 function candidateDefaultInstalledExtensionRoots(): string[] {
-  return [
-    process.env.NEON_PILOT_REPO_ROOT ? join(process.env.NEON_PILOT_REPO_ROOT, 'installable-extensions') : null,
-    join(process.cwd(), 'installable-extensions'),
-    typeof process.resourcesPath === 'string' ? join(process.resourcesPath, 'default-installable-extensions') : null,
-  ].filter((value): value is string => Boolean(value));
+  return [];
 }
 
 function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): ExtensionRegistryConfig {

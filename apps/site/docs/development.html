@@ -34,7 +34,8 @@
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -155,6 +156,24 @@ pnpm run check    # types, lint, format, full test suite, extension static check
         <pre><code>pnpm run perf:desktop -- --app=&quot;/Applications/Neon Pilot RC.app&quot; --sessions=2500 --blocks=80 --seconds=30 --max-ready-ms=5000 --max-cpu=120</code></pre>
         <p>
           If the pre-commit hook reports pre-existing baseline issues, make sure the task did not add new ones and document the constraint.
+        </p>
+        <p>Agent gold benchmark:</p>
+        <pre><code>pnpm run bench:agent -- --output=benchmarks/neon-pilot-gold.jsonl --report=benchmarks/neon-pilot-gold.md</code></pre>
+        <p>
+          This builds a 20-minute-per-task gold benchmark suite from <code>patrickleenyc/personal-agent-evals</code>. It joins shaped cases
+          with commit-resolution metadata, deduplicates repeated generated cases, and includes only cases whose selected/base commit exists
+          in the Neon Pilot git history. The benchmark is meant for model-comparable agent runs that measure diagnosis, scoped fixes, UX
+          workflow judgment, instruction following, and validation quality on real Neon Pilot work.
+        </p>
+        <p>
+          The dataset is private/gated, so the script reads <code>HF_TOKEN</code> or <code>~/.cache/huggingface/token</code>. Use
+          <code>--limit=&lt;n&gt;</code> to tune suite size. Cases excluded because their commits are missing should be treated as backfill
+          candidates, not benchmark-ready gold.
+        </p>
+        <p>
+          The packaged dataset lives in <code>benchmarks/neon-pilot-agent-evals/</code> and is published privately at
+          <code>patrickleenyc/neon-pilot-agent-evals</code> on Hugging Face. It includes a runnable <code>gold</code> config and a
+          non-scoring <code>backfill_candidates</code> config.
         </p>
         <h2 id="web-ui-and-desktop-qa">Web UI and desktop QA</h2>
         <p>

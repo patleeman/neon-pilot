@@ -34,7 +34,8 @@
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -342,6 +343,38 @@
           files found from the working directory, local overlays, extension-contributed skills, and compatibility skill roots such as
           <code>~/.claude/skills</code> and <code>~/.codex/skills</code>.
         </p>
+        <h2 id="runtime-prompt-layers">Runtime prompt layers</h2>
+        <p>The runtime may materialize both generated prompt defaults and discovered instruction files. They are different layers:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Runtime file</th>
+              <th>Source</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Global system defaults</td>
+              <td><code>&lt;state-root&gt;/neon-pilot-runtime/APPEND_SYSTEM.md</code></td>
+              <td>Built-in/runtime system prompt template plus configured append-system material</td>
+              <td>Always-on personal defaults such as behavior, execution guidance, and knowledge pointers</td>
+            </tr>
+            <tr>
+              <td>Agent instruction files</td>
+              <td><code>&lt;state-root&gt;/neon-pilot-runtime/AGENTS.md</code></td>
+              <td>Knowledge root, machine-local, configured, repo, ancestor, and local <code>AGENTS.md</code> files</td>
+              <td>Durable user, machine, repo, and directory-scoped standing instructions</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Treat <code>APPEND_SYSTEM.md</code> as generated runtime context, not as a repo instruction file. Treat
+          <code>AGENTS.md</code> files as editable instruction sources with explicit scope. Model profiles that need smaller prompts, such
+          as local/constrained model extensions, may replace instruction files or skills with file pointers while keeping generated global
+          system defaults embedded.
+        </p>
         <h2 id="desktop-daemon-and-local-ui-state">Desktop, daemon, and local UI state</h2>
         <p>Not every Settings-page control writes to the same JSON file:</p>
         <table>
@@ -416,6 +449,7 @@
         ><a href="#runtime-agent-settings">Runtime agent settings</a><a href="#extension-settings">Extension settings</a
         ><a href="#models-providers-and-credentials">Models, providers, and credentials</a
         ><a href="#knowledge-base-resolution">Knowledge base resolution</a><a href="#agent-file-discovery">Agent file discovery</a
+        ><a href="#runtime-prompt-layers">Runtime prompt layers</a
         ><a href="#desktop-daemon-and-local-ui-state">Desktop, daemon, and local UI state</a><a href="#rule-of-thumb">Rule of thumb</a>
       </aside>
     </main>

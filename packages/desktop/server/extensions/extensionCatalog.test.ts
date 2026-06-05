@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -19,8 +19,6 @@ vi.mock('./extensionLifecycle.js', () => ({
 
 describe('extension catalog', () => {
   const originalRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
-  const localBundlePath = join(process.cwd(), 'dist', 'installable-extensions', 'system-browser.neon-extension.zip');
-
   afterEach(() => {
     vi.restoreAllMocks();
     summaries.mockReset().mockReturnValue([]);
@@ -28,7 +26,6 @@ describe('extension catalog', () => {
     setExtensionEnabled.mockReset();
     importRuntimeExtensionBundle.mockReset();
     vi.unstubAllGlobals();
-    rmSync(localBundlePath, { force: true });
     if (originalRepoRoot === undefined) delete process.env.NEON_PILOT_REPO_ROOT;
     else process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
   });
@@ -67,34 +64,20 @@ describe('extension catalog', () => {
           marketplaceSourceId: 'neon-pilot-release',
           installed: true,
           enabled: true,
-          bundleUrl: `https://github.com/patleeman/neon-pilot/releases/download/v${version}/system-browser.neon-extension.zip`,
+          bundleUrl: `https://github.com/patleeman/neon-pilot-extensions/releases/download/v${version}/system-browser.neon-extension.zip`,
         }),
         expect.objectContaining({
           id: 'system-suggested-context',
           installed: false,
-          bundleUrl: `https://github.com/patleeman/neon-pilot/releases/download/v${version}/system-suggested-context.neon-extension.zip`,
+          bundleUrl: `https://github.com/patleeman/neon-pilot-extensions/releases/download/v${version}/system-suggested-context.neon-extension.zip`,
         }),
         expect.objectContaining({
           id: 'system-ds4',
           installed: false,
-          bundleUrl: `https://github.com/patleeman/neon-pilot/releases/download/v${version}/system-ds4.neon-extension.zip`,
+          bundleUrl: `https://github.com/patleeman/neon-pilot-extensions/releases/download/v${version}/system-ds4.neon-extension.zip`,
         }),
       ]),
     );
-  });
-
-  it('keeps the generated catalog in sync with installable extension manifests', async () => {
-    const installableRoot = join(process.cwd(), 'installable-extensions');
-    const manifestIds = existsSync(installableRoot)
-      ? readdirSync(installableRoot, { withFileTypes: true })
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name)
-          .filter((name) => existsSync(join(installableRoot, name, 'extension.json')))
-          .sort((left, right) => left.localeCompare(right))
-      : [];
-
-    const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
-    expect(listInstallableExtensionCatalog().extensions.map((extension) => extension.id)).toEqual(manifestIds);
   });
 
   it('rejects non-GitHub bundle URLs before downloading', async () => {
@@ -118,30 +101,10 @@ describe('extension catalog', () => {
 
     const { installExtensionBundleFromUrl } = await import('./extensionCatalog.js');
     const result = await installExtensionBundleFromUrl({
-      url: 'https://github.com/patleeman/neon-pilot/releases/download/v1.0.0/system-browser.neon-extension.zip',
+      url: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v1.0.0/system-browser.neon-extension.zip',
       expectedId: 'system-browser',
     });
 
-    expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', false, undefined);
-    expect(result.extension).toMatchObject({ id: 'system-browser', enabled: false });
-  });
-
-  it('installs catalog bundles from local packed artifacts when available', async () => {
-    process.env.NEON_PILOT_REPO_ROOT = join(process.cwd());
-    mkdirSync(join(process.cwd(), 'dist', 'installable-extensions'), { recursive: true });
-    writeFileSync(localBundlePath, new Uint8Array([1, 2, 3, 4]));
-    vi.stubGlobal('fetch', vi.fn());
-    importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-browser', enabled: true }, packageRoot: '/tmp/ext' });
-    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: false, version: '1.0.0' }]);
-
-    const { installCatalogExtension } = await import('./extensionCatalog.js');
-    const result = await installCatalogExtension({ id: 'system-browser' });
-
-    expect(fetch).not.toHaveBeenCalled();
-    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith(
-      { zipPath: join(process.cwd(), 'dist', 'installable-extensions', 'system-browser.neon-extension.zip') },
-      undefined,
-    );
     expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', false, undefined);
     expect(result.extension).toMatchObject({ id: 'system-browser', enabled: false });
   });

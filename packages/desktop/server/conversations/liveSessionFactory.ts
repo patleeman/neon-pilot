@@ -120,10 +120,6 @@ function ds4CliCandidates(options: LiveSessionLoaderOptions): string[] {
   if (process.env.NEON_PILOT_STATE_ROOT) {
     candidates.push(path.join(process.env.NEON_PILOT_STATE_ROOT, 'extensions', 'system-ds4', 'bin'));
   }
-  if (process.env.NEON_PILOT_REPO_ROOT) {
-    candidates.push(path.join(process.env.NEON_PILOT_REPO_ROOT, 'installable-extensions', 'system-ds4', 'bin'));
-  }
-  candidates.push(path.join(process.cwd(), 'installable-extensions', 'system-ds4', 'bin'));
   return candidates;
 }
 

@@ -40,7 +40,7 @@ User-created extensions live in runtime state by default:
 ~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
-Bundled first-party extensions live in the repo under `extensions/`. They use the same contract as user extensions and are good examples when you need to copy a working shape.
+Bundled first-party extensions live in the repo under `extensions/`. Optional first-party extensions live in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) and install from GitHub release artifacts. They use the same runtime contract as user extensions and are good examples when you need to copy a working shape.
 
 The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS`. Each path can point directly at a folder with `extension.json` or at a parent folder containing many extension packages.
 
@@ -93,10 +93,12 @@ The pack command excludes `node_modules`, `sidecar/target`, and transient `.dist
 
 Import and catalog installs expect the same safe zip shape: exactly one top-level package directory with `extension.json`. The installer unpacks it into `<state-root>/extensions/{extension-id}` and loads the existing `dist/` bundles.
 
-Optional first-party extensions under `installable-extensions/` use the release packer instead:
+Optional first-party extensions use the same packer from their own repo checkout:
 
 ```bash
-pnpm run extension:pack:installable
+pnpm run extension:build -- <extension-dir>
+neon-pilot-extension doctor <extension-dir>
+neon-pilot-extension pack <extension-dir> --out <extension-id>-<version>.neon-extension.zip
 ```
 
 Those bundles are named `{extension-id}.neon-extension.zip` and are uploaded to the matching GitHub release tag for Settings → Extensions → Install.

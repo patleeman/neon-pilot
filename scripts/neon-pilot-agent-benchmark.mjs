@@ -83,7 +83,7 @@ function treeHasPath(commit, path) {
 }
 
 function readRepoShape(commit) {
-  return ['package.json', 'docs', 'packages', 'extensions', 'installable-extensions'].filter((path) => treeHasPath(commit, path));
+  return ['package.json', 'docs', 'packages', 'extensions'].filter((path) => treeHasPath(commit, path));
 }
 
 function readCommitSelection(row, resolution) {

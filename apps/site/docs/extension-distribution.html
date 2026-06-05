@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Extension Distribution · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./knowledge-base.html">Knowledge Base</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="active" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./configuration.html">Configuration</a><a class="" href="./daemon.html">Daemon</a
+          ><a class="" href="./telemetry.html">Telemetry</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./development.html">Development</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="extension-distribution">Extension Distribution</h1>
+        <p>
+          Neon Pilot extensions are distributed as prebuilt Neon packages, not npm packages. GitHub repositories and releases are the v1
+          distribution layer.
+        </p>
+        <h2 id="distribution-model">Distribution model</h2>
+        <p>There are four extension lanes:</p>
+        <ul>
+          <li>
+            <strong>Bundled system extensions</strong> live in the Neon Pilot app repo under <code>extensions/</code> and ship inside the
+            desktop app.
+          </li>
+          <li>
+            <strong>First-party optional extensions</strong> live in the separate
+            <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a> repo and install
+            from GitHub release artifacts.
+          </li>
+          <li>
+            <strong>User/local extensions</strong> live in runtime state under <code>&lt;state-root&gt;/extensions/{extension-id}</code> or
+            in explicit development paths.
+          </li>
+          <li>
+            <strong>Third-party extension repos</strong> are GitHub repos with a Neon source manifest and one or more extension packages.
+          </li>
+        </ul>
+        <p>
+          Core owns the extension host, SDK, permissions, app shell integration, install/update plumbing, and validation. Product workflows
+          should still be extensions; distribution no longer depends on keeping optional extension source inside the app repo.
+        </p>
+        <h2 id="github-extension-repositories">GitHub extension repositories</h2>
+        <p>An extension repository must include a root <code>neon.extensions.json</code> file. Repos may hold one extension or many.</p>
+        <pre><code>{
+  &quot;schemaVersion&quot;: 1,
+  &quot;publisher&quot;: {
+    &quot;id&quot;: &quot;example&quot;,
+    &quot;name&quot;: &quot;Example Publisher&quot;,
+    &quot;url&quot;: &quot;https://github.com/example&quot;
+  },
+  &quot;repository&quot;: {
+    &quot;type&quot;: &quot;github&quot;,
+    &quot;owner&quot;: &quot;example&quot;,
+    &quot;repo&quot;: &quot;example-neon-extensions&quot;
+  },
+  &quot;packages&quot;: [
+    {
+      &quot;id&quot;: &quot;example-search&quot;,
+      &quot;path&quot;: &quot;extensions/example-search&quot;,
+      &quot;channel&quot;: &quot;stable&quot;
+    }
+  ]
+}</code></pre>
+        <p>The app can inspect this file, show the packages in the repo, and let the user choose which extensions to install.</p>
+        <h2 id="extension-package-format">Extension package format</h2>
+        <p>The installable artifact is a <code>.neon-extension.zip</code>. It contains exactly one top-level extension directory:</p>
+        <pre><code>example-search/
+  extension.json
+  README.md
+  LICENSE
+  dist/
+    frontend.js
+    backend.mjs
+  assets/</code></pre>
+        <p>Package rules:</p>
+        <ul>
+          <li>Build before packing.</li>
+          <li>Include <code>extension.json</code>.</li>
+          <li>Include prebuilt <code>dist/</code> entries for all frontend and backend manifest entries.</li>
+          <li>
+            Do not include <code>node_modules</code>, <code>.dist.tmp-*</code>, local caches, or sidecar build output such as
+            <code>sidecar/target</code>.
+          </li>
+          <li>Do not require install-time compilation, npm install, or postinstall scripts.</li>
+          <li>Use only the public extension SDK imports supplied by the host.</li>
+        </ul>
+        <h2 id="compatibility">Compatibility</h2>
+        <p>Every distributed extension should declare the Neon Pilot and extension API versions it targets:</p>
+        <pre><code>{
+  &quot;schemaVersion&quot;: 2,
+  &quot;id&quot;: &quot;example-search&quot;,
+  &quot;name&quot;: &quot;Example Search&quot;,
+  &quot;version&quot;: &quot;0.1.0&quot;,
+  &quot;compatibility&quot;: {
+    &quot;neonPilot&quot;: &quot;&gt;=0.10.0 &lt;0.11.0&quot;,
+    &quot;extensionApi&quot;: &quot;^2&quot;
+  }
+}</code></pre>
+        <p>
+          Neon Pilot should refuse incompatible packages before installation. Compatibility belongs in the package manifest so a zip, local
+          folder, catalog item, or GitHub release all carry the same contract.
+        </p>
+        <h2 id="release-artifacts">Release artifacts</h2>
+        <p>Normal installs should use immutable GitHub release artifacts, not branch source. A release may include:</p>
+        <ul>
+          <li>
+            <code>&lt;extension-id&gt;-&lt;version&gt;.neon-extension.zip</code> or <code>&lt;extension-id&gt;.neon-extension.zip</code>
+          </li>
+          <li><code>neon-extension-catalog.json</code></li>
+        </ul>
+        <p>
+          The optional release catalog can include package versions, artifact URLs, SHA-256 checksums, compatibility, permissions, and
+          display metadata:
+        </p>
+        <pre><code>{
+  &quot;schemaVersion&quot;: 1,
+  &quot;source&quot;: {
+    &quot;type&quot;: &quot;github&quot;,
+    &quot;owner&quot;: &quot;example&quot;,
+    &quot;repo&quot;: &quot;example-neon-extensions&quot;
+  },
+  &quot;packages&quot;: [
+    {
+      &quot;id&quot;: &quot;example-search&quot;,
+      &quot;version&quot;: &quot;0.1.0&quot;,
+      &quot;artifact&quot;: &quot;example-search-0.1.0.neon-extension.zip&quot;,
+      &quot;sha256&quot;: &quot;...&quot;
+    }
+  ]
+}</code></pre>
+        <p>
+          Source-branch installs are development mode only. They require local build trust and should be visually distinguished from release
+          artifact installs.
+        </p>
+        <h2 id="publishing-your-own-extension-repo">Publishing your own extension repo</h2>
+        <p>
+          1. Create a GitHub repo. 2. Add one extension directory or several extension directories. 3. Add root
+          <code>neon.extensions.json</code>. 4. Build each extension with
+          <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from a Neon Pilot checkout. 5. Validate with
+          <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code>. 6. Pack with
+          <code>neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;version&gt;.neon-extension.zip</code>. 7.
+          Publish a GitHub release containing the zip artifacts. 8. Share the GitHub repo URL with users.
+        </p>
+        <p>
+          Users install from the GitHub repo URL, inspect the packages it exposes, select the packages they want, review permissions and
+          compatibility, then install the release artifacts.
+        </p>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-distribution.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#distribution-model">Distribution model</a><a href="#github-extension-repositories">GitHub extension repositories</a
+        ><a href="#extension-package-format">Extension package format</a><a href="#compatibility">Compatibility</a
+        ><a href="#release-artifacts">Release artifacts</a
+        ><a href="#publishing-your-own-extension-repo">Publishing your own extension repo</a>
+      </aside>
+    </main>
+  </body>
+</html>

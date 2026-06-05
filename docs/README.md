@@ -36,25 +36,26 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Renderer isolation](renderer-isolation.md) — process ownership, critical lanes, and transcript projection boundaries
 - [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
 - [Build an extension with your agent](build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions
+- [Extension distribution](extension-distribution.md) — GitHub-backed extension repos, package format, compatibility, release artifacts, and publishing your own extension repo
 - [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Extension authoring](extensions.md) — reference for native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
 - [System extensions](../extensions) — feature-owned docs and implementation packages
-- [Installable extensions](../installable-extensions) — optional first-party extensions that install into runtime state as user extensions
+- [First-party optional extensions](https://github.com/patleeman/neon-pilot-extensions) — optional packages distributed from GitHub release artifacts
 
 ## Extension docs
 
 Neon Pilot product features live in extensions. The normal way to create one is to ask your agent to build it; start with [Build an extension with your agent](build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
 
-System extensions are bundled under `extensions/system-*`. Installable extensions live under `installable-extensions/*` in the repo, are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`. Users install released optional extensions from **Settings → Extensions → Install**; after installing, check the main extension registry to enable and inspect the extension.
+System extensions are bundled under `extensions/system-*`. Optional first-party extensions live in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions), are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`. Users install released optional extensions from **Settings → Extensions → Install**; after installing, check the main extension registry to enable and inspect the extension.
 
 Feature-specific documentation lives beside the owning extension package:
 
-- [Agent Browser](../installable-extensions/system-agent-browser/README.md)
+- [Agent Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser)
 - [Artifacts](../extensions/system-artifacts/README.md)
 - [Auto Mode](../extensions/system-auto-mode/README.md)
 - [Automations](../extensions/system-automations/README.md)
-- [Browser](../installable-extensions/system-browser/README.md)
+- [Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser)
 - [Caffeinate](../extensions/system-caffeinate/README.md)
 - [Codex Profile](../extensions/system-codex-profile/README.md) — Codex/OpenAI tool profile, including `apply_patch` and image generation
 - [Composer Attachments](../extensions/system-composer-attachments/README.md)
@@ -62,31 +63,31 @@ Feature-specific documentation lives beside the owning extension package:
 - [Context Usage](../extensions/system-context-usage/README.md)
 - [Conversation Tools](../extensions/system-conversation-tools/README.md)
 - [Diffs](../extensions/system-diffs/README.md)
-- [DuckDuckGo Search](../installable-extensions/system-duckduckgo-search/README.md) — web search using DuckDuckGo's HTML page
-- [DS4](../installable-extensions/system-ds4/README.md) — local DeepSeek V4 Flash provider/profile for antirez/ds4
-- [Exa Search](../installable-extensions/system-exa-search/README.md)
+- [DuckDuckGo Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search) — web search using DuckDuckGo's HTML page
+- [DS4](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4) — local DeepSeek V4 Flash provider/profile for antirez/ds4
+- [Exa Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search)
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md)
 - [Extension Manager](../extensions/system-extension-manager/README.md)
 - [File Explorer](../extensions/system-files/README.md)
 - [Git Status](../extensions/system-git-status/README.md)
 - [Host view components](host-view-components.md)
 - [Image Probe](../extensions/system-image-probe/README.md)
-- [Kitty Litter Mobile Pairing](../installable-extensions/system-alleycat/README.md)
+- [Kitty Litter Mobile Pairing](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat)
 - [Knowledge](../extensions/system-knowledge/README.md)
 - [Local Dictation](../extensions/system-local-dictation/README.md)
-- [Local Models](../installable-extensions/system-local-models/README.md)
+- [Local Models](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models)
 - [MCP](../extensions/system-mcp/README.md)
 - [Model Picker](../extensions/system-model-picker/README.md)
-- [Onboarding](../installable-extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
+- [Onboarding](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-onboarding) — first-run onboarding bootstrap and conversation flow
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md)
 - [Runs](../extensions/system-runs/README.md)
-- [Self Preservation](../installable-extensions/system-self-preservation/README.md)
+- [Self Preservation](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation)
 - [Settings](../extensions/system-settings/README.md)
 - [Skills](../extensions/system-skills/README.md)
-- [Suggested Context](../installable-extensions/system-suggested-context/README.md)
+- [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context)
 - [Telemetry extension](../extensions/system-telemetry/README.md)
-- [Video Probe](../installable-extensions/system-video-probe/README.md)
+- [Video Probe](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-video-probe)
 - [Web Fetch](../extensions/system-web-tools/README.md)
 
 ## Sections

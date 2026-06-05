@@ -10,8 +10,6 @@ export default {
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
     '../../../extensions/*/src/**/*.{js,ts,jsx,tsx}',
-    '../../../installable-extensions/*/src/**/*.{js,ts,jsx,tsx}',
-    '../../../installable-extensions/shared/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {

@@ -6,7 +6,7 @@ import { importRuntimeExtensionBundle } from './extensionLifecycle.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { INSTALLABLE_EXTENSION_CATALOG } from './installableExtensionCatalog.generated.js';
 
-const GITHUB_RELEASE_BASE_URL = 'https://github.com/patleeman/neon-pilot/releases/download';
+const GITHUB_RELEASE_BASE_URL = 'https://github.com/patleeman/neon-pilot-extensions/releases/download';
 const MAX_EXTENSION_BUNDLE_BYTES = 80 * 1024 * 1024;
 
 export interface CatalogSeed {
@@ -103,8 +103,6 @@ function bundleUrlFor(id: string, version: string): string {
 
 function localBundlePathFor(id: string): string | null {
   const candidates = [
-    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'dist', 'installable-extensions') : null,
-    resolve(process.cwd(), 'dist', 'installable-extensions'),
     typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'installable-extension-bundles') : null,
   ].filter((value): value is string => Boolean(value));
   for (const root of candidates) {

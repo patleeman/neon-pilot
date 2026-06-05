@@ -35,7 +35,8 @@
         <section>
           <h2>Extensions</h2>
           <a class="" href="./build-an-extension.html">Build an Extension</a
-          ><a class="active" href="./extensions.html">Extension Authoring</a>
+          ><a class="active" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -90,6 +91,43 @@ Implement it with editable source files, build it, reload it, visually test it, 
           The agent should create editable <code>src/</code> files, declare contributions in <code>extension.json</code>, build, validate,
           reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
         </p>
+        <h3 id="production-readiness-checklist">Production readiness checklist</h3>
+        <p>Before calling an extension done, an agent must be able to answer each item with evidence from the repo or app:</p>
+        <ul>
+          <li>
+            <strong>Surface chosen</strong>: the extension has one clear primary surface for the first version: main page, workbench
+            rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
+          </li>
+          <li>
+            <strong>Boundary clean</strong>: extension runtime code imports from <code>@neon-pilot/extensions</code>,
+            <code>@neon-pilot/extensions/ui</code>, or narrow <code>@neon-pilot/extensions/backend/*</code> SDK subpaths, not core, desktop,
+            or package-internal app modules.
+          </li>
+          <li>
+            <strong>Manifest wired</strong>: every declared component/action/tool/skill/settings entry points to an existing source export
+            or file, and every frontend <code>pa.actions.call(...)</code> action id is declared in <code>backend.actions</code>.
+          </li>
+          <li>
+            <strong>Runtime built</strong>: <code>dist/</code> files are current, because packaged desktop runtimes load built bundles and
+            do not compile extension source at install time.
+          </li>
+          <li>
+            <strong>Diagnostics clean</strong>: <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code> is clean when available;
+            boundary work also runs <code>pnpm run check:extensions:static</code>.
+          </li>
+          <li>
+            <strong>User path validated</strong>: the route, rail, Settings section, command, composer control, or tool invocation was
+            opened or invoked through the app/extension host.
+          </li>
+          <li>
+            <strong>States covered</strong>: UI surfaces show useful loading, empty, error, and success states; backend-only extensions
+            return useful error text/details for malformed input.
+          </li>
+          <li>
+            <strong>Docs local</strong>: the extension has or updates a <code>README.md</code> with build, reload, validation, and usage
+            notes for the next agent.
+          </li>
+        </ul>
         <h2 id="core-vs-extensions">Core vs extensions</h2>
         <p>
           Neon Pilot core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event
@@ -145,11 +183,17 @@ neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out
           unzips into <code>&lt;state-root&gt;/extensions/{extension-id}</code> and loads the prebuilt <code>dist/</code> files. Packaged
           desktop releases do <strong>not</strong> compile extensions at install time.
         </p>
-        <p>For optional first-party installable extensions under <code>installable-extensions/</code>, use the release packer instead:</p>
-        <pre><code>pnpm run extension:pack:installable</code></pre>
         <p>
-          That writes <code>{extension-id}.neon-extension.zip</code> bundles for release upload. The Settings → Extensions
-          <strong>Available</strong> tab downloads those files from the GitHub release tag matching the installed app version.
+          Optional first-party extensions are distributed from the separate
+          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a> repo as GitHub
+          release artifacts. Use the same package format for local, catalog, and GitHub installs:
+        </p>
+        <pre><code>pnpm run extension:build -- &lt;extension-dir&gt;
+neon-pilot-extension doctor &lt;extension-dir&gt;
+neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;version&gt;.neon-extension.zip</code></pre>
+        <p>
+          See <a href="./extension-distribution.html">Extension Distribution</a> for GitHub repo manifests, release catalogs, compatibility
+          metadata, and publishing guidance.
         </p>
         <h2 id="manifest-extension-json">Manifest (<code>extension.json</code>)</h2>
         <p>The manifest declares what your extension contributes:</p>
@@ -215,12 +259,12 @@ neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out
           <tbody>
             <tr>
               <td><code>views</code></td>
-              <td>UI surfaces (pages, panels)</td>
+              <td>UI surfaces (pages, panels, sidebar replacements)</td>
               <td>See <code>docs/views.md</code></td>
             </tr>
             <tr>
               <td><code>nav</code></td>
-              <td>Left sidebar navigation items</td>
+              <td>Left sidebar navigation items; can reference a sidebar view with <code>sidebarView</code></td>
               <td></td>
             </tr>
             <tr>
@@ -543,6 +587,12 @@ return { text: 'Updated file.', details: { fileChanges: [change] } };</code></pr
           <code>backend.agentExtension</code> hooks to switch active tools to <code>bash</code> and <code>apply_patch</code> when a matching
           model is active. Explicit per-run tool allowlists still take precedence over extension profile behavior.
         </p>
+        <p>
+          Profiles for local runtimes may declare <code>startupAction</code>, naming a backend action in the same extension. When that
+          profile is the resolved match for the selected model, Neon Pilot invokes the action before the provider request is sent. Use this
+          for idempotent runtime preparation such as starting a local server; the action should return quickly when the runtime is already
+          healthy and surface setup errors clearly.
+        </p>
         <p>For <code>session_start</code> and <code>model_select</code> handlers, the desktop host augments the lifecycle context with:</p>
         <pre><code>type ModelProfileContext =
   | { kind: 'none'; modelRef: string | null }
@@ -814,12 +864,16 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         <h3 id="settings-component-settingscomponent">Settings Component (<code>settingsComponent</code>)</h3>
         <p>Add one component-backed section to the main Settings page.</p>
         <pre><code>{
-  &quot;id&quot;: &quot;dictation&quot;,
-  &quot;component&quot;: &quot;DictationSettingsPanel&quot;,
-  &quot;sectionId&quot;: &quot;settings-dictation&quot;,
-  &quot;label&quot;: &quot;Dictation&quot;,
-  &quot;description&quot;: &quot;Enable local dictation via Whisper.cpp for the composer mic button.&quot;,
-  &quot;order&quot;: 30
+  &quot;contributes&quot;: {
+    &quot;settingsComponent&quot;: {
+      &quot;id&quot;: &quot;dictation&quot;,
+      &quot;component&quot;: &quot;DictationSettingsPanel&quot;,
+      &quot;sectionId&quot;: &quot;settings-dictation&quot;,
+      &quot;label&quot;: &quot;Dictation&quot;,
+      &quot;description&quot;: &quot;Enable local dictation via Whisper.cpp for the composer mic button.&quot;,
+      &quot;order&quot;: 30
+    }
+  }
 }</code></pre>
         <p>
           The component receives <code>pa</code> and <code>settingsContext</code>. Use this for rich settings UIs; use
@@ -1051,6 +1105,34 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           The component receives <code>{ pa, actionContext }</code>; <code>actionContext</code> includes
           <code>activeConversationId</code> and <code>cwd</code> when available.
         </p>
+        <h3 id="sidebar-views-views-location-sidebar">Sidebar Views (<code>views[].location: &quot;sidebar&quot;</code>)</h3>
+        <p>
+          Add a native extension surface that replaces the thread list area in the left sidebar while an extension nav item is active. Use
+          this for extension-owned navigation models such as remote-agent sessions, external task lists, or project-specific explorers.
+        </p>
+        <pre><code>{
+  &quot;views&quot;: [
+    {
+      &quot;id&quot;: &quot;sessions-sidebar&quot;,
+      &quot;title&quot;: &quot;Hermes Sessions&quot;,
+      &quot;location&quot;: &quot;sidebar&quot;,
+      &quot;component&quot;: &quot;HermesSessionsSidebar&quot;
+    }
+  ],
+  &quot;nav&quot;: [
+    {
+      &quot;id&quot;: &quot;hermes&quot;,
+      &quot;label&quot;: &quot;Hermes&quot;,
+      &quot;icon&quot;: &quot;sparkle&quot;,
+      &quot;route&quot;: &quot;/ext/hermes&quot;,
+      &quot;sidebarView&quot;: &quot;sessions-sidebar&quot;
+    }
+  ]
+}</code></pre>
+        <p>
+          The host still owns the fixed app navigation stack and bottom settings area. The sidebar view owns only the body below the nav
+          item list, so it should render its own header, filters, empty/loading/error states, and row actions.
+        </p>
         <h3 id="status-bar-items-statusbaritems">Status Bar Items (<code>statusBarItems</code>)</h3>
         <p>Add labels in the status bar below the composer. Action-based — no frontend entry needed.</p>
         <pre><code>{
@@ -1200,6 +1282,14 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           This is useful for tools that take multiple seconds to complete — the agent sees intermediate progress instead of waiting
           silently.```
         </p>
+        <p>
+          Actions invoked as manifest tools normally carry live-only agent context, including the abort signal and progress callback, so
+          they stay in the host process by default. If an action only needs serializable <code>toolContext</code> fields and focused host
+          capabilities, it may opt into worker execution with
+          <code>worker: { &quot;enabled&quot;: true, &quot;ignoreLiveContext&quot;: true }</code>. Do not use this flag for actions that
+          consume <code>ctx.agentToolContext</code>, rely on <code>ctx.toolContext.onUpdate</code>, or otherwise need live function-bearing
+          context.
+        </p>
         <h2 id="frontend-ui">Frontend (UI)</h2>
         <p>
           Your <code>src/frontend.tsx</code> exports React components referenced in the manifest. The desktop app loads the extension
@@ -1239,12 +1329,12 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
           Backend-only host APIs that should stay narrow can also be exposed through focused SDK subpaths such as
           <code>@neon-pilot/extensions/backend/artifacts</code>, <code>/automations</code>, <code>/browser</code>, <code>/compaction</code>,
           <code>/conversations</code>, <code>/images</code>, <code>/mcp</code>, <code>/runs</code>, <code>/runtime</code>,
-          <code>/telemetry</code>, and <code>/webContent</code>. Prefer a focused subpath over the broad backend barrel when bundling a
-          system extension that only needs one backend service. Feature-specific data planes such as Knowledge should live inside their
-          owning extension and use generic host capabilities (<code>ctx.storage</code>, <code>ctx.filesystem</code>, <code>ctx.shell</code>,
-          <code>ctx.git</code>, events, and UI invalidation) rather than dedicated host subpaths. For daemon-backed shell work in a packaged
-          system extension, keep the foreground path free of daemon imports and lazy-load background-run support only when the action
-          actually starts or inspects background work.
+          <code>/telemetry</code>, <code>/terminal</code>, and <code>/webContent</code>. Prefer a focused subpath over the broad backend
+          barrel when bundling a system extension that only needs one backend service. Feature-specific data planes such as Knowledge should
+          live inside their owning extension and use generic host capabilities (<code>ctx.storage</code>, <code>ctx.filesystem</code>,
+          <code>ctx.shell</code>, <code>ctx.git</code>, events, and UI invalidation) rather than dedicated host subpaths. For daemon-backed
+          shell work in a packaged system extension, keep the foreground path free of daemon imports and lazy-load background-run support
+          only when the action actually starts or inspects background work.
         </p>
         <p>
           The backend API is deliberately two-layered: public stubs under <code>packages/extensions/src/backend/*.ts</code>, and host
@@ -1253,8 +1343,9 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
           <code>@neon-pilot/daemon</code>, or agent-runtime internals directly. System extension source may use type-only Pi imports for
           extension hook types, but runtime value imports from Pi must go through a focused host seam. Host backend API modules should be
           thin adapters; lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in
-          half the app. <code>pnpm run check:extensions</code> enforces this with <code>scripts/check-extension-backend-api.mjs</code> and
-          packaged source/bundle checks before packaged bundle checks run.
+          half the app. If a backend API wraps process-local host state and may run in the backend worker, it must use the worker capability
+          bridge instead of importing that state directly in the worker. <code>pnpm run check:extensions</code> enforces this with
+          <code>scripts/check-extension-backend-api.mjs</code> and packaged source/bundle checks before packaged bundle checks run.
         </p>
         <p>
           Backend seam permission model: seams that run user-visible privileged workflows still require explicit extension permissions
@@ -1265,12 +1356,25 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
         <p>
           For model-backed extension workflows, use <code>@neon-pilot/extensions/backend/agent</code> instead of importing Pi directly.
           <code>runAgentTask</code> runs a host-owned one-shot hidden agent task with optional image inputs, <code>tools: 'none'</code>, and
-          timeout cleanup; the host owns model lookup, auth storage, session creation, cancellation boundaries, and runtime policy.
-          Extensions must declare <code>agent:run</code> to use this seam. For multi-turn extension-owned workers, use
-          <code>createAgentConversation</code>, <code>sendAgentMessage</code>, <code>getAgentConversation</code>,
-          <code>listAgentConversations</code>, <code>abortAgentConversation</code>, and <code>disposeAgentConversation</code>; conversations
-          support hidden+ephemeral private worker sessions and visible+saved host conversations that appear in the normal conversation
-          system. Both modes are scoped to the owner extension id and require <code>agent:conversations</code>.
+          timeout cleanup; the host owns model lookup, auth storage, session creation, cancellation boundaries, and runtime policy. When
+          <code>allowedToolNames</code> is provided, the task can execute those tool calls across multiple hidden turns; it stops early only
+          when a tool result returns <code>terminate: true</code>. Extensions must declare <code>agent:run</code> to use this seam.
+        </p>
+        <p>
+          For extension-owned chat, use <code>createAgentConversation</code>, <code>sendAgentMessage</code>,
+          <code>streamAgentMessage</code>, <code>getAgentConversation</code>, <code>listAgentConversations</code>,
+          <code>abortAgentConversation</code>, and <code>disposeAgentConversation</code>; conversations support hidden+ephemeral private
+          worker sessions and visible+saved host conversations that appear in the normal conversation system. Both modes are scoped to the
+          owner extension id and require <code>agent:conversations</code>.
+        </p>
+        <p>
+          Use <code>streamAgentMessage</code> from a manifest-declared SSE <code>backend.routes</code> handler when an extension needs to
+          render its own private chat UI. It returns the same shaped event stream extensions should render in chat surfaces:
+          <code>user_message</code>, <code>agent_start</code>, <code>text_delta</code>, <code>thinking_delta</code>, tool events,
+          <code>agent_end</code>, <code>turn_end</code>, and <code>error</code>. Visible+saved conversations should instead subscribe to the
+          host live-session event endpoint for that conversation id; those are already first-class main-chat sessions. Frontend extensions
+          should import <code>ChatView</code>, <code>ChatRailComposer</code>, and their props from
+          <code>@neon-pilot/extensions/ui</code> rather than reimplementing transcript or composer chrome.
         </p>
         <p>Backend extensions can record fire-and-forget app telemetry through the dedicated telemetry seam:</p>
         <pre><code>import { recordTelemetryEvent } from '@neon-pilot/extensions/backend/telemetry';
@@ -1350,10 +1454,60 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           <code>EventSource</code>.
         </p>
         <p>
-          Backend extensions share the host process, but they are not allowed to terminate it. The runtime wraps backend imports, actions,
-          services, protocol handlers, and agent lifecycle factories with a process-termination guard. If guarded extension code calls
-          <code>process.exit(...)</code>, <code>process.abort()</code>, or <code>process.kill(process.pid, ...)</code>, the call is blocked,
-          surfaced as an extension health error, and runtime action paths disable the extension to prevent startup boot loops.
+          Backend extensions share the host process today, but backend module import, export lookup, and handler execution are host-owned
+          through the <code>ExtensionBackendRunner</code> boundary. The current runner is in-process and applies the process-termination
+          guard around imports, actions, services, subscriptions, protocol handlers, self-test smoke actions, and agent lifecycle factories.
+          Future per-extension workers should replace this runner instead of changing product runtime callers or extension capability
+          adapters.
+        </p>
+        <p>
+          The extension backend worker entrypoint currently supports wire-safe backend import/cache invalidation, export-availability
+          checks, and narrow export execution with worker-safe context handles. The worker import runner uses a separate backend worker per
+          extension for those operations. The worker transport also supports worker-to-host capability requests and host-to-worker
+          capability events: a worker sends a typed capability name, operation name, and serializable input, the host returns a typed
+          success or error response, and live host handles can publish callback events through the same worker channel. The first
+          worker-safe backend context handles are serialized <code>ctx.runtime</code> metadata plus host-owned runtime refresh operations
+          such as <code>ctx.runtime.refreshSkillMcpConfig</code>, <code>ctx.log</code>, <code>ctx.events.publish</code>, narrow conversation
+          handles (<code>ctx.conversations.get</code>, <code>create</code>, <code>ensureLive</code>, <code>sendMessage</code>,
+          <code>abort</code>, <code>compact</code>, <code>fork</code>, <code>setTitle</code>, <code>setActiveTools</code>,
+          <code>appendCustomEntry</code>, <code>appendTranscriptBlock</code>, <code>updateTranscriptBlock</code>, <code>getWorkspace</code>,
+          <code>updateWorkspace</code>, <code>rollback</code>, and <code>metadata</code>), extension registry reads/enablement through
+          <code>ctx.extensions</code>, host-owned <code>ctx.filesystem</code> scoped root handles, <code>ctx.git</code>,
+          <code>ctx.models.list</code> plus host-owned provider/model writes, <code>ctx.notify</code>, <code>ctx.storage</code>,
+          <code>ctx.secrets.get</code>, non-streaming <code>ctx.shell.exec</code>, host-owned <code>ctx.shell.spawn</code> handles with
+          stdout/stderr/exit callbacks, <code>ctx.telemetry.record</code>, <code>ctx.ui.invalidate</code>, and the serialized
+          <code>ctx.workspace</code> file API. Product-critical system surfaces including artifacts, Automations scheduled-task/follow-up
+          actions, Caffeinate process control, Codex apply-patch, conversation ask/inspect/title/cwd/deferred-resume/context-menu helpers,
+          the worker-safe subset of the conversation tool (<code>inspect</code>, <code>create</code>, <code>set_title</code>,
+          <code>change_working_directory</code>, <code>ensure_live</code>, <code>send_message</code>, <code>abort</code>,
+          <code>compact</code>, <code>fork</code>, <code>set_active_tools</code>, <code>workspace_get</code>, <code>workspace_update</code>,
+          <code>append_transcript_block</code>, <code>update_transcript_block</code>, and <code>rollback</code>), all extension manager
+          actions, image probe agent tasks, knowledge state/sync/read/search/reference/memory/file mutation/import actions and all
+          non-streaming Knowledge routes including binary assets, local dictation settings/model install/transcription, MCP
+          settings/config/test/auth/logout actions and read-only tool inspection, onboarding bootstrap, prompt assembly inspection/toggles,
+          skills inventory and enablement, telemetry aggregate reads, todos, web fetch, installable web search tools, installable local
+          model lookup/discovery actions, installable DS4 provider/tool/runtime-control actions, Video Probe local runtime controls,
+          Suggested Context cache warming, and background work (<code>system-runs</code>) run their declared worker-safe actions through
+          this lane; broader backend handler execution still runs through the in-process runner until the remaining live capabilities are
+          implemented on top of those capability handles.
+        </p>
+        <p>
+          Backend actions can opt into worker execution with <code>worker.enabled: true</code> when every code path they expose only needs
+          worker-safe context handles. If only some object inputs are worker-safe, add <code>worker.inputActions</code> with the allowed
+          string values for the input object's <code>action</code> field. Inputs outside that allowlist continue to run through the
+          in-process runner.
+        </p>
+        <p>
+          Backend routes can opt into worker execution with <code>worker.enabled: true</code> when the route is non-streaming and only needs
+          serializable request fields plus worker-safe context handles. The worker receives <code>method</code>, <code>path</code>,
+          <code>query</code>, <code>params</code>, and <code>body</code>; live abort signals and SSE event streams stay on the in-process
+          runner for now.
+        </p>
+        <p>
+          Host implementation code should not call extension backend handlers under one-off process guards. Add the needed operation to the
+          runner boundary, then call it from the host-facing orchestrator. If guarded extension code calls <code>process.exit(...)</code>,
+          <code>process.abort()</code>, or <code>process.kill(process.pid, ...)</code>, the call is blocked, surfaced as an extension health
+          error, and runtime action paths disable the extension to prevent startup boot loops.
         </p>
         <p>
           Repeated backend infrastructure failures trip a circuit breaker: three failures in ten minutes disables the extension and adds an
@@ -2156,8 +2310,9 @@ const cacheFiles = await ctx.filesystem.cache();
 await cacheFiles.writeJson('remote-index.json', index);</code></pre>
         <h2 id="examples">Examples</h2>
         <p>
-          See bundled system extensions in <code>extensions/</code> and optional installable extensions in
-          <code>installable-extensions/</code> for practical examples:
+          See bundled system extensions in <code>extensions/</code> and optional first-party extensions in
+          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a> for practical
+          examples:
         </p>
         <ul>
           <li>
@@ -2165,11 +2320,11 @@ await cacheFiles.writeJson('remote-index.json', index);</code></pre>
           </li>
           <li>
             <strong><code>system-agent-browser</code></strong> — agent-browser CLI tool integration
-            (<code>installable-extensions/system-agent-browser</code>)
+            (<code>patleeman/neon-pilot-extensions/system-agent-browser</code>)
           </li>
           <li>
             <strong><code>system-browser</code></strong> — Experimental browser automation tool + views
-            (<code>installable-extensions/system-browser</code>)
+            (<code>patleeman/neon-pilot-extensions/system-browser</code>)
           </li>
           <li>
             <strong><code>system-automations</code></strong> — Scheduled tasks, follow-up queues, and the Automations page
@@ -2201,13 +2356,12 @@ await cacheFiles.writeJson('remote-index.json', index);</code></pre>
           <code>dist/frontend.js</code> bundles are still built and validated as release artifacts.
         </p>
         <p>
-          Installable repo extensions are not bundled or auto-loaded. Users install released optional extensions from
-          <strong>Settings → Extensions → Available</strong>, which downloads the <code>.neon-extension.zip</code> bundle from the GitHub
-          release tag matching the installed app version. After install, check the Installed tab in Settings → Extensions to enable and
-          inspect the extension. For local development, build and install into runtime state with
-          <code>pnpm --dir installable-extensions run build -- --extension &lt;id&gt;</code> and
-          <code>pnpm --dir installable-extensions run install -- --extension &lt;id&gt; --target &lt;state-root|testing|production&gt;</code
-          >.
+          Optional extension repo packages are not bundled or auto-loaded. Users install released optional extensions from
+          <strong>Settings → Extensions → Install</strong>, which downloads <code>.neon-extension.zip</code> artifacts from GitHub releases.
+          After install, check the unified list in Settings → Extensions to enable and inspect the extension. For local development, build
+          with <code>pnpm run extension:build -- &lt;extension-dir&gt;</code>, validate with
+          <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code>, and import the resulting zip or copy the built package into
+          runtime state.
         </p>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extensions.md">Edit this page on GitHub →</a>

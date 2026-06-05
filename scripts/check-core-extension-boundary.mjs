@@ -6,15 +6,15 @@ import { execFileSync } from 'node:child_process';
 
 const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const coreSearchRoots = ['packages/desktop/src', 'packages/desktop/server', 'packages/desktop/ui/src'];
-const extensionSearchRoots = ['extensions', 'installable-extensions'];
+const extensionSearchRoots = ['extensions'];
 
 const allowedFiles = new Set(['packages/desktop/ui/src/extensions/systemExtensionModules.ts']);
 
 const filePattern = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 const forbiddenPatterns = [
-  /from\s+['"][^'"]*(?:extensions|installable-extensions)\/[^'"]+\/src\//,
-  /import\(\s*['"][^'"]*(?:extensions|installable-extensions)\/[^'"]+\/src\//,
-  /(?:^|[^A-Za-z0-9_-])(?:extensions|installable-extensions)\/[^'"\s]+\/src\//,
+  /from\s+['"][^'"]*extensions\/[^'"]+\/src\//,
+  /import\(\s*['"][^'"]*extensions\/[^'"]+\/src\//,
+  /(?:^|[^A-Za-z0-9_-])extensions\/[^'"\s]+\/src\//,
 ];
 
 function walkTrackedFallback(dir) {

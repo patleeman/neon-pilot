@@ -29,7 +29,7 @@ function walkTrackedFallback(dir) {
 
 function listCandidateFiles() {
   try {
-    return execFileSync('git', ['ls-files', 'packages/desktop/server/**/*.ts', 'extensions/**/*.ts', 'installable-extensions/**/*.ts'], {
+    return execFileSync('git', ['ls-files', 'packages/desktop/server/**/*.ts', 'extensions/**/*.ts'], {
       cwd: root,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -40,7 +40,6 @@ function listCandidateFiles() {
     return [
       ...walkTrackedFallback('packages/desktop/server'),
       ...walkTrackedFallback('extensions'),
-      ...walkTrackedFallback('installable-extensions'),
     ];
   }
 }
