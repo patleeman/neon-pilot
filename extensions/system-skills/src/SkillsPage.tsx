@@ -2,6 +2,7 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   AppPageIntro,
   AppPageLayout,
+  Button,
   cx,
   EmptyState,
   ErrorState,
@@ -146,16 +147,16 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                   {skill.description ? <p className="mt-1 text-[12px] text-secondary">{skill.description}</p> : null}
                   <p className="mt-1 truncate text-[11px] text-dim">{skill.sourceLabel ?? skill.path}</p>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={() => void toggleSkill(skill)}
                   className={cx(
-                    'rounded-full border px-3 py-1 text-[12px]',
+                    'rounded-full px-3 py-1 text-[12px]',
                     skill.enabled ? 'border-success/40 bg-success/10 text-success' : 'border-subtle bg-muted text-secondary',
                   )}
                 >
                   {skill.enabled ? 'Enabled' : 'Disabled'}
-                </button>
+                </Button>
               </div>
             </div>
           ))}
