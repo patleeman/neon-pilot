@@ -45,6 +45,7 @@ import {
   TabList,
   Textarea,
   TextInput,
+  Tooltip,
   ToolbarButton,
 } from '../primitives';
 import '../styles.css';
@@ -77,6 +78,23 @@ const meta = {
           <Pill tone="danger">Failed</Pill>
           <Keycap>⌘</Keycap>
           <Keycap>K</Keycap>
+          <span
+            className="group"
+            tabIndex={0}
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              border: '1px solid rgb(var(--color-border-subtle))',
+              borderRadius: 6,
+              padding: '0.25rem 0.5rem',
+              color: 'rgb(var(--color-secondary))',
+              fontSize: 11,
+            }}
+          >
+            Tooltip
+            <Tooltip>Shared hover copy</Tooltip>
+          </span>
         </div>
       </section>
 

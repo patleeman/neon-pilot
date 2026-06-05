@@ -1,4 +1,5 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
+import { Tooltip } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useState } from 'react';
 
 interface CaffeinateStatus {
@@ -92,9 +93,9 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
       onClick={() => void toggle()}
     >
       <CoffeeCupIcon active={running} />
-      <span className="pointer-events-none absolute right-0 top-full z-50 mt-2 hidden whitespace-nowrap rounded-md bg-elevated px-2 py-1 text-xs font-medium text-primary shadow-lg ring-1 ring-border group-hover:block group-focus-visible:block">
+      <Tooltip position="bottom-right" className="text-xs">
         {statusLabel}
-      </span>
+      </Tooltip>
     </button>
   );
 }

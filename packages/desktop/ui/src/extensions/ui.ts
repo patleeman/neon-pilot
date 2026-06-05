@@ -62,6 +62,7 @@ export {
   TabList,
   Textarea,
   TextInput,
+  Tooltip,
   ToolbarButton,
 } from '../components/ui';
 export { Keycap } from '../components/ui';

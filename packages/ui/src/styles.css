@@ -281,6 +281,43 @@ body {
   font-size: 0.6875rem;
 }
 
+.ui-tooltip {
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  z-index: 50;
+  width: max-content;
+  max-width: 18rem;
+  white-space: nowrap;
+  border-radius: 0.375rem;
+  border: 1px solid rgb(var(--color-border-subtle));
+  background: rgb(var(--color-elevated));
+  padding: 0.25rem 0.5rem;
+  color: rgb(var(--color-primary));
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1rem;
+  opacity: 0;
+  box-shadow: 0 0.5rem 1.25rem rgb(0 0 0 / 0.18);
+  transition: opacity 140ms ease;
+}
+
+.ui-tooltip-top-right {
+  bottom: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.ui-tooltip-bottom-right {
+  top: 100%;
+  margin-top: 0.5rem;
+}
+
+.group:hover .ui-tooltip,
+.group:focus-within .ui-tooltip,
+.group:focus-visible .ui-tooltip {
+  opacity: 1;
+}
+
 .ui-section-label {
   color: rgb(var(--color-teal) / 0.88);
   font-size: 0.625rem;

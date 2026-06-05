@@ -34,6 +34,7 @@ import {
   TabButton,
   TabList,
   TextInput,
+  Tooltip,
 } from './primitives';
 
 describe('design-system primitives', () => {
@@ -94,6 +95,9 @@ describe('design-system primitives', () => {
   it('renders section labels and resource list rows', () => {
     expect(renderToStaticMarkup(createElement(SectionLabel, null, 'Artifacts'))).toContain('ui-section-label');
     expect(renderToStaticMarkup(createElement(SupportingText, null, 'Secondary copy'))).toContain('ui-supporting-text');
+    expect(renderToStaticMarkup(createElement(Tooltip, { position: 'bottom-right', mono: true }, 'Copied'))).toContain(
+      'ui-tooltip-bottom-right',
+    );
 
     const html = renderToStaticMarkup(
       createElement(ResourceListItem, {

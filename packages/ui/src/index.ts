@@ -59,5 +59,7 @@ export {
   TabList,
   Textarea,
   TextInput,
+  Tooltip,
+  type TooltipPosition,
   ToolbarButton,
 } from './primitives';

@@ -49,7 +49,7 @@ CI=true pnpm --dir packages/ui run build:storybook
 The initial package includes:
 
 - Actions: `Button`, `ToolbarButton`, `IconButton`, `CheckButton`
-- Status: `Pill`, `Keycap`, `Notice`
+- Status: `Pill`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`

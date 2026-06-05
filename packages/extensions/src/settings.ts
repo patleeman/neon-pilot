@@ -39,6 +39,7 @@ export declare const Disclosure: HostComponent;
 export declare const SupportingText: HostComponent;
 export declare const THINKING_LEVEL_OPTIONS: unknown;
 export declare const ToolbarButton: HostComponent;
+export declare const Tooltip: HostComponent;
 export declare const api: unknown;
 export declare function cx(...values: Array<unknown>): string;
 export declare function createDesktopAwareEventSource(...args: never[]): unknown;

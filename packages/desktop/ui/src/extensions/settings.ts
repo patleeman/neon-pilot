@@ -48,6 +48,7 @@ export {
   TabList,
   Textarea,
   TextInput,
+  Tooltip,
   ToolbarButton,
 } from '../components/ui';
 export { formatContextWindowLabel, formatThinkingLevelLabel } from '../conversation/conversationHeader';

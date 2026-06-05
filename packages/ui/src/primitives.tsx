@@ -141,6 +141,27 @@ export function Keycap({ children, className }: { children: ReactNode; className
   return <kbd className={cx('ui-kbd', className)}>{children}</kbd>;
 }
 
+export type TooltipPosition = 'top-right' | 'bottom-right';
+
+export function Tooltip({
+  children,
+  className,
+  position = 'top-right',
+  mono = false,
+  ...props
+}: {
+  children: ReactNode;
+  className?: string;
+  position?: TooltipPosition;
+  mono?: boolean;
+} & HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={cx('ui-tooltip', `ui-tooltip-${position}`, mono && 'font-mono', className)} {...props}>
+      {children}
+    </span>
+  );
+}
+
 export function SectionLabel({ children, className, ...props }: HTMLAttributes<HTMLSpanElement>) {
   return (
     <span className={cx('ui-section-label', className)} {...props}>

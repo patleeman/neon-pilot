@@ -1,4 +1,5 @@
 import type { ExtensionStatusBarItemProps } from '@neon-pilot/extensions';
+import { Tooltip } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -69,9 +70,9 @@ export function ContextUsageIndicator({ statusBarContext }: ExtensionStatusBarIt
           <span className={cx('h-1 w-1 rounded-full', toneClass)} />
         </span>
       </span>
-      <span className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 whitespace-nowrap rounded-md border border-border-subtle bg-elevated px-2 py-1 font-mono text-[10px] text-primary opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <Tooltip mono className="text-[10px]">
         {label}
-      </span>
+      </Tooltip>
     </span>
   );
 }
