@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.3-rc.3 — 2026-06-05
+
+### Highlights
+
+- Fixes extension action runtime settings resolution so installed RC tool calls such as `system-runs` `bash` use the active app settings file instead of falling through to `/settings.json`.
+- Adds regression coverage for both direct extension backend contexts and worker action contexts so future packaged builds verify the real route settings path, not just the presence of a string field.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.10.3-rc.2 — 2026-06-05
 
 ### Highlights
