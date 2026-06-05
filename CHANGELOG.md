@@ -1,14 +1,18 @@
 # Changelog
 
-## 0.10.3-rc.0 — 2026-06-05
+## 0.10.3-rc.1 — 2026-06-05
 
 ### Highlights
 
-- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+- Adds a full GitHub-based extension distribution workflow with explicit package version/tag metadata, release bundles, and authoring documentation.
+- Lets Extension Manager discover configured extension repositories, surface available updates, and update catalog-installed extensions while preserving enabled state.
+- Moves first-run onboarding back into the bundled app and keeps optional first-party extensions in the external release repository as normal user-installable packages.
+- Refreshes the first-party extension release assets so catalog installs, reinstalls, updates, and uninstalls use the corrected package lifecycle.
+- Tightens RC readiness with startup-blocking build checks, extension boundary validation, and focused regression coverage for catalog install/update flows.
 
 ### Notes
 
-- 109 commits since the previous release.
+- 110 commits since the previous release.
 
 ## 0.10.2 — 2026-06-03
 
