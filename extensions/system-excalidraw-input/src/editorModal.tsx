@@ -8,6 +8,7 @@ import {
   parseExcalidrawSceneFromSourceData,
   serializeExcalidrawScene,
 } from '@neon-pilot/extensions/excalidraw';
+import { ResourceListItem, SectionLabel } from '@neon-pilot/extensions/ui';
 import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react';
 
 export interface ExcalidrawEditorSavePayload {
@@ -676,24 +677,15 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
           const busy = busyId === drawing.id;
           const isDraft = 'draft' in drawing && drawing.draft;
           return (
-            <button
+            <ResourceListItem
               key={drawing.id}
-              type="button"
-              className="rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-elevated/60 hover:text-primary disabled:cursor-progress disabled:bg-elevated disabled:text-primary"
               onClick={() => void attachDrawing(drawing)}
               disabled={busy}
+              label={getDrawingTitle(drawing)}
+              meta={busy ? 'attaching' : isDraft ? 'open' : 'attach'}
+              detail={`${drawing.id} · ${formatRevision(drawing)}`}
               title={`${getDrawingTitle(drawing)} · ${drawing.id} · ${formatRevision(drawing)}`}
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-[12px] font-medium">{getDrawingTitle(drawing)}</span>
-                <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/70">
-                  {busy ? 'attaching' : isDraft ? 'open' : 'attach'}
-                </span>
-              </div>
-              <div className="mt-0.5 truncate font-mono text-[10px] text-dim">
-                {drawing.id} · {formatRevision(drawing)}
-              </div>
-            </button>
+            />
           );
         })}
       </div>
@@ -704,7 +696,7 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="shrink-0 px-3 py-2">
         <div className="flex min-w-0 items-center gap-1">
-          <p className="ui-section-label flex-1">Drawings</p>
+          <SectionLabel className="flex-1">Drawings</SectionLabel>
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"

@@ -26,7 +26,9 @@ import {
   MenuShell,
   Notice,
   Pill,
+  ResourceListItem,
   SearchInput,
+  SectionLabel,
   SegmentedControl,
   Select,
   SettingToggleRow,
@@ -129,6 +131,11 @@ const meta = {
       <section style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Data Display</h2>
         <SurfacePanel style={{ display: 'grid', gap: 16, padding: 16 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <SectionLabel>Artifacts</SectionLabel>
+            <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" selected />
+            <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
+          </div>
           <StatGrid>
             <Stat label="Installed" value="31" />
             <Stat label="Enabled" value="26" />

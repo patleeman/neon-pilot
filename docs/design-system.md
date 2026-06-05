@@ -55,7 +55,7 @@ The initial package includes:
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
 - Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection: `SegmentedControl`, `TabList`, `TabButton`
-- Data display: `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
+- Data display: `SectionLabel`, `ResourceListItem`, `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`
 - Utility: `cx`
 

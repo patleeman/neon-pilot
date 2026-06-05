@@ -1,4 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { ResourceListItem, SectionLabel } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -240,19 +241,15 @@ export function ArtifactsPanel({ pa, context }: ExtensionSurfaceProps) {
         {artifacts.map((artifact) => {
           const selected = artifact.id === activeArtifactId;
           return (
-            <button
+            <ResourceListItem
               key={artifact.id}
-              type="button"
               onClick={() => handleOpenArtifact(artifact.id)}
-              className={`rounded-xl px-3 py-2.5 text-left transition-colors ${selected ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary'}`}
+              selected={selected}
+              label={artifact.title}
+              meta={artifact.kind}
+              detail={artifact.id}
               title={`${artifact.title} · ${artifact.id} · rev ${artifact.revision}`}
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-[12px] font-medium">{artifact.title}</span>
-                <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/70">{artifact.kind}</span>
-              </div>
-              <div className="mt-0.5 truncate font-mono text-[10px] text-dim">{artifact.id}</div>
-            </button>
+            />
           );
         })}
       </div>
@@ -262,7 +259,7 @@ export function ArtifactsPanel({ pa, context }: ExtensionSurfaceProps) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="shrink-0 px-3 py-2">
-        <p className="ui-section-label">Artifacts</p>
+        <SectionLabel>Artifacts</SectionLabel>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">{content}</div>
     </div>

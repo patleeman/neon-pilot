@@ -19,7 +19,9 @@ import {
   MenuShell,
   Notice,
   Pill,
+  ResourceListItem,
   SearchInput,
+  SectionLabel,
   SegmentedControl,
   SettingToggleRow,
   Stat,
@@ -76,6 +78,24 @@ describe('design-system primitives', () => {
 
   it('renders text input with design-system class', () => {
     expect(renderToStaticMarkup(createElement(TextInput, { value: 'hello', readOnly: true }))).toContain('ui-text-input');
+  });
+
+  it('renders section labels and resource list rows', () => {
+    expect(renderToStaticMarkup(createElement(SectionLabel, null, 'Artifacts'))).toContain('ui-section-label');
+
+    const html = renderToStaticMarkup(
+      createElement(ResourceListItem, {
+        label: 'Architecture diagram',
+        meta: 'mermaid',
+        detail: 'artifact_123',
+        selected: true,
+      }),
+    );
+
+    expect(html).toContain('ui-resource-list-item');
+    expect(html).toContain('ui-resource-list-item-selected');
+    expect(html).toContain('Architecture diagram');
+    expect(html).toContain('mermaid');
   });
 
   it('renders dialog semantics', () => {

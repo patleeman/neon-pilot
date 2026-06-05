@@ -121,6 +121,42 @@ export function Keycap({ children, className }: { children: ReactNode; className
   return <kbd className={cx('ui-kbd', className)}>{children}</kbd>;
 }
 
+export function SectionLabel({ children, className, ...props }: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={cx('ui-section-label', className)} {...props}>
+      {children}
+    </span>
+  );
+}
+
+export function ResourceListItem({
+  label,
+  meta,
+  detail,
+  selected = false,
+  className,
+  children,
+  type = 'button',
+  ...props
+}: {
+  label: ReactNode;
+  meta?: ReactNode;
+  detail?: ReactNode;
+  selected?: boolean;
+  className?: string;
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button type={type} className={cx('ui-resource-list-item', selected && 'ui-resource-list-item-selected', className)} {...props}>
+      <span className="ui-resource-list-item-main">
+        <span className="ui-resource-list-item-title">{label}</span>
+        {meta ? <span className="ui-resource-list-item-meta">{meta}</span> : null}
+      </span>
+      {detail ? <span className="ui-resource-list-item-detail">{detail}</span> : null}
+      {children}
+    </button>
+  );
+}
+
 export function SurfacePanel({ className, muted = false, children, ...props }: HTMLAttributes<HTMLDivElement> & { muted?: boolean }) {
   return (
     <div className={cx(muted ? 'ui-panel-muted' : 'ui-panel', className)} {...props}>

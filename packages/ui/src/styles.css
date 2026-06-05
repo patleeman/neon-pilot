@@ -249,6 +249,86 @@ body {
   font-size: 0.6875rem;
 }
 
+.ui-section-label {
+  color: rgb(var(--color-teal) / 0.88);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ui-resource-list-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  padding: 0.625rem 0.75rem;
+  color: rgb(var(--color-secondary));
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.ui-resource-list-item:hover {
+  background: rgb(var(--color-elevated) / 0.6);
+  color: rgb(var(--color-primary));
+}
+
+.ui-resource-list-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
+}
+
+.ui-resource-list-item:disabled {
+  cursor: progress;
+  background: rgb(var(--color-elevated));
+  color: rgb(var(--color-primary));
+}
+
+.ui-resource-list-item-selected {
+  background: rgb(var(--color-elevated));
+  color: rgb(var(--color-primary));
+}
+
+.ui-resource-list-item-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ui-resource-list-item-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ui-resource-list-item-meta {
+  flex-shrink: 0;
+  color: rgb(var(--color-dim) / 0.7);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ui-resource-list-item-detail {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  color: rgb(var(--color-dim));
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-panel,
 .ui-panel-muted {
   border-radius: 0.75rem;
