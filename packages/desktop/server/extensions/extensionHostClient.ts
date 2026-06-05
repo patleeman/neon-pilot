@@ -484,12 +484,12 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         setExtensionEnabled(entry.manifest.id, false);
       }
       if (request.enabled) {
-        const [{ installSubscriptionsForExtension }, { startExtensionServices }] = await Promise.all([
+        const [{ installSubscriptionsForExtension }, { startServicesForExtension }] = await Promise.all([
           import('./extensionSubscriptions.js'),
           import('./extensionServices.js'),
         ]);
         await installSubscriptionsForExtension(entry.manifest.id, serverContext);
-        await startExtensionServices(serverContext);
+        await startServicesForExtension(entry.manifest.id, serverContext);
       }
       return {
         ok: true,

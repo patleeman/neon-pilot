@@ -122,6 +122,17 @@ export async function startExtensionServices(
   return results;
 }
 
+export async function startServicesForExtension(
+  extensionId: string,
+  serverContext?: ExtensionBackendServerContext,
+): Promise<Array<{ extensionId: string; serviceId: string; ok: boolean; error?: string }>> {
+  const summary = listExtensionInstallSummaries().find((s) => s.id === extensionId);
+  if (summary?.status !== 'enabled') return [];
+  const entry = findExtensionEntry(extensionId);
+  const services = entry?.manifest.backend?.services ?? [];
+  return Promise.all(services.map((service) => startOneExtensionService(extensionId, service, serverContext)));
+}
+
 export async function runExtensionServiceHealthChecks(serverContext?: ExtensionBackendServerContext): Promise<void> {
   for (const summary of listExtensionInstallSummaries()) {
     if (summary.status !== 'enabled') continue;

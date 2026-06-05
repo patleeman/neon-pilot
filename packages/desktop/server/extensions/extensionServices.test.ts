@@ -45,6 +45,7 @@ const {
   listRunningExtensionServices,
   runExtensionServiceHealthChecks,
   startExtensionServices,
+  startServicesForExtension,
   stopAllExtensionServices,
   stopExtensionServices,
 } = await import('./extensionServices.js');
@@ -183,6 +184,30 @@ describe('extensionServices', () => {
     await startExtensionServices();
 
     expect(loadExtensionBackend).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts services for only the requested enabled extension', async () => {
+    listExtensionInstallSummaries.mockReturnValue([
+      { id: 'target', status: 'enabled' },
+      { id: 'other', status: 'enabled' },
+    ]);
+    findExtensionEntry.mockImplementation((extensionId: string) => ({
+      manifest: { backend: { services: [{ id: 'sync', handler: `${extensionId}Start`, worker: { enabled: true } }] } },
+    }));
+    runExtensionBackendExportInWorker.mockResolvedValue({ ok: true });
+
+    await expect(startServicesForExtension('target', { server: true } as never)).resolves.toEqual([
+      { extensionId: 'target', serviceId: 'sync', ok: true },
+    ]);
+
+    expect(runExtensionBackendExportInWorker).toHaveBeenCalledOnce();
+    expect(runExtensionBackendExportInWorker).toHaveBeenCalledWith(
+      'target',
+      'targetStart',
+      { type: 'service-startup', label: 'service sync startup', target: 'sync' },
+      [{ serviceId: 'sync' }],
+      { server: true },
+    );
   });
 
   it('records startup failures and publishes app notifications', async () => {

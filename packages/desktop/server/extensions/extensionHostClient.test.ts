@@ -18,6 +18,7 @@ const extensionSubscriptions = vi.hoisted(() => ({
 const extensionServices = vi.hoisted(() => ({
   listRunningExtensionServices: vi.fn(),
   startExtensionServices: vi.fn(),
+  startServicesForExtension: vi.fn(),
   stopExtensionServices: vi.fn(),
 }));
 const extensionEventBus = vi.hoisted(() => ({
@@ -350,6 +351,8 @@ describe('extension host client', () => {
 
   it('routes extension enablement through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionServices.startExtensionServices.mockClear();
+    extensionServices.startServicesForExtension.mockClear();
     extensionRegistry.findExtensionEntry.mockReturnValueOnce({
       manifest: { id: 'ext', name: 'Ext', backend: { onEnableAction: 'enabled' } },
     });
@@ -359,7 +362,7 @@ describe('extension host client', () => {
       .mockReturnValueOnce([{ id: 'ext', status: 'enabled', enabled: true }]);
     extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { enabled: true } });
     extensionSubscriptions.installSubscriptionsForExtension.mockResolvedValueOnce(undefined);
-    extensionServices.startExtensionServices.mockResolvedValueOnce([]);
+    extensionServices.startServicesForExtension.mockResolvedValueOnce([]);
 
     await expect(
       getExtensionHostClient().setEnabled({ extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } }),
@@ -370,7 +373,11 @@ describe('extension host client', () => {
     });
     expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('ext', true);
     expect(extensionSubscriptions.installSubscriptionsForExtension).toHaveBeenCalledWith('ext', expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
-    expect(extensionServices.startExtensionServices).toHaveBeenCalledWith(expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
+    expect(extensionServices.startServicesForExtension).toHaveBeenCalledWith(
+      'ext',
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
+    expect(extensionServices.startExtensionServices).not.toHaveBeenCalled();
   });
 
   it('routes keybinding updates through the extension host request envelope', async () => {
