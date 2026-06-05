@@ -46,6 +46,7 @@ export {
   MenuShell,
   Notice,
   Pill,
+  ProgressBar,
   ResourceListItem,
   SearchInput,
   SectionLabel,

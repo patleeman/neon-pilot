@@ -318,6 +318,34 @@ body {
   opacity: 1;
 }
 
+.ui-progress-bar {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  background: rgb(var(--color-elevated));
+}
+
+.ui-progress-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.ui-progress-bar-accent {
+  background: rgb(var(--color-accent));
+}
+
+.ui-progress-bar-success {
+  background: rgb(var(--color-success) / 0.7);
+}
+
+.ui-progress-bar-warning {
+  background: rgb(var(--color-warning) / 0.8);
+}
+
+.ui-progress-bar-danger {
+  background: rgb(var(--color-danger));
+}
+
 .ui-section-label {
   color: rgb(var(--color-teal) / 0.88);
   font-size: 0.625rem;

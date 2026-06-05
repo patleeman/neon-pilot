@@ -29,6 +29,7 @@ import {
   MenuShell,
   Notice,
   Pill,
+  ProgressBar,
   ResourceListItem,
   SearchInput,
   SectionLabel,
@@ -171,6 +172,12 @@ const meta = {
             <KeyValueItem label="Package" value="installable-extensions/system-example" action={<Button variant="ghost">Open</Button>} />
             <KeyValueItem label="Permissions" value="Filesystem, shell, notifications" />
           </KeyValueList>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <SectionLabel>Progress</SectionLabel>
+            <ProgressBar value={64} label="Trace coverage" />
+            <ProgressBar value={42} tone="success" label="Successful calls" />
+            <ProgressBar value={18} tone="warning" minPercent={2} label="Warnings" />
+          </div>
           <Disclosure summary="Invocation payload" open>
             <CodeBlock compact>{'{\n  "cwd": "/Users/patrick/workingdir/neon-pilot",\n  "mode": "review"\n}'}</CodeBlock>
           </Disclosure>

@@ -198,6 +198,7 @@ export declare const MenuSeparator: HostComponent;
 export declare const MenuShell: HostComponent;
 export declare const Notice: HostComponent;
 export declare const Pill: HostComponent;
+export declare const ProgressBar: HostComponent;
 export declare const ResourceListItem: HostComponent;
 export declare const SearchInput: HostComponent;
 export declare const SectionLabel: HostComponent;

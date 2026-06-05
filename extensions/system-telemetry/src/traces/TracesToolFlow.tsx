@@ -3,6 +3,7 @@
  */
 
 import type { ToolFlowResult } from '@neon-pilot/extensions/data';
+import { ProgressBar } from '@neon-pilot/extensions/ui';
 
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
@@ -42,9 +43,7 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
                   <span className="text-[11px] text-primary w-[90px] font-mono truncate" title={t.toTool}>
                     {t.toTool}
                   </span>
-                  <div className="flex-1 h-2 bg-elevated rounded-md overflow-hidden">
-                    <div className="h-full rounded-md bg-accent" style={{ width: `${pct}%` }} />
-                  </div>
+                  <ProgressBar value={pct} className="h-2 flex-1" label={`${t.fromTool} to ${t.toTool}`} />
                   <span className="text-[10px] font-mono text-dim w-[30px] text-right">{t.count}</span>
                 </div>
               );
@@ -64,9 +63,7 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
                   <span className="text-[11px] text-secondary w-[55px] text-right font-mono truncate">{c.toolA}</span>
                   <span className="text-dim text-[9px]">+</span>
                   <span className="text-[11px] text-primary w-[55px] font-mono truncate">{c.toolB}</span>
-                  <div className="flex-1 h-2 bg-elevated rounded-md overflow-hidden">
-                    <div className="h-full rounded-md bg-success" style={{ width: `${pct}%` }} />
-                  </div>
+                  <ProgressBar value={pct} tone="success" className="h-2 flex-1" label={`${c.toolA} and ${c.toolB}`} />
                   <span className="text-[10px] font-mono text-dim w-[24px] text-right">{c.sessions}</span>
                 </div>
               );

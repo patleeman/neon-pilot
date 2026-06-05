@@ -36,6 +36,7 @@ export declare const AppPageSection: HostComponent;
 export declare const AppPageToc: HostComponent;
 export declare const Pill: HostComponent;
 export declare const Disclosure: HostComponent;
+export declare const ProgressBar: HostComponent;
 export declare const SupportingText: HostComponent;
 export declare const THINKING_LEVEL_OPTIONS: unknown;
 export declare const ToolbarButton: HostComponent;

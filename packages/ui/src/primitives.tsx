@@ -162,6 +162,52 @@ export function Tooltip({
   );
 }
 
+const PROGRESS_BAR_TONE_CLASSES = {
+  accent: 'ui-progress-bar-accent',
+  success: 'ui-progress-bar-success',
+  warning: 'ui-progress-bar-warning',
+  danger: 'ui-progress-bar-danger',
+} as const;
+
+export type ProgressBarTone = keyof typeof PROGRESS_BAR_TONE_CLASSES;
+
+export function ProgressBar({
+  value,
+  max = 100,
+  minPercent = 0,
+  tone = 'accent',
+  className,
+  barClassName,
+  label,
+  ...props
+}: {
+  value: number;
+  max?: number;
+  minPercent?: number;
+  tone?: ProgressBarTone;
+  className?: string;
+  barClassName?: string;
+  label?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 100;
+  const rawPercent = Number.isFinite(value) ? (value / safeMax) * 100 : 0;
+  const boundedPercent = Math.max(0, Math.min(100, rawPercent));
+  const visiblePercent = boundedPercent > 0 ? Math.max(minPercent, boundedPercent) : 0;
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={safeMax}
+      aria-valuenow={Math.max(0, Math.min(safeMax, value))}
+      className={cx('ui-progress-bar', className)}
+      {...props}
+    >
+      <div className={cx('ui-progress-bar-fill', PROGRESS_BAR_TONE_CLASSES[tone], barClassName)} style={{ width: `${visiblePercent}%` }} />
+    </div>
+  );
+}
+
 export function SectionLabel({ children, className, ...props }: HTMLAttributes<HTMLSpanElement>) {
   return (
     <span className={cx('ui-section-label', className)} {...props}>

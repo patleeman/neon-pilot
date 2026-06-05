@@ -22,6 +22,7 @@ import {
   MenuShell,
   Notice,
   Pill,
+  ProgressBar,
   ResourceListItem,
   SearchInput,
   SectionLabel,
@@ -70,6 +71,15 @@ describe('design-system primitives', () => {
     const html = renderToStaticMarkup(createElement(Switch, { checked: true, label: 'Enabled' }));
     expect(html).toContain('role="switch"');
     expect(html).toContain('aria-checked="true"');
+  });
+
+  it('renders progress bar semantics', () => {
+    const html = renderToStaticMarkup(createElement(ProgressBar, { value: 7, max: 10, minPercent: 2, tone: 'success', label: 'Coverage' }));
+
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-valuemax="10"');
+    expect(html).toContain('aria-valuenow="7"');
+    expect(html).toContain('ui-progress-bar-success');
   });
 
   it('renders setting toggle rows with switch semantics', () => {
