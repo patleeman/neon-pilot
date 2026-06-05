@@ -168,4 +168,24 @@ describe('backendApi/extensions', () => {
       'extensions.additionalPaths': '/extensions/one\n/extensions/two',
     });
   });
+
+  it('writes extension catalog sources to profile and state-root settings files', async () => {
+    const { writeExtensionCatalogSources } = await import('./extensions.js');
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-ext-sources-'));
+    const runtimeDir = join(stateRoot, 'profiles', 'shared');
+    const runtimeSettingsFilePath = join(runtimeDir, 'settings.json');
+    const sources = [{ id: 'example', type: 'github', owner: 'example', repo: 'extensions', enabled: true }];
+
+    await expect(
+      writeExtensionCatalogSources({
+        runtimeDir,
+        runtimeSettingsFilePath,
+        sources,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(JSON.parse(readFileSync(runtimeSettingsFilePath, 'utf-8'))).toMatchObject({ 'extensions.sources': sources });
+    expect(JSON.parse(readFileSync(join(runtimeDir, 'settings.json'), 'utf-8'))).toMatchObject({ 'extensions.sources': sources });
+    expect(JSON.parse(readFileSync(join(stateRoot, 'profiles', 'settings.json'), 'utf-8'))).toMatchObject({ 'extensions.sources': sources });
+  });
 });

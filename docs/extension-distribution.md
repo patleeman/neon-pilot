@@ -127,3 +127,25 @@ Source-branch installs are development mode only. They require local build trust
 8. Share the GitHub repo URL with users.
 
 Users install from the GitHub repo URL, inspect the packages it exposes, select the packages they want, review permissions and compatibility, then install the release artifacts.
+
+## User-configured sources
+
+Users can add GitHub extension repositories from **Settings -> Extensions -> Install Extension -> Extension repositories**. The app stores sources in the runtime settings file under `extensions.sources`:
+
+```json
+{
+  "extensions.sources": [
+    {
+      "id": "example-extensions",
+      "type": "github",
+      "owner": "example",
+      "repo": "example-neon-extensions",
+      "enabled": true
+    }
+  ]
+}
+```
+
+The first-party `patleeman/neon-pilot-extensions` repo is always present as the built-in source. Additional enabled sources are fetched from `neon.extensions.json` on `main` or `master`, then merged into the installable extension list.
+
+Use the existing settings file for source configuration. A dedicated persistence table is only warranted once Neon Pilot tracks mutable source state such as refresh timestamps, trust decisions, signature validation, update history, or repeated fetch failures.

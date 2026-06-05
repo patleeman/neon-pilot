@@ -25,6 +25,7 @@ interface InstallableExtensionCatalogItem {
   packageType?: 'extension' | 'skill' | 'instruction-pack' | 'agent' | 'template';
   ecosystem?: 'neon-pilot' | 'codex' | 'claude';
   marketplaceSourceId?: string;
+  sourceRepo?: { owner: string; repo: string };
   bundleUrl?: string;
   packageSource?: string;
   defaultEnabled?: boolean;
@@ -45,9 +46,21 @@ interface InstallableExtensionCatalogResponse {
     description: string;
     supportedPackageTypes: string[];
     installStatus: 'supported' | 'planned';
+    owner?: string;
+    repo?: string;
   }>;
+  sourceErrors?: Array<{ sourceId: string; message: string }>;
   extensions: InstallableExtensionCatalogItem[];
   packages?: InstallableExtensionCatalogItem[];
+}
+
+interface ExtensionCatalogSource {
+  id: string;
+  type: 'github';
+  owner: string;
+  repo: string;
+  enabled: boolean;
+  name?: string;
 }
 
 type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | 'template';
@@ -493,6 +506,32 @@ function packageKindLabel(item: InstallableExtensionCatalogItem): string {
   return item.packageType;
 }
 
+function parseGithubCatalogSource(value: string): ExtensionCatalogSource | null {
+  const trimmed = value.trim();
+  const shorthand = trimmed.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  const repo = shorthand
+    ? { owner: shorthand[1], repo: shorthand[2].replace(/\.git$/, '') }
+    : (() => {
+        try {
+          const url = new URL(trimmed);
+          if (url.hostname !== 'github.com') return null;
+          const [owner, repoName] = url.pathname.replace(/^\/+/, '').split('/');
+          if (!owner || !repoName) return null;
+          return { owner, repo: repoName.replace(/\.git$/, '') };
+        } catch {
+          return null;
+        }
+      })();
+  if (!repo) return null;
+  return {
+    id: `${repo.owner.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${repo.repo.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    type: 'github',
+    owner: repo.owner,
+    repo: repo.repo,
+    enabled: true,
+  };
+}
+
 function installedCatalogItemToSummary(item: InstallableExtensionCatalogItem): ExtensionInstallSummary {
   const enabled = item.enabled ?? false;
   return {
@@ -558,6 +597,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogSources, setCatalogSources] = useState<ExtensionCatalogSource[]>([]);
+  const [catalogSourceInput, setCatalogSourceInput] = useState('');
   const [marketplaceSource, setMarketplaceSource] = useState('');
   const [marketplacePackageType, setMarketplacePackageType] = useState<MarketplaceBehaviorPackageType>('skill');
   const marketplaceEcosystem: MarketplaceBehaviorEcosystem = 'codex';
@@ -589,12 +630,20 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     setCatalogError(null);
     if (!pa.extensions?.callAction) {
       setCatalog({ ok: true, version: '', tag: '', extensions: [] });
+      setCatalogSources([]);
       return;
     }
     void pa.extensions
       .callAction('system-extension-manager', 'listInstallableExtensions', {})
       .then((result) => setCatalog(result as InstallableExtensionCatalogResponse))
       .catch((err) => setCatalogError(err instanceof Error ? err.message : String(err)));
+    void pa.extensions
+      .callAction('system-extension-manager', 'readExtensionSources', {})
+      .then((result) => {
+        const sources = (result as { sources?: ExtensionCatalogSource[] }).sources;
+        setCatalogSources(Array.isArray(sources) ? sources : []);
+      })
+      .catch(() => setCatalogSources([]));
   }, [pa]);
 
   useEffect(() => {
@@ -667,6 +716,47 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       setBusyId(null);
     }
   }, [load, loadCatalog, marketplaceEcosystem, marketplacePackageType, marketplaceSource, pa, showActionError]);
+
+  const addCatalogSource = useCallback(async () => {
+    const parsed = parseGithubCatalogSource(catalogSourceInput);
+    if (!parsed) {
+      showActionError('Extension repository must be a GitHub repo URL or owner/repo.');
+      return;
+    }
+    const nextSources = [
+      ...catalogSources.filter((source) => `${source.owner.toLowerCase()}/${source.repo.toLowerCase()}` !== `${parsed.owner.toLowerCase()}/${parsed.repo.toLowerCase()}`),
+      parsed,
+    ];
+    setBusyId('extension-source');
+    try {
+      await pa.extensions.callAction('system-extension-manager', 'updateExtensionSources', { sources: nextSources });
+      setCatalogSourceInput('');
+      setNotice(`Added ${parsed.owner}/${parsed.repo} to extension repositories.`);
+      loadCatalog();
+    } catch (err) {
+      showActionError('Failed to add extension repository', err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }, [catalogSourceInput, catalogSources, loadCatalog, pa, showActionError]);
+
+  const removeCatalogSource = useCallback(
+    async (source: ExtensionCatalogSource) => {
+      if (source.id === 'neon-pilot') return;
+      const nextSources = catalogSources.filter((candidate) => candidate.id !== source.id);
+      setBusyId(`extension-source:${source.id}`);
+      try {
+        await pa.extensions.callAction('system-extension-manager', 'updateExtensionSources', { sources: nextSources });
+        setNotice(`Removed ${source.owner}/${source.repo} from extension repositories.`);
+        loadCatalog();
+      } catch (err) {
+        showActionError('Failed to remove extension repository', err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [catalogSources, loadCatalog, pa, showActionError],
+  );
 
   const toggleExtension = useCallback(
     (extension: ExtensionInstallSummary) => {
@@ -1113,11 +1203,17 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           packageType={marketplacePackageType}
           busy={busyId === 'marketplace-source'}
           catalogItems={visibleCatalogExtensions}
+          catalogSources={catalogSources}
+          catalogSourceInput={catalogSourceInput}
+          catalogSourceErrors={catalog?.sourceErrors ?? []}
           catalogBusyId={busyId}
           onSourceChange={setMarketplaceSource}
+          onCatalogSourceInputChange={setCatalogSourceInput}
           onPackageTypeChange={setMarketplacePackageType}
           onInstall={() => void installMarketplaceSource()}
           onInstallCatalog={(item) => void installCatalogExtension(item)}
+          onAddCatalogSource={() => void addCatalogSource()}
+          onRemoveCatalogSource={(source) => void removeCatalogSource(source)}
           onClose={() => setInstallModalOpen(false)}
         />
       ) : null}
@@ -1136,22 +1232,34 @@ function InstallExtensionModal({
   packageType,
   busy,
   catalogItems,
+  catalogSources,
+  catalogSourceInput,
+  catalogSourceErrors,
   catalogBusyId,
   onSourceChange,
+  onCatalogSourceInputChange,
   onPackageTypeChange,
   onInstall,
   onInstallCatalog,
+  onAddCatalogSource,
+  onRemoveCatalogSource,
   onClose,
 }: {
   source: string;
   packageType: MarketplaceBehaviorPackageType;
   busy: boolean;
   catalogItems: InstallableExtensionCatalogItem[];
+  catalogSources: ExtensionCatalogSource[];
+  catalogSourceInput: string;
+  catalogSourceErrors: Array<{ sourceId: string; message: string }>;
   catalogBusyId: string | null;
   onSourceChange: (source: string) => void;
+  onCatalogSourceInputChange: (source: string) => void;
   onPackageTypeChange: (packageType: MarketplaceBehaviorPackageType) => void;
   onInstall: () => void;
   onInstallCatalog: (item: InstallableExtensionCatalogItem) => void;
+  onAddCatalogSource: () => void;
+  onRemoveCatalogSource: (source: ExtensionCatalogSource) => void;
   onClose: () => void;
 }) {
   const [marketplaceQuery, setMarketplaceQuery] = useState('');
@@ -1226,6 +1334,58 @@ function InstallExtensionModal({
           <p className="text-[12px] leading-5 text-dim">
             Neon Pilot extensions install directly. Agent plugins, including Codex and Claude-style packages, are imported as extensions.
           </p>
+
+          <section className="space-y-2">
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Extension repositories</h3>
+            <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+              <input
+                className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                value={catalogSourceInput}
+                onChange={(event) => onCatalogSourceInputChange(event.currentTarget.value)}
+                placeholder="GitHub repo URL or owner/repo"
+              />
+              <button
+                type="button"
+                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-medium text-primary hover:bg-surface/80 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={catalogBusyId === 'extension-source'}
+                onClick={onAddCatalogSource}
+              >
+                {catalogBusyId === 'extension-source' ? 'Adding...' : 'Add repo'}
+              </button>
+            </div>
+            <div className="divide-y divide-border-subtle/70 border-y border-border-subtle/70">
+              {catalogSources.map((source) => (
+                <div key={source.id} className="flex items-center justify-between gap-3 py-2 text-[12px]">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-primary">{source.name ?? `${source.owner}/${source.repo}`}</div>
+                    <div className="truncate text-dim">
+                      {source.owner}/{source.repo}
+                      {source.enabled ? '' : ' · disabled'}
+                    </div>
+                  </div>
+                  {source.id !== 'neon-pilot' ? (
+                    <button
+                      type="button"
+                      className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={catalogBusyId === `extension-source:${source.id}`}
+                      onClick={() => onRemoveCatalogSource(source)}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            {catalogSourceErrors.length ? (
+              <div className="space-y-1 text-[12px] text-danger">
+                {catalogSourceErrors.map((error) => (
+                  <p key={`${error.sourceId}:${error.message}`}>
+                    {error.sourceId}: {error.message}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </section>
 
           {catalogItems.length ? (
             <section className="space-y-2">

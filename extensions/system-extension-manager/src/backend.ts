@@ -9,10 +9,12 @@ import {
   installMarketplacePackageAsExtension,
   listExtensionInstallSummaries,
   listInstallableExtensionCatalog as listInstallableExtensionCatalogFromHost,
+  readExtensionCatalogSources,
   reloadExtensionBackend,
   snapshotRuntimeExtension,
   validateExtensionPackage,
   writeAdditionalExtensionSearchPaths,
+  writeExtensionCatalogSources,
 } from '@neon-pilot/extensions/backend/extensions';
 import { HOST_VIEW_COMPONENT_DEFINITIONS } from '@neon-pilot/extensions/host-view-components';
 
@@ -128,6 +130,16 @@ export async function updateSearchPaths(input: unknown, ctx: ExtensionBackendCon
   return readSearchPaths(input, ctx);
 }
 
+export async function readExtensionSources(_input: unknown, _ctx: ExtensionBackendContext) {
+  return readExtensionCatalogSources();
+}
+
+export async function updateExtensionSources(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const sources = Array.isArray(body.sources) ? body.sources : [];
+  return writeExtensionCatalogSources({ runtimeDir: ctx.runtimeDir, runtimeSettingsFilePath: ctx.runtimeSettingsFilePath, sources });
+}
+
 export async function reloadExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
   return { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' };
 }
@@ -147,6 +159,8 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'installMarketplacePackage') return installMarketplacePackage(input, ctx);
   if (action === 'readSearchPaths') return readSearchPaths(input, ctx);
   if (action === 'updateSearchPaths') return updateSearchPaths(input, ctx);
+  if (action === 'readExtensionSources') return readExtensionSources(input, ctx);
+  if (action === 'updateExtensionSources') return updateExtensionSources(input, ctx);
   if (action === 'reloadExtensions') return reloadExtensions(input, ctx);
   throw new Error(`Unsupported extension manager action: ${action}`);
 }

@@ -109,6 +109,22 @@
         }
       },
       {
+        "id": "readExtensionSources",
+        "handler": "readExtensionSources",
+        "title": "Read extension catalog sources",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "updateExtensionSources",
+        "handler": "updateExtensionSources",
+        "title": "Update extension catalog sources",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "reloadExtensions",
         "handler": "reloadExtensions",
         "title": "Reload extension registry",
@@ -135,6 +151,8 @@
             "installMarketplacePackage",
             "readSearchPaths",
             "updateSearchPaths",
+            "readExtensionSources",
+            "updateExtensionSources",
             "reloadExtensions"
           ]
         }

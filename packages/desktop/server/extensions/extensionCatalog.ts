@@ -2,20 +2,42 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
+import { getStateRoot } from '@neon-pilot/core';
+
 import { importRuntimeExtensionBundle } from './extensionLifecycle.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { INSTALLABLE_EXTENSION_CATALOG } from './installableExtensionCatalog.generated.js';
 
-const GITHUB_RELEASE_BASE_URL = 'https://github.com/patleeman/neon-pilot-extensions/releases/download';
+const EXTENSION_SOURCES_SETTING = 'extensions.sources';
+const FIRST_PARTY_SOURCE_ID = 'neon-pilot';
+const FIRST_PARTY_REPO = { owner: 'patleeman', repo: 'neon-pilot-extensions' };
 const MAX_EXTENSION_BUNDLE_BYTES = 80 * 1024 * 1024;
 
 export interface CatalogSeed {
   id: string;
   name: string;
   description: string;
+  version?: string;
+  tag?: string;
+  path?: string;
   packageType?: MarketplacePackageType;
   ecosystem?: MarketplaceEcosystem;
   marketplaceSourceId?: string;
+  sourceRepo?: GithubExtensionSourceRepo;
+}
+
+export interface GithubExtensionSourceRepo {
+  owner: string;
+  repo: string;
+}
+
+export interface ExtensionCatalogSource {
+  id: string;
+  type: 'github';
+  owner: string;
+  repo: string;
+  enabled: boolean;
+  name?: string;
 }
 
 export type MarketplaceEcosystem = 'neon-pilot' | 'codex' | 'claude';
@@ -28,6 +50,8 @@ export interface MarketplaceSource {
   description: string;
   supportedPackageTypes: MarketplacePackageType[];
   installStatus: 'supported' | 'planned';
+  owner?: string;
+  repo?: string;
 }
 
 const MARKETPLACE_SOURCES: MarketplaceSource[] = [
@@ -35,9 +59,11 @@ const MARKETPLACE_SOURCES: MarketplaceSource[] = [
     id: 'neon-pilot-release',
     name: 'Neon Pilot Extensions',
     ecosystem: 'neon-pilot',
-    description: 'First-party Neon Pilot extension bundles published with the current app release.',
+    description: 'First-party Neon Pilot extension bundles published from patleeman/neon-pilot-extensions.',
     supportedPackageTypes: ['extension'],
     installStatus: 'supported',
+    owner: FIRST_PARTY_REPO.owner,
+    repo: FIRST_PARTY_REPO.repo,
   },
   {
     id: 'codex',
@@ -67,6 +93,7 @@ export interface InstallableExtensionCatalogItem extends CatalogSeed {
   packageSource?: string;
   defaultEnabled: boolean;
   source: 'github-release';
+  sourceRepo: GithubExtensionSourceRepo;
   installed: boolean;
   installedVersion?: string;
   enabled?: boolean;
@@ -98,7 +125,11 @@ export function resolveInstalledAppVersion(): string {
 
 function bundleUrlFor(id: string, version: string): string {
   const tag = `v${version}`;
-  return `${GITHUB_RELEASE_BASE_URL}/${encodeURIComponent(tag)}/${encodeURIComponent(id)}.neon-extension.zip`;
+  return bundleUrlForRepo(FIRST_PARTY_REPO, id, tag);
+}
+
+function bundleUrlForRepo(repo: GithubExtensionSourceRepo, id: string, tag: string): string {
+  return `https://github.com/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.repo)}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(id)}.neon-extension.zip`;
 }
 
 function localBundlePathFor(id: string): string | null {
@@ -112,43 +143,186 @@ function localBundlePathFor(id: string): string | null {
   return null;
 }
 
-export function listInstallableExtensionCatalog(): {
+export async function listInstallableExtensionCatalog(stateRoot: string = getStateRoot()): Promise<{
   ok: true;
   version: string;
   tag: string;
   marketplaceSources: MarketplaceSource[];
   extensions: InstallableExtensionCatalogItem[];
   packages: InstallableExtensionCatalogItem[];
-} {
+  sourceErrors: Array<{ sourceId: string; message: string }>;
+}> {
   const version = resolveInstalledAppVersion();
   const tag = `v${version}`;
   const summaries = listExtensionInstallSummaries();
   const installedById = new Map(summaries.map((summary) => [summary.id, summary]));
-  const packages: InstallableExtensionCatalogItem[] = INSTALLABLE_EXTENSION_CATALOG.map((item) => {
+  const configured = readConfiguredExtensionCatalogSources(stateRoot);
+  const enabledConfigured = configured.filter((source) => source.enabled);
+  const sourceErrors: Array<{ sourceId: string; message: string }> = [];
+  const remoteSeeds = (
+    await Promise.all(
+      enabledConfigured
+        .filter((source) => source.id !== FIRST_PARTY_SOURCE_ID)
+        .map(async (source) => {
+          try {
+            return await fetchGithubSourceCatalog(source);
+          } catch (error) {
+            sourceErrors.push({ sourceId: source.id, message: error instanceof Error ? error.message : String(error) });
+            return [];
+          }
+        }),
+    )
+  ).flat();
+  const packages: InstallableExtensionCatalogItem[] = [...INSTALLABLE_EXTENSION_CATALOG, ...remoteSeeds].map((item) => {
     const installed = installedById.get(item.id);
+    const itemVersion = item.version ?? version;
+    const itemTag = item.tag ?? `v${itemVersion}`;
+    const sourceRepo = item.sourceRepo ?? FIRST_PARTY_REPO;
     return {
       ...item,
-      version,
-      tag,
+      version: itemVersion,
+      tag: itemTag,
       packageType: item.packageType ?? 'extension',
       ecosystem: item.ecosystem ?? 'neon-pilot',
       marketplaceSourceId: item.marketplaceSourceId ?? 'neon-pilot-release',
-      bundleUrl: bundleUrlFor(item.id, version),
+      bundleUrl: bundleUrlForRepo(sourceRepo, item.id, itemTag),
       defaultEnabled: false,
       source: 'github-release',
+      sourceRepo,
       installed: Boolean(installed),
       ...(installed?.version ? { installedVersion: installed.version } : {}),
       ...(installed ? { enabled: installed.enabled } : {}),
     };
   });
+  const marketplaceSources = [
+    ...MARKETPLACE_SOURCES,
+    ...enabledConfigured
+      .filter((source) => source.id !== FIRST_PARTY_SOURCE_ID)
+      .map((source): MarketplaceSource => ({
+        id: source.id,
+        name: source.name ?? `${source.owner}/${source.repo}`,
+        ecosystem: 'neon-pilot',
+        description: `Extensions from ${source.owner}/${source.repo}.`,
+        supportedPackageTypes: ['extension'],
+        installStatus: 'supported',
+        owner: source.owner,
+        repo: source.repo,
+      })),
+  ];
   return {
     ok: true,
     version,
     tag,
-    marketplaceSources: MARKETPLACE_SOURCES,
+    marketplaceSources,
     extensions: packages,
     packages,
+    sourceErrors,
   };
+}
+
+export function readConfiguredExtensionCatalogSources(stateRoot: string = getStateRoot()): ExtensionCatalogSource[] {
+  const configured = normalizeExtensionCatalogSources(readJson(join(stateRoot, 'settings.json'))?.[EXTENSION_SOURCES_SETTING]);
+  return mergeExtensionCatalogSources([defaultExtensionCatalogSource(), ...configured]);
+}
+
+function defaultExtensionCatalogSource(): ExtensionCatalogSource {
+  return {
+    id: FIRST_PARTY_SOURCE_ID,
+    type: 'github',
+    owner: FIRST_PARTY_REPO.owner,
+    repo: FIRST_PARTY_REPO.repo,
+    enabled: true,
+    name: 'Neon Pilot Extensions',
+  };
+}
+
+function normalizeExtensionCatalogSources(value: unknown): ExtensionCatalogSource[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    const urlRepo = typeof record.url === 'string' ? parseGithubRepoUrl(record.url) : null;
+    const owner = typeof record.owner === 'string' && record.owner.trim() ? record.owner.trim() : urlRepo?.owner;
+    const repo = typeof record.repo === 'string' && record.repo.trim() ? record.repo.trim() : urlRepo?.repo;
+    if (!owner || !repo) return [];
+    const id =
+      typeof record.id === 'string' && record.id.trim()
+        ? record.id.trim()
+        : `${owner.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${repo.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    return [
+      {
+        id,
+        type: 'github' as const,
+        owner,
+        repo,
+        enabled: record.enabled !== false,
+        ...(typeof record.name === 'string' && record.name.trim() ? { name: record.name.trim() } : {}),
+      },
+    ];
+  });
+}
+
+function mergeExtensionCatalogSources(sources: ExtensionCatalogSource[]): ExtensionCatalogSource[] {
+  const byRepo = new Map<string, ExtensionCatalogSource>();
+  for (const source of sources) {
+    byRepo.set(`${source.owner.toLowerCase()}/${source.repo.toLowerCase()}`, source);
+  }
+  return [...byRepo.values()];
+}
+
+function parseGithubRepoUrl(value: string): GithubExtensionSourceRepo | null {
+  const trimmed = value.trim();
+  const shorthand = trimmed.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  if (shorthand) return { owner: shorthand[1], repo: shorthand[2].replace(/\.git$/, '') };
+  try {
+    const url = new URL(trimmed);
+    if (url.hostname !== 'github.com') return null;
+    const [owner, repo] = url.pathname.replace(/^\/+/, '').split('/');
+    if (!owner || !repo) return null;
+    return { owner, repo: repo.replace(/\.git$/, '') };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchGithubSourceCatalog(source: ExtensionCatalogSource): Promise<CatalogSeed[]> {
+  const manifest = await fetchGithubSourceManifest(source);
+  const packages = Array.isArray(manifest.packages) ? manifest.packages : [];
+  return packages.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    const id = typeof record.id === 'string' && record.id.trim() ? record.id.trim() : '';
+    if (!id) return [];
+    return [
+      {
+        id,
+        name: typeof record.name === 'string' && record.name.trim() ? record.name.trim() : id,
+        description: typeof record.description === 'string' && record.description.trim() ? record.description.trim() : `Extension from ${source.owner}/${source.repo}.`,
+        ...(typeof record.version === 'string' && record.version.trim() ? { version: record.version.trim() } : {}),
+        ...(typeof record.tag === 'string' && record.tag.trim() ? { tag: record.tag.trim() } : {}),
+        ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : {}),
+        packageType: 'extension',
+        ecosystem: 'neon-pilot',
+        marketplaceSourceId: source.id,
+        sourceRepo: { owner: source.owner, repo: source.repo },
+      },
+    ];
+  });
+}
+
+async function fetchGithubSourceManifest(source: ExtensionCatalogSource): Promise<Record<string, unknown>> {
+  const branches = ['main', 'master'];
+  for (const branch of branches) {
+    const url = `https://raw.githubusercontent.com/${encodeURIComponent(source.owner)}/${encodeURIComponent(source.repo)}/${encodeURIComponent(branch)}/neon.extensions.json`;
+    const response = await fetch(url);
+    if (response.ok) {
+      const parsed = (await response.json()) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+      throw new Error(`${source.owner}/${source.repo} neon.extensions.json is not an object.`);
+    }
+    if (response.status !== 404) throw new Error(`Failed to fetch ${source.owner}/${source.repo}: HTTP ${response.status}`);
+  }
+  throw new Error(`${source.owner}/${source.repo} does not contain neon.extensions.json on main or master.`);
 }
 
 function assertSafeExtensionBundleUrl(value: string): URL {
@@ -217,7 +391,7 @@ export function installExtensionBundleFromPath(input: { path?: unknown; expected
 export async function installCatalogExtension(input: { id?: unknown }, stateRoot?: string) {
   const id = typeof input.id === 'string' ? input.id.trim() : '';
   if (!id) throw new Error('id is required.');
-  const item = listInstallableExtensionCatalog().extensions.find((candidate) => candidate.id === id);
+  const item = (await listInstallableExtensionCatalog(stateRoot)).extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
   if (findExtensionEntry(id)) throw new Error(`Extension ${id} is already installed.`);

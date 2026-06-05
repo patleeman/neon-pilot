@@ -1,4 +1,5 @@
-import { rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -36,7 +37,7 @@ describe('extension catalog', () => {
 
     const { listInstallableExtensionCatalog, resolveInstalledAppVersion } = await import('./extensionCatalog.js');
     const version = resolveInstalledAppVersion();
-    const catalog = listInstallableExtensionCatalog();
+    const catalog = await listInstallableExtensionCatalog();
 
     expect(version).toMatch(/^\d+\.\d+\.\d+/);
     expect(catalog.tag).toBe(`v${version}`);
@@ -78,6 +79,44 @@ describe('extension catalog', () => {
         }),
       ]),
     );
+  });
+
+  it('merges enabled GitHub extension sources from settings into the catalog', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-extension-sources-'));
+    writeFileSync(
+      join(stateRoot, 'settings.json'),
+      JSON.stringify({
+        'extensions.sources': [{ id: 'example-source', type: 'github', owner: 'example', repo: 'neon-extensions', enabled: true }],
+      }),
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => ({
+        ok: url.includes('/main/'),
+        status: url.includes('/main/') ? 200 : 404,
+        json: async () => ({
+          packages: [{ id: 'example-search', name: 'Example Search', description: 'Search from a custom repo.', version: '0.2.0' }],
+        }),
+      })),
+    );
+
+    const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog(stateRoot);
+
+    expect(catalog.marketplaceSources).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'example-source', owner: 'example', repo: 'neon-extensions' })]),
+    );
+    expect(catalog.extensions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'example-search',
+          version: '0.2.0',
+          marketplaceSourceId: 'example-source',
+          bundleUrl: 'https://github.com/example/neon-extensions/releases/download/v0.2.0/example-search.neon-extension.zip',
+        }),
+      ]),
+    );
+    rmSync(stateRoot, { recursive: true, force: true });
   });
 
   it('rejects non-GitHub bundle URLs before downloading', async () => {

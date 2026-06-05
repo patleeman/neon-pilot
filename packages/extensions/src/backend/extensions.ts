@@ -19,6 +19,12 @@ export interface ExtensionSearchPathWriteOptions {
   paths?: string[];
 }
 
+export interface ExtensionCatalogSourceWriteOptions {
+  runtimeDir?: string;
+  runtimeSettingsFilePath?: string;
+  sources?: unknown[];
+}
+
 export type ExtensionDoctorSeverity = 'error' | 'warning' | 'info';
 
 export interface ExtensionDoctorFinding {
@@ -102,5 +108,15 @@ export async function validateExtensionPackage(_options: { extensionId?: string;
 }
 
 export async function writeAdditionalExtensionSearchPaths(_options: ExtensionSearchPathWriteOptions): Promise<{ ok: true }> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function readExtensionCatalogSources(): Promise<{ ok: true; sources: unknown[] }> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function writeExtensionCatalogSources(
+  _options: ExtensionCatalogSourceWriteOptions,
+): Promise<{ ok: true; sources: unknown[] }> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }

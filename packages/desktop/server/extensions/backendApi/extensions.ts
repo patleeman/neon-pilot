@@ -16,8 +16,10 @@ type CoreModule = typeof import('@neon-pilot/core');
 type RuntimeExtensionCreateOptions = Parameters<ExtensionLifecycleModule['createRuntimeExtension']>[0];
 type ValidateExtensionPackageOptions = { extensionId?: string; packageRoot?: string };
 type ExtensionSearchPathWriteOptions = { runtimeDir?: string; runtimeSettingsFilePath?: string; paths?: string[] };
+type ExtensionSourceWriteOptions = { runtimeDir?: string; runtimeSettingsFilePath?: string; sources?: unknown[] };
 
 const ADDITIONAL_EXTENSION_PATHS_SETTING = 'extensions.additionalPaths';
+const EXTENSION_SOURCES_SETTING = 'extensions.sources';
 const IMPORTED_PACKAGE_SKIP_DIRS = new Set(['.git', 'dist', 'node_modules', 'target']);
 const MARKETPLACE_BEHAVIOR_PACKAGE_TYPES = new Set(['skill', 'instruction-pack', 'agent', 'template']);
 
@@ -141,12 +143,29 @@ export async function writeAdditionalExtensionSearchPaths(options: ExtensionSear
   if (!runtimeDir || !runtimeSettingsFilePath) throw new Error('runtimeDir and runtimeSettingsFilePath are required.');
   const paths = Array.isArray(options.paths) ? options.paths.filter((path): path is string => typeof path === 'string') : [];
   const pathsJoined = paths.join('\n');
-  writeSettingsValue(runtimeSettingsFilePath, pathsJoined);
-  writeSettingsValue(join(runtimeDir, 'settings.json'), pathsJoined);
+  writeSettingsValue(runtimeSettingsFilePath, ADDITIONAL_EXTENSION_PATHS_SETTING, pathsJoined);
+  writeSettingsValue(join(runtimeDir, 'settings.json'), ADDITIONAL_EXTENSION_PATHS_SETTING, pathsJoined);
   // Keep the canonical state-root settings file in sync with the profile file
   // because the extension loader reads configured search paths from state root.
-  writeSettingsValue(join(resolve(runtimeDir, '..'), 'settings.json'), pathsJoined);
+  writeSettingsValue(join(resolve(runtimeDir, '..'), 'settings.json'), ADDITIONAL_EXTENSION_PATHS_SETTING, pathsJoined);
   return { ok: true };
+}
+
+export async function readExtensionCatalogSources(): Promise<{ ok: true; sources: unknown[] }> {
+  const module = await importExtensionCatalog();
+  return { ok: true, sources: module.readConfiguredExtensionCatalogSources() };
+}
+
+export async function writeExtensionCatalogSources(options: ExtensionSourceWriteOptions): Promise<{ ok: true; sources: unknown[] }> {
+  const runtimeDir = typeof options.runtimeDir === 'string' && options.runtimeDir ? options.runtimeDir : undefined;
+  const runtimeSettingsFilePath =
+    typeof options.runtimeSettingsFilePath === 'string' && options.runtimeSettingsFilePath ? options.runtimeSettingsFilePath : undefined;
+  if (!runtimeDir || !runtimeSettingsFilePath) throw new Error('runtimeDir and runtimeSettingsFilePath are required.');
+  const sources = Array.isArray(options.sources) ? options.sources : [];
+  writeSettingsValue(runtimeSettingsFilePath, EXTENSION_SOURCES_SETTING, sources);
+  writeSettingsValue(join(runtimeDir, 'settings.json'), EXTENSION_SOURCES_SETTING, sources);
+  writeSettingsValue(join(resolve(runtimeDir, '..'), 'settings.json'), EXTENSION_SOURCES_SETTING, sources);
+  return { ok: true, sources };
 }
 
 function readSettingsFile(path: string): Record<string, unknown> {
@@ -159,9 +178,9 @@ function readSettingsFile(path: string): Record<string, unknown> {
   }
 }
 
-function writeSettingsValue(path: string, value: string): void {
+function writeSettingsValue(path: string, key: string, value: unknown): void {
   const settings = readSettingsFile(path);
-  settings[ADDITIONAL_EXTENSION_PATHS_SETTING] = value;
+  settings[key] = value;
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`);
 }

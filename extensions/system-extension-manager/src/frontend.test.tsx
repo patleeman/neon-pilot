@@ -344,7 +344,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(callAction).toHaveBeenCalledTimes(1);
+    expect(callAction).toHaveBeenCalledTimes(2);
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'listInstallableExtensions', {});
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'readExtensionSources', {});
     expect(setIntervalSpy.mock.calls.some((call) => call[1] === 5_000)).toBe(false);
   });
 
