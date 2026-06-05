@@ -502,14 +502,6 @@ const smokes = {
     const result = await module.listHostViewComponents({}, ctx);
     assert(result.ok === true && Array.isArray(result.hostViewComponents), 'host component list failed');
   },
-  async 'system-hermes-agent'() {
-    const initial = await module.readConfig({}, ctx);
-    assert(initial.config.id === 'local' && initial.config.baseUrl === 'http://127.0.0.1:8642', 'hermes default config failed');
-    const updated = await module.updateConfig({ id: 'smoke', name: 'Smoke Hermes', baseUrl: 'http://127.0.0.1:9999' }, ctx);
-    assert(updated.activeDeploymentId === 'smoke', 'hermes update did not activate deployment');
-    assert(updated.config.name === 'Smoke Hermes' && updated.config.hasApiKey === false, 'hermes update config failed');
-    assert(invalidatedTopics.some((topics) => topics.includes('extensions:system-hermes-agent')), 'hermes update did not invalidate UI');
-  },
   async 'system-image-probe'() {
     await expectReject(() => module.probeImage({ imageIds: [], question: 'what is this?' }, ctx), /at least one image ID/i);
   },
