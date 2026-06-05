@@ -14,6 +14,7 @@ const apiMock = vi.hoisted(() => ({
   extensionSlashCommands: vi.fn(),
   extensionMentions: vi.fn(),
   memory: vi.fn(),
+  modelPreferences: vi.fn(),
   models: vi.fn(),
   runs: vi.fn(),
   liveSession: vi.fn(),
@@ -226,6 +227,12 @@ beforeEach(() => {
   ]);
   apiMock.models.mockResolvedValue({
     models: [{ id: 'openai/gpt-5.4', name: 'GPT-5.4', provider: 'openai' }],
+    currentModel: 'openai/gpt-5.4',
+    currentVisionModel: '',
+    currentThinkingLevel: 'medium',
+    currentServiceTier: '',
+  });
+  apiMock.modelPreferences.mockResolvedValue({
     currentModel: 'openai/gpt-5.4',
     currentVisionModel: '',
     currentThinkingLevel: 'medium',
