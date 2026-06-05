@@ -34,7 +34,8 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
 9. Validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
 10. Exercise empty, loading, error, and success states when the surface has UI; for backend tools/actions, run one representative invocation and inspect the transcript or visible result.
 11. Update the extension `README.md` with install/build/use notes and any non-obvious behavior.
-12. Checkpoint only the files touched for this extension and its docs.
+12. If the extension is meant for other users, prepare `.neon-extension.zip` release artifacts and document the GitHub release tag users should install from.
+13. Checkpoint only the files touched for this extension and its docs.
 
 Do not stop after a successful build. A built extension is only ready after its manifest diagnostics are clean and the user-visible path has been exercised.
 
@@ -82,7 +83,8 @@ For a new extension, the agent should:
 8. Reload extensions.
 9. Open the contributed page/panel and visually inspect UI changes.
 10. Add or update the extension `README.md` when behavior is non-obvious.
-11. Checkpoint only the files it touched.
+11. If publishing through an extension repo, build release artifacts; source folders plus `neon.extensions.json` are not enough for normal GitHub install.
+12. Checkpoint only the files it touched.
 
 ## Where files live
 
@@ -112,6 +114,27 @@ my-extension/
 ```
 
 `src/` is the source of truth. `dist/` is generated output that every desktop runtime loads.
+
+## Extension repositories and releases
+
+When building an extension repository for other users, do not stop at source folders and `neon.extensions.json`. GitHub install expects prebuilt release assets:
+
+```text
+<extension-id>.neon-extension.zip
+neon-extension-catalog.json
+```
+
+Use [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) as the example repo. Its release flow is:
+
+```bash
+NEON_PILOT_REPO=/path/to/neon-pilot pnpm run release:prepare -- --tag v0.9.1-rc.6
+gh release create v0.9.1-rc.6 \
+  release-artifacts/v0.9.1-rc.6/*.neon-extension.zip \
+  release-artifacts/v0.9.1-rc.6/neon-extension-catalog.json \
+  --repo owner/repo
+```
+
+Use the app version tag unless the catalog package explicitly declares another compatible `tag`. A repo without release assets can be inspected, but normal users cannot install its packages through the GitHub install flow.
 
 ## Good extension requests
 

@@ -176,12 +176,34 @@
           <code>neon.extensions.json</code>. 4. Build each extension with
           <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from a Neon Pilot checkout. 5. Validate with
           <code>neon-pilot-extension doctor &lt;extension-dir&gt;</code>. 6. Pack with
-          <code>neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;version&gt;.neon-extension.zip</code>. 7.
-          Publish a GitHub release containing the zip artifacts. 8. Share the GitHub repo URL with users.
+          <code>neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;.neon-extension.zip</code>. 7. Publish a GitHub
+          release containing the zip artifacts. 8. Share the GitHub repo URL with users.
         </p>
         <p>
           Users install from the GitHub repo URL, inspect the packages it exposes, select the packages they want, review permissions and
           compatibility, then install the release artifacts.
+        </p>
+        <p>
+          Use <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a> as the reference
+          repository. It includes repo-local scripts that resolve a Neon Pilot checkout from <code>NEON_PILOT_REPO</code> or a sibling
+          <code>../neon-pilot</code> checkout:
+        </p>
+        <pre><code>pnpm run list
+pnpm run build -- --extension example-search
+pnpm run pack -- --extension example-search --out-dir /tmp/neon-extension-artifacts
+pnpm run release:prepare -- --tag v0.9.1-rc.6</code></pre>
+        <p>
+          <code>release:prepare</code> builds all indexed packages, writes <code>&lt;extension-id&gt;.neon-extension.zip</code> assets, and
+          writes <code>neon-extension-catalog.json</code> with checksums. Publish those files with GitHub CLI:
+        </p>
+        <pre><code>gh release create v0.9.1-rc.6 \
+  release-artifacts/v0.9.1-rc.6/*.neon-extension.zip \
+  release-artifacts/v0.9.1-rc.6/neon-extension-catalog.json \
+  --repo example/example-neon-extensions</code></pre>
+        <p>
+          The current installer expects the release asset name <code>&lt;extension-id&gt;.neon-extension.zip</code> on the package tag. If a
+          <code>neon.extensions.json</code> package does not declare a <code>version</code> or <code>tag</code>, Neon Pilot uses the
+          installed app version tag.
         </p>
         <h2 id="user-configured-sources">User-configured sources</h2>
         <p>

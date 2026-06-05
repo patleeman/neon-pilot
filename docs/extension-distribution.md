@@ -122,11 +122,31 @@ Source-branch installs are development mode only. They require local build trust
 3. Add root `neon.extensions.json`.
 4. Build each extension with `pnpm run extension:build -- <extension-dir>` from a Neon Pilot checkout.
 5. Validate with `neon-pilot-extension doctor <extension-dir>`.
-6. Pack with `neon-pilot-extension pack <extension-dir> --out <extension-id>-<version>.neon-extension.zip`.
+6. Pack with `neon-pilot-extension pack <extension-dir> --out <extension-id>.neon-extension.zip`.
 7. Publish a GitHub release containing the zip artifacts.
 8. Share the GitHub repo URL with users.
 
 Users install from the GitHub repo URL, inspect the packages it exposes, select the packages they want, review permissions and compatibility, then install the release artifacts.
+
+Use [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) as the reference repository. It includes repo-local scripts that resolve a Neon Pilot checkout from `NEON_PILOT_REPO` or a sibling `../neon-pilot` checkout:
+
+```bash
+pnpm run list
+pnpm run build -- --extension example-search
+pnpm run pack -- --extension example-search --out-dir /tmp/neon-extension-artifacts
+pnpm run release:prepare -- --tag v0.9.1-rc.6
+```
+
+`release:prepare` builds all indexed packages, writes `<extension-id>.neon-extension.zip` assets, and writes `neon-extension-catalog.json` with checksums. Publish those files with GitHub CLI:
+
+```bash
+gh release create v0.9.1-rc.6 \
+  release-artifacts/v0.9.1-rc.6/*.neon-extension.zip \
+  release-artifacts/v0.9.1-rc.6/neon-extension-catalog.json \
+  --repo example/example-neon-extensions
+```
+
+The current installer expects the release asset name `<extension-id>.neon-extension.zip` on the package tag. If a `neon.extensions.json` package does not declare a `version` or `tag`, Neon Pilot uses the installed app version tag.
 
 ## User-configured sources
 

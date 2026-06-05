@@ -91,8 +91,9 @@ Implement it with editable source files, build it, reload it, visually test it, 
           desktop app when reload is unavailable. 9. Validate through the same surface the user will use: open the route, rail, Settings
           section, command, composer control, or agent tool. 10. Exercise empty, loading, error, and success states when the surface has UI;
           for backend tools/actions, run one representative invocation and inspect the transcript or visible result. 11. Update the
-          extension <code>README.md</code> with install/build/use notes and any non-obvious behavior. 12. Checkpoint only the files touched
-          for this extension and its docs.
+          extension <code>README.md</code> with install/build/use notes and any non-obvious behavior. 12. If the extension is meant for
+          other users, prepare <code>.neon-extension.zip</code> release artifacts and document the GitHub release tag users should install
+          from. 13. Checkpoint only the files touched for this extension and its docs.
         </p>
         <p>
           Do not stop after a successful build. A built extension is only ready after its manifest diagnostics are clean and the
@@ -195,7 +196,8 @@ Implement it with editable source files, build it, reload it, visually test it, 
           <code>extension.json</code>. 5. Use <code>@neon-pilot/extensions</code> as the SDK seam; do not import app internals. 6. Build
           outside the desktop app using repo or CLI extension tooling. 7. Validate and fix Extension Manager diagnostics. 8. Reload
           extensions. 9. Open the contributed page/panel and visually inspect UI changes. 10. Add or update the extension
-          <code>README.md</code> when behavior is non-obvious. 11. Checkpoint only the files it touched.
+          <code>README.md</code> when behavior is non-obvious. 11. If publishing through an extension repo, build release artifacts; source
+          folders plus <code>neon.extensions.json</code> are not enough for normal GitHub install. 12. Checkpoint only the files it touched.
         </p>
         <h2 id="where-files-live">Where files live</h2>
         <p>User-created extensions live in runtime state by default:</p>
@@ -220,6 +222,26 @@ Implement it with editable source files, build it, reload it, visually test it, 
     frontend.css
     backend.mjs</code></pre>
         <p><code>src/</code> is the source of truth. <code>dist/</code> is generated output that every desktop runtime loads.</p>
+        <h2 id="extension-repositories-and-releases">Extension repositories and releases</h2>
+        <p>
+          When building an extension repository for other users, do not stop at source folders and <code>neon.extensions.json</code>. GitHub
+          install expects prebuilt release assets:
+        </p>
+        <pre><code>&lt;extension-id&gt;.neon-extension.zip
+neon-extension-catalog.json</code></pre>
+        <p>
+          Use <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a> as the example
+          repo. Its release flow is:
+        </p>
+        <pre><code>NEON_PILOT_REPO=/path/to/neon-pilot pnpm run release:prepare -- --tag v0.9.1-rc.6
+gh release create v0.9.1-rc.6 \
+  release-artifacts/v0.9.1-rc.6/*.neon-extension.zip \
+  release-artifacts/v0.9.1-rc.6/neon-extension-catalog.json \
+  --repo owner/repo</code></pre>
+        <p>
+          Use the app version tag unless the catalog package explicitly declares another compatible <code>tag</code>. A repo without release
+          assets can be inspected, but normal users cannot install its packages through the GitHub install flow.
+        </p>
         <h2 id="good-extension-requests">Good extension requests</h2>
         <pre><code>Build a tab-local right-rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.</code></pre>
         <pre><code>Build a main-page extension for reviewing background work. It should list recent executions, show status and duration, and open background command or subagent logs in a detail pane.</code></pre>
@@ -305,6 +327,7 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
         <a href="#copy-paste-prompt">Copy-paste prompt</a><a href="#production-agent-loop">Production agent loop</a
         ><a href="#templates">Templates</a><a href="#pick-the-right-surface">Pick the right surface</a
         ><a href="#what-your-agent-should-do">What your agent should do</a><a href="#where-files-live">Where files live</a
+        ><a href="#extension-repositories-and-releases">Extension repositories and releases</a
         ><a href="#good-extension-requests">Good extension requests</a><a href="#build-reload-validate">Build, reload, validate</a
         ><a href="#troubleshooting">Troubleshooting</a><a href="#reference">Reference</a>
       </aside>

@@ -27,7 +27,8 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 5. Validate from Extension Manager and fix every error.
 6. Reload from Extension Manager.
 7. Open the declared route/surface and visually inspect UI changes.
-8. Check Extension Manager diagnostics before reporting done.
+8. If the extension is being published through a GitHub extension repo, prepare `.neon-extension.zip` release assets; source folders plus `neon.extensions.json` are not enough for normal install.
+9. Check Extension Manager diagnostics before reporting done.
 
 Copy-paste user prompt:
 
@@ -106,6 +107,29 @@ my-extension/
 ```
 
 `src/` is source of truth. `dist/` is generated output. Packaged app runtimes load `dist/` and do not rely on TypeScript source.
+
+## Extension repository publishing
+
+A GitHub extension repo must provide both source metadata and release assets:
+
+```text
+neon.extensions.json
+release tag/
+  <extension-id>.neon-extension.zip
+  neon-extension-catalog.json
+```
+
+Use `patleeman/neon-pilot-extensions` as the reference repo. Its repo-local flow is:
+
+```bash
+NEON_PILOT_REPO=/path/to/neon-pilot pnpm run release:prepare -- --tag v0.9.1-rc.6
+gh release create v0.9.1-rc.6 \
+  release-artifacts/v0.9.1-rc.6/*.neon-extension.zip \
+  release-artifacts/v0.9.1-rc.6/neon-extension-catalog.json \
+  --repo owner/repo
+```
+
+The current GitHub installer resolves `<extension-id>.neon-extension.zip` from the package tag. If `neon.extensions.json` does not specify a package tag, the app uses the installed Neon Pilot app version tag.
 
 ## Minimal manifest
 
