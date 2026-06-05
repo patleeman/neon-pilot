@@ -119,6 +119,28 @@ describe('extension catalog', () => {
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
+  it('keeps the first-party extension source canonical when settings include the same repo', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-extension-sources-'));
+    writeFileSync(
+      join(stateRoot, 'settings.json'),
+      JSON.stringify({
+        'extensions.sources': [
+          { id: 'custom-first-party', type: 'github', owner: 'PatLeeMan', repo: 'neon-pilot-extensions', enabled: false },
+          { id: 'example-source', type: 'github', owner: 'example', repo: 'neon-extensions', enabled: true },
+        ],
+      }),
+    );
+
+    const { readConfiguredExtensionCatalogSources } = await import('./extensionCatalog.js');
+    const sources = readConfiguredExtensionCatalogSources(stateRoot);
+
+    expect(sources).toEqual([
+      expect.objectContaining({ id: 'neon-pilot', owner: 'patleeman', repo: 'neon-pilot-extensions', enabled: true }),
+      expect.objectContaining({ id: 'example-source', owner: 'example', repo: 'neon-extensions', enabled: true }),
+    ]);
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
   it('rejects non-GitHub bundle URLs before downloading', async () => {
     const { installExtensionBundleFromUrl } = await import('./extensionCatalog.js');
     await expect(installExtensionBundleFromUrl({ url: 'https://example.com/system-browser.neon-extension.zip' })).rejects.toThrow(

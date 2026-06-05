@@ -221,7 +221,9 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
 }
 
 export function readConfiguredExtensionCatalogSources(stateRoot: string = getStateRoot()): ExtensionCatalogSource[] {
-  const configured = normalizeExtensionCatalogSources(readJson(join(stateRoot, 'settings.json'))?.[EXTENSION_SOURCES_SETTING]);
+  const configured = normalizeExtensionCatalogSources(readJson(join(stateRoot, 'settings.json'))?.[EXTENSION_SOURCES_SETTING]).filter(
+    (source) => !isFirstPartyRepo(source),
+  );
   return mergeExtensionCatalogSources([defaultExtensionCatalogSource(), ...configured]);
 }
 
@@ -268,6 +270,10 @@ function mergeExtensionCatalogSources(sources: ExtensionCatalogSource[]): Extens
     byRepo.set(`${source.owner.toLowerCase()}/${source.repo.toLowerCase()}`, source);
   }
   return [...byRepo.values()];
+}
+
+function isFirstPartyRepo(source: GithubExtensionSourceRepo): boolean {
+  return source.owner.toLowerCase() === FIRST_PARTY_REPO.owner && source.repo.toLowerCase() === FIRST_PARTY_REPO.repo;
 }
 
 function parseGithubRepoUrl(value: string): GithubExtensionSourceRepo | null {
