@@ -1,12 +1,9 @@
-import { cx, useApi, useInvalidateOnTopics } from '@neon-pilot/extensions/settings';
+import { useApi, useInvalidateOnTopics } from '@neon-pilot/extensions/settings';
+import { Button, Field, LoadingState, Notice, Textarea, TextInput, ToolbarButton, cx } from '@neon-pilot/extensions/ui';
 import { useEffect, useMemo, useState } from 'react';
 
 import { knowledgeApi } from '../lib/knowledgeApi';
 import { getKnowledgeBaseSyncPresentation } from '../lib/knowledgeBaseSyncStatus';
-
-const INPUT_CLASS =
-  'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
-const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
 
 export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'settings' | 'onboarding' } = {}) {
   const {
@@ -151,11 +148,15 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
   }, [action, branchDraft, directoriesDraft, dirty, isOnboarding, knowledgeBaseState, repoUrlDraft]);
 
   if (knowledgeBaseLoading && !knowledgeBaseState) {
-    return <p className="ui-card-meta">Loading knowledge base…</p>;
+    return <LoadingState label="Loading knowledge base..." />;
   }
 
   if (knowledgeBaseLoadError && !knowledgeBaseState) {
-    return <p className="text-[12px] text-danger">Failed to load knowledge base: {knowledgeBaseLoadError}</p>;
+    return (
+      <Notice tone="danger" title="Failed to load knowledge base">
+        {knowledgeBaseLoadError}
+      </Notice>
+    );
   }
 
   if (!knowledgeBaseState) {
@@ -171,14 +172,16 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
           void save();
         }}
       >
-        <div className="space-y-1.5">
-          <label
-            className={isOnboarding ? 'text-[12px] font-semibold text-secondary' : 'ui-card-meta'}
-            htmlFor="settings-knowledge-base-repo"
-          >
-            Repository
-          </label>
-          <input
+        <Field
+          label="Repository"
+          hint={
+            isOnboarding
+              ? 'Use an SSH/HTTPS remote or a local git repository path. Private repos use your local git credentials.'
+              : undefined
+          }
+          htmlFor="settings-knowledge-base-repo"
+        >
+          <TextInput
             id="settings-knowledge-base-repo"
             name="knowledge-base-repo-url"
             type="text"
@@ -187,24 +190,16 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
               setRepoUrlDraft(event.target.value);
               if (saveError) setSaveError(null);
             }}
-            className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-[13px]`}
+            className="min-w-0 flex-1 font-mono text-[13px]"
             placeholder="git@github.com:you/knowledge-base.git, https://github.com/you/kb.git, or /path/to/repo"
             autoComplete="off"
             spellCheck={false}
             disabled={action !== null}
           />
-          {isOnboarding ? (
-            <p className="text-[12px] leading-5 text-dim">
-              Use an SSH/HTTPS remote or a local git repository path. Private repos use your local git credentials.
-            </p>
-          ) : null}
-        </div>
+        </Field>
         {isOnboarding ? null : (
-          <div className="space-y-1.5">
-            <label className="ui-card-meta" htmlFor="settings-knowledge-base-directories">
-              Local directories
-            </label>
-            <textarea
+          <Field label="Local directories" htmlFor="settings-knowledge-base-directories">
+            <Textarea
               id="settings-knowledge-base-directories"
               name="knowledge-base-directories"
               value={directoriesDraft}
@@ -212,22 +207,16 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
                 setDirectoriesDraft(event.target.value);
                 if (saveError) setSaveError(null);
               }}
-              className={`${INPUT_CLASS} min-h-20 min-w-0 flex-1 font-mono text-[13px]`}
+              className="min-h-20 min-w-0 flex-1 font-mono text-[13px]"
               placeholder={'/Users/you/Notes\n/Users/you/Projects/docs'}
               autoComplete="off"
               spellCheck={false}
               disabled={action !== null}
             />
-          </div>
+          </Field>
         )}
-        <div className="space-y-1.5">
-          <label
-            className={isOnboarding ? 'text-[12px] font-semibold text-secondary' : 'ui-card-meta'}
-            htmlFor="settings-knowledge-base-branch"
-          >
-            Branch
-          </label>
-          <input
+        <Field label="Branch" htmlFor="settings-knowledge-base-branch">
+          <TextInput
             id="settings-knowledge-base-branch"
             name="knowledge-base-branch"
             value={branchDraft}
@@ -235,13 +224,13 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
               setBranchDraft(event.target.value);
               if (saveError) setSaveError(null);
             }}
-            className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-[13px]`}
+            className="min-w-0 flex-1 font-mono text-[13px]"
             placeholder="main"
             autoComplete="off"
             spellCheck={false}
             disabled={action !== null}
           />
-        </div>
+        </Field>
         {isOnboarding ? null : (
           <>
             <p className="ui-card-meta break-all">
@@ -264,38 +253,40 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
         )}
         {isOnboarding ? (
           <div className="flex items-center gap-3 pt-1">
-            <button
+            <Button
               type="submit"
+              variant="action"
+              tone="accent"
               disabled={action !== null || repoUrlDraft.trim().length === 0}
-              className="h-8 rounded-md bg-accent px-3 text-[12px] font-semibold text-base shadow-[0_0_0_1px_rgb(var(--color-accent)/0.45)] transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:bg-dim/45 disabled:text-white/80"
+              className="h-8 px-3 text-[12px] font-semibold"
             >
               {action === 'save' ? 'Connecting…' : 'Connect Repository'}
-            </button>
+            </Button>
             <span className="text-[12px] text-dim">You can change this later in Settings.</span>
           </div>
         ) : null}
         {isOnboarding && actionProgressText ? (
-          <div className="rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[12px] leading-5 text-secondary" role="status">
+          <Notice className="text-[12px]" role="status">
             <div className="mb-1 h-1.5 overflow-hidden rounded-md bg-border-subtle">
               <div className="h-full w-1/2 animate-pulse rounded-md bg-accent/80" />
             </div>
             {actionProgressText}
-          </div>
+          </Notice>
         ) : null}
         {isOnboarding ? null : (
           <div className="flex flex-wrap items-center gap-2">
             <span className="ui-card-meta">{action === 'save' ? 'Saving…' : dirty ? 'Auto-save pending…' : 'Auto-saved'}</span>
-            <button
+            <ToolbarButton
               type="button"
               onClick={() => {
                 void sync();
               }}
               disabled={action !== null || !knowledgeBaseState.configured}
-              className={ACTION_BUTTON_CLASS}
+              className="px-3 py-1.5 text-[12px] shadow-none"
             >
               {action === 'sync' ? 'Syncing…' : 'Sync now'}
-            </button>
-            <button
+            </ToolbarButton>
+            <ToolbarButton
               type="button"
               onClick={() => {
                 setRepoUrlDraft('');
@@ -310,10 +301,10 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
                 });
               }}
               disabled={action !== null || !knowledgeBaseState.configured}
-              className={ACTION_BUTTON_CLASS}
+              className="px-3 py-1.5 text-[12px] shadow-none"
             >
               Disable managed sync
-            </button>
+            </ToolbarButton>
           </div>
         )}
         {isOnboarding ? null : (
@@ -324,7 +315,7 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
         )}
       </form>
 
-      {saveError && <p className="text-[12px] text-danger">{saveError}</p>}
+      {saveError ? <Notice tone="danger">{saveError}</Notice> : null}
     </>
   );
 }
