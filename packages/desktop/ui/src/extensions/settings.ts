@@ -41,6 +41,7 @@ export {
   SettingsSection,
   Stat,
   StatGrid,
+  SupportingText,
   Switch,
   TabButton,
   TabList,

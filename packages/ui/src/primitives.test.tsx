@@ -28,6 +28,7 @@ import {
   SettingToggleRow,
   Stat,
   StatGrid,
+  SupportingText,
   Switch,
   TabButton,
   TabList,
@@ -91,6 +92,7 @@ describe('design-system primitives', () => {
 
   it('renders section labels and resource list rows', () => {
     expect(renderToStaticMarkup(createElement(SectionLabel, null, 'Artifacts'))).toContain('ui-section-label');
+    expect(renderToStaticMarkup(createElement(SupportingText, null, 'Secondary copy'))).toContain('ui-supporting-text');
 
     const html = renderToStaticMarkup(
       createElement(ResourceListItem, {

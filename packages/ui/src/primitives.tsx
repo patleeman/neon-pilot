@@ -148,6 +148,14 @@ export function SectionLabel({ children, className, ...props }: HTMLAttributes<H
   );
 }
 
+export function SupportingText({ children, className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p className={cx('ui-supporting-text', className)} {...props}>
+      {children}
+    </p>
+  );
+}
+
 export function ResourceListItem({
   label,
   meta,

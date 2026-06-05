@@ -1,5 +1,5 @@
 import { api, type ModelState, useApi } from '@neon-pilot/extensions/settings';
-import { Field, LoadingState, Notice, Select, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { Field, LoadingState, Notice, Select, SupportingText, SurfacePanel } from '@neon-pilot/extensions/ui';
 import { useMemo, useState } from 'react';
 
 type ModelOption = ModelState['models'][number];
@@ -39,7 +39,7 @@ export function ImageProbeSettings() {
       <SurfacePanel className="p-4 shadow-none">
         <div className="mb-3">
           <h3 className="text-[13px] font-semibold text-primary">Vision model</h3>
-          <p className="ui-card-meta">Used by image probing when the active conversation model cannot inspect images directly.</p>
+          <SupportingText>Used by image probing when the active conversation model cannot inspect images directly.</SupportingText>
         </div>
 
         {loading && !modelState ? (

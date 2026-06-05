@@ -5,6 +5,7 @@ import {
   Pill,
   Select,
   SettingsSection,
+  SupportingText,
   Textarea,
   TextInput,
   ToolbarButton,
@@ -235,15 +236,15 @@ export function McpSettingsPanel() {
         description="Add, edit, remove, test, and authenticate explicit MCP servers. Skill-bundled servers stay read-only here."
       >
         {mcpLoading && !mcpState ? (
-          <p className="ui-card-meta">Loading MCP servers…</p>
+          <SupportingText>Loading MCP servers…</SupportingText>
         ) : mcpError && !mcpState ? (
           <p className="text-[12px] text-danger">Failed to load MCP servers: {mcpError}</p>
         ) : mcpState ? (
           <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="ui-card-meta break-all">
+              <SupportingText className="break-all">
                 Explicit config: <span className="font-mono text-[11px]">{mcpState.configPath}</span>
-              </p>
+              </SupportingText>
               <div className="flex gap-2">
                 <ToolbarButton type="button" disabled={mcpLoading} onClick={() => void refetch()}>
                   Refresh
@@ -327,7 +328,7 @@ export function McpSettingsPanel() {
             ) : null}
 
             <div className="space-y-3">
-              <p className="ui-card-meta">Explicit servers</p>
+              <SupportingText>Explicit servers</SupportingText>
               {explicitServers.length > 0 ? (
                 explicitServers.map((name) => {
                   const server = mcpState.servers.find((entry) => entry.name === name);
@@ -341,7 +342,7 @@ export function McpSettingsPanel() {
                         <Pill tone={server?.transport === 'remote' ? 'teal' : 'muted'}>{server?.transport ?? 'config'}</Pill>
                         {disabled ? <Pill tone="muted">disabled</Pill> : null}
                         {server?.hasOAuth ? <Pill tone="accent">oauth</Pill> : null}
-                        <span className="ui-card-meta break-all">
+                        <span className="ui-supporting-text break-all">
                           {server ? formatMcpServerCommand(server) : disabled ? 'Disabled server' : 'Unparsed server config'}
                         </span>
                       </div>
@@ -391,27 +392,27 @@ export function McpSettingsPanel() {
                   );
                 })
               ) : (
-                <p className="ui-card-meta">No explicit servers. Add one above instead of spelunking through JSON like an animal.</p>
+                <SupportingText>No explicit servers. Add one above to create a managed MCP configuration.</SupportingText>
               )}
             </div>
 
             <div className="space-y-3">
-              <p className="ui-card-meta">Skill-bundled servers</p>
+              <SupportingText>Skill-bundled servers</SupportingText>
               {mcpState.bundledSkills.length > 0 ? (
                 mcpState.bundledSkills.map((bundle) => (
                   <div key={bundle.manifestPath} className="space-y-1.5 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="text-[13px] font-medium text-primary">{bundle.skillName}</span>
-                      <span className="ui-card-meta">
+                      <span className="ui-supporting-text">
                         {bundle.serverNames.length} server{bundle.serverNames.length === 1 ? '' : 's'}
                       </span>
                     </div>
-                    <p className="ui-card-meta break-all">
+                    <SupportingText className="break-all">
                       <span className="font-mono text-[11px]">{bundle.manifestPath}</span>
-                    </p>
-                    <p className="ui-card-meta break-all">
+                    </SupportingText>
+                    <SupportingText className="break-all">
                       <span className="font-mono text-[11px]">{bundle.serverNames.join(', ')}</span>
-                    </p>
+                    </SupportingText>
                     {bundle.overriddenServerNames.length > 0 ? (
                       <p className="text-[12px] text-secondary">
                         Overridden by explicit config:{' '}
@@ -421,7 +422,7 @@ export function McpSettingsPanel() {
                   </div>
                 ))
               ) : (
-                <p className="ui-card-meta">No skill-local mcp.json wrappers found in the active skill set.</p>
+                <SupportingText>No skill-local mcp.json wrappers found in the active skill set.</SupportingText>
               )}
             </div>
           </div>

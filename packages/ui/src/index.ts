@@ -52,6 +52,7 @@ export {
   Stat,
   StatGrid,
   SurfacePanel,
+  SupportingText,
   Switch,
   TabButton,
   TabList,

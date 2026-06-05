@@ -38,6 +38,7 @@ import {
   Stat,
   StatGrid,
   SurfacePanel,
+  SupportingText,
   Switch,
   TabButton,
   TabList,
@@ -137,6 +138,7 @@ const meta = {
         <SurfacePanel style={{ display: 'grid', gap: 16, padding: 16 }}>
           <div style={{ display: 'grid', gap: 6 }}>
             <SectionLabel>Artifacts</SectionLabel>
+            <SupportingText>Use supporting text for secondary settings copy, empty hints, paths, and status details.</SupportingText>
             <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
           </div>
