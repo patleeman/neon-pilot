@@ -23,6 +23,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`
 - Menus: `MenuShell`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection: `SegmentedControl`
+- Data display: `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`
 - Utility: `cx`
 
@@ -69,5 +70,5 @@ Next good candidates:
 - `PositionedMenu`
 - `FilterToolbar`
 - `Tabs`
-- `DataTable`, `KeyValueTable`, `Stat`, `StatGrid`
+- `KeyValueTable`
 - `SettingsRow`

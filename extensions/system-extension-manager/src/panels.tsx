@@ -12,6 +12,10 @@ import {
   MenuShell,
   Notice,
   SearchInput,
+  KeyValueItem,
+  KeyValueList,
+  Stat,
+  StatGrid,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
@@ -1979,12 +1983,12 @@ function ExtensionDetailsContent({
           </div>
         </div>
         {extension.description ? <p className="text-[13px] leading-6 text-secondary">{extension.description}</p> : null}
-        <div className={cx('grid gap-2 text-[12px] text-secondary', compact ? 'grid-cols-2' : 'sm:grid-cols-4')}>
-          <MetaItem label="Source" value={extensionSourceLabel(extension)} />
-          <MetaItem label="Status" value={healthLabel} />
-          <MetaItem label="Version" value={extension.version ? `v${extension.version}` : 'Unknown'} />
-          <MetaItem label="Settings" value={hasSettings ? 'Configurable' : ''} />
-        </div>
+        <StatGrid compact={compact}>
+          <Stat label="Source" value={extensionSourceLabel(extension)} />
+          <Stat label="Status" value={healthLabel} />
+          <Stat label="Version" value={extension.version ? `v${extension.version}` : 'Unknown'} />
+          <Stat label="Settings" value={hasSettings ? 'Configurable' : 'None'} />
+        </StatGrid>
       </header>
 
       {hasSettings ? (
@@ -2020,22 +2024,22 @@ function ExtensionDetailsContent({
 
       {includeRows.length ? (
         <DetailBlock title="Includes">
-          <div className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70">
+          <KeyValueList>
             {includeRows.map(([label, value]) => (
-              <IncludedCapability key={label} label={label} value={value} />
+              <KeyValueItem key={label} label={label} value={value} />
             ))}
-          </div>
+          </KeyValueList>
         </DetailBlock>
       ) : null}
 
       {informationRows.length || extension.packageRoot ? (
         <DetailBlock title="Information">
-          <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
+          <KeyValueList>
             {informationRows.map(([label, value]) => (
-              <DetailTableRow key={label} label={label} value={value} />
+              <KeyValueItem key={label} label={label} value={value} />
             ))}
             {extension.packageRoot ? (
-              <DetailTableRow
+              <KeyValueItem
                 label="Package"
                 value={extension.packageRoot}
                 action={
@@ -2049,7 +2053,7 @@ function ExtensionDetailsContent({
                 }
               />
             ) : null}
-          </dl>
+          </KeyValueList>
         </DetailBlock>
       ) : null}
 
@@ -2059,34 +2063,6 @@ function ExtensionDetailsContent({
           {JSON.stringify(extension.manifest, null, 2)}
         </pre>
       </details>
-    </div>
-  );
-}
-
-function MetaItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">{label}</div>
-      <div className="mt-1 truncate text-primary">{value}</div>
-    </div>
-  );
-}
-
-function IncludedCapability({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-2 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
-      <dt className="text-[12px] font-medium text-primary">{label}</dt>
-      <dd className="break-words text-[12px] leading-5 text-secondary">{value}</dd>
-    </div>
-  );
-}
-
-function DetailTableRow({ label, value, action }: { label: string; value: string; action?: ReactNode }) {
-  return (
-    <div className="grid gap-2 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto]">
-      <dt className="text-dim">{label}</dt>
-      <dd className="break-words text-secondary">{value}</dd>
-      {action ? <div>{action}</div> : null}
     </div>
   );
 }

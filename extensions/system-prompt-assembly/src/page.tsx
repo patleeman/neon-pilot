@@ -5,6 +5,12 @@ import {
   AppPageLayout,
   AppPageToc,
   cx,
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -446,57 +452,55 @@ function CapabilityTable({
   onToggle: (row: RuntimeCapability, enabled: boolean) => Promise<void>;
 }) {
   return (
-    <section className="min-w-0 overflow-auto">
-      <table className="w-full border-collapse text-left text-[13px]">
-        <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
-          <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
-            <th className="py-2 pr-4 font-semibold">Name</th>
-            <th className="py-2 px-3 font-semibold">Contributes</th>
-            <th className="py-2 px-3 font-semibold">Source</th>
-            <th className="py-2 pl-3 text-right font-semibold">Enabled</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.kind}:${row.id}`} className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
-              <td className="min-w-0 py-3 pr-4 align-middle">
-                <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <div className="truncate text-[14px] font-semibold text-primary">{row.title}</div>
-                    <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
-                      {labelForKind(row.kind)}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
-                    {row.description || fallbackDescription(row)}
-                  </div>
-                  {row.diagnostics?.length ? <DiagnosticsSummary diagnostics={row.diagnostics} /> : null}
+    <DataTable>
+      <DataTableHead>
+        <DataTableRow>
+          <DataTableHeaderCell className="pr-4">Name</DataTableHeaderCell>
+          <DataTableHeaderCell>Contributes</DataTableHeaderCell>
+          <DataTableHeaderCell>Source</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Enabled</DataTableHeaderCell>
+        </DataTableRow>
+      </DataTableHead>
+      <DataTableBody>
+        {rows.map((row) => (
+          <DataTableRow key={`${row.kind}:${row.id}`} className="group">
+            <DataTableCell className="min-w-0 pr-4">
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="truncate text-[14px] font-semibold text-primary">{row.title}</div>
+                  <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-dim">
+                    {labelForKind(row.kind)}
+                  </span>
                 </div>
-              </td>
-              <td className="px-3 py-3 align-middle">
-                <ContributionSummary row={row} />
-              </td>
-              <td className="max-w-[18rem] px-3 py-3 align-middle text-[12px] leading-5 text-secondary">
-                <div className="truncate">{formatParts(row.ownerExtensionId, row.scope, row.source?.kind)}</div>
-                <div className="truncate text-dim" title={row.source?.label}>
-                  {row.source?.label ?? row.id}
+                <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
+                  {row.description || fallbackDescription(row)}
                 </div>
-              </td>
-              <td className="py-3 pl-3 text-right align-middle">
-                <div className="flex items-center justify-end gap-3">
-                  {busyId === row.id ? <span className="text-[11px] text-dim">Working…</span> : null}
-                  {canToggle(row) ? (
-                    <StatusToggle row={row} busy={busyId === row.id} onToggle={() => void onToggle(row, !row.enabled)} />
-                  ) : (
-                    <span className={statusClass(row)}>{row.status}</span>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+                {row.diagnostics?.length ? <DiagnosticsSummary diagnostics={row.diagnostics} /> : null}
+              </div>
+            </DataTableCell>
+            <DataTableCell>
+              <ContributionSummary row={row} />
+            </DataTableCell>
+            <DataTableCell className="max-w-[18rem] text-[12px] leading-5 text-secondary">
+              <div className="truncate">{formatParts(row.ownerExtensionId, row.scope, row.source?.kind)}</div>
+              <div className="truncate text-dim" title={row.source?.label}>
+                {row.source?.label ?? row.id}
+              </div>
+            </DataTableCell>
+            <DataTableCell className="pl-3 text-right">
+              <div className="flex items-center justify-end gap-3">
+                {busyId === row.id ? <span className="text-[11px] text-dim">Working…</span> : null}
+                {canToggle(row) ? (
+                  <StatusToggle row={row} busy={busyId === row.id} onToggle={() => void onToggle(row, !row.enabled)} />
+                ) : (
+                  <span className={statusClass(row)}>{row.status}</span>
+                )}
+              </div>
+            </DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
+    </DataTable>
   );
 }
 

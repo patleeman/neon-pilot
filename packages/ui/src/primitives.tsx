@@ -129,6 +129,112 @@ export function SurfacePanel({ className, muted = false, children, ...props }: H
   );
 }
 
+export function StatGrid({ children, className, compact = false, ...props }: HTMLAttributes<HTMLDivElement> & { compact?: boolean }) {
+  return (
+    <div className={cx('ui-stat-grid', compact && 'ui-stat-grid-compact', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function Stat({
+  label,
+  value,
+  detail,
+  className,
+  ...props
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  detail?: ReactNode;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-stat', className)} {...props}>
+      <div className="ui-stat-label">{label}</div>
+      <div className="ui-stat-value">{value}</div>
+      {detail ? <div className="ui-stat-detail">{detail}</div> : null}
+    </div>
+  );
+}
+
+export function KeyValueList({ children, className, ...props }: HTMLAttributes<HTMLDListElement>) {
+  return (
+    <dl className={cx('ui-key-value-list', className)} {...props}>
+      {children}
+    </dl>
+  );
+}
+
+export function KeyValueItem({
+  label,
+  value,
+  action,
+  className,
+  ...props
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  action?: ReactNode;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-key-value-item', action ? 'ui-key-value-item-action' : null, className)} {...props}>
+      <dt className="ui-key-value-label">{label}</dt>
+      <dd className="ui-key-value-value">{value}</dd>
+      {action ? <div className="ui-key-value-action">{action}</div> : null}
+    </div>
+  );
+}
+
+export function DataTable({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-data-table-shell', className)} {...props}>
+      <table className="ui-data-table">{children}</table>
+    </div>
+  );
+}
+
+export function DataTableHead({ children, className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <thead className={cx('ui-data-table-head', className)} {...props}>
+      {children}
+    </thead>
+  );
+}
+
+export function DataTableBody({ children, className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <tbody className={cx('ui-data-table-body', className)} {...props}>
+      {children}
+    </tbody>
+  );
+}
+
+export function DataTableRow({ children, className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <tr className={cx('ui-data-table-row', className)} {...props}>
+      {children}
+    </tr>
+  );
+}
+
+export function DataTableHeaderCell({ children, className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <th className={cx('ui-data-table-header-cell', className)} {...props}>
+      {children}
+    </th>
+  );
+}
+
+export function DataTableCell({ children, className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <td className={cx('ui-data-table-cell', className)} {...props}>
+      {children}
+    </td>
+  );
+}
+
 export function Dialog({
   children,
   className,

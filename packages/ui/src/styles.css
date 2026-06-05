@@ -263,6 +263,143 @@ body {
   background: rgb(var(--color-elevated) / 0.7);
 }
 
+.ui-stat-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ui-stat-grid-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .ui-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.ui-stat {
+  min-width: 0;
+}
+
+.ui-stat-label {
+  color: rgb(var(--color-dim));
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1rem;
+  text-transform: uppercase;
+}
+
+.ui-stat-value {
+  margin-top: 0.25rem;
+  overflow: hidden;
+  color: rgb(var(--color-primary));
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-stat-detail {
+  margin-top: 0.125rem;
+  overflow: hidden;
+  color: rgb(var(--color-dim));
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-key-value-list {
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--color-border-subtle) / 0.7);
+  font-size: 0.75rem;
+}
+
+.ui-key-value-item {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.ui-key-value-item + .ui-key-value-item {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.7);
+}
+
+.ui-key-value-label {
+  margin: 0;
+  color: rgb(var(--color-primary));
+  font-weight: 600;
+}
+
+.ui-key-value-value {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: rgb(var(--color-secondary));
+  line-height: 1.35rem;
+}
+
+.ui-key-value-action {
+  align-self: start;
+}
+
+@media (min-width: 640px) {
+  .ui-key-value-item {
+    grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .ui-key-value-item-action {
+    grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr) auto;
+  }
+}
+
+.ui-data-table-shell {
+  min-width: 0;
+  overflow: auto;
+}
+
+.ui-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+.ui-data-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgb(var(--color-base) / 0.95);
+  backdrop-filter: blur(8px);
+}
+
+.ui-data-table-header-cell {
+  padding: 0.5rem 0.75rem;
+  color: rgb(var(--color-dim));
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1rem;
+  text-transform: uppercase;
+}
+
+.ui-data-table-row {
+  border-top: 1px solid rgb(var(--color-border-subtle) / 0.7);
+  transition: background-color 140ms ease;
+}
+
+.ui-data-table-row:hover {
+  background: rgb(var(--color-surface) / 0.3);
+}
+
+.ui-data-table-cell {
+  padding: 0.75rem;
+  vertical-align: middle;
+}
+
 .ui-overlay-backdrop {
   position: fixed;
   inset: 0;

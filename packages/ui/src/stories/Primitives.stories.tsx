@@ -4,6 +4,12 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
   DialogBody,
   DialogFooter,
   DialogHeader,
@@ -11,6 +17,8 @@ import {
   Field,
   IconButton,
   Keycap,
+  KeyValueItem,
+  KeyValueList,
   LoadingState,
   MenuGroupLabel,
   MenuItem,
@@ -22,6 +30,8 @@ import {
   SegmentedControl,
   Select,
   SettingsSection,
+  Stat,
+  StatGrid,
   SurfacePanel,
   Switch,
   Textarea,
@@ -102,6 +112,38 @@ const meta = {
             onChange={() => undefined}
           />
         </div>
+      </section>
+
+      <section style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>Data Display</h2>
+        <SurfacePanel style={{ display: 'grid', gap: 16, padding: 16 }}>
+          <StatGrid>
+            <Stat label="Installed" value="31" />
+            <Stat label="Enabled" value="26" />
+            <Stat label="Warnings" value="2" detail="Needs attention" />
+            <Stat label="Updated" value="Today" />
+          </StatGrid>
+          <KeyValueList>
+            <KeyValueItem label="Package" value="installable-extensions/system-example" action={<Button variant="ghost">Open</Button>} />
+            <KeyValueItem label="Permissions" value="Filesystem, shell, notifications" />
+          </KeyValueList>
+          <DataTable>
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableHeaderCell>Name</DataTableHeaderCell>
+                <DataTableHeaderCell>Status</DataTableHeaderCell>
+                <DataTableHeaderCell>Source</DataTableHeaderCell>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              <DataTableRow>
+                <DataTableCell>System Knowledge</DataTableCell>
+                <DataTableCell>Enabled</DataTableCell>
+                <DataTableCell>System</DataTableCell>
+              </DataTableRow>
+            </DataTableBody>
+          </DataTable>
+        </SurfacePanel>
       </section>
 
       <section style={{ display: 'grid', gap: 12 }}>

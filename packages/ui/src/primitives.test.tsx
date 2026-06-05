@@ -5,7 +5,15 @@ import { describe, expect, it } from 'vitest';
 import {
   Button,
   cx,
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
   Dialog,
+  KeyValueItem,
+  KeyValueList,
   MenuItem,
   MenuSeparator,
   MenuShell,
@@ -13,6 +21,8 @@ import {
   Pill,
   SearchInput,
   SegmentedControl,
+  Stat,
+  StatGrid,
   Switch,
   TextInput,
 } from './primitives';
@@ -95,5 +105,37 @@ describe('design-system primitives', () => {
     const html = renderToStaticMarkup(createElement(SearchInput, { placeholder: 'Search extensions' }));
     expect(html).toContain('type="search"');
     expect(html).toContain('ui-search-input');
+  });
+
+  it('renders stat grids and stats with stable classes', () => {
+    const html = renderToStaticMarkup(createElement(StatGrid, null, createElement(Stat, { label: 'Enabled', value: '12' })));
+    expect(html).toContain('ui-stat-grid');
+    expect(html).toContain('ui-stat-label');
+    expect(html).toContain('ui-stat-value');
+  });
+
+  it('renders key value lists with definition-list semantics', () => {
+    const html = renderToStaticMarkup(
+      createElement(KeyValueList, null, createElement(KeyValueItem, { label: 'Package', value: '/tmp/ext' })),
+    );
+    expect(html).toContain('<dl');
+    expect(html).toContain('<dt');
+    expect(html).toContain('<dd');
+    expect(html).toContain('ui-key-value-list');
+  });
+
+  it('renders data table anatomy', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        DataTable,
+        null,
+        createElement(DataTableHead, null, createElement(DataTableRow, null, createElement(DataTableHeaderCell, null, 'Name'))),
+        createElement(DataTableBody, null, createElement(DataTableRow, null, createElement(DataTableCell, null, 'Extension'))),
+      ),
+    );
+
+    expect(html).toContain('<table');
+    expect(html).toContain('ui-data-table-head');
+    expect(html).toContain('ui-data-table-cell');
   });
 });
