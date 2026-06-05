@@ -156,6 +156,46 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
   });
 
+  it('keeps the row actions menu inside the viewport near the window bottom', async () => {
+    renderPage();
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    const moreButton = screen.getByLabelText('More actions');
+    vi.spyOn(moreButton, 'getBoundingClientRect').mockReturnValue({
+      x: 780,
+      y: 560,
+      width: 24,
+      height: 24,
+      top: 560,
+      right: 804,
+      bottom: 584,
+      left: 780,
+      toJSON: () => ({}),
+    } as DOMRect);
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(820);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600);
+
+    fireEvent.click(moreButton);
+    const menu = screen.getByRole('menu', { hidden: true });
+    vi.spyOn(menu, 'getBoundingClientRect').mockReturnValue({
+      x: 652,
+      y: 0,
+      width: 160,
+      height: 92,
+      top: 0,
+      right: 812,
+      bottom: 92,
+      left: 652,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.scroll(window);
+
+    expect(Number.parseFloat(menu.style.top)).toBeLessThan(560);
+    expect(Number.parseFloat(menu.style.top) + 92).toBeLessThanOrEqual(592);
+    expect(Number.parseFloat(menu.style.right)).toBeGreaterThanOrEqual(8);
+  });
+
   it('shows a single extensions list with source labels and no catalog tab', async () => {
     renderPage();
 

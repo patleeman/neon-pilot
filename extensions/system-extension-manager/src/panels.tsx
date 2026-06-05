@@ -10,7 +10,17 @@ import {
   LoadingState,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
-import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -69,6 +79,42 @@ type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | '
 type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
 type ExtensionFilter = 'all' | 'attention';
 type ExtensionActionBridge = ExtensionSurfaceProps['pa']['extensions'];
+
+const ACTIONS_MENU_VIEWPORT_MARGIN = 8;
+const ACTIONS_MENU_BUTTON_GAP = 8;
+
+interface ActionsMenuPosition {
+  top: number;
+  right: number;
+  maxHeight: number;
+  visibility?: CSSProperties['visibility'];
+}
+
+function calculateActionsMenuPosition({
+  buttonRect,
+  menuHeight,
+  viewportWidth,
+  viewportHeight,
+}: {
+  buttonRect: DOMRect;
+  menuHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}): ActionsMenuPosition {
+  const margin = ACTIONS_MENU_VIEWPORT_MARGIN;
+  const gap = ACTIONS_MENU_BUTTON_GAP;
+  const availableBelow = viewportHeight - buttonRect.bottom - margin - gap;
+  const availableAbove = buttonRect.top - margin - gap;
+  const openAbove = menuHeight > availableBelow && availableAbove > availableBelow;
+  const preferredTop = openAbove ? buttonRect.top - gap - menuHeight : buttonRect.bottom + gap;
+  const maxHeight = Math.max(80, Math.floor(openAbove ? availableAbove : availableBelow));
+
+  return {
+    top: Math.max(margin, Math.min(preferredTop, viewportHeight - margin - Math.min(menuHeight, maxHeight))),
+    right: Math.max(margin, viewportWidth - buttonRect.right),
+    maxHeight,
+  };
+}
 
 interface LogicalSurfaceSummary {
   id: string;
@@ -158,7 +204,7 @@ function ExtensionActionsMenu({
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<ActionsMenuPosition | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -174,7 +220,7 @@ function ExtensionActionsMenu({
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [open]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) {
       setMenuPosition(null);
       return;
@@ -183,9 +229,15 @@ function ExtensionActionsMenu({
     function updateMenuPosition() {
       const rect = buttonRef.current?.getBoundingClientRect();
       if (!rect) return;
+      const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 0;
       setMenuPosition({
-        top: rect.bottom + 8,
-        right: Math.max(8, window.innerWidth - rect.right),
+        ...calculateActionsMenuPosition({
+          buttonRect: rect,
+          menuHeight,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+        }),
+        ...(menuHeight ? {} : { visibility: 'hidden' as const }),
       });
     }
 
@@ -197,6 +249,21 @@ function ExtensionActionsMenu({
       window.removeEventListener('scroll', updateMenuPosition, true);
     };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || menuPosition?.visibility !== 'hidden') return;
+    const rect = buttonRef.current?.getBoundingClientRect();
+    const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 0;
+    if (!rect || !menuHeight) return;
+    setMenuPosition(
+      calculateActionsMenuPosition({
+        buttonRect: rect,
+        menuHeight,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      }),
+    );
+  }, [open, menuPosition?.visibility]);
 
   const run = useCallback((event: ReactMouseEvent<HTMLButtonElement>, action: () => void) => {
     event.stopPropagation();
@@ -230,7 +297,13 @@ function ExtensionActionsMenu({
             <div
               ref={menuRef}
               className="fixed z-[70] w-40 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-xl"
-              style={{ top: menuPosition.top, right: menuPosition.right }}
+              style={{
+                top: menuPosition.top,
+                right: menuPosition.right,
+                maxHeight: menuPosition.maxHeight,
+                overflowY: 'auto',
+                visibility: menuPosition.visibility,
+              }}
               role="menu"
               onClick={(event) => event.stopPropagation()}
             >
