@@ -62,6 +62,33 @@ export function MyExtensionPage() {
 }
 ```
 
+## Component Selection Guide
+
+Reach for the smallest primitive that covers the interaction before composing a new local control:
+
+- Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
+- Use `IconButton` for square icon-only actions such as close, remove, more, edit, or refresh. Always provide `aria-label` and usually `title`.
+- Use `Field` only when the child is a simple form control that can be labeled by wrapping it, such as `TextInput`, `Textarea`, or `Select`. For composite controls containing buttons, compose `FieldLabel` and `FieldHint` in a neutral container instead.
+- Use `TextInput`, `SearchInput`, `Textarea`, and `Select` instead of handwritten bordered controls. Override only sizing/background with `className`.
+- Use `Switch` or `SettingToggleRow` for boolean settings. `SettingToggleRow` is preferred when a title and description are part of the row.
+- Use `SegmentedControl` for two-to-six mutually exclusive modes or filters. Do not rebuild segmented buttons locally.
+- Use `TabList` and `TabButton` for larger view navigation where content panels change.
+- Use `MenuShell`, `MenuItem`, `MenuGroupLabel`, and `MenuSeparator` for menu contents. Positioning can remain local until a shared positioned menu exists.
+- Use `Dialog` and its header/body/footer pieces for modal shells before creating local fixed overlays.
+- Use `Notice`, `LoadingState`, `ErrorState`, and `EmptyState` for feedback. Avoid page-specific loading/error markup unless the layout requires it.
+- Use `ProgressBar`, `StatGrid`, `KeyValueList`, `DataTable`, `ResourceListItem`, `CodeBlock`, and `Disclosure` for data display before composing raw rows or panels.
+
+## Proven Replacement Targets
+
+These production areas already use the shared package and are useful examples for agents:
+
+- Extension page shell and states: `system-telemetry`, `system-skills`, `system-extension-manager`
+- Forms and settings: `system-automations`, `system-knowledge`, desktop `SettingsField`
+- Search and filters: `system-extension-manager`, `system-automations`
+- Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`
+- Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Dialog shells: desktop modals and extension install/details dialogs
+
 ## Extraction Backlog
 
 Next good candidates:

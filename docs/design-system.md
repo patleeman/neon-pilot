@@ -18,6 +18,8 @@ The desktop app may import from local compatibility paths such as `packages/desk
 4. Replace local copies in app and extension code when the new component is compatible.
 5. Keep extension-specific workflow logic inside the extension; keep generic chrome and controls in the design system.
 
+For dynamic or generated settings UIs, avoid local input/select/button class constants. Compose the shared primitives directly. Use `Field` for simple controls, and use `FieldLabel` plus `FieldHint` in a neutral wrapper for composite controls that contain buttons.
+
 ## Commands
 
 Run the component package build:
@@ -71,3 +73,15 @@ Extract in small tranches and migrate real usage each time:
 5. Host-owned app patterns: file trees, activity trees, chat/transcript surfaces, diff/artifact views.
 
 Each tranche should include documentation, Storybook coverage, and at least one app or extension replacement so the component is proven against production usage.
+
+## Migration Map
+
+- Raw action buttons -> `Button`, `ToolbarButton`, or `IconButton`
+- Raw text/search/number inputs -> `TextInput` or `SearchInput`
+- Raw selects -> `Select`
+- Raw textareas -> `Textarea`
+- Boolean settings -> `Switch` or `SettingToggleRow`
+- Local segmented filters -> `SegmentedControl`
+- Local tab rows -> `TabList` and `TabButton`
+- Local loading/error/empty messages -> `LoadingState`, `ErrorState`, `EmptyState`, or `Notice`
+- Local bordered data cards -> `SurfacePanel`, `ResourceListItem`, `KeyValueList`, `DataTable`, or `Disclosure`
