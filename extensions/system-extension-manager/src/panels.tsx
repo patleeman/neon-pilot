@@ -1,16 +1,13 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
-import { type UnifiedSettingsEntry, useApi } from '@neon-pilot/extensions/settings';
 import {
   AppPageIntro,
   AppPageLayout,
   cx,
   EmptyState,
   ErrorState,
-  type ExtensionSettingsPanelRegistration,
   LoadingState,
-  SettingsPanelHost,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import { type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -443,6 +440,10 @@ function hasExtensionSettings(extension: ExtensionInstallSummary): boolean {
     settings && typeof settings === 'object' && !Array.isArray(settings) && Object.keys(settings).length > 0,
   );
   return hasSchemaSettings || Boolean(extension.manifest?.contributes?.settingsComponent);
+}
+
+function extensionSettingsSectionId(extension: ExtensionInstallSummary): string {
+  return 'settings-extensions';
 }
 
 function formatAppearsInSummary(extension: ExtensionInstallSummary): string {
@@ -916,18 +917,17 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 </Link>
               ) : null}
               {hasExtensionSettings(extension) ? (
-                <button
-                  type="button"
+                <Link
                   className="ui-icon-button ui-icon-button-compact"
-                  title={`Settings for ${extension.name}`}
-                  aria-label={`Settings for ${extension.name}`}
+                  to={`/settings#${extensionSettingsSectionId(extension)}`}
+                  title={`Configure ${extension.name} in Settings`}
+                  aria-label={`Configure ${extension.name} in Settings`}
                   onClick={(event) => {
                     event.stopPropagation();
-                    setDetailsExtensionId(extension.id);
                   }}
                 >
                   <GearIcon />
-                </button>
+                </Link>
               ) : null}
               <button
                 type="button"
@@ -1277,236 +1277,38 @@ function InstallExtensionModal({
   );
 }
 
-function ExtensionSettingsBlock({ extension }: { extension: ExtensionInstallSummary }) {
-  const { data: values } = useApi<Record<string, unknown>>(api.settings as never);
-  const [draft, setDraft] = useState<Record<string, unknown>>({});
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveNotice, setSaveNotice] = useState<string | null>(null);
-
-  const entries = useMemo(() => extensionSettingsEntries(extension), [extension]);
-  const settingsComponent = extension.manifest?.contributes?.settingsComponent;
-
-  useEffect(() => {
-    if (values) {
-      setDraft((prev) => {
-        const merged = { ...values };
-        for (const [key, value] of Object.entries(prev)) {
-          if (value !== values[key]) merged[key] = value;
-        }
-        return merged;
-      });
-    }
-  }, [values]);
-
-  // Debounced auto-save — queues latest changes after edits settle.
-  // Uses a ref to accumulate changes incrementally so edits made during
-  // an in-flight save are not lost.
-  const pendingChangesRef = useRef<Record<string, unknown> | null>(null);
-  useEffect(() => {
-    if (!values || !draft) return;
-
-    // Accumulate incremental changes rather than re-diffing against values
-    // so edits made during an in-flight save are preserved.
-    for (const [key, value] of Object.entries(draft)) {
-      if (value !== values[key]) {
-        if (!pendingChangesRef.current) pendingChangesRef.current = {};
-        pendingChangesRef.current[key] = value;
-      }
-    }
-
-    const pending = pendingChangesRef.current;
-    if (!pending || Object.keys(pending).length === 0) return;
-
-    if (saving) {
-      // Save is in-flight; accumulated changes will be picked up when it
-      // completes via the saving dependency change.
-      return;
-    }
-
-    const timeout = window.setTimeout(async () => {
-      const changes = pendingChangesRef.current;
-      if (!changes || Object.keys(changes).length === 0) return;
-      pendingChangesRef.current = null;
-
-      setSaving(true);
-      setSaveError(null);
-      try {
-        await api.updateSettings(changes);
-        setSaveNotice('Saved.');
-      } catch (err) {
-        setSaveError(err instanceof Error ? err.message : String(err));
-        // Re-queue failed changes so they can be retried.
-        pendingChangesRef.current = changes;
-      } finally {
-        setSaving(false);
-      }
-    }, 500);
-
-    return () => window.clearTimeout(timeout);
-  }, [draft, values, saving]);
-
-  if (entries.length === 0 && !settingsComponent) return null;
-
-  entries.sort((a, b) => a.order - b.order);
-
-  return (
-    <div className="space-y-3">
-      <dl className="divide-y divide-border-subtle/70 rounded-xl border border-border-subtle/70 text-[12px]">
-        {settingsComponent ? <ExtensionSettingsComponentPanel extension={extension} settingsComponent={settingsComponent} /> : null}
-        {entries.map((entry) => (
-          <ExtensionSettingRow
-            key={entry.key}
-            entry={entry}
-            value={draft[entry.key]}
-            onChange={(val) => {
-              setDraft((prev) => ({ ...prev, [entry.key]: val }));
-              setSaveNotice(null);
-              setSaveError(null);
-            }}
-          />
-        ))}
-      </dl>
-      {saving ? <p className="text-[12px] text-dim">Saving…</p> : null}
-      {saveNotice ? <p className="text-[12px] text-success">{saveNotice}</p> : null}
-      {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
-    </div>
-  );
-}
-
-function ExtensionSettingsComponentPanel({
-  extension,
-  settingsComponent,
-}: {
-  extension: ExtensionInstallSummary;
-  settingsComponent: NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['settingsComponent'];
-}) {
-  const registration: ExtensionSettingsPanelRegistration = {
-    extensionId: extension.id,
-    id: settingsComponent.id,
-    component: settingsComponent.component,
-    sectionId: settingsComponent.sectionId,
-    label: settingsComponent.label,
-    ...(settingsComponent.description ? { description: settingsComponent.description } : {}),
-    ...(typeof settingsComponent.order === 'number' ? { order: settingsComponent.order } : {}),
-    ...(extension.manifest?.frontend?.entry ? { frontendEntry: extension.manifest.frontend.entry } : {}),
-  };
-  return (
-    <div className="px-3 py-3">
-      <SettingsPanelHost registration={registration} />
-    </div>
-  );
-}
-
-const settingControlClass =
-  'w-full rounded-lg border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary outline-none transition-colors placeholder:text-dim focus:border-accent/50 focus:bg-surface';
-
-function formatSettingLabel(key: string): string {
-  return key
-    .split('.')
-    .pop()!
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function extensionSettingsEntries(extension: ExtensionInstallSummary): UnifiedSettingsEntry[] {
+function extensionSettingsEntries(extension: ExtensionInstallSummary): Array<{ key: string; order: number }> {
   const contributes = extension.manifest?.contributes?.settings;
   const rawSettings = contributes && typeof contributes === 'object' && !Array.isArray(contributes) ? contributes : {};
   return Object.entries(rawSettings).map(([key, value]) => {
     const s = value as Record<string, unknown>;
     return {
-      extensionId: extension.id,
       key,
-      type: (s.type as string) ?? 'string',
-      default: s.default,
-      description: (s.description as string) ?? undefined,
-      group: (s.group as string) ?? 'General',
-      enum: Array.isArray(s.enum) ? (s.enum as string[]) : undefined,
-      placeholder: (s.placeholder as string) ?? undefined,
       order: (s.order as number) ?? 0,
     };
   });
 }
 
-function hasInlineRailSettings(extension: ExtensionInstallSummary): boolean {
-  if (extension.manifest?.contributes?.settingsComponent) return false;
-  const entries = extensionSettingsEntries(extension);
+function ExtensionSettingsPointer({ extension }: { extension: ExtensionInstallSummary }) {
+  const entries = extensionSettingsEntries(extension).sort((a, b) => a.order - b.order);
+  const settingsComponent = extension.manifest?.contributes?.settingsComponent;
+  const target = `/settings#${extensionSettingsSectionId(extension)}`;
   return (
-    entries.length > 0 &&
-    entries.length <= 3 &&
-    entries.every((entry) => ['boolean', 'number', 'string'].includes(entry.type) || entry.enum?.length)
-  );
-}
-
-function ExtensionSettingRow({
-  entry,
-  value,
-  onChange,
-}: {
-  entry: UnifiedSettingsEntry;
-  value: unknown;
-  onChange: (value: unknown) => void;
-}) {
-  const currentValue = value ?? entry.default;
-  return (
-    <div className="grid gap-3 px-3 py-3 sm:grid-cols-[9rem_minmax(0,1fr)]">
-      <dt className="text-[12px] font-medium text-primary">{formatSettingLabel(entry.key)}</dt>
-      <dd className="min-w-0 space-y-2">
-        {entry.description ? <p className="text-[12px] leading-5 text-secondary">{entry.description}</p> : null}
-        {renderExtensionSettingControl(entry, currentValue, onChange)}
-      </dd>
+    <div className="rounded-xl border border-border-subtle/70 px-3 py-3 text-[12px] leading-5 text-secondary">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span>
+          Configure {extension.name} from Settings{settingsComponent ? ` (${settingsComponent.label})` : ''}.
+        </span>
+        <Link className="text-accent transition-colors hover:text-primary" to={target}>
+          Open settings
+        </Link>
+      </div>
+      {entries.length ? (
+        <div className="mt-2 font-mono text-[11px] text-dim">
+          {entries.map((entry) => entry.key).join(', ')}
+        </div>
+      ) : null}
     </div>
-  );
-}
-
-function renderExtensionSettingControl(entry: UnifiedSettingsEntry, value: unknown, onChange: (value: unknown) => void) {
-  if (entry.enum?.length) {
-    return (
-      <select className={settingControlClass} value={String(value ?? '')} onChange={(event) => onChange(event.target.value)}>
-        {entry.enum.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    );
-  }
-
-  if (entry.type === 'boolean') {
-    return (
-      <label className="inline-flex items-center gap-2 text-[13px] text-primary">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-border-subtle bg-elevated accent-accent"
-          checked={Boolean(value)}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        Enabled
-      </label>
-    );
-  }
-
-  if (entry.type === 'number') {
-    return (
-      <input
-        type="number"
-        className={settingControlClass}
-        value={typeof value === 'number' ? value : ''}
-        placeholder={entry.placeholder}
-        onChange={(event) => onChange(event.target.value === '' ? undefined : Number(event.target.value))}
-      />
-    );
-  }
-
-  return (
-    <input
-      type="text"
-      className={settingControlClass}
-      value={typeof value === 'string' ? value : ''}
-      placeholder={entry.placeholder}
-      onChange={(event) => onChange(event.target.value)}
-    />
   );
 }
 
@@ -1707,13 +1509,7 @@ function ExtensionDetailsContent({
 
       {hasSettings ? (
         <DetailBlock title="Settings">
-          {hasInlineRailSettings(extension) || !compact ? (
-            <ExtensionSettingsBlock extension={extension} />
-          ) : (
-            <div className="rounded-xl border border-border-subtle/70 px-3 py-3 text-[12px] leading-5 text-secondary">
-              This extension has a full settings surface.
-            </div>
-          )}
+          <ExtensionSettingsPointer extension={extension} />
         </DetailBlock>
       ) : null}
 

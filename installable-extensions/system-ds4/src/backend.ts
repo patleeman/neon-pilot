@@ -16,6 +16,7 @@ const MODEL_LINK_FILENAME = 'ds4flash.gguf';
 const DS4_CORE_TOOLS = ['bash', 'read', 'edit'];
 const BOOTSTRAP_PID_KEY = 'runtime/bootstrapPid';
 const SERVER_PID_KEY = 'runtime/serverPid';
+const SERVER_SLOT_KEY = 'runtime/serverSlotId';
 const SETTINGS_KEY = 'settings';
 const DEFAULT_CONTEXT_WINDOW = 1000000;
 const MIN_CONTEXT_WINDOW = 4096;
@@ -283,6 +284,24 @@ function enabledModelSlots(settings: Ds4Settings): Ds4ModelSlot[] {
   return enabled.length ? enabled : [activeModelSlot(settings)];
 }
 
+function requestedModelId(input: { provider?: unknown; model?: unknown; modelRef?: unknown; slotId?: unknown }): string {
+  const explicitSlot = typeof input.slotId === 'string' ? input.slotId.trim() : '';
+  if (explicitSlot) return explicitSlot;
+  const modelRef = typeof input.modelRef === 'string' ? input.modelRef.trim() : '';
+  if (modelRef.includes('/')) return modelRef.slice(modelRef.indexOf('/') + 1);
+  const model = typeof input.model === 'string' ? input.model.trim() : '';
+  return modelRef || model;
+}
+
+function slotForRequest(settings: Ds4Settings, input: { provider?: unknown; model?: unknown; modelRef?: unknown; slotId?: unknown }): Ds4ModelSlot {
+  const requested = requestedModelId(input);
+  if (!requested) return activeModelSlot(settings);
+  return (
+    settings.modelSlots.find((slot) => slot.id === requested || slot.modelId === requested) ??
+    activeModelSlot(settings)
+  );
+}
+
 function normalizeSettings(value: unknown): Ds4Settings {
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   const contextWindow = normalizeInteger(record.contextWindow, DEFAULT_SETTINGS.contextWindow, MIN_CONTEXT_WINDOW, MAX_CONTEXT_WINDOW);
@@ -341,6 +360,13 @@ async function writeSettings(ctx: ExtensionBackendContext, patch: unknown): Prom
   const next = normalizeSettings({ ...current, ...(patch && typeof patch === 'object' ? (patch as Record<string, unknown>) : {}) });
   await ctx.storage.put(SETTINGS_KEY, next);
   syncRtkShellCompressionEnv(next);
+  return next;
+}
+
+async function activateModelSlot(ctx: ExtensionBackendContext, settings: Ds4Settings, slot: Ds4ModelSlot): Promise<Ds4Settings> {
+  if (settings.activeModelSlotId === slot.id) return settings;
+  const next = await writeSettings(ctx, { activeModelSlotId: slot.id });
+  await installProviderWithSettings(ctx, next);
   return next;
 }
 
@@ -1033,24 +1059,37 @@ export async function installProvider(_input: unknown, ctx: ExtensionBackendCont
   return installProviderWithSettings(ctx, await readSettings(ctx));
 }
 
+export async function disable(_input: unknown, ctx: ExtensionBackendContext) {
+  const server = await stopServer({}, ctx);
+  const state = await ctx.models.deleteProvider(PROVIDER);
+  return { ok: true, provider: PROVIDER, server, state };
+}
+
 export async function status(_input: unknown, ctx: ExtensionBackendContext) {
   publishDs4CliToProcessPath();
   const cliPath = process.env.DS4_CLI_BIN ?? path.join(resolveDs4CliBinDir(), 'ds4');
   const currentSettings = await readSettings(ctx);
   const paths = await runtimePaths(ctx, currentSettings);
-  const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, server, tools, settings, rtk] = await Promise.all([
+  const [repoInstalled, serverInstalled, modelInstalled, modelBytes, bootstrap, serverPid, serverSlotId, server, tools, settings, rtk] = await Promise.all([
     exists(path.join(paths.repoDir, '.git')),
     exists(paths.serverBin),
     exists(paths.modelPath),
     fileSize(paths.modelPath),
     readBootstrapState(ctx, paths),
     readStoredPid(ctx, SERVER_PID_KEY),
+    ctx.storage.get(SERVER_SLOT_KEY).catch(() => null),
     readServerHealth(),
     readToolAvailability(ctx),
     readSettings(ctx),
     readRtkAvailability(ctx),
   ]);
   const managedRunning = await isPidRunning(ctx, serverPid);
+  const modelSlots = await Promise.all(
+    settings.modelSlots.map(async (slot) => ({
+      ...slot,
+      installed: await exists(path.join(paths.repoDir, 'gguf', slot.filename)),
+    })),
+  );
   return {
     ok: true,
     reachable: server.reachable,
@@ -1064,6 +1103,7 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
       serverInstalled,
       serverPath: paths.serverBin,
       modelSlot: paths.modelSlot,
+      modelSlots,
       modelVariant: paths.modelSlot.downloadVariant,
       modelInstalled,
       modelPath: paths.modelPath,
@@ -1081,6 +1121,8 @@ export async function status(_input: unknown, ctx: ExtensionBackendContext) {
       ...server,
       managedPid: serverPid,
       managedRunning,
+      slotId: typeof serverSlotId === 'string' && serverSlotId ? serverSlotId : undefined,
+      modelId: settings.modelSlots.find((slot) => slot.id === serverSlotId)?.modelId,
       log: await readTail(paths.serverLog),
     },
   };
@@ -1122,8 +1164,10 @@ export async function runtimeServiceHealth() {
   return { running: true };
 }
 
-export async function bootstrapRuntime(input: { force?: unknown; start?: unknown }, ctx: ExtensionBackendContext) {
-  const settings = await readSettings(ctx);
+export async function bootstrapRuntime(input: { force?: unknown; start?: unknown; provider?: unknown; model?: unknown; modelRef?: unknown; slotId?: unknown }, ctx: ExtensionBackendContext) {
+  const currentSettings = input && typeof input === 'object' && 'modelSlots' in input ? await writeSettings(ctx, input) : await readSettings(ctx);
+  const requestedSlot = slotForRequest(currentSettings, input);
+  const settings = await activateModelSlot(ctx, currentSettings, requestedSlot);
   const paths = await runtimePaths(ctx, settings);
   const slot = paths.modelSlot;
   await mkdir(paths.root, { recursive: true });
@@ -1210,18 +1254,25 @@ write_status running tools 2 "Checking required local tools"
   return { ok: true, started: true, pid, status: await status({}, ctx) };
 }
 
-export async function startServer(input: { timeoutMs?: unknown }, ctx: ExtensionBackendContext) {
-  const settings = await readSettings(ctx);
+export async function startServer(input: { timeoutMs?: unknown; provider?: unknown; model?: unknown; modelRef?: unknown; slotId?: unknown }, ctx: ExtensionBackendContext) {
+  const currentSettings = await readSettings(ctx);
+  const requestedSlot = slotForRequest(currentSettings, input);
+  const existingServerSlot = await ctx.storage.get(SERVER_SLOT_KEY).catch(() => null);
+  const needsSlotSwitch = currentSettings.activeModelSlotId !== requestedSlot.id || (typeof existingServerSlot === 'string' && existingServerSlot && existingServerSlot !== requestedSlot.id);
+  if (needsSlotSwitch) {
+    await stopServer({}, ctx);
+  }
+  const settings = await activateModelSlot(ctx, currentSettings, requestedSlot);
   const paths = await runtimePaths(ctx, settings);
   const health = await readServerHealth();
-  if (health.reachable) return { ok: true, alreadyRunning: true, status: await status({}, ctx) };
+  if (health.reachable) return { ok: true, alreadyRunning: true, modelSlot: paths.modelSlot, status: await status({}, ctx) };
 
   if (!(await exists(paths.serverBin)) || !(await exists(paths.modelPath))) {
-    throw new Error('DS4 is not installed yet. Run ds4BootstrapRuntime first; it clones ds4, builds ds4-server, and downloads the GGUF model.');
+    throw new Error(`DS4 model "${paths.modelSlot.name}" is not installed yet. Open DS4 settings and run setup for this model slot first.`);
   }
 
   const pid = await readStoredPid(ctx, SERVER_PID_KEY);
-  if (await isPidRunning(ctx, pid)) return { ok: true, starting: true, status: await status({}, ctx) };
+  if (await isPidRunning(ctx, pid)) return { ok: true, starting: true, modelSlot: paths.modelSlot, status: await status({}, ctx) };
 
   await mkdir(paths.kvDir, { recursive: true });
   await ctx.shell.exec({
@@ -1236,6 +1287,7 @@ export async function startServer(input: { timeoutMs?: unknown }, ctx: Extension
   });
   const serverPid = Number(result.stdout.trim());
   await ctx.storage.put(SERVER_PID_KEY, serverPid);
+  await ctx.storage.put(SERVER_SLOT_KEY, paths.modelSlot.id);
   const timeoutMs = typeof input.timeoutMs === 'number' && Number.isFinite(input.timeoutMs) ? Math.max(0, Math.floor(input.timeoutMs)) : 60_000;
   const nextHealth = timeoutMs > 0 ? await waitForHealth(timeoutMs) : await readServerHealth();
   if (!nextHealth.reachable) {
@@ -1250,7 +1302,7 @@ export async function startServer(input: { timeoutMs?: unknown }, ctx: Extension
         .join('\n\n'),
     );
   }
-  return { ok: true, started: true, pid: serverPid, status: await status({}, ctx) };
+  return { ok: true, started: true, pid: serverPid, modelSlot: paths.modelSlot, status: await status({}, ctx) };
 }
 
 export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) {
@@ -1264,6 +1316,7 @@ export async function stopServer(_input: unknown, ctx: ExtensionBackendContext) 
     await waitForPidExit(ctx, pid, 2_000);
   }
   await ctx.storage.put(SERVER_PID_KEY, 0);
+  await ctx.storage.put(SERVER_SLOT_KEY, '');
   return { ok: true, stopped: true, pid, graceful: exited, status: await status({}, ctx) };
 }
 

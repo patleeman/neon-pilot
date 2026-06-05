@@ -174,24 +174,26 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByText('2 installed · 2 enabled')).toBeTruthy();
   });
 
-  it('shows settings actions only for configurable extensions', async () => {
+  it('links configurable extensions to Settings', async () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension(), createConfigurableExtension()]);
     renderPage();
 
     expect(await screen.findByText('Configurable Test')).toBeTruthy();
-    expect(screen.getByLabelText('Settings for Configurable Test')).toBeTruthy();
-    expect(screen.queryByLabelText('Settings for Menu Test')).toBeNull();
+    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings#settings-extensions');
+    expect(screen.queryByLabelText('Configure Menu Test in Settings')).toBeNull();
   });
 
-  it('opens the extension details modal from the settings action', async () => {
+  it('points extension details to Settings instead of rendering duplicate controls', async () => {
     mocks.extensionInstallations.mockResolvedValue([createConfigurableExtension()]);
     renderPage();
 
     expect(await screen.findByText('Configurable Test')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Settings for Configurable Test'));
+    fireEvent.click(screen.getByLabelText('Details for Configurable Test'));
 
     expect(await screen.findByRole('dialog', { name: 'Extension details' })).toBeTruthy();
-    expect(screen.getByText('Toggle a test setting.')).toBeTruthy();
+    expect(screen.getByText('Configure Configurable Test from Settings.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open settings' }).getAttribute('href')).toBe('/settings#settings-extensions');
+    expect(screen.queryByText('Toggle a test setting.')).toBeNull();
   });
 
   it('shows catalog-only extensions in the install modal instead of the installed table', async () => {

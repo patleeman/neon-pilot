@@ -36,6 +36,7 @@ type Ds4Status = {
     serverPath?: string;
     modelBytes?: number | null;
     modelSlot?: Ds4ModelSlot;
+    modelSlots?: Array<Ds4ModelSlot & { installed?: boolean }>;
     modelLink?: string;
     tools?: Record<string, boolean>;
     cliAvailable?: boolean;
@@ -213,7 +214,7 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
     status?.settings?.modelSlots,
   ]);
 
-  const run = async (action: 'setup' | 'repair' | 'start' | 'stop' | 'restart') => {
+  const run = async (action: 'setup' | 'repair' | 'start' | 'stop' | 'restart', slotId?: string) => {
     const actionId =
       action === 'setup' || action === 'repair'
         ? 'ds4BootstrapRuntime'
@@ -229,7 +230,10 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
         await pa.extension.invoke('ds4StopServer', {});
         result = (await pa.extension.invoke('ds4StartServer', {})) as { status?: Ds4Status };
       } else {
-        result = (await pa.extension.invoke(actionId!, action === 'repair' ? { force: true } : {})) as { status?: Ds4Status };
+        result = (await pa.extension.invoke(actionId!, {
+          ...(action === 'repair' ? { force: true } : {}),
+          ...(slotId ? { slotId, activeModelSlotId: slotId, modelSlots: advancedDraft.modelSlots } : {}),
+        })) as { status?: Ds4Status };
       }
       if (result.status) setStatus(result.status);
       setError('');
@@ -610,7 +614,12 @@ export function Ds4RuntimeSettings({ pa }: { pa: ExtensionClient }) {
                   <input type="checkbox" checked={slot.enabled} onChange={(event) => updateModelSlot(index, { enabled: event.currentTarget.checked })} className="h-4 w-4 accent-accent" />
                   Expose in picker
                 </label>
-                <span className="font-mono text-[11px] text-dim">{slot.id}</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" className={BUTTON_CLASS} onClick={() => void run('setup', slot.id)} disabled={busy !== null || bootstrapRunning}>
+                    Setup this slot
+                  </button>
+                  <span className="font-mono text-[11px] text-dim">{slot.id}</span>
+                </div>
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <TextSetting label="Model id" value={slot.modelId} onChange={(modelId) => updateModelSlot(index, { modelId })} />

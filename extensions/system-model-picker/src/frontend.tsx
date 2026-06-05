@@ -52,11 +52,15 @@ type Ds4Status = {
     progressiveSkills?: boolean;
     compactSkillPrompt?: boolean;
     agentsPointers?: boolean;
+    activeModelSlotId?: string;
+    modelSlots?: Array<{ id: string; modelId: string; name?: string; enabled?: boolean }>;
   };
-  runtime?: { installed?: boolean };
+  runtime?: { installed?: boolean; modelSlots?: Array<{ id: string; modelId: string; name?: string; installed?: boolean }> };
   bootstrap?: { running?: boolean; status?: string; progress?: number; message?: string };
-  server?: { managedRunning?: boolean; error?: string };
+  server?: { managedRunning?: boolean; error?: string; slotId?: string; modelId?: string };
 };
+
+type Ds4QuickSettingKey = 'shellCompression' | 'directCoreTools' | 'progressiveSkills' | 'compactSkillPrompt' | 'agentsPointers';
 
 function useDs4Health(
   pa: {
@@ -74,6 +78,14 @@ function useDs4Health(
   const [settingUp, setSettingUp] = useState(false);
   const [savingSetting, setSavingSetting] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const selectedModelId = model?.id ?? '';
+  const selectedSlot =
+    status?.runtime?.modelSlots?.find((slot) => slot.modelId === selectedModelId || slot.id === selectedModelId) ??
+    status?.settings?.modelSlots?.find((slot) => slot.modelId === selectedModelId || slot.id === selectedModelId);
+  const selectedSlotId = selectedSlot?.id;
+  const selectedModelInstalled = Boolean(selectedSlot && ('installed' in selectedSlot ? selectedSlot.installed : status?.runtime?.installed));
+  const selectedModelRunning = Boolean(status?.reachable && selectedModelId && status.server?.modelId === selectedModelId);
+  const selectedModelMismatch = Boolean(isDs4 && status?.reachable && selectedModelId && status.server?.modelId && status.server.modelId !== selectedModelId);
 
   const refresh = useCallback(
     async () => {
@@ -115,7 +127,7 @@ function useDs4Health(
     if (!isDs4 || starting) return;
     setStarting(true);
     try {
-      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', {})) as { status?: Ds4Status };
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', { provider: 'ds4', model: selectedModelId })) as { status?: Ds4Status };
       setStatus(result.status ?? null);
       setError('');
       await refresh();
@@ -131,7 +143,7 @@ function useDs4Health(
     if (!isDs4 || settingUp) return;
     setSettingUp(true);
     try {
-      const result = (await pa.extensions.callAction('system-ds4', 'ds4BootstrapRuntime', {})) as { status?: Ds4Status };
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4BootstrapRuntime', { provider: 'ds4', model: selectedModelId })) as { status?: Ds4Status };
       setStatus(result.status ?? null);
       setError('');
       await refresh();
@@ -164,7 +176,7 @@ function useDs4Health(
     setRestarting(true);
     try {
       await pa.extensions.callAction('system-ds4', 'ds4StopServer', {});
-      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', {})) as { status?: Ds4Status };
+      const result = (await pa.extensions.callAction('system-ds4', 'ds4StartServer', { provider: 'ds4', model: selectedModelId })) as { status?: Ds4Status };
       setStatus(result.status ?? null);
       setError('');
       await refresh();
@@ -180,11 +192,15 @@ function useDs4Health(
     await pa.commands?.execute('app.navigate', { to: '/settings#settings-ds4' });
   };
 
-  const saveIntervention = async (key: 'directCoreTools' | 'progressiveSkills' | 'compactSkillPrompt' | 'agentsPointers', value: boolean) => {
+  const saveIntervention = async (key: Ds4QuickSettingKey, value: boolean) => {
     if (!isDs4 || savingSetting) return;
     setSavingSetting(key);
     try {
       const current = status?.settings ?? {};
+      const interventionPatch =
+        key === 'shellCompression'
+          ? { shellCompression: value ? 'rtk' : 'off' }
+          : { [key]: value };
       const result = (await pa.extensions.callAction('system-ds4', 'ds4SaveSettings', {
         shellCompression: current.shellCompression ?? 'rtk',
         contextWindow: current.contextWindow ?? 1000000,
@@ -194,7 +210,7 @@ function useDs4Health(
         progressiveSkills: current.progressiveSkills ?? true,
         compactSkillPrompt: current.compactSkillPrompt ?? true,
         agentsPointers: current.agentsPointers ?? true,
-        [key]: value,
+        ...interventionPatch,
       })) as { status?: Ds4Status };
       setStatus(result.status ?? null);
       setError('');
@@ -210,6 +226,12 @@ function useDs4Health(
   return {
     isDs4,
     status,
+    selectedModelId,
+    selectedSlot,
+    selectedSlotId,
+    selectedModelInstalled,
+    selectedModelRunning,
+    selectedModelMismatch,
     checking,
     starting,
     stopping,
@@ -243,13 +265,32 @@ function describeDs4Health(health: ReturnType<typeof useDs4Health>, active: bool
   if (!health.isDs4) return null;
   if (active) return { tone: 'active', label: 'DS4 active', title: 'DS4 is handling the current run.', canStart: false };
   if (health.error) return { tone: 'danger', label: 'DS4 error', title: health.error, canStart: true };
+  if (health.selectedModelMismatch) {
+    return {
+      tone: 'warn',
+      label: 'DS4 wrong model',
+      title: `DS4 is reachable, but it is running ${health.status?.server?.modelId ?? 'another model'} instead of ${health.selectedModelId}.`,
+      canStart: true,
+      startLabel: 'Switch to selected model',
+    };
+  }
+  if (health.status?.reachable && health.selectedModelRunning) return { tone: 'ok', label: 'DS4 alive', title: 'DS4 server is reachable for the selected model.', canStart: false };
   if (health.status?.reachable) return { tone: 'ok', label: 'DS4 alive', title: 'DS4 server is reachable.', canStart: false };
   if (health.status?.bootstrap?.running) return { tone: 'warn', label: 'DS4 setup', title: 'DS4 bootstrap is running.', canStart: false };
   if (health.status?.runtime?.installed === false) {
     return {
       tone: 'muted',
       label: 'DS4 setup needed',
-      title: 'DS4 runtime is not installed. Setup clones ds4, builds ds4-server, and downloads the model.',
+      title: 'DS4 runtime is not installed. Setup clones ds4, builds ds4-server, and downloads the selected model.',
+      canSetup: true,
+      canStart: false,
+    };
+  }
+  if (health.selectedSlot && !health.selectedModelInstalled) {
+    return {
+      tone: 'muted',
+      label: 'DS4 setup needed',
+      title: `The selected DS4 model (${health.selectedSlot.name ?? health.selectedModelId}) is not installed as the active runtime slot.`,
       canSetup: true,
       canStart: false,
     };
@@ -316,33 +357,33 @@ function Ds4HealthIndicator({
       : null;
   const settings = health.status?.settings ?? {};
   const interventionItems: Array<{
-    key: 'directCoreTools' | 'progressiveSkills' | 'compactSkillPrompt' | 'agentsPointers';
+    key: Ds4QuickSettingKey;
     label: string;
-    description: string;
     checked: boolean;
   }> = [
     {
+      key: 'shellCompression',
+      label: 'Output compression',
+      checked: (settings.shellCompression ?? 'rtk') === 'rtk',
+    },
+    {
       key: 'directCoreTools',
       label: 'Core tools only',
-      description: 'Expose bash/read/edit directly',
       checked: settings.directCoreTools ?? true,
     },
     {
       key: 'progressiveSkills',
       label: 'Progressive skills',
-      description: 'Discover skills through ds4',
       checked: settings.progressiveSkills ?? true,
     },
     {
       key: 'compactSkillPrompt',
       label: 'Compact skill prompt',
-      description: 'Skip inline skill bodies',
       checked: settings.compactSkillPrompt ?? true,
     },
     {
       key: 'agentsPointers',
       label: 'AGENTS.md pointers',
-      description: 'Use file pointers instead of bodies',
       checked: settings.agentsPointers ?? true,
     },
   ];
@@ -398,8 +439,8 @@ function Ds4HealthIndicator({
             {health.settingUp ? 'Setting up' : 'Run setup'}
           </MenuButton>
         ) : null}
-        <MenuButton onClick={() => void health.start()} disabled={health.starting || health.status?.reachable === true}>
-          {health.starting ? 'Starting' : 'Start server'}
+        <MenuButton onClick={() => void health.start()} disabled={health.starting || (health.status?.reachable === true && !health.selectedModelMismatch)}>
+          {health.starting ? 'Starting' : 'startLabel' in description ? description.startLabel : 'Start server'}
         </MenuButton>
         <MenuButton onClick={() => void health.stop()} disabled={health.stopping || health.status?.server?.managedRunning !== true}>
           {health.stopping ? 'Stopping' : 'Stop server'}

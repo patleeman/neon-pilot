@@ -5,7 +5,7 @@
   "packageType": "system",
   "defaultEnabled": false,
   "description": "DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "frontend": {
     "entry": "dist/frontend.js",
     "styles": []
@@ -14,7 +14,7 @@
     "entry": "src/backend.ts",
     "agentExtension": "createDs4AgentExtension",
     "onEnableAction": "ds4InstallProvider",
-    "onDisableAction": "ds4StopServer",
+    "onDisableAction": "ds4Disable",
     "services": [
       {
         "id": "ds4-runtime",
@@ -37,6 +37,7 @@
     ],
     "actions": [
       { "id": "ds4InstallProvider", "handler": "installProvider", "title": "Install DS4 model provider", "worker": { "enabled": true } },
+      { "id": "ds4Disable", "handler": "disable", "title": "Disable DS4 model provider", "worker": { "enabled": true } },
       { "id": "ds4Status", "handler": "status", "title": "DS4 server status", "worker": { "enabled": true } },
       { "id": "ds4Discover", "handler": "discover", "title": "Discover DS4 model", "worker": { "enabled": true } },
       { "id": "ds4BootstrapRuntime", "handler": "bootstrapRuntime", "title": "Download and build DS4 runtime", "worker": { "enabled": true } },

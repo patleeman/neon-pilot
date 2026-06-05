@@ -54,6 +54,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
     models: {
       saveProvider: vi.fn(async () => ({ providers: [] })),
       saveProviderModel: vi.fn(async () => ({ providers: [] })),
+      deleteProvider: vi.fn(async () => ({ providers: [] })),
     },
     conversations: {
       setActiveTools: vi.fn(async (_conversationId: string, toolNames: string[]) => ({ toolNames })),
@@ -150,6 +151,23 @@ describe('DS4 provider setup', () => {
     );
   });
 
+  it('removes the DS4 provider when disabled', async () => {
+    const context = ctx({
+      shell: {
+        exec: vi.fn(async () => ({ stdout: '', stderr: '', code: 0 })),
+        spawn: vi.fn(),
+      },
+    });
+
+    await expect(backend.disable({}, context)).resolves.toMatchObject({
+      ok: true,
+      provider: 'ds4',
+      server: { ok: true },
+    });
+
+    expect(context.models.deleteProvider).toHaveBeenCalledWith('ds4');
+  });
+
   it('installs and discovers enabled custom DS4 model slots', async () => {
     const context = ctx({
       storage: {
@@ -238,6 +256,11 @@ describe('DS4 managed runtime', () => {
       );
       const context = ctx({
         filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        storage: {
+          get: vi.fn(async (key: string) => (key === 'runtime/serverSlotId' ? 'default' : null)),
+          put: vi.fn(async () => ({ ok: true })),
+          delete: vi.fn(async () => ({ ok: true, deleted: true })),
+        },
         shell: {
           exec: vi.fn(async () => ({ stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] })),
           spawn: vi.fn(),
@@ -256,8 +279,10 @@ describe('DS4 managed runtime', () => {
           modelBytes: 0,
           tools: expect.any(Object),
           rtk: expect.objectContaining({ installed: false, valid: false }),
+          modelSlots: expect.arrayContaining([expect.objectContaining({ id: 'default', installed: true })]),
         }),
       );
+      expect(result.server).toEqual(expect.objectContaining({ slotId: 'default', modelId: 'deepseek-v4-flash' }));
       expect(result.settings).toEqual(expect.objectContaining({
         shellCompression: 'rtk',
         contextWindow: 1000000,
@@ -355,6 +380,87 @@ describe('DS4 managed runtime', () => {
       expect(launchScript).toContain('--ctx 262144');
       expect(launchScript).toContain('--kv-disk-space-mb 16384');
       expect(launchScript).toContain(path.join(dir, 'runtime'));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('switches the active slot and restarts when a different DS4 model is selected', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'ds4-runtime-'));
+    try {
+      await mkdir(path.join(dir, 'runtime', 'ds4', 'gguf'), { recursive: true });
+      await writeFile(path.join(dir, 'runtime', 'ds4', 'ds4-server'), '#!/bin/sh\n', 'utf8');
+      await writeFile(path.join(dir, 'runtime', 'ds4', 'gguf', 'DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf'), '', 'utf8');
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: [{ id: 'deepseek-v4-flash' }] }),
+          })
+          .mockRejectedValueOnce(new Error('offline'))
+          .mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: [{ id: 'deepseek-v4-flash-spark-mini-q2-reap' }] }),
+          }),
+      );
+      let oldRunning = true;
+      const exec = vi.fn(async (input: { args?: string[] }) => {
+        const command = input.args?.join(' ') ?? '';
+        if (command.includes('kill -0')) return { stdout: oldRunning ? 'yes\n' : '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        if (command.includes('kill -TERM')) {
+          oldRunning = false;
+          return { stdout: '', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+        }
+        return { stdout: '67890\n', stderr: '', command: 'sh', args: [], executionWrappers: [] };
+      });
+      const stored: Record<string, unknown> = {
+        settings: {
+          activeModelSlotId: 'default',
+          modelSlots: [
+            {
+              id: 'default',
+              enabled: true,
+              modelId: 'deepseek-v4-flash',
+              name: 'DeepSeek V4 Flash',
+              filename: 'DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf',
+              downloadVariant: 'q2-imatrix',
+            },
+            {
+              id: 'spark-mini-q2-reap',
+              enabled: true,
+              modelId: 'deepseek-v4-flash-spark-mini-q2-reap',
+              name: 'DeepSeek V4 Flash Spark Mini Q2 REAP',
+              filename: 'DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf',
+            },
+          ],
+        },
+        'runtime/serverPid': 12345,
+        'runtime/serverSlotId': 'default',
+      };
+      const context = ctx({
+        filesystem: { app: vi.fn(async () => ({ root: { path: dir } })) },
+        storage: {
+          get: vi.fn(async (key: string) => stored[key] ?? null),
+          put: vi.fn(async (key: string, value: unknown) => {
+            stored[key] = value;
+            return { ok: true };
+          }),
+          delete: vi.fn(async () => ({ ok: true, deleted: true })),
+        },
+        shell: { exec, spawn: vi.fn() },
+      });
+
+      const result = await backend.startServer({ model: 'deepseek-v4-flash-spark-mini-q2-reap', timeoutMs: 0 }, context);
+
+      expect(result.started).toBe(true);
+      expect(context.storage.put).toHaveBeenCalledWith('runtime/serverPid', 0);
+      expect(context.storage.put).toHaveBeenCalledWith('settings', expect.objectContaining({ activeModelSlotId: 'spark-mini-q2-reap' }));
+      expect(context.storage.put).toHaveBeenCalledWith('runtime/serverSlotId', 'spark-mini-q2-reap');
+      expect(exec.mock.calls.some(([input]) => (input.args?.join(' ') ?? '').includes('DeepSeek-V4-Flash-Spark-Mini-Q2-REAP-ds4.gguf'))).toBe(true);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

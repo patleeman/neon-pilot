@@ -59,6 +59,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const INPUT_CLASS =
   'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
@@ -75,6 +76,7 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-workspace', label: 'Workspace', summary: 'Default cwd and local context' },
   { id: 'settings-commands', label: 'Commands', summary: 'Command palette actions and keyboard shortcuts' },
   { id: 'settings-security', label: 'Security', summary: 'Secret storage and extension credentials' },
+  { id: 'settings-extensions', label: 'Extensions', summary: 'Preferences declared by installed extensions' },
   { id: 'settings-desktop', label: 'Desktop', summary: 'App behavior, remotes, and keyboard shortcuts' },
 ] as const satisfies readonly { id: string; label: string; summary: string }[];
 
@@ -1621,6 +1623,23 @@ function ExtensionSettingsSection({
   );
 }
 
+function ExtensionSettingsComponentPanels({
+  registrations,
+}: {
+  registrations: ReturnType<typeof useExtensionRegistry>['settingsComponents'];
+}) {
+  if (registrations.length === 0) return null;
+  return (
+    <div className="space-y-0 border-t border-border-subtle/70 pt-6">
+      {registrations.map((registration) => (
+        <SettingsPanel key={`${registration.extensionId}:${registration.id}`} title={registration.label} description={registration.description}>
+          <SettingsPanelHost registration={registration} />
+        </SettingsPanel>
+      ))}
+    </div>
+  );
+}
+
 function getSettingsChanges(draft: Record<string, unknown>, values: Record<string, unknown>): Array<[string, unknown]> {
   return Object.entries(draft).filter(([key, val]) => val !== values[key]);
 }
@@ -1847,6 +1866,7 @@ function ExtensionSecretsSection() {
 }
 
 export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[] } = {}) {
+  const location = useLocation();
   const extensionRegistry = useExtensionRegistry();
   const {
     theme,
@@ -1927,14 +1947,17 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       desktopEnvironment?.isElectron || isDesktopShell()
         ? SETTINGS_QUICK_LINKS
         : SETTINGS_QUICK_LINKS.filter((item) => item.id !== 'settings-desktop');
-    const extensionLinks = extensionRegistry.settingsComponents.map((component) => ({
-      id: component.sectionId,
-      label: component.label,
-      summary: component.description ?? 'Extension settings',
-    }));
-    const allLinks = [...shellFiltered, ...extensionLinks];
-    return visibleSectionIds ? allLinks.filter((item) => visibleSectionIds.has(item.id)) : allLinks;
-  }, [desktopEnvironment?.isElectron, extensionRegistry.settingsComponents, visibleSectionIds]);
+    return visibleSectionIds ? shellFiltered.filter((item) => visibleSectionIds.has(item.id)) : shellFiltered;
+  }, [desktopEnvironment?.isElectron, visibleSectionIds]);
+
+  useEffect(() => {
+    const rawSectionId = decodeURIComponent(location.hash.replace(/^#/, ''));
+    const extensionComponentIds = new Set(extensionRegistry.settingsComponents.map((component) => component.sectionId));
+    const sectionId = extensionComponentIds.has(rawSectionId) ? 'settings-extensions' : rawSectionId;
+    if (!sectionId || !visibleQuickLinks.some((item) => item.id === sectionId)) return;
+    const frame = window.requestAnimationFrame(() => navigateToSection(sectionId));
+    return () => window.cancelAnimationFrame(frame);
+  }, [extensionRegistry.settingsComponents, location.hash, visibleQuickLinks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3160,6 +3183,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               <ExtensionSecretsSection />
             </SettingsSection>
 
+            <SettingsSection id="settings-extensions" label="Extensions" description="Preferences declared by installed extensions.">
+              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
+              <ExtensionSettingsComponentPanels registrations={extensionRegistry.settingsComponents} />
+            </SettingsSection>
+
             <SettingsSection
               id="settings-providers"
               label="Providers"
@@ -4310,18 +4338,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               <TelemetryLogsSettingsPanel />
             </SettingsSection>
 
-            {extensionRegistry.settingsComponents.map((registration) => (
-              <SettingsSection
-                key={`${registration.extensionId}:${registration.id}`}
-                id={registration.sectionId}
-                label={registration.label}
-                description={registration.description ?? 'Extension settings.'}
-              >
-                <SettingsPanel title={registration.label} description={registration.description}>
-                  <SettingsPanelHost registration={registration} />
-                </SettingsPanel>
-              </SettingsSection>
-            ))}
           </div>
         </AppPageLayout>
       </div>
