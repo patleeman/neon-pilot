@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.3-rc.4 — 2026-06-05
+
+### Highlights
+
+- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.10.3-rc.3 — 2026-06-05
 
 ### Highlights
