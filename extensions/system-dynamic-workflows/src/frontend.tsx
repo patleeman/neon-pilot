@@ -531,9 +531,9 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 ) : null}
                 {detail?.events.length ? (
-                  <div>
-                    <h3 className="mb-2 text-[13px] font-medium text-primary">Events</h3>
-                    <div className="max-h-72 overflow-auto rounded-md border border-border-subtle bg-surface/30">
+                  <SurfacePanel muted className="overflow-hidden shadow-none">
+                    <PanelHeader title="Events" meta={`${detail.events.length} events`} className="px-3 py-2" />
+                    <div className="max-h-72 overflow-auto">
                       {detail.events.slice(-80).map((event, index) => (
                         <div
                           key={`${event.createdAt}-${index}`}
@@ -551,7 +551,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </SurfacePanel>
                 ) : null}
                 {detail ? (
                   <Disclosure summary="Args" className="bg-surface/30">
