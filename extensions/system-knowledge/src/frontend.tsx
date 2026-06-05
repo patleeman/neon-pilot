@@ -6,6 +6,7 @@ import {
   AppPageIntro,
   AppPageLayout,
   type ExtensionSurfaceProps,
+  SurfacePanel,
   lazyRouteWithRecovery,
   useApi,
 } from '@neon-pilot/extensions/ui';
@@ -114,9 +115,9 @@ export function KnowledgePageSurface() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border-subtle bg-surface p-5 shadow-sm">
+              <SurfacePanel className="p-5">
                 <KnowledgeSettingsPanelComponent variant="onboarding" />
-              </div>
+              </SurfacePanel>
             </div>
 
             <aside className="space-y-5 border-t border-border-subtle pt-5 lg:border-t-0 lg:pt-0">
