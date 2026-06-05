@@ -26,6 +26,7 @@ process.env.NEON_PILOT_CONFIG_ROOT ??= smokeConfigRoot;
 process.env.NEON_PILOT_KNOWLEDGE_ROOT ??= smokeKnowledgeRoot;
 const inputRoot = process.argv[2] ? resolve(process.argv[2]) : repoRoot;
 const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'Contents', 'Resources') : null;
+const directExtensionRoot = !packagedAppResourcesRoot && existsSync(join(inputRoot, 'extension.json')) ? inputRoot : null;
 const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
 
 if (packagedAppResourcesRoot) {
@@ -77,6 +78,7 @@ function listSourceExtensionDirs() {
 }
 
 function listPackagedExtensionDirs() {
+  if (directExtensionRoot) return [directExtensionRoot];
   return listExtensionDirs(extensionsRoot, (name) => name.startsWith('system-'));
 }
 

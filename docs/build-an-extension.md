@@ -19,6 +19,25 @@ Implement it with editable source files, build it, reload it, visually test it, 
 
 Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done” looks like.
 
+## Production agent loop
+
+Use this as the no-ambiguity loop for an agent building an extension in a repo checkout:
+
+1. Read this guide, [`docs/extensions.md`](extensions.md), [`packages/extensions/README.md`](../packages/extensions/README.md), and the closest existing extension `README.md`.
+2. Inspect existing extension ids, routes, nav labels, action ids, commands, settings components, and tools before choosing names.
+3. Pick exactly one primary surface for the first version: `main-page`, `right-rail`, `workbench-detail`, `settingsComponent`, backend tool/action, or theme.
+4. Start from [`docs/extension-templates/`](extension-templates/README.md) when the feature matches a template; otherwise copy the closest first-party extension shape.
+5. Create editable source files in `src/`, declare every contribution in `extension.json`, and keep generated bundles in `dist/`.
+6. Build with `pnpm run extension:build -- <extension-dir>`.
+7. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; for repo extension or boundary work, also run `pnpm run check:extensions:static`.
+8. Reload extensions from Settings -> Extensions, or restart the desktop app when reload is unavailable.
+9. Validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
+10. Exercise empty, loading, error, and success states when the surface has UI; for backend tools/actions, run one representative invocation and inspect the transcript or visible result.
+11. Update the extension `README.md` with install/build/use notes and any non-obvious behavior.
+12. Checkpoint only the files touched for this extension and its docs.
+
+Do not stop after a successful build. A built extension is only ready after its manifest diagnostics are clean and the user-visible path has been exercised.
+
 ## Templates
 
 Before writing from scratch, check [`docs/extension-templates/`](extension-templates/README.md) for copy-paste stubs
@@ -126,12 +145,23 @@ In the packaged app, use Extension Manager actions to create, validate, and relo
 
 Validation is not optional. The extension doctor catches missing bundles, stale output, bad manifest references, missing frontend/backend exports, tool schema problems, forbidden backend imports, non-portable paths, and backend import crashes.
 
+Acceptance criteria for agent-built extensions:
+
+- `extension.json` uses schema v2, stable kebab-case ids, `/ext/{extension-id}` routes for main pages, and matching frontend/backend export names.
+- Runtime code imports only from `@neon-pilot/extensions`, `@neon-pilot/extensions/ui`, and narrow `@neon-pilot/extensions/backend/*` subpaths for host access.
+- Backend actions validate their inputs enough to return useful errors instead of crashing on malformed agent/tool calls.
+- UI calls backend actions through `pa.actions.call(...)` and shows loading, empty, error, and success states.
+- Dist files are current, diagnostics are clean, and the extension has been reloaded in the app.
+- The contributed surface or tool was exercised through the app/extension host, not only by unit tests or direct module imports.
+
 ## Troubleshooting
 
 - **The page or panel does not appear** — reload extensions and check manifest `contributes.views` / `contributes.nav`.
 - **The UI opens blank** — check frontend export names and Extension Manager diagnostics.
 - **Backend action/tool is missing** — check backend import errors and handler export names.
 - **Works from source but not in the app** — build `dist/`; the app does not compile extensions at runtime.
+- **Settings section does not appear** — use one `contributes.settingsComponent` object with `id`, `component`, `sectionId`, and `label`; the component export name must match `component`.
+- **Agent tool returns an opaque failure** — validate action/tool input and return a structured `{ text, details }` result when the transcript should show more than a raw object.
 - **Need an app capability the SDK lacks** — add the smallest reusable API to `@neon-pilot/extensions`; do not import desktop/server internals.
 
 ## Reference

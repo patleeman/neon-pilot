@@ -39,6 +39,19 @@ Implement it with editable source files, build it, reload it, visually test it, 
 
 The agent should create editable `src/` files, declare contributions in `extension.json`, build, validate, reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
 
+### Production readiness checklist
+
+Before calling an extension done, an agent must be able to answer each item with evidence from the repo or app:
+
+- **Surface chosen**: the extension has one clear primary surface for the first version: main page, workbench rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
+- **Boundary clean**: extension runtime code imports from `@neon-pilot/extensions`, `@neon-pilot/extensions/ui`, or narrow `@neon-pilot/extensions/backend/*` SDK subpaths, not core, desktop, or package-internal app modules.
+- **Manifest wired**: every declared component/action/tool/skill/settings entry points to an existing source export or file, and every frontend `pa.actions.call(...)` action id is declared in `backend.actions`.
+- **Runtime built**: `dist/` files are current, because packaged desktop runtimes load built bundles and do not compile extension source at install time.
+- **Diagnostics clean**: `neon-pilot-extension doctor <extension-dir>` is clean when available; boundary work also runs `pnpm run check:extensions:static`.
+- **User path validated**: the route, rail, Settings section, command, composer control, or tool invocation was opened or invoked through the app/extension host.
+- **States covered**: UI surfaces show useful loading, empty, error, and success states; backend-only extensions return useful error text/details for malformed input.
+- **Docs local**: the extension has or updates a `README.md` with build, reload, validation, and usage notes for the next agent.
+
 ## Core vs extensions
 
 Neon Pilot core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security boundaries, desktop/web shell, routing, install/update plumbing, and shared UI primitives.
@@ -536,12 +549,16 @@ Add one component-backed section to the main Settings page.
 
 ```json
 {
-  "id": "dictation",
-  "component": "DictationSettingsPanel",
-  "sectionId": "settings-dictation",
-  "label": "Dictation",
-  "description": "Enable local dictation via Whisper.cpp for the composer mic button.",
-  "order": 30
+  "contributes": {
+    "settingsComponent": {
+      "id": "dictation",
+      "component": "DictationSettingsPanel",
+      "sectionId": "settings-dictation",
+      "label": "Dictation",
+      "description": "Enable local dictation via Whisper.cpp for the composer mic button.",
+      "order": 30
+    }
+  }
 }
 ```
 

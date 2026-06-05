@@ -16,15 +16,14 @@
     ]
   },
   "contributes": {
-    "settingsSections": [
-      {
-        "id": "system-template-settings-section",
-        "title": "Template: My Integration",
-        "summary": "One sentence describing this integration.",
-        "component": "MySettingsSection",
-        "order": 100
-      }
-    ]
+    "settingsComponent": {
+      "id": "template-settings-section",
+      "component": "MySettingsSection",
+      "sectionId": "settings-template-my-integration",
+      "label": "Template: My Integration",
+      "description": "One sentence describing this integration.",
+      "order": 100
+    }
   },
   "permissions": ["settings:read", "settings:write"]
 }

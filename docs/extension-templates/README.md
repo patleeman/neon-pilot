@@ -25,6 +25,25 @@ pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/my-extension
 # 4. Reload via Extension Manager
 ```
 
+## Agent copy checklist
+
+After copying a template, replace every template-scoped identifier before the first build:
+
+- `extension.json`: `id`, `name`, `description`, route, nav label, component export names, action ids, handler names, permissions, and settings component ids when present.
+- `package.json`: package name when a package name is present, plus any runtime dependencies the extension imports.
+- `src/backend.ts`: domain types, input validation, persistence, action return shapes, and notification/error text.
+- `src/frontend.tsx`: exported component name, `pa.actions.call(...)` ids, visible labels, empty/error/loading states, and any action source strings passed to `pa.ui.notify`.
+- `README.md`: what the extension does, how to build it, how to validate it in the app, and which surface it contributes.
+
+Build and validate the copied extension, not the template directory:
+
+```bash
+pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/my-extension
+neon-pilot-extension doctor ~/.local/state/neon-pilot/extensions/my-extension
+```
+
+Then reload extensions and open the contributed route, rail, Settings section, command, or tool through the app.
+
 ## When to pick each template
 
 **data-dashboard** — displaying state the user can't directly edit (server health, run history,
@@ -45,3 +64,7 @@ than a full page; the host handles layout. Good for integration config and toggl
 - `pa.ui.confirm` — confirmation dialogs before destructive actions
 - Backend actions declared in `extension.json` → exported functions in `src/backend.ts`
 - Frontend calls backend via `pa.actions.call('actionId', input)`
+
+## Template validation expectations
+
+Templates are scaffolding, so their in-memory stores and placeholder copy are intentionally simple. A production extension copied from a template should persist user data when the workflow needs durability, validate backend action input, and include an extension-local `README.md` that tells future agents exactly how to build, reload, and exercise the user-visible path.
