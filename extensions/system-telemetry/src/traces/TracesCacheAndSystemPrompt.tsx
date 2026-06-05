@@ -3,6 +3,7 @@
  */
 
 import type { CacheEfficiencyAggregate, SystemPromptAggregate } from '@neon-pilot/extensions/data';
+import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesCacheAndSystemPrompt({
   cacheEfficiency,
@@ -14,10 +15,8 @@ export function TracesCacheAndSystemPrompt({
   if (!cacheEfficiency && !systemPrompt) return null;
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden shadow-[0_1px_2px_rgb(var(--color-primary)/0.04)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle">
-        <span className="text-[12px] font-semibold">Cache Efficiency &amp; System Prompt</span>
-      </div>
+    <SurfacePanel className="overflow-hidden">
+      <PanelHeader title="Cache Efficiency & System Prompt" />
       <div className="grid grid-cols-2 divide-x divide-border-subtle">
         {/* Cache */}
         <div className="p-4">
@@ -91,7 +90,7 @@ export function TracesCacheAndSystemPrompt({
           )}
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }
 
