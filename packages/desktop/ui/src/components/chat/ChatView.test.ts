@@ -1253,9 +1253,29 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('data-context-shelf="1"');
     expect(html).toContain('data-context-type="remote_control"');
     expect(html).toContain('Remote control');
-    expect(html).toContain('Controlled remotely from Kitty Litter');
+    expect(html).toContain('You are remotely controlling this agent.');
     expect(html).not.toContain('data-context-type="referenced_context"');
     expect(html).not.toContain('ui-message-card-assistant');
+  });
+
+  it('renders custom remote control status text', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        remoteControlled: true,
+        remoteControlStatus: 'You are remotely controlling a hermes agent on bender.tailnet:8642.',
+        messages: [
+          {
+            type: 'user',
+            id: 'user-1',
+            ts: '2026-03-11T18:00:00.000Z',
+            text: 'What is happening?',
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('You are remotely controlling a hermes agent on bender.tailnet:8642.');
+    expect(html).not.toContain('Kitty Litter');
   });
 
   it('renders goal continuations as quiet lifecycle markers', () => {

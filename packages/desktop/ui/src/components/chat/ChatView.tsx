@@ -74,6 +74,7 @@ export interface ChatViewProps {
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
   remoteControlled?: boolean;
+  remoteControlStatus?: string | null;
   precomputedRenderItems?: TranscriptRenderItem[];
 }
 
@@ -141,6 +142,7 @@ function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): bo
     (previous.systemPrompt ?? null) === (next.systemPrompt ?? null) &&
     previous.toolDefinitions === next.toolDefinitions &&
     (previous.remoteControlled ?? false) === (next.remoteControlled ?? false) &&
+    (previous.remoteControlStatus ?? null) === (next.remoteControlStatus ?? null) &&
     previous.precomputedRenderItems === next.precomputedRenderItems
   );
 }
@@ -182,6 +184,7 @@ export const ChatView = memo(function ChatView({
   systemPrompt = null,
   toolDefinitions = [],
   remoteControlled = false,
+  remoteControlStatus = null,
   precomputedRenderItems,
 }: ChatViewProps) {
   const renderStartedAtRef = useRef(performance.now());
@@ -575,6 +578,7 @@ export const ChatView = memo(function ChatView({
               systemPrompt={systemPrompt ?? ''}
               toolDefinitions={toolDefinitions}
               remoteControlled={remoteControlled}
+              remoteControlStatus={remoteControlStatus}
               onOpenFilePath={onOpenFilePath}
               onOpenCheckpoint={onOpenCheckpoint}
               onSelectionGesture={onReplyToSelection ? scheduleReplySelectionSync : undefined}

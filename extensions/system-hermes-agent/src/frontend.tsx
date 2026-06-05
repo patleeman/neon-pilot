@@ -201,6 +201,17 @@ function sessionTitle(session: HermesSession): string {
   return safeString(session.title).trim() || safeString(session.preview).trim().slice(0, 64) || safeString(session.id, 'Hermes session');
 }
 
+function remoteServerLabel(baseUrl: string | undefined): string {
+  const raw = safeString(baseUrl).trim();
+  if (!raw) return 'the configured remote server';
+  try {
+    const url = new URL(raw);
+    return url.host || raw;
+  } catch {
+    return raw.replace(/^https?:\/\//i, '').replace(/\/+$/, '') || raw;
+  }
+}
+
 function sessionId(session: HermesSession): string {
   return safeString(
     session.id ?? (session as { session_id?: unknown }).session_id ?? (session as { sessionId?: unknown }).sessionId,
@@ -1204,7 +1215,13 @@ export function HermesAgentPage({ pa, context }: ExtensionSurfaceProps) {
           ) : chatBlocks.length === 0 ? (
             <EmptyState title="Empty Hermes session" body="Send the first message to this remote agent session." />
           ) : (
-            <ChatView messages={chatBlocks} conversationId={activeSessionId} isStreaming={sending} remoteControlled />
+            <ChatView
+              messages={chatBlocks}
+              conversationId={activeSessionId}
+              isStreaming={sending}
+              remoteControlled
+              remoteControlStatus={`You are remotely controlling a hermes agent on ${remoteServerLabel(config?.baseUrl)}.`}
+            />
           )}
         </div>
 

@@ -93,6 +93,7 @@ export interface ChatViewProps {
   bottomPaddingPx?: number;
   systemPrompt?: string | null;
   remoteControlled?: boolean;
+  remoteControlStatus?: string | null;
 }
 
 export interface ChatRailComposerProps {

@@ -259,6 +259,7 @@ export const ContextShelf = memo(function ContextShelf({
   systemPrompt,
   toolDefinitions = [],
   remoteControlled = false,
+  remoteControlStatus,
   onOpenFilePath,
   onOpenCheckpoint,
   onSelectionGesture,
@@ -269,11 +270,13 @@ export const ContextShelf = memo(function ContextShelf({
   systemPrompt?: string | null;
   toolDefinitions?: LiveSessionToolDefinition[];
   remoteControlled?: boolean;
+  remoteControlStatus?: string | null;
   onOpenFilePath?: (path: string) => void;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
 }) {
   const normalizedSystemPrompt = systemPrompt?.trim() ?? '';
+  const remoteControlText = remoteControlStatus?.trim() || 'You are remotely controlling this agent.';
   const toolDefinitionsText = formatToolDefinitions(toolDefinitions);
   const hasSystemPrompt = normalizedSystemPrompt.length > 0 || toolDefinitionsText.length > 0;
   const systemPromptTokenCount = estimateTextTokens([normalizedSystemPrompt, toolDefinitionsText].filter(Boolean).join('\n\n'));
@@ -328,11 +331,11 @@ export const ContextShelf = memo(function ContextShelf({
                 ›
               </span>
               <span className="shrink-0 font-medium text-primary/90">Remote control</span>
-              <span className="min-w-0 truncate text-dim/90">Controlled remotely from Kitty Litter.</span>
+              <span className="min-w-0 truncate text-dim/90">{remoteControlText}</span>
             </span>
             <span className="h-px bg-border-subtle" aria-hidden="true" />
           </summary>
-          <div className={contextShelfBodyClassName}>Controlled remotely from Kitty Litter.</div>
+          <div className={contextShelfBodyClassName}>{remoteControlText}</div>
         </details>
       ) : null}
       {blocks.map((block, index) => {
