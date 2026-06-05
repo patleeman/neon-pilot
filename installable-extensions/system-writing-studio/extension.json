@@ -195,7 +195,10 @@
           "required": ["markdown"],
           "additionalProperties": false
         },
-        "promptGuidelines": ["Read the canvas first and preserve user intent; this tool replaces the full document."]
+        "promptGuidelines": [
+          "Read the canvas first and preserve user intent; this tool replaces the full document.",
+          "When the user asks for edits, rewrites, a final document, or changes that resolve comments, call this tool with the full updated markdown instead of only writing the edited document in chat."
+        ]
       },
       {
         "id": "add-annotation",

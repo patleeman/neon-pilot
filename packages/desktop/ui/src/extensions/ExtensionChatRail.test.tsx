@@ -158,13 +158,15 @@ describe('ExtensionChatRail', () => {
   });
 
   it('routes model changes through the host conversation model API', async () => {
-    render(<ExtensionChatRail conversationId="conversation-1" />);
+    const onModelChange = vi.fn();
+    render(<ExtensionChatRail conversationId="conversation-1" onModelChange={onModelChange} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'model' }));
 
     await waitFor(() => {
       expect(updateConversationModelPreferencesMock).toHaveBeenCalledWith('conversation-1', { model: 'model-b' });
     });
+    expect(onModelChange).toHaveBeenCalledWith('model-b');
   });
 
   it('hydrates and renders authoritative host conversation blocks when the hook has no blocks yet', async () => {

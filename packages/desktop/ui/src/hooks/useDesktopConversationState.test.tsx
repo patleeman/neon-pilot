@@ -530,6 +530,175 @@ describe('useDesktopConversationState', () => {
     expect(desktopConversationState).toHaveBeenCalledWith('conv-cached', { tailBlocks: 20, includeToolBlocks: false });
   });
 
+  it('resumes a persisted desktop conversation before sending a prompt', async () => {
+    const savedConversationState = {
+      conversationId: 'conv-saved',
+      sessionDetail: {
+        meta: {
+          id: 'conv-saved',
+          file: '/repo/saved.jsonl',
+          timestamp: '2026-05-30T00:00:00.000Z',
+          cwd: '/repo',
+          cwdSlug: 'repo',
+          model: 'gpt',
+          title: 'Saved Conversation',
+          messageCount: 1,
+        },
+        blocks: [{ type: 'text', id: 'text-1', text: 'Saved reply', ts: '2026-05-30T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        contextUsage: null,
+      },
+      liveSession: { live: false },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'Saved reply', ts: '2026-05-30T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
+    vi.spyOn(api, 'desktopConversationState')
+      .mockResolvedValueOnce(savedConversationState)
+      .mockResolvedValue({
+        ...savedConversationState,
+        liveSession: { live: true, id: 'conv-saved', cwd: '/repo', sessionFile: '/repo/saved.jsonl', isStreaming: false },
+      });
+    const resumeSession = vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-saved' });
+    const promptSession = vi.spyOn(api, 'promptSession').mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-saved" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await latestState?.send('continue', 'followUp');
+      await flushPromises();
+    });
+    await act(async () => {
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(resumeSession).toHaveBeenCalledWith('/repo/saved.jsonl', '/repo');
+    expect(promptSession).toHaveBeenCalledWith('conv-saved', 'continue', 'followUp', undefined, undefined, expect.any(String), undefined, undefined);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ live: true, id: 'conv-saved', sessionFile: '/repo/saved.jsonl' }));
+    expect(eventSources).toHaveLength(1);
+  });
+
+  it('fetches and resumes persisted conversation state when sending before hydration finishes', async () => {
+    const savedConversationState = {
+      conversationId: 'conv-fast',
+      sessionDetail: {
+        meta: {
+          id: 'conv-fast',
+          file: '/repo/fast.jsonl',
+          timestamp: '2026-05-30T00:00:00.000Z',
+          cwd: '/repo',
+          cwdSlug: 'repo',
+          model: 'gpt',
+          title: 'Fast Conversation',
+          messageCount: 1,
+        },
+        blocks: [{ type: 'text', id: 'text-1', text: 'Saved reply', ts: '2026-05-30T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        contextUsage: null,
+      },
+      liveSession: { live: false },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'Saved reply', ts: '2026-05-30T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
+    let resolveInitialState: (state: Awaited<ReturnType<typeof api.desktopConversationState>>) => void = () => {};
+    const initialStateRequest = new Promise<Awaited<ReturnType<typeof api.desktopConversationState>>>((resolve) => {
+      resolveInitialState = resolve;
+    });
+    vi.spyOn(api, 'desktopConversationState').mockReturnValueOnce(initialStateRequest).mockResolvedValue(savedConversationState);
+    const resumeSession = vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-fast' });
+    const promptSession = vi.spyOn(api, 'promptSession').mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-fast" />);
+      await flushPromises();
+    });
+
+    await act(async () => {
+      await latestState?.send('send immediately');
+      resolveInitialState(savedConversationState);
+      await flushPromises();
+    });
+
+    expect(resumeSession).toHaveBeenCalledWith('/repo/fast.jsonl', '/repo');
+    expect(promptSession).toHaveBeenCalledWith('conv-fast', 'send immediately', undefined, undefined, undefined, expect.any(String), undefined, undefined);
+  });
+
   it('uses a primed reserved conversation as live state while refreshing desktop state and subscribing', async () => {
     const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
 

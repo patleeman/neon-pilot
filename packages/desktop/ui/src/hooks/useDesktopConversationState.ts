@@ -765,8 +765,53 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return;
       }
 
+      const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+      const requestOptions = {
+        ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+        ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+      } satisfies DesktopConversationStateOptions;
+      let stateForSend = matchedState;
+      if (!stateForSend) {
+        stateForSend = await api.desktopConversationState(conversationId, requestOptions);
+        setState((previous) => mergeDesktopConversationState(previous, stateForSend));
+      }
+
+      let targetConversationId = conversationId;
+      const liveState = stateForSend?.liveSession;
+      if (!liveState?.live) {
+        const sessionFile = stateForSend?.sessionDetail?.meta?.file?.trim();
+        if (sessionFile) {
+          const resumed = await api.resumeSession(sessionFile, stateForSend?.sessionDetail?.meta?.cwd);
+          targetConversationId = resumed.id || conversationId;
+          if (targetConversationId === conversationId) {
+            setState((previous) => {
+              if (previous?.conversationId !== conversationId) return previous;
+              return {
+                ...previous,
+                liveSession: {
+                  live: true,
+                  id: conversationId,
+                  cwd: previous.sessionDetail?.meta?.cwd ?? '',
+                  sessionFile,
+                  isStreaming: previous.stream.isStreaming,
+                },
+              };
+            });
+            void api.desktopConversationState(conversationId, requestOptions).then((nextState) => {
+              setState((previous) => {
+                const mergedState = mergeDesktopConversationState(previous, nextState);
+                const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
+                rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
+                return mergedState;
+              });
+            });
+            setSubscriptionVersion((current) => current + 1);
+          }
+        }
+      }
+
       return await api.promptSession(
-        conversationId,
+        targetConversationId,
         text,
         behavior,
         images,
@@ -776,7 +821,15 @@ export function useDesktopConversationState(conversationId: string | null, optio
         relatedConversationIds,
       );
     },
-    [conversationId, surfaceId],
+    [
+      conversationId,
+      matchedState?.liveSession,
+      matchedState?.sessionDetail?.meta?.cwd,
+      matchedState?.sessionDetail?.meta?.file,
+      options?.includeToolBlocks,
+      options?.tailBlocks,
+      surfaceId,
+    ],
   );
 
   const abort = useCallback(async () => {

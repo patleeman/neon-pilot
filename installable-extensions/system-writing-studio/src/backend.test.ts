@@ -173,7 +173,7 @@ describe('Writing Studio backend', () => {
     expect(state.events.some((event) => event.type === 'agent_run_completed')).toBe(true);
   });
 
-  it('does not request active tool updates when creating the review transcript conversation', async () => {
+  it('ensures the review transcript conversation has Writing Studio tools before reviewing', async () => {
     const conversations = {
       create: vi.fn(async () => ({ id: 'host-chat-1', conversationId: 'host-chat-1' })),
       ensureLive: vi.fn(),
@@ -196,9 +196,31 @@ describe('Writing Studio backend', () => {
       runReview({ markdown: '# Draft\n\nThis selected sentence has enough surface area for a review note.' }, ctx),
     ).resolves.toMatchObject({ annotations: [expect.objectContaining({ body: 'This is anchored review feedback.' })] });
 
-    expect(conversations.create).toHaveBeenCalledWith(expect.not.objectContaining({ allowedToolNames: expect.any(Array) }));
-    expect(conversations.setActiveTools).not.toHaveBeenCalled();
+    expect(conversations.create).toHaveBeenCalledWith(expect.objectContaining({ allowedToolNames: expect.any(Array) }));
     expect(conversations.appendTranscriptBlock).toHaveBeenCalledWith(expect.objectContaining({ title: 'Reviewed 1' }));
+  });
+
+  it('does not churn the visible chat conversation while loading a document', async () => {
+    const conversations = {
+      create: vi.fn(async () => ({ id: 'host-chat-1', conversationId: 'host-chat-1' })),
+      ensureLive: vi.fn(async () => {
+        throw new Error('Live control is unavailable during passive load.');
+      }),
+      get: vi.fn(async () => ({ toolNames: ['bash'] })),
+      setActiveTools: vi.fn(),
+      appendCustomEntry: vi.fn(),
+    };
+    const ctx = context({ conversations });
+
+    const first = await load({}, ctx);
+    const second = await load({}, ctx);
+
+    expect(first.chatConversationId).toBe('host-chat-1');
+    expect(second.chatConversationId).toBe('host-chat-1');
+    expect(conversations.create).toHaveBeenCalledTimes(1);
+    expect(conversations.ensureLive).not.toHaveBeenCalled();
+    expect(conversations.get).not.toHaveBeenCalled();
+    expect(conversations.setActiveTools).not.toHaveBeenCalled();
   });
 
   it('can produce more than three review annotations for longer drafts', async () => {
@@ -375,8 +397,14 @@ describe('Writing Studio backend', () => {
     expect(state.chatConversationId).toBe('host-chat-2');
     expect(state.events).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'chat_cleared', actorId: 'user' })]));
     expect(conversations.abort).toHaveBeenCalledWith('host-chat-2');
-    expect(conversations.create).toHaveBeenCalledWith(expect.objectContaining({ live: true, title: expect.stringContaining('Writing Studio') }));
-    expect(conversations.setActiveTools).toHaveBeenCalledWith('host-chat-2', expect.arrayContaining(['writing_studio_get_canvas']));
+    expect(conversations.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        live: true,
+        title: expect.stringContaining('Writing Studio'),
+        allowedToolNames: expect.arrayContaining(['writing_studio_get_canvas']),
+      }),
+    );
+    expect(conversations.setActiveTools).not.toHaveBeenCalled();
   });
 
   it('ensures a host conversation for shared Writing Studio chat', async () => {
@@ -417,7 +445,8 @@ describe('Writing Studio backend', () => {
 
     expect(ensured.conversationId).toBe('host-chat-1');
     expect(state.chatConversationId).toBe('host-chat-1');
-    expect(conversations.setActiveTools).toHaveBeenCalled();
+    expect(conversations.create).toHaveBeenCalledWith(expect.objectContaining({ allowedToolNames: expect.any(Array) }));
+    expect(conversations.setActiveTools).not.toHaveBeenCalled();
   });
 
   it('retries host chat creation without tool selection when creation rejects active tool updates', async () => {

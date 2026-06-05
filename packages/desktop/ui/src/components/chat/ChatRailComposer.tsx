@@ -69,7 +69,7 @@ export interface ChatRailComposerProps {
     behavior?: 'steer' | 'followUp',
     images?: PromptImageInput[],
     attachmentRefs?: PromptAttachmentRefInput[],
-  ) => void;
+  ) => void | Promise<void>;
   onAbortStream: () => void;
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
@@ -232,7 +232,7 @@ export function ChatRailComposer({
   composerMenuStateRef.current = composerMenus;
 
   const hasContent = input.trim().length > 0 || attachments.length > 0 || drawingAttachments.length > 0;
-  const composerDisabled = false;
+  const composerDisabled = !conversationId;
 
   const buildSubmitPayload = useCallback(() => {
     const promptImages = [...buildPromptImages(attachments), ...drawingAttachments.map(drawingAttachmentToPromptImage)];
@@ -258,7 +258,7 @@ export function ChatRailComposer({
         event.preventDefault();
         if (hasContent) {
           const { promptImages, attachmentRefs } = buildSubmitPayload();
-          onSubmit(input.trim(), isStreaming ? 'steer' : undefined, promptImages, attachmentRefs);
+          await onSubmit(input.trim(), isStreaming ? 'steer' : undefined, promptImages, attachmentRefs);
           clearComposerAfterSubmit();
         }
       }
@@ -306,13 +306,12 @@ export function ChatRailComposer({
     (altKeyHeld: boolean) => {
       if (!hasContent) return;
       const { promptImages, attachmentRefs } = buildSubmitPayload();
-      onSubmit(
+      void Promise.resolve(onSubmit(
         input.trim(),
         isStreaming ? (altKeyHeld ? 'followUp' : 'steer') : altKeyHeld ? 'followUp' : undefined,
         promptImages,
         attachmentRefs,
-      );
-      clearComposerAfterSubmit();
+      )).then(clearComposerAfterSubmit);
     },
     [buildSubmitPayload, clearComposerAfterSubmit, hasContent, input, isStreaming, onSubmit],
   );

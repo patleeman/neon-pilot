@@ -105,7 +105,7 @@ Start writing here. The agent will keep the document in focus and add comments, 
 const defaultReviewPrompt =
   'Read like a generous collaborator with taste. Leave lively marginalia: notice energy, friction, specificity, rhythm, and places where the draft wants a stronger choice. Avoid generic proofreading unless the text truly needs it.';
 const defaultAgentInstructions =
-  'Keep the document in focus. Be useful, specific, and alive on the page. Prefer concrete edits, margin comments, and approved-edit suggestions over abstract writing advice.';
+  'Keep the document in focus. Be useful, specific, and alive on the page. Prefer concrete edits, margin comments, and approved-edit suggestions over abstract writing advice. If you claim to edit, rewrite, or provide a final version of the document, update the canvas with writing_studio_update_canvas before you answer.';
 
 const defaultSettings: WritingSettings = {
   reviewIntervalSeconds: 12,
@@ -505,12 +505,13 @@ async function ensureHostChatConversation(
   state: StoredState,
   ctx: ExtensionBackendContext,
   modelRef?: string,
-  options: { configureTools?: boolean } = {},
+  options: { configureTools?: boolean; ensureLive?: boolean } = {},
 ): Promise<string> {
   if (!ctx.conversations?.create) {
     throw new Error('Writing Studio chat requires the host conversation capability.');
   }
   const configureTools = options.configureTools !== false;
+  const shouldEnsureLive = options.ensureLive !== false;
   const conversationHasWritingStudioTools = async (conversationId: string): Promise<boolean | null> => {
     if (!configureTools || !ctx.conversations?.get) return null;
     try {
@@ -548,6 +549,7 @@ async function ensureHostChatConversation(
     ).catch(() => undefined);
   };
   if (state.chatConversationId) {
+    if (!shouldEnsureLive) return state.chatConversationId;
     try {
       const ensured = await ctx.conversations.ensureLive?.(
         state.chatConversationId,
@@ -599,7 +601,7 @@ async function runReviewThroughChat(
     reviewPrompt?: string;
   },
 ): Promise<{ annotations: Annotation[] }> {
-  await ensureHostChatConversation(state, ctx, input.modelRef, { configureTools: false });
+  await ensureHostChatConversation(state, ctx, input.modelRef);
   const existingIds = new Set(state.annotations.map((annotation) => annotation.id));
   const reviewPrompt = input.reviewPrompt?.trim() || state.settings.reviewPrompt;
   const selectedText = input.selectedText?.trim();
@@ -735,7 +737,7 @@ export async function load(input: unknown, ctx: ExtensionBackendContext): Promis
   const state = await readState(ctx, readDocumentId(input));
   if (ctx.conversations?.create) {
     const previousChatConversationId = state.chatConversationId;
-    await ensureHostChatConversation(state, ctx);
+    await ensureHostChatConversation(state, ctx, undefined, { configureTools: false, ensureLive: false });
     if (state.chatConversationId !== previousChatConversationId) await writeState(ctx, state);
   }
   const index = await readIndex(ctx);

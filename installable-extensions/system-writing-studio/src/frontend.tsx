@@ -659,6 +659,16 @@ function modelSelectionValue(model: WritingModelInfo, models: WritingModelInfo[]
   return duplicateId ? `${model.provider}/${model.id}` : model.id;
 }
 
+function modelSelectionValues(models: WritingModelInfo[]): Set<string> {
+  const values = new Set<string>();
+  for (const model of models) {
+    values.add(model.id);
+    values.add(modelSelectionValue(model, models));
+    if (model.provider) values.add(`${model.provider}/${model.id}`);
+  }
+  return values;
+}
+
 function documentTreePath(doc: DocumentSummary): string {
   const folderPath = doc.folderPath?.trim() || 'Drafts';
   const fileName = doc.fileName?.trim() || `${doc.title || 'Draft'}.md`;
@@ -1312,7 +1322,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     reviewIntervalSeconds: 12,
     reviewPrompt: '',
     agentInstructions:
-      'Keep the document in focus. Be useful, specific, and alive on the page. Prefer concrete edits, margin comments, and approved-edit suggestions over abstract writing advice.',
+      'Keep the document in focus. Be useful, specific, and alive on the page. Prefer concrete edits, margin comments, and approved-edit suggestions over abstract writing advice. If you claim to edit, rewrite, or provide a final version of the document, update the canvas with writing_studio_update_canvas before you answer.',
   });
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
@@ -1330,11 +1340,16 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
   const commentCardRefs = useRef(new Map<string, HTMLElement>());
   const fileNameDraftRef = useRef('');
   const dismissedSelectionTextRef = useRef('');
+  const activeDocumentIdRef = useRef(activeDocumentId);
 
   const updateFileNameDraft = useCallback((value: string) => {
     fileNameDraftRef.current = value;
     setFileNameDraft(value);
   }, []);
+
+  useEffect(() => {
+    activeDocumentIdRef.current = activeDocumentId;
+  }, [activeDocumentId]);
 
   useEffect(() => {
     return () => {
@@ -1363,7 +1378,10 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
         const nextModels = Array.isArray(result.models) ? result.models : [];
         setCurrentModel((current) => {
           const stored = current || readStringSetting(modelStorageKey);
-          const next = stored || result.currentModel || (nextModels[0] ? modelSelectionValue(nextModels[0], nextModels) : '');
+          const availableValues = modelSelectionValues(nextModels);
+          const hostCurrent = result.currentModel && availableValues.has(result.currentModel) ? result.currentModel : '';
+          const fallback = hostCurrent || (nextModels[0] ? modelSelectionValue(nextModels[0], nextModels) : '');
+          const next = stored && availableValues.has(stored) ? stored : fallback;
           writeStringSetting(modelStorageKey, next);
           return next;
         });
@@ -1791,6 +1809,16 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
     return result.conversationId;
   }, [activeDocumentId, currentModel, pa]);
 
+  const handleChatModelChange = useCallback((modelId: string) => {
+    if (!modelId) return;
+    writeStringSetting(modelStorageKey, modelId);
+    setCurrentModel(modelId);
+  }, []);
+
+  const refreshDocumentAfterChatTurn = useCallback(async () => {
+    await load(activeDocumentIdRef.current);
+  }, [load]);
+
   const clearChat = useCallback(async () => {
     setBusy('clear-chat');
     setError(null);
@@ -1853,6 +1881,7 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             openAnnotations || '(none)',
             '',
             'Use Writing Studio tools when the user asks to edit the canvas, add/update/dismiss comments, apply approved edits, review the draft, or update your Writing Studio instructions.',
+            'If you rewrite text, provide a final edited document, say you made edits, or resolve comments by changing prose, you must call writing_studio_update_canvas with the full updated markdown before your final answer. Do not present edited markdown only in chat when the user asked for document edits.',
           ].join('\n'),
         },
       ];
@@ -2292,7 +2321,8 @@ export function WritingStudioPage({ pa }: { pa: NativeExtensionClient }) {
             emptyState={<p className="writing-studio-muted">Ask for help with the draft, or ask the agent to add comments to the canvas.</p>}
             externalDraft={chatDraftInsertion}
             getContextMessages={getChatContextMessages}
-            onTurnComplete={() => load(activeDocumentId)}
+            onModelChange={handleChatModelChange}
+            onTurnComplete={refreshDocumentAfterChatTurn}
             onError={setError}
           />
         </section>

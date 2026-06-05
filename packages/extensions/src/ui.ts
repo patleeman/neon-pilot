@@ -113,6 +113,24 @@ export interface ChatRailComposerProps {
   externalDraft?: { id: string; text: string } | null;
 }
 
+export interface ExtensionChatContextMessage {
+  customType: string;
+  content: string;
+}
+
+export interface ExtensionChatRailProps {
+  conversationId: string | null;
+  workspaceCwd?: string | null;
+  tailBlocks?: number;
+  className?: string;
+  emptyState?: unknown;
+  externalDraft?: { id: string; text: string } | null;
+  getContextMessages?: (text: string) => ExtensionChatContextMessage[] | Promise<ExtensionChatContextMessage[]>;
+  onError?: (message: string) => void;
+  onModelChange?: (modelId: string) => void;
+  onTurnComplete?: () => void | Promise<void>;
+}
+
 export declare const AppPageEmptyState: HostComponent;
 export declare const AppPageIntro: HostComponent;
 export declare const AppPageLayout: HostComponent;
@@ -120,6 +138,7 @@ export declare const AppPageSection: HostComponent;
 export declare const AppPageToc: HostComponent;
 export declare const CheckpointInlineDiff: (...args: never[]) => unknown;
 export declare const ChatRailComposer: (props: ChatRailComposerProps) => unknown;
+export declare const ExtensionChatRail: (props: ExtensionChatRailProps) => unknown;
 export declare const ChatView: (props: ChatViewProps) => unknown;
 export declare const ActivityTreeView: (props: {
   items: readonly ActivityTreeItem[];
