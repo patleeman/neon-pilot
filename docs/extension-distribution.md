@@ -130,7 +130,7 @@ Users install from the GitHub repo URL, inspect the packages it exposes, select 
 
 ## User-configured sources
 
-Users can add GitHub extension repositories from **Settings -> Extensions -> Install Extension -> Extension repositories**. The app stores sources in the runtime settings file under `extensions.sources`:
+Users can add GitHub extension repositories from **Settings -> Extensions -> Extension repositories**. The install dialog also exposes the same repository control beside the installable package list. The app stores sources in the runtime settings file under `extensions.sources`:
 
 ```json
 {

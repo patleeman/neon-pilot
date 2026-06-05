@@ -173,6 +173,14 @@
         "activation": "on-route"
       }
     ],
+    "settingsComponent": {
+      "id": "extension-repositories",
+      "component": "ExtensionRepositoriesSettingsPanel",
+      "sectionId": "settings-extension-repositories",
+      "label": "Extension repositories",
+      "description": "Manage GitHub repositories used to populate installable extensions.",
+      "order": 20
+    },
     "skills": [
       {
         "id": "skills-and-capabilities",

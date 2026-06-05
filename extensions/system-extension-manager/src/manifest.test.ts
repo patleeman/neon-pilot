@@ -32,7 +32,14 @@ describe('system-extension-manager manifest', () => {
         component: 'ExtensionManagerPage',
       }),
     );
-    expect(manifest.contributes.settingsComponent).toBeUndefined();
+    expect(manifest.contributes.settingsComponent).toEqual(
+      expect.objectContaining({
+        id: 'extension-repositories',
+        component: 'ExtensionRepositoriesSettingsPanel',
+        sectionId: 'settings-extension-repositories',
+        label: 'Extension repositories',
+      }),
+    );
   });
 
   it('declares required permissions', () => {

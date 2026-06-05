@@ -42,7 +42,7 @@ vi.mock('@neon-pilot/extensions/workbench-browser', () => ({
   }),
 }));
 
-import { ExtensionManagerPage } from './frontend';
+import { ExtensionManagerPage, ExtensionRepositoriesSettingsPanel } from './frontend';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -119,6 +119,10 @@ function renderPageWithPa(pa: Record<string, unknown>) {
       <ExtensionManagerPage pa={pa as never} context={{} as never} surface={{} as never} params={{}} />
     </MemoryRouter>,
   );
+}
+
+function renderRepositoriesSettingsPanel(pa: Record<string, unknown>) {
+  render(<ExtensionRepositoriesSettingsPanel pa={pa as never} context={{} as never} surface={{} as never} params={{}} />);
 }
 
 describe('ExtensionManagerPage', () => {
@@ -348,6 +352,55 @@ describe('ExtensionManagerPage', () => {
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'listInstallableExtensions', {});
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'readExtensionSources', {});
     expect(setIntervalSpy.mock.calls.some((call) => call[1] === 5_000)).toBe(false);
+  });
+
+  it('renders extension repositories as a settings panel', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      sources: [
+        { id: 'neon-pilot', type: 'github', owner: 'patleeman', repo: 'neon-pilot-extensions', enabled: true, name: 'Neon Pilot Extensions' },
+      ],
+    });
+
+    renderRepositoriesSettingsPanel({
+      ui: { notify: vi.fn() },
+      extensions: { callAction },
+    });
+
+    expect(await screen.findByText('Neon Pilot Extensions')).toBeTruthy();
+    expect(screen.getByPlaceholderText('GitHub repo URL or owner/repo')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'readExtensionSources', {});
+  });
+
+  it('adds extension repositories from the settings panel', async () => {
+    const readResult = {
+      sources: [
+        { id: 'neon-pilot', type: 'github', owner: 'patleeman', repo: 'neon-pilot-extensions', enabled: true, name: 'Neon Pilot Extensions' },
+      ],
+    };
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'readExtensionSources') return readResult;
+      if (action === 'updateExtensionSources') return { ok: true, sources: readResult.sources };
+      return { ok: true };
+    });
+
+    renderRepositoriesSettingsPanel({
+      ui: { notify: vi.fn() },
+      extensions: { callAction },
+    });
+
+    fireEvent.change(await screen.findByPlaceholderText('GitHub repo URL or owner/repo'), {
+      target: { value: 'https://github.com/example/neon-extensions.git' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add repo' }));
+
+    await screen.findByText('Added example/neon-extensions.');
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateExtensionSources', {
+      sources: [
+        readResult.sources[0],
+        { id: 'example-neon-extensions', type: 'github', owner: 'example', repo: 'neon-extensions', enabled: true },
+      ],
+    });
   });
 
   it('installs marketplace behavior package sources from the marketplace form', async () => {

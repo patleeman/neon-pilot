@@ -66,6 +66,7 @@ interface ExtensionCatalogSource {
 type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | 'template';
 type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
 type ExtensionFilter = 'all' | 'attention';
+type ExtensionActionBridge = ExtensionSurfaceProps['pa']['extensions'];
 
 interface LogicalSurfaceSummary {
   id: string;
@@ -532,6 +533,187 @@ function parseGithubCatalogSource(value: string): ExtensionCatalogSource | null 
   };
 }
 
+function repoKey(source: Pick<ExtensionCatalogSource, 'owner' | 'repo'>): string {
+  return `${source.owner.toLowerCase()}/${source.repo.toLowerCase()}`;
+}
+
+function sourceLabel(source: ExtensionCatalogSource): string {
+  return source.name ?? `${source.owner}/${source.repo}`;
+}
+
+async function readExtensionSources(extensions: ExtensionActionBridge): Promise<ExtensionCatalogSource[]> {
+  if (!extensions?.callAction) return [];
+  const result = (await extensions.callAction('system-extension-manager', 'readExtensionSources', {})) as {
+    sources?: ExtensionCatalogSource[];
+  };
+  return Array.isArray(result.sources) ? result.sources : [];
+}
+
+async function writeExtensionSources(extensions: ExtensionActionBridge, sources: ExtensionCatalogSource[]): Promise<void> {
+  if (!extensions?.callAction) throw new Error('Extension source management is unavailable.');
+  await extensions.callAction('system-extension-manager', 'updateExtensionSources', { sources });
+}
+
+function ExtensionRepositoriesControl({
+  sources,
+  sourceErrors = [],
+  input,
+  busyId,
+  onInputChange,
+  onAdd,
+  onRemove,
+}: {
+  sources: ExtensionCatalogSource[];
+  sourceErrors?: Array<{ sourceId: string; message: string }>;
+  input: string;
+  busyId: string | null;
+  onInputChange: (value: string) => void;
+  onAdd: () => void;
+  onRemove: (source: ExtensionCatalogSource) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+        <input
+          className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+          value={input}
+          onChange={(event) => onInputChange(event.currentTarget.value)}
+          placeholder="GitHub repo URL or owner/repo"
+        />
+        <button
+          type="button"
+          className="rounded-lg bg-surface px-3 py-2 text-[13px] font-medium text-primary hover:bg-surface/80 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={busyId === 'extension-source'}
+          onClick={onAdd}
+        >
+          {busyId === 'extension-source' ? 'Adding...' : 'Add repo'}
+        </button>
+      </div>
+      <div className="divide-y divide-border-subtle/70 border-y border-border-subtle/70">
+        {sources.map((source) => (
+          <div key={source.id} className="flex items-center justify-between gap-3 py-2 text-[12px]">
+            <div className="min-w-0">
+              <div className="truncate font-medium text-primary">{sourceLabel(source)}</div>
+              <div className="truncate text-dim">
+                {source.owner}/{source.repo}
+                {source.enabled ? '' : ' · disabled'}
+              </div>
+            </div>
+            {source.id !== 'neon-pilot' ? (
+              <button
+                type="button"
+                className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={busyId === `extension-source:${source.id}`}
+                onClick={() => onRemove(source)}
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {sourceErrors.length ? (
+        <div className="space-y-1 text-[12px] text-danger">
+          {sourceErrors.map((error) => (
+            <p key={`${error.sourceId}:${error.message}`}>
+              {error.sourceId}: {error.message}
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ExtensionRepositoriesSettingsPanel({ pa }: ExtensionSurfaceProps) {
+  const [sources, setSources] = useState<ExtensionCatalogSource[]>([]);
+  const [input, setInput] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadSources = useCallback(async () => {
+    setError(null);
+    try {
+      setSources(await readExtensionSources(pa.extensions));
+    } catch (err) {
+      setSources([]);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [pa.extensions]);
+
+  useEffect(() => {
+    void loadSources();
+  }, [loadSources]);
+
+  const showError = useCallback(
+    (message: string, details?: string) => {
+      setError(details ? `${message}: ${details}` : message);
+      pa.ui.notify?.({ message, details, type: 'error', source: 'system-extension-manager' });
+    },
+    [pa.ui],
+  );
+
+  const addSource = useCallback(async () => {
+    const parsed = parseGithubCatalogSource(input);
+    if (!parsed) {
+      showError('Extension repository must be a GitHub repo URL or owner/repo.');
+      return;
+    }
+    const nextSources = [...sources.filter((source) => repoKey(source) !== repoKey(parsed)), parsed];
+    setBusyId('extension-source');
+    setNotice(null);
+    setError(null);
+    try {
+      await writeExtensionSources(pa.extensions, nextSources);
+      setInput('');
+      setNotice(`Added ${parsed.owner}/${parsed.repo}.`);
+      await loadSources();
+    } catch (err) {
+      showError('Failed to add extension repository', err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }, [input, loadSources, pa.extensions, showError, sources]);
+
+  const removeSource = useCallback(
+    async (source: ExtensionCatalogSource) => {
+      if (source.id === 'neon-pilot') return;
+      setBusyId(`extension-source:${source.id}`);
+      setNotice(null);
+      setError(null);
+      try {
+        await writeExtensionSources(
+          pa.extensions,
+          sources.filter((candidate) => candidate.id !== source.id),
+        );
+        setNotice(`Removed ${source.owner}/${source.repo}.`);
+        await loadSources();
+      } catch (err) {
+        showError('Failed to remove extension repository', err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [loadSources, pa.extensions, showError, sources],
+  );
+
+  return (
+    <div className="space-y-3">
+      <ExtensionRepositoriesControl
+        sources={sources}
+        input={input}
+        busyId={busyId}
+        onInputChange={setInput}
+        onAdd={() => void addSource()}
+        onRemove={(source) => void removeSource(source)}
+      />
+      {notice ? <p className="text-[12px] text-accent">{notice}</p> : null}
+      {error ? <p className="text-[12px] text-danger">{error}</p> : null}
+    </div>
+  );
+}
+
 function installedCatalogItemToSummary(item: InstallableExtensionCatalogItem): ExtensionInstallSummary {
   const enabled = item.enabled ?? false;
   return {
@@ -637,12 +819,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       .callAction('system-extension-manager', 'listInstallableExtensions', {})
       .then((result) => setCatalog(result as InstallableExtensionCatalogResponse))
       .catch((err) => setCatalogError(err instanceof Error ? err.message : String(err)));
-    void pa.extensions
-      .callAction('system-extension-manager', 'readExtensionSources', {})
-      .then((result) => {
-        const sources = (result as { sources?: ExtensionCatalogSource[] }).sources;
-        setCatalogSources(Array.isArray(sources) ? sources : []);
-      })
+    void readExtensionSources(pa.extensions)
+      .then((sources) => setCatalogSources(sources))
       .catch(() => setCatalogSources([]));
   }, [pa]);
 
@@ -723,13 +901,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       showActionError('Extension repository must be a GitHub repo URL or owner/repo.');
       return;
     }
-    const nextSources = [
-      ...catalogSources.filter((source) => `${source.owner.toLowerCase()}/${source.repo.toLowerCase()}` !== `${parsed.owner.toLowerCase()}/${parsed.repo.toLowerCase()}`),
-      parsed,
-    ];
+    const nextSources = [...catalogSources.filter((source) => repoKey(source) !== repoKey(parsed)), parsed];
     setBusyId('extension-source');
     try {
-      await pa.extensions.callAction('system-extension-manager', 'updateExtensionSources', { sources: nextSources });
+      await writeExtensionSources(pa.extensions, nextSources);
       setCatalogSourceInput('');
       setNotice(`Added ${parsed.owner}/${parsed.repo} to extension repositories.`);
       loadCatalog();
@@ -746,7 +921,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       const nextSources = catalogSources.filter((candidate) => candidate.id !== source.id);
       setBusyId(`extension-source:${source.id}`);
       try {
-        await pa.extensions.callAction('system-extension-manager', 'updateExtensionSources', { sources: nextSources });
+        await writeExtensionSources(pa.extensions, nextSources);
         setNotice(`Removed ${source.owner}/${source.repo} from extension repositories.`);
         loadCatalog();
       } catch (err) {
@@ -1337,54 +1512,15 @@ function InstallExtensionModal({
 
           <section className="space-y-2">
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Extension repositories</h3>
-            <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-              <input
-                className="min-w-0 rounded-lg border border-border-subtle bg-base px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-                value={catalogSourceInput}
-                onChange={(event) => onCatalogSourceInputChange(event.currentTarget.value)}
-                placeholder="GitHub repo URL or owner/repo"
-              />
-              <button
-                type="button"
-                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-medium text-primary hover:bg-surface/80 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={catalogBusyId === 'extension-source'}
-                onClick={onAddCatalogSource}
-              >
-                {catalogBusyId === 'extension-source' ? 'Adding...' : 'Add repo'}
-              </button>
-            </div>
-            <div className="divide-y divide-border-subtle/70 border-y border-border-subtle/70">
-              {catalogSources.map((source) => (
-                <div key={source.id} className="flex items-center justify-between gap-3 py-2 text-[12px]">
-                  <div className="min-w-0">
-                    <div className="truncate font-medium text-primary">{source.name ?? `${source.owner}/${source.repo}`}</div>
-                    <div className="truncate text-dim">
-                      {source.owner}/{source.repo}
-                      {source.enabled ? '' : ' · disabled'}
-                    </div>
-                  </div>
-                  {source.id !== 'neon-pilot' ? (
-                    <button
-                      type="button"
-                      className="rounded-lg bg-surface px-3 py-1.5 text-[12px] text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={catalogBusyId === `extension-source:${source.id}`}
-                      onClick={() => onRemoveCatalogSource(source)}
-                    >
-                      Remove
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            {catalogSourceErrors.length ? (
-              <div className="space-y-1 text-[12px] text-danger">
-                {catalogSourceErrors.map((error) => (
-                  <p key={`${error.sourceId}:${error.message}`}>
-                    {error.sourceId}: {error.message}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+            <ExtensionRepositoriesControl
+              sources={catalogSources}
+              sourceErrors={catalogSourceErrors}
+              input={catalogSourceInput}
+              busyId={catalogBusyId}
+              onInputChange={onCatalogSourceInputChange}
+              onAdd={onAddCatalogSource}
+              onRemove={onRemoveCatalogSource}
+            />
           </section>
 
           {catalogItems.length ? (
