@@ -1045,10 +1045,15 @@ export function WritingStudioSidebar({ pa }: { pa: NativeExtensionClient }) {
   useEffect(() => {
     documentIdByTreePathRef.current = documentTree.documentIdByPath;
     folderPathByTreePathRef.current = documentTree.folderPathByPath;
-    resetDocumentTree(documentTree.paths, {
+    const resetOptions = {
       initialExpandedPaths: documentTree.expandedPaths,
       initialSelectedPaths: documentTree.selectedPaths,
+    };
+    resetDocumentTree(documentTree.paths, resetOptions);
+    const frame = window.requestAnimationFrame(() => {
+      resetDocumentTree(documentTree.paths, resetOptions);
     });
+    return () => window.cancelAnimationFrame(frame);
   }, [documentTree, resetDocumentTree]);
 
   useEffect(() => {
