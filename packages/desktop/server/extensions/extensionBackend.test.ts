@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createBackendContext,
   invokeExtensionAction,
   invokeExtensionRoute,
   loadExtensionAgentFactory,
@@ -62,6 +63,60 @@ afterEach(() => {
 });
 
 describe('extension backend action invocation', () => {
+  it('uses the server route settings file in backend contexts', () => {
+    const context = createBackendContext('settings-aware-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getSettingsFile: () => '/runtime/from-route/settings.json',
+    });
+
+    expect(context.runtimeSettingsFilePath).toBe('/runtime/from-route/settings.json');
+    expect(context.profileSettingsFilePath).toBe('/runtime/from-route/settings.json');
+  });
+
+  it('passes the server route settings file into worker action contexts', async () => {
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true })),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'system-runs',
+        'bash',
+        { command: 'echo bash works' },
+        {
+          getRuntimeScope: () => 'shared',
+          getRepoRoot: () => '/repo',
+          getSettingsFile: () => '/runtime/from-route/settings.json',
+        },
+        {
+          conversationId: 'conv-1',
+          cwd: '/repo',
+        },
+      ),
+    ).resolves.toEqual({ ok: true, result: { ok: true } });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-runs',
+      expect.any(Object),
+      'bash',
+      expect.any(Object),
+      [{ command: 'echo bash works' }],
+      expect.objectContaining({
+        context: expect.objectContaining({
+          runtimeSettingsFilePath: '/runtime/from-route/settings.json',
+        }),
+      }),
+    );
+  });
+
   it('refuses to invoke actions from disabled extensions before loading backend code', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

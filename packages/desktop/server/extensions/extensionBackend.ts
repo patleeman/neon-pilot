@@ -1,7 +1,7 @@
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, queryAppTelemetryEvents, resolveLocalProfileSettingsFilePath } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, queryAppTelemetryEvents } from '@neon-pilot/core';
 
 import { registerFileSystemAuthorityHostEvents } from '../filesystem/filesystemAuthority.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from '../routes/context.js';
@@ -401,6 +401,12 @@ export type ExtensionBackendServerContext = Pick<ServerRouteContext, 'getRuntime
     >
   >;
 
+function resolveRuntimeSettingsFilePath(runtimeDir: string, serverContext?: ExtensionBackendServerContext): string {
+  const contextSettingsFile = serverContext?.getSettingsFile?.();
+  if (contextSettingsFile && contextSettingsFile.trim()) return contextSettingsFile;
+  return join(runtimeDir, 'settings.json');
+}
+
 export function createBackendContext(
   extensionId: string,
   serverContext?: ExtensionBackendServerContext,
@@ -410,7 +416,7 @@ export function createBackendContext(
   registerFileSystemAuthorityHostEvents();
   const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir();
   const runtimeScope = serverContext?.getRuntimeScope() ?? 'shared';
-  const runtimeSettingsFilePath = resolveLocalProfileSettingsFilePath();
+  const runtimeSettingsFilePath = resolveRuntimeSettingsFilePath(resolvedPiAgentRuntimeDir, serverContext);
   const liveSessionResourceOptions = () => {
     if (serverContext?.buildLiveSessionResourceOptions) {
       return serverContext.buildLiveSessionResourceOptions(serverContext.getRuntimeScope());
@@ -752,7 +758,7 @@ function workerBackendContextOptions(
     runtimeScope: serverContext?.getRuntimeScope() ?? 'shared',
     repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
     runtimeDir: getPiAgentRuntimeDir(),
-    runtimeSettingsFilePath: resolveLocalProfileSettingsFilePath(),
+    runtimeSettingsFilePath: resolveRuntimeSettingsFilePath(getPiAgentRuntimeDir(), serverContext),
     authFile: serverContext?.getAuthFile?.(),
     stateRoot: serverContext?.getStateRoot?.(),
     liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
