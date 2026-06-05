@@ -1,5 +1,19 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageEmptyState, AppPageIntro, AppPageLayout, Pill, ToolbarButton, cx } from '@neon-pilot/extensions/ui';
+import {
+  AppPageEmptyState,
+  AppPageIntro,
+  AppPageLayout,
+  CodeBlock,
+  Field,
+  Notice,
+  Pill,
+  SectionLabel,
+  SurfacePanel,
+  Textarea,
+  TextInput,
+  ToolbarButton,
+  cx,
+} from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useState } from 'react';
 
 type WorkflowSummary = {
@@ -94,7 +108,10 @@ function formatJson(value: unknown): string {
 }
 
 function templateToDraft(template: WorkflowTemplate): SavedWorkflowDraft {
-  const agentDefaults = template.agentDefaults && typeof template.agentDefaults === 'object' ? (template.agentDefaults as { model?: unknown; allowedTools?: unknown }) : {};
+  const agentDefaults =
+    template.agentDefaults && typeof template.agentDefaults === 'object'
+      ? (template.agentDefaults as { model?: unknown; allowedTools?: unknown })
+      : {};
   return {
     id: template.id,
     name: template.name,
@@ -104,7 +121,9 @@ function templateToDraft(template: WorkflowTemplate): SavedWorkflowDraft {
     cwd: template.cwd ?? '',
     model: template.model ?? '',
     agentModel: typeof agentDefaults.model === 'string' ? agentDefaults.model : '',
-    allowedToolsText: Array.isArray(agentDefaults.allowedTools) ? agentDefaults.allowedTools.filter((item): item is string => typeof item === 'string').join(',') : '',
+    allowedToolsText: Array.isArray(agentDefaults.allowedTools)
+      ? agentDefaults.allowedTools.filter((item): item is string => typeof item === 'string').join(',')
+      : '',
   };
 }
 
@@ -134,15 +153,7 @@ function parseDraft(draft: SavedWorkflowDraft) {
   };
 }
 
-function WorkflowCard({
-  workflow,
-  selected,
-  onSelect,
-}: {
-  workflow: WorkflowSummary;
-  selected: boolean;
-  onSelect: () => void;
-}) {
+function WorkflowCard({ workflow, selected, onSelect }: { workflow: WorkflowSummary; selected: boolean; onSelect: () => void }) {
   const agents = workflow.agents;
   return (
     <button
@@ -162,7 +173,11 @@ function WorkflowCard({
       </div>
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-dim">
         <span>{formatDate(workflow.createdAt)}</span>
-        {agents ? <span>{agents.completed}/{agents.total} agents</span> : null}
+        {agents ? (
+          <span>
+            {agents.completed}/{agents.total} agents
+          </span>
+        ) : null}
         {workflow.model ? <span>{workflow.model}</span> : null}
       </div>
     </button>
@@ -178,17 +193,27 @@ export function DynamicWorkflowTranscriptBlock({ block }: { block: { details?: u
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-[13px] font-medium text-primary">{details?.name ?? block.text ?? 'Dynamic workflow'}</div>
-          <div className="truncate text-[12px] text-secondary">{details?.activePhase ? `Phase: ${details.activePhase}` : details?.cwd ?? ''}</div>
+          <div className="truncate text-[12px] text-secondary">
+            {details?.activePhase ? `Phase: ${details.activePhase}` : (details?.cwd ?? '')}
+          </div>
         </div>
         {details?.status ? <Pill tone={statusTone(details.status)}>{details.status}</Pill> : null}
       </div>
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-dim">
-        {agents ? <span>{agents.completed}/{agents.total} agents</span> : null}
+        {agents ? (
+          <span>
+            {agents.completed}/{agents.total} agents
+          </span>
+        ) : null}
         {agents?.running ? <span>{agents.running} running</span> : null}
         {agents?.failed ? <span>{agents.failed} failed</span> : null}
         {agents?.cancelled ? <span>{agents.cancelled} cancelled</span> : null}
         {modelText ? <span>{modelText}</span> : null}
-        {details?.completedAt ? <span>Completed {formatDate(details.completedAt)}</span> : details?.updatedAt ? <span>Updated {formatDate(details.updatedAt)}</span> : null}
+        {details?.completedAt ? (
+          <span>Completed {formatDate(details.completedAt)}</span>
+        ) : details?.updatedAt ? (
+          <span>Updated {formatDate(details.updatedAt)}</span>
+        ) : null}
       </div>
       {details?.resultText ? <p className="mt-2 line-clamp-3 text-[12px] text-secondary">{details.resultText}</p> : null}
       {details?.error ? <p className="mt-2 line-clamp-3 text-[12px] text-danger">{details.error}</p> : null}
@@ -308,14 +333,12 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
           actions={<ToolbarButton onClick={() => void refresh()}>Refresh</ToolbarButton>}
         />
 
-        {error ? (
-          <div className="rounded-md border border-danger/35 bg-danger/10 px-3 py-2 text-[12px] leading-5 text-danger">{error}</div>
-        ) : null}
+        {error ? <Notice tone="danger">{error}</Notice> : null}
 
         <div className="grid min-h-[34rem] gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
           <section className="min-w-0 space-y-5 border-t border-border-subtle pt-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-dim">Runs</h2>
+              <SectionLabel>Runs</SectionLabel>
               {loading ? <span className="text-[11px] text-dim">Refreshing...</span> : null}
             </div>
             {loading && workflows.length === 0 ? <div className="text-[12px] text-dim">Loading workflows...</div> : null}
@@ -334,7 +357,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
             </div>
             <div className="space-y-2 border-t border-border-subtle pt-4">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-dim">Saved</h2>
+                <SectionLabel>Saved</SectionLabel>
                 <ToolbarButton
                   onClick={() => {
                     setDraft(EMPTY_DRAFT);
@@ -347,7 +370,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
               </div>
               {savedWorkflows.length === 0 ? <div className="text-[12px] text-dim">No saved workflows yet.</div> : null}
               {savedWorkflows.map((item) => (
-                <div key={item.id} className="rounded-md border border-border-subtle bg-surface/40 px-3 py-2">
+                <SurfacePanel key={item.id} muted className="px-3 py-2 shadow-none">
                   <div className="truncate text-[13px] font-medium text-primary">{item.name}</div>
                   {item.description ? <div className="mt-1 line-clamp-2 text-[12px] text-secondary">{item.description}</div> : null}
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -363,62 +386,49 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                     </ToolbarButton>
                     <ToolbarButton onClick={() => void deleteSaved(item)}>Delete</ToolbarButton>
                   </div>
-                </div>
+                </SurfacePanel>
               ))}
               {draftOpen ? (
-                <div className="space-y-2 rounded-md border border-border-subtle bg-surface/40 px-3 py-3">
+                <SurfacePanel muted className="space-y-2 px-3 py-3 shadow-none">
                   <div className="text-[13px] font-medium text-primary">{draft.id ? 'Edit saved workflow' : 'New saved workflow'}</div>
-                  {draftError ? <div className="rounded-md border border-danger/35 bg-danger/10 px-2 py-1 text-[12px] text-danger">{draftError}</div> : null}
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-dim">
-                    Name
-                    <input
-                      className="mt-1 w-full rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-[12px] normal-case tracking-normal text-primary outline-none"
-                      value={draft.name}
-                      onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-                    />
-                  </label>
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-dim">
-                    Description
-                    <input
-                      className="mt-1 w-full rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-[12px] normal-case tracking-normal text-primary outline-none"
+                  {draftError ? <Notice tone="danger">{draftError}</Notice> : null}
+                  <Field label="Name">
+                    <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+                  </Field>
+                  <Field label="Description">
+                    <TextInput
                       value={draft.description}
                       onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
                     />
-                  </label>
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-dim">
-                    Agent model
-                    <input
-                      className="mt-1 w-full rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-[12px] normal-case tracking-normal text-primary outline-none"
+                  </Field>
+                  <Field label="Agent model">
+                    <TextInput
                       placeholder="opencode-go/deepseek-v4-flash"
                       value={draft.agentModel}
                       onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
                     />
-                  </label>
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-dim">
-                    Allowed tools
-                    <input
-                      className="mt-1 w-full rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-[12px] normal-case tracking-normal text-primary outline-none"
+                  </Field>
+                  <Field label="Allowed tools">
+                    <TextInput
                       placeholder="read,bash"
                       value={draft.allowedToolsText}
                       onChange={(event) => setDraft((current) => ({ ...current, allowedToolsText: event.target.value }))}
                     />
-                  </label>
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-dim">
-                    Args JSON
-                    <textarea
-                      className="mt-1 h-24 w-full resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 font-mono text-[12px] normal-case tracking-normal text-primary outline-none"
+                  </Field>
+                  <Field label="Args JSON">
+                    <Textarea
+                      className="h-24 font-mono text-[12px]"
                       value={draft.argsText}
                       onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
                     />
-                  </label>
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-dim">
-                    Script
-                    <textarea
-                      className="mt-1 h-40 w-full resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 font-mono text-[12px] normal-case tracking-normal text-primary outline-none"
+                  </Field>
+                  <Field label="Script">
+                    <Textarea
+                      className="h-40 font-mono text-[12px]"
                       value={draft.script}
                       onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
                     />
-                  </label>
+                  </Field>
                   <div className="flex flex-wrap gap-2">
                     <ToolbarButton onClick={() => void saveDraft()}>Save</ToolbarButton>
                     <ToolbarButton
@@ -430,19 +440,19 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                       Close
                     </ToolbarButton>
                   </div>
-                </div>
+                </SurfacePanel>
               ) : null}
             </div>
             <div className="space-y-2 border-t border-border-subtle pt-4">
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-dim">Examples</h2>
+              <SectionLabel>Examples</SectionLabel>
               {templates.map((item) => (
-                <div key={item.id} className="rounded-md border border-border-subtle bg-surface/40 px-3 py-2">
+                <SurfacePanel key={item.id} muted className="px-3 py-2 shadow-none">
                   <div className="truncate text-[13px] font-medium text-primary">{item.name}</div>
                   {item.description ? <div className="mt-1 line-clamp-2 text-[12px] text-secondary">{item.description}</div> : null}
                   <div className="mt-2 flex gap-2">
                     <ToolbarButton onClick={() => void saveTemplate(item)}>Save</ToolbarButton>
                   </div>
-                </div>
+                </SurfacePanel>
               ))}
             </div>
           </section>
@@ -451,7 +461,9 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
             <div className="flex min-h-7 items-center justify-between gap-3">
               <h2 className="min-w-0 truncate text-[16px] font-semibold text-primary">{selected?.name ?? 'Details'}</h2>
             </div>
-            {!selected ? <AppPageEmptyState align="start" title="Select a workflow" body="Run details, agents, and logs are shown here." /> : null}
+            {!selected ? (
+              <AppPageEmptyState align="start" title="Select a workflow" body="Run details, agents, and logs are shown here." />
+            ) : null}
             {selected ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
@@ -465,27 +477,35 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   <div>Updated: {formatDate(selected.updatedAt)}</div>
                   <div>Active phase: {selected.activePhase ?? 'none'}</div>
                   <div>Models: {selected.models?.join(', ') || selected.model || 'default'}</div>
-                  <div>Agents: {selected.agents ? `${selected.agents.completed}/${selected.agents.total} complete, ${selected.agents.running} running, ${selected.agents.failed} failed` : 'none'}</div>
+                  <div>
+                    Agents:{' '}
+                    {selected.agents
+                      ? `${selected.agents.completed}/${selected.agents.total} complete, ${selected.agents.running} running, ${selected.agents.failed} failed`
+                      : 'none'}
+                  </div>
                   <div>Completed: {formatDate(selected.completedAt) || 'not completed'}</div>
                 </div>
                 {selected.resultText ? (
-                  <div className="rounded-md border border-border-subtle bg-surface/30 p-3">
+                  <SurfacePanel muted className="p-3 shadow-none">
                     <h3 className="mb-2 text-[13px] font-medium text-primary">Result</h3>
-                    <pre className="max-h-80 overflow-auto whitespace-pre-wrap text-[12px] text-secondary">{selected.resultText}</pre>
-                  </div>
+                    <CodeBlock compact className="max-h-80 border-0 bg-transparent p-0 text-secondary">
+                      {selected.resultText}
+                    </CodeBlock>
+                  </SurfacePanel>
                 ) : null}
                 {selected.error ? (
-                  <div className="rounded-md border border-danger/35 bg-danger/10 p-3">
-                    <h3 className="mb-2 text-[13px] font-medium text-danger">Failure</h3>
-                    <pre className="whitespace-pre-wrap text-[12px] text-danger">{selected.error}</pre>
-                  </div>
+                  <Notice tone="danger" title="Failure">
+                    <CodeBlock compact className="mt-2 border-0 bg-transparent p-0 text-danger">
+                      {selected.error}
+                    </CodeBlock>
+                  </Notice>
                 ) : null}
                 {detail?.nodes.length ? (
                   <div>
                     <h3 className="mb-2 text-[13px] font-medium text-primary">Agents</h3>
                     <div className="space-y-2">
                       {detail.nodes.map((node) => (
-                        <div key={node.id} className="rounded-md border border-border-subtle bg-surface/40 px-3 py-2 text-[12px]">
+                        <SurfacePanel key={node.id} muted className="px-3 py-2 text-[12px] shadow-none">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-medium text-primary">{node.role ?? 'agent'}</span>
                             <Pill tone={statusTone(node.status)}>{node.status}</Pill>
@@ -495,12 +515,14 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                           {node.prompt ? (
                             <details className="mt-2">
                               <summary className="cursor-pointer text-dim">Prompt</summary>
-                              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-secondary">{node.prompt}</pre>
+                              <CodeBlock compact className="mt-2 max-h-48 border-0 bg-transparent p-0 text-secondary">
+                                {node.prompt}
+                              </CodeBlock>
                             </details>
                           ) : null}
                           {node.resultText ? <p className="mt-2 text-secondary">{node.resultText}</p> : null}
                           {node.error ? <p className="mt-2 text-danger">{node.error}</p> : null}
-                        </div>
+                        </SurfacePanel>
                       ))}
                     </div>
                   </div>
@@ -510,13 +532,18 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                     <h3 className="mb-2 text-[13px] font-medium text-primary">Events</h3>
                     <div className="max-h-72 overflow-auto rounded-md border border-border-subtle bg-surface/30">
                       {detail.events.slice(-80).map((event, index) => (
-                        <div key={`${event.createdAt}-${index}`} className="border-b border-border-subtle px-3 py-2 text-[12px] last:border-b-0">
+                        <div
+                          key={`${event.createdAt}-${index}`}
+                          className="border-b border-border-subtle px-3 py-2 text-[12px] last:border-b-0"
+                        >
                           <div className="text-dim">
                             {formatDate(event.createdAt)} · {event.type}
                           </div>
                           <div className="text-secondary">{event.message}</div>
                           {event.data !== undefined && event.data !== null ? (
-                            <pre className="mt-1 whitespace-pre-wrap text-dim">{JSON.stringify(event.data, null, 2)}</pre>
+                            <CodeBlock compact className="mt-1 border-0 bg-transparent p-0 text-dim">
+                              {JSON.stringify(event.data, null, 2)}
+                            </CodeBlock>
                           ) : null}
                         </div>
                       ))}
@@ -526,13 +553,17 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                 {detail ? (
                   <details className="rounded-md border border-border-subtle bg-surface/30 p-3">
                     <summary className="cursor-pointer text-[13px] font-medium text-primary">Args</summary>
-                    <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-[12px] text-secondary">{JSON.stringify(detail.args, null, 2)}</pre>
+                    <CodeBlock compact className="mt-3 max-h-72 border-0 bg-transparent p-0 text-secondary">
+                      {JSON.stringify(detail.args, null, 2)}
+                    </CodeBlock>
                   </details>
                 ) : null}
                 {detail?.script ? (
                   <details className="rounded-md border border-border-subtle bg-surface/30 p-3">
                     <summary className="cursor-pointer text-[13px] font-medium text-primary">Script</summary>
-                    <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap text-[12px] text-secondary">{detail.script}</pre>
+                    <CodeBlock compact className="mt-3 max-h-96 border-0 bg-transparent p-0 text-secondary">
+                      {detail.script}
+                    </CodeBlock>
                   </details>
                 ) : null}
               </div>
