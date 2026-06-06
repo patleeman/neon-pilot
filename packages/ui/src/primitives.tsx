@@ -434,6 +434,39 @@ export function StatGrid({ children, className, compact = false, ...props }: HTM
   );
 }
 
+export type DashboardGridColumns = 2 | 3 | 4;
+export type DashboardGridDivide = 'none' | 'x' | 'both';
+
+export function DashboardGrid({
+  children,
+  className,
+  columns = 2,
+  divide = 'both',
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { columns?: DashboardGridColumns; divide?: DashboardGridDivide }) {
+  return (
+    <div
+      className={cx('ui-dashboard-grid', `ui-dashboard-grid-cols-${columns}`, `ui-dashboard-grid-divide-${divide}`, className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function DashboardGridCell({
+  children,
+  className,
+  span,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { span?: DashboardGridColumns }) {
+  return (
+    <div className={cx('ui-dashboard-grid-cell', span && `ui-dashboard-grid-cell-span-${span}`, className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export function Stat({
   label,
   value,

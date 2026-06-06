@@ -3,7 +3,7 @@
  */
 
 import type { ToolFlowResult } from '@neon-pilot/extensions/data';
-import { PanelHeader, ProgressBar, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, PanelHeader, ProgressBar, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
@@ -21,9 +21,9 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
         title="🔀 Tool Flow & Trajectories"
         meta={`${data.transitions.length} transitions · ${data.coOccurrences.length} co-occurrences`}
       />
-      <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
+      <DashboardGrid columns={2}>
         {/* Cell 1: Top transitions — Sankey-like flow */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Top Tool Transitions
           </SectionLabel>
@@ -46,10 +46,10 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
               );
             })}
           </div>
-        </div>
+        </DashboardGridCell>
 
         {/* Cell 2: Co-occurrence grid */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Top Tool Pairs
           </SectionLabel>
@@ -68,10 +68,10 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
               );
             })}
           </div>
-        </div>
+        </DashboardGridCell>
 
         {/* Cell 3: Failure trajectories */}
-        <div className="p-4 col-span-2">
+        <DashboardGridCell span={2}>
           <SectionLabel tone="muted" className="mb-3 block">
             Failure Trajectories (last 3 calls before error)
           </SectionLabel>
@@ -103,8 +103,8 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
           ) : (
             <div className="text-[12px] text-dim py-3 text-center">No tool errors recorded yet.</div>
           )}
-        </div>
-      </div>
+        </DashboardGridCell>
+      </DashboardGrid>
     </SurfacePanel>
   );
 }

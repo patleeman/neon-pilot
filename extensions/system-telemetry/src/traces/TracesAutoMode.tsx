@@ -2,7 +2,7 @@
  * Auto Mode tracking display
  */
 
-import { PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
   if (!data || data.recentEvents.length === 0) {
@@ -17,9 +17,9 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader title="Auto Mode" meta={`${data.currentActive} active · ${data.enabledCount} enabled · ${data.disabledCount} stopped`} />
-      <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
+      <DashboardGrid columns={2}>
         {/* Cell 1: Summary stats */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Activity
           </SectionLabel>
@@ -49,10 +49,10 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
               </div>
             </div>
           )}
-        </div>
+        </DashboardGridCell>
 
         {/* Cell 2: Recent events log */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Recent Events
           </SectionLabel>
@@ -66,8 +66,8 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
               </div>
             ))}
           </div>
-        </div>
-      </div>
+        </DashboardGridCell>
+      </DashboardGrid>
     </SurfacePanel>
   );
 }

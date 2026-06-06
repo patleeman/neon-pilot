@@ -3,7 +3,7 @@
  */
 
 import type { CacheEfficiencyAggregate, SystemPromptAggregate } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesCacheAndSystemPrompt({
   cacheEfficiency,
@@ -17,10 +17,12 @@ export function TracesCacheAndSystemPrompt({
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader title="Cache Efficiency & System Prompt" />
-      <div className="grid grid-cols-2 divide-x divide-border-subtle">
+      <DashboardGrid columns={2} divide="x">
         {/* Cache */}
-        <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Prompt Cache</div>
+        <DashboardGridCell>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Prompt Cache
+          </SectionLabel>
           {cacheEfficiency && (
             <>
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mb-3">
@@ -58,10 +60,12 @@ export function TracesCacheAndSystemPrompt({
               </div>
             </>
           )}
-        </div>
+        </DashboardGridCell>
         {/* System Prompt */}
-        <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">System Prompt</div>
+        <DashboardGridCell>
+          <SectionLabel tone="muted" className="mb-3 block">
+            System Prompt
+          </SectionLabel>
           {systemPrompt && (
             <>
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -88,8 +92,8 @@ export function TracesCacheAndSystemPrompt({
               </div>
             </>
           )}
-        </div>
-      </div>
+        </DashboardGridCell>
+      </DashboardGrid>
     </SurfacePanel>
   );
 }
@@ -100,7 +104,7 @@ function QuickStat({ value, label, cls = '' }: { value: string; label: string; c
       <div className={`truncate text-[17px] font-semibold font-mono tabular-nums ${cls}`} title={value}>
         {value}
       </div>
-      <div className="text-[9px] uppercase tracking-[0.08em] text-dim">{label}</div>
+      <SectionLabel tone="muted">{label}</SectionLabel>
     </div>
   );
 }

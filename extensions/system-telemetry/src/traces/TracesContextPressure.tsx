@@ -3,7 +3,7 @@
  */
 
 import type { TraceCompactionAggs, TraceCompactionEvent, TraceContextSession } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesContextPressure({
   sessions,
@@ -30,10 +30,12 @@ export function TracesContextPressure({
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader title="Context Pressure & Session Activity" meta={`${sessions.length} sessions · ${highCount + medCount} above 70%`} />
-      <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
+      <DashboardGrid columns={2}>
         {/* Cell 1: Session gauges */}
-        <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Context Fill by Session</div>
+        <DashboardGridCell>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Context Fill by Session
+          </SectionLabel>
           <div className="flex gap-2 mb-3">
             <AggBadge value={sessions.length} label="Active" cls="text-accent" />
             <AggBadge value={lowCount} label="Under 70%" cls="text-success" />
@@ -56,11 +58,13 @@ export function TracesContextPressure({
             <Legend color="bg-[#ff4757]" label="Tool" />
             <Legend color="bg-[#8e8ea0]" label="Summary" />
           </div>
-        </div>
+        </DashboardGridCell>
 
         {/* Cell 2: Session timeline braid + compaction */}
-        <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Session Activity</div>
+        <DashboardGridCell>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Session Activity
+          </SectionLabel>
           <div className="space-y-1.5 mb-4">
             {sessions.slice(0, 5).map((s) => (
               <div key={s.sessionId} className="flex items-center gap-2">
@@ -109,8 +113,8 @@ export function TracesContextPressure({
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </DashboardGridCell>
+      </DashboardGrid>
     </SurfacePanel>
   );
 }
@@ -144,7 +148,7 @@ function AggBadge({ value, label, cls }: { value: number; label: string; cls: st
   return (
     <div className="flex-1 bg-elevated rounded-lg p-2 text-center">
       <div className={`text-[15px] font-semibold font-mono ${cls}`}>{value}</div>
-      <div className="text-[9px] uppercase tracking-[0.08em] text-dim">{label}</div>
+      <SectionLabel tone="muted">{label}</SectionLabel>
     </div>
   );
 }

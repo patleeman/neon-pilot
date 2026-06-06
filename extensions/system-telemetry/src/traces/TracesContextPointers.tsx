@@ -6,7 +6,7 @@
  */
 
 import type { ContextPointerUsageResult } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
   if (!data || data.summary.totalSuggested === 0) {
@@ -25,7 +25,7 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
     <SurfacePanel className="overflow-hidden">
       <PanelHeader title="🔍 Suggested Context Usage" meta={`${summary.usageRate}% of sessions used suggestions`} />
 
-      <div className="grid grid-cols-4 divide-x divide-border-subtle border-b border-border-subtle">
+      <DashboardGrid columns={4} divide="x" className="border-b border-border-subtle">
         <Stat value={`${summary.usageRate}%`} label="Usage Rate" cls={usageRateColor} sub="sessions that inspected a pointer" />
         <Stat
           value={String(summary.totalInspects)}
@@ -40,11 +40,13 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
           sub={`${summary.sessionsWithSuggested} sessions`}
         />
         <Stat value={String(summary.avgPointersPerTurn)} label="Avg Pointers / Turn" cls="text-dim" sub="suggested per prompt" />
-      </div>
+      </DashboardGrid>
 
       {daily.length > 1 && (
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Daily — Suggested vs Inspected</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Daily — Suggested vs Inspected
+          </SectionLabel>
           <DailyBars daily={daily} />
         </div>
       )}
@@ -55,7 +57,7 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
 function Stat({ value, label, cls, sub }: { value: string; label: string; cls: string; sub?: string }) {
   return (
     <div className="px-4 py-3 flex flex-col gap-0.5">
-      <div className="text-[10px] uppercase tracking-[0.08em] text-dim">{label}</div>
+      <SectionLabel tone="muted">{label}</SectionLabel>
       <div className={`text-[22px] font-semibold leading-none ${cls}`}>{value}</div>
       {sub && <div className="text-[10px] text-dim mt-0.5">{sub}</div>}
     </div>

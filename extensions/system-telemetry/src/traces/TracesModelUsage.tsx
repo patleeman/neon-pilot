@@ -3,7 +3,7 @@
  */
 
 import type { CacheEfficiencyAggregate, TraceModelUsage, TraceThroughput } from '@neon-pilot/extensions/data';
-import { PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesModelUsage({
   models,
@@ -39,9 +39,9 @@ export function TracesModelUsage({
     <SurfacePanel className="overflow-hidden">
       <PanelHeader title="Model Usage & Cost" meta="Last 24h" />
 
-      <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
+      <DashboardGrid columns={2}>
         {/* Cell 1: Tokens by model */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Tokens by Model
           </SectionLabel>
@@ -67,10 +67,10 @@ export function TracesModelUsage({
               />
             );
           })}
-        </div>
+        </DashboardGridCell>
 
         {/* Cell 2: Cost treemap */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Cost Breakdown
           </SectionLabel>
@@ -100,10 +100,10 @@ export function TracesModelUsage({
               });
             })()}
           </div>
-        </div>
+        </DashboardGridCell>
 
         {/* Cell 3: Throughput */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Throughput
           </SectionLabel>
@@ -124,10 +124,10 @@ export function TracesModelUsage({
           ) : (
             <div className="text-[12px] text-dim py-4 text-center">No throughput data yet</div>
           )}
-        </div>
+        </DashboardGridCell>
 
         {/* Cell 4: Cache stats */}
-        <div className="p-4">
+        <DashboardGridCell>
           <SectionLabel tone="muted" className="mb-3 block">
             Prompt Cache
           </SectionLabel>
@@ -147,8 +147,8 @@ export function TracesModelUsage({
           <div className="mt-2 pt-2 border-t border-border-subtle text-[11px] text-dim">
             {cacheHitRate > 0 ? <span className="text-warning">{cacheHitRateLabel}</span> : null} of prompt input read from cache
           </div>
-        </div>
-      </div>
+        </DashboardGridCell>
+      </DashboardGrid>
     </SurfacePanel>
   );
 }

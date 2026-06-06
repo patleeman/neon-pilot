@@ -581,6 +581,61 @@ body {
   white-space: nowrap;
 }
 
+.ui-dashboard-grid {
+  display: grid;
+  overflow: hidden;
+}
+
+.ui-dashboard-grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ui-dashboard-grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ui-dashboard-grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ui-dashboard-grid-cell {
+  min-width: 0;
+  padding: 1rem;
+}
+
+.ui-dashboard-grid-cell-span-2 {
+  grid-column: span 2 / span 2;
+}
+
+.ui-dashboard-grid-cell-span-3 {
+  grid-column: span 3 / span 3;
+}
+
+.ui-dashboard-grid-cell-span-4 {
+  grid-column: span 4 / span 4;
+}
+
+.ui-dashboard-grid-divide-x.ui-dashboard-grid-cols-2 > :nth-child(2n),
+.ui-dashboard-grid-divide-both.ui-dashboard-grid-cols-2 > :nth-child(2n) {
+  border-left: 1px solid rgb(var(--color-border-subtle));
+}
+
+.ui-dashboard-grid-divide-x.ui-dashboard-grid-cols-3 > :not(:nth-child(3n + 1)),
+.ui-dashboard-grid-divide-both.ui-dashboard-grid-cols-3 > :not(:nth-child(3n + 1)) {
+  border-left: 1px solid rgb(var(--color-border-subtle));
+}
+
+.ui-dashboard-grid-divide-x.ui-dashboard-grid-cols-4 > :not(:nth-child(4n + 1)),
+.ui-dashboard-grid-divide-both.ui-dashboard-grid-cols-4 > :not(:nth-child(4n + 1)) {
+  border-left: 1px solid rgb(var(--color-border-subtle));
+}
+
+.ui-dashboard-grid-divide-both.ui-dashboard-grid-cols-2 > :nth-child(n + 3),
+.ui-dashboard-grid-divide-both.ui-dashboard-grid-cols-3 > :nth-child(n + 4),
+.ui-dashboard-grid-divide-both.ui-dashboard-grid-cols-4 > :nth-child(n + 5) {
+  border-top: 1px solid rgb(var(--color-border-subtle));
+}
+
 .ui-code-block {
   min-height: 0;
   overflow: auto;

@@ -13,6 +13,8 @@ import {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
+  DashboardGrid,
+  DashboardGridCell,
   Disclosure,
   DialogBody,
   DialogFooter,
@@ -218,6 +220,16 @@ const meta = {
             <Stat label="Updated" value="Today" />
             <Stat label="Avg Turns / Run" value="12.4" labelPosition="after" valueClassName="text-accent" />
           </StatGrid>
+          <DashboardGrid columns={2}>
+            <DashboardGridCell>
+              <SectionLabel tone="muted">Throughput</SectionLabel>
+              <p style={{ margin: '6px 0 0', fontSize: 20, fontWeight: 600 }}>42 tok/s</p>
+            </DashboardGridCell>
+            <DashboardGridCell>
+              <SectionLabel tone="muted">Cache</SectionLabel>
+              <p style={{ margin: '6px 0 0', fontSize: 20, fontWeight: 600 }}>68%</p>
+            </DashboardGridCell>
+          </DashboardGrid>
           <KeyValueList>
             <KeyValueItem label="Package" value="installable-extensions/system-example" action={<Button variant="ghost">Open</Button>} />
             <KeyValueItem label="Permissions" value="Filesystem, shell, notifications" />
