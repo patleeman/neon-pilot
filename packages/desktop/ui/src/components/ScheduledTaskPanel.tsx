@@ -38,6 +38,7 @@ import { ScheduledTaskPromptText } from './ScheduledTaskPromptText';
 import {
   CardMeta,
   CardTitle,
+  CheckButton,
   cx,
   ErrorState,
   InlineSelect,
@@ -69,22 +70,6 @@ function formatScheduledTaskActivity(entry: NonNullable<ScheduledTaskDetail['act
   const scheduledAt = entry.count === 1 ? entry.firstScheduledAt : `${entry.firstScheduledAt} → ${entry.lastScheduledAt}`;
   const outcome = entry.outcome === 'catch-up-started' ? 'caught up' : 'skipped';
   return `${outcome} ${entry.count} scheduled ${entry.count === 1 ? 'run' : 'runs'} · ${scheduledAt}`;
-}
-
-function toggleButtonClass(active: boolean): string {
-  return cx(
-    'inline-flex h-8 items-center rounded-md px-2 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 focus-visible:ring-offset-2 focus-visible:ring-offset-base',
-    active ? 'bg-surface/55 text-primary' : 'text-secondary hover:bg-surface/45 hover:text-primary',
-  );
-}
-
-function dayButtonClass(active: boolean): string {
-  return cx(
-    'inline-flex items-center justify-center rounded-md border px-2.5 py-1.5 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 focus-visible:ring-offset-2 focus-visible:ring-offset-base',
-    active
-      ? 'border-border-default bg-surface/65 text-primary'
-      : 'border-border-subtle bg-base/60 text-secondary hover:border-border-default hover:bg-surface/55 hover:text-primary',
-  );
 }
 
 async function refreshTaskSnapshot() {
@@ -235,15 +220,14 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
       {value.mode === 'builder' && value.builder.cadence === 'weekly' && (
         <div className="flex flex-wrap items-center gap-2">
           {WEEKDAY_OPTIONS.map((option) => (
-            <button
+            <CheckButton
               key={option.value}
-              type="button"
+              checked={value.builder.weekdays.includes(option.value)}
               onClick={() => toggleWeekday(option.value)}
-              className={dayButtonClass(value.builder.weekdays.includes(option.value))}
-              aria-pressed={value.builder.weekdays.includes(option.value)}
+              className="min-w-9 px-2.5 py-1.5 text-[12px]"
             >
               {option.shortLabel}
-            </button>
+            </CheckButton>
           ))}
         </div>
       )}
@@ -594,16 +578,16 @@ function TaskEditorForm({
             />
             <div ref={moreMenuRef} className="relative flex shrink-0 items-center gap-2">
               {advancedSummary && <span className="max-w-[16rem] truncate text-[12px] text-secondary">{advancedSummary}</span>}
-              <button
+              <ToolbarButton
                 type="button"
                 onClick={() => setMoreMenuOpen((current) => !current)}
-                className={toggleButtonClass(moreMenuOpen)}
+                className={cx('h-8 px-2', moreMenuOpen && 'bg-surface/55 text-primary')}
                 aria-label="More automation options"
                 aria-expanded={moreMenuOpen}
                 aria-haspopup="dialog"
               >
                 ⋯
-              </button>
+              </ToolbarButton>
               {moreMenuOpen && (
                 <TaskAdvancedMenu
                   value={value}
