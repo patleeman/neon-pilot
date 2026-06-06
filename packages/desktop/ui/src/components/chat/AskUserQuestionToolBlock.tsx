@@ -567,7 +567,7 @@ export function AskUserQuestionToolBlock({
 
                     {activeQuestion.options.length > 0 ? (
                       <div
-                        className="mt-2 -mx-0.5"
+                        className="mt-2 space-y-1"
                         role={activeQuestion.style === 'check' ? 'group' : 'radiogroup'}
                         aria-label={activeQuestion.label}
                       >
@@ -588,10 +588,11 @@ export function AskUserQuestionToolBlock({
                               onClick={() => handleOptionSelect(activeQuestionIndex, optionIndex)}
                               onKeyDown={(event) => handleOptionKeyDown(optionIndex, event)}
                               checked={checked}
+                              prefix={optionIndex < 9 ? `${optionIndex + 1}.` : null}
                               indicator={indicator}
                               label={option.label}
                               details={option.details}
-                              className={cx('-mx-0.5 focus-visible:ring-offset-surface', submitting && 'cursor-default opacity-60')}
+                              className={cx('px-2 focus-visible:ring-offset-surface', submitting && 'cursor-default opacity-60')}
                             />
                           );
                         })}

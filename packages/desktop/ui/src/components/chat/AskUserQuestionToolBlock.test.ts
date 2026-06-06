@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import type { MessageBlock } from '../../shared/types';
-import { describeAskUserQuestionState, summarizeAskUserQuestionAnswer } from './AskUserQuestionToolBlock.js';
+import { AskUserQuestionToolBlock, describeAskUserQuestionState, summarizeAskUserQuestionAnswer } from './AskUserQuestionToolBlock.js';
 
 const askBlock: Extract<MessageBlock, { type: 'tool_use' }> = {
   type: 'tool_use',
@@ -70,5 +72,34 @@ describe('AskUserQuestionToolBlock helpers', () => {
 
     expect(summary).toHaveLength(180);
     expect(summary?.endsWith('…')).toBe(true);
+  });
+
+  it('renders numbered inline choice rows without splitting the control from the label', () => {
+    const html = renderToStaticMarkup(
+      createElement(AskUserQuestionToolBlock, {
+        block: askBlock,
+        state: { status: 'pending' },
+        presentation: {
+          questions: [
+            {
+              id: 'question-1',
+              label: 'Should I clean up the annotation?',
+              style: 'radio',
+              options: [
+                { value: 'clean', label: 'Clean it up' },
+                { value: 'leave', label: 'Leave it' },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(html).toContain('ui-choice-row-prefix');
+    expect(html).toContain('1.');
+    expect(html).toContain('2.');
+    expect(html).toContain('ui-choice-row-indicator');
+    expect(html).toContain('Clean it up');
+    expect(html).toContain('Leave it');
   });
 });

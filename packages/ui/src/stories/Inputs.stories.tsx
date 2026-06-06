@@ -74,6 +74,7 @@ export const ChoiceControls: Story = {
             role="radio"
             aria-checked="true"
             checked
+            prefix="1."
             indicator="◉"
             label="Use the current branch"
             details="Keep this work scoped to the branch already open in the workspace."
@@ -81,6 +82,7 @@ export const ChoiceControls: Story = {
           <ChoiceRow
             role="radio"
             aria-checked="false"
+            prefix="2."
             indicator="◯"
             label="Create a new branch"
             details="Start a separate branch before applying the change."

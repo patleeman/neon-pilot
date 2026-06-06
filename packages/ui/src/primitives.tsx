@@ -1491,13 +1491,19 @@ export const ChoiceRow = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {
     checked?: boolean;
+    prefix?: ReactNode;
     indicator?: ReactNode;
     label: ReactNode;
     details?: ReactNode;
   }
->(function ChoiceRow({ checked = false, indicator, label, details, className, children, type = 'button', ...props }, ref) {
+>(function ChoiceRow({ checked = false, prefix, indicator, label, details, className, children, type = 'button', ...props }, ref) {
   return (
     <button ref={ref} type={type} className={cx('ui-choice-row', checked && 'ui-choice-row-checked', className)} {...props}>
+      {prefix != null ? (
+        <span className="ui-choice-row-prefix" aria-hidden="true">
+          {prefix}
+        </span>
+      ) : null}
       {indicator != null ? (
         <span className={cx('ui-choice-row-indicator', checked && 'ui-choice-row-indicator-checked')} aria-hidden="true">
           {indicator}

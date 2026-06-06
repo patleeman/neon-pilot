@@ -156,6 +156,15 @@ describe('design-system primitives', () => {
     expect(html).toContain('aria-expanded="false"');
   });
 
+  it('renders choice row prefixes for numbered answer options', () => {
+    const html = renderToStaticMarkup(createElement(ChoiceRow, { prefix: '1.', indicator: '○', label: 'Clean it up' }));
+
+    expect(html).toContain('ui-choice-row-prefix');
+    expect(html).toContain('1.');
+    expect(html).toContain('ui-choice-row-indicator');
+    expect(html).toContain('Clean it up');
+  });
+
   it('renders stacked app page sections for dashboard pages', () => {
     const html = renderToStaticMarkup(createElement(AppPageSection, { title: 'Usage', layout: 'stacked' }, 'Charts'));
 
