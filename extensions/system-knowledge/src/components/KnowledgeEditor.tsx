@@ -8,6 +8,7 @@ import { Markdown } from '@tiptap/markdown';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { StarterKit } from '@tiptap/starter-kit';
+import { EditorToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { knowledgeApi } from '../lib/knowledgeApi';
@@ -46,35 +47,6 @@ const ICON = {
     'M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z',
   backlink: 'M9 15 3 9l6-6M3 9h12a6 6 0 0 1 0 12h-3',
 };
-
-function ToolbarButton({
-  active,
-  onClick,
-  title,
-  children,
-}: {
-  active?: boolean;
-  onClick: () => void;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      className={[
-        'flex items-center justify-center w-7 h-7 rounded transition-colors',
-        active ? 'bg-accent/20 text-accent' : 'text-secondary hover:bg-accent/10 hover:text-primary',
-      ].join(' ')}
-    >
-      {children}
-    </button>
-  );
-}
 
 // ── Autosave ──────────────────────────────────────────────────────────────────
 
@@ -790,44 +762,51 @@ export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRename
           tippyOptions={{ duration: 100 }}
           className="flex items-center gap-0.5 rounded-lg border border-border-default bg-elevated shadow-lg px-1.5 py-1"
         >
-          <ToolbarButton active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">
+          <EditorToolbarButton icon active={editor.isActive('bold')} onPress={() => editor.chain().focus().toggleBold().run()} title="Bold">
             <Ico d={ICON.bold} />
-          </ToolbarButton>
-          <ToolbarButton active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            icon
+            active={editor.isActive('italic')}
+            onPress={() => editor.chain().focus().toggleItalic().run()}
+            title="Italic"
+          >
             <Ico d={ICON.italic} />
-          </ToolbarButton>
-          <ToolbarButton
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            icon
             active={editor.isActive('strike')}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
+            onPress={() => editor.chain().focus().toggleStrike().run()}
             title="Strikethrough"
           >
             <Ico d={ICON.strike} />
-          </ToolbarButton>
-          <ToolbarButton active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()} title="Inline code">
+          </EditorToolbarButton>
+          <EditorToolbarButton icon active={editor.isActive('code')} onPress={() => editor.chain().focus().toggleCode().run()} title="Inline code">
             <Ico d={ICON.code} />
-          </ToolbarButton>
+          </EditorToolbarButton>
           <div className="w-px h-4 bg-border-subtle mx-0.5 shrink-0" />
-          <ToolbarButton
+          <EditorToolbarButton
             active={editor.isActive('heading', { level: 1 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            onPress={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             title="H1"
           >
             <span className="text-[10px] font-bold leading-none">H1</span>
-          </ToolbarButton>
-          <ToolbarButton
+          </EditorToolbarButton>
+          <EditorToolbarButton
             active={editor.isActive('heading', { level: 2 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            onPress={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             title="H2"
           >
             <span className="text-[10px] font-bold leading-none">H2</span>
-          </ToolbarButton>
-          <ToolbarButton
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            icon
             active={editor.isActive('blockquote')}
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            onPress={() => editor.chain().focus().toggleBlockquote().run()}
             title="Blockquote"
           >
             <Ico d={ICON.quote} />
-          </ToolbarButton>
+          </EditorToolbarButton>
         </BubbleMenu>
       )}
 
