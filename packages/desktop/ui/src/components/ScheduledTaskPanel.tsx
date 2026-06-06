@@ -35,7 +35,7 @@ import {
   validateTaskForm,
 } from './scheduledTaskPanelModel';
 import { ScheduledTaskPromptText } from './ScheduledTaskPromptText';
-import { CardMeta, CardTitle, cx, ErrorState, LoadingState, Switch, TextButton, ToolbarButton } from './ui';
+import { CardMeta, CardTitle, cx, ErrorState, LoadingState, SectionLabel, Switch, TextButton, ToolbarButton } from './ui';
 
 const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
 const PROMPT_INPUT_CLASS =
@@ -44,7 +44,6 @@ const INLINE_FIELD_CLASS =
   'h-8 min-w-0 rounded-md border border-transparent bg-transparent px-1.5 text-[12px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';
 const INLINE_INPUT_CLASS = INLINE_FIELD_CLASS;
 const INLINE_SELECT_CLASS = `${INLINE_FIELD_CLASS} appearance-none pr-6`;
-const FIELD_LABEL_CLASS = 'text-[11px] font-semibold uppercase tracking-[0.14em] text-dim';
 const FIELD_HELP_CLASS = 'text-[12px] leading-relaxed text-secondary';
 export function taskStatusMeta(task: ScheduledTaskDetail): { text: string; cls: string } {
   if (task.running) return { text: 'running', cls: 'text-accent' };
@@ -320,10 +319,12 @@ function TaskAdvancedMenu({
   return (
     <div className="absolute top-full right-0 z-20 mt-2 w-[20rem] rounded-xl border border-border-default bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
       <div className="space-y-3">
-        <p className={FIELD_LABEL_CLASS}>More options</p>
+        <SectionLabel tone="muted" className="block">
+          More options
+        </SectionLabel>
 
         <div className="space-y-1.5">
-          <span className={FIELD_LABEL_CLASS}>Target</span>
+          <SectionLabel tone="muted">Target</SectionLabel>
           <InlineSelect
             value={value.targetType}
             onChange={(event) =>
@@ -344,7 +345,7 @@ function TaskAdvancedMenu({
         {value.scheduleMode === 'cron' && (
           <>
             <div className="space-y-1.5">
-              <span className={FIELD_LABEL_CLASS}>Schedule editor</span>
+              <SectionLabel tone="muted">Schedule editor</SectionLabel>
               <InlineSelect
                 value={value.cronEditor.mode}
                 onChange={(event) => onChange({ cronEditor: { ...value.cronEditor, mode: event.target.value as CronEditorState['mode'] } })}
@@ -358,7 +359,7 @@ function TaskAdvancedMenu({
             </div>
 
             <div className="space-y-1.5">
-              <span className={FIELD_LABEL_CLASS}>Catch-up window</span>
+              <SectionLabel tone="muted">Catch-up window</SectionLabel>
               <input
                 type="number"
                 min={1}
@@ -379,7 +380,7 @@ function TaskAdvancedMenu({
         )}
 
         <div className="space-y-1.5">
-          <span className={FIELD_LABEL_CLASS}>Thread</span>
+          <SectionLabel tone="muted">Thread</SectionLabel>
           <InlineSelect
             value={value.threadMode}
             onChange={(event) =>
@@ -420,7 +421,7 @@ function TaskAdvancedMenu({
         {shouldShowTaskModelControls(value) && (
           <>
             <div className="space-y-1.5">
-              <span className={FIELD_LABEL_CLASS}>Model</span>
+              <SectionLabel tone="muted">Model</SectionLabel>
               <InlineSelect
                 value={value.model}
                 onChange={(event) => onChange({ model: event.target.value })}
@@ -438,7 +439,7 @@ function TaskAdvancedMenu({
             </div>
 
             <div className="space-y-1.5">
-              <span className={FIELD_LABEL_CLASS}>Reasoning</span>
+              <SectionLabel tone="muted">Reasoning</SectionLabel>
               <InlineSelect
                 value={value.thinkingLevel}
                 onChange={(event) => onChange({ thinkingLevel: event.target.value })}
