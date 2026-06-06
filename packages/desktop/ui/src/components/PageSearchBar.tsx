@@ -598,22 +598,20 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
 
         <div className="flex items-center gap-0.5">
           <IconButton
-            type="button"
+            compact
             onClick={() => moveToMatch(-1)}
             disabled={matchesCount === 0}
             aria-label="Previous match"
             title="Previous match (Shift+Enter)"
-            className="h-7 w-7 rounded-md"
           >
             <ChevronIcon direction="up" />
           </IconButton>
           <IconButton
-            type="button"
+            compact
             onClick={() => moveToMatch(1)}
             disabled={matchesCount === 0}
             aria-label="Next match"
             title="Next match (Enter)"
-            className="h-7 w-7 rounded-md"
           >
             <ChevronIcon direction="down" />
           </IconButton>
@@ -624,7 +622,7 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
           <Keycap>G</Keycap>
         </div>
 
-        <IconButton type="button" onClick={closeSearch} aria-label="Close page search" title="Close" className="h-7 w-7 rounded-md">
+        <IconButton compact onClick={closeSearch} aria-label="Close page search" title="Close">
           <svg
             aria-hidden="true"
             width="14"
