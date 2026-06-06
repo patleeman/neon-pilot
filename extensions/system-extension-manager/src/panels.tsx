@@ -18,6 +18,8 @@ import {
   Dialog,
   DialogBody,
   DialogHeader,
+  CodeBlock,
+  Disclosure,
   EmptyState,
   ErrorState,
   IconButton,
@@ -2007,12 +2009,11 @@ function ExtensionDetailsContent({
         </DetailBlock>
       ) : null}
 
-      <details>
-        <summary className="cursor-pointer select-none text-[12px] text-dim transition-colors hover:text-secondary">Raw manifest</summary>
-        <pre className="mt-3 max-h-[22rem] overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-secondary">
+      <Disclosure summary="Raw manifest">
+        <CodeBlock compact className="max-h-[22rem] overflow-auto">
           {JSON.stringify(extension.manifest, null, 2)}
-        </pre>
-      </details>
+        </CodeBlock>
+      </Disclosure>
     </div>
   );
 }
