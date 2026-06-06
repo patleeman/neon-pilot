@@ -10,6 +10,7 @@ import './wdyr.ts';
 import '@fontsource/geist/400.css';
 import '@fontsource/geist-mono/400.css';
 import './index.css';
+import '../../../../ui/src/styles.css';
 import '../extensions/extensionRegistryPrewarm';
 
 import { StrictMode } from 'react';

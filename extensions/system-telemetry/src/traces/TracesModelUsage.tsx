@@ -144,7 +144,7 @@ export function TracesModelUsage({
             label="Cached input"
             value={formatNumber(tokensCached)}
             pct={Math.min(tokensCached / Math.max(tokensInput + tokensCached, 1), 1)}
-            tone="steel"
+            tone="accent"
           />
           <CacheRow label="Cached share" value={cacheHitRateLabel} pct={cacheHitRate / 100} tone="success" />
           <CacheRow
@@ -166,7 +166,7 @@ function BarRow({
   label,
   value,
   pct,
-  color,
+  tone,
   badge,
   badgeCls,
 }: {
