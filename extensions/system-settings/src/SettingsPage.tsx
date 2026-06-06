@@ -38,15 +38,18 @@ import {
   type ProviderOAuthLoginState,
   type ProviderOAuthLoginStreamEvent,
   readDesktopEnvironment,
+  RowButton,
   type SecretsState,
   type SecretStatusEntry,
   SearchInput,
+  SegmentedControl,
   Select,
   SettingsField,
   SettingsPanel,
   SettingsPanelHost,
   subscribeDesktopProviderOAuthLogin,
   type TelemetryDbMaintenanceResult,
+  TextButton,
   Textarea,
   TextInput,
   type ThemeAccent,
@@ -375,29 +378,6 @@ function parseOAuthPromptOptions(message: string): Array<{ id: string; label: st
   }
 
   return options;
-}
-
-function ThemeButton({
-  value,
-  current,
-  onSelect,
-  label,
-}: {
-  value: ThemePreference;
-  current: ThemePreference;
-  onSelect: (theme: ThemePreference) => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(value)}
-      className={cx('ui-segmented-button capitalize', current === value && 'ui-segmented-button-active')}
-      aria-pressed={current === value}
-    >
-      {label}
-    </button>
-  );
 }
 
 function ThemeDefaultSelect({
@@ -2839,11 +2819,16 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               <SettingsPanel title="Theme" description="Choose Auto to follow the OS.">
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="ui-segmented-control" role="group" aria-label="Theme mode selection">
-                      <ThemeButton value="system" current={themePreference} onSelect={setThemePreference} label="Auto" />
-                      <ThemeButton value="light" current={themePreference} onSelect={setThemePreference} label="Light" />
-                      <ThemeButton value="dark" current={themePreference} onSelect={setThemePreference} label="Dark" />
-                    </div>
+                    <SegmentedControl
+                      ariaLabel="Theme mode selection"
+                      value={themePreference}
+                      onChange={setThemePreference}
+                      options={[
+                        { value: 'system', label: 'Auto' },
+                        { value: 'light', label: 'Light' },
+                        { value: 'dark', label: 'Dark' },
+                      ]}
+                    />
                     <span className="ui-card-meta">
                       Current theme: {availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
                       {themePreference === 'system' ? ' (auto)' : ''}
@@ -3196,9 +3181,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 {selectedModelProviderId === NEW_MODEL_PROVIDER_ID ? (
                                   <div className="flex flex-wrap gap-2 text-[12px]">
                                     {COMMON_PROVIDER_IDS.map((providerId) => (
-                                      <button
+                                      <TextButton
                                         key={providerId}
-                                        type="button"
                                         onClick={() => {
                                           if (modelProviderAction !== null) {
                                             return;
@@ -3206,10 +3190,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           setModelProviderDraft((current) => ({ ...current, id: providerId }));
                                         }}
                                         disabled={modelProviderAction !== null}
-                                        className="text-accent underline decoration-dotted underline-offset-4 transition-colors hover:text-accent/80 disabled:opacity-50"
+                                        tone="accent"
+                                        className="underline decoration-dotted underline-offset-4"
                                       >
                                         {providerId}
-                                      </button>
+                                      </TextButton>
                                     ))}
                                   </div>
                                 ) : null}
@@ -3470,18 +3455,16 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         {builtInProviderModels.map((model) => {
                                           const hasOverride = selectedModelProvider?.models.some((candidate) => candidate.id === model.id);
                                           return (
-                                            <button
+                                            <RowButton
                                               key={`${model.provider}/${model.id}`}
-                                              type="button"
                                               onClick={() => {
                                                 startEditingBuiltInModel(model.id);
                                               }}
                                               disabled={modelDraftAction !== null}
+                                              selected={editingModelId === model.id && !editingProviderModel}
                                               className={cx(
-                                                'group ui-list-row w-full justify-between px-2 py-1 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
-                                                editingModelId === model.id && !editingProviderModel
-                                                  ? 'ui-list-row-selected'
-                                                  : 'ui-list-row-hover',
+                                                'group w-full justify-between px-2 py-1',
+                                                editingModelId !== model.id || editingProviderModel ? 'ui-list-row-hover' : null,
                                               )}
                                               aria-pressed={editingModelId === model.id && !editingProviderModel}
                                             >
@@ -3489,7 +3472,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                               <span className="shrink-0 text-dim" aria-hidden="true">
                                                 <SettingsIcon name={hasOverride ? 'check' : 'plus'} />
                                               </span>
-                                            </button>
+                                            </RowButton>
                                           );
                                         })}
                                       </div>
@@ -4135,9 +4118,8 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             {configuredProviderSummaries.map((provider) => {
                               const selected = provider.id === selectedModelProviderId || provider.id === selectedProviderId;
                               return (
-                                <button
+                                <RowButton
                                   key={provider.id}
-                                  type="button"
                                   onClick={() => {
                                     if (provider.modelProvider) {
                                       selectModelProvider(provider.id);
@@ -4145,9 +4127,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       startNewModelProvider(provider.id, 'provider');
                                     }
                                   }}
+                                  selected={selected}
                                   className={cx(
-                                    'group flex w-full items-center justify-between gap-4 rounded-lg border border-border-subtle bg-surface/70 px-3 py-3 text-left transition-colors hover:border-border-default hover:bg-surface focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
-                                    selected && 'border-border-default bg-elevated',
+                                    'group flex w-full items-center justify-between gap-4 rounded-lg border border-border-subtle bg-surface/70 px-3 py-3',
+                                    selected ? 'border-border-default bg-elevated' : 'hover:border-border-default hover:bg-surface',
                                   )}
                                   aria-pressed={selected}
                                 >
@@ -4164,7 +4147,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       {provider.modelProvider.baseUrl}
                                     </span>
                                   )}
-                                </button>
+                                </RowButton>
                               );
                             })}
                           </div>
