@@ -35,7 +35,7 @@ import {
   validateTaskForm,
 } from './scheduledTaskPanelModel';
 import { ScheduledTaskPromptText } from './ScheduledTaskPromptText';
-import { cx, ErrorState, LoadingState, ToolbarButton } from './ui';
+import { cx, ErrorState, LoadingState, Switch, ToolbarButton } from './ui';
 
 const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
 const PROMPT_INPUT_CLASS =
@@ -293,30 +293,16 @@ function InlineSwitch({
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
+    <Switch
+      checked={checked}
       aria-label={label}
       onClick={() => onCheckedChange(!checked)}
-      className="group inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 focus-visible:ring-offset-2 focus-visible:ring-offset-base"
-    >
-      <span
-        aria-hidden="true"
-        className={cx(
-          'relative inline-flex h-[18px] w-[32px] shrink-0 rounded-full border p-[1px] transition-all',
-          checked ? 'border-accent/55 bg-accent/75 shadow-sm' : 'border-border-default bg-surface/40 group-hover:bg-surface/60',
-        )}
-      >
-        <span
-          className={cx(
-            'h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform',
-            checked ? 'translate-x-[14px]' : 'translate-x-0',
-          )}
-        />
-      </span>
-      <span className={cx('leading-none', checked && 'text-primary')}>{label}</span>
-    </button>
+      label={label}
+      className={cx(
+        'h-8 shrink-0 rounded-md px-1.5 text-[12px] font-medium transition-colors hover:bg-surface/45 hover:text-primary',
+        checked && 'text-primary',
+      )}
+    />
   );
 }
 
