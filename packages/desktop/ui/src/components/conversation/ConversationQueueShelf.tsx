@@ -4,7 +4,7 @@ import {
   summarizeQueuedRunCallbackPrompt,
   truncateConversationShelfText,
 } from '../../conversation/conversationComposerPresentation';
-import { Pill } from '../ui';
+import { Pill, SectionLabel } from '../ui';
 
 export interface ConversationPendingQueueItem {
   id: string;
@@ -28,7 +28,7 @@ export function ConversationQueueShelf({
     <>
       {pendingQueue.length > 0 && (
         <div className="px-3 pt-2.5 pb-2 border-b border-border-subtle flex flex-col gap-1.5">
-          <span className="ui-section-label">Queued</span>
+          <SectionLabel>Queued</SectionLabel>
           {pendingQueue.map((message) => {
             const runCallbackSummary = summarizeQueuedRunCallbackPrompt(message.text);
             const imageSummary = formatQueuedPromptImageSummary(message.imageCount);

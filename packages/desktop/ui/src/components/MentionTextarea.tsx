@@ -11,7 +11,7 @@ import {
 
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from '../conversation/conversationMentions';
 import { useNodeMentionItems } from '../hooks/useNodeMentionItems';
-import { cx, Pill } from './ui';
+import { cx, Pill, SectionLabel } from './ui';
 
 interface MentionMatch {
   query: string;
@@ -137,7 +137,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
       {showMentionMenu && (
         <div className="ui-menu-shell absolute inset-x-0 bottom-full z-20 mb-2 max-h-72 overflow-y-auto">
           <div className="px-3 pt-2 pb-1">
-            <p className="ui-section-label">Mention</p>
+            <SectionLabel>Mention</SectionLabel>
           </div>
           {filteredItems.map((item, index) => (
             <button

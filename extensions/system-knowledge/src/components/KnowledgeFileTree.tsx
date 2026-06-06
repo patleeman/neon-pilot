@@ -26,6 +26,7 @@ import {
   renameExpandedFolderIds,
   renameOpenFileIds,
   Select,
+  SectionLabel,
   shouldUseNativeAppContextMenus,
   TextInput,
   useApi,
@@ -1434,7 +1435,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, confirm, onSyncK
         <>
           <div ref={headerRef} className="shrink-0 px-3 pb-1 pt-3">
             <div className="flex items-center gap-1">
-              <p className="ui-section-label flex-1">Knowledge</p>
+              <SectionLabel className="flex-1">Knowledge</SectionLabel>
               <span
                 role="status"
                 aria-label={knowledgeBaseSyncPresentation.text}
@@ -1464,7 +1465,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, confirm, onSyncK
         <>
           <div ref={headerRef} className="shrink-0 px-3 pb-1 pt-3">
             <div className="flex items-center gap-1">
-              <p className="ui-section-label flex-1">Knowledge</p>
+              <SectionLabel className="flex-1">Knowledge</SectionLabel>
               <span
                 role="status"
                 aria-label={knowledgeBaseSyncPresentation.text}
