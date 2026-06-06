@@ -242,6 +242,21 @@ const meta = {
               <CardTitle>Compact card</CardTitle>
               <CardMeta>Use for small rail, settings, and metadata blocks.</CardMeta>
             </CompactCard>
+            <SurfacePanel muted style={{ display: 'grid', gap: 8, padding: 12 }}>
+              <div style={{ display: 'flex', minWidth: 0, flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                <CardTitle as="span">Artifact saved</CardTitle>
+                <Pill tone="accent" mono>
+                  html
+                </Pill>
+                <CardMeta as="span">rev 3</CardMeta>
+              </div>
+              <CardMeta className="font-mono text-secondary">artifact_01HN7R2X2V3Y</CardMeta>
+              <CardBody>The generated report is available in the artifact workbench.</CardBody>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+                <TextButton tone="accent">open</TextButton>
+                <InlineMeta>updated 2m ago</InlineMeta>
+              </div>
+            </SurfacePanel>
             <p style={{ margin: 0, fontSize: 13 }}>
               Long paths wrap safely in <InlineCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineCode>.
             </p>
