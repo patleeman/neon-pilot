@@ -1,5 +1,5 @@
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
-import { Button, cx, Pill } from '../ui';
+import { Button, ChoiceRow, cx, Pill } from '../ui';
 
 type ConversationQuestion = AskUserQuestionPresentation['questions'][number];
 
@@ -72,24 +72,17 @@ export function ConversationQuestionShelf({
           const active = optionIndex === activeOptionIndex;
           const indicator = activeQuestion.style === 'check' ? (checked ? '☑' : '☐') : checked ? '◉' : '◯';
           return (
-            <button
+            <ChoiceRow
               key={`${activeQuestion.id}:${option.value}`}
               type="button"
               disabled={submitting}
               onClick={() => onSelectOption(activeQuestionIndex, optionIndex)}
-              className={cx(
-                'ui-list-row -mx-0.5 w-full items-start gap-3 px-3 py-2 text-left disabled:opacity-40',
-                checked || active ? 'ui-list-row-selected' : 'ui-list-row-hover',
-              )}
-            >
-              <span className={cx('mt-0.5 w-12 shrink-0 text-[12px]', checked || active ? 'text-accent' : 'text-dim')} aria-hidden="true">
-                {optionIndex + 1}. {indicator}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="ui-row-title block break-words text-[13px] leading-snug">{option.label}</span>
-                {option.details && <span className="ui-row-summary block break-words text-[12px] leading-relaxed">{option.details}</span>}
-              </span>
-            </button>
+              checked={checked || active}
+              indicator={`${optionIndex + 1}. ${indicator}`}
+              label={option.label}
+              details={option.details}
+              className="-mx-0.5 w-full items-start gap-3 px-3 py-2 disabled:opacity-40"
+            />
           );
         })}
       </div>
