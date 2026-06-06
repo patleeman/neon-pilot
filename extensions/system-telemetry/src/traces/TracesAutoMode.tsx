@@ -2,7 +2,15 @@
  * Auto Mode tracking display
  */
 
-import { DashboardGrid, DashboardGridCell, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  DashboardGrid,
+  DashboardGridCell,
+  MetricTile,
+  PanelHeader,
+  ProgressRow,
+  SectionLabel,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 
 export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
   if (!data || data.recentEvents.length === 0) {
@@ -37,13 +45,16 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
                 {data.topStopReasons.map((r, i) => {
                   const maxCount = data.topStopReasons[0]?.count ?? 1;
                   return (
-                    <div key={i} className="flex items-center gap-2 py-0.5">
-                      <span className="text-[11px] text-secondary flex-1 truncate">{r.reason}</span>
-                      <div className="w-16 h-1.5 bg-elevated rounded overflow-hidden">
-                        <div className="h-full rounded bg-warning" style={{ width: `${(r.count / maxCount) * 100}%` }} />
-                      </div>
-                      <span className="text-[10px] font-mono text-dim w-4 text-right">{r.count}</span>
-                    </div>
+                    <ProgressRow
+                      key={i}
+                      label={r.reason}
+                      value={r.count}
+                      progressValue={(r.count / maxCount) * 100}
+                      tone="warning"
+                      labelWidth="minmax(0, 1fr)"
+                      progressWidth="4rem"
+                      valueWidth="1rem"
+                    />
                   );
                 })}
               </div>

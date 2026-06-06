@@ -57,6 +57,7 @@ export {
   type PositionedMenuPlacement,
   ProgressBar,
   type ProgressBarTone,
+  ProgressRow,
   ResourceListItem,
   SearchInput,
   SectionLabel,

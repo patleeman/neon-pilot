@@ -3,7 +3,16 @@
  */
 
 import type { CacheEfficiencyAggregate, SystemPromptAggregate } from '@neon-pilot/extensions/data';
-import { DashboardGrid, DashboardGridCell, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  DashboardGrid,
+  DashboardGridCell,
+  MetricTile,
+  PanelHeader,
+  ProgressRow,
+  type ProgressBarTone,
+  SectionLabel,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 
 export function TracesCacheAndSystemPrompt({
   cacheEfficiency,
@@ -46,19 +55,20 @@ export function TracesCacheAndSystemPrompt({
                 />
               </div>
               {cacheEfficiency.byModel.map((m) => {
-                const barCls = m.requestCacheHitRate > 50 ? 'bg-success' : m.requestCacheHitRate > 10 ? 'bg-warning' : 'bg-danger';
+                const tone: ProgressBarTone = m.requestCacheHitRate > 50 ? 'success' : m.requestCacheHitRate > 10 ? 'warning' : 'danger';
                 return (
-                  <div key={m.modelId} className="grid grid-cols-[100px_minmax(0,1fr)_96px] items-center gap-2 py-1">
-                    <span className="text-[11px] text-secondary truncate" title={m.modelId}>
-                      {m.modelId}
-                    </span>
-                    <div className="h-1.5 bg-elevated rounded overflow-hidden">
-                      <div className={`h-full rounded ${barCls}`} style={{ width: `${Math.max(m.requestCacheHitRate, 2)}%` }} />
-                    </div>
-                    <span className="text-[10px] font-mono text-dim text-right tabular-nums">
-                      {fmtPercent(m.requestCacheHitRate)}% req · {fmtPercent(m.hitRate)}% tok
-                    </span>
-                  </div>
+                  <ProgressRow
+                    key={m.modelId}
+                    label={m.modelId}
+                    value={`${fmtPercent(m.requestCacheHitRate)}% req · ${fmtPercent(m.hitRate)}% tok`}
+                    progressValue={m.requestCacheHitRate}
+                    minPercent={2}
+                    tone={tone}
+                    labelWidth="6.25rem"
+                    valueWidth="6rem"
+                    valueClassName="text-dim tabular-nums"
+                    title={m.modelId}
+                  />
                 );
               })}
               <div className="text-[11px] text-dim pt-2 mt-2 border-t border-border-subtle">

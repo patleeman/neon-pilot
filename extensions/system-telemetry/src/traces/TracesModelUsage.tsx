@@ -3,7 +3,16 @@
  */
 
 import type { CacheEfficiencyAggregate, TraceModelUsage, TraceThroughput } from '@neon-pilot/extensions/data';
-import { DashboardGrid, DashboardGridCell, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  DashboardGrid,
+  DashboardGridCell,
+  MetricTile,
+  PanelHeader,
+  ProgressRow,
+  type ProgressBarTone,
+  SectionLabel,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 
 export function TracesModelUsage({
   models,
@@ -61,7 +70,7 @@ export function TracesModelUsage({
                 label={<span className="model-tag">{m.modelId}</span>}
                 value={formatNumber(m.tokens)}
                 pct={m.tokens / maxTokens}
-                color="bg-accent"
+                tone="accent"
                 badge={hitRate != null ? `${formatPercent(hitRate)} cache` : undefined}
                 badgeCls={hitRate != null ? (hitRate > 30 ? 'text-success' : hitRate > 10 ? 'text-warning' : 'text-danger') : undefined}
               />
@@ -118,7 +127,7 @@ export function TracesModelUsage({
                 label={<span className="model-tag">{t.modelId}</span>}
                 value={`${t.avgTokensPerSec} tok/s avg · ${t.peakTokensPerSec} peak`}
                 pct={t.avgTokensPerSec / Math.max(...throughput.map((x) => x.avgTokensPerSec), 1)}
-                color="bg-accent"
+                tone="accent"
               />
             ))
           ) : (
@@ -135,14 +144,14 @@ export function TracesModelUsage({
             label="Cached input"
             value={formatNumber(tokensCached)}
             pct={Math.min(tokensCached / Math.max(tokensInput + tokensCached, 1), 1)}
-            color="bg-steel/50"
+            tone="steel"
           />
-          <CacheRow label="Cached share" value={cacheHitRateLabel} pct={cacheHitRate / 100} color="bg-success" />
+          <CacheRow label="Cached share" value={cacheHitRateLabel} pct={cacheHitRate / 100} tone="success" />
           <CacheRow
             label="Total prompt in"
             value={formatNumber(tokensInput + tokensCached)}
             pct={Math.min((tokensInput + tokensCached) / Math.max(totalTokens, 1), 1)}
-            color="bg-success"
+            tone="success"
           />
           <div className="mt-2 pt-2 border-t border-border-subtle text-[11px] text-dim">
             {cacheHitRate > 0 ? <span className="text-warning">{cacheHitRateLabel}</span> : null} of prompt input read from cache
@@ -164,31 +173,38 @@ function BarRow({
   label: React.ReactNode;
   value: string;
   pct: number;
-  color: string;
+  tone: ProgressBarTone;
   badge?: string;
   badgeCls?: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5 py-1.5">
-      <div className="w-[100px] shrink-0 text-[12px] text-secondary">{label}</div>
-      <div className="flex-1 h-1.5 bg-elevated rounded overflow-hidden">
-        <div className={`h-full rounded ${color}`} style={{ width: `${Math.max(pct * 100, 2)}%` }} />
-      </div>
-      <div className="w-[70px] text-right font-mono text-[11px] text-secondary shrink-0">{value}</div>
-      {badge != null && <div className={`w-[80px] text-right font-mono text-[10px] shrink-0 ${badgeCls ?? 'text-dim'}`}>{badge}</div>}
-    </div>
+    <ProgressRow
+      label={label}
+      value={value}
+      badge={badge}
+      progressValue={pct * 100}
+      minPercent={2}
+      tone={tone}
+      labelWidth="6.25rem"
+      valueWidth="4.375rem"
+      badgeWidth="5rem"
+      badgeClassName={badgeCls}
+    />
   );
 }
 
-function CacheRow({ label, value, pct, color }: { label: string; value: string; pct: number; color: string }) {
+function CacheRow({ label, value, pct, tone }: { label: string; value: string; pct: number; tone: ProgressBarTone }) {
   return (
-    <div className="flex items-center gap-3 py-1.5">
-      <div className="w-[90px] shrink-0 text-[12px] text-secondary">{label}</div>
-      <div className="flex-1 h-5 bg-elevated rounded overflow-hidden">
-        <div className={`h-full rounded ${color}`} style={{ width: `${Math.max(pct * 100, 2)}%` }} />
-      </div>
-      <div className="w-[80px] text-right font-mono text-[11px] text-secondary shrink-0">{value}</div>
-    </div>
+    <ProgressRow
+      label={label}
+      value={value}
+      progressValue={pct * 100}
+      minPercent={2}
+      tone={tone}
+      progressClassName="h-5"
+      labelWidth="5.625rem"
+      valueWidth="5rem"
+    />
   );
 }
 

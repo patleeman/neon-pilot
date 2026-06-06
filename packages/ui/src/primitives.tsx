@@ -250,6 +250,7 @@ const PROGRESS_BAR_TONE_CLASSES = {
   success: 'ui-progress-bar-success',
   warning: 'ui-progress-bar-warning',
   danger: 'ui-progress-bar-danger',
+  steel: 'ui-progress-bar-steel',
 } as const;
 
 export type ProgressBarTone = keyof typeof PROGRESS_BAR_TONE_CLASSES;
@@ -287,6 +288,73 @@ export function ProgressBar({
       {...props}
     >
       <div className={cx('ui-progress-bar-fill', PROGRESS_BAR_TONE_CLASSES[tone], barClassName)} style={{ width: `${visiblePercent}%` }} />
+    </div>
+  );
+}
+
+export function ProgressRow({
+  label,
+  value,
+  progressValue,
+  badge,
+  className,
+  labelClassName,
+  valueClassName,
+  badgeClassName,
+  progressClassName,
+  barClassName,
+  labelWidth = '6rem',
+  progressWidth = 'minmax(0, 1fr)',
+  valueWidth = '4.5rem',
+  badgeWidth = '5rem',
+  tone = 'accent',
+  max = 100,
+  minPercent = 0,
+  progressLabel,
+  style,
+  ...props
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  progressValue: number;
+  badge?: ReactNode;
+  className?: string;
+  labelClassName?: string;
+  valueClassName?: string;
+  badgeClassName?: string;
+  progressClassName?: string;
+  barClassName?: string;
+  labelWidth?: string;
+  progressWidth?: string;
+  valueWidth?: string;
+  badgeWidth?: string;
+  tone?: ProgressBarTone;
+  max?: number;
+  minPercent?: number;
+  progressLabel?: string;
+} & Omit<HTMLAttributes<HTMLDivElement>, 'value'>) {
+  const rowStyle = {
+    '--ui-progress-row-label-width': labelWidth,
+    '--ui-progress-row-progress-width': progressWidth,
+    '--ui-progress-row-value-width': valueWidth,
+    '--ui-progress-row-badge-width': badgeWidth,
+    ...style,
+  } as CSSProperties;
+
+  return (
+    <div className={cx('ui-progress-row', badge != null && 'ui-progress-row-with-badge', className)} style={rowStyle} {...props}>
+      <div className={cx('ui-progress-row-label', labelClassName)}>{label}</div>
+      <ProgressBar
+        value={progressValue}
+        max={max}
+        minPercent={minPercent}
+        tone={tone}
+        label={progressLabel}
+        className={cx('ui-progress-row-bar', progressClassName)}
+        barClassName={barClassName}
+      />
+      <div className={cx('ui-progress-row-value', valueClassName)}>{value}</div>
+      {badge != null ? <div className={cx('ui-progress-row-badge', badgeClassName)}>{badge}</div> : null}
     </div>
   );
 }

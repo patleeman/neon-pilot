@@ -3,7 +3,15 @@
  */
 
 import type { TraceAgentLoop } from '@neon-pilot/extensions/data';
-import { MetricTile, type MetricTone, PanelHeader, StatGrid, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  MetricTile,
+  type MetricTone,
+  PanelHeader,
+  ProgressRow,
+  type ProgressBarTone,
+  StatGrid,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 
 export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {
@@ -50,15 +58,15 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
                 label="P50"
                 pct={durationPct(loop.durationP50Ms, loop.durationP99Ms)}
                 val={formatDuration(loop.durationP50Ms)}
-                color="bg-accent"
+                tone="accent"
               />
               <DurBar
                 label="P95"
                 pct={durationPct(loop.durationP95Ms, loop.durationP99Ms)}
                 val={formatDuration(loop.durationP95Ms)}
-                color="bg-warning"
+                tone="warning"
               />
-              <DurBar label="P99" pct={100} val={formatDuration(loop.durationP99Ms)} color="bg-danger" />
+              <DurBar label="P99" pct={100} val={formatDuration(loop.durationP99Ms)} tone="danger" />
             </>
           ) : (
             <div className="rounded-md border border-border-subtle bg-elevated px-3 py-4 text-center text-[11px] text-dim">
@@ -75,16 +83,8 @@ function LoopStat({ value, label, tone = 'default' }: { value: string; label: st
   return <MetricTile label={label} value={value} size="lg" tone={tone} />;
 }
 
-function DurBar({ label, pct, val, color }: { label: string; pct: number; val: string; color: string }) {
-  return (
-    <div className="flex items-center gap-2.5 py-1.5">
-      <span className="w-[60px] text-[11px] text-secondary shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-elevated rounded overflow-hidden">
-        <div className={`h-full rounded ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="w-[55px] text-right font-mono text-[11px] text-secondary shrink-0">{val}</span>
-    </div>
-  );
+function DurBar({ label, pct, val, tone }: { label: string; pct: number; val: string; tone: ProgressBarTone }) {
+  return <ProgressRow label={label} value={val} progressValue={pct} minPercent={4} tone={tone} labelWidth="3.75rem" valueWidth="3.5rem" />;
 }
 
 function formatNumber(value: number | null | undefined): string {

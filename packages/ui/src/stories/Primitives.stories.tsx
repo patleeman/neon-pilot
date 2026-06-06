@@ -38,6 +38,7 @@ import {
   Pill,
   PositionedMenu,
   ProgressBar,
+  ProgressRow,
   ResourceListItem,
   SearchInput,
   SectionLabel,
@@ -238,6 +239,8 @@ const meta = {
             <ProgressBar value={64} label="Trace coverage" />
             <ProgressBar value={42} tone="success" label="Successful calls" />
             <ProgressBar value={18} tone="warning" minPercent={2} label="Warnings" />
+            <ProgressRow label="Cache read" value="68%" progressValue={68} tone="success" progressLabel="Cache read" />
+            <ProgressRow label="Tool errors" value="4.2%" progressValue={4.2} tone="warning" minPercent={2} progressLabel="Tool errors" />
           </div>
           <Disclosure summary="Invocation payload" open>
             <CodeBlock compact>{'{\n  "cwd": "/Users/patrick/workingdir/neon-pilot",\n  "mode": "review"\n}'}</CodeBlock>

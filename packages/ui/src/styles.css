@@ -458,6 +458,59 @@ body {
   background: rgb(var(--color-danger));
 }
 
+.ui-progress-bar-steel {
+  background: rgb(var(--color-steel) / 0.5);
+}
+
+.ui-progress-row {
+  display: grid;
+  grid-template-columns:
+    var(--ui-progress-row-label-width) var(--ui-progress-row-progress-width)
+    var(--ui-progress-row-value-width);
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.375rem;
+}
+
+.ui-progress-row-with-badge {
+  grid-template-columns:
+    var(--ui-progress-row-label-width) var(--ui-progress-row-progress-width)
+    var(--ui-progress-row-value-width) var(--ui-progress-row-badge-width);
+}
+
+.ui-progress-row-label {
+  min-width: 0;
+  overflow: hidden;
+  color: rgb(var(--color-secondary));
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-progress-row-bar {
+  min-width: 0;
+  height: 0.375rem;
+}
+
+.ui-progress-row-value,
+.ui-progress-row-badge {
+  min-width: 0;
+  overflow: hidden;
+  color: rgb(var(--color-secondary));
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-progress-row-badge {
+  color: rgb(var(--color-dim));
+  font-size: 0.625rem;
+}
+
 .ui-section-label {
   font-size: 0.625rem;
   font-weight: 600;

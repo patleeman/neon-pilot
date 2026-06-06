@@ -3,7 +3,7 @@
  */
 
 import type { TraceToolHealth } from '@neon-pilot/extensions/data';
-import { MetricTile, type MetricTone, PanelHeader, ProgressBar, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { MetricTile, type MetricTone, PanelHeader, ProgressBar, ProgressRow, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
@@ -95,11 +95,19 @@ function BashComplexity({ complexity, totalCalls }: { complexity: NonNullable<Tr
       </div>
       <div className="space-y-1.5">
         {complexity.shapeBreakdown.map((row) => (
-          <div key={row.shape} className="grid grid-cols-[78px_1fr_54px] items-center gap-2 text-[10px]">
-            <span className="capitalize text-secondary">{row.shape}</span>
-            <ProgressBar value={row.calls} max={shapeTotal} minPercent={2} className="h-1.5" label={`${row.shape} calls`} />
-            <span className="text-right font-mono text-dim">{row.calls}</span>
-          </div>
+          <ProgressRow
+            key={row.shape}
+            label={row.shape}
+            value={row.calls}
+            progressValue={row.calls}
+            max={shapeTotal}
+            minPercent={2}
+            labelWidth="4.875rem"
+            valueWidth="3.375rem"
+            labelClassName="capitalize text-[10px]"
+            valueClassName="text-dim"
+            progressLabel={`${row.shape} calls`}
+          />
         ))}
       </div>
       <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1 text-[10px] text-dim">
