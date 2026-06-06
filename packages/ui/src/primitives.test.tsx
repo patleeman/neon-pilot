@@ -40,6 +40,10 @@ import {
   Pill,
   ProgressBar,
   ResourceListItem,
+  RuntimeFooter,
+  RuntimeSection,
+  RuntimeStatusDot,
+  RuntimeStrip,
   SearchInput,
   SectionLabel,
   SegmentedControl,
@@ -53,6 +57,7 @@ import {
   TabPanel,
   TaskListItem,
   TextInput,
+  TerminalBlock,
   Tooltip,
 } from './primitives';
 
@@ -174,6 +179,36 @@ describe('design-system primitives', () => {
     expect(html).toContain('aria-valuemax="10"');
     expect(html).toContain('aria-valuenow="7"');
     expect(html).toContain('ui-progress-bar-success');
+  });
+
+  it('renders runtime workspace primitives', () => {
+    const stripHtml = renderToStaticMarkup(
+      createElement(
+        RuntimeStrip,
+        {
+          status: 'Server ready',
+          tone: 'ready',
+          metadata: ['mlx-vlm', 'Local'],
+          message: 'Model loaded.',
+          progress: 42,
+        },
+        createElement('button', null, 'Restart'),
+      ),
+    );
+    const sectionHtml = renderToStaticMarkup(
+      createElement(RuntimeSection, { title: 'Runtime logs', action: createElement('button', null, 'Refresh') }, createElement(TerminalBlock, null, 'ok')),
+    );
+    const footerHtml = renderToStaticMarkup(
+      createElement(RuntimeFooter, { summary: 'Advanced details', open: true, onToggle: () => undefined }, 'Details'),
+    );
+
+    expect(renderToStaticMarkup(createElement(RuntimeStatusDot, { tone: 'ready' }))).toContain('ui-status-dot-accent');
+    expect(stripHtml).toContain('Server ready');
+    expect(stripHtml).toContain('aria-live="polite"');
+    expect(stripHtml).toContain('Setup progress 42%');
+    expect(sectionHtml).toContain('Runtime logs');
+    expect(sectionHtml).toContain('min-h-44');
+    expect(footerHtml).toContain('aria-expanded="true"');
   });
 
   it('renders setting toggle rows with switch semantics', () => {

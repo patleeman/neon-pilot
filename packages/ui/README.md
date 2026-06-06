@@ -24,8 +24,8 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsPanel`, `SettingsRow`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
-- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ToolResultCard`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`
-- Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ToolResultCard`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`, `TerminalBlock`
+- Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`, `RuntimePage`, `RuntimeHeader`, `RuntimeStrip`, `RuntimeSection`, `RuntimeFooter`
 - Utility: `cx`
 
 ## Storybook
@@ -97,6 +97,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `ErrorState` for blocking load failures; pass `title` plus `body` or `message` when a heading helps. Use `Notice tone="danger"` for inline validation, save, and action feedback.
 - Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.
 - Use `AppPageLayout`, `AppPageIntro`, and `AppPageSection` for extension-owned routes. `AppPageSection` accepts `meta` for counts, `actions` for search/filter controls, and optional children, so do not hand-roll bordered route section headers with local `h2`/description/count markup.
+- Use `RuntimePage`, `RuntimeHeader`, `RuntimeStrip`, `RuntimeSection`, `RuntimeFooter`, `RuntimeStatusDot`, and `TerminalBlock` for extension pages that manage a local backend, model server, watcher, daemon, or installer. `RuntimeStrip` is the top status/progress band; pass `tone="ready" | "running" | "warning" | "muted"`, `metadata`, optional `message`, and optional `progress`. Use `RuntimeSection` for setup, backend settings, library, and logs sections instead of hand-rolled `border-t` section headers. Use `TerminalBlock` for bounded logs and command output.
 - Use `CompactCard` for small bordered metadata blocks in rails, settings, dashboards, and extension panels. Compose it with `CardTitle`, `CardBody`, and `CardMeta`; set `as="article"` or `as="li"` only when the surrounding structure needs that semantic element.
 - Use `SectionLabel` for compact uppercase section, chart, editor, menu, error-panel, and metadata labels. Set `tone="muted"` for low-emphasis labels in dense dashboards and app chrome.
 - Use `MetaLabel` for inline uppercase metadata tags such as file status, artifact kind, and live/current badges.

@@ -462,6 +462,177 @@ export function ProgressBar({
   );
 }
 
+export type RuntimeStatusTone = 'ready' | 'running' | 'warning' | 'muted';
+
+function runtimeStatusToneToDotTone(tone: RuntimeStatusTone): StatusDotTone {
+  if (tone === 'ready') return 'accent';
+  if (tone === 'running') return 'success';
+  if (tone === 'warning') return 'warning';
+  return 'muted';
+}
+
+export function RuntimeStatusDot({ tone, className }: { tone: RuntimeStatusTone; className?: string }) {
+  return <StatusDot tone={runtimeStatusToneToDotTone(tone)} size="sm" className={className} />;
+}
+
+export function RuntimePage({
+  children,
+  className,
+  shellClassName,
+  contentClassName,
+}: {
+  children: ReactNode;
+  className?: string;
+  shellClassName?: string;
+  contentClassName?: string;
+}) {
+  return (
+    <div className={cx('h-full overflow-y-auto', className)}>
+      <AppPageLayout shellClassName={cx('max-w-[72rem]', shellClassName)} contentClassName={cx('space-y-10', contentClassName)}>
+        {children}
+      </AppPageLayout>
+    </div>
+  );
+}
+
+export function RuntimeHeader({
+  title,
+  summary,
+  actions,
+  className,
+}: {
+  title: ReactNode;
+  summary: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+}) {
+  return <AppPageIntro title={title} summary={summary} actions={actions} className={className} />;
+}
+
+export function RuntimeStrip({
+  status,
+  tone,
+  metadata,
+  message,
+  children,
+  progress,
+  className,
+  bodyClassName,
+}: {
+  status: ReactNode;
+  tone: RuntimeStatusTone;
+  metadata?: ReactNode[];
+  message?: ReactNode;
+  children?: ReactNode;
+  progress?: number | null;
+  className?: string;
+  bodyClassName?: string;
+}) {
+  const clampedProgress = progress == null ? null : Math.max(0, Math.min(100, Math.round(progress)));
+  return (
+    <section className={cx('space-y-5 border-y border-border-subtle/65 py-6', className)}>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-secondary">
+        <span className="inline-flex items-center gap-2 font-medium text-primary">
+          <RuntimeStatusDot tone={tone} />
+          {status}
+        </span>
+        {metadata?.map((item, index) => (
+          <span key={index} className="min-w-0 truncate">
+            {item}
+          </span>
+        ))}
+      </div>
+      {message ? (
+        <div className="text-sm text-secondary" aria-live="polite">
+          {message}
+        </div>
+      ) : null}
+      {children ? <div className={bodyClassName}>{children}</div> : null}
+      {clampedProgress != null ? <ProgressBar value={clampedProgress} minPercent={2} label={`Setup progress ${clampedProgress}%`} /> : null}
+    </section>
+  );
+}
+
+export function RuntimeSection({
+  title,
+  description,
+  action,
+  children,
+  className,
+  headerClassName,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  headerClassName?: string;
+}) {
+  return (
+    <section className={cx('space-y-5 border-t border-border-subtle/65 pt-6', className)}>
+      <div className={cx('flex items-start justify-between gap-4', headerClassName)}>
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-lg font-semibold text-primary">{title}</h2>
+          {description ? <p className="text-sm text-secondary">{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export const TerminalBlock = forwardRef<
+  HTMLPreElement,
+  {
+    children: ReactNode;
+    compact?: boolean;
+    className?: string;
+  }
+>(function TerminalBlock({ children, compact = false, className }, ref) {
+  return (
+    <pre
+      ref={ref}
+      className={cx(
+        'overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle/80 bg-surface/55 p-4 text-xs leading-relaxed text-secondary',
+        compact ? 'min-h-28' : 'min-h-44',
+        className,
+      )}
+    >
+      {children}
+    </pre>
+  );
+});
+
+export function RuntimeFooter({
+  summary,
+  open,
+  onToggle,
+  children,
+  className,
+}: {
+  summary: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <footer className={cx('border-t border-border-subtle/65 pt-4 text-sm text-secondary', className)}>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-3 rounded-lg px-1 py-2 text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+        onClick={onToggle}
+        aria-expanded={open}
+      >
+        <span>{summary}</span>
+        <span>{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open ? <div className="mt-3">{children}</div> : null}
+    </footer>
+  );
+}
+
 export function ProgressRow({
   label,
   value,
