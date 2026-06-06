@@ -8,6 +8,22 @@ export interface ComposerModelInfo {
   reasoning?: boolean;
 }
 
+export type ComposerAutoRouterState = 'off' | 'routing' | 'settled' | 'recommendation-pending' | 'blocked';
+
+export type ComposerAutoRouterSwitchoverMode =
+  | 'compact-and-switch'
+  | 'raw-transcript-switch'
+  | 'direct-swap'
+  | 'fresh-with-instructions'
+  | 'ask-each-time';
+
+export interface ComposerAutoRouterRecommendation {
+  id: string;
+  targetModel: string;
+  reason: string;
+  mode?: ComposerAutoRouterSwitchoverMode;
+}
+
 export type ComposerControlSlot = 'leading' | 'preferences' | 'actions';
 export type ComposerControlRenderMode = 'inline' | 'menu';
 
@@ -30,6 +46,17 @@ export interface ComposerControlContext {
   savingPreference: 'model' | 'thinking' | 'serviceTier' | null;
   selectModel: (modelId: string) => void;
   selectThinkingLevel: (thinkingLevel: string) => void;
+  autoRouter?: {
+    enabled: boolean;
+    state: ComposerAutoRouterState;
+    routingWindowLabel?: string;
+    judgeLabel?: string;
+    pendingRecommendation?: ComposerAutoRouterRecommendation;
+    setEnabled: (enabled: boolean) => void;
+    acceptRecommendation?: (recommendationId: string, mode?: ComposerAutoRouterSwitchoverMode) => void;
+    rejectRecommendation?: (recommendationId: string) => void;
+    openSettings?: () => void;
+  };
 }
 
 export type ComposerButtonContext = ComposerControlContext;
