@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
-import { MetaLabel, Pill, SectionLabel, SurfacePanel } from '../ui';
+import { MetaLabel, Pill, RowButton, SectionLabel, SurfacePanel } from '../ui';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
@@ -33,15 +33,12 @@ export const ThinkingBlock = memo(function ThinkingBlock({
 
   return (
     <SurfacePanel muted className="overflow-hidden border-transparent bg-elevated/35 text-[12px] shadow-none">
-      <button
-        onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
-        className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-elevated transition-colors"
-      >
+      <RowButton onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))} className="px-2.5 py-2">
         <Pill tone="muted">Thinking</Pill>
         {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
         {autoOpen && <MetaLabel tone="muted">live</MetaLabel>}
         <span className="text-dim text-[10px]">{open ? 'hide' : 'show'}</span>
-      </button>
+      </RowButton>
       {open && (
         <div className="border-t border-border-subtle/70 px-2.5 pb-2.5 pt-1.5 text-secondary italic leading-relaxed space-y-1">
           {block.text.split('\n').map((l, i) => (
@@ -67,17 +64,14 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
   const tone = { running: 'steel', complete: 'success', failed: 'danger' }[block.status] as 'steel' | 'success' | 'danger';
   return (
     <div className={`rounded-lg overflow-hidden text-[12px] ${clr}`}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-black/5 transition-colors"
-      >
+      <RowButton onClick={() => setOpen((o) => !o)} className="px-2.5 py-2 hover:bg-black/5">
         <Pill tone={tone} mono>
           subagent
         </Pill>
         <span className="flex-1 truncate opacity-70 font-normal">{block.name}</span>
         <Pill tone={tone}>{block.status}</Pill>
         <span className="shrink-0 ml-1 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
-      </button>
+      </RowButton>
       {open && (
         <div className="border-t border-border-subtle/70 px-2.5 py-2 space-y-2 bg-black/5">
           <div>

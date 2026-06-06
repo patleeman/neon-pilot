@@ -2,7 +2,7 @@ import type { FileDiffOptions } from '@pierre/diffs';
 import { type CSSProperties, lazy, Suspense, useMemo, useState } from 'react';
 
 import { type ColorTheme, useTheme } from '../../ui-state/theme';
-import { cx, MetaLabel } from '../ui';
+import { cx, MetaLabel, RowButton } from '../ui';
 
 interface FileChange {
   path: string;
@@ -195,8 +195,7 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
           const open = expanded.has(key);
           return (
             <section key={key} className="overflow-hidden rounded-md border border-border-subtle/70 bg-base/75">
-              <button
-                type="button"
+              <RowButton
                 onClick={() => {
                   setExpanded((current) => {
                     const next = new Set(current);
@@ -205,7 +204,7 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
                     return next;
                   });
                 }}
-                className="flex w-full min-w-0 items-center gap-2 bg-elevated/30 px-2.5 py-2 text-left transition-colors hover:bg-elevated/60"
+                className="bg-elevated/30 px-2.5 py-2"
               >
                 <span className={cx('shrink-0 text-dim transition-transform', open && 'rotate-90')} aria-hidden="true">
                   ›
@@ -217,7 +216,7 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
                 <span className="shrink-0 font-mono tabular-nums">
                   <span className="text-success">+{change.additions}</span> <span className="text-danger">-{change.deletions}</span>
                 </span>
-              </button>
+              </RowButton>
               {open ? (
                 change.patch ? (
                   <div className="overflow-hidden bg-[rgb(var(--color-terminal-surface))]">
