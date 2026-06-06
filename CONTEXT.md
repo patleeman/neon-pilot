@@ -121,6 +121,10 @@ An agent-callable capability with structured input and output, such as reading f
 
 An external Model Context Protocol server that exposes tools or resources to the agent through MCP.
 
+### Neon Pilot CLI
+
+The core-owned `neon-pilot` command shell for product/runtime administration. Extensions add product-specific commands through `contributes.cliCommands`; agents should discover available commands with `neon-pilot commands --json`.
+
 ### DS4
 
 The local DeepSeek V4 Flash runtime from `antirez/ds4`, surfaced in Neon Pilot as a model provider/profile plus DS4-compatible tool schemas.

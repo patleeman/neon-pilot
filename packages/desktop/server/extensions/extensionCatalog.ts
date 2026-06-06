@@ -19,6 +19,7 @@ export interface CatalogSeed {
   description: string;
   version?: string;
   tag?: string;
+  artifact?: string;
   path?: string;
   packageType?: MarketplacePackageType;
   ecosystem?: MarketplaceEcosystem;
@@ -125,8 +126,9 @@ export function resolveInstalledAppVersion(): string {
   return '0.0.0';
 }
 
-function bundleUrlForRepo(repo: GithubExtensionSourceRepo, id: string, tag: string): string {
-  return `https://github.com/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.repo)}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(id)}.neon-extension.zip`;
+function bundleUrlForRepo(repo: GithubExtensionSourceRepo, id: string, tag: string, artifact?: string): string {
+  const assetName = artifact && artifact.trim() ? artifact.trim() : `${id}.neon-extension.zip`;
+  return `https://github.com/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.repo)}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(assetName)}`;
 }
 
 function localBundlePathFor(id: string): string | null {
@@ -156,6 +158,10 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
   const configured = readConfiguredExtensionCatalogSources(stateRoot);
   const enabledConfigured = configured.filter((source) => source.enabled);
   const sourceErrors: Array<{ sourceId: string; message: string }> = [];
+  const firstPartySeeds = await fetchFirstPartyReleaseCatalog(tag).catch((error) => {
+    sourceErrors.push({ sourceId: FIRST_PARTY_SOURCE_ID, message: error instanceof Error ? error.message : String(error) });
+    return INSTALLABLE_EXTENSION_CATALOG;
+  });
   const remoteSeeds = (
     await Promise.all(
       enabledConfigured
@@ -170,7 +176,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
         }),
     )
   ).flat();
-  const packages: InstallableExtensionCatalogItem[] = [...INSTALLABLE_EXTENSION_CATALOG, ...remoteSeeds].map((item) => {
+  const packages: InstallableExtensionCatalogItem[] = [...firstPartySeeds, ...remoteSeeds].map((item) => {
     const installed = installedById.get(item.id);
     const explicitVersion = item.version;
     const itemVersion = explicitVersion ?? installed?.version ?? version;
@@ -184,7 +190,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
       packageType: item.packageType ?? 'extension',
       ecosystem: item.ecosystem ?? 'neon-pilot',
       marketplaceSourceId: item.marketplaceSourceId ?? 'neon-pilot-release',
-      bundleUrl: bundleUrlForRepo(sourceRepo, item.id, itemTag),
+      bundleUrl: bundleUrlForRepo(sourceRepo, item.id, itemTag, item.artifact),
       defaultEnabled: false,
       source: 'github-release',
       sourceRepo,
@@ -330,6 +336,49 @@ async function fetchGithubSourceManifest(source: ExtensionCatalogSource): Promis
     if (response.status !== 404) throw new Error(`Failed to fetch ${source.owner}/${source.repo}: HTTP ${response.status}`);
   }
   throw new Error(`${source.owner}/${source.repo} does not contain neon.extensions.json on main or master.`);
+}
+
+async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]> {
+  const url = `https://github.com/${encodeURIComponent(FIRST_PARTY_REPO.owner)}/${encodeURIComponent(FIRST_PARTY_REPO.repo)}/releases/download/${encodeURIComponent(tag)}/neon-extension-catalog.json`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to fetch first-party extension release catalog: HTTP ${response.status}`);
+  const parsed = (await response.json()) as unknown;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('First-party extension release catalog is not an object.');
+  }
+  const packages = Array.isArray((parsed as Record<string, unknown>).packages) ? (parsed as Record<string, unknown>).packages : [];
+  const bakedById = new Map(INSTALLABLE_EXTENSION_CATALOG.map((item) => [item.id, item]));
+  return packages.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    const id = typeof record.id === 'string' && record.id.trim() ? record.id.trim() : '';
+    if (!id) return [];
+    const baked = bakedById.get(id);
+    return [
+      {
+        id,
+        name: baked?.name ?? titleFromExtensionId(id),
+        description: baked?.description ?? `Install ${titleFromExtensionId(id)} from the Neon Pilot extension release catalog.`,
+        ...(baked?.version ? { version: baked.version } : {}),
+        ...(typeof record.tag === 'string' && record.tag.trim() ? { tag: record.tag.trim() } : { tag }),
+        ...(typeof record.artifact === 'string' && record.artifact.trim() ? { artifact: record.artifact.trim() } : {}),
+        ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : baked?.path ? { path: baked.path } : {}),
+        packageType: 'extension' as const,
+        ecosystem: 'neon-pilot' as const,
+        marketplaceSourceId: 'neon-pilot-release',
+        sourceRepo: FIRST_PARTY_REPO,
+      },
+    ];
+  });
+}
+
+function titleFromExtensionId(id: string): string {
+  return id
+    .replace(/^system-/, '')
+    .split('-')
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
 }
 
 function assertSafeExtensionBundleUrl(value: string): URL {
