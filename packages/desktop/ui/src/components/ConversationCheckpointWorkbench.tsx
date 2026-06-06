@@ -139,10 +139,11 @@ export function ConversationDiffRailContent({
       const shortId = activeCheckpointId.slice(0, 12);
       return (
         <DiffRailShell>
-          <button
+          <RowButton
             type="button"
             onClick={() => onOpenCheckpoint(activeCheckpointId)}
-            className="w-full rounded-xl bg-elevated px-3 py-2.5 text-left text-primary transition-colors"
+            selected
+            className="rounded-xl bg-elevated px-3 py-2.5 text-primary"
             title={activeCheckpointId}
           >
             <div className="flex min-w-0 items-start justify-between gap-2">
@@ -152,7 +153,7 @@ export function ConversationDiffRailContent({
               </div>
               <span className="shrink-0 font-mono text-[10px] text-dim">{shortId}</span>
             </div>
-          </button>
+          </RowButton>
         </DiffRailShell>
       );
     }
@@ -196,13 +197,11 @@ export function ConversationDiffRailContent({
           const showFiles = selected || (!activeCheckpointId && checkpoint.id === latestCheckpointId);
           return (
             <div key={checkpoint.id} className={cx('rounded-lg', selected && 'bg-elevated/70')}>
-              <button
+              <RowButton
                 type="button"
                 onClick={() => onOpenCheckpoint(checkpoint.id)}
-                className={cx(
-                  'flex w-full min-w-0 items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20',
-                  selected ? 'text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary',
-                )}
+                selected={selected}
+                className={cx('items-start gap-2 px-2.5 py-2', selected ? 'text-primary' : 'text-secondary')}
                 title={checkpoint.shortSha}
               >
                 <svg
@@ -233,7 +232,7 @@ export function ConversationDiffRailContent({
                     </span>
                   </div>
                 </div>
-              </button>
+              </RowButton>
               {showFiles ? (
                 <div className="pb-1 pl-7 pr-1">
                   {files ? (
@@ -307,13 +306,11 @@ function UncommittedRailEntry({
   const files = result.files;
   return (
     <div className={cx('rounded-lg', selected && 'bg-elevated/70')}>
-      <button
+      <RowButton
         type="button"
         onClick={onSelect}
-        className={cx(
-          'flex w-full min-w-0 items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20',
-          selected ? 'text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary',
-        )}
+        selected={selected}
+        className={cx('items-start gap-2 px-2.5 py-2', selected ? 'text-primary' : 'text-secondary')}
         title={result.branch ?? 'Uncommitted changes'}
       >
         <svg
@@ -344,7 +341,7 @@ function UncommittedRailEntry({
             </span>
           </div>
         </div>
-      </button>
+      </RowButton>
       {showFiles && files.length > 0 ? (
         <div className="pb-1 pl-7 pr-1">
           {files.slice(0, 12).map((file) => (
