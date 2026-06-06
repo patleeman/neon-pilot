@@ -820,6 +820,82 @@ body {
   box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
 }
 
+.ui-tool-result-card {
+  padding: 0.75rem 0.875rem;
+  color: rgb(var(--color-secondary));
+  font-size: 0.75rem;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.ui-tool-result-card-accent {
+  border-color: rgb(var(--color-accent) / 0.22);
+  background: rgb(var(--color-accent) / 0.055);
+}
+
+.ui-tool-result-card-success {
+  border-color: rgb(var(--color-success) / 0.22);
+  background: rgb(var(--color-success) / 0.055);
+}
+
+.ui-tool-result-card-warning {
+  border-color: rgb(var(--color-warning) / 0.24);
+  background: rgb(var(--color-warning) / 0.065);
+}
+
+.ui-tool-result-card-danger {
+  border-color: rgb(var(--color-danger) / 0.28);
+  background: rgb(var(--color-danger) / 0.055);
+}
+
+.ui-tool-result-card-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.ui-tool-result-card-leading {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.ui-tool-result-card-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.ui-tool-result-card-header {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ui-tool-result-card-meta {
+  margin-top: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.ui-tool-result-card-body {
+  margin-top: 0.5rem;
+  line-height: 1.625;
+}
+
+.ui-tool-result-card-danger .ui-tool-result-card-body {
+  color: rgb(var(--color-danger) / 0.86);
+}
+
+.ui-tool-result-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  font-size: 0.6875rem;
+}
+
 .ui-filter-toolbar {
   display: flex;
   flex-wrap: wrap;

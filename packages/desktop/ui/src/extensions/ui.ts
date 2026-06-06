@@ -117,6 +117,8 @@ export {
   TextPromptDialog,
   type TextPromptDialogProps,
   Tooltip,
+  ToolResultCard,
+  type ToolResultCardTone,
   ToolbarButton,
 } from '../components/ui';
 export { Keycap } from '../components/ui';

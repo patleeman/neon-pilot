@@ -24,7 +24,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsPanel`, `SettingsRow`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
-- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ToolResultCard`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`
 - Utility: `cx`
 
@@ -102,7 +102,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `MetaLabel` for inline uppercase metadata tags such as file status, artifact kind, and live/current badges.
 - Use `CardTitle`, `CardBody`, and `CardMeta` for compact rail, settings, and panel typography instead of raw `ui-card-*` class names. Set `as="span"`, `as="label"`, or `as="summary"` only when semantics require it.
 - Use `InlineMeta` for compact dim metadata with optional icons or spinners, such as "updated 2m ago", "saving...", counts, and inline status notes.
-- For transcript or tool-result cards, compose `SurfacePanel muted` with `CardTitle`, `Pill`, `CardMeta`, optional `CardBody`, `InlineMeta`, `MetaLabel`, `SectionLabel`, and `TextButton`. Use `MetaLabel` for live/current/kind markers and compact field labels, and `SectionLabel` for small subsections such as prompts, replies, errors, and problems. This keeps artifact, checkpoint, ask-user, trace, and tool cards consistent without creating tool-specific primitives.
+- Use `ToolResultCard` for non-collapsible transcript and extension tool-result cards with a leading icon, title, badges, meta, body, and actions. Use `tone="danger"` for failed tool cards and compose `Pill`, `InlineMeta`, and `TextButton` inside its slots. For custom collapsible or highly interactive tool cards, keep the behavior local but reuse `CardTitle`, `Pill`, `CardMeta`, `InlineMeta`, `MetaLabel`, and `SectionLabel` for the inner anatomy.
 - Use `RowButton` for compact interactive rows with custom internals, such as file rows, command rows, disclosure headers, chooser rows, and nested list entries. Use `compact` for dense rails and `selected` for the active row.
 - Use `MetricTile` for compact value/label cards in dashboards. Prefer its `tone`, `size`, `align`, and `appearance="plain"` props over custom font and color utility recipes.
 - Use `DashboardGrid` with `DashboardGridCell` for compact metric and trace dashboards that need two-to-four columns with consistent dividers.
@@ -118,6 +118,7 @@ These production areas already use the shared package and are useful examples fo
 - Search and filters: `system-extension-manager`, `system-automations`
 - Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`, `system-model-picker`
 - Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Tool result cards: artifact transcript renderers and extension-owned tool outputs
 - Status markers: context-usage status bar indicators
 - Compact rows: checkpoint file pickers, file-change headers, trace disclosure headers, and nested file lists
 - Feedback: extension manager diagnostics, automations page notices, and conversation bootstrap warnings

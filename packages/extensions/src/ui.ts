@@ -230,6 +230,7 @@ export declare const Textarea: HostComponent;
 export declare const TaskListItem: HostComponent;
 export declare const TextInput: HostComponent;
 export declare const Tooltip: HostComponent;
+export declare const ToolResultCard: HostComponent;
 export declare const ToolbarButton: HostComponent;
 export interface ExtensionSettingsPanelRegistration {
   extensionId: string;

@@ -124,5 +124,7 @@ export {
   type TextPromptDialogProps,
   Tooltip,
   type TooltipPosition,
+  ToolResultCard,
+  type ToolResultCardTone,
   ToolbarButton,
 } from './primitives';

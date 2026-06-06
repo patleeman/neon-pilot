@@ -630,6 +630,56 @@ export function CompactCard({
   );
 }
 
+export type ToolResultCardTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger';
+
+export function ToolResultCard({
+  leading,
+  title,
+  badges,
+  meta,
+  body,
+  actions,
+  children,
+  tone = 'neutral',
+  className,
+  headerClassName,
+  bodyClassName,
+  actionsClassName,
+}: {
+  leading?: ReactNode;
+  title: ReactNode;
+  badges?: ReactNode;
+  meta?: ReactNode;
+  body?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+  tone?: ToolResultCardTone;
+  className?: string;
+  headerClassName?: string;
+  bodyClassName?: string;
+  actionsClassName?: string;
+}) {
+  return (
+    <SurfacePanel muted className={cx('ui-tool-result-card', `ui-tool-result-card-${tone}`, className)}>
+      <div className="ui-tool-result-card-layout">
+        {leading ? <div className="ui-tool-result-card-leading">{leading}</div> : null}
+        <div className="ui-tool-result-card-main">
+          <div className={cx('ui-tool-result-card-header', headerClassName)}>
+            <CardTitle as="span" className="min-w-0 truncate">
+              {title}
+            </CardTitle>
+            {badges}
+          </div>
+          {meta ? <CardMeta className="ui-tool-result-card-meta">{meta}</CardMeta> : null}
+          {body ? <CardBody className={cx('ui-tool-result-card-body', bodyClassName)}>{body}</CardBody> : null}
+          {children}
+          {actions ? <div className={cx('ui-tool-result-card-actions', actionsClassName)}>{actions}</div> : null}
+        </div>
+      </div>
+    </SurfacePanel>
+  );
+}
+
 export const ActionTile = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {

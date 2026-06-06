@@ -89,6 +89,7 @@ import {
   TextInput,
   TextPromptDialog,
   Tooltip,
+  ToolResultCard,
   ToolbarButton,
 } from '../primitives';
 import '../styles.css';
@@ -357,21 +358,46 @@ const meta = {
               <CardTitle>Compact card</CardTitle>
               <CardMeta>Use for small rail, settings, and metadata blocks.</CardMeta>
             </CompactCard>
-            <SurfacePanel muted style={{ display: 'grid', gap: 8, padding: 12 }}>
-              <div style={{ display: 'flex', minWidth: 0, flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                <CardTitle as="span">Artifact saved</CardTitle>
+            <ToolResultCard
+              leading={
+                <span className="ui-chat-avatar" aria-hidden="true">
+                  <span className="ui-chat-avatar-mark">◫</span>
+                </span>
+              }
+              title="Artifact saved"
+              badges={
+                <>
+                  <Pill tone="accent" mono>
+                    html
+                  </Pill>
+                  <InlineMeta>rev 3</InlineMeta>
+                </>
+              }
+              meta={<span className="font-mono text-secondary">artifact_01HN7R2X2V3Y</span>}
+              body="The generated report is available in the artifact workbench."
+              actions={
+                <>
+                  <TextButton tone="accent">open</TextButton>
+                  <InlineMeta>updated 2m ago</InlineMeta>
+                </>
+              }
+            />
+            <ToolResultCard
+              tone="danger"
+              leading={
+                <span className="ui-chat-avatar" aria-hidden="true">
+                  <span className="ui-chat-avatar-mark">!</span>
+                </span>
+              }
+              title="Artifact failed"
+              badges={
                 <Pill tone="accent" mono>
-                  html
+                  markdown
                 </Pill>
-                <CardMeta as="span">rev 3</CardMeta>
-              </div>
-              <CardMeta className="font-mono text-secondary">artifact_01HN7R2X2V3Y</CardMeta>
-              <CardBody>The generated report is available in the artifact workbench.</CardBody>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-                <TextButton tone="accent">open</TextButton>
-                <InlineMeta>updated 2m ago</InlineMeta>
-              </div>
-            </SurfacePanel>
+              }
+              meta={<span className="font-mono text-secondary">artifact_error_01HN7R2</span>}
+              body="The renderer could not load the generated artifact."
+            />
             <p style={{ margin: 0, fontSize: 13 }}>
               Long paths wrap safely in <InlineCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineCode>.
             </p>
