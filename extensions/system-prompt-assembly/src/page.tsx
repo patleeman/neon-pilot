@@ -328,17 +328,16 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
                 <span className="text-[12px] text-dim">
                   {savingSystemPromptTemplate ? 'Saving...' : systemPromptTemplateDirty ? 'Auto-save pending...' : 'Auto-saved'}
                 </span>
-                <button
-                  type="button"
+                <ToolbarButton
                   onClick={() => {
                     setSystemPromptTemplateDraft(systemPromptTemplateState.template);
                     setSystemPromptTemplateSaveError(null);
                   }}
                   disabled={savingSystemPromptTemplate || !systemPromptTemplateDirty}
-                  className="ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none"
+                  className="rounded-md px-3 py-1.5 text-[12px] shadow-none"
                 >
                   Revert edits
-                </button>
+                </ToolbarButton>
               </div>
             </div>
           ) : null}
