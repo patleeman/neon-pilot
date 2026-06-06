@@ -67,7 +67,7 @@ export function MyExtensionPage() {
 
 Reach for the smallest primitive that covers the interaction before composing a new local control:
 
-- Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
+- Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger and works for compact transcript/tool action controls, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.
 - Use `MessageActionButton` for low-emphasis transcript, message, and tool-output actions such as copy, edit, rerun, fork, and extension-provided message actions.
@@ -118,6 +118,7 @@ These production areas already use the shared package and are useful examples fo
 - Feedback: extension manager diagnostics, automations page notices, and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
 - Message actions: transcript copy/edit/rewind/fork actions and message edit controls
+- Tool actions: transcript diff buttons, deferred output loaders, image loaders, question tabs, and trace expansion controls
 - Attachment chrome: desktop composer image and drawing attachment shelves
 - Composer menus: model picker provider groups and slash-command source labels
 - Composer controls: file attachment and local dictation buttons

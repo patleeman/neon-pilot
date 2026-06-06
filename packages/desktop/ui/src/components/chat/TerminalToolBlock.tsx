@@ -4,7 +4,7 @@ import type { MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns } from '../../store';
 import { readTerminalBashToolPresentation } from '../../transcript/terminalBashBlock';
-import { cx, Pill } from '../ui';
+import { Button, cx, Pill } from '../ui';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
 import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
 import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
@@ -99,16 +99,16 @@ const TerminalToolBlock = memo(function TerminalToolBlock({
           ))}
           {presentation.fullOutputPath && <span className="min-w-0 break-all text-dim/80">{presentation.fullOutputPath}</span>}
           {outputDeferred && blockId && (
-            <button
-              type="button"
+            <Button
+              variant="action"
               onClick={() => {
                 void onHydrateMessage?.(blockId);
               }}
               disabled={hydratingDeferredOutput}
-              className="ui-action-button text-[10px]"
+              className="text-[10px]"
             >
               {hydratingDeferredOutput ? 'Loading full output…' : 'Load full output'}
-            </button>
+            </Button>
           )}
           <span className="ml-auto">{timeAgo(block.ts)}</span>
         </div>

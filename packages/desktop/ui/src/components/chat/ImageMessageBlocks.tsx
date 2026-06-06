@@ -1,7 +1,7 @@
 import { memo } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
-import { SurfacePanel } from '../ui';
+import { Button, SurfacePanel } from '../ui';
 
 export type InspectableImage = {
   alt: string;
@@ -134,16 +134,16 @@ export function ImagePreview({
             </span>
           )}
           {deferred && onLoad && (
-            <button
-              type="button"
+            <Button
+              variant="action"
               onClick={() => {
                 void onLoad();
               }}
               disabled={loading}
-              className="ui-action-button text-[11px]"
+              className="text-[11px]"
             >
               {loading ? 'Loading image…' : 'Load image'}
-            </button>
+            </Button>
           )}
         </div>
       )}

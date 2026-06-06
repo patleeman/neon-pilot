@@ -1,5 +1,5 @@
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../../transcript/askUserQuestions';
-import { cx, Pill } from '../ui';
+import { Button, cx, Pill } from '../ui';
 
 type ConversationQuestion = AskUserQuestionPresentation['questions'][number];
 
@@ -39,14 +39,11 @@ export function ConversationQuestionShelf({
             const answered = (answers[question.id]?.length ?? 0) > 0;
             const active = index === activeQuestionIndex;
             return (
-              <button
+              <Button
                 key={question.id}
-                type="button"
+                variant="action"
                 onClick={() => onActivateQuestion(index)}
-                className={cx(
-                  'ui-action-button min-w-0 px-2 py-1 text-[12px]',
-                  active ? 'text-primary' : answered ? 'text-secondary' : 'text-dim',
-                )}
+                className={cx('min-w-0 px-2 py-1 text-[12px]', active ? 'text-primary' : answered ? 'text-secondary' : 'text-dim')}
               >
                 <span
                   aria-hidden="true"
@@ -55,7 +52,7 @@ export function ConversationQuestionShelf({
                   {answered ? '✓' : active ? '•' : '○'}
                 </span>
                 <span className="truncate">{question.label}</span>
-              </button>
+              </Button>
             );
           })}
         </div>

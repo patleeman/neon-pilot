@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
-import { MetaLabel, Pill, RowButton, SectionLabel, SurfacePanel } from '../ui';
+import { Button, MetaLabel, Pill, RowButton, SectionLabel, SurfacePanel } from '../ui';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
@@ -418,9 +418,9 @@ export function TraceClusterBlock({
                   : `${hiddenBlockCount} earlier step${hiddenBlockCount === 1 ? '' : 's'} summarized above.`}
               </span>
               <span className="flex-1" />
-              <button type="button" onClick={() => setShowAllBlocks((current) => !current)} className="ui-action-button text-[10px]">
+              <Button variant="action" onClick={() => setShowAllBlocks((current) => !current)} className="text-[10px]">
                 {showAllBlocks ? `Show latest ${MAX_VISIBLE_TRACE_BLOCKS}` : 'Show all'}
-              </button>
+              </Button>
             </div>
           )}
           {visibleBlocks.map((block, index) => {

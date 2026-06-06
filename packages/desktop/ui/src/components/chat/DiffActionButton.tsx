@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-import { cx } from '../ui';
+import { Button, cx } from '../ui';
 
 export function GitDiffIcon({ className }: { className?: string }) {
   return (
@@ -24,9 +24,9 @@ export function GitDiffIcon({ className }: { className?: string }) {
 
 export function DiffActionButton({ children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { children: ReactNode }) {
   return (
-    <button type="button" {...props} className={cx('ui-action-button inline-flex items-center gap-1.5 font-sans', className)}>
+    <Button variant="action" {...props} className={cx('inline-flex items-center gap-1.5 font-sans', className)}>
       <GitDiffIcon className="shrink-0" />
       <span>{children}</span>
-    </button>
+    </Button>
   );
 }

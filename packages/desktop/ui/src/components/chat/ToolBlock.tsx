@@ -10,7 +10,7 @@ import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
-import { cx, MetaLabel, Pill, SectionLabel } from '../ui';
+import { Button, cx, MetaLabel, Pill, SectionLabel } from '../ui';
 import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
@@ -338,16 +338,16 @@ export function ToolBlock({
       </span>
       {pinnedTool ? <span className="shrink-0 text-[10px] text-dim font-sans">{timeAgo(block.ts)}</span> : null}
       {pinnedArtifact && artifactId && onOpenArtifact ? (
-        <button
-          type="button"
-          className="ui-action-button shrink-0 text-[10px] font-sans"
+        <Button
+          variant="action"
+          className="shrink-0 text-[10px] font-sans"
           onClick={(event) => {
             event.stopPropagation();
             onOpenArtifact(artifactId);
           }}
         >
           View
-        </button>
+        </Button>
       ) : null}
       {block.durationMs && !isRunning && !pinnedTool && (
         <span className="shrink-0 opacity-40 ml-2">{(block.durationMs / 1000).toFixed(1)}s</span>
@@ -416,9 +416,9 @@ export function ToolBlock({
                   : `Showing ${MAX_VISIBLE_LINKED_RUNS} of ${displayedLinkedRuns.length} executions returned by the tool.`}
               </span>
               <span className="flex-1" />
-              <button type="button" onClick={() => setShowAllRuns((current) => !current)} className="ui-action-button text-[10px]">
+              <Button variant="action" onClick={() => setShowAllRuns((current) => !current)} className="text-[10px]">
                 {showAllRuns ? 'Show fewer' : 'Show all'}
-              </button>
+              </Button>
             </div>
           )}
           <div className="space-y-1.5">
@@ -472,16 +472,16 @@ export function ToolBlock({
                   : ''}
           </pre>
           {outputDeferred && blockId && (
-            <button
-              type="button"
+            <Button
+              variant="action"
               onClick={() => {
                 void onHydrateMessage?.(blockId);
               }}
               disabled={hydratingDeferredOutput}
-              className="ui-action-button mt-2 text-[10px]"
+              className="mt-2 text-[10px]"
             >
               {hydratingDeferredOutput ? 'Loading full output…' : 'Load full output'}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -502,16 +502,16 @@ export function ToolBlock({
                 <p className="text-[11px] italic leading-relaxed opacity-55">Older tool output is available on demand.</p>
               ) : null}
               {outputDeferred && blockId && (
-                <button
-                  type="button"
+                <Button
+                  variant="action"
                   onClick={() => {
                     void onHydrateMessage?.(blockId);
                   }}
                   disabled={hydratingDeferredOutput}
-                  className="ui-action-button mt-2 text-[10px]"
+                  className="mt-2 text-[10px]"
                 >
                   {hydratingDeferredOutput ? 'Loading full output…' : 'Load full output'}
-                </button>
+                </Button>
               )}
             </div>
           )}
