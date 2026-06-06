@@ -63,6 +63,7 @@ export {
   MenuShell,
   Notice,
   PanelHeader,
+  PanelMessage,
   Pill,
   PositionedMenu,
   ProgressBar,

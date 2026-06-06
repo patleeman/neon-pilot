@@ -1106,6 +1106,25 @@ export function LoadingState({ label, className }: { label: string; className?: 
   );
 }
 
+export type PanelMessageTone = 'muted' | 'danger';
+
+export function PanelMessage({
+  children,
+  tone = 'muted',
+  align = 'left',
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { tone?: PanelMessageTone; align?: 'left' | 'center' }) {
+  return (
+    <div
+      className={cx('ui-panel-message', `ui-panel-message-${tone}`, align === 'center' && 'ui-panel-message-center', className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function CenteredState({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cx('ui-centered-state', className)} {...props}>

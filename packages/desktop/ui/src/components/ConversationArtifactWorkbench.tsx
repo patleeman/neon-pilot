@@ -9,7 +9,7 @@ import { formatDate } from '../shared/utils';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { ErrorState, LoadingState, ResourceListItem, SectionLabel, ToolbarButton } from './ui';
+import { ErrorState, LoadingState, PanelMessage, ResourceListItem, SectionLabel, ToolbarButton } from './ui';
 
 export { useConversationArtifactSummaries };
 
@@ -33,7 +33,7 @@ export function ConversationArtifactRailContent({
   } else if (error && artifacts.length === 0) {
     content = <ErrorState message={error} className="px-4 py-4" />;
   } else if (artifacts.length === 0) {
-    content = <div className="px-4 py-3 text-[12px] text-dim">No artifacts in this conversation.</div>;
+    content = <PanelMessage>No artifacts in this conversation.</PanelMessage>;
   } else {
     content = (
       <div className="flex flex-col gap-1.5">

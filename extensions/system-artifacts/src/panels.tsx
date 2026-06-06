@@ -1,5 +1,13 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { CodeBlock, ResourceListItem, SectionLabel, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  CenteredLoadingState,
+  CenteredMessage,
+  CodeBlock,
+  PanelMessage,
+  ResourceListItem,
+  SectionLabel,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -84,11 +92,11 @@ function buildArtifactDocument(content: string): string {
 }
 
 function Loading({ label }: { label: string }) {
-  return <div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">{label}</div>;
+  return <CenteredLoadingState label={label} />;
 }
 
 function ErrorMessage({ message }: { message: string }) {
-  return <div className="px-4 py-4 text-[12px] text-danger">{message}</div>;
+  return <PanelMessage tone="danger">{message}</PanelMessage>;
 }
 
 function HtmlArtifactViewer({ artifact }: { artifact: ArtifactRecord }) {
@@ -232,7 +240,7 @@ export function ArtifactsPanel({ pa, context }: ExtensionSurfaceProps) {
   let content;
   if (loading && artifacts.length === 0) content = <Loading label="Loading artifacts..." />;
   else if (error && artifacts.length === 0) content = <ErrorMessage message={error} />;
-  else if (artifacts.length === 0) content = <div className="px-4 py-3 text-[12px] text-dim">No artifacts in this conversation.</div>;
+  else if (artifacts.length === 0) content = <PanelMessage>No artifacts in this conversation.</PanelMessage>;
   else {
     content = (
       <div className="flex flex-col gap-1.5">
@@ -298,13 +306,7 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
 
   if (!context.conversationId || !artifactId) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open an artifact</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Open an artifact from the transcript to inspect it in a tab.</p>
-        </div>
-      </div>
+      <CenteredMessage eyebrow="Workbench" title="Open an artifact" body="Open an artifact from the transcript to inspect it in a tab." />
     );
   }
 

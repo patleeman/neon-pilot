@@ -40,6 +40,7 @@ import {
   MenuShell,
   Notice,
   PanelHeader,
+  PanelMessage,
   Pill,
   PositionedMenu,
   ProgressBar,
@@ -215,6 +216,8 @@ const meta = {
         <h2 style={{ margin: 0, fontSize: 18 }}>Data Display</h2>
         <SurfacePanel style={{ display: 'grid', gap: 16, padding: 16 }}>
           <PanelHeader title="Panel header" meta="12 items" className="-m-4 mb-0" />
+          <PanelMessage>No artifacts in this conversation.</PanelMessage>
+          <PanelMessage tone="danger">Artifact not found.</PanelMessage>
           <div style={{ display: 'grid', gap: 6 }}>
             <SectionLabel>Artifacts</SectionLabel>
             <SectionLabel tone="muted">Muted Label</SectionLabel>

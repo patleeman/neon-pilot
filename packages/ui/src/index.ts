@@ -58,6 +58,8 @@ export {
   type NoticeTone,
   PageHeader,
   PanelHeader,
+  PanelMessage,
+  type PanelMessageTone,
   Pill,
   type PillTone,
   PositionedMenu,

@@ -17,7 +17,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 - Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, `CheckButton`
 - Status: `Pill`, `StatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
-- Surfaces: `SurfacePanel`, `PanelHeader`
+- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
 - Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`
@@ -85,6 +85,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `StatusDot` for compact colored status markers and `Spinner` for compact inline progress markers. Use `LoadingState`, `Notice`, `ErrorState`, and `EmptyState` for larger feedback surfaces. Avoid page-specific loading/error markup unless the layout requires it.
 - Use `CenteredLoadingState` for full-height route, panel, and Suspense fallbacks instead of handwritten centered loading divs. Use `CenteredState` when the centered content is not a loading state.
 - Use `CenteredMessage` for full-height empty, intro, and "select an item" panels that need an eyebrow, title, supporting body, and optional actions.
+- Use `PanelMessage` for compact loading, empty, and error copy inside rails, menus, and bounded panels.
 - Use `ErrorState` for blocking load failures; pass `title` plus `body` or `message` when a heading helps. Use `Notice tone="danger"` for inline validation, save, and action feedback.
 - Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.
 - Use `SectionLabel` for compact uppercase section, chart, and metadata labels. Set `tone="muted"` for low-emphasis labels in dense dashboards.

@@ -1291,6 +1291,25 @@ body {
   line-height: 1.5rem;
 }
 
+.ui-panel-message {
+  padding: 0.75rem 1rem;
+  color: rgb(var(--color-dim));
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.ui-panel-message-center {
+  text-align: center;
+}
+
+.ui-panel-message-danger {
+  color: rgb(var(--color-danger));
+}
+
+.ui-panel-message-muted {
+  color: rgb(var(--color-dim));
+}
+
 .ui-centered-state {
   display: flex;
   min-height: 100%;
