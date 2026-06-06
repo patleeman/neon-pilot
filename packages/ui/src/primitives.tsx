@@ -1356,6 +1356,53 @@ export const RowButton = forwardRef<
   );
 });
 
+export function WorkbenchTab({
+  active = false,
+  className,
+  children,
+  ...props
+}: {
+  active?: boolean;
+  className?: string;
+  children: ReactNode;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-workbench-tab', active && 'ui-workbench-tab-active', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export const WorkbenchTabButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    icon?: ReactNode;
+    label: ReactNode;
+  }
+>(function WorkbenchTabButton({ className, icon, label, type = 'button', ...props }, ref) {
+  return (
+    <button ref={ref} type={type} className={cx('ui-workbench-tab-button', className)} {...props}>
+      {icon ? (
+        <span className="ui-workbench-tab-icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
+      <span className="ui-workbench-tab-label">{label}</span>
+    </button>
+  );
+});
+
+export const WorkbenchTabCloseButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function WorkbenchTabCloseButton(
+  { className, children = '×', type = 'button', ...props },
+  ref,
+) {
+  return (
+    <button ref={ref} type={type} className={cx('ui-workbench-tab-close-button', className)} {...props}>
+      {children}
+    </button>
+  );
+});
+
 export const SwatchOption = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {

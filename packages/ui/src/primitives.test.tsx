@@ -86,6 +86,9 @@ import {
   Tooltip,
   WorkbenchHeader,
   WorkbenchShell,
+  WorkbenchTab,
+  WorkbenchTabButton,
+  WorkbenchTabCloseButton,
   formatKeyboardShortcutLabel,
 } from './primitives';
 
@@ -194,6 +197,27 @@ describe('design-system primitives', () => {
     expect(html).toContain('Choose workspace folder');
     expect(html).toContain('animate-pulse');
     expect(html).toContain('ui-icon-button-sm');
+  });
+
+  it('renders workbench tab primitives with active, label, icon, and close affordances', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        WorkbenchTab,
+        { active: true, title: 'Browser' },
+        [
+          createElement(WorkbenchTabButton, { key: 'select', icon: '[]', label: 'Browser', 'aria-label': 'Select Browser' }),
+          createElement(WorkbenchTabCloseButton, { key: 'close', 'aria-label': 'Close Browser' }),
+        ],
+      ),
+    );
+
+    expect(html).toContain('ui-workbench-tab');
+    expect(html).toContain('ui-workbench-tab-active');
+    expect(html).toContain('ui-workbench-tab-button');
+    expect(html).toContain('ui-workbench-tab-icon');
+    expect(html).toContain('ui-workbench-tab-label');
+    expect(html).toContain('ui-workbench-tab-close-button');
+    expect(html).toContain('Close Browser');
   });
 
   it('renders check button pressed state', () => {

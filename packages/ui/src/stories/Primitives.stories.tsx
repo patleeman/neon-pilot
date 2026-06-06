@@ -123,6 +123,9 @@ import {
   ToolbarButton,
   WorkbenchHeader,
   WorkbenchShell,
+  WorkbenchTab,
+  WorkbenchTabButton,
+  WorkbenchTabCloseButton,
 } from '../primitives';
 import '../styles.css';
 
@@ -230,6 +233,31 @@ const meta = {
           />
           <SwatchOption label="Amber" swatch={<span style={{ width: '100%', height: '100%', background: 'rgb(245 158 11)' }} />} />
           <SwatchOption label="Rose" swatch={<span style={{ width: '100%', height: '100%', background: 'rgb(244 63 94)' }} />} />
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            overflowX: 'auto',
+            borderBottom: '1px solid rgb(var(--color-border-subtle))',
+            background: 'rgb(var(--color-base))',
+            padding: 8,
+            width: 520,
+            maxWidth: '100%',
+          }}
+        >
+          <WorkbenchTab active title="Browser">
+            <WorkbenchTabButton icon="[]" label="Browser" />
+            <WorkbenchTabCloseButton aria-label="Close Browser" />
+          </WorkbenchTab>
+          <WorkbenchTab title="Draft">
+            <WorkbenchTabButton icon="*" label="Draft notes" />
+            <WorkbenchTabCloseButton aria-label="Close Draft notes" />
+          </WorkbenchTab>
+          <IconButton size="sm" className="h-8 w-8 rounded-md text-[16px]" aria-label="New tab">
+            +
+          </IconButton>
         </div>
         <EditorToolbar sticky={false} style={{ maxWidth: 520 }} aria-label="Writing toolbar">
           <EditorToolbarGroup>

@@ -166,4 +166,7 @@ export {
   ToolbarButton,
   WorkbenchHeader,
   WorkbenchShell,
+  WorkbenchTab,
+  WorkbenchTabButton,
+  WorkbenchTabCloseButton,
 } from './primitives';

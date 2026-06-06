@@ -54,7 +54,17 @@ import {
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
 import { addNotification, NotificationProvider } from './notifications/notificationStore';
-import { ActionTile, CenteredMessage, cx, IconButton, PanelMessage, SectionLabel } from './ui';
+import {
+  ActionTile,
+  CenteredMessage,
+  cx,
+  IconButton,
+  PanelMessage,
+  SectionLabel,
+  WorkbenchTab,
+  WorkbenchTabButton,
+  WorkbenchTabCloseButton,
+} from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
 const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
@@ -1039,23 +1049,13 @@ function WorkbenchTabStrip({
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 overflow-x-auto border-b border-border-subtle bg-base px-2">
       {openTabs.map((tab) => (
-        <div
+        <WorkbenchTab
           key={tab.id}
-          className={cx(
-            'group flex h-8 max-w-[200px] shrink-0 items-center rounded-md text-[12px] font-medium text-secondary transition hover:bg-surface hover:text-primary',
-            activeTabId === tab.id && 'bg-surface text-primary',
-          )}
+          active={activeTabId === tab.id}
           title={labelForTab(tab)}
         >
-          <button type="button" className="flex min-w-0 flex-1 items-center gap-2 px-3 py-0" onClick={() => selectTab(tab.id)}>
-            <span className="w-[14px] shrink-0 text-center text-[12px] opacity-70" aria-hidden="true">
-              {iconForMode(tab.mode)}
-            </span>
-            <span className="truncate">{labelForTab(tab)}</span>
-          </button>
-          <button
-            type="button"
-            className="mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-[14px] leading-none text-dim opacity-0 transition hover:bg-surface-2 hover:text-primary group-hover:opacity-100 focus:opacity-100"
+          <WorkbenchTabButton icon={iconForMode(tab.mode)} label={labelForTab(tab)} onClick={() => selectTab(tab.id)} />
+          <WorkbenchTabCloseButton
             aria-label={`Close ${labelForTab(tab)}`}
             title={`Close ${labelForTab(tab)}`}
             onClick={(event) => {
@@ -1064,20 +1064,21 @@ function WorkbenchTabStrip({
             }}
           >
             ×
-          </button>
-        </div>
+          </WorkbenchTabCloseButton>
+        </WorkbenchTab>
       ))}
-      <button
-        type="button"
+      <IconButton
+        size="sm"
         className={cx(
-          'ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[16px] text-secondary transition hover:bg-surface hover:text-primary',
+          'ml-1 h-8 w-8 rounded-md text-[16px]',
           isNewWorkbenchTabMode(activeTool) && 'bg-surface text-primary',
         )}
         title="New tab"
+        aria-label="New tab"
         onClick={openNewTab}
       >
         +
-      </button>
+      </IconButton>
     </div>
   );
 }
