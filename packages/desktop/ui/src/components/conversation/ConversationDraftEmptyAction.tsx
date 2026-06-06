@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { cx } from '../ui';
+import { cx, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
 const DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS = 'max-w-[38rem]';
@@ -34,9 +34,9 @@ export function ConversationDraftEmptyAction({
 }) {
   return (
     <div className="mt-4 w-full space-y-3">
-      <div className="flex items-center justify-start gap-2 text-[11px] uppercase tracking-[0.16em] text-dim/80">
+      <div className="flex items-center justify-start gap-2">
         {hasDraftCwd ? <FolderIcon className="text-accent" /> : <ChatBubbleIcon className="text-accent" />}
-        <span>{hasDraftCwd ? 'Workspace' : 'Chat'}</span>
+        <SectionLabel tone="muted">{hasDraftCwd ? 'Workspace' : 'Chat'}</SectionLabel>
       </div>
       <div className="flex w-full flex-wrap items-center justify-start gap-1.5">
         <label className="relative min-w-[16rem] max-w-full flex-1 rounded-md border border-border-subtle bg-surface/45 px-2 shadow-sm">

@@ -1,6 +1,6 @@
 import type { MentionItem } from '../../conversation/conversationMentions';
 import type { ConversationContextDocRef } from '../../shared/types';
-import { SectionLabel, TextButton } from '../ui';
+import { MetaLabel, SectionLabel, TextButton } from '../ui';
 
 export function ConversationContextShelf({
   attachedContextDocs,
@@ -28,7 +28,7 @@ export function ConversationContextShelf({
               className="inline-flex items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] text-secondary"
               title={doc.summary ? `${doc.path}\n\n${doc.summary}` : doc.path}
             >
-              <span className="text-[10px] uppercase tracking-[0.14em] text-dim/70">{doc.kind}</span>
+              <MetaLabel tone="muted">{doc.kind}</MetaLabel>
               <span className="max-w-[18rem] truncate text-secondary">{doc.title}</span>
               <button
                 type="button"
@@ -68,7 +68,7 @@ export function ConversationContextShelf({
               className="inline-flex items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] text-secondary"
               title={item.summary || item.title || item.id}
             >
-              <span className="text-[10px] uppercase tracking-[0.14em] text-dim/70">{item.kind}</span>
+              <MetaLabel tone="muted">{item.kind}</MetaLabel>
               <span className="font-mono text-accent">{item.id}</span>
             </span>
           ))}
