@@ -17,7 +17,7 @@ import {
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
-import { cx, MetaLabel, Pill, SectionLabel, StatusDot } from '../ui';
+import { cx, MetaLabel, Pill, RowButton, SectionLabel, StatusDot, TextButton } from '../ui';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
   INLINE_RUN_POLL_INTERVAL_MS,
@@ -120,7 +120,7 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
       {...transcriptTargetAttributes({ kind: 'background_run', runId: resolvedRunId })}
     >
       <div className="flex items-start gap-3 px-2.5 py-2 hover:bg-elevated/70 transition-colors">
-        <button type="button" onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 text-left">
+        <RowButton compact onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 p-0 hover:bg-transparent">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {detailRun && (
               <MetaLabel tone="accent" className={cx('rounded-md border border-accent/20 px-1.5 py-0.5', runIsShell && 'font-mono')}>
@@ -131,16 +131,16 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
             <span className="truncate text-[12px] font-medium text-primary">{headline.title}</span>
           </div>
           <p className="mt-1 truncate text-[11px] text-secondary">{headline.summary || run.detail || run.runId}</p>
-        </button>
+        </RowButton>
         <div className="flex shrink-0 items-center gap-2">
           {conversationRoute ? (
             <Link to={conversationRoute} className="ui-action-button text-[10px]">
               Open conversation
             </Link>
           ) : null}
-          <button type="button" onClick={onToggle} className="text-[10px] uppercase tracking-[0.14em] text-dim">
+          <TextButton onClick={onToggle} className="text-[10px] uppercase tracking-[0.14em] text-dim">
             {expanded ? 'hide details' : 'show details'}
-          </button>
+          </TextButton>
         </div>
       </div>
 

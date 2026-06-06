@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
-import { Button, MetaLabel, Pill, RowButton, SectionLabel, SurfacePanel } from '../ui';
+import { Button, MetaLabel, Pill, RowButton, SectionLabel, SurfacePanel, TextButton } from '../ui';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
@@ -354,13 +354,13 @@ export function TraceClusterBlock({
   return (
     <div className="space-y-1.5">
       <div className="grid w-full grid-cols-[auto_1fr] items-center gap-2 text-[11px] text-dim/70">
-        <button
-          type="button"
+        <RowButton
+          compact
           onMouseEnter={hydrateDeferredBlocks}
           onFocus={hydrateDeferredBlocks}
           onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
           aria-expanded={open}
-          className="flex min-w-0 max-w-[78vw] items-center gap-1.5 text-left sm:max-w-[42rem]"
+          className="flex min-w-0 max-w-[78vw] items-center gap-1.5 p-0 text-dim/70 hover:bg-transparent sm:max-w-[42rem]"
         >
           <span className="font-medium text-primary">{title}</span>
           <span className="text-secondary">
@@ -389,7 +389,7 @@ export function TraceClusterBlock({
           )}
           {durationLabel && !isActive && <span className="text-dim">{durationLabel}</span>}
           <span className="text-dim">{open ? 'hide' : 'show'}</span>
-        </button>
+        </RowButton>
         <span className="h-px bg-border-subtle" aria-hidden="true" />
       </div>
       <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
@@ -497,8 +497,7 @@ function ResumeConversationAction({
     'group inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-secondary transition-colors hover:bg-elevated hover:text-primary disabled:cursor-default disabled:text-dim disabled:hover:bg-transparent sm:self-center';
 
   return (
-    <button
-      type="button"
+    <TextButton
       onClick={() => {
         void onResume();
       }}
@@ -507,7 +506,7 @@ function ResumeConversationAction({
       className={variant === 'inline' ? inlineClassName : compactClassName}
     >
       {busy ? 'opening…' : label}
-    </button>
+    </TextButton>
   );
 }
 

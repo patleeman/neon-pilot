@@ -4,7 +4,7 @@ import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx, MessageActionButton, MessageCard, MessageMeta } from '../ui.js';
+import { cx, MessageActionButton, MessageCard, MessageMeta, TextButton } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -142,9 +142,8 @@ function QuietLifecycleMarker({ blocks, marker }: { blocks: Extract<MessageBlock
 
   if (backgroundRun) {
     return (
-      <button
-        type="button"
-        className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-left text-[11px] text-dim/75 transition-colors hover:text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base"
+      <MessageActionButton
+        className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75 hover:text-secondary"
         data-context-shelf="1"
         data-lifecycle-marker={marker}
         title={tooltip ?? backgroundRun.runId}
@@ -152,7 +151,7 @@ function QuietLifecycleMarker({ blocks, marker }: { blocks: Extract<MessageBlock
         onClick={() => dispatchTranscriptSpotlight({ kind: 'background_run', runId: backgroundRun.runId })}
       >
         {content}
-      </button>
+      </MessageActionButton>
     );
   }
   return (
@@ -939,14 +938,13 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
       <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
         <span className="shrink-0">{label}</span>
         {conversationId ? (
-          <button
-            type="button"
+          <TextButton
             onClick={handleClick}
             className="min-w-0 truncate text-accent/80 hover:text-accent hover:underline focus-visible:outline-none"
             title={sourceMessageId ? `Source: ${sourcePreview ?? sourceMessageId}` : undefined}
           >
             {title}
-          </button>
+          </TextButton>
         ) : (
           <span className="min-w-0 truncate">{title}</span>
         )}
