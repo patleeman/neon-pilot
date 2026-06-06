@@ -16,6 +16,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 ## Current Components
 
 - Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, `CheckButton`, `ActionTile`
+- Attachment controls: `AttachmentChip`, `AttachmentChipButton`
 - Status: `Pill`, `StatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
@@ -72,6 +73,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `IconButton` for icon-only actions such as close, remove, more, edit, or refresh. Use `shape="circle"` for composer controls and compact round affordances. Always provide `aria-label` and usually `title`.
 - Use `IconLink` when the same square icon treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `ActionTile` for dashboard, chooser, new-tab, and empty-state actions that need an icon, label, description, and optional meta. Prefer it over rebuilding bordered action cards.
+- Use `AttachmentChip` with `AttachmentChipButton` for compact file, image, drawing, and generated-asset rows in composer shelves, attachment lists, and upload previews. Keep file-specific labels, thumbnails, and actions in the caller.
 - `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, and `CheckButton` forward refs for focus management, anchored menus, and keyboard workflows.
 - Use `Field` only when the child is a simple form control that can be labeled by wrapping it, such as `TextInput`, `Textarea`, or `Select`. For composite controls containing buttons, compose `FieldLabel` and `FieldHint` in a neutral container instead.
 - Use `TextInput`, `SearchInput`, `Textarea`, and `Select` instead of handwritten bordered controls. Override only sizing/background with `className`.
@@ -113,6 +115,7 @@ These production areas already use the shared package and are useful examples fo
 - Compact rows: checkpoint file pickers, file-change headers, trace disclosure headers, and nested file lists
 - Feedback: extension manager diagnostics, automations page notices, and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
+- Attachment chrome: desktop composer image and drawing attachment shelves
 - Composer menus: model picker provider groups and slash-command source labels
 - Compact editors: scheduled task advanced options and other dense field groups
 - Dialog shells: desktop modals and extension install/details dialogs

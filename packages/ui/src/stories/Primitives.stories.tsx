@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react';
 
 import {
   ActionTile,
+  AttachmentChip,
+  AttachmentChipButton,
   AppPageIntro,
   AppPageLayout,
   Button,
@@ -106,6 +108,46 @@ const meta = {
           </IconLink>
           <CheckButton checked aria-label="Completed" />
           <CheckButton checked={false} aria-label="Incomplete" />
+        </div>
+      </section>
+
+      <section style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>Attachments</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <AttachmentChip style={{ maxWidth: 220 }}>
+            <AttachmentChipButton title="Preview repository-notes.md">
+              <span style={{ flexShrink: 0 }}>#</span>
+              <span className="truncate">repository-notes.md</span>
+              <span className="shrink-0 text-dim">12KB</span>
+            </AttachmentChipButton>
+            <IconButton compact title="Remove repository-notes.md" aria-label="Remove repository-notes.md">
+              x
+            </IconButton>
+          </AttachmentChip>
+          <AttachmentChip size="md" style={{ maxWidth: 270 }}>
+            <AttachmentChipButton title="Preview product sketch">
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 36,
+                  height: 28,
+                  flexShrink: 0,
+                  borderRadius: 4,
+                  background: 'rgb(var(--color-accent) / 0.16)',
+                }}
+              />
+              <span className="min-w-0">
+                <span className="block truncate">product sketch</span>
+                <span className="block text-[10px] text-dim">#draw_42 · unsaved</span>
+              </span>
+            </AttachmentChipButton>
+            <TextButton tone="accent" className="text-[11px]">
+              edit
+            </TextButton>
+            <IconButton compact title="Remove product sketch" aria-label="Remove product sketch">
+              x
+            </IconButton>
+          </AttachmentChip>
         </div>
       </section>
 

@@ -1,5 +1,8 @@
 export {
   ActionTile,
+  AttachmentChip,
+  AttachmentChipButton,
+  type AttachmentChipSize,
   AppPageEmptyState,
   AppPageIntro,
   AppPageLayout,

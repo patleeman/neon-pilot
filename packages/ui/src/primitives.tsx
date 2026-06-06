@@ -559,6 +559,34 @@ export const RowButton = forwardRef<
   );
 });
 
+export type AttachmentChipSize = 'sm' | 'md';
+
+export function AttachmentChip({
+  children,
+  className,
+  size = 'sm',
+  ...props
+}: HTMLAttributes<HTMLDivElement> & {
+  size?: AttachmentChipSize;
+}) {
+  return (
+    <div className={cx('ui-attachment-chip', `ui-attachment-chip-${size}`, className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export const AttachmentChipButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function AttachmentChipButton(
+  { className, children, type = 'button', ...props },
+  ref,
+) {
+  return (
+    <button ref={ref} type={type} className={cx('ui-attachment-chip-button', className)} {...props}>
+      {children}
+    </button>
+  );
+});
+
 export function CodeBlock({
   children,
   className,

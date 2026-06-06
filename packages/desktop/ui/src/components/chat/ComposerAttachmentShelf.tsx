@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { TextButton } from '../ui';
+import { AttachmentChip, AttachmentChipButton, IconButton, TextButton } from '../ui';
 
 interface ComposerAttachmentShelfDrawingAttachment {
   localId: string;
@@ -203,32 +203,28 @@ export function ComposerAttachmentShelf({
             );
 
             return (
-              <div
-                key={file.localId || `${fileName}-${file.size}-${index}`}
-                className="flex max-w-[220px] items-center gap-1 rounded-lg border border-border-subtle bg-elevated text-[11px]"
-              >
+              <AttachmentChip key={file.localId || `${fileName}-${file.size}-${index}`} className="max-w-[220px]">
                 {canPreview ? (
-                  <button
-                    type="button"
+                  <AttachmentChipButton
                     onClick={() => openAttachmentPreview(file)}
-                    className="flex min-w-0 flex-1 cursor-zoom-in items-center gap-1.5 rounded-l-[inherit] px-2 py-1 text-left transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                    className="cursor-zoom-in"
                     title={`Preview ${fileName}`}
                     aria-label={`Preview ${fileName}`}
                   >
                     {summary}
-                  </button>
+                  </AttachmentChipButton>
                 ) : (
                   <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1">{summary}</div>
                 )}
-                <button
-                  type="button"
+                <IconButton
+                  compact
                   onClick={() => onRemoveAttachment(index)}
-                  className="ui-icon-button ui-icon-button-compact mr-1 shrink-0 leading-none"
+                  className="mr-1 shrink-0 leading-none"
                   title={`Remove ${fileName}`}
                 >
                   ×
-                </button>
-              </div>
+                </IconButton>
+              </AttachmentChip>
             );
           })}
         </div>
@@ -239,14 +235,10 @@ export function ComposerAttachmentShelf({
           {drawingAttachments.map((attachment) => {
             const label = buildDrawingPreviewTitle(attachment);
             return (
-              <div
-                key={attachment.localId}
-                className="flex max-w-[270px] items-center gap-1.5 rounded-lg border border-border-subtle bg-elevated px-1 py-1 text-[11px]"
-              >
-                <button
-                  type="button"
+              <AttachmentChip key={attachment.localId} size="md" className="max-w-[270px]">
+                <AttachmentChipButton
                   onClick={() => openDrawingPreview(attachment)}
-                  className="flex min-w-0 flex-1 cursor-zoom-in items-center gap-1.5 rounded-md px-1 text-left transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  className="cursor-zoom-in px-1 hover:opacity-95"
                   title={`Preview ${label}`}
                   aria-label={`Preview ${label}`}
                 >
@@ -258,7 +250,7 @@ export function ComposerAttachmentShelf({
                       {attachment.dirty ? ' · unsaved' : ''}
                     </p>
                   </div>
-                </button>
+                </AttachmentChipButton>
                 <TextButton
                   type="button"
                   onClick={() => onEditDrawing(attachment.localId)}
@@ -268,15 +260,15 @@ export function ComposerAttachmentShelf({
                 >
                   edit
                 </TextButton>
-                <button
-                  type="button"
+                <IconButton
+                  compact
                   onClick={() => onRemoveDrawingAttachment(attachment.localId)}
-                  className="ui-icon-button ui-icon-button-compact ml-0.5 shrink-0 leading-none"
+                  className="ml-0.5 shrink-0 leading-none"
                   title={`Remove ${attachment.title}`}
                 >
                   ×
-                </button>
-              </div>
+                </IconButton>
+              </AttachmentChip>
             );
           })}
         </div>
