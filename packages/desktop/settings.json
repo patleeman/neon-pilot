@@ -1,7 +1,7 @@
 {
-  "defaultProvider": "ds4",
+  "defaultProvider": "opencode-go",
   "defaultModel": "deepseek-v4-flash",
-  "defaultThinkingLevel": "xhigh",
+  "defaultThinkingLevel": "high",
   "theme": "cobalt2",
   "themeDark": "cobalt2",
   "themeLight": "cobalt2-light",
@@ -33,7 +33,21 @@
       "019e9459-fa77-78b6-ae1b-2ba884caa9ac",
       "019e952d-e1e4-7db7-aa83-b342d633a58c",
       "019e9561-33a9-7906-b188-e7422a3ae1bf",
-      "019e9565-ff54-730a-b1a1-05ab9e7983e2"
+      "019e9565-ff54-730a-b1a1-05ab9e7983e2",
+      "019e9598-bc05-7960-898e-0b20e5704449",
+      "019e9848-dc1f-7c0b-9b23-d7e7a6b3dcea",
+      "019e9850-b9d2-7bcd-bf84-26c3c2acf2b2",
+      "019e9851-0607-72af-8b6d-8ade314366e6",
+      "019e9916-8836-7e71-908d-c22c48c63a65",
+      "019e9928-99f1-70db-90db-3662e4ee6f55",
+      "019e992a-69fe-79f4-959f-fc6a2379d3e7",
+      "019e992b-0b80-7a45-acef-b0fa74989019",
+      "019e9975-d8e5-7dc2-bf23-7a564a445260",
+      "019e9984-7e14-71bd-803d-3a16ca694df3"
     ]
+  },
+  "dictation": {
+    "enabled": false,
+    "model": "base.en"
   }
 }

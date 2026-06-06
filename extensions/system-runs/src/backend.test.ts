@@ -108,6 +108,14 @@ describe('system-runs backend', () => {
       expect(onUpdate).toHaveBeenCalledWith({ content: [{ type: 'text', text: 'ok\n' }] });
     });
 
+    it('ignores non-AbortSignal values from serialized agent tool context', async () => {
+      const onUpdate = vi.fn();
+      const ctx = createCtx({ agentToolContext: { signal: { aborted: false } }, toolContext: { cwd: '/tmp/repo', onUpdate } });
+
+      await expect(bash({ command: 'echo hi' }, ctx)).resolves.toMatchObject({ text: 'ok' });
+      expect(ctx.shell.spawn).toHaveBeenCalled();
+    });
+
     it('falls back to exec and passes the active tool abort signal when spawn is unavailable', async () => {
       const signal = new AbortController().signal;
       const ctx = createCtx({ agentToolContext: { signal } });

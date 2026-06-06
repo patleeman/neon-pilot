@@ -15,7 +15,7 @@ export interface ManifestToolFactoryOptions {
   repoRoot: string;
   runtimeConfigRoot: string;
   stateRoot: string;
-  serverContext?: Pick<ServerRouteContext, 'getRuntimeScope'>;
+  serverContext?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getSettingsFile'>>;
 }
 
 /**

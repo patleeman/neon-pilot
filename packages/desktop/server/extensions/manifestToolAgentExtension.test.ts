@@ -17,7 +17,7 @@ function baseOptions(overrides: Partial<Parameters<typeof createManifestToolAgen
     repoRoot: '/repo',
     runtimeConfigRoot: '/runtime-config',
     stateRoot: '/state',
-    serverContext: { getRuntimeScope: () => 'shared' },
+    serverContext: { getRuntimeScope: () => 'shared', getSettingsFile: () => '/runtime/settings.json' },
     ...overrides,
   };
 }
@@ -79,7 +79,7 @@ describe('manifestToolAgentExtension', () => {
       extensionId: 'ext',
       actionId: 'doThing',
       input: { x: 1 },
-      serverContextSnapshot: { runtimeScope: 'shared' },
+      serverContextSnapshot: { runtimeScope: 'shared', settingsFile: '/runtime/settings.json' },
       toolContext: { onUpdate: expect.any(Function) },
       toolContextSnapshot: {
         conversationId: 'conversation-1',

@@ -296,6 +296,35 @@ function formatModelSummary(model: ModelOption | null, fallback: string): string
   return `${model.id} · ${model.provider} · ${formatContextWindowLabel(model.context)} ctx`;
 }
 
+function modelIdHasMultipleProviders(models: readonly ModelOption[], modelId: string): boolean {
+  return models.filter((model) => model.id === modelId).length > 1;
+}
+
+export function formatSettingsModelOptionValue(model: ModelOption, models: readonly ModelOption[]): string {
+  return modelIdHasMultipleProviders(models, model.id) ? `${model.provider}/${model.id}` : model.id;
+}
+
+export function resolveSettingsModelOption(models: readonly ModelOption[], modelRef: string): ModelOption | null {
+  const normalized = modelRef.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const slashIndex = normalized.indexOf('/');
+  if (slashIndex > 0 && slashIndex < normalized.length - 1) {
+    const provider = normalized.slice(0, slashIndex);
+    const id = normalized.slice(slashIndex + 1);
+    return models.find((model) => model.provider === provider && model.id === id) ?? null;
+  }
+
+  const exactMatch = models.find((model) => model.id === normalized);
+  if (!exactMatch) {
+    return null;
+  }
+
+  return modelIdHasMultipleProviders(models, exactMatch.id) ? null : exactMatch;
+}
+
 function canProviderUseApiKey(provider: ProviderAuthSummary | null): boolean {
   if (!provider) {
     return false;
@@ -2088,7 +2117,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
       return null;
     }
 
-    return modelState.models.find((model) => model.id === modelState.currentModel) ?? null;
+    return resolveSettingsModelOption(modelState.models, modelState.currentModel);
   }, [modelState]);
   const availableModelProviderIds = useMemo(
     () => listKnownModelProviderIds(modelProviderState, providerAuthState, modelState?.models),
@@ -3051,7 +3080,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         {groupedModels.map(([provider, models]) => (
                           <optgroup key={provider} label={provider}>
                             {models.map((model) => (
-                              <option key={model.id} value={model.id}>
+                              <option key={`${model.provider}/${model.id}`} value={formatSettingsModelOptionValue(model, modelState.models)}>
                                 {model.name} · {formatContextWindowLabel(model.context)} ctx
                               </option>
                             ))}

@@ -312,7 +312,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         repoRoot,
         runtimeConfigRoot: getRuntimeConfigRoot(),
         stateRoot: getStateRoot(),
-        serverContext: { getRuntimeScope: getRuntimeScope },
+        serverContext: { getRuntimeScope: getRuntimeScope, getSettingsFile: () => DEFAULT_RUNTIME_SETTINGS_FILE },
       }),
 
       ...agentExtensions.factories,

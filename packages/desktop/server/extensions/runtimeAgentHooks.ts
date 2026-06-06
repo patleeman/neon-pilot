@@ -62,6 +62,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
       repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
       runtimeConfigRoot: getRuntimeConfigRoot(),
       stateRoot: getStateRoot(),
+      serverContext: { getRuntimeScope: () => 'shared', getSettingsFile: () => DEFAULT_RUNTIME_SETTINGS_FILE },
     }),
     ...agentExtensions.factories,
   ];

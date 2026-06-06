@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'vitest';
+
+import { formatSettingsModelOptionValue, resolveSettingsModelOption } from './SettingsPage';
+
+const MODELS = [
+  {
+    id: 'deepseek-v4-flash',
+    provider: 'ds4',
+    name: 'DeepSeek V4 Flash',
+    context: 400_000,
+    input: ['text'],
+    supportedServiceTiers: [],
+  },
+  {
+    id: 'deepseek-v4-flash',
+    provider: 'opencode-go',
+    name: 'DeepSeek V4 Flash',
+    context: 400_000,
+    input: ['text'],
+    supportedServiceTiers: [],
+  },
+  {
+    id: 'gpt-5.4',
+    provider: 'openai-codex',
+    name: 'GPT-5.4',
+    context: 200_000,
+    input: ['text', 'image'],
+    supportedServiceTiers: ['auto', 'priority'],
+  },
+] as const;
+
+describe('settings model selection', () => {
+  it('qualifies option values when two providers expose the same model id', () => {
+    expect(formatSettingsModelOptionValue(MODELS[0], MODELS)).toBe('ds4/deepseek-v4-flash');
+    expect(formatSettingsModelOptionValue(MODELS[1], MODELS)).toBe('opencode-go/deepseek-v4-flash');
+    expect(formatSettingsModelOptionValue(MODELS[2], MODELS)).toBe('gpt-5.4');
+  });
+
+  it('resolves provider-qualified selected models without falling back to the first duplicate id', () => {
+    expect(resolveSettingsModelOption(MODELS, 'opencode-go/deepseek-v4-flash')?.provider).toBe('opencode-go');
+    expect(resolveSettingsModelOption(MODELS, 'ds4/deepseek-v4-flash')?.provider).toBe('ds4');
+    expect(resolveSettingsModelOption(MODELS, 'deepseek-v4-flash')).toBeNull();
+  });
+});

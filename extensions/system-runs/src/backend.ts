@@ -77,6 +77,14 @@ function readRequiredString(value: unknown, label: string): string {
   return normalized;
 }
 
+function readAbortSignal(value: unknown): AbortSignal | undefined {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.aborted !== 'boolean') return undefined;
+  if (typeof value.addEventListener !== 'function') return undefined;
+  if (typeof value.removeEventListener !== 'function') return undefined;
+  return value as AbortSignal;
+}
+
 async function runForegroundBash(
   command: string,
   cwd: string | undefined,
@@ -93,7 +101,7 @@ async function runForegroundBash(
       args: ['-lc', command],
       cwd,
       timeoutMs: timeoutSeconds ? timeoutSeconds * 1000 : undefined,
-      signal: ctx.agentToolContext?.signal,
+      signal: readAbortSignal(ctx.agentToolContext?.signal),
     });
     const output = [result.stdout?.trimEnd(), result.stderr?.trimEnd()].filter(Boolean).join('\n');
     return {
@@ -117,6 +125,7 @@ async function runStreamingForegroundBash(
   let killedByTimeout = false;
   let killProcess: (() => void) | undefined;
   let executionWrappers: Array<{ id: string; label?: string }> = [];
+  const abortSignal = readAbortSignal(ctx.agentToolContext?.signal);
 
   const append = (chunk: string) => {
     if (!chunk) return;
@@ -129,7 +138,7 @@ async function runStreamingForegroundBash(
       if (settled) return;
       settled = true;
       if (timeout) clearTimeout(timeout);
-      ctx.agentToolContext?.signal?.removeEventListener('abort', onAbort);
+      abortSignal?.removeEventListener('abort', onAbort);
       resolve(result);
     };
 
@@ -163,11 +172,11 @@ async function runStreamingForegroundBash(
         killProcess = processHandle.kill;
         executionWrappers = processHandle.executionWrappers ?? [];
 
-        if (ctx.agentToolContext?.signal?.aborted) {
+        if (abortSignal?.aborted) {
           onAbort();
           return;
         }
-        ctx.agentToolContext?.signal?.addEventListener('abort', onAbort, { once: true });
+        abortSignal?.addEventListener('abort', onAbort, { once: true });
 
         if (timeoutSeconds) {
           timeout = setTimeout(() => {
