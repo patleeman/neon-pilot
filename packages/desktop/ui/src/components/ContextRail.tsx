@@ -23,7 +23,7 @@ import type { AgentToolInfo, ScheduledTaskSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
 import { RichMarkdownRenderer } from './editor/RichMarkdownRenderer';
 import { addNotification } from './notifications/notificationStore';
-import { cx, ErrorState, IconButton, LoadingState } from './ui';
+import { cx, ErrorState, IconButton, LoadingState, ToolbarButton } from './ui';
 
 const ScheduledTaskPanel = lazy(() => import('./ScheduledTaskPanel').then((module) => ({ default: module.ScheduledTaskPanel })));
 
@@ -285,12 +285,12 @@ function DraftConversationContextPanel() {
                 Use the folder picker above for the default flow, or enter an absolute, ~, or relative path here.
               </p>
               <div className="flex items-center gap-1">
-                <button type="button" onClick={cancelChangingCwd} disabled={pickCwdBusy} className="ui-toolbar-button">
+                <ToolbarButton onClick={cancelChangingCwd} disabled={pickCwdBusy}>
                   Cancel
-                </button>
-                <button type="submit" disabled={pickCwdBusy} className="ui-toolbar-button text-accent">
+                </ToolbarButton>
+                <ToolbarButton type="submit" disabled={pickCwdBusy} className="text-accent">
                   Save
-                </button>
+                </ToolbarButton>
               </div>
             </div>
           </form>
@@ -431,15 +431,14 @@ function ConversationsWorkspaceContext() {
             Browse pinned, open, and archived conversations in the main pane. Open one to switch this rail back into live session context.
           </p>
         </div>
-        <button
-          type="button"
+        <ToolbarButton
           onClick={() => {
             void refetch();
           }}
-          className="ui-toolbar-button shrink-0"
+          className="shrink-0"
         >
           ↻ Refresh
-        </button>
+        </ToolbarButton>
       </div>
 
       <div className="space-y-2">
@@ -683,16 +682,15 @@ function CapabilitiesTaskContext({ taskId }: { taskId: string }) {
             <p className="ui-card-title break-words">{data.id}</p>
             <p className="ui-card-meta mt-1">{data.running ? 'running' : (data.lastStatus ?? (data.enabled ? 'enabled' : 'disabled'))}</p>
           </div>
-          <button
-            type="button"
+          <ToolbarButton
             onClick={() => {
               void refetch({ resetLoading: false });
             }}
             disabled={refreshing}
-            className="ui-toolbar-button shrink-0"
+            className="shrink-0"
           >
             {refreshing ? 'Refreshing…' : '↻ Refresh'}
-          </button>
+          </ToolbarButton>
         </div>
         <div className="space-y-2">
           <RailMetadataRow label="Schedule" value={data.cron || data.at ? formatTaskSchedule(data) : 'manual only'} />
@@ -700,16 +698,15 @@ function CapabilitiesTaskContext({ taskId }: { taskId: string }) {
           <RailMetadataRow label="Cwd" value={<span className="font-mono break-all">{data.cwd ?? 'No cwd set'}</span>} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
+          <ToolbarButton
             onClick={() => {
               void handleRunNow();
             }}
             disabled={runningNow || data.running}
-            className="ui-toolbar-button text-accent"
+            className="text-accent"
           >
             {runningNow ? 'Running…' : 'Run now'}
-          </button>
+          </ToolbarButton>
           <Link to={`/automations/${encodeURIComponent(data.id)}`} className="ui-toolbar-button">
             Open automation
           </Link>
