@@ -11,6 +11,7 @@ type WorkspacePickerOption = {
   value: string;
   label: string;
   detail: string;
+  title: string;
 };
 
 function formatWorkspaceOption(workspacePath: string): WorkspacePickerOption {
@@ -19,6 +20,7 @@ function formatWorkspaceOption(workspacePath: string): WorkspacePickerOption {
       value: '',
       label: 'Chat — no workspace',
       detail: 'No attached workspace',
+      title: 'Start as a chat with no attached workspace.',
     };
   }
 
@@ -26,7 +28,7 @@ function formatWorkspaceOption(workspacePath: string): WorkspacePickerOption {
   const segments = normalizedPath.split('/').filter(Boolean);
   const label = segments.at(-1) ?? normalizedPath;
   const detail = segments.length > 1 ? normalizedPath.slice(0, Math.max(1, normalizedPath.length - label.length - 1)) : normalizedPath;
-  return { value: workspacePath, label, detail };
+  return { value: workspacePath, label, detail, title: workspacePath };
 }
 
 export function ConversationDraftEmptyAction({
@@ -61,6 +63,10 @@ export function ConversationDraftEmptyAction({
         value: '',
         label: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Loading workspaces…' : 'Chat — no workspace',
         detail: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Fetching saved workspace paths' : 'No attached workspace',
+        title:
+          savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0
+            ? 'Fetching saved workspace paths'
+            : 'Start as a chat with no attached workspace.',
       },
       ...availableDraftWorkspacePaths.map(formatWorkspaceOption),
     ],
@@ -119,7 +125,7 @@ export function ConversationDraftEmptyAction({
             aria-haspopup="listbox"
             aria-expanded={workspacePickerOpen}
             aria-label="Saved workspace"
-            title={hasDraftCwd ? draftCwdValue : 'Start as a chat with no attached workspace.'}
+            title={selectedWorkspace.title}
             disabled={workspacePickerDisabled}
             onClick={() => setWorkspacePickerOpen((open) => !open)}
           >
@@ -159,14 +165,14 @@ export function ConversationDraftEmptyAction({
                     selected={option.value === draftCwdValue}
                     aria-selected={option.value === draftCwdValue}
                     className="w-full justify-start px-2 py-2 text-left"
-                    title={option.value || option.detail}
+                    title={option.title}
                     onClick={() => selectWorkspace(option.value)}
                   >
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className={cx('block truncate text-[12px]', option.value ? 'font-mono text-primary' : 'text-secondary')}>
                         {option.label}
                       </span>
-                      <span className="block truncate text-[11px] text-dim">{option.detail}</span>
+                      <span className="ui-truncate-start block text-[11px] text-dim">{option.detail}</span>
                     </span>
                   </RowButton>
                 ))}
