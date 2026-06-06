@@ -60,7 +60,7 @@ The shared package includes:
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`, `SettingsSection`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
-- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`
 - Pages: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`
 - Utility: `cx`
 
@@ -101,6 +101,8 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Local loading/error/empty messages -> `LoadingState`, `ErrorState`, `EmptyState`, `PanelMessage`, `CenteredMessage`, or `Notice`
 - Local bordered section cards with title/meta rows -> `SurfacePanel` with `PanelHeader`
 - Local bordered data cards -> `SurfacePanel`, `ResourceListItem`, `KeyValueList`, `KeyValueTable`, `DataTable`, or `Disclosure`
+- Local table no-results `tr`/`td` placeholders -> `DataTableEmptyRow`
+- Local table row action wrappers -> `DataTableActionGroup`
 - Local compact uppercase labels -> `SectionLabel` or `MetaLabel`
 - Local file trees or workspace file panels -> `useFileTreeModel` for app-integrated trees, or `WorkspaceExplorer`/`WorkspaceFileDocument` when the extension needs the existing workspace file UX
 - Local transcript/chat surfaces -> `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `MessageActionButton`, and transcript-specific primitives before rebuilding message chrome

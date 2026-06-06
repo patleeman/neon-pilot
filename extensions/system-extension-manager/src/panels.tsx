@@ -9,6 +9,7 @@ import {
   CompactCard,
   cx,
   DataTable,
+  DataTableActionGroup,
   DataTableBody,
   DataTableCell,
   DataTableHead,
@@ -1355,7 +1356,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             )}
           </DataTableCell>
           <DataTableCell className="py-4 pr-0">
-            <div className="flex items-center justify-end gap-1.5">
+            <DataTableActionGroup>
               {busy ? <span className="text-[11px] text-dim">Working…</span> : null}
               {route && extension.enabled ? (
                 <Link
@@ -1402,7 +1403,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 }
                 onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
               />
-            </div>
+            </DataTableActionGroup>
           </DataTableCell>
         </DataTableRow>
       );

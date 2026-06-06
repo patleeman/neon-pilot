@@ -21,8 +21,10 @@ import {
   CompactCard,
   ConfirmDialog,
   DataTable,
+  DataTableActionGroup,
   DataTableBody,
   DataTableCell,
+  DataTableEmptyRow,
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
@@ -462,8 +464,14 @@ const meta = {
               <DataTableRow>
                 <DataTableCell>System Knowledge</DataTableCell>
                 <DataTableCell>Enabled</DataTableCell>
-                <DataTableCell>System</DataTableCell>
+                <DataTableCell>
+                  <DataTableActionGroup className="justify-start">
+                    <Pill tone="muted">System</Pill>
+                    <TextButton>Details</TextButton>
+                  </DataTableActionGroup>
+                </DataTableCell>
               </DataTableRow>
+              <DataTableEmptyRow colSpan={3}>No user extensions match the current filters.</DataTableEmptyRow>
             </DataTableBody>
           </DataTable>
         </SurfacePanel>

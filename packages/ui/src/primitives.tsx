@@ -10,6 +10,7 @@ import {
   type LabelHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
+  type TdHTMLAttributes,
   type TextareaHTMLAttributes,
   useEffect,
   useId,
@@ -1104,11 +1105,40 @@ export function DataTableHeaderCell({ children, className, ...props }: HTMLAttri
   );
 }
 
-export function DataTableCell({ children, className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
+export function DataTableCell({ children, className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td className={cx('ui-data-table-cell', className)} {...props}>
       {children}
     </td>
+  );
+}
+
+export function DataTableEmptyRow({
+  colSpan,
+  children,
+  className,
+  cellClassName,
+  ...props
+}: {
+  colSpan: number;
+  children: ReactNode;
+  className?: string;
+  cellClassName?: string;
+} & HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <DataTableRow className={cx('hover:bg-transparent', className)} {...props}>
+      <DataTableCell colSpan={colSpan} className={cx('px-3 py-12 text-center text-secondary', cellClassName)}>
+        {children}
+      </DataTableCell>
+    </DataTableRow>
+  );
+}
+
+export function DataTableActionGroup({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('flex items-center justify-end gap-1.5', className)} {...props}>
+      {children}
+    </div>
   );
 }
 
