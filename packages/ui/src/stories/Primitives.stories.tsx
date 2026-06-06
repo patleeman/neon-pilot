@@ -19,6 +19,7 @@ import {
   ChatBubbleIcon,
   ChoiceRow,
   CodeBlock,
+  ComposerActionButton,
   CompactCard,
   ConfirmDialog,
   DataTable,
@@ -142,6 +143,21 @@ const meta = {
           <MessageActionButton tone="accent">copied</MessageActionButton>
           <MessageActionButton tone="danger">copy failed</MessageActionButton>
           <MessageActionButton disabled>disabled</MessageActionButton>
+          <ComposerActionButton tone="accent" aria-label="Send">
+            ↑
+          </ComposerActionButton>
+          <ComposerActionButton tone="warning" size="label">
+            Steer
+          </ComposerActionButton>
+          <ComposerActionButton tone="neutral" size="label">
+            Follow up
+          </ComposerActionButton>
+          <ComposerActionButton tone="danger" aria-label="Stop">
+            ■
+          </ComposerActionButton>
+          <ComposerActionButton tone="disabled" disabled aria-label="Send unavailable">
+            ↑
+          </ComposerActionButton>
           <IconButton aria-label="More actions">•••</IconButton>
           <IconButton aria-label="Add item" shape="circle">
             +

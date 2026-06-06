@@ -15,6 +15,7 @@ import {
   ChatBubbleIcon,
   ChoiceRow,
   CodeBlock,
+  ComposerActionButton,
   CompactCard,
   cx,
   DataTable,
@@ -120,6 +121,24 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-message-card-user');
     expect(html).toContain('ui-message-card-assistant');
     expect(html).toContain('ui-message-meta');
+  });
+
+  it('renders composer action buttons with stable tone and size classes', () => {
+    const html = renderToStaticMarkup(
+      createElement('div', null, [
+        createElement(ComposerActionButton, { key: 'send', tone: 'accent', size: 'icon', 'aria-label': 'Send' }, '↑'),
+        createElement(ComposerActionButton, { key: 'steer', tone: 'warning', size: 'label' }, 'Steer'),
+        createElement(ComposerActionButton, { key: 'stop', tone: 'danger', size: 'icon' }, '■'),
+        createElement(ComposerActionButton, { key: 'empty', tone: 'disabled', disabled: true }, '↑'),
+      ]),
+    );
+
+    expect(html).toContain('ui-composer-action-button');
+    expect(html).toContain('ui-composer-action-button-accent');
+    expect(html).toContain('ui-composer-action-button-warning');
+    expect(html).toContain('ui-composer-action-button-danger');
+    expect(html).toContain('ui-composer-action-button-disabled');
+    expect(html).toContain('ui-composer-action-button-label');
   });
 
   it('renders shared path picker chrome and workspace icons', () => {

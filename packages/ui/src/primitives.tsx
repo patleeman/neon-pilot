@@ -136,6 +136,42 @@ export const MessageActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttri
   },
 );
 
+export type ComposerActionButtonTone = 'accent' | 'warning' | 'danger' | 'neutral' | 'disabled';
+export type ComposerActionButtonSize = 'icon' | 'label' | 'compactLabel';
+
+function composerActionButtonToneClass(tone: ComposerActionButtonTone) {
+  if (tone === 'accent') return 'ui-composer-action-button-accent';
+  if (tone === 'warning') return 'ui-composer-action-button-warning';
+  if (tone === 'danger') return 'ui-composer-action-button-danger';
+  if (tone === 'disabled') return 'ui-composer-action-button-disabled';
+  return 'ui-composer-action-button-neutral';
+}
+
+function composerActionButtonSizeClass(size: ComposerActionButtonSize) {
+  if (size === 'label') return 'ui-composer-action-button-label';
+  if (size === 'compactLabel') return 'ui-composer-action-button-compact-label';
+  return 'ui-composer-action-button-icon';
+}
+
+export const ComposerActionButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    tone?: ComposerActionButtonTone;
+    size?: ComposerActionButtonSize;
+  }
+>(function ComposerActionButton({ className, children, type = 'button', tone = 'neutral', size = 'icon', ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cx('ui-composer-action-button', composerActionButtonToneClass(tone), composerActionButtonSizeClass(size), className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
+
 export type MessageCardRole = 'user' | 'assistant';
 
 export function MessageCard({

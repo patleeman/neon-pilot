@@ -4,7 +4,7 @@ import { formatComposerActionLabel } from '../../conversation/conversationCompos
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { cx, IconButton } from '../ui';
+import { ComposerActionButton, IconButton } from '../ui';
 import { ComposerActionIcon } from './ConversationComposerChrome';
 
 export type ConversationComposerSubmitLabel = 'Send' | 'Steer' | 'Follow up';
@@ -137,33 +137,27 @@ export function ConversationComposerActions({
       {streamIsStreaming ? (
         <>
           {composerHasContent ? (
-            <button
+            <ComposerActionButton
               type="button"
               onClick={(event) => {
                 onSubmitComposerActionForModifiers(streamingSubmitLabel === 'Follow up' || composerAltHeld || event.altKey);
               }}
               disabled={composerDisabled}
-              className={cx(
-                'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[11px] font-medium transition-colors disabled:cursor-default disabled:opacity-40',
-                streamingSubmitLabel === 'Follow up'
-                  ? 'bg-elevated text-primary hover:bg-elevated/80'
-                  : 'bg-warning/15 text-warning hover:bg-warning/25',
-              )}
+              size="compactLabel"
+              tone={streamingSubmitLabel === 'Follow up' ? 'neutral' : 'warning'}
               title={streamingSubmitLabel}
               aria-label={streamingSubmitLabel}
             >
               <ComposerActionIcon label={streamingSubmitLabel} className="shrink-0" />
               <span>{formatComposerActionLabel(streamingSubmitLabel)}</span>
-            </button>
+            </ComposerActionButton>
           ) : null}
-          <button
+          <ComposerActionButton
             type="button"
             onClick={onAbortStream}
             disabled={conversationNeedsTakeover}
-            className={cx(
-              'group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:cursor-default disabled:opacity-60',
-              'bg-danger/15 text-danger hover:bg-danger/25',
-            )}
+            tone="danger"
+            className="group relative"
             title={conversationNeedsTakeover ? 'Take over this conversation before stopping' : 'Stop'}
             aria-label="Stop"
           >
@@ -176,17 +170,15 @@ export function ConversationComposerActions({
             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="1.2" />
             </svg>
-          </button>
+          </ComposerActionButton>
         </>
       ) : composerShowsQuestionSubmit ? (
-        <button
+        <ComposerActionButton
           type="button"
           onClick={onSubmitComposerQuestion}
           disabled={composerDisabled || !composerQuestionCanSubmit || composerQuestionSubmitting}
-          className={cx(
-            'flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[11px] font-medium transition-colors disabled:cursor-default',
-            composerQuestionCanSubmit && !composerQuestionSubmitting ? 'bg-accent text-white hover:bg-accent/90' : 'bg-elevated text-dim',
-          )}
+          size="label"
+          tone={composerQuestionCanSubmit && !composerQuestionSubmitting ? 'accent' : 'disabled'}
           title={
             composerQuestionCanSubmit
               ? 'Submit answers'
@@ -198,23 +190,16 @@ export function ConversationComposerActions({
           <span>
             {composerQuestionSubmitting ? 'Submitting…' : composerQuestionCanSubmit ? 'Submit' : `${composerQuestionRemainingCount} left`}
           </span>
-        </button>
+        </ComposerActionButton>
       ) : composerHasContent ? (
-        <button
+        <ComposerActionButton
           type="button"
           onClick={(event) => {
             onSubmitComposerActionForModifiers(composerSubmitLabel === 'Follow up' || composerAltHeld || event.altKey);
           }}
           disabled={composerDisabled}
-          className={cx(
-            'flex shrink-0 items-center justify-center rounded-full transition-colors disabled:cursor-default disabled:opacity-40',
-            composerSubmitLabel === 'Send' ? 'h-8 w-8 bg-accent text-white hover:bg-accent/90' : 'h-9 gap-1.5 px-3 text-[11px] font-medium',
-            composerSubmitLabel === 'Steer'
-              ? 'bg-warning/15 text-warning hover:bg-warning/25'
-              : composerSubmitLabel === 'Follow up'
-                ? 'bg-elevated text-primary hover:bg-elevated/80'
-                : '',
-          )}
+          size={composerSubmitLabel === 'Send' ? 'icon' : 'label'}
+          tone={composerSubmitLabel === 'Send' ? 'accent' : composerSubmitLabel === 'Steer' ? 'warning' : 'neutral'}
           title={composerSubmitLabel}
           aria-label={composerSubmitLabel}
         >
@@ -237,12 +222,12 @@ export function ConversationComposerActions({
               <span>{formatComposerActionLabel(composerSubmitLabel)}</span>
             </>
           )}
-        </button>
+        </ComposerActionButton>
       ) : (
-        <button
+        <ComposerActionButton
           type="button"
           disabled={true}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-default/70 bg-surface/65 text-dim/70"
+          tone="disabled"
           title="Send"
           aria-label="Send"
         >
@@ -258,7 +243,7 @@ export function ConversationComposerActions({
           >
             <path d="m18 15-6-6-6 6" />
           </svg>
-        </button>
+        </ComposerActionButton>
       )}
     </div>
   );

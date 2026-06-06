@@ -15,7 +15,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 ## Current Components
 
-- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `IconButton`, `IconLink`, `BrowsePathButton`, `CheckButton`, `TaskListItem`, `ActionTile`
+- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `ComposerActionButton`, `IconButton`, `IconLink`, `BrowsePathButton`, `CheckButton`, `TaskListItem`, `ActionTile`
 - Attachment controls: `AttachmentChip`, `AttachmentChipButton`
 - Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`, `WorkbenchShell`, `WorkbenchHeader`, `RailSection`, `RailSubsection`, `ShelfSection`, `ShelfHeader`, `ShelfBody`
@@ -72,6 +72,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.
 - Use `MessageActionButton` for low-emphasis transcript, message, and tool-output actions such as copy, edit, rerun, fork, and extension-provided message actions.
+- Use `ComposerActionButton` for round composer submit, steer, follow-up, stop, and disabled-send affordances. Set `tone="accent"` for send/submit, `tone="warning"` for steer, `tone="neutral"` for follow-up, `tone="danger"` for stop, and `tone="disabled"` for unavailable send/submit states. Use `size="icon"` for icon-only send/stop buttons, `size="compactLabel"` for 32px inline steer/follow-up buttons, and `size="label"` for 36px submit-answer buttons.
 - Use `MessageCard` for transcript-like user and assistant message bodies in chat rails, extension-owned agent conversations, and message previews. Pass `role="user"` for right-aligned prompt bubbles and omit it for assistant text blocks. Use `MessageMeta` for timestamps and compact transcript metadata beside `MessageActionButton`.
 - Use `IconButton` for icon-only actions such as close, remove, more, edit, refresh, or composer controls. Use `size="sm"` for dense 28px chrome, and `shape="circle"` for composer controls and compact round affordances. Always provide `aria-label` and usually `title`.
 - Use `IconLink` when the same square icon treatment navigates with a real `href`. Prefer it over styling anchors by hand.
@@ -142,6 +143,7 @@ These production areas already use the shared package and are useful examples fo
 - Attachment chrome: desktop composer image and drawing attachment shelves
 - Composer menus: model picker provider groups and slash-command source labels
 - Composer controls: file attachment and local dictation buttons
+- Composer actions: desktop send, steer, follow-up, stop, and submit-answer controls
 - Compact editors: scheduled task advanced options and other dense field groups
 - Dialog shells: desktop modals and extension install/details dialogs
 
