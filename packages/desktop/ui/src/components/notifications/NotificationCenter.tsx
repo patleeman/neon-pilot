@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
-import { cx, MetaLabel, StatusDot, type StatusDotTone } from '../ui';
+import { cx, IconButton, MetaLabel, StatusDot, TextButton, type StatusDotTone } from '../ui';
 import { type NotificationItem, type NotificationType, useNotificationStore } from './notificationStore';
 
 const TYPE_DOT_TONE: Record<NotificationType, StatusDotTone> = {
@@ -112,9 +112,11 @@ function NotificationRow({
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-          <button
+          <IconButton
+            compact
+            size="sm"
             type="button"
-            className="rounded p-0.5 text-steel/40 transition-colors hover:text-secondary"
+            className="text-steel/40 hover:text-secondary"
             onClick={(e) => {
               e.stopPropagation();
               void copyNotification();
@@ -136,10 +138,12 @@ function NotificationRow({
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
             </svg>
-          </button>
-          <button
+          </IconButton>
+          <IconButton
+            compact
+            size="sm"
             type="button"
-            className="rounded p-0.5 text-steel/40 transition-colors hover:text-secondary"
+            className="text-steel/40 hover:text-secondary"
             onClick={(e) => {
               e.stopPropagation();
               onDismiss(item.id);
@@ -160,7 +164,7 @@ function NotificationRow({
               <path d="M18 6 6 18" />
               <path d="m6 6 12 12" />
             </svg>
-          </button>
+          </IconButton>
         </div>
       </div>
     </div>
@@ -199,27 +203,29 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
           <div className="flex items-center gap-1">
             {hasNotifications && (
               <>
-                <button
+                <TextButton
                   type="button"
-                  className="rounded px-1.5 py-0.5 text-[9px] font-medium text-dim transition-colors hover:bg-steel/10 hover:text-secondary"
+                  className="px-1.5 py-0.5 text-[9px]"
                   onClick={dismissAll}
                 >
                   Dismiss all
-                </button>
+                </TextButton>
                 {hasUnread && (
-                  <button
+                  <TextButton
                     type="button"
-                    className="rounded px-1.5 py-0.5 text-[9px] font-medium text-dim transition-colors hover:bg-steel/10 hover:text-secondary"
+                    className="px-1.5 py-0.5 text-[9px]"
                     onClick={markAllRead}
                   >
                     Mark read
-                  </button>
+                  </TextButton>
                 )}
               </>
             )}
-            <button
+            <IconButton
+              compact
+              size="sm"
               type="button"
-              className="rounded p-0.5 text-secondary transition-colors hover:bg-steel/10 hover:text-primary"
+              className="text-secondary hover:text-primary"
               onClick={onClose}
               aria-label="Close notifications"
             >
@@ -236,7 +242,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                 <path d="M18 6 6 18" />
                 <path d="m6 6 12 12" />
               </svg>
-            </button>
+            </IconButton>
           </div>
         </div>
 
