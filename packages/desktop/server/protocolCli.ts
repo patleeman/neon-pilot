@@ -398,6 +398,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   });
   const code = await runProtocolCli(argv);
   process.exitCode = code;
+  if (!process.env.VITEST) process.exit(code);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
