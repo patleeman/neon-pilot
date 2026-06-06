@@ -676,9 +676,9 @@ function TaskEditorForm({
             </div>
 
             <div className="flex shrink-0 items-center justify-end gap-3 xl:self-end">
-              <button type="button" onClick={onCancel} className="text-[13px] text-secondary transition-colors hover:text-primary">
+              <TextButton type="button" onClick={onCancel} className="text-[13px]">
                 Cancel
-              </button>
+              </TextButton>
               <ToolbarButton type="submit" disabled={saving}>
                 {saving ? (mode === 'create' ? 'Creating…' : 'Saving…') : mode === 'create' ? 'Create' : 'Save'}
               </ToolbarButton>
