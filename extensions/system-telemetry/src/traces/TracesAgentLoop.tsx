@@ -9,6 +9,7 @@ import {
   MetricTile,
   type MetricTone,
   PanelHeader,
+  PanelMessage,
   ProgressRow,
   type ProgressBarTone,
   StatGrid,
@@ -20,7 +21,9 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="🔄 Agent Loop Health" meta="No data yet" metaClassName="bg-transparent px-0" />
-        <div className="p-6 text-center text-[12px] text-dim">Loop metrics appear after agent runs complete.</div>
+        <PanelMessage align="center" className="p-6">
+          Loop metrics appear after agent runs complete.
+        </PanelMessage>
       </SurfacePanel>
     );
   }

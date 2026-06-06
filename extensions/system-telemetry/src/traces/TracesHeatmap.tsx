@@ -3,14 +3,16 @@
  */
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { PanelHeader, PanelMessage, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
   if (!data || data.length === 0) {
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Token Activity — All Retained History" meta="No data yet" metaClassName="bg-transparent px-0" />
-        <div className="p-6 text-center text-[12px] text-dim">Data accumulates after sessions produce tokens.</div>
+        <PanelMessage align="center" className="p-6">
+          Data accumulates after sessions produce tokens.
+        </PanelMessage>
       </SurfacePanel>
     );
   }

@@ -3,14 +3,16 @@
  */
 
 import type { TraceToolHealth } from '@neon-pilot/extensions/data';
-import { MetricTile, type MetricTone, PanelHeader, ProgressBar, ProgressRow, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { MetricTile, type MetricTone, PanelHeader, PanelMessage, ProgressBar, ProgressRow, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Tool Telemetry" meta="No tool data yet" metaClassName="bg-transparent px-0" />
-        <div className="p-6 text-center text-[12px] text-dim">Tool calls will appear here as agents execute tools.</div>
+        <PanelMessage align="center" className="p-6">
+          Tool calls will appear here as agents execute tools.
+        </PanelMessage>
       </SurfacePanel>
     );
   }

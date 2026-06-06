@@ -7,6 +7,7 @@ import {
   DashboardGridCell,
   MetricTile,
   PanelHeader,
+  PanelMessage,
   ProgressRow,
   SectionLabel,
   SurfacePanel,
@@ -17,7 +18,9 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Auto Mode" meta="No auto mode activity" metaClassName="bg-transparent px-0" />
-        <div className="p-6 text-center text-[12px] text-dim">Auto mode state changes will appear here.</div>
+        <PanelMessage align="center" className="p-6">
+          Auto mode state changes will appear here.
+        </PanelMessage>
       </SurfacePanel>
     );
   }
