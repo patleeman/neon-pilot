@@ -22,7 +22,7 @@ import {
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
 import { addNotification } from '../components/notifications/notificationStore';
-import { AppPageEmptyState, EmptyState, LoadingState, PageHeader } from '../components/ui';
+import { AppPageEmptyState, EmptyState, LoadingState, PageHeader, SectionLabel } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
 import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
 import {
@@ -6363,7 +6363,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   {pendingBrowserComments.length > 0 ? (
                     <div className="border-b border-border-subtle/60 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dim">Browser comments</p>
+                        <SectionLabel tone="muted">Browser comments</SectionLabel>
                         <button
                           type="button"
                           className="ui-toolbar-button px-2 py-1 text-[11px]"

@@ -90,7 +90,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `ErrorState` for blocking load failures; pass `title` plus `body` or `message` when a heading helps. Use `Notice tone="danger"` for inline validation, save, and action feedback.
 - Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.
 - Use `CompactCard` for small bordered metadata blocks in rails, settings, dashboards, and extension panels. Compose it with `CardTitle`, `CardBody`, and `CardMeta`; set `as="article"` or `as="li"` only when the surrounding structure needs that semantic element.
-- Use `SectionLabel` for compact uppercase section, chart, and metadata labels. Set `tone="muted"` for low-emphasis labels in dense dashboards.
+- Use `SectionLabel` for compact uppercase section, chart, error-panel, and metadata labels. Set `tone="muted"` for low-emphasis labels in dense dashboards and app chrome.
 - Use `MetaLabel` for inline uppercase metadata tags such as file status, artifact kind, and live/current badges.
 - Use `CardTitle`, `CardBody`, and `CardMeta` for compact rail, settings, and panel typography instead of raw `ui-card-*` class names. Set `as="span"`, `as="label"`, or `as="summary"` only when semantics require it.
 - Use `InlineMeta` for compact dim metadata with optional icons or spinners, such as "updated 2m ago", "saving...", counts, and inline status notes.
@@ -109,6 +109,7 @@ These production areas already use the shared package and are useful examples fo
 - Search and filters: `system-extension-manager`, `system-automations`
 - Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`
 - Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Transcript chrome: desktop browser comment shelves, app error recovery panels, and file-change tool diffs
 - Dialog shells: desktop modals and extension install/details dialogs
 
 ## Extraction Backlog

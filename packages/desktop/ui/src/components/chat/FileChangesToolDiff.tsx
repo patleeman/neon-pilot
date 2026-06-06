@@ -2,7 +2,7 @@ import type { FileDiffOptions } from '@pierre/diffs';
 import { type CSSProperties, lazy, Suspense, useMemo, useState } from 'react';
 
 import { type ColorTheme, useTheme } from '../../ui-state/theme';
-import { cx } from '../ui';
+import { cx, MetaLabel } from '../ui';
 
 interface FileChange {
   path: string;
@@ -213,7 +213,7 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
                 <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-primary" title={key}>
                   {key}
                 </span>
-                <span className="shrink-0 uppercase tracking-[0.12em] text-dim">{statusLabel(change.status)}</span>
+                <MetaLabel tone="muted">{statusLabel(change.status)}</MetaLabel>
                 <span className="shrink-0 font-mono tabular-nums">
                   <span className="text-success">+{change.additions}</span> <span className="text-danger">-{change.deletions}</span>
                 </span>

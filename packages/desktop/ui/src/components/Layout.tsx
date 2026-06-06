@@ -54,7 +54,7 @@ import {
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
 import { addNotification, NotificationProvider } from './notifications/notificationStore';
-import { ActionTile, CenteredMessage, cx, IconButton, PanelMessage } from './ui';
+import { ActionTile, CenteredMessage, cx, IconButton, PanelMessage, SectionLabel } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
 const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
@@ -508,12 +508,12 @@ class RouteContentBoundary extends Component<
       <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden select-text">
         <div className="flex h-full items-center justify-center px-8 py-10">
           <div className="max-w-lg rounded-2xl border border-border-subtle bg-surface px-6 py-6 shadow-sm">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-dim">Recovered from render error</p>
+            <SectionLabel tone="muted">Recovered from render error</SectionLabel>
             <h1 className="mt-2 text-[22px] font-semibold text-primary">{title}</h1>
             <p className="mt-2 text-[13px] leading-6 text-secondary">{body}</p>
             {errorMessage ? (
               <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-dim">Error details</p>
+                <SectionLabel tone="muted">Error details</SectionLabel>
                 <p className="mt-2 whitespace-pre-wrap break-words font-mono text-[12px] leading-5 text-primary">{errorMessage}</p>
               </div>
             ) : null}
@@ -877,7 +877,7 @@ function WorkbenchNewTabPage({
   return (
     <div className="flex h-full items-center justify-center px-8 text-center select-text">
       <div className="w-full max-w-xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
+        <SectionLabel tone="secondary">Workbench</SectionLabel>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
         <div className="mt-6 grid gap-2 sm:grid-cols-2">
           <ActionTile
