@@ -23,7 +23,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
-- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`
 - Utility: `cx`
 
@@ -95,6 +95,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `CardTitle`, `CardBody`, and `CardMeta` for compact rail, settings, and panel typography instead of raw `ui-card-*` class names. Set `as="span"`, `as="label"`, or `as="summary"` only when semantics require it.
 - Use `InlineMeta` for compact dim metadata with optional icons or spinners, such as "updated 2m ago", "saving...", counts, and inline status notes.
 - For transcript or tool-result cards, compose `SurfacePanel muted` with `CardTitle`, `Pill`, `CardMeta`, optional `CardBody`, `InlineMeta`, `MetaLabel`, `SectionLabel`, and `TextButton`. Use `MetaLabel` for live/current/kind markers and compact field labels, and `SectionLabel` for small subsections such as prompts, replies, errors, and problems. This keeps artifact, checkpoint, ask-user, trace, and tool cards consistent without creating tool-specific primitives.
+- Use `RowButton` for compact interactive rows with custom internals, such as file rows, command rows, chooser rows, and nested list entries. Use `compact` for dense rails and `selected` for the active row.
 - Use `MetricTile` for compact value/label cards in dashboards. Prefer its `tone`, `size`, `align`, and `appearance="plain"` props over custom font and color utility recipes.
 - Use `DashboardGrid` with `DashboardGridCell` for compact metric and trace dashboards that need two-to-four columns with consistent dividers.
 - Use `InlineCode` for inline paths, ids, commands, commit hashes, and compact tokens. It wraps long values by default; set `wrap={false}` only for short fixed tokens.
@@ -109,6 +110,7 @@ These production areas already use the shared package and are useful examples fo
 - Search and filters: `system-extension-manager`, `system-automations`
 - Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`, `system-model-picker`
 - Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Compact rows: checkpoint file pickers and nested file lists
 - Feedback: extension manager diagnostics and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
 - Composer menus: model picker provider groups and slash-command source labels

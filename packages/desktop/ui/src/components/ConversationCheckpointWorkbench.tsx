@@ -8,7 +8,7 @@ import { formatDate } from '../shared/utils';
 import { CheckpointDiffSection, fileDisplayPath } from './checkpoints/CheckpointDiffView';
 import { UNCOMMITTED_SENTINEL, useConversationCheckpointSummaries, useUncommittedDiff } from './conversationCheckpointHooks';
 import { addNotification } from './notifications/notificationStore';
-import { CenteredLoadingState, CenteredMessage, cx, ErrorState, PanelMessage, SectionLabel, SegmentedControl } from './ui';
+import { CenteredLoadingState, CenteredMessage, cx, ErrorState, PanelMessage, RowButton, SectionLabel, SegmentedControl } from './ui';
 
 type DiffViewMode = 'unified' | 'split';
 
@@ -229,9 +229,9 @@ export function ConversationDiffRailContent({
                 <div className="pb-1 pl-7 pr-1">
                   {files ? (
                     files.slice(0, 12).map((file) => (
-                      <button
+                      <RowButton
                         key={`${checkpoint.id}:${file.path}:${file.previousPath ?? ''}`}
-                        type="button"
+                        compact
                         onClick={() => {
                           if (checkpoint.id === activeCheckpointId && onScrollToFile) {
                             onScrollToFile(file.path);
@@ -239,7 +239,7 @@ export function ConversationDiffRailContent({
                             onOpenCheckpoint(checkpoint.id);
                           }
                         }}
-                        className="group flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-secondary transition-colors hover:bg-elevated/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
+                        className="group"
                         title={fileDisplayPath(file as ConversationCommitCheckpointRecord['files'][number])}
                       >
                         <svg
@@ -262,7 +262,7 @@ export function ConversationDiffRailContent({
                         <span className="shrink-0 font-mono text-[10px] tabular-nums">
                           <span className="text-success">+{file.additions}</span> <span className="text-danger">-{file.deletions}</span>
                         </span>
-                      </button>
+                      </RowButton>
                     ))
                   ) : (
                     <PanelMessage className="px-2 py-1.5">Loading files...</PanelMessage>
@@ -339,11 +339,11 @@ function UncommittedRailEntry({
       {showFiles && files.length > 0 ? (
         <div className="pb-1 pl-7 pr-1">
           {files.slice(0, 12).map((file) => (
-            <button
+            <RowButton
               key={file.path}
-              type="button"
+              compact
               onClick={() => onFileClick?.(file.path)}
-              className="group flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-secondary transition-colors hover:bg-elevated/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
+              className="group"
               title={fileDisplayPath(file as ConversationCommitCheckpointRecord['files'][number])}
             >
               <svg
@@ -366,7 +366,7 @@ function UncommittedRailEntry({
               <span className="shrink-0 font-mono text-[10px] tabular-nums">
                 <span className="text-success">+{file.additions}</span> <span className="text-danger">-{file.deletions}</span>
               </span>
-            </button>
+            </RowButton>
           ))}
           {files.length > 12 ? <div className="px-2 py-1 text-[10px] text-dim">+{files.length - 12} more files</div> : null}
         </div>

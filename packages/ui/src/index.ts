@@ -79,6 +79,7 @@ export {
   type ProgressBarTone,
   ProgressRow,
   ResourceListItem,
+  RowButton,
   SearchInput,
   SectionLabel,
   type SectionLabelTone,

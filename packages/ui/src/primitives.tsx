@@ -540,6 +540,25 @@ export function ResourceListItem({
   );
 }
 
+export const RowButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    selected?: boolean;
+    compact?: boolean;
+  }
+>(function RowButton({ className, children, selected = false, compact = false, type = 'button', ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cx('ui-row-button', compact && 'ui-row-button-compact', selected && 'ui-row-button-selected', className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
+
 export function CodeBlock({
   children,
   className,

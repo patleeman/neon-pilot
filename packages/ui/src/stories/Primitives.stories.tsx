@@ -53,6 +53,7 @@ import {
   ProgressBar,
   ProgressRow,
   ResourceListItem,
+  RowButton,
   SearchInput,
   SectionLabel,
   SegmentedControl,
@@ -267,6 +268,22 @@ const meta = {
             </p>
             <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
+            <div style={{ display: 'grid', gap: 4 }}>
+              <RowButton compact selected>
+                <span style={{ color: 'rgb(var(--color-dim))' }}>▸</span>
+                <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  packages/ui/src/primitives.tsx
+                </span>
+                <MetaLabel tone="muted">modified</MetaLabel>
+              </RowButton>
+              <RowButton compact>
+                <span style={{ color: 'rgb(var(--color-dim))' }}>▸</span>
+                <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  extensions/system-example/src/frontend.tsx
+                </span>
+                <MetaLabel tone="success">added</MetaLabel>
+              </RowButton>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
               <ActionTile icon="□" label="File Explorer" description="Browse workspace files." />
               <ActionTile icon="▸" label="Terminal" description="Open a terminal tab." meta="local" />
