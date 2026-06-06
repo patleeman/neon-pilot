@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { api } from '../client/api';
-import { Spinner, TextButton } from './ui';
+import { RuntimeFooter, Spinner, TerminalBlock } from './ui';
 
 export function ScheduledTaskLogSection({ taskId }: { taskId: string }) {
   const [log, setLog] = useState<string | null>(null);
@@ -32,19 +32,25 @@ export function ScheduledTaskLogSection({ taskId }: { taskId: string }) {
   }
 
   return (
-    <div className="border-t border-border-subtle pt-3">
-      <TextButton onClick={loadLog} tone="accent" className="flex items-center gap-1.5 text-[11px]">
-        {loading ? <Spinner /> : open ? '▾' : '▸'}
-        Last run log
-      </TextButton>
+    <RuntimeFooter
+      summary={
+        <span className="flex items-center gap-1.5 text-[11px]">
+          {loading ? <Spinner /> : null}
+          Last run log
+        </span>
+      }
+      open={open && log !== null}
+      onToggle={loadLog}
+      className="pt-3"
+    >
       {open && log !== null && (
         <div className="mt-2">
           {logPath && <p className="text-[9px] font-mono text-dim/50 truncate mb-1">{logPath.split('/').slice(-1)[0]}</p>}
-          <pre className="text-[10px] font-mono text-secondary whitespace-pre-wrap break-all bg-elevated rounded-lg p-2.5 max-h-64 overflow-y-auto leading-relaxed">
+          <TerminalBlock compact className="max-h-64 min-h-0 break-all bg-elevated p-2.5 text-[10px] leading-relaxed">
             {log || '(empty)'}
-          </pre>
+          </TerminalBlock>
         </div>
       )}
-    </div>
+    </RuntimeFooter>
   );
 }
