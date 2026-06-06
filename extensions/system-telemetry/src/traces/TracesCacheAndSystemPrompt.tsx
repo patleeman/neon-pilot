@@ -3,7 +3,7 @@
  */
 
 import type { CacheEfficiencyAggregate, SystemPromptAggregate } from '@neon-pilot/extensions/data';
-import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesCacheAndSystemPrompt({
   cacheEfficiency,
@@ -26,18 +26,24 @@ export function TracesCacheAndSystemPrompt({
           {cacheEfficiency && (
             <>
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mb-3">
-                <QuickStat
+                <MetricTile
                   value={`${fmtPercent(cacheEfficiency.requestCacheHitRate)}%`}
                   label="Request Hit Rate"
-                  cls={cacheEfficiency.requestCacheHitRate > 50 ? 'text-success' : 'text-warning'}
+                  tone={cacheEfficiency.requestCacheHitRate > 50 ? 'success' : 'warning'}
+                  valueClassName="tabular-nums"
                 />
-                <QuickStat
+                <MetricTile
                   value={`${fmtPercent(cacheEfficiency.overallHitRate)}%`}
                   label="Cached Share"
-                  cls={cacheEfficiency.overallHitRate > 30 ? 'text-success' : 'text-warning'}
+                  tone={cacheEfficiency.overallHitRate > 30 ? 'success' : 'warning'}
+                  valueClassName="tabular-nums"
                 />
-                <QuickStat value={fmt(cacheEfficiency.totalCached)} label="Cache Read" />
-                <QuickStat value={`${cacheEfficiency.cachedRequests}/${cacheEfficiency.requests}`} label="Cached Requests" />
+                <MetricTile value={fmt(cacheEfficiency.totalCached)} label="Cache Read" valueClassName="tabular-nums" />
+                <MetricTile
+                  value={`${cacheEfficiency.cachedRequests}/${cacheEfficiency.requests}`}
+                  label="Cached Requests"
+                  valueClassName="tabular-nums"
+                />
               </div>
               {cacheEfficiency.byModel.map((m) => {
                 const barCls = m.requestCacheHitRate > 50 ? 'bg-success' : m.requestCacheHitRate > 10 ? 'bg-warning' : 'bg-danger';
@@ -69,9 +75,13 @@ export function TracesCacheAndSystemPrompt({
           {systemPrompt && (
             <>
               <div className="grid grid-cols-3 gap-2 mb-3">
-                <QuickStat value={fmt(systemPrompt.avgSystemPromptTokens)} label="Avg Size" />
-                <QuickStat value={`${fmtPercent(systemPrompt.avgPctOfContextWindow)}%`} label="Avg % Window" />
-                <QuickStat value={fmt(systemPrompt.maxSystemPromptTokens)} label="Max Size" />
+                <MetricTile value={fmt(systemPrompt.avgSystemPromptTokens)} label="Avg Size" valueClassName="tabular-nums" />
+                <MetricTile
+                  value={`${fmtPercent(systemPrompt.avgPctOfContextWindow)}%`}
+                  label="Avg % Window"
+                  valueClassName="tabular-nums"
+                />
+                <MetricTile value={fmt(systemPrompt.maxSystemPromptTokens)} label="Max Size" valueClassName="tabular-nums" />
               </div>
               {systemPrompt.byModel.length > 0 && (
                 <div className="space-y-1.5 mb-3">
@@ -95,17 +105,6 @@ export function TracesCacheAndSystemPrompt({
         </DashboardGridCell>
       </DashboardGrid>
     </SurfacePanel>
-  );
-}
-
-function QuickStat({ value, label, cls = '' }: { value: string; label: string; cls?: string }) {
-  return (
-    <div className="min-w-0 bg-elevated rounded-lg p-2.5 text-center">
-      <div className={`truncate text-[17px] font-semibold font-mono tabular-nums ${cls}`} title={value}>
-        {value}
-      </div>
-      <SectionLabel tone="muted">{label}</SectionLabel>
-    </div>
   );
 }
 

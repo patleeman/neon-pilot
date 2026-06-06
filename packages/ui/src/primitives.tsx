@@ -28,6 +28,16 @@ const PILL_TONE_CLASSES = {
 } as const;
 
 export type PillTone = keyof typeof PILL_TONE_CLASSES;
+export type MetricTone = 'default' | 'muted' | 'accent' | 'success' | 'warning' | 'danger';
+
+function metricToneClass(tone: MetricTone) {
+  if (tone === 'muted') return 'ui-metric-tile-value-muted';
+  if (tone === 'accent') return 'ui-metric-tile-value-accent';
+  if (tone === 'success') return 'ui-metric-tile-value-success';
+  if (tone === 'warning') return 'ui-metric-tile-value-warning';
+  if (tone === 'danger') return 'ui-metric-tile-value-danger';
+  return null;
+}
 
 function pillToneClass(tone: PillTone) {
   return PILL_TONE_CLASSES[tone];
@@ -495,6 +505,54 @@ export function Stat({
       {detail ? <div className={cx('ui-stat-detail', detailClassName)}>{detail}</div> : null}
       {children}
     </div>
+  );
+}
+
+export function MetricTile({
+  label,
+  value,
+  detail,
+  children,
+  className,
+  valueClassName,
+  detailClassName,
+  tone = 'default',
+  size = 'md',
+  align = 'center',
+  appearance = 'tile',
+  ...props
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  detail?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  valueClassName?: string;
+  detailClassName?: string;
+  tone?: MetricTone;
+  size?: 'sm' | 'md' | 'lg';
+  align?: 'left' | 'center';
+  appearance?: 'tile' | 'plain';
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <Stat
+      label={label}
+      value={value}
+      detail={detail}
+      labelPosition="after"
+      className={cx(
+        'ui-metric-tile',
+        `ui-metric-tile-${size}`,
+        `ui-metric-tile-${appearance}`,
+        align === 'left' && 'ui-metric-tile-left',
+        className,
+      )}
+      valueClassName={cx('ui-metric-tile-value', metricToneClass(tone), valueClassName)}
+      detailClassName={cx('ui-metric-tile-detail', detailClassName)}
+      {...props}
+    >
+      {children}
+    </Stat>
   );
 }
 

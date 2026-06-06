@@ -2,7 +2,7 @@
  * Auto Mode tracking display
  */
 
-import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
   if (!data || data.recentEvents.length === 0) {
@@ -24,9 +24,9 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
             Activity
           </SectionLabel>
           <div className="flex gap-2 mb-4">
-            <QuickStat value={String(data.currentActive)} label="Currently Active" cls="text-accent" />
-            <QuickStat value={String(data.enabledCount)} label="Times Enabled" cls="text-success" />
-            <QuickStat value={String(data.disabledCount)} label="Times Stopped" cls="text-warning" />
+            <MetricTile className="flex-1" value={String(data.currentActive)} label="Currently Active" tone="accent" />
+            <MetricTile className="flex-1" value={String(data.enabledCount)} label="Times Enabled" tone="success" />
+            <MetricTile className="flex-1" value={String(data.disabledCount)} label="Times Stopped" tone="warning" />
           </div>
           {data.topStopReasons.length > 0 && (
             <div className="pt-3 border-t border-border-subtle">
@@ -69,14 +69,5 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
         </DashboardGridCell>
       </DashboardGrid>
     </SurfacePanel>
-  );
-}
-
-function QuickStat({ value, label, cls }: { value: string; label: string; cls: string }) {
-  return (
-    <div className="flex-1 bg-elevated rounded-lg p-2.5 text-center">
-      <div className={`text-[17px] font-semibold font-mono ${cls}`}>{value}</div>
-      <SectionLabel tone="muted">{label}</SectionLabel>
-    </div>
   );
 }

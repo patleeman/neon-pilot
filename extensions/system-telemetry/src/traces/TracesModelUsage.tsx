@@ -3,7 +3,7 @@
  */
 
 import type { CacheEfficiencyAggregate, TraceModelUsage, TraceThroughput } from '@neon-pilot/extensions/data';
-import { DashboardGrid, DashboardGridCell, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, DashboardGridCell, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesModelUsage({
   models,
@@ -46,12 +46,12 @@ export function TracesModelUsage({
             Tokens by Model
           </SectionLabel>
           <div className="flex gap-4 flex-wrap pb-3 mb-3 border-b border-border-subtle">
-            <Metric value={formatNumber(totalTokens)} label="Total" cls="text-accent" />
-            <Metric value={formatNumber(tokensInput)} label="Input" />
-            <Metric value={formatNumber(tokensOutput)} label="Output" />
-            <Metric value={formatNumber(tokensCached)} label="Cache Read" cls="text-success" />
-            <Metric value={formatNumber(tokensCachedWrite)} label="Cache Write" cls="text-warning" />
-            <Metric value={cacheHitRateLabel} label="Cached Share" cls="text-accent" />
+            <MetricTile value={formatNumber(totalTokens)} label="Total" tone="accent" size="lg" appearance="plain" />
+            <MetricTile value={formatNumber(tokensInput)} label="Input" size="lg" appearance="plain" />
+            <MetricTile value={formatNumber(tokensOutput)} label="Output" size="lg" appearance="plain" />
+            <MetricTile value={formatNumber(tokensCached)} label="Cache Read" tone="success" size="lg" appearance="plain" />
+            <MetricTile value={formatNumber(tokensCachedWrite)} label="Cache Write" tone="warning" size="lg" appearance="plain" />
+            <MetricTile value={cacheHitRateLabel} label="Cached Share" tone="accent" size="lg" appearance="plain" />
           </div>
           {models.map((m) => {
             const hitRate = cacheByModel[m.modelId];
@@ -108,8 +108,8 @@ export function TracesModelUsage({
             Throughput
           </SectionLabel>
           <div className="flex gap-2 mb-3">
-            <QuickStat value={`${totalThroughputTokensPerSec}`} label="tok/s avg" cls="text-accent" />
-            <QuickStat value={`${peakThroughputTokensPerSec}`} label="tok/s peak" cls="text-warning" />
+            <MetricTile className="flex-1" value={`${totalThroughputTokensPerSec}`} label="tok/s avg" tone="accent" />
+            <MetricTile className="flex-1" value={`${peakThroughputTokensPerSec}`} label="tok/s peak" tone="warning" />
           </div>
           {throughput.length > 0 ? (
             throughput.map((t) => (
@@ -150,24 +150,6 @@ export function TracesModelUsage({
         </DashboardGridCell>
       </DashboardGrid>
     </SurfacePanel>
-  );
-}
-
-function Metric({ value, label, cls = '' }: { value: string; label: string; cls?: string }) {
-  return (
-    <div className="text-center">
-      <div className={`text-[18px] font-semibold font-mono tracking-tight ${cls}`}>{value}</div>
-      <SectionLabel tone="muted">{label}</SectionLabel>
-    </div>
-  );
-}
-
-function QuickStat({ value, label, cls = '' }: { value: string; label: string; cls?: string }) {
-  return (
-    <div className="flex-1 bg-elevated rounded-lg p-2.5 text-center">
-      <div className={`text-[17px] font-semibold font-mono ${cls}`}>{value}</div>
-      <SectionLabel tone="muted">{label}</SectionLabel>
-    </div>
   );
 }
 

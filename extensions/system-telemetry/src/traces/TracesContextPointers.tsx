@@ -6,7 +6,7 @@
  */
 
 import type { ContextPointerUsageResult } from '@neon-pilot/extensions/data';
-import { DashboardGrid, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { DashboardGrid, MetricTile, PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
   if (!data || data.summary.totalSuggested === 0) {
@@ -19,27 +19,48 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
   }
 
   const { summary, daily } = data;
-  const usageRateColor = summary.usageRate >= 50 ? 'text-success' : summary.usageRate >= 20 ? 'text-warning' : 'text-danger';
+  const usageRateTone = summary.usageRate >= 50 ? 'success' : summary.usageRate >= 20 ? 'warning' : 'danger';
 
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader title="🔍 Suggested Context Usage" meta={`${summary.usageRate}% of sessions used suggestions`} />
 
       <DashboardGrid columns={4} divide="x" className="border-b border-border-subtle">
-        <Stat value={`${summary.usageRate}%`} label="Usage Rate" cls={usageRateColor} sub="sessions that inspected a pointer" />
-        <Stat
+        <MetricTile
+          value={`${summary.usageRate}%`}
+          label="Usage Rate"
+          tone={usageRateTone}
+          detail="sessions that inspected a pointer"
+          size="lg"
+          appearance="plain"
+          className="px-4 py-3"
+        />
+        <MetricTile
           value={String(summary.totalInspects)}
           label="Pointer Inspects"
-          cls="text-accent"
-          sub={`of ${summary.totalAnyInspects} total inspect calls`}
+          tone="accent"
+          detail={`of ${summary.totalAnyInspects} total inspect calls`}
+          size="lg"
+          appearance="plain"
+          className="px-4 py-3"
         />
-        <Stat
+        <MetricTile
           value={String(summary.totalSuggested)}
           label="Turns w/ Pointers"
-          cls="text-primary"
-          sub={`${summary.sessionsWithSuggested} sessions`}
+          detail={`${summary.sessionsWithSuggested} sessions`}
+          size="lg"
+          appearance="plain"
+          className="px-4 py-3"
         />
-        <Stat value={String(summary.avgPointersPerTurn)} label="Avg Pointers / Turn" cls="text-dim" sub="suggested per prompt" />
+        <MetricTile
+          value={String(summary.avgPointersPerTurn)}
+          label="Avg Pointers / Turn"
+          tone="muted"
+          detail="suggested per prompt"
+          size="lg"
+          appearance="plain"
+          className="px-4 py-3"
+        />
       </DashboardGrid>
 
       {daily.length > 1 && (
@@ -51,16 +72,6 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
         </div>
       )}
     </SurfacePanel>
-  );
-}
-
-function Stat({ value, label, cls, sub }: { value: string; label: string; cls: string; sub?: string }) {
-  return (
-    <div className="px-4 py-3 flex flex-col gap-0.5">
-      <SectionLabel tone="muted">{label}</SectionLabel>
-      <div className={`text-[22px] font-semibold leading-none ${cls}`}>{value}</div>
-      {sub && <div className="text-[10px] text-dim mt-0.5">{sub}</div>}
-    </div>
   );
 }
 

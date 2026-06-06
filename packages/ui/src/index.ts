@@ -41,6 +41,8 @@ export {
   KeyValueItem,
   KeyValueList,
   LoadingState,
+  MetricTile,
+  type MetricTone,
   MenuGroupLabel,
   MenuItem,
   MenuSeparator,

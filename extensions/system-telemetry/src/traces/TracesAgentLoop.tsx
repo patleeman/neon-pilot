@@ -3,7 +3,7 @@
  */
 
 import type { TraceAgentLoop } from '@neon-pilot/extensions/data';
-import { PanelHeader, Stat, StatGrid, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { MetricTile, type MetricTone, PanelHeader, StatGrid, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {
@@ -21,33 +21,25 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
       <div className="p-4">
         {/* Loop stats grid */}
         <StatGrid className="mb-4 !grid-cols-2 gap-2.5 lg:!grid-cols-4">
-          <LoopStat value={formatNumber(loop.turnsPerRun)} label="Avg Turns / Run" cls="text-accent" />
-          <LoopStat value={formatNumber(loop.stepsPerTurn)} label="Avg Steps / Turn" cls="text-accent" />
-          <LoopStat value={formatNumber(loop.toolCallsPerRun)} label="Tool Calls / Run" cls="text-accent" />
-          <LoopStat value={formatNumber(loop.toolCallsP95)} label="P95 Tool Calls" cls="text-warning" />
+          <LoopStat value={formatNumber(loop.turnsPerRun)} label="Avg Turns / Run" tone="accent" />
+          <LoopStat value={formatNumber(loop.stepsPerTurn)} label="Avg Steps / Turn" tone="accent" />
+          <LoopStat value={formatNumber(loop.toolCallsPerRun)} label="Tool Calls / Run" tone="accent" />
+          <LoopStat value={formatNumber(loop.toolCallsP95)} label="P95 Tool Calls" tone="warning" />
           <LoopStat
             value={formatPercent(loop.toolErrorRatePct)}
             label="Tool Error Rate"
-            cls={loop.toolErrorRatePct > 0 ? 'text-danger' : 'text-dim'}
+            tone={loop.toolErrorRatePct > 0 ? 'danger' : 'muted'}
           />
-          <LoopStat value={formatTokens(loop.avgTokensPerRun)} label="Avg Tokens / Run" cls="text-secondary" />
-          <LoopStat value={formatNumber(loop.subagentsPerRun)} label="Subagents / Run" cls="text-accent" />
-          <LoopStat value={formatDuration(loop.avgDurationMs)} label="Avg Run Duration" cls="text-success" />
+          <LoopStat value={formatTokens(loop.avgTokensPerRun)} label="Avg Tokens / Run" />
+          <LoopStat value={formatNumber(loop.subagentsPerRun)} label="Subagents / Run" tone="accent" />
+          <LoopStat value={formatDuration(loop.avgDurationMs)} label="Avg Run Duration" tone="success" />
           <LoopStat
             value={formatNumber(loop.runsOver20Turns)}
             label="Runs &gt; 20 Turns"
-            cls={loop.runsOver20Turns > 0 ? 'text-warning' : 'text-dim'}
+            tone={loop.runsOver20Turns > 0 ? 'warning' : 'muted'}
           />
-          <LoopStat
-            value={formatNumber(loop.stuckRuns)}
-            label="Stuck Runs (&gt;10m)"
-            cls={loop.stuckRuns > 0 ? 'text-danger' : 'text-dim'}
-          />
-          <LoopStat
-            value={formatPercent(loop.stuckRunPct)}
-            label="Stuck Run Rate"
-            cls={loop.stuckRunPct > 0 ? 'text-danger' : 'text-dim'}
-          />
+          <LoopStat value={formatNumber(loop.stuckRuns)} label="Stuck Runs (&gt;10m)" tone={loop.stuckRuns > 0 ? 'danger' : 'muted'} />
+          <LoopStat value={formatPercent(loop.stuckRunPct)} label="Stuck Run Rate" tone={loop.stuckRunPct > 0 ? 'danger' : 'muted'} />
         </StatGrid>
 
         <div className="pt-3 border-t border-border-subtle">
@@ -79,16 +71,8 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   );
 }
 
-function LoopStat({ value, label, cls }: { value: string; label: string; cls: string }) {
-  return (
-    <Stat
-      label={label}
-      value={value}
-      labelPosition="after"
-      className="rounded-lg bg-elevated p-3 text-center"
-      valueClassName={`font-mono text-[17px] ${cls}`}
-    />
-  );
+function LoopStat({ value, label, tone = 'default' }: { value: string; label: string; tone?: MetricTone }) {
+  return <MetricTile label={label} value={value} size="lg" tone={tone} />;
 }
 
 function DurBar({ label, pct, val, color }: { label: string; pct: number; val: string; color: string }) {

@@ -28,6 +28,7 @@ import {
   KeyValueItem,
   KeyValueList,
   LoadingState,
+  MetricTile,
   MenuGroupLabel,
   MenuItem,
   MenuSeparator,
@@ -222,12 +223,10 @@ const meta = {
           </StatGrid>
           <DashboardGrid columns={2}>
             <DashboardGridCell>
-              <SectionLabel tone="muted">Throughput</SectionLabel>
-              <p style={{ margin: '6px 0 0', fontSize: 20, fontWeight: 600 }}>42 tok/s</p>
+              <MetricTile label="Throughput" value="42 tok/s" tone="accent" />
             </DashboardGridCell>
             <DashboardGridCell>
-              <SectionLabel tone="muted">Cache</SectionLabel>
-              <p style={{ margin: '6px 0 0', fontSize: 20, fontWeight: 600 }}>68%</p>
+              <MetricTile label="Cache" value="68%" tone="success" />
             </DashboardGridCell>
           </DashboardGrid>
           <KeyValueList>

@@ -799,6 +799,81 @@ body {
   white-space: nowrap;
 }
 
+.ui-metric-tile {
+  border-radius: 0.5rem;
+  background: rgb(var(--color-elevated));
+  padding: 0.625rem;
+  text-align: center;
+}
+
+.ui-metric-tile-left {
+  text-align: left;
+}
+
+.ui-metric-tile-sm {
+  padding: 0.5rem;
+}
+
+.ui-metric-tile-md {
+  padding: 0.625rem;
+}
+
+.ui-metric-tile-lg {
+  padding: 0.75rem;
+}
+
+.ui-metric-tile-plain {
+  background: transparent;
+  padding: 0;
+}
+
+.ui-metric-tile .ui-stat-label {
+  margin-top: 0;
+}
+
+.ui-metric-tile-value {
+  margin-top: 0;
+  color: rgb(var(--color-primary));
+  font-family: var(--font-mono);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.ui-metric-tile-sm .ui-metric-tile-value {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.ui-metric-tile-lg .ui-metric-tile-value {
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+}
+
+.ui-metric-tile-value-muted {
+  color: rgb(var(--color-dim));
+}
+
+.ui-metric-tile-value-accent {
+  color: rgb(var(--color-accent));
+}
+
+.ui-metric-tile-value-success {
+  color: rgb(var(--color-success));
+}
+
+.ui-metric-tile-value-warning {
+  color: rgb(var(--color-warning));
+}
+
+.ui-metric-tile-value-danger {
+  color: rgb(var(--color-danger));
+}
+
+.ui-metric-tile-detail {
+  margin-top: 0.125rem;
+  font-size: 0.625rem;
+}
+
 .ui-key-value-list {
   overflow: hidden;
   border-radius: 0.75rem;

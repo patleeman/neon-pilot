@@ -3,7 +3,7 @@
  */
 
 import type { TraceToolHealth } from '@neon-pilot/extensions/data';
-import { PanelHeader, ProgressBar, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { MetricTile, type MetricTone, PanelHeader, ProgressBar, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
@@ -90,7 +90,7 @@ function BashComplexity({ complexity, totalCalls }: { complexity: NonNullable<Tr
     <div>
       <div className="mb-2 grid grid-cols-3 gap-3 text-[11px]">
         <ComplexityStat label="Avg score" value={complexity.avgScore.toFixed(1)} />
-        <ComplexityStat label="Max score" value={String(complexity.maxScore)} cls={complexity.maxScore >= 10 ? 'text-warning' : ''} />
+        <ComplexityStat label="Max score" value={String(complexity.maxScore)} tone={complexity.maxScore >= 10 ? 'warning' : 'default'} />
         <ComplexityStat label="Max cmds" value={String(complexity.maxCommandCount)} />
       </div>
       <div className="space-y-1.5">
@@ -114,13 +114,8 @@ function BashComplexity({ complexity, totalCalls }: { complexity: NonNullable<Tr
   );
 }
 
-function ComplexityStat({ label, value, cls = '' }: { label: string; value: string; cls?: string }) {
-  return (
-    <div>
-      <div className="text-[9px] uppercase tracking-[0.06em] text-dim">{label}</div>
-      <div className={`font-mono text-[13px] font-semibold ${cls || 'text-primary'}`}>{value}</div>
-    </div>
-  );
+function ComplexityStat({ label, value, tone = 'default' }: { label: string; value: string; tone?: MetricTone }) {
+  return <MetricTile label={label} value={value} tone={tone} size="sm" align="left" appearance="plain" />;
 }
 
 function ToolCard({ tool }: { tool: TraceToolHealth }) {
@@ -141,7 +136,7 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
         <Stat
           label="Success"
           value={`${successRate.toFixed(1)}%`}
-          cls={tool.errors === 0 ? 'text-success' : hasTrouble ? 'text-danger' : 'text-warning'}
+          tone={tool.errors === 0 ? 'success' : hasTrouble ? 'danger' : 'warning'}
         />
         <Stat label="Avg Latency" value={formatDuration(tool.avgLatencyMs)} />
         <Stat label="P95 Latency" value={formatDuration(tool.p95LatencyMs)} />
@@ -170,11 +165,6 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-function Stat({ label, value, cls = '' }: { label: string; value: string; cls?: string }) {
-  return (
-    <div>
-      <div className="text-[9px] uppercase tracking-[0.06em] text-dim">{label}</div>
-      <div className={`text-[12px] font-mono font-medium ${cls || 'text-primary'}`}>{value}</div>
-    </div>
-  );
+function Stat({ label, value, tone = 'default' }: { label: string; value: string; tone?: MetricTone }) {
+  return <MetricTile label={label} value={value} tone={tone} size="sm" align="left" appearance="plain" />;
 }
