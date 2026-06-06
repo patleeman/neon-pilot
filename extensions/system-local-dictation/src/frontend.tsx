@@ -3,6 +3,7 @@ import {
   CardMeta,
   cx,
   Field,
+  IconButton,
   LoadingState,
   Notice,
   Select,
@@ -213,8 +214,8 @@ export function DictationButton({
   return (
     <>
       {state === 'recording' ? <DictationWaveform samples={samples} startedAt={startedAt} /> : null}
-      <button
-        type="button"
+      <IconButton
+        shape="circle"
         onPointerDown={(event) => {
           if (event.button !== 0 || buttonContext.composerDisabled || state === 'transcribing') return;
           event.preventDefault();
@@ -238,7 +239,7 @@ export function DictationButton({
         }}
         disabled={buttonContext.composerDisabled || state === 'transcribing'}
         className={cx(
-          'flex h-8 w-8 shrink-0 touch-none items-center justify-center rounded-full transition-colors disabled:cursor-default disabled:opacity-40',
+          'touch-none transition-colors disabled:cursor-default disabled:opacity-40',
           state === 'recording'
             ? 'bg-danger/15 text-danger hover:bg-danger/25'
             : state === 'transcribing'
@@ -255,7 +256,7 @@ export function DictationButton({
         aria-label={state === 'recording' ? 'Stop dictation' : 'Start dictation'}
       >
         {state === 'transcribing' ? <Spinner /> : <MicIcon />}
-      </button>
+      </IconButton>
     </>
   );
 }

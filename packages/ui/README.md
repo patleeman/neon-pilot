@@ -70,7 +70,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.
-- Use `IconButton` for icon-only actions such as close, remove, more, edit, or refresh. Use `shape="circle"` for composer controls and compact round affordances. Always provide `aria-label` and usually `title`.
+- Use `IconButton` for icon-only actions such as close, remove, more, edit, refresh, or composer controls. Use `shape="circle"` for composer controls and compact round affordances. Always provide `aria-label` and usually `title`.
 - Use `IconLink` when the same square icon treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `ActionTile` for dashboard, chooser, new-tab, and empty-state actions that need an icon, label, description, and optional meta. Prefer it over rebuilding bordered action cards.
 - Use `AttachmentChip` with `AttachmentChipButton` for compact file, image, drawing, and generated-asset rows in composer shelves, attachment lists, and upload previews. Keep file-specific labels, thumbnails, and actions in the caller.
@@ -117,6 +117,7 @@ These production areas already use the shared package and are useful examples fo
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
 - Attachment chrome: desktop composer image and drawing attachment shelves
 - Composer menus: model picker provider groups and slash-command source labels
+- Composer controls: file attachment and local dictation buttons
 - Compact editors: scheduled task advanced options and other dense field groups
 - Dialog shells: desktop modals and extension install/details dialogs
 
