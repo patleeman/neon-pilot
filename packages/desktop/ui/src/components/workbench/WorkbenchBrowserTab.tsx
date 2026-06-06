@@ -11,6 +11,7 @@ import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../../extensions/extensionRegi
 import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
 import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '../../local/workbenchBrowserTabs';
+import { Button, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 
@@ -474,12 +475,12 @@ export function WorkbenchBrowserTab({
               placeholder="What should the agent know about this?"
             />
             <div className="mt-2 flex justify-end gap-1.5">
-              <button type="button" className="ui-toolbar-button px-2 py-1 text-[11px]" onClick={() => setCommentDraft(null)}>
+              <ToolbarButton className="px-2 py-1 text-[11px]" onClick={() => setCommentDraft(null)}>
                 Cancel
-              </button>
-              <button type="button" className="ui-action-button px-2 py-1 text-[11px]" onClick={saveCommentDraft}>
+              </ToolbarButton>
+              <Button variant="action" className="px-2 py-1 text-[11px]" onClick={saveCommentDraft}>
                 Add comment
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
