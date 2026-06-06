@@ -13,6 +13,7 @@ import {
   Field,
   getDesktopBridge,
   getTopLevelDraggedPaths,
+  IconButton,
   MenuItem,
   MenuSeparator,
   normalizeOpenFileIds,
@@ -1469,9 +1470,8 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
                   knowledgeBaseSyncPresentation.pulse && 'animate-pulse',
                 )}
               />
-              <button
-                type="button"
-                className="ui-icon-button ui-icon-button-compact"
+              <IconButton
+                compact
                 title={syncingKnowledgeBase ? 'Syncing knowledge base...' : 'Sync knowledge base'}
                 aria-label="Sync knowledge base"
                 disabled={syncingKnowledgeBase}
@@ -1480,34 +1480,21 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
                 }}
               >
                 <Ico d={ICON.refresh} size={12} />
-              </button>
-              <button
-                type="button"
-                className="ui-icon-button ui-icon-button-compact"
+              </IconButton>
+              <IconButton
+                compact
                 title="Import URL"
                 aria-label="Import URL"
                 onClick={() => setImportDirectoryId(normalizeDirectoryId(activeFileId ? idToDir(activeFileId) : ''))}
               >
                 <Ico d={ICON.import} size={12} />
-              </button>
-              <button
-                type="button"
-                className="ui-icon-button ui-icon-button-compact"
-                title="New file"
-                aria-label="New file"
-                onClick={() => openCreateEntryModal('file', '')}
-              >
+              </IconButton>
+              <IconButton compact title="New file" aria-label="New file" onClick={() => openCreateEntryModal('file', '')}>
                 <Ico d={ICON.plus} size={12} />
-              </button>
-              <button
-                type="button"
-                className="ui-icon-button ui-icon-button-compact"
-                title="New folder"
-                aria-label="New folder"
-                onClick={() => openCreateEntryModal('folder', '')}
-              >
+              </IconButton>
+              <IconButton compact title="New folder" aria-label="New folder" onClick={() => openCreateEntryModal('folder', '')}>
                 <Ico d={ICON.folderPlus} size={12} />
-              </button>
+              </IconButton>
             </div>
           </div>
 
