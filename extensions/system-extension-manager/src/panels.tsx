@@ -1061,7 +1061,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const deleteExtension = useCallback(
     async (extension: ExtensionInstallSummary) => {
       if (extension.packageType === 'system') return;
-      const confirmed = window.confirm(`Delete ${extension.name}? This removes the extension package from disk.`);
+      const confirmed = await pa.ui.confirm({
+        title: 'Delete extension',
+        message: `Delete ${extension.name}? This removes the extension package from disk.`,
+      });
       if (!confirmed) return;
       setBusyId(extension.id);
       setNotice(null);
@@ -1088,7 +1091,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         setBusyId(null);
       }
     },
-    [location.pathname, navigate, showActionError],
+    [location.pathname, navigate, pa.ui, showActionError],
   );
 
   const reinstallExtension = useCallback(
@@ -1096,9 +1099,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       if (extension.packageType === 'system') return;
       const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
       if (!catalogItem) return;
-      const confirmed = window.confirm(
-        `Reinstall ${extension.name}? This removes the current package and installs it again from ${catalogItem.tag}.`,
-      );
+      const confirmed = await pa.ui.confirm({
+        title: 'Reinstall extension',
+        message: `Reinstall ${extension.name}? This removes the current package and installs it again from ${catalogItem.tag}.`,
+      });
       if (!confirmed) return;
       setBusyId(extension.id);
       setNotice(null);
@@ -1123,9 +1127,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
       if (!catalogItem?.updateAvailable) return;
       const targetVersion = catalogItem.availableVersion ?? catalogItem.version;
-      const confirmed = window.confirm(
-        `Update ${extension.name} from ${extension.version ?? 'installed'} to ${targetVersion} using ${catalogItem.tag}?`,
-      );
+      const confirmed = await pa.ui.confirm({
+        title: 'Update extension',
+        message: `Update ${extension.name} from ${extension.version ?? 'installed'} to ${targetVersion} using ${catalogItem.tag}?`,
+      });
       if (!confirmed) return;
       setBusyId(extension.id);
       setNotice({ type: 'info', message: `Updating ${extension.name}...` });
@@ -1194,7 +1199,10 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   const updateAllExtensions = useCallback(async () => {
     if (updatableExtensions.length === 0) return;
-    const confirmed = window.confirm(`Update ${updatableExtensions.length} extension${updatableExtensions.length === 1 ? '' : 's'} now?`);
+    const confirmed = await pa.ui.confirm({
+      title: 'Update extensions',
+      message: `Update ${updatableExtensions.length} extension${updatableExtensions.length === 1 ? '' : 's'} now?`,
+    });
     if (!confirmed) return;
 
     setBusyId('update-all');
@@ -1231,7 +1239,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     }
 
     setNotice({ type: 'success', message: `Updated ${updatedCount} extension${updatedCount === 1 ? '' : 's'}.` });
-  }, [load, loadCatalog, pa.extensions, showActionError, updatableExtensions]);
+  }, [load, loadCatalog, pa.extensions, pa.ui, showActionError, updatableExtensions]);
 
   const visibleExtensions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
