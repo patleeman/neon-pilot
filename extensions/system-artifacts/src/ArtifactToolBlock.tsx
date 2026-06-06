@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CardBody, cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
 import { memo } from 'react';
 
 export const ArtifactToolBlock = memo(function ArtifactToolBlock({
@@ -33,7 +33,7 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
             {artifact.revision !== undefined && <span className="text-[10px] text-dim">rev {artifact.revision}</span>}
           </div>
           <p className="mt-1 break-all font-mono text-[11px] text-secondary">{artifact.artifactId}</p>
-          {block.output && !isError && <p className="mt-2 text-[12px] leading-relaxed text-secondary">{block.output}</p>}
+          {block.output && !isError && <CardBody className="mt-2 leading-relaxed">{block.output}</CardBody>}
           {isError && block.output && <p className="mt-2 text-[12px] leading-relaxed text-danger/85">{block.output}</p>}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px]">
             {isRunning ? (

@@ -2,6 +2,7 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   CenteredLoadingState,
   CenteredMessage,
+  CardBody,
   CodeBlock,
   MetaLabel,
   PanelMessage,
@@ -151,9 +152,9 @@ function LatexArtifactViewer({ artifact }: { artifact: ArtifactRecord }) {
     <div className="flex h-full min-h-0 flex-col overflow-auto px-5 py-5">
       <div className="mb-3 min-w-0">
         <SectionLabel>LaTeX source</SectionLabel>
-        <p className="mt-1 text-[12px] leading-relaxed text-secondary">
+        <CardBody className="mt-1 leading-relaxed">
           LaTeX artifacts are shown as raw source so the entire file remains visible and copyable.
-        </p>
+        </CardBody>
       </div>
       <CodeBlock>{artifact.content}</CodeBlock>
     </div>
