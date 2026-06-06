@@ -230,6 +230,41 @@ body {
   color: rgb(var(--color-danger));
 }
 
+.ui-message-card-user {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--color-accent) / 0.2);
+  background: rgb(var(--color-accent) / 0.1);
+  padding: 0.75rem 1rem;
+  color: rgb(var(--color-primary));
+  font-size: 0.875rem;
+  line-height: 1.625;
+}
+
+.ui-message-card-assistant {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  color: rgb(var(--color-primary));
+  font-size: 0.90625rem;
+  line-height: 1.625;
+  box-shadow: none;
+}
+
+.ui-message-meta {
+  color: rgb(var(--color-dim));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.65625rem;
+  line-height: 1rem;
+  letter-spacing: 0.02em;
+}
+
 .ui-icon-button {
   display: inline-flex;
   align-items: center;

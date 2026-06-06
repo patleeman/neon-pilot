@@ -136,6 +136,31 @@ export const MessageActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttri
   },
 );
 
+export type MessageCardRole = 'user' | 'assistant';
+
+export function MessageCard({
+  role = 'assistant',
+  children,
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & {
+  role?: MessageCardRole;
+}) {
+  return (
+    <div className={cx(role === 'user' ? 'ui-message-card-user' : 'ui-message-card-assistant', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function MessageMeta({ children, className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p className={cx('ui-message-meta', className)} {...props}>
+      {children}
+    </p>
+  );
+}
+
 export type IconButtonShape = 'square' | 'circle';
 export type IconButtonSize = 'sm' | 'md';
 

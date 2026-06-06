@@ -4,7 +4,7 @@ import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx, MessageActionButton } from '../ui.js';
+import { cx, MessageActionButton, MessageCard, MessageMeta } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -480,7 +480,7 @@ export const UserMessage = memo(function UserMessage({
   return (
     <div className="group flex w-full flex-col items-end gap-1.5" {...transcriptTargetAttrs} tabIndex={block.id ? -1 : undefined}>
       <div className={layout === 'compact' ? 'ml-auto min-w-0 max-w-[92%] sm:max-w-[88%]' : 'ml-auto min-w-0 max-w-[86%]'}>
-        <div className="ui-message-card-user space-y-2">
+        <MessageCard role="user" className="space-y-2">
           {hasImages && (
             <div className="space-y-2">
               {block.images?.map((image, index) => {
@@ -557,9 +557,9 @@ export const UserMessage = memo(function UserMessage({
               {imageCount === 1 ? 'Image attachment' : `${imageCount} image attachments`}
             </div>
           ) : null}
-        </div>
+        </MessageCard>
         <div className="flex flex-wrap items-center gap-2 pt-1 pr-1">
-          <p className="ui-message-meta">{timeAgo(block.ts)}</p>
+          <MessageMeta>{timeAgo(block.ts)}</MessageMeta>
           <span className="flex-1" />
           <MessageActions
             isUser
@@ -633,7 +633,7 @@ export const AssistantMessage = memo(function AssistantMessage({
       tabIndex={blockId ? -1 : undefined}
     >
       <div className="min-w-0 flex-1 space-y-1.5">
-        <div {...replySelectionScopeProps} className="ui-message-card-assistant space-y-1 text-primary">
+        <MessageCard {...replySelectionScopeProps} className="space-y-1 text-primary">
           {showRawRunCallbackCard ? (
             <RawRunCallbackCard
               runs={rawRunCallbackRuns}
@@ -652,9 +652,9 @@ export const AssistantMessage = memo(function AssistantMessage({
               style={{ animation: 'cursorBlink 1s step-end infinite', verticalAlign: 'text-bottom' }}
             />
           )}
-        </div>
+        </MessageCard>
         <div className="flex flex-wrap items-center gap-2 pt-0.5">
-          <p className="ui-message-meta">{timeAgo(block.ts)}</p>
+          <MessageMeta>{timeAgo(block.ts)}</MessageMeta>
           <span className="flex-1" />
           <MessageActions
             blockText={block.text}

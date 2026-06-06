@@ -24,7 +24,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `InlineTextInput`, `InlineSelect`, `Checkbox`, `KeyboardShortcutCaptureInput`, `Switch`, `SettingsPanel`, `SettingsRow`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
-- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ToolResultCard`, `ResourcePickerDialog`, `ResourcePickerToolbar`, `ResourcePickerList`, `ResourceList`, `ResourceListRow`, `ResourceListItem`, `ResourceListLink`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`, `TerminalBlock`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `MessageCard`, `MessageMeta`, `ToolResultCard`, `ResourcePickerDialog`, `ResourcePickerToolbar`, `ResourcePickerList`, `ResourceList`, `ResourceListRow`, `ResourceListItem`, `ResourceListLink`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`, `TerminalBlock`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`, `RuntimePage`, `RuntimeHeader`, `RuntimeStrip`, `RuntimeSection`, `RuntimeFooter`
 - Utility: `cx`
 
@@ -71,6 +71,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.
 - Use `MessageActionButton` for low-emphasis transcript, message, and tool-output actions such as copy, edit, rerun, fork, and extension-provided message actions.
+- Use `MessageCard` for transcript-like user and assistant message bodies in chat rails, extension-owned agent conversations, and message previews. Pass `role="user"` for right-aligned prompt bubbles and omit it for assistant text blocks. Use `MessageMeta` for timestamps and compact transcript metadata beside `MessageActionButton`.
 - Use `IconButton` for icon-only actions such as close, remove, more, edit, refresh, or composer controls. Use `size="sm"` for dense 28px chrome, and `shape="circle"` for composer controls and compact round affordances. Always provide `aria-label` and usually `title`.
 - Use `IconLink` when the same square icon treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `BrowsePathButton` for compact file/folder picker triggers. It provides the shared folder-plus icon, disabled/busy treatment, and picker focus chrome; callers still own the actual browse action.
@@ -131,6 +132,7 @@ These production areas already use the shared package and are useful examples fo
 - Feedback: extension manager diagnostics, automations page notices, and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
 - Message actions: transcript copy/edit/rewind/fork actions and message edit controls
+- Message cards and actions: desktop user/assistant transcript messages, transcript copy/edit/rewind/fork actions, and extension-owned chat rails
 - Tool actions: transcript diff buttons, deferred output loaders, image loaders, question tabs, and trace expansion controls
 - Choice rows: ask-user prompt radio and checkbox options in both the desktop transcript and system conversation-tools extension
 - Attachment chrome: desktop composer image and drawing attachment shelves
@@ -145,4 +147,4 @@ Next good candidates:
 
 - reusable activity/tree empty-state patterns
 - transcript and tool-result card anatomy
-- chat transcript/message shell components
+- transcript cluster and context shelf components

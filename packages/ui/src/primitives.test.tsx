@@ -39,6 +39,8 @@ import {
   PositionedMenu,
   MenuSeparator,
   MenuShell,
+  MessageCard,
+  MessageMeta,
   MetaLabel,
   Notice,
   PanelHeader,
@@ -99,6 +101,20 @@ describe('design-system primitives', () => {
     expect(html).toContain('href="#new"');
     expect(html).toContain('ui-action-button');
     expect(html).toContain('text-accent');
+  });
+
+  it('renders transcript message card primitives', () => {
+    const html = renderToStaticMarkup(
+      createElement('div', null, [
+        createElement(MessageCard, { key: 'user', role: 'user' }, 'User prompt'),
+        createElement(MessageCard, { key: 'assistant' }, 'Assistant reply'),
+        createElement(MessageMeta, { key: 'meta' }, '2m ago'),
+      ]),
+    );
+
+    expect(html).toContain('ui-message-card-user');
+    expect(html).toContain('ui-message-card-assistant');
+    expect(html).toContain('ui-message-meta');
   });
 
   it('renders shared path picker chrome and workspace icons', () => {
