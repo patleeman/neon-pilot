@@ -1,6 +1,6 @@
 import type { MentionItem } from '../../conversation/conversationMentions';
 import type { ConversationContextDocRef } from '../../shared/types';
-import { SectionLabel } from '../ui';
+import { SectionLabel, TextButton } from '../ui';
 
 export function ConversationContextShelf({
   attachedContextDocs,
@@ -50,16 +50,17 @@ export function ConversationContextShelf({
         <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-3 pt-3 pb-2.5">
           <SectionLabel>Prompt references</SectionLabel>
           {unattachedDraftMentionItems.length > 0 && (
-            <button
+            <TextButton
               type="button"
               onClick={() => {
                 onAttachMentionedDocs(unattachedDraftMentionItems);
               }}
               disabled={contextDocsBusy}
-              className="text-[11px] text-accent transition-colors hover:text-accent/80 disabled:cursor-default disabled:opacity-50"
+              tone="accent"
+              className="text-[11px] disabled:cursor-default disabled:opacity-50"
             >
               {contextDocsBusy ? 'attaching…' : `attach ${unattachedDraftMentionItems.length}`}
-            </button>
+            </TextButton>
           )}
           {draftMentionItems.map((item) => (
             <span

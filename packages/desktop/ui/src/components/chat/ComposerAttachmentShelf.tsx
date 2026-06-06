@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { TextButton } from '../ui';
+
 interface ComposerAttachmentShelfDrawingAttachment {
   localId: string;
   title: string;
@@ -257,14 +259,15 @@ export function ComposerAttachmentShelf({
                     </p>
                   </div>
                 </button>
-                <button
+                <TextButton
                   type="button"
                   onClick={() => onEditDrawing(attachment.localId)}
-                  className="text-[11px] text-accent transition-colors hover:text-accent/80"
+                  tone="accent"
+                  className="text-[11px]"
                   title={`Edit ${attachment.title}`}
                 >
                   edit
-                </button>
+                </TextButton>
                 <button
                   type="button"
                   onClick={() => onRemoveDrawingAttachment(attachment.localId)}
