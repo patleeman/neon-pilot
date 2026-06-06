@@ -534,6 +534,33 @@ body {
   color: rgb(var(--color-accent));
 }
 
+.ui-meta-label {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ui-meta-label-muted {
+  color: rgb(var(--color-dim) / 0.8);
+}
+
+.ui-meta-label-secondary {
+  color: rgb(var(--color-secondary));
+}
+
+.ui-meta-label-accent {
+  color: rgb(var(--color-accent));
+}
+
+.ui-meta-label-success {
+  color: rgb(var(--color-success));
+}
+
+.ui-meta-label-danger {
+  color: rgb(var(--color-danger));
+}
+
 .ui-supporting-text {
   margin: 0;
   color: rgb(var(--color-dim));

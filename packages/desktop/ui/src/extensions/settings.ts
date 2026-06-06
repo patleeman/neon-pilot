@@ -32,6 +32,7 @@ export {
   KeyValueItem,
   KeyValueList,
   LoadingState,
+  MetaLabel,
   MenuGroupLabel,
   MenuItem,
   MenuSeparator,

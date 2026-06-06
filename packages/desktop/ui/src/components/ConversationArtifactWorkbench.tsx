@@ -9,7 +9,7 @@ import { formatDate } from '../shared/utils';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { ErrorState, LoadingState, PanelMessage, ResourceListItem, SectionLabel, ToolbarButton } from './ui';
+import { ErrorState, LoadingState, MetaLabel, PanelMessage, ResourceListItem, SectionLabel, ToolbarButton } from './ui';
 
 export { useConversationArtifactSummaries };
 
@@ -140,7 +140,7 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
       <div className="shrink-0 border-b border-border-subtle px-4 py-2.5">
         <div className="flex min-w-0 items-center justify-between gap-2">
           <div className="min-w-0 flex flex-1 items-center gap-2.5">
-            <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/80">{artifact?.kind ?? 'artifact'}</span>
+            <MetaLabel>{artifact?.kind ?? 'artifact'}</MetaLabel>
             <h2
               className="min-w-0 truncate text-[14px] font-medium text-primary"
               title={

@@ -33,6 +33,7 @@ import {
   KeyValueItem,
   KeyValueList,
   LoadingState,
+  MetaLabel,
   MetricTile,
   MenuGroupLabel,
   MenuItem,
@@ -221,6 +222,11 @@ const meta = {
           <div style={{ display: 'grid', gap: 6 }}>
             <SectionLabel>Artifacts</SectionLabel>
             <SectionLabel tone="muted">Muted Label</SectionLabel>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <MetaLabel>artifact</MetaLabel>
+              <MetaLabel tone="accent">current</MetaLabel>
+              <MetaLabel tone="success">added</MetaLabel>
+            </div>
             <SupportingText>Use supporting text for secondary settings copy, empty hints, paths, and status details.</SupportingText>
             <p style={{ margin: 0, fontSize: 13 }}>
               Long paths wrap safely in <InlineCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineCode>.

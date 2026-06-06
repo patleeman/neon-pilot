@@ -379,6 +379,16 @@ export function SectionLabel({
   );
 }
 
+export type MetaLabelTone = 'muted' | 'secondary' | 'accent' | 'success' | 'danger';
+
+export function MetaLabel({ children, className, tone = 'muted', ...props }: HTMLAttributes<HTMLSpanElement> & { tone?: MetaLabelTone }) {
+  return (
+    <span className={cx('ui-meta-label', `ui-meta-label-${tone}`, className)} {...props}>
+      {children}
+    </span>
+  );
+}
+
 export function SupportingText({ children, className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p className={cx('ui-supporting-text', className)} {...props}>

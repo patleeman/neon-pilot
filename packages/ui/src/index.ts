@@ -48,6 +48,8 @@ export {
   KeyValueItem,
   KeyValueList,
   LoadingState,
+  MetaLabel,
+  type MetaLabelTone,
   MetricTile,
   type MetricTone,
   MenuGroupLabel,

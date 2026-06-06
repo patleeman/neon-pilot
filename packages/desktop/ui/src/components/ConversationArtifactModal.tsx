@@ -9,7 +9,7 @@ import { useApi } from '../hooks/useApi';
 import { formatDate } from '../shared/utils';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { CodeBlock, cx, ErrorState, LoadingState, SectionLabel, ToolbarButton } from './ui';
+import { CodeBlock, cx, ErrorState, LoadingState, MetaLabel, SectionLabel, ToolbarButton } from './ui';
 
 function formatArtifactLoadError(error: string | null): string | null {
   if (!error) {
@@ -165,7 +165,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
         <div className="border-b border-border-subtle px-4 py-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0 flex flex-1 items-center gap-2.5">
-              <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/80">{artifact?.kind ?? 'artifact'}</span>
+              <MetaLabel>{artifact?.kind ?? 'artifact'}</MetaLabel>
               <h2
                 className="min-w-0 truncate text-[14px] font-medium text-primary"
                 title={

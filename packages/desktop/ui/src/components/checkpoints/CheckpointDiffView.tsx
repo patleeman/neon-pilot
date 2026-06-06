@@ -3,7 +3,7 @@ import { type CSSProperties, lazy, Suspense, useCallback, useMemo } from 'react'
 
 import type { ConversationCommitCheckpointFile } from '../../shared/types';
 import { type ColorTheme, useTheme } from '../../ui-state/theme';
-import { cx } from '../ui';
+import { cx, MetaLabel } from '../ui';
 
 const checkpointDiffStyle = {
   '--diffs-font-family': 'var(--font-mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace)',
@@ -140,13 +140,13 @@ export function CheckpointDiffSection({
             </p>
           </div>
           <p className="mt-0.5 flex flex-wrap items-center gap-2 pl-[18px] text-[10px] text-secondary">
-            <span className="uppercase tracking-[0.14em] text-dim/80">{statusLabel(file)}</span>
+            <MetaLabel>{statusLabel(file)}</MetaLabel>
             <span className="font-mono tabular-nums">
               <span className="text-success">+{file.additions}</span> <span className="text-danger">-{file.deletions}</span>
             </span>
           </p>
         </div>
-        {showActiveBadge && active ? <span className="text-[10px] uppercase tracking-[0.14em] text-accent">Current</span> : null}
+        {showActiveBadge && active ? <MetaLabel tone="accent">Current</MetaLabel> : null}
       </button>
       {!collapsed ? (
         <div className="overflow-hidden bg-[rgb(var(--color-terminal-surface))]">

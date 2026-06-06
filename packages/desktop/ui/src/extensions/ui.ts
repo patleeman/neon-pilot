@@ -55,6 +55,7 @@ export {
   KeyValueItem,
   KeyValueList,
   LoadingState,
+  MetaLabel,
   MetricTile,
   type MetricTone,
   MenuGroupLabel,
