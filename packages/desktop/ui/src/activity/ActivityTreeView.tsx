@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ActivityTreeItem } from './activityTree';
 import { buildActivityTreePathModel } from './activityTreePaths';
 import { ActivityTreeRow } from './ActivityTreeRow';
+import { PanelMessage } from '../components/ui';
 
 export type ActivityTreeDropPosition = 'before' | 'after';
 
@@ -247,7 +248,7 @@ export function ActivityTreeView({
   }
 
   if (pathModel.entries.length === 0) {
-    return <p className="px-4 py-2 text-[12px] text-dim">No threads yet.</p>;
+    return <PanelMessage className="px-4 py-2">No threads yet.</PanelMessage>;
   }
 
   return (
