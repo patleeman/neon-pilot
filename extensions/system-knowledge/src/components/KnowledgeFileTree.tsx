@@ -13,6 +13,8 @@ import {
   Field,
   getDesktopBridge,
   getTopLevelDraggedPaths,
+  MenuItem,
+  MenuSeparator,
   normalizeOpenFileIds,
   readStoredExpandedFolderIds,
   readStoredOpenFileIds,
@@ -281,42 +283,37 @@ function TreeContextMenu({ onCreateFile, onCreateFolder, onDelete, onOpenInFinde
   return (
     <ContextMenuWrapper className="ui-menu-shell ui-context-menu-shell absolute bottom-auto left-0 right-auto top-0 mb-0 min-w-[224px]">
       <div className="space-y-px" role="menu" aria-label="Knowledge entry actions">
-        <button type="button" className="ui-context-menu-item gap-2" onClick={onCreateFile} role="menuitem">
+        <MenuItem className="gap-2" onClick={onCreateFile}>
           <Ico d={ICON.file} size={12} />
           New File
-        </button>
-        <button type="button" className="ui-context-menu-item gap-2" onClick={onCreateFolder} role="menuitem">
+        </MenuItem>
+        <MenuItem className="gap-2" onClick={onCreateFolder}>
           <Ico d={ICON.folderPlus} size={12} />
           New Folder
-        </button>
-        <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
+        </MenuItem>
+        <MenuSeparator />
         {onOpenInFinder ? (
           <>
-            <button type="button" className="ui-context-menu-item gap-2" onClick={onOpenInFinder} role="menuitem">
+            <MenuItem className="gap-2" onClick={onOpenInFinder}>
               <Ico d={ICON.folderOpen} size={12} />
               Open in Finder
-            </button>
-            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
+            </MenuItem>
+            <MenuSeparator />
           </>
         ) : null}
-        <button type="button" className="ui-context-menu-item gap-2" onClick={onRename} role="menuitem">
+        <MenuItem className="gap-2" onClick={onRename}>
           <Ico d={ICON.pencil} size={12} />
           Rename
-        </button>
-        <button type="button" className="ui-context-menu-item gap-2" onClick={onMove} role="menuitem">
+        </MenuItem>
+        <MenuItem className="gap-2" onClick={onMove}>
           <Ico d={ICON.move} size={12} />
           Move to...
-        </button>
-        <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-        <button
-          type="button"
-          className="ui-context-menu-item gap-2 text-danger hover:bg-danger/10 focus-visible:bg-danger/10"
-          onClick={onDelete}
-          role="menuitem"
-        >
+        </MenuItem>
+        <MenuSeparator />
+        <MenuItem className="gap-2" tone="danger" onClick={onDelete}>
           <Ico d={ICON.trash} size={12} />
           Delete
-        </button>
+        </MenuItem>
       </div>
     </ContextMenuWrapper>
   );
