@@ -31,7 +31,7 @@ import { useTheme } from '../../ui-state/theme';
 import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
-import { Button, cx, EmptyState, IconButton, LoadingState, MenuItem, MenuSeparator, Pill, ToolbarButton } from '../ui';
+import { Button, cx, EmptyState, IconButton, LoadingState, MenuItem, MenuSeparator, PanelMessage, Pill, ToolbarButton } from '../ui';
 import { addWorkspaceOpenFile, readWorkspaceOpenFiles, removeWorkspaceOpenFile, writeWorkspaceOpenFiles } from './openWorkspaceFiles';
 
 interface WorkspaceExplorerProps {
@@ -811,7 +811,7 @@ export function WorkspaceExplorer({
       <div className="flex h-full flex-col bg-panel text-sm">
         <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-2">
           {rootListing.status === 'loading' && !rootListing.data ? (
-            <p className="px-3 py-2 text-[12px] text-dim animate-pulse">Loading…</p>
+            <PanelMessage className="animate-pulse px-3 py-2">Loading...</PanelMessage>
           ) : rootListing.error ? (
             <EmptyState title="Workspace unavailable" body={rootListing.error} className="px-3 py-8" />
           ) : (
