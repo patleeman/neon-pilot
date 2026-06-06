@@ -316,15 +316,7 @@ function formatActionResult(result: unknown, json: boolean): string {
 
 function actionFromCliCommand(command: string): string | undefined {
   const lastToken = commandTokens(command).at(-1);
-  if (!lastToken) return undefined;
-  if (lastToken === 'list') return 'list';
-  if (lastToken === 'validate') return 'validate';
-  if (lastToken === 'reload') return 'reload';
-  if (lastToken === 'enable') return 'enable';
-  if (lastToken === 'disable') return 'disable';
-  if (lastToken === 'paths') return 'readSearchPaths';
-  if (lastToken === 'sources') return 'readExtensionSources';
-  return undefined;
+  return lastToken;
 }
 
 async function invokeContributedCliCommand(argv: string[], options?: { signal?: AbortSignal }): Promise<number> {

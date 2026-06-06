@@ -578,6 +578,67 @@
           "scope": "commands"
         }
       }
+    ],
+    "cliCommands": [
+      {
+        "id": "conversations-list",
+        "command": "conversations list",
+        "description": "List conversations, optionally filtered by query.",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-search",
+        "command": "conversations search",
+        "description": "Search visible conversation transcript text.",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-inspect",
+        "command": "conversations inspect",
+        "description": "Inspect a conversation by id; optional second arg is outline, query, diff, or read_window.",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-create",
+        "command": "conversations create",
+        "description": "Create a conversation with an optional title.",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-title",
+        "command": "conversations title",
+        "description": "Set a conversation title: conversations title <id> <title>.",
+        "action": "conversationTool"
+      },
+      {
+        "id": "conversations-cwd",
+        "command": "conversations cwd",
+        "description": "Change a conversation working directory: conversations cwd <id> <path>.",
+        "action": "conversationTool"
+      },
+      {
+        "id": "conversations-abort",
+        "command": "conversations abort",
+        "description": "Abort a live conversation turn.",
+        "action": "conversationTool"
+      },
+      {
+        "id": "conversations-compact",
+        "command": "conversations compact",
+        "description": "Compact a conversation transcript.",
+        "action": "conversationTool"
+      },
+      {
+        "id": "conversations-workspace",
+        "command": "conversations workspace",
+        "description": "Read conversation workspace state.",
+        "action": "conversationTool",
+        "jsonDefault": true
+      }
     ]
   },
   "backend": {

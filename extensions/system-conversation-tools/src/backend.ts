@@ -144,6 +144,34 @@ function workspaceUpdateInput(params: Record<string, unknown>) {
   };
 }
 
+function cliCommand(input: Record<string, unknown>): string {
+  const cli = input.cli && typeof input.cli === 'object' && !Array.isArray(input.cli) ? (input.cli as Record<string, unknown>) : {};
+  return typeof cli.command === 'string' ? cli.command : '';
+}
+
+function cliArgs(input: Record<string, unknown>): string[] {
+  const cli = input.cli && typeof input.cli === 'object' && !Array.isArray(input.cli) ? (input.cli as Record<string, unknown>) : {};
+  return Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+}
+
+function normalizeConversationCliInput(input: unknown): Record<string, unknown> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const body = input as Record<string, unknown>;
+  const command = cliCommand(body);
+  const args = cliArgs(body);
+  if (!command) return body;
+  if (command === 'conversations list') return { ...body, action: 'inspect', inspectAction: 'list', query: args[0] };
+  if (command === 'conversations search') return { ...body, action: 'inspect', inspectAction: 'search', query: args.join(' ') };
+  if (command === 'conversations inspect') return { ...body, action: 'inspect', inspectAction: args[1] ?? 'outline', conversationId: args[0] };
+  if (command === 'conversations create') return { ...body, action: 'create', title: args.join(' ') || undefined };
+  if (command === 'conversations title') return { ...body, action: 'set_title', conversationId: args[0], title: args.slice(1).join(' ') };
+  if (command === 'conversations cwd') return { ...body, action: 'change_working_directory', conversationId: args[0], cwd: args[1] };
+  if (command === 'conversations abort') return { ...body, action: 'abort', conversationId: args[0] };
+  if (command === 'conversations compact') return { ...body, action: 'compact', conversationId: args[0] };
+  if (command === 'conversations workspace') return { ...body, action: 'workspace_get' };
+  return body;
+}
+
 function toolResult(action: string, details: unknown) {
   return {
     content: [{ type: 'text' as const, text: `${action} complete.` }],
@@ -152,6 +180,7 @@ function toolResult(action: string, details: unknown) {
 }
 
 export async function conversationTool(input: unknown, ctx: ExtensionBackendContext) {
+  input = normalizeConversationCliInput(input);
   const toolCtx = ctx.toolContext;
   const conversationId = toolCtx?.conversationId ?? toolCtx?.sessionId ?? '';
 

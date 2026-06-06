@@ -61,6 +61,35 @@
         "icon": "gear"
       }
     ],
+    "cliCommands": [
+      {
+        "id": "settings-list",
+        "command": "settings list",
+        "description": "List merged Neon Pilot settings, optionally filtered by key prefix.",
+        "action": "manageSettings",
+        "jsonDefault": true
+      },
+      {
+        "id": "settings-schema",
+        "command": "settings schema",
+        "description": "List manifest-declared settings schema.",
+        "action": "manageSettings",
+        "jsonDefault": true
+      },
+      {
+        "id": "settings-get",
+        "command": "settings get",
+        "description": "Read a single setting by key.",
+        "action": "manageSettings",
+        "jsonDefault": true
+      },
+      {
+        "id": "settings-set",
+        "command": "settings set",
+        "description": "Update a manifest-declared non-secret setting by key and JSON value.",
+        "action": "manageSettings"
+      }
+    ],
     "views": [
       {
         "id": "settings",
@@ -91,6 +120,20 @@
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"
+      }
+    ]
+  },
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "manageSettings",
+        "handler": "manageSettings",
+        "title": "Manage settings",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["list", "schema", "get", "set"]
+        }
       }
     ]
   },
