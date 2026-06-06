@@ -63,6 +63,7 @@ function readAction(params: unknown): ConversationAction {
 function payloadWithoutAction(params: Record<string, unknown>): Record<string, unknown> {
   const payload = { ...params };
   delete payload.action;
+  delete payload.cli;
   return payload;
 }
 
@@ -155,7 +156,7 @@ function cliArgs(input: Record<string, unknown>): string[] {
 }
 
 function normalizeConversationCliInput(input: unknown): Record<string, unknown> {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return input as Record<string, unknown>;
   const body = input as Record<string, unknown>;
   const command = cliCommand(body);
   const args = cliArgs(body);
