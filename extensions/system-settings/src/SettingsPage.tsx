@@ -13,6 +13,7 @@ import {
   cx,
   type DesktopAppPreferencesState,
   type DesktopEnvironmentState,
+  Disclosure,
   EXTENSION_REGISTRY_CHANGED_EVENT,
   type ExtensionKeybindingRegistration,
   formatContextWindowLabel,
@@ -3180,14 +3181,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   </div>
                                 </div>
 
-                                <details
+                                <Disclosure
                                   open={showAdvancedProviderFields}
                                   onToggle={(event) => {
                                     setShowAdvancedProviderFields((event.currentTarget as HTMLDetailsElement).open);
                                   }}
-                                  className="space-y-1"
+                                  summary="Advanced provider options"
                                 >
-                                  <summary className="ui-card-meta cursor-pointer text-primary">Advanced provider options</summary>
                                   <div className="space-y-4 pt-2">
                                     <div className="grid gap-4 md:grid-cols-2">
                                       <div className="space-y-2 min-w-0">
@@ -3301,7 +3301,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       </div>
                                     </div>
                                   </div>
-                                </details>
+                                </Disclosure>
 
                                 <p className="ui-card-meta max-w-3xl">
                                   Provider API keys here use <span className="font-mono text-[11px]">models.json</span> value resolution.
@@ -3343,15 +3343,14 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             </div>
                           )}
 
-                          <details
+                          <Disclosure
                             open={showProviderModelManagement}
                             onToggle={(event) => {
                               setShowProviderModelManagement((event.currentTarget as HTMLDetailsElement).open);
                             }}
-                            className="order-2 space-y-1 min-w-0"
+                            className="order-2 min-w-0"
+                            summary={<span className="text-[14px] font-medium text-primary">Advanced config</span>}
                           >
-                            <summary className="cursor-pointer text-[14px] font-medium text-primary">Advanced config</summary>
-
                             <div className="space-y-2 pt-3">
                               <p className="ui-card-meta">
                                 {providerModelCount > 0
@@ -3819,7 +3818,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 <p className="ui-card-meta">Select a provider, or type a provider id above, to edit its models.</p>
                               )}
                             </div>
-                          </details>
+                          </Disclosure>
 
                           <div className="order-1 space-y-3 min-w-0">
                             <div>
