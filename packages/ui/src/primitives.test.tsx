@@ -71,6 +71,7 @@ import {
   SettingToggleRow,
   ShelfHeader,
   ShelfSection,
+  SidebarNavButton,
   Stat,
   StatGrid,
   SwatchOption,
@@ -82,6 +83,7 @@ import {
   TaskListItem,
   TextInput,
   TextLink,
+  TitleButton,
   TerminalBlock,
   Tooltip,
   WorkbenchHeader,
@@ -123,6 +125,23 @@ describe('design-system primitives', () => {
     expect(html).toContain('href="#settings"');
     expect(html).toContain('ui-text-link');
     expect(html).toContain('text-accent');
+  });
+
+  it('renders title buttons for clickable page headings', () => {
+    const html = renderToStaticMarkup(createElement(TitleButton, { 'aria-label': 'Rename conversation' }, 'Fix top bar'));
+
+    expect(html).toContain('ui-title-button');
+    expect(html).toContain('type="button"');
+    expect(html).toContain('Fix top bar');
+  });
+
+  it('renders sidebar nav buttons with active state and current page semantics', () => {
+    const html = renderToStaticMarkup(createElement(SidebarNavButton, { active: true }, 'Settings'));
+
+    expect(html).toContain('ui-sidebar-nav-item');
+    expect(html).toContain('ui-sidebar-nav-item-active');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('Settings');
   });
 
   it('renders transcript message card primitives', () => {

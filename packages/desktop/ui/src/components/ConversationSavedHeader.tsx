@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 
-import { TextInput, ToolbarButton } from './ui';
+import { TextInput, TitleButton, ToolbarButton } from './ui';
 
 interface ConversationSavedHeaderProps {
   title: string;
@@ -32,15 +32,14 @@ export function ConversationSavedHeader({
       <div className="min-w-0 overflow-hidden">
         {onTitleClick ? (
           <h1 className="min-w-0">
-            <button
-              type="button"
+            <TitleButton
               onClick={onTitleClick}
               title="Rename conversation"
               aria-label={`Rename conversation: ${title}`}
-              className="ui-conversation-title-clamp max-w-full break-words text-left text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-primary transition-colors hover:text-accent focus-visible:outline-none focus-visible:text-accent sm:text-[42px]"
+              className="ui-conversation-title-clamp max-w-full break-words text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[42px]"
             >
               {title}
-            </button>
+            </TitleButton>
           </h1>
         ) : (
           <h1 className="ui-conversation-title-clamp max-w-full break-words text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-primary sm:text-[42px]">

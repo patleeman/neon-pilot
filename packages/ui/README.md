@@ -15,7 +15,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 ## Current Components
 
-- Actions: `Button`, `ButtonLink`, `TextLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `ComposerActionButton`, `EditorToolbar`, `EditorToolbarGroup`, `EditorToolbarButton`, `IconButton`, `IconLink`, `BrowsePathButton`, `CheckButton`, `TaskListItem`, `ActionTile`
+- Actions: `Button`, `ButtonLink`, `TextLink`, `ToolbarButton`, `TextButton`, `TitleButton`, `SidebarNavButton`, `MessageActionButton`, `ComposerActionButton`, `EditorToolbar`, `EditorToolbarGroup`, `EditorToolbarButton`, `IconButton`, `IconLink`, `BrowsePathButton`, `CheckButton`, `TaskListItem`, `ActionTile`
 - Attachment controls: `AttachmentChip`, `AttachmentChipButton`
 - Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`, `WorkbenchShell`, `WorkbenchHeader`, `RailSection`, `RailSubsection`, `ShelfSection`, `ShelfHeader`, `ShelfBody`
@@ -72,6 +72,8 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `TextLink` for inline prose links in notices, hints, setup copy, help text, and empty states. Prefer it over handwritten `text-accent underline` anchors.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.
+- Use `TitleButton` when a large page, conversation, document, or artifact heading is itself clickable, usually for rename/edit-title flows. Keep the heading typography on the surrounding `h1`/`h2` or via caller classes so the primitive stays content-neutral.
+- Use `SidebarNavButton` for app-sidebar and extension-sidebar navigation rows. Pass `active` for the current route, compose the icon/label/badge inside, and keep routing in the caller.
 - Use `MessageActionButton` for low-emphasis transcript, message, and tool-output actions such as copy, edit, rerun, fork, and extension-provided message actions.
 - Use `ComposerActionButton` for round composer submit, steer, follow-up, stop, and disabled-send affordances. Set `tone="accent"` for send/submit, `tone="warning"` for steer, `tone="neutral"` for follow-up, `tone="danger"` for stop, and `tone="disabled"` for unavailable send/submit states. Use `size="icon"` for icon-only send/stop buttons, `size="compactLabel"` for 32px inline steer/follow-up buttons, and `size="label"` for 36px submit-answer buttons.
 - Use `EditorToolbar`, `EditorToolbarGroup`, and `EditorToolbarButton` for rich-text, markdown, canvas, and document editor command bars. `EditorToolbarButton` supports `active`, `icon`, `statusTone`, and `onPress`; prefer `onPress` for editor commands that need mouse-down focus preservation.
@@ -142,6 +144,8 @@ These production areas already use the shared package and are useful examples fo
 - Feedback: extension manager diagnostics, automations page notices, and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
 - Message actions: transcript copy/edit/rewind/fork actions and message edit controls
+- Title actions: saved conversation title rename trigger
+- Sidebar navigation: desktop primary and extension navigation rows
 - Message cards and actions: desktop user/assistant transcript messages, transcript copy/edit/rewind/fork actions, and extension-owned chat rails
 - Tool actions: transcript diff buttons, deferred output loaders, image loaders, question tabs, and trace expansion controls
 - Choice rows: ask-user prompt radio and checkbox options in both the desktop transcript and system conversation-tools extension

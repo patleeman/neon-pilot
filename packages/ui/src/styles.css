@@ -329,6 +329,28 @@ body {
   color: rgb(var(--color-primary));
 }
 
+.ui-title-button {
+  display: inline;
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: rgb(var(--color-primary));
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: color 140ms ease;
+}
+
+.ui-title-button:hover,
+.ui-title-button:focus-visible {
+  color: rgb(var(--color-accent));
+}
+
+.ui-title-button:focus-visible {
+  outline: none;
+}
+
 .ui-text-link {
   color: rgb(var(--color-accent));
   text-decoration-line: underline;

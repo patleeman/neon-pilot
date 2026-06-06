@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { routeMatchesPrefix } from '../navigation/routeRegistry';
+import { SidebarNavButton } from './ui';
 
 export const SIDEBAR_ICON_PATHS = {
   automations: 'M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
@@ -105,12 +106,11 @@ function TopNavItem({
   );
 
   return (
-    <button
-      type="button"
+    <SidebarNavButton
       onClick={handleClick}
-      aria-current={active ? 'page' : undefined}
+      active={active}
       data-route={to}
-      className={['ui-sidebar-nav-item w-full text-left', active && 'ui-sidebar-nav-item-active'].filter(Boolean).join(' ')}
+      className="w-full text-left"
     >
       <svg
         width="15"
@@ -127,7 +127,7 @@ function TopNavItem({
       </svg>
       <span className="flex-1">{label}</span>
       {badge != null && badge > 0 && <span className="ui-sidebar-nav-badge">{badge > 99 ? '99+' : badge}</span>}
-    </button>
+    </SidebarNavButton>
   );
 }
 
@@ -147,18 +147,16 @@ export function SidebarPrimaryNav({
   return (
     <div className="space-y-px pt-3 pb-1">
       <div className="px-1">
-        <button
-          type="button"
+        <SidebarNavButton
           onClick={onNewConversation}
           disabled={newConversationBusy}
-          className={['ui-sidebar-nav-item mx-0 flex w-full text-secondary', chatActive && 'ui-sidebar-nav-item-active']
-            .filter(Boolean)
-            .join(' ')}
+          active={chatActive}
+          className="mx-0 flex w-full text-secondary"
           title={newConversationBusy ? 'Creating conversation...' : `Chat (${newConversationHotkeyLabel})`}
         >
           <SidebarIcon d={SIDEBAR_ICON_PATHS.plus} size={15} />
           <span className="flex-1 text-left">Chat</span>
-        </button>
+        </SidebarNavButton>
       </div>
       {items.map((item) => (
         <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />

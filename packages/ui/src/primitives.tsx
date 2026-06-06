@@ -211,6 +211,35 @@ export const TextButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
   },
 );
 
+export const TitleButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
+  function TitleButton({ className, children, type = 'button', ...props }, ref) {
+    return (
+      <button ref={ref} type={type} className={cx('ui-title-button', className)} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
+
+export const SidebarNavButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    active?: boolean;
+  }
+>(function SidebarNavButton({ active = false, className, children, type = 'button', ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      aria-current={props['aria-current'] ?? (active ? 'page' : undefined)}
+      className={cx('ui-sidebar-nav-item', active && 'ui-sidebar-nav-item-active', className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
+
 export const MessageActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { tone?: ButtonTone }>(
   function MessageActionButton({ className, children, type = 'button', tone = 'default', ...props }, ref) {
     return (

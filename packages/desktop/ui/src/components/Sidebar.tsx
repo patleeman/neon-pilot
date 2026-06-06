@@ -76,7 +76,7 @@ import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPr
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
-import { IconButton, PanelMessage, SectionLabel } from './ui';
+import { IconButton, PanelMessage, SectionLabel, SidebarNavButton } from './ui';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
@@ -669,12 +669,11 @@ function TopNavItem({
   );
 
   return (
-    <button
-      type="button"
+    <SidebarNavButton
       onClick={handleClick}
-      aria-current={active ? 'page' : undefined}
+      active={active}
       data-route={to}
-      className={['ui-sidebar-nav-item w-full text-left', active && 'ui-sidebar-nav-item-active'].filter(Boolean).join(' ')}
+      className="w-full text-left"
     >
       <svg
         width="15"
@@ -691,7 +690,7 @@ function TopNavItem({
       </svg>
       <span className="flex-1">{label}</span>
       {badge != null && badge > 0 && <span className="ui-sidebar-nav-badge">{badge > 99 ? '99+' : badge}</span>}
-    </button>
+    </SidebarNavButton>
   );
 }
 
@@ -711,18 +710,16 @@ function SidebarPrimaryNav({
   return (
     <div className="space-y-px pt-3 pb-1">
       <div className="px-1">
-        <button
-          type="button"
+        <SidebarNavButton
           onClick={onNewConversation}
           disabled={newConversationBusy}
-          className={['ui-sidebar-nav-item mx-0 flex w-full text-secondary', chatActive && 'ui-sidebar-nav-item-active']
-            .filter(Boolean)
-            .join(' ')}
+          active={chatActive}
+          className="mx-0 flex w-full text-secondary"
           title={newConversationBusy ? 'Creating conversation...' : `Chat (${newConversationHotkeyLabel})`}
         >
           <Ico d={PATH.plus} size={15} />
           <span className="flex-1 text-left">Chat</span>
-        </button>
+        </SidebarNavButton>
       </div>
       {items.map((item) => (
         <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />

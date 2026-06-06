@@ -100,6 +100,7 @@ import {
   SettingsSection,
   ShelfHeader,
   ShelfSection,
+  SidebarNavButton,
   Spinner,
   Stat,
   StatGrid,
@@ -118,6 +119,7 @@ import {
   TextLink,
   TextPromptDialog,
   TerminalBlock,
+  TitleButton,
   Tooltip,
   ToolResultCard,
   ToolbarButton,
@@ -148,6 +150,9 @@ const meta = {
           <TextButton>Inline action</TextButton>
           <TextButton tone="danger">Remove</TextButton>
           <TextLink href="#settings">Settings link</TextLink>
+          <h1 style={{ margin: 0, flexBasis: '100%', fontSize: 36, lineHeight: 1.05 }}>
+            <TitleButton aria-label="Rename conversation">Clickable page title</TitleButton>
+          </h1>
           <MessageActionButton>copy</MessageActionButton>
           <MessageActionButton tone="accent">copied</MessageActionButton>
           <MessageActionButton tone="danger">copy failed</MessageActionButton>
@@ -184,6 +189,17 @@ const meta = {
           <CheckButton checked={false} aria-label="Incomplete" />
           <FolderIcon className="text-secondary" />
           <ChatBubbleIcon className="text-secondary" />
+        </div>
+        <div style={{ display: 'grid', gap: 2, width: 260, maxWidth: '100%' }}>
+          <SidebarNavButton active>
+            <span aria-hidden="true">[]</span>
+            <span style={{ flex: 1 }}>Knowledge</span>
+            <span className="ui-sidebar-nav-badge">3</span>
+          </SidebarNavButton>
+          <SidebarNavButton>
+            <span aria-hidden="true">*</span>
+            <span style={{ flex: 1 }}>Settings</span>
+          </SidebarNavButton>
         </div>
         <div style={{ display: 'grid', gap: 2, width: 460, maxWidth: '100%' }}>
           <TaskListItem
