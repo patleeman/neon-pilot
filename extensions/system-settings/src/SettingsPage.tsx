@@ -1392,22 +1392,21 @@ function ExtensionSettingsSection({
             />
           ))}
           <div className="flex items-center gap-2 pt-2">
-            <button
+            <ToolbarButton
               type="button"
-              className="ui-toolbar-button text-accent disabled:opacity-50"
+              className="text-accent"
               disabled={!hasPendingChanges || saving}
               onClick={saveChanges}
             >
               {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button
+            </ToolbarButton>
+            <ToolbarButton
               type="button"
-              className="ui-toolbar-button disabled:opacity-50"
               disabled={!hasPendingChanges || saving}
               onClick={resetChanges}
             >
               Reset
-            </button>
+            </ToolbarButton>
             {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
           </div>
           {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
