@@ -183,4 +183,18 @@ describe('Layout workbench toggle', () => {
     expect(await screen.findByRole('button', { name: 'Investigate onboarding crash' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Chat side-cha/ })).toBeNull();
   });
+
+  it('keeps the workbench new tab button outside the scrollable tab lane', () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+
+    renderLayout('/conversations/conv-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'File Explorer Browse workspace files.' }));
+
+    const newTabButton = screen.getByRole('button', { name: 'New tab' });
+    expect(newTabButton.className).toContain('shrink-0');
+    expect(newTabButton.parentElement?.className).toContain('overflow-hidden');
+    expect(newTabButton.closest('.overflow-x-auto')).toBeNull();
+    expect(document.querySelector('.ui-workbench-tab')?.parentElement?.className).toContain('overflow-x-auto');
+  });
 });

@@ -1052,31 +1052,33 @@ function WorkbenchTabStrip({
   }, [clearWorkbenchSelection, onOpenNewTab]);
 
   return (
-    <div className="flex h-11 shrink-0 items-center gap-1 overflow-x-auto border-b border-border-subtle bg-base px-2">
-      {openTabs.map((tab) => (
-        <WorkbenchTab
-          key={tab.id}
-          ref={activeTabId === tab.id ? activeTabRef : undefined}
-          active={activeTabId === tab.id}
-          title={labelForTab(tab)}
-        >
-          <WorkbenchTabButton icon={iconForMode(tab.mode)} label={labelForTab(tab)} onClick={() => selectTab(tab.id)} />
-          <WorkbenchTabCloseButton
-            aria-label={`Close ${labelForTab(tab)}`}
-            title={`Close ${labelForTab(tab)}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onCloseTab(tab.id);
-            }}
+    <div className="flex h-11 shrink-0 items-center gap-1 overflow-hidden border-b border-border-subtle bg-base px-2">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        {openTabs.map((tab) => (
+          <WorkbenchTab
+            key={tab.id}
+            ref={activeTabId === tab.id ? activeTabRef : undefined}
+            active={activeTabId === tab.id}
+            title={labelForTab(tab)}
           >
-            ×
-          </WorkbenchTabCloseButton>
-        </WorkbenchTab>
-      ))}
+            <WorkbenchTabButton icon={iconForMode(tab.mode)} label={labelForTab(tab)} onClick={() => selectTab(tab.id)} />
+            <WorkbenchTabCloseButton
+              aria-label={`Close ${labelForTab(tab)}`}
+              title={`Close ${labelForTab(tab)}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onCloseTab(tab.id);
+              }}
+            >
+              ×
+            </WorkbenchTabCloseButton>
+          </WorkbenchTab>
+        ))}
+      </div>
       <IconButton
         size="sm"
         className={cx(
-          'ml-1 h-8 w-8 rounded-md text-[16px]',
+          'ml-1 h-8 w-8 shrink-0 rounded-md text-[16px]',
           isNewWorkbenchTabMode(activeTool) && 'bg-surface text-primary',
         )}
         title="New tab"
