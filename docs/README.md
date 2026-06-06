@@ -41,6 +41,7 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Extension authoring](extensions.md) — reference for native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
+- `neon-pilot` CLI — core-owned command shell; extensions add administration commands with `contributes.cliCommands`, and agents can discover them with `neon-pilot commands --json`
 - [System extensions](../extensions) — feature-owned docs and implementation packages
 - [First-party optional extensions](https://github.com/patleeman/neon-pilot-extensions) — optional packages distributed from GitHub release artifacts
 

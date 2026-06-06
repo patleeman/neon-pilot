@@ -804,6 +804,31 @@ Enablement is intentionally tiny: a command can set `enablement` to a context ke
 
 Do not install global `window` listeners for app-level shortcuts.
 
+## CLI commands
+
+Core owns the `neon-pilot` CLI shell. Extensions can add administrative commands to that surface with `contributes.cliCommands`; enabled extensions are discovered at runtime, and the CLI invokes the declared backend action through the extension host boundary.
+
+```json
+{
+  "backend": {
+    "actions": [{ "id": "manageTasks", "handler": "manageTasks" }]
+  },
+  "contributes": {
+    "cliCommands": [
+      {
+        "id": "tasks-list",
+        "command": "tasks list",
+        "description": "List tasks.",
+        "action": "manageTasks",
+        "jsonDefault": true
+      }
+    ]
+  }
+}
+```
+
+The backend action receives `{ cli: { command, rawArgv, args, flags, json, cwd } }`. Return `{ text }` for human-readable output and structured fields for `--json`. Keep CLI commands coarse and workflow-oriented. Agents should start with `neon-pilot commands --json` and use extension CLI commands for Neon Pilot administration instead of editing runtime files directly.
+
 ## Storage
 
 Extensions should use app-owned document storage, scoped per extension:
