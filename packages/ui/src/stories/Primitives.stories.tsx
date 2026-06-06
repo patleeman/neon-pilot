@@ -49,6 +49,7 @@ import {
   Switch,
   TabButton,
   TabList,
+  TextButton,
   Textarea,
   TextInput,
   Tooltip,
@@ -71,6 +72,8 @@ const meta = {
           </ButtonLink>
           <Button tone="accent">Save</Button>
           <Button tone="danger">Delete</Button>
+          <TextButton>Inline action</TextButton>
+          <TextButton tone="danger">Remove</TextButton>
           <IconButton aria-label="More actions">•••</IconButton>
           <IconLink href="#thread" aria-label="Open thread">
             ↗

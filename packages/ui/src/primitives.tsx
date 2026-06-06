@@ -98,6 +98,16 @@ export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<
   );
 });
 
+export const TextButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { tone?: ButtonTone }>(
+  function TextButton({ className, children, type = 'button', tone = 'default', ...props }, ref) {
+    return (
+      <button ref={ref} type={type} className={cx('ui-text-button', buttonToneClass(tone), className)} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
+
 export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }>(
   function IconButton({ className, children, compact = false, type = 'button', ...props }, ref) {
     return (

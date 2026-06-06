@@ -24,6 +24,7 @@ import {
   StatGrid,
   TabButton,
   TabList,
+  TextButton,
   TextInput,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
@@ -1956,15 +1957,7 @@ function ExtensionDetailsContent({
       {extension.status === 'invalid' || extension.diagnostics?.length || extension.buildError ? (
         <DetailBlock
           title="Diagnostics"
-          action={
-            <button
-              type="button"
-              className="text-[11px] text-secondary transition-colors hover:text-primary"
-              onClick={() => void onCopyDiagnostics(extension)}
-            >
-              Copy diagnostics
-            </button>
-          }
+          action={<TextButton onClick={() => void onCopyDiagnostics(extension)}>Copy diagnostics</TextButton>}
         >
           <div className="space-y-2">
             {[...(extension.errors ?? []), ...(extension.diagnostics ?? []), extension.buildError ?? null]
@@ -1998,15 +1991,7 @@ function ExtensionDetailsContent({
               <KeyValueItem
                 label="Package"
                 value={extension.packageRoot}
-                action={
-                  <button
-                    type="button"
-                    className="text-[11px] text-secondary transition-colors hover:text-primary"
-                    onClick={() => onOpenPath(extension.packageRoot!)}
-                  >
-                    Open
-                  </button>
-                }
+                action={<TextButton onClick={() => onOpenPath(extension.packageRoot!)}>Open</TextButton>}
               />
             ) : null}
           </KeyValueList>

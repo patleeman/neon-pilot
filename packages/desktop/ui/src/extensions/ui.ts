@@ -66,6 +66,7 @@ export {
   Switch,
   TabButton,
   TabList,
+  TextButton,
   Textarea,
   TextInput,
   Tooltip,

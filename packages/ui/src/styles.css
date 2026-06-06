@@ -131,6 +131,7 @@ body {
 .ui-toolbar-button:focus-visible,
 .ui-action-button:focus-visible,
 .ui-ghost-button:focus-visible,
+.ui-text-button:focus-visible,
 .ui-icon-button:focus-visible,
 .ui-check-button:focus-visible,
 .ui-switch:focus-visible,
@@ -146,11 +147,35 @@ body {
 .ui-toolbar-button:disabled,
 .ui-action-button:disabled,
 .ui-ghost-button:disabled,
+.ui-text-button:disabled,
 .ui-icon-button:disabled,
 .ui-check-button:disabled,
 .ui-switch:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.ui-text-button {
+  display: inline-flex;
+  min-height: 1.25rem;
+  user-select: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  padding: 0;
+  color: rgb(var(--color-secondary));
+  font: inherit;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.ui-text-button:hover {
+  color: rgb(var(--color-primary));
 }
 
 .ui-icon-button {
