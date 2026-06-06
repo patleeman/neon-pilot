@@ -73,6 +73,7 @@ import {
   ShelfSection,
   Stat,
   StatGrid,
+  SwatchOption,
   SupportingText,
   Switch,
   TabButton,
@@ -238,6 +239,22 @@ describe('design-system primitives', () => {
     expect(html).toContain('role="radio"');
     expect(html).toContain('Approve plan');
     expect(html).toContain('Continue with the selected implementation path.');
+  });
+
+  it('renders swatch options as accessible radio controls', () => {
+    const html = renderToStaticMarkup(
+      createElement(SwatchOption, {
+        checked: true,
+        label: 'Teal',
+        swatch: createElement('span', { style: { backgroundColor: 'rgb(20 184 166)' } }),
+      }),
+    );
+
+    expect(html).toContain('ui-swatch-option');
+    expect(html).toContain('ui-swatch-option-checked');
+    expect(html).toContain('role="radio"');
+    expect(html).toContain('aria-checked="true"');
+    expect(html).toContain('Teal');
   });
 
   it('renders icon links with shared icon button classes', () => {

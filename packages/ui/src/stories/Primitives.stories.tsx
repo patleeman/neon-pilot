@@ -103,6 +103,7 @@ import {
   Spinner,
   Stat,
   StatGrid,
+  SwatchOption,
   StatusDot,
   SurfacePanel,
   SupportingText,
@@ -220,6 +221,15 @@ const meta = {
             label="Create a new branch"
             details="Start a separate branch before applying the change."
           />
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="radiogroup" aria-label="Accent color">
+          <SwatchOption
+            checked
+            label="Teal"
+            swatch={<span style={{ width: '100%', height: '100%', background: 'rgb(20 184 166)' }} />}
+          />
+          <SwatchOption label="Amber" swatch={<span style={{ width: '100%', height: '100%', background: 'rgb(245 158 11)' }} />} />
+          <SwatchOption label="Rose" swatch={<span style={{ width: '100%', height: '100%', background: 'rgb(244 63 94)' }} />} />
         </div>
         <EditorToolbar sticky={false} style={{ maxWidth: 520 }} aria-label="Writing toolbar">
           <EditorToolbarGroup>

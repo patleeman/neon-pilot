@@ -1460,6 +1460,71 @@ body {
   color: rgb(var(--color-primary));
 }
 
+.ui-swatch-option {
+  display: inline-flex;
+  min-width: 5.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgb(var(--color-border-subtle));
+  border-radius: 0.5rem;
+  background: rgb(var(--color-elevated));
+  padding: 0.5rem 0.625rem;
+  color: rgb(var(--color-secondary));
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.ui-swatch-option:hover {
+  border-color: rgb(var(--color-border-default));
+  background: rgb(var(--color-surface));
+}
+
+.ui-swatch-option:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgb(var(--color-accent) / 0.5),
+    0 0 0 3px rgb(var(--color-accent) / 0.16);
+}
+
+.ui-swatch-option:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ui-swatch-option-checked {
+  border-color: rgb(var(--color-accent));
+  background: rgb(var(--color-accent) / 0.1);
+  color: rgb(var(--color-primary));
+}
+
+.ui-swatch-option-swatch {
+  display: inline-flex;
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgb(var(--color-border-default));
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.ui-swatch-option-label {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-choice-row {
   display: flex;
   width: 100%;

@@ -23,7 +23,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `InlineTextInput`, `InlineSelect`, `Checkbox`, `KeyboardShortcutCaptureInput`, `Switch`, `SettingsPanel`, `SettingsRow`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
-- Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
+- Selection and filtering: `SegmentedControl`, `SwatchOption`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
 - Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `MessageCard`, `MessageMeta`, `ToolResultCard`, `ResourcePickerDialog`, `ResourcePickerToolbar`, `ResourcePickerList`, `ResourceList`, `ResourceListRow`, `ResourceListItem`, `ResourceListLink`, `RowButton`, `InlineCode`, `InlineCodeButton`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`, `TerminalBlock`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`, `RuntimePage`, `RuntimeHeader`, `RuntimeHeaderControls`, `RuntimeStrip`, `RuntimeSection`, `RuntimeFooter`
 - Utility: `cx`
@@ -83,6 +83,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `CheckButton` for compact binary state controls where the row label is adjacent, such as todo completion, checklist steps, or small selectable resources.
 - Use `TaskListItem` for compact checklist/todo rows with a control, label, optional detail text, done styling, and hover/focus actions. It is the default primitive for todo shelves, agent task lists, setup checklists, and queue items.
 - Use `ChoiceRow` for selectable radio/checkbox option rows with an indicator, label, and optional details. It is the default primitive for ask-user prompts, setup wizards, and compact extension decision flows.
+- Use `SwatchOption` for color, accent, theme, status-color, and palette choices. Wrap related swatches in a `radiogroup`, pass `checked`, a visible `label`, and a small `swatch` node; avoid rebuilding local color-pick buttons.
 - Use `AttachmentChip` with `AttachmentChipButton` for compact file, image, drawing, and generated-asset rows in composer shelves, attachment lists, and upload previews. Keep file-specific labels, thumbnails, and actions in the caller.
 - `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, and `CheckButton` forward refs for focus management, anchored menus, and keyboard workflows.
 - Use `Field` only when the child is a simple form control that can be labeled by wrapping it, such as `TextInput`, `Textarea`, or `Select`. For composite controls containing buttons, compose `FieldLabel` and `FieldHint` in a neutral container instead.

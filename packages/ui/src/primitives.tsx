@@ -1356,6 +1356,31 @@ export const RowButton = forwardRef<
   );
 });
 
+export const SwatchOption = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    checked?: boolean;
+    label: ReactNode;
+    swatch: ReactNode;
+  }
+>(function SwatchOption({ checked = false, className, label, swatch, type = 'button', ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      role={props.role ?? 'radio'}
+      aria-checked={props['aria-checked'] ?? checked}
+      className={cx('ui-swatch-option', checked && 'ui-swatch-option-checked', className)}
+      {...props}
+    >
+      <span className="ui-swatch-option-swatch" aria-hidden="true">
+        {swatch}
+      </span>
+      <span className="ui-swatch-option-label">{label}</span>
+    </button>
+  );
+});
+
 export const ChoiceRow = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {

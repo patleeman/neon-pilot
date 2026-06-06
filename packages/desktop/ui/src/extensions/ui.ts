@@ -139,6 +139,7 @@ export {
   Stat,
   StatGrid,
   StatusDot,
+  SwatchOption,
   SurfacePanel,
   SupportingText,
   Switch,

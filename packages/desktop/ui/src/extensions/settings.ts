@@ -60,6 +60,7 @@ export {
   SettingsSection,
   Stat,
   StatGrid,
+  SwatchOption,
   SupportingText,
   Switch,
   TabButton,

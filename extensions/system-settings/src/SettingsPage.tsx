@@ -48,6 +48,7 @@ import {
   SettingsPanel,
   SettingsPanelHost,
   subscribeDesktopProviderOAuthLogin,
+  SwatchOption,
   type TelemetryDbMaintenanceResult,
   TextButton,
   Textarea,
@@ -2858,26 +2859,18 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         const isSelected = accent === entry.id;
                         const currentTokens = theme.includes('dark') ? entry.dark : entry.light;
                         return (
-                          <button
+                          <SwatchOption
                             key={entry.id}
-                            type="button"
-                            role="radio"
-                            aria-checked={isSelected}
-                            className={cx(
-                              'flex min-w-[92px] items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35',
-                              isSelected
-                                ? 'border-accent bg-accent/10 text-primary'
-                                : 'border-border-subtle bg-elevated text-secondary hover:border-border-default hover:bg-surface',
-                            )}
+                            checked={isSelected}
+                            label={entry.label}
+                            swatch={
+                              <span
+                                className="h-full w-full"
+                                style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
+                              />
+                            }
                             onClick={() => setAccent(entry.id as ThemeAccent)}
-                          >
-                            <span
-                              className="h-4 w-4 shrink-0 rounded-full border border-border-default shadow-sm"
-                              style={{ backgroundColor: `rgb(${currentTokens.accent.replaceAll(' ', ', ')})` }}
-                              aria-hidden="true"
-                            />
-                            <span className="text-[12px] font-medium">{entry.label}</span>
-                          </button>
+                          />
                         );
                       })}
                     </div>

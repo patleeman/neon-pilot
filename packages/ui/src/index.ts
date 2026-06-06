@@ -142,6 +142,7 @@ export {
   Stat,
   StatGrid,
   StatusDot,
+  SwatchOption,
   type StatusDotSize,
   type StatusDotTone,
   SurfacePanel,
