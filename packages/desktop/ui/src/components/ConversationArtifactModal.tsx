@@ -9,7 +9,7 @@ import { useApi } from '../hooks/useApi';
 import { formatDate } from '../shared/utils';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { CodeBlock, cx, ErrorState, LoadingState, MetaLabel, SectionLabel, ToolbarButton } from './ui';
+import { CodeBlock, cx, ErrorState, IconButton, LoadingState, MetaLabel, SectionLabel } from './ui';
 
 function formatArtifactLoadError(error: string | null): string | null {
   if (!error) {
@@ -181,39 +181,39 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
             <div className="flex shrink-0 items-center gap-1.5">
               {artifact ? (
                 <>
-                  <ToolbarButton
+                  <IconButton
+                    compact
                     onClick={() => {
                       void copySource();
                     }}
-                    className="h-7 w-7 justify-center p-0"
                     aria-label={copied ? 'Copied' : artifact.kind === 'latex' ? 'Copy LaTeX' : 'Copy source'}
                     title={copied ? 'Copied' : artifact.kind === 'latex' ? 'Copy LaTeX' : 'Copy source'}
                   >
                     <ToolbarIcon name={copied ? 'check' : 'copy'} />
-                  </ToolbarButton>
+                  </IconButton>
                   {artifact.kind !== 'latex' ? (
-                    <ToolbarButton
+                    <IconButton
+                      compact
                       onClick={() => setShowSource((current) => !current)}
-                      className="h-7 w-7 justify-center p-0"
                       aria-label={showSource ? 'Hide source' : 'Show source'}
                       title={showSource ? 'Hide source' : 'Show source'}
                     >
                       <ToolbarIcon name={showSource ? 'eyeOff' : 'code'} />
-                    </ToolbarButton>
+                    </IconButton>
                   ) : null}
                 </>
               ) : null}
-              <ToolbarButton
+              <IconButton
+                compact
                 onClick={() => setExpanded((current) => !current)}
-                className="h-7 w-7 justify-center p-0"
                 aria-label={expanded ? 'Restore' : 'Fullscreen'}
                 title={expanded ? 'Restore' : 'Fullscreen'}
               >
                 <ToolbarIcon name={expanded ? 'minimize' : 'maximize'} />
-              </ToolbarButton>
-              <ToolbarButton onClick={closeArtifact} className="h-7 w-7 justify-center p-0" aria-label="Close" title="Close">
+              </IconButton>
+              <IconButton compact onClick={closeArtifact} aria-label="Close" title="Close">
                 <ToolbarIcon name="x" />
-              </ToolbarButton>
+              </IconButton>
             </div>
           </div>
         </div>
