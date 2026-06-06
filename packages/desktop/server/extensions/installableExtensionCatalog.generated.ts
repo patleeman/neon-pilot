@@ -19,6 +19,13 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     "tag": "v0.10.2"
   },
   {
+    "id": "system-auto-router",
+    "name": "Auto Router",
+    "description": "Adds a composer control for judge-based model routing policy settings.",
+    "version": "0.1.0",
+    "tag": "v0.10.2"
+  },
+  {
     "id": "system-browser",
     "name": "Browser",
     "description": "Browse web pages beside the active conversation.",
