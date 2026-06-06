@@ -3415,6 +3415,11 @@ body {
   scroll-margin-top: 2rem;
 }
 
+.ui-app-page-section-stacked {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .ui-app-page-section-header {
   display: flex;
   align-items: flex-start;

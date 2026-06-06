@@ -103,7 +103,7 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
         {/* ── Pulse Row ── */}
         {summary && <PulseRow summary={summary} />}
 
-        <AppPageSection title="Usage" bodyClassName="space-y-4">
+        <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
           {tokensDaily && <TracesHeatmap data={tokensDaily} />}
           {modelUsage && summary && (
             <TracesModelUsage
@@ -121,12 +121,12 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
           {tokensDaily && summary && <TracesBraidChart data={tokensDaily} />}
         </AppPageSection>
 
-        <AppPageSection title="Tools" bodyClassName="space-y-4">
+        <AppPageSection title="Tools" layout="stacked" bodyClassName="space-y-4">
           {toolHealth && <TracesToolHealth tools={toolHealth} />}
           <TracesToolFlow data={toolFlow} />
         </AppPageSection>
 
-        <AppPageSection title="Runtime" bodyClassName="space-y-4">
+        <AppPageSection title="Runtime" layout="stacked" bodyClassName="space-y-4">
           <TracesContextPointers data={contextPointers} />
           <TracesAutoMode data={autoMode} />
           <TracesSessionIntegrity events={sessionIntegrity ?? []} />

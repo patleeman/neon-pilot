@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ActionTile,
+  AppPageSection,
   Button,
   ButtonLink,
   BrowsePathButton,
@@ -153,6 +154,15 @@ describe('design-system primitives', () => {
     expect(html).toContain('role="treeitem"');
     expect(html).toContain('aria-selected="true"');
     expect(html).toContain('aria-expanded="false"');
+  });
+
+  it('renders stacked app page sections for dashboard pages', () => {
+    const html = renderToStaticMarkup(createElement(AppPageSection, { title: 'Usage', layout: 'stacked' }, 'Charts'));
+
+    expect(html).toContain('ui-app-page-section');
+    expect(html).toContain('ui-app-page-section-stacked');
+    expect(html).toContain('Usage');
+    expect(html).toContain('Charts');
   });
 
   it('renders transcript message card primitives', () => {

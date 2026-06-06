@@ -535,6 +535,10 @@
     @apply scroll-mt-24 border-b border-border-subtle py-7 last:border-b-0 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8;
   }
 
+  .ui-app-page-section-stacked {
+    @apply grid-cols-1 gap-4;
+  }
+
   .ui-app-page-section-body {
     @apply min-w-0 pt-5 lg:pt-0;
   }

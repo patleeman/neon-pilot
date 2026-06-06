@@ -3155,6 +3155,7 @@ export function AppPageSection({
   meta,
   actions,
   children,
+  layout = 'split',
   className,
   headerClassName,
   titleClassName,
@@ -3167,6 +3168,7 @@ export function AppPageSection({
   meta?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
+  layout?: 'split' | 'stacked';
   className?: string;
   headerClassName?: string;
   titleClassName?: string;
@@ -3174,7 +3176,7 @@ export function AppPageSection({
   bodyClassName?: string;
 }) {
   return (
-    <section id={id} className={cx('ui-app-page-section', className)}>
+    <section id={id} className={cx('ui-app-page-section', layout === 'stacked' && 'ui-app-page-section-stacked', className)}>
       {title || description || meta || actions ? (
         <div className={cx('ui-app-page-section-header', headerClassName)}>
           <div className="min-w-0 space-y-2">
