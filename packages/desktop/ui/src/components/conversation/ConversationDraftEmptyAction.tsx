@@ -113,8 +113,8 @@ export function ConversationDraftEmptyAction({
         {hasDraftCwd ? <FolderIcon className="text-accent" /> : <ChatBubbleIcon className="text-accent" />}
         <SectionLabel tone="muted">{hasDraftCwd ? 'Workspace' : 'Chat'}</SectionLabel>
       </div>
-      <div className="flex w-full flex-wrap items-start justify-start gap-2">
-        <div ref={pickerRef} className="relative min-w-[18rem] max-w-full flex-1 sm:max-w-[32rem]">
+      <div className="flex w-full flex-nowrap items-start justify-start gap-2">
+        <div ref={pickerRef} className="relative min-w-0 flex-1 sm:min-w-[18rem] sm:max-w-[32rem]">
           <span className="sr-only">Saved workspace</span>
           <RowButton
             compact
@@ -153,10 +153,12 @@ export function ConversationDraftEmptyAction({
 
           {workspacePickerOpen && !workspacePickerDisabled ? (
             <div
+              role="listbox"
+              aria-label="Saved workspaces"
               className="absolute left-0 right-0 top-full z-50 mt-1 overflow-y-auto rounded-lg border border-border-subtle bg-base p-1 shadow-xl"
               style={{ maxHeight: 'min(18rem, 42vh)' }}
             >
-              <div role="listbox" aria-label="Saved workspaces" className="space-y-0.5">
+              <div className="space-y-0.5">
                 {workspaceOptions.map((option) => (
                   <RowButton
                     key={option.value}
