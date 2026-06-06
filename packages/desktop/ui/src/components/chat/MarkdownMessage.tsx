@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 
 import { type ParsedSkillBlock, parseSkillBlock } from '../../markdown/markdownExtensions';
 import { extractMarkdownTextContent, InlineMarkdownCode } from '../MarkdownInlineCode';
-import { cx, InlineCode } from '../ui';
+import { cx, InlineCode, InlineCodeButton } from '../ui';
 
 // ── Markdown renderer ─────────────────────────────────────────────────────────
 
@@ -14,9 +14,6 @@ const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkBreaks];
 function MentionPill({ text }: { text: string }) {
   return <span className="ui-markdown-mention">{text}</span>;
 }
-
-const INLINE_COMMIT_HASH_BUTTON_CLASS =
-  'inline-flex items-center font-mono text-[0.82em] bg-elevated px-1 py-0.5 rounded text-accent whitespace-pre-wrap break-words [overflow-wrap:anywhere] transition-colors hover:bg-accent/12 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20';
 
 type EnhancedTextFragment = {
   text: string;
@@ -35,15 +32,13 @@ function CommitHashButton({ hash, onOpenCheckpoint }: { hash: string; onOpenChec
   }
 
   return (
-    <button
-      type="button"
+    <InlineCodeButton
       onClick={() => onOpenCheckpoint(hash)}
-      className={INLINE_COMMIT_HASH_BUTTON_CLASS}
       aria-label={`Open diff for commit ${hash}`}
       title={`Open diff for commit ${hash}`}
     >
       {hash}
-    </button>
+    </InlineCodeButton>
   );
 }
 

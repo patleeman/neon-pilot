@@ -29,6 +29,7 @@ import {
   FolderIcon,
   IconButton,
   IconLink,
+  InlineCodeButton,
   InlineSelect,
   InlineTextInput,
   KeyboardShortcutCaptureInput,
@@ -501,6 +502,15 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-code-block');
     expect(html).toContain('ui-code-block-compact');
     expect(html).not.toContain('ui-code-block-wrap');
+  });
+
+  it('renders inline code buttons with button semantics', () => {
+    const html = renderToStaticMarkup(createElement(InlineCodeButton, { 'aria-label': 'Open checkpoint' }, '7410c8c'));
+
+    expect(html).toContain('<button');
+    expect(html).toContain('type="button"');
+    expect(html).toContain('ui-inline-code-button');
+    expect(html).toContain('ui-inline-code-wrap');
   });
 
   it('renders disclosure anatomy', () => {

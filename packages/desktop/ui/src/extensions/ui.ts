@@ -69,6 +69,7 @@ export {
   type IconButtonSize,
   IconLink,
   InlineCode,
+  InlineCodeButton,
   InlineMeta,
   InlineSelect,
   InlineTextInput,

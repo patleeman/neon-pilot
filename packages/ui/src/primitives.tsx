@@ -1315,6 +1315,20 @@ export function InlineCode({ children, className, wrap = true, ...props }: HTMLA
   );
 }
 
+export function InlineCodeButton({
+  children,
+  className,
+  type = 'button',
+  wrap = true,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { wrap?: boolean }) {
+  return (
+    <button type={type} className={cx('ui-inline-code-button', wrap && 'ui-inline-code-wrap', className)} {...props}>
+      {children}
+    </button>
+  );
+}
+
 export function Disclosure({
   summary,
   children,

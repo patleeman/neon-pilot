@@ -1502,6 +1502,30 @@ body {
   font-size: 0.82em;
 }
 
+.ui-inline-code-button {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.25rem;
+  background: rgb(var(--color-elevated));
+  padding: 0.125rem 0.25rem;
+  color: rgb(var(--color-accent));
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.ui-inline-code-button:hover {
+  background: rgb(var(--color-accent) / 0.12);
+  color: rgb(var(--color-accent));
+}
+
+.ui-inline-code-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.2);
+}
+
 .ui-inline-code-wrap {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

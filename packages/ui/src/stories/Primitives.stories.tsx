@@ -43,6 +43,7 @@ import {
   IconButton,
   IconLink,
   InlineCode,
+  InlineCodeButton,
   InlineMeta,
   InlineSelect,
   InlineTextInput,
@@ -464,6 +465,10 @@ const meta = {
             />
             <p style={{ margin: 0, fontSize: 13 }}>
               Long paths wrap safely in <InlineCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineCode>.
+            </p>
+            <p style={{ margin: 0, fontSize: 13 }}>
+              Clickable tokens use <InlineCodeButton aria-label="Open checkpoint">7410c8c</InlineCodeButton> for commit hashes,
+              checkpoints, and other inline actions.
             </p>
             <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" leading="#" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
