@@ -1964,9 +1964,9 @@ function ExtensionDetailsContent({
             {[...(extension.errors ?? []), ...(extension.diagnostics ?? []), extension.buildError ?? null]
               .filter(Boolean)
               .map((message) => (
-                <p key={message} className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[12px] leading-5 text-danger">
+                <Notice key={message} tone="danger" className="py-2">
                   {message}
-                </p>
+                </Notice>
               ))}
           </div>
         </DetailBlock>

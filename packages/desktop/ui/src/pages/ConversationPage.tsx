@@ -22,7 +22,7 @@ import {
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
 import { addNotification } from '../components/notifications/notificationStore';
-import { AppPageEmptyState, EmptyState, LoadingState, PageHeader, SectionLabel } from '../components/ui';
+import { AppPageEmptyState, EmptyState, LoadingState, Notice, PageHeader, SectionLabel } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
 import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
 import {
@@ -5984,24 +5984,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 </div>
               ) : null}
               {visibleConversationBootstrap?.integrityWarning && (
-                <div className="mt-1 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs text-warning">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                  <span>Session file was modified outside the agent. Some context may be stale.</span>
-                </div>
+                <Notice tone="warning" className="mt-1 py-1.5">
+                  Session file was modified outside the agent. Some context may be stale.
+                </Notice>
               )}
             </div>
           </div>

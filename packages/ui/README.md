@@ -109,6 +109,7 @@ These production areas already use the shared package and are useful examples fo
 - Search and filters: `system-extension-manager`, `system-automations`
 - Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`, `system-model-picker`
 - Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Feedback: extension manager diagnostics and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
 - Composer menus: model picker provider groups and slash-command source labels
 - Compact editors: scheduled task advanced options and other dense field groups
