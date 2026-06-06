@@ -79,6 +79,22 @@ describe('system-conversation-tools manifest', () => {
     );
   });
 
+  it('declares conversation CLI commands on the conversation tool action', () => {
+    expect(manifest.contributes.cliCommands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: 'conversations list', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations search', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations inspect', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations create', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations title', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations cwd', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations abort', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations compact', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations workspace', action: 'conversationTool' }),
+      ]),
+    );
+  });
+
   it('does not use an agentExtension for conversation tools', () => {
     expect(manifest.backend.agentExtension).toBeUndefined();
   });

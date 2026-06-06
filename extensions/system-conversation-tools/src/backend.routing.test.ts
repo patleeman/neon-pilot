@@ -132,6 +132,28 @@ describe('system-conversation-tools backend routing', () => {
     );
   });
 
+  it('normalizes contributed conversation CLI commands into conversation actions', async () => {
+    const context = ctx();
+    const conversations = (context as { conversations: Record<string, ReturnType<typeof vi.fn>> }).conversations;
+
+    await conversationTool({ cli: { command: 'conversations list', args: ['repo'] } }, context);
+    expect(inspect.executeConversationInspectTool).toHaveBeenLastCalledWith(
+      { action: 'list', query: 'repo' },
+      expect.objectContaining({ cwd: '/repo' }),
+    );
+
+    await conversationTool({ cli: { command: 'conversations create', args: ['CLI', 'Thread'] } }, context);
+    expect(conversations.create).toHaveBeenLastCalledWith({ title: 'CLI Thread' });
+
+    await conversationTool({ cli: { command: 'conversations title', args: ['conv-2', 'Renamed', 'Thread'] } }, context);
+    const setTitleCallback = title.executeSetConversationTitle.mock.calls.at(-1)?.[2] as (nextTitle: string) => Promise<unknown>;
+    await setTitleCallback('Renamed Thread');
+    expect(conversations.setTitle).toHaveBeenLastCalledWith('conv-2', 'Renamed Thread');
+
+    await conversationTool({ cli: { command: 'conversations abort', args: ['conv-2'] } }, context);
+    expect(conversations.abort).toHaveBeenLastCalledWith('conv-2');
+  });
+
   it('sets the title on an explicit target conversation when conversationId is provided', async () => {
     const context = ctx();
 

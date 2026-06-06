@@ -132,6 +132,36 @@ describe('protocol CLI', () => {
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Validated system-knowledge'));
   });
 
+  it('passes the final command token as a generic action hint for extension CLI handlers', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-settings',
+          surfaceId: 'settings-set',
+          command: 'settings set',
+          action: 'manageSettings',
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['settings', 'set', 'conversation.pinnedToolCalls', 'false'])).resolves.toBe(0);
+
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensionId: 'system-settings',
+        actionId: 'manageSettings',
+        input: expect.objectContaining({
+          action: 'set',
+          cli: expect.objectContaining({
+            command: 'settings set',
+            args: ['conversation.pinnedToolCalls', 'false'],
+            json: false,
+          }),
+        }),
+      }),
+    );
+  });
+
   it('reports CLI install status as a built-in command', async () => {
     await expect(runProtocolCli(['cli', 'status', '--json'])).resolves.toBe(0);
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"binDir"'));

@@ -35,4 +35,23 @@ describe('system-settings manifest', () => {
     expect(manifest.permissions).toContain('settings:read');
     expect(manifest.permissions).toContain('settings:write');
   });
+
+  it('declares settings CLI commands backed by a worker action', () => {
+    expect(manifest.contributes.cliCommands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: 'settings list', action: 'manageSettings' }),
+        expect.objectContaining({ command: 'settings schema', action: 'manageSettings' }),
+        expect.objectContaining({ command: 'settings get', action: 'manageSettings' }),
+        expect.objectContaining({ command: 'settings set', action: 'manageSettings' }),
+      ]),
+    );
+    expect(manifest.backend.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'manageSettings',
+          worker: expect.objectContaining({ enabled: true, inputActions: ['list', 'schema', 'get', 'set'] }),
+        }),
+      ]),
+    );
+  });
 });
