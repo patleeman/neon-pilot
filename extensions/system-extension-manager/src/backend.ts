@@ -151,25 +151,46 @@ export async function reloadExtensions(_input: unknown, _ctx: ExtensionBackendCo
 }
 
 export async function manageExtension(input: unknown, ctx: ExtensionBackendContext) {
-  const body = asRecord(input);
+  const body = normalizeManagerInput(input);
   const action = typeof body.action === 'string' ? body.action : 'list';
-  if (action === 'list') return listExtensions(input, ctx);
-  if (action === 'create') return createExtension(input, ctx);
-  if (action === 'snapshot') return snapshotExtension(input as ExtensionIdInput, ctx);
-  if (action === 'reload') return reloadExtension(input as ExtensionIdInput, ctx);
-  if (action === 'validate') return validateExtension(input, ctx);
-  if (action === 'hostViewComponents') return listHostViewComponents(input, ctx);
-  if (action === 'listInstallable') return listInstallableExtensions(input, ctx);
-  if (action === 'installCatalog') return installCatalogExtension(input, ctx);
-  if (action === 'updateCatalog') return updateCatalogExtension(input, ctx);
-  if (action === 'installFromUrl') return installExtensionFromUrl(input, ctx);
-  if (action === 'installMarketplacePackage') return installMarketplacePackage(input, ctx);
-  if (action === 'readSearchPaths') return readSearchPaths(input, ctx);
-  if (action === 'updateSearchPaths') return updateSearchPaths(input, ctx);
-  if (action === 'readExtensionSources') return readExtensionSources(input, ctx);
-  if (action === 'updateExtensionSources') return updateExtensionSources(input, ctx);
-  if (action === 'reloadExtensions') return reloadExtensions(input, ctx);
+  if (action === 'list') return listExtensions(body, ctx);
+  if (action === 'create') return createExtension(body, ctx);
+  if (action === 'snapshot') return snapshotExtension(body as ExtensionIdInput, ctx);
+  if (action === 'reload') return reloadExtension(body as ExtensionIdInput, ctx);
+  if (action === 'validate') return validateExtension(body, ctx);
+  if (action === 'hostViewComponents') return listHostViewComponents(body, ctx);
+  if (action === 'listInstallable') return listInstallableExtensions(body, ctx);
+  if (action === 'installCatalog') return installCatalogExtension(body, ctx);
+  if (action === 'updateCatalog') return updateCatalogExtension(body, ctx);
+  if (action === 'installFromUrl') return installExtensionFromUrl(body, ctx);
+  if (action === 'installMarketplacePackage') return installMarketplacePackage(body, ctx);
+  if (action === 'readSearchPaths') return readSearchPaths(body, ctx);
+  if (action === 'updateSearchPaths') return updateSearchPaths(body, ctx);
+  if (action === 'readExtensionSources') return readExtensionSources(body, ctx);
+  if (action === 'updateExtensionSources') return updateExtensionSources(body, ctx);
+  if (action === 'reloadExtensions') return reloadExtensions(body, ctx);
+  if (action === 'enable' || action === 'disable') {
+    const extensionId = requireExtensionId(body);
+    ctx.extensions?.setEnabled?.(extensionId, action === 'enable');
+    return { ok: true, extensionId, enabled: action === 'enable', text: `${action === 'enable' ? 'Enabled' : 'Disabled'} ${extensionId}.` };
+  }
   throw new Error(`Unsupported extension manager action: ${action}`);
+}
+
+function normalizeManagerInput(input: unknown): Record<string, unknown> {
+  const body = asRecord(input);
+  const cli = asRecord(body.cli);
+  if (!cli.command) return body;
+  const command = typeof cli.command === 'string' ? cli.command : '';
+  const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  if (command === 'extensions list') return { ...body, action: 'list' };
+  if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0] };
+  if (command === 'extensions reload') return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };
+  if (command === 'extensions enable') return { ...body, action: 'enable', extensionId: args[0] };
+  if (command === 'extensions disable') return { ...body, action: 'disable', extensionId: args[0] };
+  if (command === 'extensions paths') return { ...body, action: 'readSearchPaths' };
+  if (command === 'extensions sources') return { ...body, action: 'readExtensionSources' };
+  return body;
 }
 
 function requireExtensionId(input: ExtensionIdInput): string {

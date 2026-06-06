@@ -162,7 +162,9 @@
             "updateSearchPaths",
             "readExtensionSources",
             "updateExtensionSources",
-            "reloadExtensions"
+            "reloadExtensions",
+            "enable",
+            "disable"
           ]
         }
       }
@@ -190,7 +192,60 @@
       "description": "Manage GitHub repositories used to populate installable extensions.",
       "order": 20
     },
+    "cliCommands": [
+      {
+        "id": "extensions-list",
+        "command": "extensions list",
+        "description": "List installed Neon Pilot extensions.",
+        "action": "manageExtension",
+        "jsonDefault": true
+      },
+      {
+        "id": "extensions-validate",
+        "command": "extensions validate",
+        "description": "Validate an installed extension by id.",
+        "action": "manageExtension"
+      },
+      {
+        "id": "extensions-reload",
+        "command": "extensions reload",
+        "description": "Reload an extension backend by id, or refresh registry state.",
+        "action": "manageExtension"
+      },
+      {
+        "id": "extensions-enable",
+        "command": "extensions enable",
+        "description": "Enable an installed extension.",
+        "action": "manageExtension"
+      },
+      {
+        "id": "extensions-disable",
+        "command": "extensions disable",
+        "description": "Disable an installed extension.",
+        "action": "manageExtension"
+      },
+      {
+        "id": "extensions-paths",
+        "command": "extensions paths",
+        "description": "Read extension search paths.",
+        "action": "manageExtension",
+        "jsonDefault": true
+      },
+      {
+        "id": "extensions-sources",
+        "command": "extensions sources",
+        "description": "Read extension catalog sources.",
+        "action": "manageExtension",
+        "jsonDefault": true
+      }
+    ],
     "skills": [
+      {
+        "id": "neon-pilot-administration",
+        "title": "Neon Pilot Administration",
+        "description": "Use the Neon Pilot CLI for self-administration of extensions, conversations, settings, and other extension-contributed surfaces.",
+        "path": "skills/neon-pilot-administration/SKILL.md"
+      },
       {
         "id": "skills-and-capabilities",
         "title": "Skills and Extension Capabilities",
