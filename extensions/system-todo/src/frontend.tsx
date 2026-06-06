@@ -1,4 +1,4 @@
-import { CheckButton, IconButton, Notice, ToolbarButton, cx } from '@neon-pilot/extensions/ui';
+import { CardMeta, CheckButton, IconButton, Notice, TextButton, cx } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type TodoStatus = 'todo' | 'done';
@@ -186,13 +186,13 @@ export function TodoShelf({
         <span className="text-dim">{`${openItems.length} open${doneItems.length ? ` · ${doneItems.length} done` : ''}`}</span>
         <span className="flex-1" />
         {doneItems.length > 0 ? (
-          <ToolbarButton
-            className="min-h-0 px-1.5 py-0.5 text-[11px] shadow-none"
+          <TextButton
+            className="text-[11px]"
             disabled={Boolean(busyId)}
             onClick={() => void run('clear-done', () => invoke<TodoState>('clearItems', { scope: 'done' }))}
           >
             Clear done
-          </ToolbarButton>
+          </TextButton>
         ) : null}
       </div>
 
@@ -219,7 +219,7 @@ export function TodoShelf({
               />
               <div className="min-w-0">
                 <div className={cx('truncate', isDone(item) ? 'text-dim line-through' : 'text-primary')}>{item.text}</div>
-                {item.note ? <div className="truncate text-[10px] text-dim">{item.note}</div> : null}
+                {item.note ? <CardMeta className="truncate text-[10px]">{item.note}</CardMeta> : null}
               </div>
               <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                 <IconButton
