@@ -44,6 +44,7 @@ import {
   PanelHeader,
   Pill,
   ProgressBar,
+  RailSection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
@@ -70,6 +71,8 @@ import {
   TextInput,
   TerminalBlock,
   Tooltip,
+  WorkbenchHeader,
+  WorkbenchShell,
   formatKeyboardShortcutLabel,
 } from './primitives';
 
@@ -221,6 +224,30 @@ describe('design-system primitives', () => {
     expect(sectionHtml).toContain('Runtime logs');
     expect(sectionHtml).toContain('min-h-44');
     expect(footerHtml).toContain('aria-expanded="true"');
+  });
+
+  it('renders workbench and rail layout primitives', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        WorkbenchShell,
+        {
+          header: createElement(WorkbenchHeader, {
+            title: 'Artifact preview',
+            meta: 'rev 3',
+            actions: createElement(Button, { variant: 'action' }, 'Copy'),
+          }),
+          footer: createElement('span', null, 'Ready'),
+        },
+        createElement(RailSection, { title: 'Files' }, createElement(ResourceListItem, { label: 'index.tsx', meta: 'modified' })),
+      ),
+    );
+
+    expect(html).toContain('ui-workbench-shell');
+    expect(html).toContain('ui-workbench-header');
+    expect(html).toContain('Artifact preview');
+    expect(html).toContain('ui-rail-section');
+    expect(html).toContain('Files');
+    expect(html).toContain('Ready');
   });
 
   it('renders setting toggle rows with switch semantics', () => {

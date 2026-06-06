@@ -9,7 +9,17 @@ import { formatDate } from '../shared/utils';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { ErrorState, LoadingState, MetaLabel, PanelMessage, ResourceListItem, SectionLabel, ToolbarButton } from './ui';
+import {
+  ErrorState,
+  LoadingState,
+  MetaLabel,
+  PanelMessage,
+  RailSection,
+  ResourceListItem,
+  ToolbarButton,
+  WorkbenchHeader,
+  WorkbenchShell,
+} from './ui';
 
 export { useConversationArtifactSummaries };
 
@@ -55,14 +65,7 @@ export function ConversationArtifactRailContent({
     );
   }
 
-  return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 px-3 py-2">
-        <SectionLabel>Artifacts</SectionLabel>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">{content}</div>
-    </div>
-  );
+  return <RailSection title="Artifacts">{content}</RailSection>;
 }
 
 function formatArtifactLoadError(error: string | null): string | null {
@@ -135,45 +138,38 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
     window.setTimeout(() => setCopied(false), 1200);
   }, [artifact]);
 
+  const artifactTitle = artifact ? `${artifact.title} · ${artifact.id} · rev ${artifact.revision} · updated ${formatDate(artifact.updatedAt)}` : artifactId;
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
-      <div className="shrink-0 border-b border-border-subtle px-4 py-2.5">
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <div className="min-w-0 flex flex-1 items-center gap-2.5">
-            <MetaLabel>{artifact?.kind ?? 'artifact'}</MetaLabel>
-            <h2
-              className="min-w-0 truncate text-[14px] font-medium text-primary"
-              title={
-                artifact
-                  ? `${artifact.title} · ${artifact.id} · rev ${artifact.revision} · updated ${formatDate(artifact.updatedAt)}`
-                  : artifactId
-              }
-            >
-              {artifact?.title ?? artifactId}
-            </h2>
-            {artifact ? <span className="hidden shrink-0 text-[11px] text-dim sm:inline">rev {artifact.revision}</span> : null}
-          </div>
-          {artifact ? (
-            <ToolbarButton
-              onClick={() => {
-                void copySource();
-              }}
-              className="shrink-0 px-2 py-1 text-[10px]"
-            >
-              {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
-            </ToolbarButton>
-          ) : null}
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {loading && !artifact ? (
-          <LoadingState label="Loading artifact…" className="justify-center h-full" />
-        ) : error || !artifact ? (
-          <ErrorState message={error || 'Artifact not found.'} className="px-4 py-4" />
-        ) : (
-          <ConversationArtifactViewer artifact={artifact} />
-        )}
-      </div>
-    </div>
+    <WorkbenchShell
+      header={
+        <WorkbenchHeader
+          title={<span title={artifactTitle}>{artifact?.title ?? artifactId}</span>}
+          meta={artifact ? <span className="hidden sm:inline">rev {artifact.revision}</span> : null}
+          leading={<MetaLabel>{artifact?.kind ?? 'artifact'}</MetaLabel>}
+          titleClassName="text-[14px]"
+          actions={
+            artifact ? (
+              <ToolbarButton
+                onClick={() => {
+                  void copySource();
+                }}
+                className="shrink-0 px-2 py-1 text-[10px]"
+              >
+                {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
+              </ToolbarButton>
+            ) : null
+          }
+        />
+      }
+    >
+      {loading && !artifact ? (
+        <LoadingState label="Loading artifact…" className="justify-center h-full" />
+      ) : error || !artifact ? (
+        <ErrorState message={error || 'Artifact not found.'} className="px-4 py-4" />
+      ) : (
+        <ConversationArtifactViewer artifact={artifact} />
+      )}
+    </WorkbenchShell>
   );
 }

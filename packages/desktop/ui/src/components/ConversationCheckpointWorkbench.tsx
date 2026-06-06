@@ -8,7 +8,19 @@ import { formatDate } from '../shared/utils';
 import { CheckpointDiffSection, fileDisplayPath } from './checkpoints/CheckpointDiffView';
 import { UNCOMMITTED_SENTINEL, useConversationCheckpointSummaries, useUncommittedDiff } from './conversationCheckpointHooks';
 import { addNotification } from './notifications/notificationStore';
-import { CenteredLoadingState, CenteredMessage, cx, ErrorState, PanelMessage, RowButton, SectionLabel, SegmentedControl } from './ui';
+import {
+  CenteredLoadingState,
+  CenteredMessage,
+  cx,
+  ErrorState,
+  PanelMessage,
+  RailSection,
+  RowButton,
+  SectionLabel,
+  SegmentedControl,
+  WorkbenchHeader,
+  WorkbenchShell,
+} from './ui';
 
 type DiffViewMode = 'unified' | 'split';
 
@@ -50,12 +62,9 @@ export { UNCOMMITTED_SENTINEL, useConversationCheckpointSummaries, useUncommitte
 
 function DiffRailShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 px-3 py-2">
-        <SectionLabel>Diffs</SectionLabel>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">{children}</div>
-    </div>
+    <RailSection title="Diffs" bodyClassName="px-1.5">
+      {children}
+    </RailSection>
   );
 }
 
@@ -552,11 +561,13 @@ export function ConversationCheckpointWorkbenchPane({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
-      <div className="shrink-0 border-b border-border-subtle bg-panel px-5 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-secondary">
+    <WorkbenchShell
+      header={
+        <WorkbenchHeader
+          title={checkpoint?.subject ?? checkpointId}
+          titleClassName="text-[17px] font-semibold"
+          meta={
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               {checkpoint ? <span className="font-mono text-steel">{checkpoint.shortSha}</span> : <SectionLabel>Diff</SectionLabel>}
               {checkpointSubtitle ? <span className="truncate">{checkpointSubtitle}</span> : null}
               {checkpoint ? (
@@ -566,14 +577,12 @@ export function ConversationCheckpointWorkbenchPane({
                 </span>
               ) : null}
             </div>
-            <h2 className="mt-1 truncate text-[17px] font-semibold text-primary" title={checkpoint?.subject ?? checkpointId}>
-              {checkpoint?.subject ?? checkpointId}
-            </h2>
-          </div>
-          <DiffViewToggle currentView={diffView} onChange={setDiffView} />
-        </div>
-      </div>
-
+          }
+          actions={<DiffViewToggle currentView={diffView} onChange={setDiffView} />}
+          className="px-5 py-3"
+        />
+      }
+    >
       <div className="min-h-0 flex flex-1 overflow-hidden">
         <div className="min-h-0 flex-1 overflow-hidden">
           {loading && !checkpoint ? (
@@ -617,7 +626,7 @@ export function ConversationCheckpointWorkbenchPane({
           )}
         </div>
       </div>
-    </div>
+    </WorkbenchShell>
   );
 }
 
@@ -746,25 +755,29 @@ function UncommittedDiffPaneView({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-panel">
-      <div className="shrink-0 border-b border-border-subtle bg-panel px-5 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-secondary">
-              <SectionLabel>Uncommitted</SectionLabel>
-              {result?.branch ? <span className="truncate font-mono text-steel">{result.branch}</span> : null}
-              {result ? (
-                <span className="font-mono tabular-nums">
-                  <span className="text-success">+{result.linesAdded}</span> <span className="text-danger">-{result.linesDeleted}</span>
-                </span>
-              ) : null}
+    <WorkbenchShell
+      header={
+        <WorkbenchHeader
+          title="Uncommitted changes"
+          titleClassName="text-[17px] font-semibold"
+          meta={
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <SectionLabel>Uncommitted</SectionLabel>
+                {result?.branch ? <span className="truncate font-mono text-steel">{result.branch}</span> : null}
+                {result ? (
+                  <span className="font-mono tabular-nums">
+                    <span className="text-success">+{result.linesAdded}</span> <span className="text-danger">-{result.linesDeleted}</span>
+                  </span>
+                ) : null}
+              </div>
             </div>
-            <h2 className="mt-1 text-[17px] font-semibold text-primary">Uncommitted changes</h2>
-          </div>
-          <DiffViewToggle currentView={diffView} onChange={onDiffViewChange} />
-        </div>
-      </div>
-
+          }
+          actions={<DiffViewToggle currentView={diffView} onChange={onDiffViewChange} />}
+          className="px-5 py-3"
+        />
+      }
+    >
       <div className="min-h-0 flex flex-1 overflow-hidden">
         <div className="min-h-0 flex-1 overflow-hidden">
           {files.length === 0 ? (
@@ -802,6 +815,6 @@ function UncommittedDiffPaneView({
           )}
         </div>
       </div>
-    </div>
+    </WorkbenchShell>
   );
 }

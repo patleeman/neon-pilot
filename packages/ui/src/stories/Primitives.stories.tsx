@@ -66,6 +66,7 @@ import {
   PositionedMenu,
   ProgressBar,
   ProgressRow,
+  RailSection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
@@ -107,6 +108,8 @@ import {
   Tooltip,
   ToolResultCard,
   ToolbarButton,
+  WorkbenchHeader,
+  WorkbenchShell,
 } from '../primitives';
 import '../styles.css';
 
@@ -447,6 +450,30 @@ const meta = {
               />
               <ResourceListLink href="#resource-link" label="Default workflow" meta="4 items" detail="Navigates to the workflow detail route." />
             </ResourceList>
+            <WorkbenchShell
+              style={{ height: 280, border: '1px solid rgb(var(--color-border-subtle))' }}
+              header={
+                <WorkbenchHeader
+                  title="Artifact preview"
+                  meta="html · rev 3"
+                  leading={<MetaLabel>artifact</MetaLabel>}
+                  actions={<ToolbarButton>copy source</ToolbarButton>}
+                />
+              }
+              footer={<InlineMeta>Use WorkbenchShell for editor, preview, and file-diff panes.</InlineMeta>}
+            >
+              <div style={{ display: 'grid', height: '100%', gridTemplateColumns: '14rem minmax(0, 1fr)', minHeight: 0 }}>
+                <RailSection title="Files">
+                  <ResourceList bordered={false}>
+                    <ResourceListItem label="index.html" meta="current" selected />
+                    <ResourceListItem label="styles.css" meta="asset" />
+                  </ResourceList>
+                </RailSection>
+                <div style={{ minHeight: 0, overflow: 'auto', borderLeft: '1px solid rgb(var(--color-border-subtle))', padding: 16 }}>
+                  <CodeBlock compact>{'<main>\\n  <h1>Preview</h1>\\n</main>'}</CodeBlock>
+                </div>
+              </div>
+            </WorkbenchShell>
             <div style={{ position: 'relative', minHeight: 340, overflow: 'hidden', border: '1px dashed rgb(var(--color-border-subtle))' }}>
               <ResourcePickerDialog
                 title="Open workspace"

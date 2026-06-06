@@ -1251,6 +1251,90 @@ export function SurfacePanel({ className, muted = false, children, ...props }: H
   );
 }
 
+export function WorkbenchShell({
+  header,
+  children,
+  footer,
+  className,
+  bodyClassName,
+  footerClassName,
+  ...props
+}: {
+  header?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  footerClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-workbench-shell', className)} {...props}>
+      {header}
+      <div className={cx('ui-workbench-body', bodyClassName)}>{children}</div>
+      {footer ? <div className={cx('ui-workbench-footer', footerClassName)}>{footer}</div> : null}
+    </div>
+  );
+}
+
+export function WorkbenchHeader({
+  title,
+  meta,
+  leading,
+  actions,
+  className,
+  titleClassName,
+  metaClassName,
+  ...props
+}: {
+  title: ReactNode;
+  meta?: ReactNode;
+  leading?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+  titleClassName?: string;
+  metaClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-workbench-header', className)} {...props}>
+      <div className="ui-workbench-header-main">
+        {leading ? <div className="ui-workbench-header-leading">{leading}</div> : null}
+        <div className="ui-workbench-header-copy">
+          <h2 className={cx('ui-workbench-header-title', titleClassName)}>{title}</h2>
+          {meta ? <div className={cx('ui-workbench-header-meta', metaClassName)}>{meta}</div> : null}
+        </div>
+      </div>
+      {actions ? <div className="ui-workbench-header-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
+export function RailSection({
+  title,
+  actions,
+  children,
+  className,
+  bodyClassName,
+  headerClassName,
+  ...props
+}: {
+  title: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  headerClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <section className={cx('ui-rail-section', className)} {...props}>
+      <div className={cx('ui-rail-section-header', headerClassName)}>
+        <SectionLabel>{title}</SectionLabel>
+        {actions ? <div className="ui-rail-section-actions">{actions}</div> : null}
+      </div>
+      <div className={cx('ui-rail-section-body', bodyClassName)}>{children}</div>
+    </section>
+  );
+}
+
 export function PanelHeader({
   title,
   meta,

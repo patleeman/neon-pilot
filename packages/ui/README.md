@@ -18,7 +18,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `IconButton`, `IconLink`, `BrowsePathButton`, `CheckButton`, `TaskListItem`, `ActionTile`
 - Attachment controls: `AttachmentChip`, `AttachmentChipButton`
 - Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
-- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`
+- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`, `WorkbenchShell`, `WorkbenchHeader`, `RailSection`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
 - Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `InlineTextInput`, `InlineSelect`, `Checkbox`, `KeyboardShortcutCaptureInput`, `Switch`, `SettingsPanel`, `SettingsRow`, `SettingToggleRow`
@@ -98,6 +98,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `PanelMessage` for compact loading, empty, and error copy inside rails, menus, and bounded panels.
 - Use `ErrorState` for blocking load failures; pass `title` plus `body` or `message` when a heading helps. Use `Notice tone="danger"` for inline validation, save, and action feedback.
 - Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.
+- Use `WorkbenchShell` with `WorkbenchHeader` for full-height editor, preview, file diff, artifact, and inspection panes that need a fixed header, scroll/viewport body, and optional footer. Use `RailSection` for side rails inside those panes or app chrome: it provides the compact section label, optional actions, and a stable scroll body. Keep resource-specific rows in the caller, usually with `ResourceListItem`, `ResourceListLink`, `RowButton`, or `ResourceListRow`.
 - Use `AppPageLayout`, `AppPageIntro`, and `AppPageSection` for extension-owned routes. `AppPageSection` accepts `meta` for counts, `actions` for search/filter controls, and optional children, so do not hand-roll bordered route section headers with local `h2`/description/count markup.
 - Use `RuntimePage`, `RuntimeHeader`, `RuntimeStrip`, `RuntimeSection`, `RuntimeFooter`, `RuntimeStatusDot`, and `TerminalBlock` for extension pages that manage a local backend, model server, watcher, daemon, or installer. `RuntimeStrip` is the top status/progress band; pass `tone="ready" | "running" | "warning" | "muted"`, `metadata`, optional `message`, and optional `progress`. Use `RuntimeSection` for setup, backend settings, library, and logs sections instead of hand-rolled `border-t` section headers. Use `TerminalBlock` for bounded logs and command output.
 - Use `CompactCard` for small bordered metadata blocks in rails, settings, dashboards, and extension panels. Compose it with `CardTitle`, `CardBody`, and `CardMeta`; set `as="article"` or `as="li"` only when the surrounding structure needs that semantic element.
@@ -123,6 +124,7 @@ These production areas already use the shared package and are useful examples fo
 - Search and filters: `system-extension-manager`, `system-automations`
 - Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`, `system-model-picker`
 - Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Workbench and rail chrome: artifact preview panes and checkpoint diff rails
 - Tool result cards: artifact transcript renderers and extension-owned tool outputs
 - Status markers: context-usage status bar indicators
 - Compact rows: checkpoint file pickers, file-change headers, trace disclosure headers, and nested file lists
@@ -143,4 +145,4 @@ Next good candidates:
 
 - reusable activity/tree empty-state patterns
 - transcript and tool-result card anatomy
-- richer row/list collection primitives
+- chat transcript/message shell components

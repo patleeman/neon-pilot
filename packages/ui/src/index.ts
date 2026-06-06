@@ -95,6 +95,7 @@ export {
   ProgressBar,
   type ProgressBarTone,
   ProgressRow,
+  RailSection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
@@ -146,4 +147,6 @@ export {
   ToolResultCard,
   type ToolResultCardTone,
   ToolbarButton,
+  WorkbenchHeader,
+  WorkbenchShell,
 } from './primitives';

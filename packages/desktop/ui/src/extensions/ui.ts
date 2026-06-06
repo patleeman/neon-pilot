@@ -94,6 +94,7 @@ export {
   PositionedMenu,
   ProgressBar,
   ProgressRow,
+  RailSection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
@@ -139,6 +140,8 @@ export {
   ToolResultCard,
   type ToolResultCardTone,
   ToolbarButton,
+  WorkbenchHeader,
+  WorkbenchShell,
 } from '../components/ui';
 export { Keycap } from '../components/ui';
 export { type DesktopKnowledgeEntryContextMenuAction, getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
