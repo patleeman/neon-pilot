@@ -1,5 +1,7 @@
 import { type FormEvent, useState } from 'react';
 
+import { Button } from '../ui';
+
 interface MissionTask {
   id: string;
   description: string;
@@ -49,9 +51,9 @@ export function ConversationRunModePanel({
         </ul>
         <form onSubmit={submitTask}>
           <input aria-label="Add mission task" value={taskInput} onChange={(event) => setTaskInput(event.currentTarget.value)} />
-          <button type="submit" disabled={!taskInput.trim()}>
+          <Button type="submit" variant="secondary" disabled={!taskInput.trim()}>
             Add
-          </button>
+          </Button>
         </form>
       </section>
     );

@@ -1,6 +1,7 @@
 import type { ActivityTreeItem } from '../activity/activityTree';
 import { DRAFT_CONVERSATION_ID } from '../conversation/draftConversation';
 import type { SessionMeta } from '../shared/types';
+import { MenuItem } from './ui';
 import type { SidebarConversationGroup, SidebarConversationItem } from './sidebarThreadModel';
 
 type ActivityContextMenuContribution = {
@@ -239,9 +240,8 @@ function ContextMenuItem({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={danger ? 'ui-context-menu-item text-danger hover:bg-danger/10 focus-visible:bg-danger/10' : 'ui-context-menu-item'}
+    <MenuItem
+      tone={danger ? 'danger' : 'default'}
       role="menuitem"
       onClick={() => {
         onClose();
@@ -249,6 +249,6 @@ function ContextMenuItem({
       }}
     >
       {children}
-    </button>
+    </MenuItem>
   );
 }
