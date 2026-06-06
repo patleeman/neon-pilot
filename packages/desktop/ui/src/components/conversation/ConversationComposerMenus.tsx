@@ -4,7 +4,7 @@ import type { SlashMenuItem } from '../../commands/slashMenu';
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from '../../conversation/conversationMentions';
 import { getModelSelectionValue, groupModelsByProvider } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
-import { cx, IconButton, MenuGroupLabel, MetaLabel, Pill, SectionLabel } from '../ui';
+import { cx, IconButton, MenuGroupLabel, MetaLabel, Pill, RowButton, SectionLabel } from '../ui';
 
 const useMenuLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -51,15 +51,16 @@ export function ModelPicker({
               const isCurrent = modelValue === currentModel;
               const isFocused = modelValue === selectedModelValue;
               return (
-                <button
+                <RowButton
                   key={modelValue}
                   onMouseDown={(event) => {
                     event.preventDefault();
                     onSelect(modelValue);
                   }}
+                  selected={isFocused}
                   className={cx(
-                    'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors',
-                    isFocused ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/50',
+                    'flex w-full items-center gap-3 px-3 py-2.5',
+                    !isFocused && 'text-secondary',
                   )}
                 >
                   <span
@@ -72,7 +73,7 @@ export function ModelPicker({
                     {modelValue}
                   </Pill>
                   <span className="text-[10px] text-dim/60 shrink-0">{formatContext(model.context)}</span>
-                </button>
+                </RowButton>
               );
             })}
           </div>
@@ -95,16 +96,17 @@ export function SlashMenu({ items, idx, onSelect }: { items: SlashMenuItem[]; id
   return (
     <div className="ui-menu-shell max-h-[28rem] overflow-y-auto py-1.5">
       {items.map((item, itemIndex) => (
-        <button
+        <RowButton
           key={item.key}
           ref={itemIndex === selectedIndex ? selectedItemRef : undefined}
           onMouseDown={(event) => {
             event.preventDefault();
             onSelect(item);
           }}
+          selected={itemIndex === selectedIndex}
           className={cx(
-            'w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors',
-            itemIndex === selectedIndex ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/50',
+            'flex w-full items-start gap-3 px-3 py-2.5',
+            itemIndex !== selectedIndex && 'text-secondary',
           )}
         >
           <span className="w-5 pt-0.5 text-center text-[13px] select-none text-dim/70">{item.icon}</span>
@@ -115,7 +117,7 @@ export function SlashMenu({ items, idx, onSelect }: { items: SlashMenuItem[]; id
             </div>
             <p className="mt-0.5 truncate text-[12px] text-dim/90">{item.desc}</p>
           </div>
-        </button>
+        </RowButton>
       ))}
     </div>
   );
@@ -148,16 +150,17 @@ export function MentionMenu({
         <SectionLabel>Mention</SectionLabel>
       </div>
       {filtered.map((item, index) => (
-        <button
+        <RowButton
           key={`${item.kind}:${item.id}`}
           ref={index === selectedIndex ? selectedItemRef : undefined}
           onMouseDown={(event) => {
             event.preventDefault();
             onSelect(item.id);
           }}
+          selected={index === selectedIndex}
           className={cx(
-            'w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors',
-            index === selectedIndex ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/50',
+            'flex w-full items-start gap-3 px-3 py-2.5',
+            index !== selectedIndex && 'text-secondary',
           )}
         >
           <Pill tone="muted">{item.kind}</Pill>
@@ -167,7 +170,7 @@ export function MentionMenu({
               <p className="mt-0.5 truncate text-[12px] text-dim/90">{item.summary || item.title}</p>
             )}
           </div>
-        </button>
+        </RowButton>
       ))}
     </div>
   );
