@@ -14,6 +14,7 @@ import {
   CardTitle,
   CenteredLoadingState,
   CenteredMessage,
+  Checkbox,
   CheckButton,
   ChatBubbleIcon,
   ChoiceRow,
@@ -286,6 +287,9 @@ const meta = {
           </Field>
           <Field label="Instructions" error="Keep instructions under the extension limit.">
             <Textarea defaultValue="Summarize recent changes and flag anything that needs attention." />
+          </Field>
+          <Field label="Auto-run">
+            <Checkbox defaultChecked aria-label="Auto-run" />
           </Field>
           <Switch checked label="Enabled" />
         </SurfacePanel>

@@ -8,6 +8,7 @@ export {
   CenteredLoadingState,
   CenteredMessage,
   CenteredState,
+  Checkbox,
   CodeBlock,
   cx,
   DataTable,

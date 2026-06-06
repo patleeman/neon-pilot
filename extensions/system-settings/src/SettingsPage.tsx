@@ -5,6 +5,7 @@ import {
   AppPageToc,
   type AppTelemetryLogBundleExport,
   type AppTelemetryLogDiagnostics,
+  Checkbox,
   type ColorTheme,
   createDesktopAwareEventSource,
   createModelEditorDraft,
@@ -69,7 +70,6 @@ const ICON_BUTTON_CLASS =
   'ui-toolbar-button inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-0 text-[14px] shadow-none';
 const DANGER_ACTION_BUTTON_CLASS =
   'inline-flex h-8 shrink-0 items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-danger transition-colors hover:border-danger/60 hover:bg-danger/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/50 disabled:cursor-not-allowed disabled:opacity-40';
-const CHECKBOX_CLASS = 'h-4 w-4 rounded border-border-default bg-base text-accent focus:ring-0 focus:outline-none';
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
@@ -1392,7 +1392,7 @@ export function DesktopConnectionsSettingsPanel() {
         {appPreferencesState ? (
           <div className="space-y-4">
             <label className="inline-flex items-center gap-3 text-[14px] text-primary" htmlFor="desktop-auto-install-updates">
-              <input
+              <Checkbox
                 id="desktop-auto-install-updates"
                 type="checkbox"
                 checked={appPreferencesState.autoInstallUpdates}
@@ -1400,7 +1400,6 @@ export function DesktopConnectionsSettingsPanel() {
                   void handleUpdateAppPreferences({ autoInstallUpdates: event.target.checked });
                 }}
                 disabled={action !== null || !appPreferencesState.update.supported}
-                className={CHECKBOX_CLASS}
               />
               <span>Install downloaded updates automatically</span>
             </label>
@@ -1428,7 +1427,7 @@ export function DesktopConnectionsSettingsPanel() {
             </div>
 
             <label className="inline-flex items-center gap-3 text-[14px] text-primary" htmlFor="desktop-start-on-system-start">
-              <input
+              <Checkbox
                 id="desktop-start-on-system-start"
                 type="checkbox"
                 checked={appPreferencesState.startOnSystemStart}
@@ -1436,7 +1435,6 @@ export function DesktopConnectionsSettingsPanel() {
                   void handleUpdateAppPreferences({ startOnSystemStart: event.target.checked });
                 }}
                 disabled={action !== null || !appPreferencesState.supportsStartOnSystemStart}
-                className={CHECKBOX_CLASS}
               />
               <span>Start Neon Pilot when you sign in</span>
             </label>
@@ -3445,7 +3443,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       className="inline-flex items-center gap-3 text-[14px] text-primary"
                                       htmlFor="settings-model-provider-auth-header"
                                     >
-                                      <input
+                                      <Checkbox
                                         id="settings-model-provider-auth-header"
                                         type="checkbox"
                                         checked={modelProviderDraft.authHeader}
@@ -3453,7 +3451,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           setModelProviderDraft((current) => ({ ...current, authHeader: event.target.checked }));
                                         }}
                                         disabled={modelProviderAction !== null}
-                                        className={CHECKBOX_CLASS}
                                       />
                                       <span>
                                         Add <span className="font-mono text-[11px]">Authorization: Bearer</span> from the provider API key
@@ -3865,7 +3862,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           className="inline-flex items-center gap-3 text-[14px] text-primary"
                                           htmlFor="settings-provider-model-reasoning"
                                         >
-                                          <input
+                                          <Checkbox
                                             id="settings-provider-model-reasoning"
                                             type="checkbox"
                                             checked={modelDraft.reasoning}
@@ -3873,7 +3870,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                               setModelDraft((current) => ({ ...current, reasoning: event.target.checked }));
                                             }}
                                             disabled={modelDraftAction !== null}
-                                            className={CHECKBOX_CLASS}
                                           />
                                           <span>Reasoning capable</span>
                                         </label>
@@ -3882,7 +3878,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           className="inline-flex items-center gap-3 text-[14px] text-primary"
                                           htmlFor="settings-provider-model-images"
                                         >
-                                          <input
+                                          <Checkbox
                                             id="settings-provider-model-images"
                                             type="checkbox"
                                             checked={modelDraft.acceptsImages}
@@ -3890,7 +3886,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                               setModelDraft((current) => ({ ...current, acceptsImages: event.target.checked }));
                                             }}
                                             disabled={modelDraftAction !== null}
-                                            className={CHECKBOX_CLASS}
                                           />
                                           <span>Accept images</span>
                                         </label>

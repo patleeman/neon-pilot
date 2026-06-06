@@ -2053,6 +2053,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   );
 });
 
+export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Checkbox(
+  { className, type = 'checkbox', ...props },
+  ref,
+) {
+  return <input ref={ref} type={type} className={cx('ui-checkbox', className)} {...props} />;
+});
+
 export function Field({
   label,
   hint,

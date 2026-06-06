@@ -10,6 +10,7 @@ import {
   CardBody,
   CardMeta,
   CardTitle,
+  Checkbox,
   CheckButton,
   ChatBubbleIcon,
   ChoiceRow,
@@ -245,6 +246,10 @@ describe('design-system primitives', () => {
 
   it('renders text input with design-system class', () => {
     expect(renderToStaticMarkup(createElement(TextInput, { value: 'hello', readOnly: true }))).toContain('ui-text-input');
+  });
+
+  it('renders checkbox with design-system class', () => {
+    expect(renderToStaticMarkup(createElement(Checkbox, { checked: true, readOnly: true }))).toContain('ui-checkbox');
   });
 
   it('renders filter toolbars with filters and search slots', () => {

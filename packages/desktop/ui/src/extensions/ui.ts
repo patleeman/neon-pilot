@@ -27,6 +27,7 @@ export {
   CenteredLoadingState,
   CenteredMessage,
   CenteredState,
+  Checkbox,
   CheckButton,
   ChatBubbleIcon,
   ChoiceRow,
