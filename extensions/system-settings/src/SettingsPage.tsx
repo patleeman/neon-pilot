@@ -10,6 +10,7 @@ import {
   createDesktopAwareEventSource,
   createModelEditorDraft,
   createProviderEditorDraft,
+  Button,
   cx,
   type DesktopAppPreferencesState,
   type DesktopEnvironmentState,
@@ -70,8 +71,6 @@ import {
 } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const DANGER_ACTION_BUTTON_CLASS =
-  'inline-flex h-8 shrink-0 items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-danger transition-colors hover:border-danger/60 hover:bg-danger/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/50 disabled:cursor-not-allowed disabled:opacity-40';
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance', summary: 'Theme, accent, and visual defaults' },
   { id: 'settings-providers', label: 'Providers', summary: 'Models, overrides, and credentials' },
@@ -3049,7 +3048,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             {modalProviderAuth && (
-                              <button
+                              <Button
+                                variant="action"
+                                tone="danger"
                                 type="button"
                                 onClick={() => {
                                   void handleRemoveProviderCredential();
@@ -3059,7 +3060,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   oauthLoginState?.status === 'running' ||
                                   !modalProviderAuth.hasStoredCredential
                                 }
-                                className={DANGER_ACTION_BUTTON_CLASS}
                                 aria-label="Remove stored credential"
                                 title="Remove stored credential"
                               >
@@ -3071,7 +3071,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     Delete
                                   </>
                                 )}
-                              </button>
+                              </Button>
                             )}
                             <IconButton
                               type="button"

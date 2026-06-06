@@ -128,6 +128,22 @@ body {
   color: rgb(var(--color-primary));
 }
 
+.ui-toolbar-button.text-danger,
+.ui-action-button.text-danger,
+.ui-ghost-button.text-danger {
+  border-color: rgb(var(--color-danger) / 0.32);
+  background: rgb(var(--color-danger) / 0.08);
+  color: rgb(var(--color-danger));
+}
+
+.ui-toolbar-button.text-danger:hover,
+.ui-action-button.text-danger:hover,
+.ui-ghost-button.text-danger:hover {
+  border-color: rgb(var(--color-danger) / 0.5);
+  background: rgb(var(--color-danger) / 0.12);
+  color: rgb(var(--color-danger));
+}
+
 .ui-toolbar-button:focus-visible,
 .ui-action-button:focus-visible,
 .ui-ghost-button:focus-visible,
