@@ -112,6 +112,7 @@ const TREE_HOST_STYLE = {
 export interface FileTreeProps {
   activeFileId: string | null;
   onFileSelect: (id: string) => void;
+  confirm?: (options: { title?: string; message: string }) => Promise<boolean>;
   onSyncKnowledgeBase?: () => Promise<unknown>;
 }
 
@@ -573,7 +574,7 @@ function CreateEntryModal({
   );
 }
 
-export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeBase }: FileTreeProps) {
+export function KnowledgeFileTree({ activeFileId, onFileSelect, confirm, onSyncKnowledgeBase }: FileTreeProps) {
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [movePaths, setMovePaths] = useState<string[] | null>(null);
@@ -883,7 +884,10 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
       const message =
         deduped.length === 1 ? `Delete "${deduped[0]?.split('/').filter(Boolean).pop() ?? ''}"?` : `Delete ${deduped.length} items?`;
 
-      if (!window.confirm(message)) {
+      const confirmed = confirm
+        ? await confirm({ title: deduped.length === 1 ? 'Delete knowledge file' : 'Delete knowledge items', message })
+        : window.confirm(message);
+      if (!confirmed) {
         return;
       }
 
@@ -914,7 +918,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, onSyncKnowledgeB
 
       emitKBEvent('kb:entries-changed');
     },
-    [applyDeleteEffects, model],
+    [applyDeleteEffects, confirm, model],
   );
 
   const handleOpenInFinder = useCallback(
