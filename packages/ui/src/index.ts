@@ -100,6 +100,7 @@ export {
   ResourcePickerToolbar,
   ResourceList,
   ResourceListItem,
+  ResourceListLink,
   ResourceListRow,
   RingStatusDot,
   RowButton,

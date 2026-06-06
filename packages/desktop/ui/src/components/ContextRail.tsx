@@ -23,7 +23,7 @@ import type { AgentToolInfo, ScheduledTaskSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
 import { RichMarkdownRenderer } from './editor/RichMarkdownRenderer';
 import { addNotification } from './notifications/notificationStore';
-import { CardMeta, CardTitle, CompactCard, cx, ErrorState, IconButton, LoadingState, SectionLabel, ToolbarButton } from './ui';
+import { CardMeta, CardTitle, CompactCard, cx, ErrorState, IconButton, LoadingState, ResourceListLink, SectionLabel, ToolbarButton } from './ui';
 
 const ScheduledTaskPanel = lazy(() => import('./ScheduledTaskPanel').then((module) => ({ default: module.ScheduledTaskPanel })));
 
@@ -455,16 +455,13 @@ function ConversationsWorkspaceContext() {
         ) : (
           <div className="space-y-2">
             {attentionSessions.slice(0, 5).map((session) => (
-              <Link
+              <ResourceListLink
                 key={session.id}
+                as={Link}
                 to={`/conversations/${encodeURIComponent(session.id)}`}
-                className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
-              >
-                <p className="text-[12px] font-medium text-primary break-words">{session.title}</p>
-                <CardMeta className="mt-1">
-                  {timeAgo(session.lastActivityAt ?? session.timestamp)} · {session.model?.split('/').pop() ?? 'model unknown'}
-                </CardMeta>
-              </Link>
+                label={session.title}
+                meta={`${timeAgo(session.lastActivityAt ?? session.timestamp)} · ${session.model?.split('/').pop() ?? 'model unknown'}`}
+              />
             ))}
           </div>
         )}
@@ -482,16 +479,13 @@ function ConversationsWorkspaceContext() {
             {[...pinnedSessions.map((session) => ({ session, label: 'pinned' })), ...tabs.map((session) => ({ session, label: 'open' }))]
               .slice(0, 5)
               .map(({ session, label }) => (
-                <Link
+                <ResourceListLink
                   key={session.id}
+                  as={Link}
                   to={`/conversations/${encodeURIComponent(session.id)}`}
-                  className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
-                >
-                  <p className="text-[12px] font-medium text-primary break-words">{session.title}</p>
-                  <CardMeta className="mt-1">
-                    {label} · {timeAgo(session.lastActivityAt ?? session.timestamp)}
-                  </CardMeta>
-                </Link>
+                  label={session.title}
+                  meta={`${label} · ${timeAgo(session.lastActivityAt ?? session.timestamp)}`}
+                />
               ))}
           </div>
         )}
@@ -541,14 +535,13 @@ function CapabilitiesOverviewContext({
                 return null;
               }
               return (
-                <Link
+                <ResourceListLink
                   key={preset.id}
+                  as={Link}
                   to={`/capabilities${buildCapabilitiesSearch(location.search, { section: 'presets', presetId: preset.id })}`}
-                  className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
-                >
-                  <p className="text-[12px] font-medium text-primary">{preset.name}</p>
-                  <CardMeta className="mt-1">{preset.items.length} items</CardMeta>
-                </Link>
+                  label={preset.name}
+                  meta={`${preset.items.length} items`}
+                />
               );
             })
           )}
@@ -575,14 +568,13 @@ function CapabilitiesOverviewContext({
             <CardMeta>No scheduled tasks currently need attention.</CardMeta>
           ) : (
             failingTasks.slice(0, 5).map((task) => (
-              <Link
+              <ResourceListLink
                 key={task.id}
+                as={Link}
                 to={`/capabilities${buildCapabilitiesSearch(location.search, { section: 'scheduled', taskId: task.id })}`}
-                className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
-              >
-                <p className="text-[12px] font-medium text-primary">{task.id}</p>
-                <CardMeta className="mt-1">failed {task.lastRunAt ? timeAgo(task.lastRunAt) : 'recently'}</CardMeta>
-              </Link>
+                label={task.id}
+                meta={`failed ${task.lastRunAt ? timeAgo(task.lastRunAt) : 'recently'}`}
+              />
             ))
           )}
         </div>
@@ -607,16 +599,13 @@ function CapabilitiesOverviewContext({
             <CardMeta>No active tools reported.</CardMeta>
           ) : (
             activeTools.slice(0, 6).map((tool) => (
-              <Link
+              <ResourceListLink
                 key={tool.name}
+                as={Link}
                 to={`/capabilities${buildCapabilitiesSearch(location.search, { section: 'tools', toolName: tool.name })}`}
-                className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
-              >
-                <p className="text-[12px] font-medium text-primary">{tool.name}</p>
-                <CardMeta className="mt-1">
-                  {toolParameterDetails(tool).length} parameter{toolParameterDetails(tool).length === 1 ? '' : 's'}
-                </CardMeta>
-              </Link>
+                label={tool.name}
+                meta={`${toolParameterDetails(tool).length} parameter${toolParameterDetails(tool).length === 1 ? '' : 's'}`}
+              />
             ))
           )}
         </div>

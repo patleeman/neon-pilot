@@ -3,6 +3,7 @@ import {
   type ButtonHTMLAttributes,
   type CSSProperties,
   type DetailsHTMLAttributes,
+  type ElementType,
   type FormEvent,
   forwardRef,
   type HTMLAttributes,
@@ -1074,6 +1075,51 @@ export function ResourceListItem({
         {children ? <div className="ui-resource-list-item-extra">{children}</div> : null}
       </span>
     </button>
+  );
+}
+
+export function ResourceListLink({
+  as,
+  label,
+  meta,
+  detail,
+  leading,
+  selected = false,
+  className,
+  children,
+  ...props
+}: {
+  as?: ElementType;
+  label: ReactNode;
+  meta?: ReactNode;
+  detail?: ReactNode;
+  leading?: ReactNode;
+  selected?: boolean;
+  className?: string;
+} & AnchorHTMLAttributes<HTMLAnchorElement> & Record<string, unknown>) {
+  const Component = as ?? 'a';
+  return (
+    <Component
+      className={cx(
+        'ui-resource-list-item',
+        leading != null && 'ui-resource-list-item-with-leading',
+        selected && 'ui-resource-list-item-selected',
+        className,
+      )}
+      {...props}
+    >
+      {leading ? (
+        <span className="ui-resource-list-item-leading" aria-hidden="true">
+          {leading}
+        </span>
+      ) : null}
+      <span className="ui-resource-list-item-main">
+        <span className="ui-resource-list-item-title">{label}</span>
+        {meta ? <span className="ui-resource-list-item-meta">{meta}</span> : null}
+        {detail ? <span className="ui-resource-list-item-detail">{detail}</span> : null}
+        {children ? <div className="ui-resource-list-item-extra">{children}</div> : null}
+      </span>
+    </Component>
   );
 }
 

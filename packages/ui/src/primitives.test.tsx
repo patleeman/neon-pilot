@@ -49,6 +49,7 @@ import {
   ResourcePickerToolbar,
   ResourceList,
   ResourceListItem,
+  ResourceListLink,
   ResourceListRow,
   RuntimeFooter,
   RuntimeSection,
@@ -343,11 +344,18 @@ describe('design-system primitives', () => {
           detail: 'extensions/system-example/skills/example/SKILL.md',
           actions: createElement(Button, { variant: 'ghost' }, 'Enabled'),
         }),
+        createElement(ResourceListLink, {
+          href: '/capabilities',
+          label: 'Default preset',
+          meta: '4 items',
+          detail: 'Navigates to the workflow detail route.',
+        }),
       ),
     );
 
     expect(rowHtml).toContain('ui-resource-list-bordered');
     expect(rowHtml).toContain('ui-resource-list-row');
+    expect(rowHtml).toContain('href="/capabilities"');
     expect(rowHtml).toContain('ui-resource-list-row-actions');
   });
 

@@ -71,6 +71,7 @@ import {
   ResourcePickerToolbar,
   ResourceList,
   ResourceListItem,
+  ResourceListLink,
   ResourceListRow,
   RingStatusDot,
   RowButton,
@@ -444,6 +445,7 @@ const meta = {
                 detail="AGENTS.md"
                 actions={<Button variant="ghost">Disabled</Button>}
               />
+              <ResourceListLink href="#resource-link" label="Default workflow" meta="4 items" detail="Navigates to the workflow detail route." />
             </ResourceList>
             <div style={{ position: 'relative', minHeight: 340, overflow: 'hidden', border: '1px dashed rgb(var(--color-border-subtle))' }}>
               <ResourcePickerDialog
