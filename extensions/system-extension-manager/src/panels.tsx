@@ -5,6 +5,8 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
+  CardBody,
+  CompactCard,
   cx,
   Dialog,
   DialogBody,
@@ -1313,9 +1315,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 </button>
                 <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
               </div>
-              <div className="mt-0.5 max-w-[42rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
+              <CardBody as="div" className="mt-0.5 max-w-[42rem] whitespace-normal break-words">
                 {extension.description || 'No description provided.'}
-              </div>
+              </CardBody>
               {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
                 <div className="mt-1 text-[12px] text-danger">
                   {extension.status === 'invalid'
@@ -1716,7 +1718,9 @@ function InstallExtensionModal({
                     <div key={item.id} className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
                       <div className="min-w-0">
                         <div className="text-[13px] font-medium text-primary">{item.name}</div>
-                        <div className="mt-0.5 text-[12px] text-secondary">{item.description || packageKindLabel(item)}</div>
+                        <CardBody as="div" className="mt-0.5">
+                          {item.description || packageKindLabel(item)}
+                        </CardBody>
                       </div>
                       <Button
                         variant="action"
@@ -1756,17 +1760,17 @@ function ExtensionSettingsPointer({ extension }: { extension: ExtensionInstallSu
   const settingsComponent = extension.manifest?.contributes?.settingsComponent;
   const target = `/settings#${extensionSettingsSectionId(extension)}`;
   return (
-    <div className="rounded-xl border border-border-subtle/70 px-3 py-3 text-[12px] leading-5 text-secondary">
+    <CompactCard className="py-3" tone="surface">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span>
+        <CardBody as="span">
           Configure {extension.name} from Settings{settingsComponent ? ` (${settingsComponent.label})` : ''}.
-        </span>
+        </CardBody>
         <Link className="text-accent transition-colors hover:text-primary" to={target}>
           Open settings
         </Link>
       </div>
       {entries.length ? <div className="mt-2 font-mono text-[11px] text-dim">{entries.map((entry) => entry.key).join(', ')}</div> : null}
-    </div>
+    </CompactCard>
   );
 }
 
@@ -1917,7 +1921,7 @@ function ExtensionDetailsContent({
 
   return (
     <div className="space-y-6 pb-4">
-      {notice ? <p className="text-[12px] leading-5 text-secondary">{notice}</p> : null}
+      {notice ? <CardBody>{notice}</CardBody> : null}
 
       <header className="space-y-3">
         <div className="flex items-start justify-between gap-4">
