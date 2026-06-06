@@ -1,5 +1,5 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { Tooltip } from '@neon-pilot/extensions/ui';
+import { ToolbarButton, Tooltip } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useState } from 'react';
 
 interface CaffeinateStatus {
@@ -83,9 +83,8 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
   }
 
   return (
-    <button
-      type="button"
-      className={`ui-toolbar-button ui-desktop-top-bar__icon-button group relative transition-colors ${running ? 'text-warning' : 'text-secondary'}`}
+    <ToolbarButton
+      className={`ui-desktop-top-bar__icon-button group relative transition-colors ${running ? 'text-warning' : 'text-secondary'}`}
       aria-label={running ? 'Stop caffeinate' : 'Start caffeinate'}
       aria-pressed={running}
       title={`${statusLabel} — click to ${running ? 'stop' : 'start'}`}
@@ -96,6 +95,6 @@ export function CaffeinateToggle({ pa }: CaffeinateToggleProps) {
       <Tooltip position="bottom-right" className="text-xs">
         {statusLabel}
       </Tooltip>
-    </button>
+    </ToolbarButton>
   );
 }
