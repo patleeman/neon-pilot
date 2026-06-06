@@ -300,10 +300,9 @@ function ExtensionActionsMenu({
 
   return (
     <div ref={rootRef} className="relative" onClick={(event) => event.stopPropagation()}>
-      <button
+      <IconButton
         ref={buttonRef}
-        type="button"
-        className="ui-icon-button ui-icon-button-compact"
+        compact
         title={busy ? 'Working…' : 'More actions'}
         aria-label={busy ? 'Working…' : 'More actions'}
         aria-haspopup="menu"
@@ -315,7 +314,7 @@ function ExtensionActionsMenu({
         }}
       >
         <MoreIcon />
-      </button>
+      </IconButton>
       {open && menuPosition
         ? createPortal(
             <MenuShell
@@ -1380,9 +1379,8 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                   <GearIcon />
                 </Link>
               ) : null}
-              <button
-                type="button"
-                className="ui-icon-button ui-icon-button-compact"
+              <IconButton
+                compact
                 title={`Details for ${extension.name}`}
                 aria-label={`Details for ${extension.name}`}
                 onClick={(event) => {
@@ -1391,7 +1389,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 }}
               >
                 <DetailsIcon />
-              </button>
+              </IconButton>
               <ExtensionActionsMenu
                 extension={extension}
                 busy={busy}
