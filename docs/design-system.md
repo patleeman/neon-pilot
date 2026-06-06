@@ -8,6 +8,8 @@ Extension authors should normally import through the public SDK surface:
 import { Field, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';
 ```
 
+This applies to sibling first-party extension repositories too, such as `../neon-pilot-extensions`. Those extensions should not copy local `Field`, `TextInput`, `Select`, `Pill`, notice, progress, or panel classes when the SDK component exists. Build the extension after replacement with its repo script, for example `pnpm build system-video-probe` from `../neon-pilot-extensions`.
+
 The desktop app may import from local compatibility paths such as `packages/desktop/ui/src/components/ui`, but reusable components should be implemented in `packages/ui` first and re-exported through `@neon-pilot/extensions/ui`.
 
 ## Agent Workflow
@@ -89,6 +91,7 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Raw selectable radio/checkbox option rows -> `ChoiceRow`
 - Raw text/search/number inputs -> `TextInput` or `SearchInput`
 - Raw selects -> `Select`
+- Raw local `Field`, `TextInput`, `Select`, or `Pill` helpers in external extensions -> SDK imports from `@neon-pilot/extensions/ui`
 - Raw textareas -> `Textarea`
 - Boolean settings -> `Switch` or `SettingToggleRow`
 - Local segmented filters -> `SegmentedControl`
