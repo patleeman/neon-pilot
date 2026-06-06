@@ -3,7 +3,7 @@
  */
 
 import type { TraceAgentLoop } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { PanelHeader, Stat, StatGrid, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
   if (!loop) {
@@ -20,7 +20,7 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
       <PanelHeader title="🔄 Agent Loop Health" meta="Selected range" />
       <div className="p-4">
         {/* Loop stats grid */}
-        <div className="grid grid-cols-4 gap-2.5 mb-4">
+        <StatGrid className="mb-4 !grid-cols-2 gap-2.5 lg:!grid-cols-4">
           <LoopStat value={formatNumber(loop.turnsPerRun)} label="Avg Turns / Run" cls="text-accent" />
           <LoopStat value={formatNumber(loop.stepsPerTurn)} label="Avg Steps / Turn" cls="text-accent" />
           <LoopStat value={formatNumber(loop.toolCallsPerRun)} label="Tool Calls / Run" cls="text-accent" />
@@ -48,7 +48,7 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
             label="Stuck Run Rate"
             cls={loop.stuckRunPct > 0 ? 'text-danger' : 'text-dim'}
           />
-        </div>
+        </StatGrid>
 
         <div className="pt-3 border-t border-border-subtle">
           <div className="text-[11px] font-medium mb-3">Run Duration Distribution</div>
@@ -81,10 +81,13 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
 
 function LoopStat({ value, label, cls }: { value: string; label: string; cls: string }) {
   return (
-    <div className="bg-elevated rounded-lg p-3 text-center">
-      <div className={`text-[17px] font-semibold font-mono ${cls}`}>{value}</div>
-      <div className="text-[9px] uppercase tracking-[0.08em] text-dim mt-0.5">{label}</div>
-    </div>
+    <Stat
+      label={label}
+      value={value}
+      labelPosition="after"
+      className="rounded-lg bg-elevated p-3 text-center"
+      valueClassName={`font-mono text-[17px] ${cls}`}
+    />
   );
 }
 

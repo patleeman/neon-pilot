@@ -191,6 +191,7 @@ const meta = {
             <Stat label="Enabled" value="26" />
             <Stat label="Warnings" value="2" detail="Needs attention" valueClassName="text-warning" detailClassName="text-warning" />
             <Stat label="Updated" value="Today" />
+            <Stat label="Avg Turns / Run" value="12.4" labelPosition="after" valueClassName="text-accent" />
           </StatGrid>
           <KeyValueList>
             <KeyValueItem label="Package" value="installable-extensions/system-example" action={<Button variant="ghost">Open</Button>} />

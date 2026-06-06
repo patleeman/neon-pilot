@@ -363,6 +363,7 @@ export function Stat({
   className,
   valueClassName,
   detailClassName,
+  labelPosition = 'before',
   ...props
 }: {
   label: ReactNode;
@@ -371,11 +372,14 @@ export function Stat({
   className?: string;
   valueClassName?: string;
   detailClassName?: string;
+  labelPosition?: 'before' | 'after';
 } & HTMLAttributes<HTMLDivElement>) {
+  const labelNode = <div className="ui-stat-label">{label}</div>;
   return (
     <div className={cx('ui-stat', className)} {...props}>
-      <div className="ui-stat-label">{label}</div>
+      {labelPosition === 'before' ? labelNode : null}
       <div className={cx('ui-stat-value', valueClassName)}>{value}</div>
+      {labelPosition === 'after' ? labelNode : null}
       {detail ? <div className={cx('ui-stat-detail', detailClassName)}>{detail}</div> : null}
       {children}
     </div>
