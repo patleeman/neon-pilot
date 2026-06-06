@@ -6,6 +6,7 @@ import {
   Button,
   ButtonLink,
   CenteredLoadingState,
+  CenteredMessage,
   CheckButton,
   CodeBlock,
   ConfirmDialog,
@@ -317,6 +318,14 @@ const meta = {
           <LoadingState label="Loading extension state…" />
           <div style={{ minHeight: 120, border: '1px dashed rgb(var(--color-border-subtle))' }}>
             <CenteredLoadingState label="Loading extension route..." />
+          </div>
+          <div style={{ minHeight: 160, border: '1px dashed rgb(var(--color-border-subtle))' }}>
+            <CenteredMessage
+              eyebrow="Workbench"
+              title="Open a file"
+              body="Pick a file from the tree to keep it beside the transcript."
+              actions={<ToolbarButton>Browse Files</ToolbarButton>}
+            />
           </div>
           <ErrorState title="Failed to load" body="The extension backend returned an unexpected response." />
           <EmptyState title="No Results" body="Clear the filter to show all registered extensions." />

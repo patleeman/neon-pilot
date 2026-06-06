@@ -1,4 +1,5 @@
 import { type ExtensionSurfaceProps, WorkspaceExplorer, WorkspaceFileDocument } from '@neon-pilot/extensions/workbench-files';
+import { CenteredLoadingState, CenteredMessage } from '@neon-pilot/extensions/ui';
 import { Suspense, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -28,11 +29,13 @@ export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
     [setSearchParams],
   );
   if (!context.cwd) {
-    return <div className="px-4 py-5 text-[12px] text-dim">Open a local conversation to browse its workspace.</div>;
+    return (
+      <CenteredMessage eyebrow="Workbench" title="Open a local conversation" body="Open a local conversation to browse its workspace." />
+    );
   }
 
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading workspace…</div>}>
+    <Suspense fallback={<CenteredLoadingState label="Loading workspace..." />}>
       <WorkspaceExplorer
         cwd={context.cwd}
         railOnly
@@ -52,32 +55,20 @@ export function WorkspaceFileDetailPanel({ context }: ExtensionSurfaceProps) {
 
   if (!context.cwd) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a local conversation</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Open a local conversation to browse its workspace.</p>
-        </div>
-      </div>
+      <CenteredMessage eyebrow="Workbench" title="Open a local conversation" body="Open a local conversation to browse its workspace." />
     );
   }
 
   if (!filePath) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a file</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the file tree to keep it beside the transcript.</p>
-        </div>
-      </div>
+      <CenteredMessage eyebrow="Workbench" title="Open a file" body="Pick a file from the file tree to keep it beside the transcript." />
     );
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-base">
       <div className="min-h-0 flex-1 overflow-hidden">
-        <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Opening file…</div>}>
+        <Suspense fallback={<CenteredLoadingState label="Opening file..." />}>
           <WorkspaceFileDocument
             cwd={context.cwd}
             path={filePath}

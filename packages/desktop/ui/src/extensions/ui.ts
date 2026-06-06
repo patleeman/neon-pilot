@@ -18,6 +18,7 @@ export {
   Button,
   ButtonLink,
   CenteredLoadingState,
+  CenteredMessage,
   CenteredState,
   CheckButton,
   CodeBlock,

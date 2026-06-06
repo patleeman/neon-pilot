@@ -1300,6 +1300,35 @@ body {
   text-align: center;
 }
 
+.ui-centered-message {
+  max-width: 24rem;
+  min-width: 0;
+}
+
+.ui-centered-message-title {
+  margin: 0.5rem 0 0;
+  text-wrap: balance;
+  color: rgb(var(--color-primary));
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+}
+
+.ui-centered-message-body {
+  margin: 0.5rem 0 0;
+  color: rgb(var(--color-secondary));
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+}
+
+.ui-centered-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .ui-error-state {
   flex-direction: column;
   align-items: flex-start;

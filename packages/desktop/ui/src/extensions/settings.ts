@@ -6,6 +6,7 @@ export {
   AppPageToc,
   Button,
   CenteredLoadingState,
+  CenteredMessage,
   CenteredState,
   CodeBlock,
   cx,

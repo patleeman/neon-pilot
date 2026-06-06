@@ -1122,6 +1122,31 @@ export function CenteredLoadingState({ label = 'Loading...', className }: { labe
   );
 }
 
+export function CenteredMessage({
+  eyebrow,
+  title,
+  body,
+  actions,
+  className,
+}: {
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  body?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <CenteredState className={className}>
+      <div className="ui-centered-message">
+        {eyebrow ? <SectionLabel tone="secondary">{eyebrow}</SectionLabel> : null}
+        <h2 className="ui-centered-message-title">{title}</h2>
+        {body ? <p className="ui-centered-message-body">{body}</p> : null}
+        {actions ? <div className="ui-centered-message-actions">{actions}</div> : null}
+      </div>
+    </CenteredState>
+  );
+}
+
 export function ErrorState({
   title,
   message,

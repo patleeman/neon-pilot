@@ -10,6 +10,7 @@ export {
   type ButtonTone,
   type ButtonVariant,
   CenteredLoadingState,
+  CenteredMessage,
   CenteredState,
   CheckButton,
   CodeBlock,
