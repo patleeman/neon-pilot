@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cx, RowButton, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
-const DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS = 'max-w-[38rem]';
+const DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS = 'w-full max-w-[38rem] items-stretch';
 
 export { DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS };
 
@@ -114,7 +114,7 @@ export function ConversationDraftEmptyAction({
         <SectionLabel tone="muted">{hasDraftCwd ? 'Workspace' : 'Chat'}</SectionLabel>
       </div>
       <div className="flex w-full flex-nowrap items-start justify-start gap-2">
-        <div ref={pickerRef} className="relative min-w-0 max-w-[32rem] flex-1">
+        <div ref={pickerRef} className="relative min-w-0 max-w-[32rem] flex-1 basis-72">
           <span className="sr-only">Saved workspace</span>
           <RowButton
             compact

@@ -567,6 +567,10 @@
     @apply pt-0;
   }
 
+  .ui-conversation-setup-empty .ui-empty-state {
+    align-items: stretch;
+  }
+
   .ui-section-label {
     @apply text-[10px] font-semibold uppercase tracking-wider;
     color: rgb(var(--color-teal) / 0.88);

@@ -6,7 +6,7 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ConversationDraftEmptyAction } from './ConversationDraftEmptyAction';
+import { ConversationDraftEmptyAction, DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS } from './ConversationDraftEmptyAction';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -56,6 +56,12 @@ function renderInteractive(overrides: Partial<React.ComponentProps<typeof Conver
 }
 
 describe('ConversationDraftEmptyAction', () => {
+  it('exports a full-width bounded empty-state content class', () => {
+    expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('w-full');
+    expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('max-w-[38rem]');
+    expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('items-stretch');
+  });
+
   it('renders chat/workspace selection', () => {
     const html = renderAction();
 
@@ -97,6 +103,7 @@ describe('ConversationDraftEmptyAction', () => {
 
       const pickerWrapper = workspaceButton?.closest('div');
       expect(pickerWrapper?.className).toContain('min-w-0');
+      expect(pickerWrapper?.className).toContain('basis-72');
       expect(pickerWrapper?.className).not.toContain('min-w-[18rem]');
       expect(pickerWrapper?.parentElement?.className).toContain('flex-nowrap');
 
