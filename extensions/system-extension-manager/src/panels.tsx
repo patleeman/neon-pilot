@@ -8,6 +8,12 @@ import {
   CardBody,
   CompactCard,
   cx,
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
   Dialog,
   DialogBody,
   DialogHeader,
@@ -1296,15 +1302,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogItem;
       const selected = detailsExtensionId === extension.id;
       return (
-        <tr
+        <DataTableRow
           key={`installed:${extension.id}`}
-          className={cx(
-            'group cursor-default border-t border-border-subtle/70 transition-colors hover:bg-surface/30',
-            selected ? 'bg-accent/10' : '',
-          )}
+          className={cx('group cursor-default', selected ? 'bg-accent/10' : '')}
           onClick={() => setDetailsExtensionId(extension.id)}
         >
-          <td className="min-w-0 py-4 pr-6 align-middle">
+          <DataTableCell className="min-w-0 py-4 pl-0 pr-6">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
                 <button
@@ -1337,21 +1340,21 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 </div>
               ) : null}
             </div>
-          </td>
-          <td className="whitespace-nowrap px-3 py-4 align-middle text-[12px]">
+          </DataTableCell>
+          <DataTableCell className="whitespace-nowrap py-4 text-[12px]">
             <span className={extensionStatusClass(extension, unavailableCatalogItem)}>
               {extensionStatusLabel(extension, unavailableCatalogItem)}
             </span>
-          </td>
-          <td className="px-3 py-4 align-middle text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</td>
-          <td className="whitespace-nowrap px-3 py-4 align-middle">
+          </DataTableCell>
+          <DataTableCell className="py-4 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</DataTableCell>
+          <DataTableCell className="whitespace-nowrap py-4">
             {extension.status === 'invalid' ? (
               <span className="text-[12px] text-danger">Invalid</span>
             ) : (
               <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
             )}
-          </td>
-          <td className="py-4 pl-3 align-middle">
+          </DataTableCell>
+          <DataTableCell className="py-4 pr-0">
             <div className="flex items-center justify-end gap-1.5">
               {busy ? <span className="text-[11px] text-dim">Working…</span> : null}
               {route && extension.enabled ? (
@@ -1400,26 +1403,24 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
               />
             </div>
-          </td>
-        </tr>
+          </DataTableCell>
+        </DataTableRow>
       );
     });
 
   const renderExtensionTable = (items: ExtensionInstallSummary[]) => (
-    <section className="min-w-0 overflow-auto">
-      <table className="w-full border-collapse text-left text-[13px]">
-        <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
-          <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
-            <th className="py-2 pr-4 font-semibold">Extension</th>
-            <th className="px-3 py-2 font-semibold">Status</th>
-            <th className="px-3 py-2 font-semibold">Appears in</th>
-            <th className="py-2 px-3 font-semibold">Enabled</th>
-            <th className="py-2 pl-3 text-right font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>{renderExtensionRows(items)}</tbody>
-      </table>
-    </section>
+    <DataTable className="overflow-auto">
+      <DataTableHead>
+        <DataTableRow className="hover:bg-transparent">
+          <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
+          <DataTableHeaderCell>Status</DataTableHeaderCell>
+          <DataTableHeaderCell>Appears in</DataTableHeaderCell>
+          <DataTableHeaderCell>Enabled</DataTableHeaderCell>
+          <DataTableHeaderCell className="pr-0 text-right">Actions</DataTableHeaderCell>
+        </DataTableRow>
+      </DataTableHead>
+      <DataTableBody>{renderExtensionRows(items)}</DataTableBody>
+    </DataTable>
   );
 
   if (loading) {
