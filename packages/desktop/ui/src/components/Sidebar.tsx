@@ -76,7 +76,7 @@ import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPr
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
-import { PanelMessage, SectionLabel } from './ui';
+import { CardMeta, CardTitle, PanelMessage, SectionLabel } from './ui';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
 const SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS = 40;
@@ -470,16 +470,14 @@ function WorkspaceQuickSelectModal({
                   ].join(' ')}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium">
-                      {getConversationGroupLabel(workspacePath, { labelsByCwd: workspaceLabels })}
-                    </p>
-                    <p className="truncate text-[11px] text-dim">{workspacePath}</p>
+                    <CardTitle className="truncate">{getConversationGroupLabel(workspacePath, { labelsByCwd: workspaceLabels })}</CardTitle>
+                    <CardMeta className="truncate">{workspacePath}</CardMeta>
                   </div>
                 </button>
               );
             })
           ) : (
-            <p className="px-3 py-4 text-[12px] text-dim">No saved workspaces yet.</p>
+            <PanelMessage className="px-3 py-4">No saved workspaces yet.</PanelMessage>
           )}
 
           <button
@@ -495,8 +493,8 @@ function WorkspaceQuickSelectModal({
               <Ico d={PATH.workspaceAdd} size={13} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium">{choosingNewFolder ? 'Choosing folder…' : 'Choose a new folder'}</p>
-              <p className="text-[11px] text-dim">Use the system picker to add another workspace.</p>
+              <CardTitle>{choosingNewFolder ? 'Choosing folder…' : 'Choose a new folder'}</CardTitle>
+              <CardMeta>Use the system picker to add another workspace.</CardMeta>
             </div>
           </button>
         </div>

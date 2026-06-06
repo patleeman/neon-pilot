@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { buildConversationGroupLabels, getConversationGroupLabel } from '../conversation/conversationCwdGroups';
-import { Dialog, IconButton, PanelMessage } from './ui';
+import { CardMeta, CardTitle, Dialog, IconButton, PanelMessage } from './ui';
 
 const CLOSE_PATH = 'M6 6l12 12M18 6 6 18';
 const WORKSPACE_ADD_PATH =
@@ -128,10 +128,8 @@ export function WorkspaceQuickSelectModal({
                 ].join(' ')}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium">
-                    {getConversationGroupLabel(workspacePath, { labelsByCwd: workspaceLabels })}
-                  </p>
-                  <p className="truncate text-[11px] text-dim">{workspacePath}</p>
+                  <CardTitle className="truncate">{getConversationGroupLabel(workspacePath, { labelsByCwd: workspaceLabels })}</CardTitle>
+                  <CardMeta className="truncate">{workspacePath}</CardMeta>
                 </div>
               </button>
             );
@@ -153,8 +151,8 @@ export function WorkspaceQuickSelectModal({
             <Icon d={WORKSPACE_ADD_PATH} size={13} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-medium">{choosingNewFolder ? 'Choosing folder...' : 'Choose a new folder'}</p>
-            <p className="text-[11px] text-dim">Use the system picker to add another workspace.</p>
+            <CardTitle>{choosingNewFolder ? 'Choosing folder...' : 'Choose a new folder'}</CardTitle>
+            <CardMeta>Use the system picker to add another workspace.</CardMeta>
           </div>
         </button>
       </div>
