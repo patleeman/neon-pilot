@@ -396,7 +396,9 @@ export function createNativeExtensionClient(extensionId: string): NativeExtensio
         );
       },
       async confirm(options) {
-        return window.confirm(options.title ? `${options.title}\n\n${options.message}` : options.message);
+        return new Promise<boolean>((resolve) => {
+          window.dispatchEvent(new CustomEvent('neon-pilot-extension-confirm', { detail: { ...options, resolve } }));
+        });
       },
       openModal(options) {
         return new Promise((resolve, reject) => {

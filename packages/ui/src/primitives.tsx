@@ -796,6 +796,57 @@ export function DialogFooter({ children, className, ...props }: HTMLAttributes<H
   );
 }
 
+export interface ConfirmDialogProps {
+  title: ReactNode;
+  message: ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  tone?: ButtonTone;
+  className?: string;
+  backdropClassName?: string;
+  backdropStyle?: CSSProperties;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  tone = 'danger',
+  className,
+  backdropClassName,
+  backdropStyle,
+  onCancel,
+  onConfirm,
+}: ConfirmDialogProps) {
+  const titleId = useId();
+
+  return (
+    <Dialog
+      onClose={onCancel}
+      labelledBy={titleId}
+      className={cx('max-w-md', className)}
+      backdropClassName={backdropClassName}
+      backdropStyle={backdropStyle}
+    >
+      <DialogHeader title={title} titleId={titleId} />
+      <DialogBody>
+        <div className="text-[13px] leading-6 text-secondary">{message}</div>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCancel}>
+          {cancelLabel}
+        </Button>
+        <Button variant="action" tone={tone} onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </DialogFooter>
+    </Dialog>
+  );
+}
+
 export interface TextPromptDialogProps {
   title: string;
   label: string;

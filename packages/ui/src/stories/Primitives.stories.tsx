@@ -7,6 +7,7 @@ import {
   ButtonLink,
   CheckButton,
   CodeBlock,
+  ConfirmDialog,
   DataTable,
   DataTableBody,
   DataTableCell,
@@ -319,6 +320,16 @@ const meta = {
               Create
             </Button>
           </DialogFooter>
+        </div>
+        <div style={{ position: 'relative', minHeight: 260, overflow: 'hidden', border: '1px dashed rgb(var(--color-border-subtle))' }}>
+          <ConfirmDialog
+            title="Delete Extension"
+            message="Delete System Knowledge? This removes the extension package from disk."
+            confirmLabel="Delete"
+            backdropStyle={{ position: 'absolute', inset: 0, background: 'rgb(0 0 0 / 0.18)' }}
+            onCancel={() => undefined}
+            onConfirm={() => undefined}
+          />
         </div>
         <div style={{ position: 'relative', minHeight: 260, overflow: 'hidden', border: '1px dashed rgb(var(--color-border-subtle))' }}>
           <TextPromptDialog

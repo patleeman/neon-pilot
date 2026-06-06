@@ -11,6 +11,8 @@ export {
   type ButtonVariant,
   CheckButton,
   CodeBlock,
+  ConfirmDialog,
+  type ConfirmDialogProps,
   cx,
   DataTable,
   DataTableBody,

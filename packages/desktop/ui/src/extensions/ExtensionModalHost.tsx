@@ -1,7 +1,7 @@
 import { type ComponentType, useCallback, useEffect, useRef, useState } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
-import { Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
+import { ConfirmDialog, Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
 import { createNativeExtensionClient } from './nativePaClient';
 import { systemExtensionModules } from './systemExtensionModules';
 
@@ -15,8 +15,17 @@ interface ModalState {
   reject: (error: Error) => void;
 }
 
+interface ConfirmState {
+  title?: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  resolve: (value: boolean) => void;
+}
+
 export function ExtensionModalHost() {
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [Component, setComponent] = useState<ComponentType<{
     pa: ReturnType<typeof createNativeExtensionClient>;
     props: Record<string, unknown>;
@@ -24,6 +33,7 @@ export function ExtensionModalHost() {
   }> | null>(null);
   const resolveRef = useRef<((value: unknown) => void) | null>(null);
   const rejectRef = useRef<((error: Error) => void) | null>(null);
+  const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
 
   useEffect(() => {
     function handleModal(event: CustomEvent) {
@@ -48,12 +58,26 @@ export function ExtensionModalHost() {
     return () => window.removeEventListener('neon-pilot-extension-modal', handleModal as EventListener);
   }, []);
 
+  useEffect(() => {
+    function handleConfirm(event: CustomEvent) {
+      const { title, message, confirmLabel, cancelLabel, resolve } = event.detail as ConfirmState;
+      confirmResolveRef.current?.(false);
+      confirmResolveRef.current = resolve;
+      setConfirm({ title, message, confirmLabel, cancelLabel, resolve });
+    }
+
+    window.addEventListener('neon-pilot-extension-confirm', handleConfirm as EventListener);
+    return () => window.removeEventListener('neon-pilot-extension-confirm', handleConfirm as EventListener);
+  }, []);
+
   // Reject the promise if the host unmounts while a modal is open
   useEffect(() => {
     return () => {
       rejectRef.current?.(new Error('Extension modal host unmounted'));
+      confirmResolveRef.current?.(false);
       resolveRef.current = null;
       rejectRef.current = null;
+      confirmResolveRef.current = null;
     };
   }, []);
 
@@ -65,6 +89,12 @@ export function ExtensionModalHost() {
     }
     setModal(null);
     setComponent(null);
+  }, []);
+
+  const handleConfirmClose = useCallback((confirmed: boolean) => {
+    confirmResolveRef.current?.(confirmed);
+    confirmResolveRef.current = null;
+    setConfirm(null);
   }, []);
 
   // Load the component when modal state changes
@@ -122,51 +152,65 @@ export function ExtensionModalHost() {
     load();
   }, [modal]);
 
-  if (!modal || !Component) return null;
+  const confirmDialog = confirm ? (
+    <ConfirmDialog
+      title={confirm.title ?? 'Confirm action'}
+      message={confirm.message}
+      confirmLabel={confirm.confirmLabel}
+      cancelLabel={confirm.cancelLabel}
+      onCancel={() => handleConfirmClose(false)}
+      onConfirm={() => handleConfirmClose(true)}
+    />
+  ) : null;
+
+  if (!modal || !Component) return confirmDialog;
 
   const pa = createNativeExtensionClient(modal.extensionId);
   const fullscreen = modal.size === 'fullscreen';
 
   return (
-    <Dialog
-      onClose={() => handleClose()}
-      labelledBy={modal.title ? 'extension-modal-title' : undefined}
-      aria-label={modal.title ? undefined : 'Extension dialog'}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') handleClose();
-      }}
-      className={
-        fullscreen
-          ? 'h-[85vh] max-h-[85vh] w-[min(85vw,1600px)] max-w-none rounded-lg border-border-default bg-surface'
-          : 'max-h-[85vh] max-w-2xl rounded-lg border-border-default bg-surface'
-      }
-    >
-      {modal.title ? (
-        <DialogHeader
-          title={modal.title}
-          titleId="extension-modal-title"
-          actions={
-            <IconButton onClick={() => handleClose()} aria-label="Close">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </IconButton>
-          }
-        />
-      ) : null}
-      <DialogBody className={fullscreen ? 'p-0' : undefined}>
-        <Component pa={pa} props={modal.props} close={handleClose} />
-      </DialogBody>
-    </Dialog>
+    <>
+      <Dialog
+        onClose={() => handleClose()}
+        labelledBy={modal.title ? 'extension-modal-title' : undefined}
+        aria-label={modal.title ? undefined : 'Extension dialog'}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') handleClose();
+        }}
+        className={
+          fullscreen
+            ? 'h-[85vh] max-h-[85vh] w-[min(85vw,1600px)] max-w-none rounded-lg border-border-default bg-surface'
+            : 'max-h-[85vh] max-w-2xl rounded-lg border-border-default bg-surface'
+        }
+      >
+        {modal.title ? (
+          <DialogHeader
+            title={modal.title}
+            titleId="extension-modal-title"
+            actions={
+              <IconButton onClick={() => handleClose()} aria-label="Close">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </IconButton>
+            }
+          />
+        ) : null}
+        <DialogBody className={fullscreen ? 'p-0' : undefined}>
+          <Component pa={pa} props={modal.props} close={handleClose} />
+        </DialogBody>
+      </Dialog>
+      {confirmDialog}
+    </>
   );
 }

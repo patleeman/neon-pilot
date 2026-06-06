@@ -19,6 +19,8 @@ export {
   ButtonLink,
   CheckButton,
   CodeBlock,
+  ConfirmDialog,
+  type ConfirmDialogProps,
   cx,
   DataTable,
   DataTableBody,
