@@ -346,7 +346,8 @@ async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('First-party extension release catalog is not an object.');
   }
-  const packages = Array.isArray((parsed as Record<string, unknown>).packages) ? (parsed as Record<string, unknown>).packages : [];
+  const parsedRecord = parsed as Record<string, unknown>;
+  const packages: unknown[] = Array.isArray(parsedRecord.packages) ? parsedRecord.packages : [];
   const bakedById = new Map(INSTALLABLE_EXTENSION_CATALOG.map((item) => [item.id, item]));
   return packages.flatMap((entry) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
