@@ -24,6 +24,7 @@ import {
   KeyValueTable,
   LoadingState,
   MenuItem,
+  Notice,
   PositionedMenu,
   SearchInput,
   Select,
@@ -1344,7 +1345,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
               }
             />
 
-            {notice ? <div className="rounded-lg bg-surface/35 px-3 py-2 text-[13px] text-secondary">{notice}</div> : null}
+            {notice ? <Notice>{notice}</Notice> : null}
           </>
         )}
 
