@@ -31,7 +31,19 @@ import { useTheme } from '../../ui-state/theme';
 import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
-import { Button, cx, EmptyState, IconButton, LoadingState, MenuItem, MenuSeparator, PanelMessage, Pill, ToolbarButton } from '../ui';
+import {
+  Button,
+  cx,
+  EmptyState,
+  IconButton,
+  LoadingState,
+  MenuItem,
+  MenuSeparator,
+  PanelMessage,
+  Pill,
+  TextButton,
+  ToolbarButton,
+} from '../ui';
 import { addWorkspaceOpenFile, readWorkspaceOpenFiles, removeWorkspaceOpenFile, writeWorkspaceOpenFiles } from './openWorkspaceFiles';
 
 interface WorkspaceExplorerProps {
@@ -402,8 +414,7 @@ function WorkspaceTreeRow({
           <span className="hidden shrink-0 text-[10px] text-dim group-hover:inline">{formatWorkspaceEntrySize(entry.size)}</span>
         )}
         <WorkspaceStatusBadge status={entry.gitStatus} count={entry.descendantGitStatusCount} />
-        <button
-          type="button"
+        <TextButton
           className="hidden shrink-0 rounded px-1 py-0.5 text-[10px] text-dim hover:bg-elevated hover:text-primary group-hover:inline"
           title="Draft an agent prompt for this path"
           onClick={(event) => {
@@ -412,7 +423,7 @@ function WorkspaceTreeRow({
           }}
         >
           ask
-        </button>
+        </TextButton>
       </div>
       {isDirectory && node?.expanded && (
         <div>
@@ -796,13 +807,12 @@ export function WorkspaceExplorer({
 
   if (!open && !railOnly) {
     return (
-      <button
-        type="button"
+      <ToolbarButton
         className="absolute right-3 top-3 z-40 rounded-md border border-border-subtle bg-base/90 px-2 py-1 text-[11px] text-secondary shadow-sm hover:text-primary"
         onClick={() => setOpen(true)}
       >
         Files
-      </button>
+      </ToolbarButton>
     );
   }
 
@@ -1330,43 +1340,23 @@ export function WorkspaceFileDocument({
           <div className="space-y-px">
             {onReplyWithSelection ? (
               <>
-                <button
-                  type="button"
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
+                <MenuItem
                   onClick={() => replyWithSelectedText(selectionContextMenu.text)}
-                  className="ui-context-menu-item"
                   role="menuitem"
                 >
                   Reply with Selection
-                </button>
-                <div className="mx-1 my-1 h-px bg-border-subtle" role="separator" />
+                </MenuItem>
+                <MenuSeparator className="mx-1 my-1" />
               </>
             ) : null}
-            <button
-              type="button"
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
-              onMouseDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
+            <MenuItem
               onClick={() => {
                 void copySelectedText(selectionContextMenu.text);
               }}
-              className="ui-context-menu-item"
               role="menuitem"
             >
               Copy
-            </button>
+            </MenuItem>
           </div>
         </div>
       ) : null}
