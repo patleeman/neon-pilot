@@ -45,6 +45,7 @@ import {
   Switch,
   TabButton,
   TabList,
+  TabPanel,
   TextInput,
   Tooltip,
 } from './primitives';
@@ -297,6 +298,14 @@ describe('design-system primitives', () => {
     expect(html).toContain('role="tab"');
     expect(html).toContain('aria-selected="true"');
     expect(html).toContain('ui-tab-button-active');
+  });
+
+  it('renders tab panels with hidden inactive state', () => {
+    const html = renderToStaticMarkup(createElement(TabPanel, { active: false }, 'Inactive content'));
+
+    expect(html).toContain('role="tabpanel"');
+    expect(html).toContain('hidden');
+    expect(html).toContain('ui-tab-panel');
   });
 
   it('renders search inputs with search semantics', () => {

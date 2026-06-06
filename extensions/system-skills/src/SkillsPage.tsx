@@ -11,6 +11,7 @@ import {
   SearchInput,
   TabButton,
   TabList,
+  TabPanel,
 } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -138,36 +139,38 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
         }
       />
 
-      {filtered.length === 0 ? (
-        <EmptyState title="No skills" body="No skills match the current filters." />
-      ) : (
-        <div className="divide-y divide-subtle border-y border-subtle">
-          {filtered.map((skill) => (
-            <div key={`${skill.source}:${skill.id}:${skill.path}`} className="py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="truncate text-[13px] font-semibold text-primary">{skill.name}</h3>
-                    <span className="text-[10px] uppercase tracking-wide text-dim">{sourceLabel(skill)}</span>
+      <TabPanel>
+        {filtered.length === 0 ? (
+          <EmptyState title="No skills" body="No skills match the current filters." />
+        ) : (
+          <div className="divide-y divide-subtle border-y border-subtle">
+            {filtered.map((skill) => (
+              <div key={`${skill.source}:${skill.id}:${skill.path}`} className="py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="truncate text-[13px] font-semibold text-primary">{skill.name}</h3>
+                      <span className="text-[10px] uppercase tracking-wide text-dim">{sourceLabel(skill)}</span>
+                    </div>
+                    {skill.description ? <p className="mt-1 text-[12px] text-secondary">{skill.description}</p> : null}
+                    <p className="mt-1 truncate text-[11px] text-dim">{skill.sourceLabel ?? skill.path}</p>
                   </div>
-                  {skill.description ? <p className="mt-1 text-[12px] text-secondary">{skill.description}</p> : null}
-                  <p className="mt-1 truncate text-[11px] text-dim">{skill.sourceLabel ?? skill.path}</p>
+                  <Button
+                    variant="ghost"
+                    onClick={() => void toggleSkill(skill)}
+                    className={cx(
+                      'rounded-full px-3 py-1 text-[12px]',
+                      skill.enabled ? 'border-success/40 bg-success/10 text-success' : 'border-subtle bg-muted text-secondary',
+                    )}
+                  >
+                    {skill.enabled ? 'Enabled' : 'Disabled'}
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  onClick={() => void toggleSkill(skill)}
-                  className={cx(
-                    'rounded-full px-3 py-1 text-[12px]',
-                    skill.enabled ? 'border-success/40 bg-success/10 text-success' : 'border-subtle bg-muted text-secondary',
-                  )}
-                >
-                  {skill.enabled ? 'Enabled' : 'Disabled'}
-                </Button>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </TabPanel>
     </AppPageLayout>
   );
 }

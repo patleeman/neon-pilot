@@ -22,7 +22,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
-- Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `FilterToolbar`
+- Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
 - Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`
 - Utility: `cx`
@@ -77,7 +77,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `TextInput`, `SearchInput`, `Textarea`, and `Select` instead of handwritten bordered controls. Override only sizing/background with `className`.
 - Use `SettingsRow` for settings with title/description copy and a trailing control or action. Use `Switch` or `SettingToggleRow` for boolean settings. `SettingToggleRow` is preferred when a title and description are part of the row.
 - Use `SegmentedControl` for two-to-six mutually exclusive modes or filters. Do not rebuild segmented buttons locally.
-- Use `TabList` and `TabButton` for larger view navigation where content panels change.
+- Use `TabList`, `TabButton`, and `TabPanel` for larger view navigation where content panels change. Use `TabPanel active={false}` for mounted-but-hidden inactive content, or render one active panel when inactive content does not need to stay mounted.
 - Use `FilterToolbar` to align filter controls, search inputs, and optional actions on list pages.
 - Use `MenuShell`, `MenuItem`, `MenuGroupLabel`, and `MenuSeparator` for menu contents. Use `PositionedMenu` when a menu needs fixed, absolute, or static placement without rebuilding menu chrome.
 - Use `Dialog` and its header/body/footer pieces for modal shells before creating local fixed overlays. `Dialog` accepts `backdropClassName` and `backdropStyle` for host-specific overlay alignment or blur without rewriting the shell.

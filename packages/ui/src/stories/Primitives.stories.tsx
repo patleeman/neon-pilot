@@ -69,6 +69,7 @@ import {
   Switch,
   TabButton,
   TabList,
+  TabPanel,
   TextButton,
   Textarea,
   TextInput,
@@ -202,6 +203,9 @@ const meta = {
           <TabButton active>All</TabButton>
           <TabButton>Attention</TabButton>
         </TabList>
+        <TabPanel style={{ borderTop: '1px solid rgb(var(--color-border-subtle))', paddingTop: 12 }}>
+          <PanelMessage className="px-0 py-0">The active tab content renders inside a shared tab panel.</PanelMessage>
+        </TabPanel>
         <FilterToolbar
           filters={
             <SegmentedControl

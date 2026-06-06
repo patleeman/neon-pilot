@@ -1494,6 +1494,10 @@ body {
   box-shadow: none;
 }
 
+.ui-tab-panel {
+  min-width: 0;
+}
+
 .ui-loading-state,
 .ui-error-state,
 .ui-empty-state {

@@ -100,6 +100,7 @@ export {
   Switch,
   TabButton,
   TabList,
+  TabPanel,
   TextButton,
   Textarea,
   TextInput,

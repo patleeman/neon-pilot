@@ -1182,6 +1182,14 @@ export function TabButton({
   );
 }
 
+export function TabPanel({ active = true, children, className, ...props }: HTMLAttributes<HTMLDivElement> & { active?: boolean }) {
+  return (
+    <div role="tabpanel" hidden={!active} className={cx('ui-tab-panel', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export interface SegmentedControlOption<TValue extends string> {
   value: TValue;
   label: ReactNode;
