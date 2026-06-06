@@ -55,6 +55,7 @@ import {
   ProgressBar,
   ProgressRow,
   ResourceListItem,
+  RingStatusDot,
   RowButton,
   SearchInput,
   SectionLabel,
@@ -162,6 +163,9 @@ const meta = {
           <StatusDot tone="success" />
           <StatusDot tone="warning" />
           <StatusDot tone="danger" />
+          <RingStatusDot value={42} tone="accent" />
+          <RingStatusDot value={76} tone="warning" />
+          <RingStatusDot value={94} tone="danger" />
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgb(var(--color-accent))', fontSize: 11 }}>
             <Spinner size="xs" />
             Running

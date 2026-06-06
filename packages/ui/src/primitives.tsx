@@ -215,6 +215,31 @@ export function StatusDot({
   );
 }
 
+export function RingStatusDot({
+  value,
+  tone = 'accent',
+  className,
+  ...props
+}: {
+  value: number;
+  tone?: StatusDotTone;
+  className?: string;
+} & HTMLAttributes<HTMLSpanElement>) {
+  const boundedValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+  return (
+    <span
+      aria-hidden="true"
+      className={cx('ui-ring-status-dot', `ui-ring-status-dot-${tone}`, className)}
+      style={{ '--ui-ring-status-dot-value': `${boundedValue}%` } as CSSProperties}
+      {...props}
+    >
+      <span className="ui-ring-status-dot-core">
+        <StatusDot tone={tone} size="xs" />
+      </span>
+    </span>
+  );
+}
+
 export function Keycap({ children, className }: { children: ReactNode; className?: string }) {
   return <kbd className={cx('ui-kbd', className)}>{children}</kbd>;
 }

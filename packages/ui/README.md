@@ -17,7 +17,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 - Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, `CheckButton`, `ActionTile`
 - Attachment controls: `AttachmentChip`, `AttachmentChipButton`
-- Status: `Pill`, `StatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
+- Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
 - Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
@@ -85,7 +85,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `Dialog` and its header/body/footer pieces for modal shells before creating local fixed overlays. `Dialog` accepts `backdropClassName` and `backdropStyle` for host-specific overlay alignment or blur without rewriting the shell.
 - Use `ConfirmDialog` for destructive or high-impact confirmations instead of `window.confirm`; it keeps extension prompts inside the app shell and supports explicit button labels.
 - Use `TextPromptDialog` for simple rename, create, and move prompts that need one text input plus Cancel/Submit actions.
-- Use `StatusDot` for compact colored status markers and `Spinner` for compact inline progress markers. Use `LoadingState`, `Notice`, `ErrorState`, and `EmptyState` for larger feedback surfaces. Avoid page-specific loading/error markup unless the layout requires it.
+- Use `StatusDot` for compact colored status markers, `RingStatusDot` for compact percent/budget/quota markers, and `Spinner` for compact inline progress markers. Use `LoadingState`, `Notice`, `ErrorState`, and `EmptyState` for larger feedback surfaces. Avoid page-specific loading/error markup unless the layout requires it.
 - Use `CenteredLoadingState` for full-height route, panel, and Suspense fallbacks instead of handwritten centered loading divs. Use `CenteredState` when the centered content is not a loading state.
 - Use `CenteredMessage` for full-height empty, intro, and "select an item" panels that need an eyebrow, title, supporting body, and optional actions.
 - Use `PanelMessage` for compact loading, empty, and error copy inside rails, menus, and bounded panels.
@@ -112,6 +112,7 @@ These production areas already use the shared package and are useful examples fo
 - Search and filters: `system-extension-manager`, `system-automations`
 - Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`, `system-model-picker`
 - Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Status markers: context-usage status bar indicators
 - Compact rows: checkpoint file pickers, file-change headers, trace disclosure headers, and nested file lists
 - Feedback: extension manager diagnostics, automations page notices, and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves

@@ -264,6 +264,55 @@ body {
   background: currentColor;
 }
 
+.ui-ring-status-dot {
+  display: inline-grid;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--color-border-subtle) / 0.7);
+  background: conic-gradient(var(--ui-ring-status-dot-color) var(--ui-ring-status-dot-value), rgb(var(--color-dim) / 0.22) 0);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
+}
+
+.ui-ring-status-dot-muted {
+  --ui-ring-status-dot-color: rgb(var(--color-dim) / 0.7);
+}
+
+.ui-ring-status-dot-accent {
+  --ui-ring-status-dot-color: rgb(var(--color-accent) / 0.95);
+}
+
+.ui-ring-status-dot-success {
+  --ui-ring-status-dot-color: rgb(var(--color-success) / 0.9);
+}
+
+.ui-ring-status-dot-warning {
+  --ui-ring-status-dot-color: rgb(var(--color-warning) / 0.95);
+}
+
+.ui-ring-status-dot-danger {
+  --ui-ring-status-dot-color: rgb(var(--color-danger) / 0.95);
+}
+
+.ui-ring-status-dot-steel {
+  --ui-ring-status-dot-color: rgb(var(--color-steel) / 0.9);
+}
+
+.ui-ring-status-dot-current {
+  --ui-ring-status-dot-color: currentColor;
+}
+
+.ui-ring-status-dot-core {
+  display: grid;
+  width: 0.5rem;
+  height: 0.5rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(var(--color-base));
+}
+
 .ui-spinner {
   display: inline-block;
   flex-shrink: 0;
