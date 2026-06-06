@@ -1,4 +1,5 @@
 import type { KnowledgeEntry } from '@neon-pilot/extensions/data';
+import { PanelMessage } from '@neon-pilot/extensions/ui';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 
@@ -61,7 +62,7 @@ const WikiLinkList = forwardRef<WikiLinkListRef, WikiLinkListProps>(function Wik
   if (!items.length) {
     return (
       <div className="kb-wikilink-popup">
-        <p className="px-3 py-2 text-[12px] text-dim">No matching files</p>
+        <PanelMessage className="px-3 py-2">No matching files</PanelMessage>
       </div>
     );
   }

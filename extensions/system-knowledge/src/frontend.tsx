@@ -5,7 +5,10 @@ import {
   AppPageEmptyState,
   AppPageIntro,
   AppPageLayout,
+  CenteredLoadingState,
+  CenteredMessage,
   type ExtensionSurfaceProps,
+  MetaLabel,
   SurfacePanel,
   lazyRouteWithRecovery,
   useApi,
@@ -54,7 +57,7 @@ export function KnowledgeTreePanel({ pa }: ExtensionSurfaceProps) {
 
   return (
     <div className="h-full min-h-0 overflow-hidden">
-      <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
+      <Suspense fallback={<CenteredLoadingState />}>
         <LazyKnowledgeFileTree
           activeFileId={activeFileId}
           onFileSelect={handleFileSelect}
@@ -106,7 +109,9 @@ export function KnowledgePageSurface() {
           <section className="grid w-full gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
             <div className="space-y-7">
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Set Up Knowledge</p>
+                <MetaLabel tone="accent" className="font-semibold">
+                  Set Up Knowledge
+                </MetaLabel>
                 <h2 className="text-[34px] font-semibold leading-tight tracking-[-0.02em] text-primary text-balance">
                   Give the agent a durable memory.
                 </h2>
@@ -148,7 +153,7 @@ export function KnowledgePageSurface() {
 
   if (activeFileId) {
     return (
-      <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
+      <Suspense fallback={<CenteredLoadingState />}>
         <LazyKnowledgeEditor
           fileId={activeFileId}
           fileName={fileName}
@@ -202,18 +207,16 @@ export function KnowledgeFilePanel({ context }: ExtensionSurfaceProps) {
 
   if (!activeFileId) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a knowledge file</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the Knowledge tree to keep it beside the transcript.</p>
-        </div>
-      </div>
+      <CenteredMessage
+        eyebrow="Workbench"
+        title="Open a knowledge file"
+        body="Pick a file from the Knowledge tree to keep it beside the transcript."
+      />
     );
   }
 
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading…</div>}>
+    <Suspense fallback={<CenteredLoadingState />}>
       <LazyKnowledgeEditor
         fileId={activeFileId}
         fileName={fileName}

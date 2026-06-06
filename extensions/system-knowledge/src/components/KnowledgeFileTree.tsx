@@ -17,6 +17,7 @@ import {
   MenuItem,
   MenuSeparator,
   normalizeOpenFileIds,
+  PanelMessage,
   readStoredExpandedFolderIds,
   readStoredOpenFileIds,
   readStoredRecentlyClosedFileIds,
@@ -1506,7 +1507,7 @@ export function KnowledgeFileTree({ activeFileId, onFileSelect, confirm, onSyncK
             {knowledgeBaseError && !knowledgeBaseState && !loading ? (
               <p className="px-3 py-2 text-[12px] leading-5 text-danger">Knowledge unavailable · {knowledgeBaseError}</p>
             ) : loading ? (
-              <p className="px-3 py-2 text-[12px] text-dim animate-pulse">Loading...</p>
+              <PanelMessage className="animate-pulse px-3 py-2">Loading...</PanelMessage>
             ) : (
               <TreesFileTree
                 className="h-full"
