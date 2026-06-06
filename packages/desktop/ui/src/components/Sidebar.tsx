@@ -76,7 +76,7 @@ import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPr
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
-import { IconButton, PanelMessage, SectionLabel, SidebarNavButton } from './ui';
+import { IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
@@ -764,7 +764,6 @@ function ThreadsFilterButton({
   const menuRootRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const menuItemClass = 'ui-context-menu-item';
 
   useEffect(() => {
     if (!menuOpen || typeof document === 'undefined') {
@@ -817,11 +816,6 @@ function ThreadsFilterButton({
     setMenuOpen(true);
   }
 
-  function stopMenuEvent(event: { preventDefault: () => void; stopPropagation: () => void }) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
   function handleMenuToggle() {
     if (menuOpen) {
       setMenuOpen(false);
@@ -833,17 +827,12 @@ function ThreadsFilterButton({
 
   function renderMenuItem({ label, icon, checked, onClick }: { label: string; icon: string; checked: boolean; onClick: () => void }) {
     return (
-      <button
-        type="button"
-        onPointerDown={stopMenuEvent}
-        onMouseDown={stopMenuEvent}
+      <MenuItem
         onClick={() => {
           onClick();
           setMenuOpen(false);
         }}
-        className={menuItemClass}
-        role="menuitemradio"
-        aria-checked={checked}
+        checked={checked}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <span className="shrink-0 text-secondary">
@@ -854,7 +843,7 @@ function ThreadsFilterButton({
         <span className="ml-3 flex h-4 w-4 shrink-0 items-center justify-center text-accent">
           {checked ? <Ico d={PATH.check} size={11} /> : null}
         </span>
-      </button>
+      </MenuItem>
     );
   }
 
@@ -994,9 +983,8 @@ function ConversationCwdGroupHeader({
   const menuActionCount =
     Number(Boolean(onOpenInFinder)) + Number(Boolean(onEditName)) + Number(Boolean(onArchiveThreads)) + Number(Boolean(onRemove));
   const showMenuDivider = Boolean((onOpenInFinder || onEditName) && (onArchiveThreads || onRemove));
-  const menuItemClass = 'ui-context-menu-item';
   const toggleButtonClassName = [
-    'flex min-w-0 flex-1 items-center gap-2 rounded-md py-1 text-left text-primary transition-colors hover:bg-white/5',
+    'min-w-0 flex-1 gap-2 rounded-md py-1 text-primary hover:bg-white/5',
     canDrag && (isDragging ? 'cursor-grabbing opacity-60' : 'cursor-grab'),
   ]
     .filter(Boolean)
@@ -1127,8 +1115,8 @@ function ConversationCwdGroupHeader({
         />
       ) : null}
       <div className="flex items-center gap-1">
-        <button
-          type="button"
+        <RowButton
+          compact
           draggable={false}
           onClick={onToggleCollapsed}
           onMouseEnter={() => setHovered(true)}
@@ -1142,7 +1130,7 @@ function ConversationCwdGroupHeader({
             <Ico d={iconPath} size={13} />
           </span>
           <span className="min-w-0 truncate text-[14px] font-semibold tracking-tight">{label}</span>
-        </button>
+        </RowButton>
         {hasMenuActions ? (
           <IconButton
             compact
@@ -1184,61 +1172,42 @@ function ConversationCwdGroupHeader({
         >
           <div className="space-y-px">
             {onOpenInFinder ? (
-              <button
-                type="button"
-                onPointerDown={stopMenuEvent}
-                onMouseDown={stopMenuEvent}
+              <MenuItem
                 onClick={() => {
                   void runMenuHandler(onOpenInFinder);
                 }}
-                className={menuItemClass}
-                role="menuitem"
               >
                 Open in Finder
-              </button>
+              </MenuItem>
             ) : null}
             {onEditName ? (
-              <button
-                type="button"
-                onPointerDown={stopMenuEvent}
-                onMouseDown={stopMenuEvent}
+              <MenuItem
                 onClick={() => {
                   void runMenuHandler(onEditName);
                 }}
-                className={menuItemClass}
-                role="menuitem"
               >
                 Edit Name
-              </button>
+              </MenuItem>
             ) : null}
-            {showMenuDivider ? <div className="my-1 h-px bg-border-subtle" aria-hidden="true" /> : null}
+            {showMenuDivider ? <MenuSeparator className="my-1" /> : null}
             {onArchiveThreads ? (
-              <button
-                type="button"
-                onPointerDown={stopMenuEvent}
-                onMouseDown={stopMenuEvent}
+              <MenuItem
                 onClick={() => {
                   void runMenuHandler(onArchiveThreads);
                 }}
-                className={menuItemClass}
-                role="menuitem"
               >
                 Archive Threads
-              </button>
+              </MenuItem>
             ) : null}
             {onRemove ? (
-              <button
-                type="button"
-                onPointerDown={stopMenuEvent}
-                onMouseDown={stopMenuEvent}
+              <MenuItem
                 onClick={() => {
                   void runMenuHandler(onRemove);
                 }}
-                className={`${menuItemClass} text-danger`}
-                role="menuitem"
+                tone="danger"
               >
                 Remove
-              </button>
+              </MenuItem>
             ) : null}
           </div>
         </div>
@@ -1422,7 +1391,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
   const showCloseButton = showQuickActions && Boolean(onClose);
   const showTrailingControls = showCloseButton;
   const rowTitle = canDrag ? 'Drag to reorder conversations' : undefined;
-  const menuItemClass = 'ui-context-menu-item';
   const prefetchTimeoutRef = useRef<number | null>(null);
 
   const cancelConversationPrefetch = useCallback(() => {
@@ -1741,95 +1709,70 @@ const OpenConversationRow = memo(function OpenConversationRow({
         >
           <div className="space-y-px">
             {pinned && onUnpin ? (
-              <button
-                type="button"
-                onPointerDown={stopRowInteraction}
-                onMouseDown={stopRowInteraction}
+              <MenuItem
                 onClick={async () => {
                   const succeeded = await onUnpin();
                   if (succeeded !== false) {
                     setMenuOpen(false);
                   }
                 }}
-                className={menuItemClass}
                 disabled={busyExtensionMenuId !== null}
-                role="menuitem"
               >
                 Unpin
-              </button>
+              </MenuItem>
             ) : null}
             {!pinned && onPin ? (
-              <button
-                type="button"
-                onPointerDown={stopRowInteraction}
-                onMouseDown={stopRowInteraction}
+              <MenuItem
                 onClick={async () => {
                   const succeeded = await onPin();
                   if (succeeded !== false) {
                     setMenuOpen(false);
                   }
                 }}
-                className={menuItemClass}
                 disabled={busyExtensionMenuId !== null}
-                role="menuitem"
               >
                 Pin
-              </button>
+              </MenuItem>
             ) : null}
             {onArchive ? (
-              <button
-                type="button"
-                onPointerDown={stopRowInteraction}
-                onMouseDown={stopRowInteraction}
+              <MenuItem
                 onClick={async () => {
                   const succeeded = await onArchive();
                   if (succeeded !== false) {
                     setMenuOpen(false);
                   }
                 }}
-                className={menuItemClass}
                 disabled={busyExtensionMenuId !== null}
-                role="menuitem"
               >
                 Archive
-              </button>
+              </MenuItem>
             ) : null}
             {onOpenInNewWindow ? (
-              <button
-                type="button"
-                onPointerDown={stopRowInteraction}
-                onMouseDown={stopRowInteraction}
+              <MenuItem
                 onClick={async () => {
                   const succeeded = await onOpenInNewWindow?.();
                   if (succeeded !== false) {
                     setMenuOpen(false);
                   }
                 }}
-                className={menuItemClass}
                 disabled={busyExtensionMenuId !== null}
-                role="menuitem"
               >
                 Open in Separate Window
-              </button>
+              </MenuItem>
             ) : null}
             {conversationExtensionMenuItems.length > 0 && (
               <>
-                <div className="border-t border-border-subtle mx-2 my-1" />
+                <MenuSeparator className="mx-2 my-1" />
                 {conversationExtensionMenuItems.map((menu) => (
-                  <button
+                  <MenuItem
                     key={menu.id}
-                    type="button"
-                    onPointerDown={stopRowInteraction}
-                    onMouseDown={stopRowInteraction}
                     onClick={() => {
                       void handleExtensionContextMenuClick(menu);
                     }}
-                    className={menuItemClass}
                     disabled={busyExtensionMenuId !== null}
-                    role="menuitem"
                   >
                     {getExtensionContextMenuTitle(menu)}
-                  </button>
+                  </MenuItem>
                 ))}
               </>
             )}
@@ -3990,37 +3933,28 @@ export function Sidebar() {
                           role="menu"
                         >
                           {item.route ? (
-                            <button
-                              type="button"
-                              className="ui-context-menu-item"
-                              role="menuitem"
+                            <MenuItem
                               onClick={() => {
                                 context.close();
                                 navigate(item.route!);
                               }}
                             >
                               Open
-                            </button>
+                            </MenuItem>
                           ) : null}
                           {isGroup ? (
                             <>
                               {conversationGroup.cwd ? (
-                                <button
-                                  type="button"
-                                  className="ui-context-menu-item"
-                                  role="menuitem"
+                                <MenuItem
                                   onClick={() => {
                                     context.close();
                                     void handleOpenConversationGroupInFinder(conversationGroup.cwd!, conversationGroup.label);
                                   }}
                                 >
                                   Open in Finder
-                                </button>
+                                </MenuItem>
                               ) : null}
-                              <button
-                                type="button"
-                                className="ui-context-menu-item"
-                                role="menuitem"
+                              <MenuItem
                                 onClick={() => {
                                   context.close();
                                   handleRenameConversationGroup(
@@ -4031,24 +3965,19 @@ export function Sidebar() {
                                 }}
                               >
                                 Edit Name
-                              </button>
+                              </MenuItem>
                               {groupSessionIds && groupSessionIds.length > 0 ? (
-                                <button
-                                  type="button"
-                                  className="ui-context-menu-item"
-                                  role="menuitem"
+                                <MenuItem
                                   onClick={() => {
                                     context.close();
                                     void handleArchiveConversationGroup(conversationGroup.label, groupSessionIds);
                                   }}
                                 >
                                   Archive Threads
-                                </button>
+                                </MenuItem>
                               ) : null}
-                              <button
-                                type="button"
-                                className="ui-context-menu-item text-danger hover:bg-danger/10 focus-visible:bg-danger/10"
-                                role="menuitem"
+                              <MenuItem
+                                tone="danger"
                                 onClick={() => {
                                   context.close();
                                   handleRemoveConversationGroup(
@@ -4061,27 +3990,21 @@ export function Sidebar() {
                                 }}
                               >
                                 Remove
-                              </button>
+                              </MenuItem>
                             </>
                           ) : isConversation ? (
                             <>
                               {parentConversation ? (
-                                <button
-                                  type="button"
-                                  className="ui-context-menu-item"
-                                  role="menuitem"
+                                <MenuItem
                                   onClick={() => {
                                     context.close();
                                     navigate(`/conversations/${encodeURIComponent(parentConversation.session.id)}`);
                                   }}
                                 >
                                   Go to Parent Thread
-                                </button>
+                                </MenuItem>
                               ) : null}
-                              <button
-                                type="button"
-                                className="ui-context-menu-item"
-                                role="menuitem"
+                              <MenuItem
                                 onClick={() => {
                                   context.close();
                                   if (conversationItem.pinned) {
@@ -4092,11 +4015,8 @@ export function Sidebar() {
                                 }}
                               >
                                 {conversationItem.pinned ? 'Unpin Thread' : 'Pin Thread'}
-                              </button>
-                              <button
-                                type="button"
-                                className="ui-context-menu-item"
-                                role="menuitem"
+                              </MenuItem>
+                              <MenuItem
                                 onClick={() => {
                                   context.close();
                                   if (conversationItem.pinned) {
@@ -4107,70 +4027,52 @@ export function Sidebar() {
                                 }}
                               >
                                 Close Thread
-                              </button>
-                              <button
-                                type="button"
-                                className="ui-context-menu-item"
-                                role="menuitem"
+                              </MenuItem>
+                              <MenuItem
                                 onClick={() => {
                                   context.close();
                                   void handleDuplicateConversation(conversationItem.session);
                                 }}
                               >
                                 Duplicate Thread
-                              </button>
-                              <button
-                                type="button"
-                                className="ui-context-menu-item"
-                                role="menuitem"
+                              </MenuItem>
+                              <MenuItem
                                 onClick={() => {
                                   context.close();
                                   handleArchiveConversation(conversationId);
                                 }}
                               >
                                 Archive Thread
-                              </button>
-                              <button
-                                type="button"
-                                className="ui-context-menu-item"
-                                role="menuitem"
+                              </MenuItem>
+                              <MenuItem
                                 onClick={() => {
                                   context.close();
                                   void handleCopyConversationId(conversationId);
                                 }}
                               >
                                 Copy Session ID
-                              </button>
-                              <button
-                                type="button"
-                                className="ui-context-menu-item"
-                                role="menuitem"
+                              </MenuItem>
+                              <MenuItem
                                 onClick={() => {
                                   context.close();
                                   void handleCopyConversationDeeplink(conversationId);
                                 }}
                               >
                                 Copy Deeplink
-                              </button>
+                              </MenuItem>
                               {conversationItem.session.cwd?.trim() ? (
-                                <button
-                                  type="button"
-                                  className="ui-context-menu-item"
-                                  role="menuitem"
+                                <MenuItem
                                   onClick={() => {
                                     context.close();
                                     void handleCopyConversationWorkingDirectory(conversationItem.session.cwd);
                                   }}
                                 >
                                   Copy Working Directory
-                                </button>
+                                </MenuItem>
                               ) : null}
                               {activityTreeExtensionContextMenus.map((menu) => (
-                                <button
+                                <MenuItem
                                   key={`${menu.extensionId}:${menu.id}`}
-                                  type="button"
-                                  className="ui-context-menu-item"
-                                  role="menuitem"
                                   onClick={() => {
                                     context.close();
                                     void handleActivityTreeExtensionContextMenu(menu, {
@@ -4181,7 +4083,7 @@ export function Sidebar() {
                                   }}
                                 >
                                   {menu.title}
-                                </button>
+                                </MenuItem>
                               ))}
                             </>
                           ) : null}
