@@ -37,6 +37,20 @@ describe('extension catalog', () => {
   it('lists first-party installable bundles for the published package tag', async () => {
     process.env.NEON_PILOT_REPO_ROOT = join(process.cwd());
     summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1' }]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          packages: [
+            { id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' },
+            { id: 'system-suggested-context', tag: 'v0.10.2', artifact: 'system-suggested-context.neon-extension.zip' },
+            { id: 'system-ds4', tag: 'v0.10.2', artifact: 'system-ds4.neon-extension.zip' },
+            { id: 'system-auto-router', tag: 'v0.10.2', artifact: 'system-auto-router.neon-extension.zip' },
+          ],
+        }),
+      })),
+    );
 
     const { listInstallableExtensionCatalog, resolveInstalledAppVersion } = await import('./extensionCatalog.js');
     const version = resolveInstalledAppVersion();
@@ -84,8 +98,62 @@ describe('extension catalog', () => {
           installed: false,
           bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-ds4.neon-extension.zip',
         }),
+        expect.objectContaining({
+          id: 'system-auto-router',
+          name: 'Auto Router',
+          installed: false,
+          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-auto-router.neon-extension.zip',
+        }),
       ]),
     );
+  });
+
+  it('discovers first-party packages from the release catalog that are not in the baked catalog', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          packages: [{ id: 'system-new-thing', tag: 'v0.10.2', artifact: 'system-new-thing.neon-extension.zip' }],
+        }),
+      })),
+    );
+
+    const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog();
+
+    expect(catalog.sourceErrors).toEqual([]);
+    expect(catalog.extensions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'system-new-thing',
+          name: 'New Thing',
+          description: 'Install New Thing from the Neon Pilot extension release catalog.',
+          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-new-thing.neon-extension.zip',
+        }),
+      ]),
+    );
+  });
+
+  it('falls back to the baked first-party catalog when the release catalog cannot be fetched', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 404,
+      })),
+    );
+
+    const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog();
+
+    expect(catalog.sourceErrors).toEqual([
+      expect.objectContaining({
+        sourceId: 'neon-pilot',
+        message: 'Failed to fetch first-party extension release catalog: HTTP 404',
+      }),
+    ]);
+    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-browser' })]));
   });
 
   it('merges enabled GitHub extension sources from settings into the catalog', async () => {
