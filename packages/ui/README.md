@@ -98,7 +98,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `MetricTile` for compact value/label cards in dashboards. Prefer its `tone`, `size`, `align`, and `appearance="plain"` props over custom font and color utility recipes.
 - Use `DashboardGrid` with `DashboardGridCell` for compact metric and trace dashboards that need two-to-four columns with consistent dividers.
 - Use `InlineCode` for inline paths, ids, commands, commit hashes, and compact tokens. It wraps long values by default; set `wrap={false}` only for short fixed tokens.
-- Use `ProgressBar`, `ProgressRow`, `StatGrid`, `Stat`, `KeyValueList`, `KeyValueTable`, `DataTable`, `ResourceListItem`, `CodeBlock`, and `Disclosure` for data display before composing raw rows or panels. `ProgressRow` is for label/bar/value dashboard rows; `KeyValueList` is for vertical definition rows with optional actions; `KeyValueTable` is for compact two-to-four column summaries. `Stat` accepts `valueClassName`, `detailClassName`, `labelPosition`, and children for status dots or other small overlays.
+- Use `ProgressBar`, `ProgressRow`, `StatGrid`, `Stat`, `KeyValueList`, `KeyValueTable`, `DataTable`, `ResourceListItem`, `CodeBlock`, and `Disclosure` for data display before composing raw rows or panels. `ProgressRow` is for label/bar/value dashboard rows; `KeyValueList` is for vertical definition rows with optional actions; `KeyValueTable` is for compact two-to-four column summaries. Use `DataTable` with `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, and `DataTableCell` for structured tables; pass `columns={<colgroup>...</colgroup>}` and `tableClassName="table-fixed"` when fixed column sizing matters. `Stat` accepts `valueClassName`, `detailClassName`, `labelPosition`, and children for status dots or other small overlays.
 
 ## Proven Replacement Targets
 
@@ -115,6 +115,6 @@ These production areas already use the shared package and are useful examples fo
 
 Next good candidates:
 
-- richer tab panels
-- `KeyValueTable`
-- route header/chrome primitives
+- richer route header/chrome primitives
+- reusable activity/tree empty-state patterns
+- transcript and tool-result card anatomy

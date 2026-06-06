@@ -48,17 +48,17 @@ CI=true pnpm --dir packages/ui run build:storybook
 
 ## Current Foundation
 
-The initial package includes:
+The shared package includes:
 
-- Actions: `Button`, `ToolbarButton`, `IconButton`, `CheckButton`
-- Status: `Pill`, `Keycap`, `Tooltip`, `Notice`
-- Surfaces: `SurfacePanel`, `PanelHeader`
-- Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
-- Feedback: `LoadingState`, `ErrorState`, `EmptyState`
-- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
+- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, `CheckButton`, `ActionTile`
+- Status: `Pill`, `StatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
+- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`
+- Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
+- Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
+- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`, `SettingsSection`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
-- Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `FilterToolbar`
-- Data display: `SectionLabel`, `SupportingText`, `ResourceListItem`, `CodeBlock`, `Disclosure`, `ProgressBar`, `Stat`, `StatGrid`, `KeyValueList`, `KeyValueItem`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
+- Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`
 - Utility: `cx`
 
@@ -69,7 +69,7 @@ Extract in small tranches and migrate real usage each time:
 1. Forms and feedback: fields, inputs, switches, notices.
 2. Overlays: confirmation dialogs and richer positioned menu behavior.
 3. Layout: settings sections, cards, page headers, richer search/filter bars.
-4. Data display: richer tables, sortable columns, tab panels.
+4. Data display: sortable columns, richer table states, and nested table actions.
 5. Host-owned app patterns: file trees, activity trees, chat/transcript surfaces, diff/artifact views.
 
 Each tranche should include documentation, Storybook coverage, and at least one app or extension replacement so the component is proven against production usage.
@@ -82,9 +82,10 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Raw textareas -> `Textarea`
 - Boolean settings -> `Switch` or `SettingToggleRow`
 - Local segmented filters -> `SegmentedControl`
-- Local tab rows -> `TabList` and `TabButton`
+- Local tab rows -> `TabList`, `TabButton`, and `TabPanel`
 - Local search/filter header rows -> `FilterToolbar`
 - Local fixed/absolute menu shells -> `PositionedMenu` with `MenuItem`
-- Local loading/error/empty messages -> `LoadingState`, `ErrorState`, `EmptyState`, or `Notice`
+- Local loading/error/empty messages -> `LoadingState`, `ErrorState`, `EmptyState`, `PanelMessage`, `CenteredMessage`, or `Notice`
 - Local bordered section cards with title/meta rows -> `SurfacePanel` with `PanelHeader`
-- Local bordered data cards -> `SurfacePanel`, `ResourceListItem`, `KeyValueList`, `DataTable`, or `Disclosure`
+- Local bordered data cards -> `SurfacePanel`, `ResourceListItem`, `KeyValueList`, `KeyValueTable`, `DataTable`, or `Disclosure`
+- Local compact uppercase labels -> `SectionLabel` or `MetaLabel`
