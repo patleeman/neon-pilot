@@ -889,11 +889,10 @@ function WorkbenchNewTabPage({
       <div className="w-full min-w-0" style={{ maxWidth: 'min(36rem, 100%)' }}>
         <SectionLabel tone="secondary">Workbench</SectionLabel>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
-        <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(10rem,100%),1fr))] gap-2">
+        <div className="ui-workbench-new-tab-grid mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(10rem,100%),1fr))] gap-2">
           <ActionTile
             icon="□"
             label="File Explorer"
-            description="Browse workspace files."
             onClick={() => {
               onActiveToolChange(systemFilesExtensionSurface ? extensionToolPanelMode(systemFilesExtensionSurface) : 'files');
               onWorkspaceFileClear();
@@ -904,7 +903,6 @@ function WorkbenchNewTabPage({
               disabled={sideChatStarting}
               icon="◌"
               label={sideChatStarting ? 'Opening...' : 'Chat'}
-              description="Open a new chat tab."
               onClick={handleStartSideChat}
             />
           ) : null}
@@ -912,7 +910,6 @@ function WorkbenchNewTabPage({
             <ActionTile
               icon="▸"
               label="Terminal"
-              description="Open a terminal tab."
               onClick={() => openTool(systemTerminalExtensionSurface)}
             />
           ) : null}
@@ -921,7 +918,6 @@ function WorkbenchNewTabPage({
               key={`${surface.extensionId}:${surface.id}`}
               icon={iconGlyphForExtensionSurface(surface.icon)}
               label={labelForExtensionToolPanel(surface)}
-              description="Open in the workbench."
               onClick={() => openTool(surface)}
             />
           ))}

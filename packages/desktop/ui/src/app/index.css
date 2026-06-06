@@ -571,6 +571,11 @@
     align-items: stretch;
   }
 
+  .ui-workbench-new-tab-grid .ui-action-tile {
+    min-height: 3.5rem;
+    padding: 0.75rem;
+  }
+
   .ui-section-label {
     @apply text-[10px] font-semibold uppercase tracking-wider;
     color: rgb(var(--color-teal) / 0.88);
