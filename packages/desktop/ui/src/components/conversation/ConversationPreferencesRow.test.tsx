@@ -98,6 +98,9 @@ describe('ConversationPreferencesRow', () => {
       const moreButton = container.querySelector<HTMLButtonElement>('button[aria-label="More composer settings"]');
       expect(moreButton).not.toBeNull();
       act(() => moreButton?.click());
+      const menu = container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]');
+      expect(menu?.className).toContain('left-1/2');
+      expect(menu?.className).toContain('w-[min(13rem,calc(100vw-1rem))]');
       expect(container.textContent).toContain('goal-mode:menu');
     } finally {
       unmount();

@@ -78,7 +78,7 @@ export function ConversationPreferencesRow({
           </IconButton>
           {menuOpen && (
             <div
-              className="ui-context-menu-shell absolute bottom-full left-0 z-50 mb-2 w-[15rem] p-2.5"
+              className="ui-context-menu-shell absolute bottom-full left-1/2 z-50 mb-2 w-[min(13rem,calc(100vw-1rem))] -translate-x-1/2 p-2.5"
               role="dialog"
               aria-label="Composer settings"
             >
