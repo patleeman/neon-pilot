@@ -35,7 +35,7 @@ import {
   validateTaskForm,
 } from './scheduledTaskPanelModel';
 import { ScheduledTaskPromptText } from './ScheduledTaskPromptText';
-import { cx, ErrorState, LoadingState, Switch, ToolbarButton } from './ui';
+import { CardMeta, CardTitle, cx, ErrorState, LoadingState, Switch, ToolbarButton } from './ui';
 
 const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
 const PROMPT_INPUT_CLASS =
@@ -869,8 +869,8 @@ export function ScheduledTaskPanel({
     <div className="space-y-4 px-4 py-4 overflow-y-auto">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
-          <p className="ui-card-title break-all">{taskDetail.title ?? taskDetail.id}</p>
-          <p className="ui-card-meta">
+          <CardTitle className="break-all">{taskDetail.title ?? taskDetail.id}</CardTitle>
+          <CardMeta>
             <span className={status.cls}>{status.text}</span>
             {taskDetail.lastRunAt && (
               <>
@@ -882,7 +882,7 @@ export function ScheduledTaskPanel({
                 <span className="opacity-40 mx-1.5">·</span>disabled
               </>
             )}
-          </p>
+          </CardMeta>
           <p className="text-[12px] text-secondary">{taskDetail.id}</p>
         </div>
         <ToolbarButton
@@ -902,7 +902,7 @@ export function ScheduledTaskPanel({
             <span className="ui-detail-label">schedule</span>
             <div className="min-w-0">
               <p className="ui-detail-value">{formatTaskSchedule(taskDetail)}</p>
-              <p className="ui-card-meta mt-0.5 font-mono break-all">{taskDetail.cron ?? taskDetail.at}</p>
+              <CardMeta className="mt-0.5 font-mono break-all">{taskDetail.cron ?? taskDetail.at}</CardMeta>
             </div>
           </div>
           {taskDetail.model && (
@@ -921,7 +921,7 @@ export function ScheduledTaskPanel({
             <span className="ui-detail-label">thread</span>
             <div className="min-w-0">
               <p className="ui-detail-value">{formatThreadModeLabel(taskDetail.threadMode)}</p>
-              {taskDetail.threadTitle && <p className="ui-card-meta mt-0.5 break-all">{taskDetail.threadTitle}</p>}
+              {taskDetail.threadTitle && <CardMeta className="mt-0.5 break-all">{taskDetail.threadTitle}</CardMeta>}
               {taskDetail.threadConversationId && (
                 <button
                   type="button"
