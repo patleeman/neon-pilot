@@ -17,6 +17,7 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   AppPageIntro,
   AppPageLayout,
+  AppPageSection,
   Button,
   ErrorState,
   LoadingState,
@@ -102,7 +103,7 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
         {/* ── Pulse Row ── */}
         {summary && <PulseRow summary={summary} />}
 
-        <section className="space-y-4 border-t border-border-subtle pt-6">
+        <AppPageSection title="Usage" bodyClassName="space-y-4">
           {tokensDaily && <TracesHeatmap data={tokensDaily} />}
           {modelUsage && summary && (
             <TracesModelUsage
@@ -118,21 +119,21 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
             />
           )}
           {tokensDaily && summary && <TracesBraidChart data={tokensDaily} />}
-        </section>
+        </AppPageSection>
 
-        <section className="space-y-4 border-t border-border-subtle pt-6">
+        <AppPageSection title="Tools" bodyClassName="space-y-4">
           {toolHealth && <TracesToolHealth tools={toolHealth} />}
           <TracesToolFlow data={toolFlow} />
-        </section>
+        </AppPageSection>
 
-        <section className="space-y-4 border-t border-border-subtle pt-6">
+        <AppPageSection title="Runtime" bodyClassName="space-y-4">
           <TracesContextPointers data={contextPointers} />
           <TracesAutoMode data={autoMode} />
           <TracesSessionIntegrity events={sessionIntegrity ?? []} />
           <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
           <TracesContextPressure sessions={contextSessions ?? []} compactions={compactions ?? []} compactionAggs={compactionAggs} />
           <TracesAgentLoop loop={agentLoop} />
-        </section>
+        </AppPageSection>
       </AppPageLayout>
     </div>
   );
