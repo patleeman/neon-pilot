@@ -42,6 +42,7 @@ import {
   KeyValueList,
   KeyValueTable,
   LoadingState,
+  MessageActionButton,
   MetaLabel,
   MetricTile,
   MenuGroupLabel,
@@ -101,6 +102,10 @@ const meta = {
           <Button tone="danger">Delete</Button>
           <TextButton>Inline action</TextButton>
           <TextButton tone="danger">Remove</TextButton>
+          <MessageActionButton>copy</MessageActionButton>
+          <MessageActionButton tone="accent">copied</MessageActionButton>
+          <MessageActionButton tone="danger">copy failed</MessageActionButton>
+          <MessageActionButton disabled>disabled</MessageActionButton>
           <IconButton aria-label="More actions">•••</IconButton>
           <IconButton aria-label="Add item" shape="circle">
             +

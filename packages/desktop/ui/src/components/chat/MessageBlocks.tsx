@@ -4,7 +4,7 @@ import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx } from '../ui.js';
+import { cx, MessageActionButton } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -528,12 +528,12 @@ export const UserMessage = memo(function UserMessage({
                 className="min-h-[96px] w-full resize-y rounded-xl border border-border-subtle bg-base/60 px-3 py-2 text-sm leading-relaxed text-primary outline-none focus:border-accent/50"
               />
               <div className="flex justify-end gap-2">
-                <button type="button" className="ui-message-action-button" onClick={cancelEdit} disabled={editSaving}>
+                <MessageActionButton type="button" onClick={cancelEdit} disabled={editSaving}>
                   cancel
-                </button>
-                <button type="submit" className="ui-message-action-button text-accent" disabled={editSaving || !editDraft.trim()}>
+                </MessageActionButton>
+                <MessageActionButton type="submit" tone="accent" disabled={editSaving || !editDraft.trim()}>
                   {editSaving ? 'rerunning…' : 'rerun'}
-                </button>
+                </MessageActionButton>
               </div>
             </form>
           ) : showRawRunCallbackCard ? (

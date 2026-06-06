@@ -123,6 +123,16 @@ export const TextButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
   },
 );
 
+export const MessageActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { tone?: ButtonTone }>(
+  function MessageActionButton({ className, children, type = 'button', tone = 'default', ...props }, ref) {
+    return (
+      <button ref={ref} type={type} className={cx('ui-message-action-button', buttonToneClass(tone), className)} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
+
 export type IconButtonShape = 'square' | 'circle';
 export type IconButtonSize = 'sm' | 'md';
 

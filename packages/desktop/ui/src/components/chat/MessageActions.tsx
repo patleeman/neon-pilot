@@ -4,7 +4,7 @@ import { writeClipboardText } from '../../desktop/clipboard';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { cx } from '../ui';
+import { MessageActionButton } from '../ui';
 
 /**
  * Simple `when` expression evaluator for message actions.
@@ -143,60 +143,55 @@ export function MessageActions({
       }`}
     >
       {canCopy && (
-        <button
+        <MessageActionButton
           type="button"
           onClick={() => {
             void handleCopy();
           }}
-          className={cx('ui-message-action-button', copyState === 'copied' && 'text-accent', copyState === 'failed' && 'text-danger')}
+          tone={copyState === 'copied' ? 'accent' : copyState === 'failed' ? 'danger' : 'default'}
           title={copyState === 'failed' ? 'Copy to clipboard failed' : 'Copy this assistant message to the clipboard'}
         >
           {copyState === 'copied' ? '⎘ copied' : copyState === 'failed' ? '⎘ copy failed' : '⎘ copy'}
-        </button>
+        </MessageActionButton>
       )}
       {onEdit && (
-        <button
-          type="button"
-          onClick={onEdit}
-          className="ui-message-action-button"
-          title="Edit this prompt and rerun the conversation from here"
-        >
+        <MessageActionButton type="button" onClick={onEdit} title="Edit this prompt and rerun the conversation from here">
           ✎ edit
-        </button>
+        </MessageActionButton>
       )}
       {onRewind && (
-        <button
+        <MessageActionButton
           type="button"
           onClick={() => {
             void handleRewind();
           }}
-          className={cx('ui-message-action-button', isRewinding && 'text-accent')}
+          tone={isRewinding ? 'accent' : 'default'}
           title={
             isUser ? 'Rewind into a new conversation from this prompt' : 'Rewind into a new conversation from the prompt that led here'
           }
           disabled={isRewinding}
         >
           {isRewinding ? '↩ rewinding…' : '↩ rewind'}
-        </button>
+        </MessageActionButton>
       )}
       {onFork && (
-        <button
+        <MessageActionButton
           type="button"
           onClick={() => {
             void handleFork();
           }}
-          className={cx('ui-message-action-button', isForking && 'text-accent')}
+          tone={isForking ? 'accent' : 'default'}
           title={isUser ? 'Fork into a new conversation with this prompt in the input' : 'Fork into a new conversation from here'}
           disabled={isForking}
         >
           {isForking ? '⑂ forking…' : '⑂ fork'}
-        </button>
+        </MessageActionButton>
       )}
       {messageActions.map((action) => {
         if (!matchMessageActionWhen(action, isUser, blockText)) return null;
         const busy = busyActionIds.has(action.id);
         return (
-          <button
+          <MessageActionButton
             key={action.id}
             type="button"
             onClick={() => {
@@ -218,12 +213,12 @@ export function MessageActions({
                 }
               })();
             }}
-            className={cx('ui-message-action-button', busy && 'text-accent')}
+            tone={busy ? 'accent' : 'default'}
             title={action.title}
             disabled={busy}
           >
             {action.title}
-          </button>
+          </MessageActionButton>
         );
       })}
     </div>

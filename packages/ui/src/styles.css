@@ -178,6 +178,58 @@ body {
   color: rgb(var(--color-primary));
 }
 
+.ui-message-action-button {
+  display: inline-flex;
+  user-select: none;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.125rem 0;
+  color: rgb(var(--color-dim));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.ui-message-action-button:hover,
+.ui-message-action-button:focus-visible {
+  color: rgb(var(--color-steel));
+  text-decoration: none;
+}
+
+.ui-message-action-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
+}
+
+.ui-message-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.ui-message-action-button.text-accent,
+.ui-message-action-button.text-accent:hover,
+.ui-message-action-button.text-accent:focus-visible {
+  border-color: rgb(var(--color-steel) / 0.15);
+  background: rgb(var(--color-steel) / 0.05);
+  color: rgb(var(--color-steel));
+}
+
+.ui-message-action-button.text-danger,
+.ui-message-action-button.text-danger:hover,
+.ui-message-action-button.text-danger:focus-visible {
+  color: rgb(var(--color-danger));
+}
+
 .ui-icon-button {
   display: inline-flex;
   align-items: center;

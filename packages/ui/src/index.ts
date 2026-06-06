@@ -61,6 +61,7 @@ export {
   KeyValueTable,
   type KeyValueTableColumns,
   LoadingState,
+  MessageActionButton,
   MetaLabel,
   type MetaLabelTone,
   MetricTile,
