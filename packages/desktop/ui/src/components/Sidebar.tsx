@@ -76,7 +76,7 @@ import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPr
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
-import { PanelMessage, SectionLabel } from './ui';
+import { IconButton, PanelMessage, SectionLabel } from './ui';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
@@ -863,18 +863,19 @@ function ThreadsFilterButton({
 
   return (
     <>
-      <button
+      <IconButton
+        compact
         ref={buttonRef}
         type="button"
         onClick={handleMenuToggle}
-        className="ui-icon-button ui-icon-button-compact shrink-0"
+        className="shrink-0"
         title="Organize and sort threads"
         aria-label="Organize and sort threads"
         aria-expanded={menuOpen}
         aria-haspopup="menu"
       >
         <Ico d={PATH.filter} size={12} />
-      </button>
+      </IconButton>
       {menuOpen && menuPosition ? (
         <div
           ref={menuRootRef}
@@ -1146,27 +1147,29 @@ function ConversationCwdGroupHeader({
           <span className="min-w-0 truncate text-[14px] font-semibold tracking-tight">{label}</span>
         </button>
         {hasMenuActions ? (
-          <button
+          <IconButton
+            compact
             type="button"
             draggable={false}
             onClick={handleMenuButtonClick}
-            className="ui-icon-button ui-icon-button-compact shrink-0"
+            className="shrink-0"
             title={workspaceActionsTitle}
             aria-label={workspaceActionsTitle}
           >
             <MoreActionsIcon size={12} />
-          </button>
+          </IconButton>
         ) : null}
-        <button
+        <IconButton
+          compact
           type="button"
           draggable={false}
           onClick={onNewConversation}
-          className="ui-icon-button ui-icon-button-compact shrink-0"
+          className="shrink-0"
           title={newConversationTitle}
           aria-label={newConversationTitle}
         >
           <Ico d={PATH.plus} size={11} />
-        </button>
+        </IconButton>
       </div>
       {menuOpen && menuPosition ? (
         <div
@@ -1706,17 +1709,17 @@ const OpenConversationRow = memo(function OpenConversationRow({
         {showTrailingControls ? (
           <div className="pointer-events-auto flex items-center gap-0.5">
             {showCloseButton ? (
-              <button
+              <IconButton
+                compact
                 type="button"
                 onPointerDown={stopRowInteraction}
                 onMouseDown={stopRowInteraction}
                 onClick={() => onClose?.()}
-                className="ui-icon-button ui-icon-button-compact"
                 title="Close"
                 aria-label="Close"
               >
                 <Ico d={PATH.close} size={10} />
-              </button>
+              </IconButton>
             ) : null}
           </div>
         ) : (
@@ -3891,25 +3894,27 @@ export function Sidebar() {
                   onChangeFilterMode={handleThreadsFilterModeChange}
                   onChangeSortMode={handleThreadsSortModeChange}
                 />
-                <button
+                <IconButton
+                  compact
                   type="button"
                   onClick={handleOpenThreadSwitcher}
-                  className="ui-icon-button ui-icon-button-compact shrink-0"
+                  className="shrink-0"
                   title="Find threads and archived conversations"
                   aria-label="Find threads and archived conversations"
                 >
                   <Ico d={PATH.search} size={12} />
-                </button>
-                <button
+                </IconButton>
+                <IconButton
+                  compact
                   type="button"
                   onClick={handleAddWorkspace}
-                  className="ui-icon-button ui-icon-button-compact -mr-1 shrink-0"
+                  className="-mr-1 shrink-0"
                   title={addWorkspaceBusy ? 'Choosing workspace…' : 'Add workspace'}
                   aria-label={addWorkspaceBusy ? 'Choosing workspace…' : 'Add workspace'}
                   disabled={addWorkspaceBusy}
                 >
                   <Ico d={PATH.workspaceAdd} size={12} />
-                </button>
+                </IconButton>
               </div>
             </div>
 
