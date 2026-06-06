@@ -11,7 +11,7 @@ import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../../extensions/extensionRegi
 import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
 import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '../../local/workbenchBrowserTabs';
-import { Button, Textarea, TextInput, ToolbarButton } from '../ui';
+import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 
@@ -368,25 +368,29 @@ export function WorkbenchBrowserTab({
           void runBrowserCommand(() => bridge!.navigateWorkbenchBrowser({ url: urlDraft, sessionKey: browserSessionKey }));
         }}
       >
-        <button
-          type="button"
-          className="rounded px-1.5 py-1 text-[12px] text-secondary hover:bg-surface hover:text-primary disabled:opacity-35"
+        <IconButton
+          compact
+          size="sm"
           disabled={!state?.canGoBack}
+          aria-label="Go back"
+          title="Go back"
           onClick={() => void runBrowserCommand(() => bridge!.goBackWorkbenchBrowser({ sessionKey: browserSessionKey }))}
         >
           ←
-        </button>
-        <button
-          type="button"
-          className="rounded px-1.5 py-1 text-[12px] text-secondary hover:bg-surface hover:text-primary disabled:opacity-35"
+        </IconButton>
+        <IconButton
+          compact
+          size="sm"
           disabled={!state?.canGoForward}
+          aria-label="Go forward"
+          title="Go forward"
           onClick={() => void runBrowserCommand(() => bridge!.goForwardWorkbenchBrowser({ sessionKey: browserSessionKey }))}
         >
           →
-        </button>
-        <button
-          type="button"
-          className="rounded px-1.5 py-1 text-[13px] text-secondary hover:bg-surface hover:text-primary"
+        </IconButton>
+        <IconButton
+          compact
+          size="sm"
           aria-label={state?.loading ? 'Stop loading' : 'Reload'}
           title={state?.loading ? 'Stop loading' : 'Reload'}
           onClick={() =>
@@ -398,7 +402,7 @@ export function WorkbenchBrowserTab({
           }
         >
           {state?.loading ? '×' : '↻'}
-        </button>
+        </IconButton>
         <TextInput
           ref={urlInputRef}
           className="min-w-0 flex-1"
@@ -406,15 +410,15 @@ export function WorkbenchBrowserTab({
           onChange={(event) => handleUrlInputChange(event.target.value)}
           placeholder="https://example.com"
         />
-        <button
-          type="button"
-          className="rounded px-1.5 py-1 text-[13px] text-secondary hover:bg-surface hover:text-primary"
+        <IconButton
+          compact
+          size="sm"
           aria-label="Close browser"
           title="Close browser"
           onClick={handleCloseBrowser}
         >
           ×
-        </button>
+        </IconButton>
       </form>
       <div ref={browserHostRef} className="relative min-h-[220px] flex-1 overflow-hidden bg-base">
         {!bridge ? (
