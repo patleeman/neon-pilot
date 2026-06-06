@@ -261,6 +261,10 @@ const meta = {
 
       <section style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Dialog Anatomy</h2>
+        <SupportingText>
+          Use `Dialog` for the live overlay. `backdropClassName` and `backdropStyle` keep host-specific alignment or blur on the shared
+          shell.
+        </SupportingText>
         <div className="ui-dialog-shell" style={{ width: 'min(28rem, 100%)' }}>
           <DialogHeader title="Create File" titleId="story-dialog-title" description="Use dialog structure for short focused tasks." />
           <DialogBody>

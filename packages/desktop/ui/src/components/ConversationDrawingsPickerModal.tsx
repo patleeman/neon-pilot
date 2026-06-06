@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 
 import type { ConversationAttachmentRecord, ConversationAttachmentSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
-import { cx, Pill } from './ui';
+import { Button, cx, Dialog, DialogBody, DialogHeader, Pill, SurfacePanel, ToolbarButton } from './ui';
 
 interface AttachSelection {
   attachment: ConversationAttachmentSummary;
@@ -55,46 +55,35 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
   }
 
   return (
-    <div
-      className="ui-overlay-backdrop"
-      style={{ background: 'rgb(0 0 0 / 0.55)', backdropFilter: 'blur(2px)' }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Dialog
+      aria-label="Conversation drawings"
+      onClose={onClose}
+      backdropStyle={{ background: 'rgb(0 0 0 / 0.55)', backdropFilter: 'blur(2px)' }}
+      style={{ maxWidth: '840px', maxHeight: 'calc(100vh - 5rem)' }}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Conversation drawings"
-        className="ui-dialog-shell"
-        style={{ maxWidth: '840px', maxHeight: 'calc(100vh - 5rem)' }}
-      >
-        <div className="border-b border-border-subtle px-4 py-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="ui-section-label">Conversation drawings</p>
-              <p className="mt-1 text-[12px] text-secondary">Attach a saved drawing (latest or a specific revision) to your next prompt.</p>
-            </div>
-            <button type="button" onClick={onClose} className="ui-toolbar-button">
-              Close
-            </button>
-          </div>
+      <DialogHeader
+        title="Conversation drawings"
+        description="Attach a saved drawing (latest or a specific revision) to your next prompt."
+        actions={<ToolbarButton onClick={onClose}>Close</ToolbarButton>}
+      />
 
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-border-subtle bg-elevated px-3 py-2">
-            <span className="text-dim text-[12px]">⌕</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="flex-1 bg-transparent text-[13px] text-primary placeholder:text-dim outline-none"
-              placeholder="Filter drawings by id or title…"
-            />
-            <Pill tone="muted" mono className="tabular-nums">
-              {filtered.length}
-            </Pill>
-          </div>
+      <div className="border-b border-border-subtle px-4 pb-3">
+        <div className="flex items-center gap-2 rounded-xl border border-border-subtle bg-elevated px-3 py-2">
+          <span className="text-dim text-[12px]">⌕</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="flex-1 bg-transparent text-[13px] text-primary placeholder:text-dim outline-none"
+            placeholder="Filter drawings by id or title…"
+          />
+          <Pill tone="muted" mono className="tabular-nums">
+            {filtered.length}
+          </Pill>
         </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      <DialogBody className="space-y-2">
+        <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 && <p className="py-8 text-center text-[12px] text-dim">No drawings match this filter.</p>}
 
           {filtered.map((attachment) => {
@@ -103,7 +92,7 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
             const record = recordsById[attachment.id];
 
             return (
-              <div key={attachment.id} className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5">
+              <SurfacePanel key={attachment.id} className="px-3 py-2.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-medium text-primary truncate">{attachment.title}</p>
@@ -112,22 +101,17 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onAttach({ attachment, revision: attachment.currentRevision })}
-                      className="ui-toolbar-button"
-                    >
+                    <ToolbarButton onClick={() => onAttach({ attachment, revision: attachment.currentRevision })}>
                       Attach latest
-                    </button>
-                    <button
-                      type="button"
+                    </ToolbarButton>
+                    <ToolbarButton
                       onClick={() => {
                         void toggleHistory(attachment);
                       }}
-                      className={cx('ui-toolbar-button', isExpanded && 'text-accent')}
+                      className={cx(isExpanded && 'text-accent')}
                     >
                       {isExpanded ? 'Hide history' : 'History'}
-                    </button>
+                    </ToolbarButton>
                   </div>
                 </div>
 
@@ -148,24 +132,24 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
                               <span>· {timeAgo(revision.createdAt)}</span>
                               {revision.note && <span className="truncate">· {revision.note}</span>}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => onAttach({ attachment, revision: revision.revision })}
+                            <Button
+                              variant="ghost"
                               className="text-[11px] text-accent hover:text-accent/80"
+                              onClick={() => onAttach({ attachment, revision: revision.revision })}
                             >
                               Attach
-                            </button>
+                            </Button>
                           </div>
                         ))}
 
                     {!isLoading && record && record.revisions.length === 0 && <p className="text-[11px] text-dim">No saved revisions.</p>}
                   </div>
                 )}
-              </div>
+              </SurfacePanel>
             );
           })}
         </div>
-      </div>
-    </div>
+      </DialogBody>
+    </Dialog>
   );
 }

@@ -470,6 +470,8 @@ export function DataTableCell({ children, className, ...props }: HTMLAttributes<
 export function Dialog({
   children,
   className,
+  backdropClassName,
+  backdropStyle,
   onClose,
   closeOnBackdrop = true,
   labelledBy,
@@ -477,13 +479,16 @@ export function Dialog({
 }: {
   children: ReactNode;
   className?: string;
+  backdropClassName?: string;
+  backdropStyle?: CSSProperties;
   onClose?: () => void;
   closeOnBackdrop?: boolean;
   labelledBy?: string;
 } & HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className="ui-overlay-backdrop"
+      className={cx('ui-overlay-backdrop', backdropClassName)}
+      style={backdropStyle}
       onClick={(event) => {
         if (closeOnBackdrop && event.target === event.currentTarget) onClose?.();
       }}

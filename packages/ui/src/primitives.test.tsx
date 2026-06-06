@@ -110,6 +110,16 @@ describe('design-system primitives', () => {
     expect(html).toContain('aria-checked="true"');
   });
 
+  it('renders dialog backdrop customizations on the overlay', () => {
+    const html = renderToStaticMarkup(
+      createElement(Dialog, { backdropClassName: 'custom-backdrop', backdropStyle: { background: 'red' } }, 'Dialog body'),
+    );
+
+    expect(html).toContain('ui-overlay-backdrop');
+    expect(html).toContain('custom-backdrop');
+    expect(html).toContain('background:red');
+  });
+
   it('renders text input with design-system class', () => {
     expect(renderToStaticMarkup(createElement(TextInput, { value: 'hello', readOnly: true }))).toContain('ui-text-input');
   });
