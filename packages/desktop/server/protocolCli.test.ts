@@ -117,6 +117,7 @@ describe('protocol CLI', () => {
         extensionId: 'system-extension-manager',
         actionId: 'manageExtension',
         input: {
+          action: 'validate',
           cli: {
             command: 'extensions validate',
             rawArgv: ['extensions', 'validate', 'system-knowledge', '--json'],
