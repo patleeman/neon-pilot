@@ -14,7 +14,7 @@
  */
 
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, ErrorState, LoadingState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, ErrorState, LoadingState, Stat, StatGrid, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useState } from 'react';
 
 import { TracesAgentLoop } from './traces/TracesAgentLoop';
@@ -196,19 +196,20 @@ function PulseRow({ summary }: { summary: NonNullable<ReturnType<typeof useTrace
   ];
 
   return (
-    <section className="grid grid-cols-1 overflow-hidden rounded-xl border border-border-subtle bg-surface sm:grid-cols-2 lg:grid-cols-5">
+    <StatGrid className="!grid-cols-1 overflow-hidden rounded-xl border border-border-subtle bg-surface sm:!grid-cols-2 lg:!grid-cols-5">
       {cards.map((card) => (
-        <div
+        <Stat
           key={card.label}
+          label={card.label}
+          value={card.value}
+          detail={card.trend}
+          valueClassName={`font-mono text-[24px] ${card.cls}`}
           className="relative flex min-w-0 flex-col gap-2 border-border-subtle px-4 py-4 sm:[&:not(:first-child)]:border-l max-sm:border-t max-sm:first:border-t-0"
         >
           {card.dot && <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-accent animate-pulse" />}
-          <span className="text-[10px] uppercase tracking-[0.1em] text-dim">{card.label}</span>
-          <span className={`font-mono text-[24px] font-semibold leading-none tracking-tight ${card.cls}`}>{card.value}</span>
-          <span className="text-[11px] text-dim">{card.trend}</span>
-        </div>
+        </Stat>
       ))}
-    </section>
+    </StatGrid>
   );
 }
 

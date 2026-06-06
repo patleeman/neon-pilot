@@ -359,19 +359,25 @@ export function Stat({
   label,
   value,
   detail,
+  children,
   className,
+  valueClassName,
+  detailClassName,
   ...props
 }: {
   label: ReactNode;
   value: ReactNode;
   detail?: ReactNode;
   className?: string;
+  valueClassName?: string;
+  detailClassName?: string;
 } & HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cx('ui-stat', className)} {...props}>
       <div className="ui-stat-label">{label}</div>
-      <div className="ui-stat-value">{value}</div>
-      {detail ? <div className="ui-stat-detail">{detail}</div> : null}
+      <div className={cx('ui-stat-value', valueClassName)}>{value}</div>
+      {detail ? <div className={cx('ui-stat-detail', detailClassName)}>{detail}</div> : null}
+      {children}
     </div>
   );
 }

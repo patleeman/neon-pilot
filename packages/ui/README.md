@@ -78,7 +78,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `Dialog` and its header/body/footer pieces for modal shells before creating local fixed overlays.
 - Use `Notice`, `LoadingState`, `ErrorState`, and `EmptyState` for feedback. Avoid page-specific loading/error markup unless the layout requires it.
 - Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.
-- Use `ProgressBar`, `StatGrid`, `KeyValueList`, `DataTable`, `ResourceListItem`, `CodeBlock`, and `Disclosure` for data display before composing raw rows or panels.
+- Use `ProgressBar`, `StatGrid`, `Stat`, `KeyValueList`, `DataTable`, `ResourceListItem`, `CodeBlock`, and `Disclosure` for data display before composing raw rows or panels. `Stat` accepts `valueClassName`, `detailClassName`, and children for status dots or other small overlays.
 
 ## Proven Replacement Targets
 

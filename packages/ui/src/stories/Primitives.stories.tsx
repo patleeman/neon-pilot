@@ -189,7 +189,7 @@ const meta = {
           <StatGrid>
             <Stat label="Installed" value="31" />
             <Stat label="Enabled" value="26" />
-            <Stat label="Warnings" value="2" detail="Needs attention" />
+            <Stat label="Warnings" value="2" detail="Needs attention" valueClassName="text-warning" detailClassName="text-warning" />
             <Stat label="Updated" value="Today" />
           </StatGrid>
           <KeyValueList>
