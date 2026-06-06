@@ -76,6 +76,7 @@ import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPr
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
+import { SectionLabel } from './ui';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
 const SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS = 40;
@@ -4029,7 +4030,7 @@ export function Sidebar() {
           <>
             <div className="px-4 pt-1 pb-0.5">
               <div className="flex items-center gap-1">
-                <p className="ui-section-label flex-1">Threads</p>
+                <SectionLabel className="flex-1">Threads</SectionLabel>
                 {extensionRegistry.threadHeaderActions.map((action) => (
                   <ThreadHeaderActionHost
                     key={`${action.extensionId}:${action.id}`}

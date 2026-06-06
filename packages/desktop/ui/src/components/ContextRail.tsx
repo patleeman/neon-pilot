@@ -23,7 +23,7 @@ import type { AgentToolInfo, ScheduledTaskSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
 import { RichMarkdownRenderer } from './editor/RichMarkdownRenderer';
 import { addNotification } from './notifications/notificationStore';
-import { cx, ErrorState, IconButton, LoadingState, ToolbarButton } from './ui';
+import { cx, ErrorState, IconButton, LoadingState, SectionLabel, ToolbarButton } from './ui';
 
 const ScheduledTaskPanel = lazy(() => import('./ScheduledTaskPanel').then((module) => ({ default: module.ScheduledTaskPanel })));
 
@@ -69,7 +69,7 @@ function RailHeader({ label, sub }: { label: string; sub?: string }) {
   return (
     <div className="px-4 pt-4 pb-3 border-b border-border-subtle shrink-0">
       <div className="min-w-0">
-        <p className="ui-section-label">{label}</p>
+        <SectionLabel>{label}</SectionLabel>
         {sub && <p className="text-[12px] text-secondary mt-0.5 font-mono truncate">{sub}</p>}
       </div>
     </div>
@@ -449,7 +449,7 @@ function ConversationsWorkspaceContext() {
       </div>
 
       <div className="space-y-2 border-t border-border-subtle pt-4">
-        <p className="ui-section-label">Needs review</p>
+        <SectionLabel>Needs review</SectionLabel>
         {attentionSessions.length === 0 ? (
           <p className="ui-card-meta">No conversations currently need review.</p>
         ) : (
@@ -471,7 +471,7 @@ function ConversationsWorkspaceContext() {
       </div>
 
       <div className="space-y-2 border-t border-border-subtle pt-4">
-        <p className="ui-section-label">Open now</p>
+        <SectionLabel>Open now</SectionLabel>
         {[...pinnedSessions.map((session) => ({ session, label: 'pinned' })), ...tabs.map((session) => ({ session, label: 'open' }))].slice(
           0,
           5,
@@ -531,7 +531,7 @@ function CapabilitiesOverviewContext({
           <RailMetadataRow label="Defaults" value={defaultPresetIds.length} />
         </div>
         <div className="space-y-2 border-t border-border-subtle pt-4">
-          <p className="ui-section-label">Defaults</p>
+          <SectionLabel>Defaults</SectionLabel>
           {defaultPresetIds.length === 0 ? (
             <p className="ui-card-meta">No default presets configured.</p>
           ) : (
@@ -570,7 +570,7 @@ function CapabilitiesOverviewContext({
           <RailMetadataRow label="Failing" value={failingTasks.length} />
         </div>
         <div className="space-y-2 border-t border-border-subtle pt-4">
-          <p className="ui-section-label">Needs attention</p>
+          <SectionLabel>Needs attention</SectionLabel>
           {failingTasks.length === 0 ? (
             <p className="ui-card-meta">No scheduled tasks currently need attention.</p>
           ) : (
@@ -602,7 +602,7 @@ function CapabilitiesOverviewContext({
           <RailMetadataRow label="CLI issues" value={unavailableCliCount} />
         </div>
         <div className="space-y-2 border-t border-border-subtle pt-4">
-          <p className="ui-section-label">Active by default</p>
+          <SectionLabel>Active by default</SectionLabel>
           {activeTools.length === 0 ? (
             <p className="ui-card-meta">No active tools reported.</p>
           ) : (
@@ -636,7 +636,7 @@ function CapabilitiesOverviewContext({
         <RailMetadataRow label="Tools" value={activeTools.length} />
       </div>
       <div className="space-y-2 border-t border-border-subtle pt-4">
-        <p className="ui-section-label">Current health</p>
+        <SectionLabel>Current health</SectionLabel>
         <p className="ui-card-meta">
           {tasks.filter((task) => task.running).length} running scheduled task{tasks.filter((task) => task.running).length === 1 ? '' : 's'}{' '}
           · {failingTasks.length} failing · {unavailableCliCount} CLI issue{unavailableCliCount === 1 ? '' : 's'}.
@@ -714,11 +714,11 @@ function CapabilitiesTaskContext({ taskId }: { taskId: string }) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
         <div className="space-y-2">
-          <p className="ui-section-label">Prompt</p>
+          <SectionLabel>Prompt</SectionLabel>
           <RailMarkdownPreview content={data.prompt} />
         </div>
         <div className="space-y-2 border-t border-border-subtle pt-4">
-          <p className="ui-section-label">Task file</p>
+          <SectionLabel>Task file</SectionLabel>
           <RailMarkdownPreview content={data.fileContent} />
         </div>
       </div>
@@ -741,7 +741,7 @@ function CapabilitiesToolContext({ tool }: { tool: AgentToolInfo }) {
         <RailMetadataRow label="Parameters" value={parameters.length} />
       </div>
       <div className="space-y-2 border-t border-border-subtle pt-4">
-        <p className="ui-section-label">Parameters</p>
+        <SectionLabel>Parameters</SectionLabel>
         {parameters.length === 0 ? (
           <p className="ui-card-meta">No parameters.</p>
         ) : (
@@ -833,7 +833,7 @@ function SettingsOverviewContext() {
       </div>
 
       <div className="space-y-2 border-t border-border-subtle pt-4">
-        <p className="ui-section-label">What lives here</p>
+        <SectionLabel>What lives here</SectionLabel>
         <p className="ui-card-meta">
           Use Settings for stable preferences, interface controls, desktop connections, and inline runtime service panels. Use Background
           Work for shell commands, agent tasks, and recovery review.

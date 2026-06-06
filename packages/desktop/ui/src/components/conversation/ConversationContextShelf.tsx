@@ -1,5 +1,6 @@
 import type { MentionItem } from '../../conversation/conversationMentions';
 import type { ConversationContextDocRef } from '../../shared/types';
+import { SectionLabel } from '../ui';
 
 export function ConversationContextShelf({
   attachedContextDocs,
@@ -20,7 +21,7 @@ export function ConversationContextShelf({
     <>
       {attachedContextDocs.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-3 pt-3 pb-2.5">
-          <span className="ui-section-label">Attached context</span>
+          <SectionLabel>Attached context</SectionLabel>
           {attachedContextDocs.map((doc) => (
             <span
               key={doc.path}
@@ -47,7 +48,7 @@ export function ConversationContextShelf({
 
       {draftMentionItems.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-3 pt-3 pb-2.5">
-          <span className="ui-section-label">Prompt references</span>
+          <SectionLabel>Prompt references</SectionLabel>
           {unattachedDraftMentionItems.length > 0 && (
             <button
               type="button"

@@ -4,7 +4,7 @@ import type { SlashMenuItem } from '../../commands/slashMenu';
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from '../../conversation/conversationMentions';
 import { getModelSelectionValue, groupModelsByProvider } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
-import { cx, IconButton, Pill } from '../ui';
+import { cx, IconButton, Pill, SectionLabel } from '../ui';
 
 const useMenuLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -33,7 +33,7 @@ export function ModelPicker({
   return (
     <div className="ui-menu-shell">
       <div className="ui-menu-header">
-        <p className="ui-section-label">Switch model</p>
+        <SectionLabel>Switch model</SectionLabel>
         <IconButton onClick={onClose} title="Close model picker" aria-label="Close model picker" compact>
           <span className="text-[11px] font-mono">esc</span>
         </IconButton>
@@ -145,7 +145,7 @@ export function MentionMenu({
   return (
     <div className="ui-menu-shell max-h-[18rem] overflow-y-auto py-1.5">
       <div className="px-3 pt-2 pb-1">
-        <p className="ui-section-label">Mention</p>
+        <SectionLabel>Mention</SectionLabel>
       </div>
       {filtered.map((item, index) => (
         <button
