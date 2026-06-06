@@ -3,7 +3,7 @@ import { type CSSProperties, lazy, Suspense, useCallback, useMemo } from 'react'
 
 import type { ConversationCommitCheckpointFile } from '../../shared/types';
 import { type ColorTheme, useTheme } from '../../ui-state/theme';
-import { cx, MetaLabel } from '../ui';
+import { cx, MetaLabel, RowButton } from '../ui';
 
 const checkpointDiffStyle = {
   '--diffs-font-family': 'var(--font-mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace)',
@@ -111,11 +111,10 @@ export function CheckpointDiffSection({
         sectionClassName,
       )}
     >
-      <button
-        type="button"
+      <RowButton
         onClick={handleToggleCollapse}
         className={cx(
-          'flex w-full items-center justify-between gap-3 border-b border-border-subtle/50 bg-elevated/25 px-3 py-2 text-left transition-colors',
+          'justify-between gap-3 rounded-none border-b border-border-subtle/50 bg-elevated/25 px-3 py-2',
           stickyHeader && 'sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-elevated/80',
         )}
       >
@@ -147,7 +146,7 @@ export function CheckpointDiffSection({
           </p>
         </div>
         {showActiveBadge && active ? <MetaLabel tone="accent">Current</MetaLabel> : null}
-      </button>
+      </RowButton>
       {!collapsed ? (
         <div className="overflow-hidden bg-[rgb(var(--color-terminal-surface))]">
           <Suspense fallback={<div className="px-3 py-2 text-[11px] text-dim">Loading diff...</div>}>
