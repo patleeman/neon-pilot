@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import React from 'react';
 
-import { MenuItem, MenuSeparator, MenuShell, StatusDot } from '../ui';
+import { IconButton, MenuItem, MenuSeparator, MenuShell, StatusDot } from '../ui';
 import type { ReplySelectionContextMenuState, TranscriptSelectionAction } from './useChatReplySelection.js';
 
 void React;
@@ -43,9 +43,9 @@ export function SelectionContextMenu({
               <>
                 <div className="flex items-center gap-1 px-2 py-1" role="group" aria-label="Selection reply starters">
                   {selectionActions.map((action) => (
-                    <button
+                    <IconButton
                       key={`${action.extensionId}:${action.id}`}
-                      type="button"
+                      compact
                       title={action.title}
                       aria-label={action.title}
                       onPointerDown={(event) => {
@@ -59,11 +59,11 @@ export function SelectionContextMenu({
                       onClick={() => {
                         void onAction(action);
                       }}
-                      className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="text-base"
                       role="menuitem"
                     >
                       {action.icon ?? action.title}
-                    </button>
+                    </IconButton>
                   ))}
                 </div>
                 <MenuSeparator />
