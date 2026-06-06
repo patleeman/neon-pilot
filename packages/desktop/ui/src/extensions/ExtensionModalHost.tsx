@@ -206,7 +206,7 @@ export function ExtensionModalHost() {
             }
           />
         ) : null}
-        <DialogBody className={fullscreen ? 'p-0' : undefined}>
+        <DialogBody className={fullscreen ? 'min-h-0 flex-1 overflow-hidden p-0' : undefined}>
           <Component pa={pa} props={modal.props} close={handleClose} />
         </DialogBody>
       </Dialog>
