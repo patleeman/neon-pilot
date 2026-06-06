@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -1243,7 +1243,13 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'shell',
       operation: 'exec',
-      input: { command: 'git', args: ['status', '--short'], cwd: '/repo', timeoutMs: 1000 },
+      input: {
+        command: 'git',
+        args: ['status', '--short'],
+        cwd: '/repo',
+        timeoutMs: 1000,
+        env: expect.objectContaining({ PATH: expect.stringContaining('/bin') }),
+      },
     });
     workerThreads.messageHandler?.({
       id: 1,
@@ -1304,7 +1310,7 @@ export async function doThing(_input, ctx) {
         command: 'sh',
         args: ['-lc', 'ds4 help'],
         cwd: '/repo',
-        env: { PATH: `${extensionBin}:/usr/bin` },
+        env: { PATH: `${extensionBin}${delimiter}${process.env.NEON_PILOT_STATE_ROOT}/bin${delimiter}/usr/bin` },
       },
     });
   });
@@ -1350,7 +1356,15 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'shell',
       operation: 'spawn',
-      input: { handleId: 'worker-shell-1', command: 'caffeinate', args: ['-dimsu'], onStdout: true, onStderr: true, onExit: true },
+      input: {
+        handleId: 'worker-shell-1',
+        command: 'caffeinate',
+        args: ['-dimsu'],
+        env: expect.objectContaining({ PATH: expect.stringContaining('/bin') }),
+        onStdout: true,
+        onStderr: true,
+        onExit: true,
+      },
     });
     workerThreads.messageHandler?.({
       id: 1,

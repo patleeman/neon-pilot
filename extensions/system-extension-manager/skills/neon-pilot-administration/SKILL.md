@@ -1,3 +1,8 @@
+---
+name: neon-pilot-administration
+description: Use the Neon Pilot CLI for self-administration of extensions, conversations, settings, and extension-contributed administration surfaces.
+---
+
 # Neon Pilot Administration
 
 Use the `neon-pilot` CLI for Neon Pilot self-administration when it is available in the agent shell.
