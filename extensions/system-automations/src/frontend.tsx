@@ -21,6 +21,7 @@ import {
   SegmentedControl,
   SettingsSection,
   Switch,
+  TextButton,
   Textarea,
   TextInput,
   ToolbarButton,
@@ -1356,9 +1357,9 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
             >
               <div className="flex items-start justify-between gap-4 pb-10">
                 <div className="min-w-0">
-                  <button type="button" className="text-[13px] text-secondary hover:text-primary" onClick={closeEditor}>
+                  <TextButton className="text-[13px]" onClick={closeEditor}>
                     ← Automations
-                  </button>
+                  </TextButton>
                   <h2 className="mt-6 text-[32px] font-semibold leading-[1.05] tracking-[-0.025em] text-primary">
                     {editingId ? 'Edit automation' : 'New automation'}
                   </h2>
