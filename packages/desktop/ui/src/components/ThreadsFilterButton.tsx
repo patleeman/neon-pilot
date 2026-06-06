@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ThreadsFilterMode, ThreadsOrganizeMode, ThreadsSortMode } from './sidebarThreadModel';
-import { MenuGroupLabel, MenuItem, MenuSeparator, MenuShell } from './ui';
+import { IconButton, MenuGroupLabel, MenuItem, MenuSeparator, MenuShell } from './ui';
 
 const PATH = {
   automations:
@@ -146,18 +146,18 @@ export function ThreadsFilterButton({
 
   return (
     <>
-      <button
+      <IconButton
         ref={buttonRef}
-        type="button"
+        compact
         onClick={handleMenuToggle}
-        className="ui-icon-button ui-icon-button-compact shrink-0"
+        className="shrink-0"
         title="Organize and sort threads"
         aria-label="Organize and sort threads"
         aria-expanded={menuOpen}
         aria-haspopup="menu"
       >
         <Icon d={PATH.filter} size={12} />
-      </button>
+      </IconButton>
       {menuOpen && menuPosition ? (
         <MenuShell
           ref={menuRootRef}
