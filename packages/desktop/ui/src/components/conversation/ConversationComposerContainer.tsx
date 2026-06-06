@@ -34,6 +34,7 @@ export const ConversationComposerContainer = forwardRef<HTMLDivElement, Conversa
   ) {
     return (
       <div className={cx(layout === 'rail' && 'px-3 py-3', className)} {...containerProps}>
+        {shelves ? <div className="mb-2">{shelves}</div> : null}
         <ConversationComposerShell
           ref={ref}
           className={shellClassName}
@@ -44,7 +45,6 @@ export const ConversationComposerContainer = forwardRef<HTMLDivElement, Conversa
           runMode={runMode}
         >
           {dragOverlay}
-          {shelves}
           {inputControls}
         </ConversationComposerShell>
       </div>

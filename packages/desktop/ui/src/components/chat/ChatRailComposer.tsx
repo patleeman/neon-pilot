@@ -348,7 +348,7 @@ export function ChatRailComposer({
 
   const shelves =
     attachments.length > 0 || drawingAttachments.length > 0 ? (
-      <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain border-b border-border-subtle/60">
+      <div className="max-h-[min(34vh,20rem)] overflow-y-auto overscroll-contain">
         <ComposerAttachmentShelf
           attachments={attachments}
           drawingAttachments={drawingAttachments}
