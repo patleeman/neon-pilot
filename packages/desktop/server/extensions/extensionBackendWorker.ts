@@ -4,6 +4,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parentPort } from 'node:worker_threads';
 
+import { prependNeonPilotCliBin } from '../cliEnvironment.js';
+
 import type { ExtensionBackendModule } from './extensionBackendRunner.js';
 import type {
   ExtensionBackendWorkerBackendContextOptions,
@@ -155,10 +157,11 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       inputEnv && typeof inputEnv === 'object' && !Array.isArray(inputEnv)
         ? Object.fromEntries(Object.entries(inputEnv).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
         : {};
-    if (extensionBinDirs.length === 0) return Object.keys(env).length ? env : undefined;
-    const pathParts = (env.PATH ?? process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+    const baseEnv = prependNeonPilotCliBin({ ...process.env, ...env });
+    if (extensionBinDirs.length === 0) return baseEnv;
+    const pathParts = (baseEnv.PATH ?? '').split(path.delimiter).filter(Boolean);
     return {
-      ...env,
+      ...baseEnv,
       PATH: [...extensionBinDirs, ...pathParts.filter((part) => !extensionBinDirs.includes(part))].join(path.delimiter),
     };
   };

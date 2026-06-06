@@ -23,6 +23,8 @@ import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompt
 import { LIVE_SESSION_RESOURCE_OPTIONS_PERF, type LiveSessionResourceOptions } from '../routes/context.js';
 import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
 import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
+import { ensureNeonPilotCliLauncher, prependNeonPilotCliBin } from '../cliEnvironment.js';
+import { registerProcessWrapper } from '../shared/processLauncher.js';
 
 export interface RuntimeStateLogger {
   warn: (message: string, fields?: Record<string, unknown>) => void;
@@ -64,6 +66,18 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   }
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
+    const stateRoot = getStateRoot();
+    ensureNeonPilotCliLauncher({ repoRoot, stateRoot });
+    process.env.PATH = prependNeonPilotCliBin(process.env, stateRoot).PATH;
+    registerProcessWrapper(
+      'neon-pilot-cli',
+      (context) => ({
+        ...context,
+        env: prependNeonPilotCliBin(context.env, stateRoot),
+      }),
+      { label: 'Neon Pilot CLI' },
+    );
+
     delete process.env.NEON_PILOT_ACTIVE_PROFILE;
     delete process.env.NEON_PILOT_PROFILE;
     if (existsSync(resolve(repoRoot, 'packages'))) {
