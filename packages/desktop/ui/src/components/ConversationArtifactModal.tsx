@@ -240,7 +240,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                       >
                         <div className="flex items-center gap-2">
                           <span className="truncate text-[12px] font-medium">{item.title}</span>
-                          <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/70">{item.kind}</span>
+                          <MetaLabel tone="muted">{item.kind}</MetaLabel>
                         </div>
                         <div className="mt-0.5 text-[10px] text-dim font-mono">{item.id}</div>
                       </button>

@@ -10,7 +10,7 @@ import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
 import { isTerminalBashToolBlock } from '../../transcript/terminalBashBlock';
 import { readToolExecutionWrappers } from '../../transcript/toolExecutionWrappers';
-import { cx, Pill } from '../ui';
+import { cx, MetaLabel, Pill, SectionLabel } from '../ui';
 import { type FileChange, FileChangesToolDiff, readFileChangesForToolBlock } from './FileChangesToolDiff.js';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
@@ -405,9 +405,9 @@ export function ToolBlock({
 
       {displayedLinkedRuns.length > 0 && !pinnedTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 text-[11px] font-sans">
-          <p className="mb-1.5 uppercase tracking-[0.14em] opacity-40">
+          <SectionLabel tone="muted" className="mb-1.5 block opacity-70">
             {displayedLinkedRuns.length === 1 ? 'listed execution' : 'listed executions'}
-          </p>
+          </SectionLabel>
           {hiddenRunCount > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md bg-black/5 px-2 py-1.5 text-[10px] text-secondary/80">
               <span>
@@ -441,7 +441,9 @@ export function ToolBlock({
                         Open conversation
                       </Link>
                     ) : (
-                      <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] opacity-45">linked</span>
+                      <MetaLabel tone="muted" className="opacity-70">
+                        linked
+                      </MetaLabel>
                     )}
                   </div>
                 </div>

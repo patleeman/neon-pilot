@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
-import { cx, StatusDot, type StatusDotTone } from '../ui';
+import { cx, MetaLabel, StatusDot, type StatusDotTone } from '../ui';
 import { type NotificationItem, type NotificationType, useNotificationStore } from './notificationStore';
 
 const TYPE_DOT_TONE: Record<NotificationType, StatusDotTone> = {
@@ -97,7 +97,9 @@ function NotificationRow({
         <StatusDot tone={TYPE_DOT_TONE[item.type]} size="xs" className="mt-0.5" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-dim">{TYPE_LABEL[item.type]}</span>
+            <MetaLabel tone="muted" className="font-medium">
+              {TYPE_LABEL[item.type]}
+            </MetaLabel>
             {item.source ? <span className="text-[9px] text-steel/50">[{item.source}]</span> : null}
             <span className="ml-auto text-[9px] text-steel/45">{formatTimestamp(item.timestamp)}</span>
           </div>
