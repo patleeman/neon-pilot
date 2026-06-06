@@ -157,7 +157,10 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       inputEnv && typeof inputEnv === 'object' && !Array.isArray(inputEnv)
         ? Object.fromEntries(Object.entries(inputEnv).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
         : {};
-    const baseEnv = prependNeonPilotCliBin({ ...process.env, ...env });
+    const baseEnvInput = { ...env, PATH: env.PATH ?? process.env.PATH ?? '' };
+    const baseEnv = Object.fromEntries(
+      Object.entries(prependNeonPilotCliBin(baseEnvInput)).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+    );
     if (extensionBinDirs.length === 0) return baseEnv;
     const pathParts = (baseEnv.PATH ?? '').split(path.delimiter).filter(Boolean);
     return {
