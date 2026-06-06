@@ -794,10 +794,22 @@ export function LoadingState({ label, className }: { label: string; className?: 
   );
 }
 
-export function ErrorState({ message, className }: { message: string; className?: string }) {
+export function ErrorState({
+  title,
+  message,
+  body,
+  className,
+}: {
+  title?: ReactNode;
+  message?: ReactNode;
+  body?: ReactNode;
+  className?: string;
+}) {
+  const resolvedBody = body ?? message;
   return (
     <div className={cx('ui-error-state', className)} role="alert">
-      {message}
+      {title ? <div className="ui-error-title">{title}</div> : null}
+      {resolvedBody ? <div className="ui-error-body">{resolvedBody}</div> : null}
     </div>
   );
 }

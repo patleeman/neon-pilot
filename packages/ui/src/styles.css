@@ -1072,7 +1072,18 @@ body {
 }
 
 .ui-error-state {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
   color: rgb(var(--color-danger));
+}
+
+.ui-error-title {
+  font-weight: 600;
+}
+
+.ui-error-body {
+  color: rgb(var(--color-danger) / 0.86);
 }
 
 .ui-empty-state {

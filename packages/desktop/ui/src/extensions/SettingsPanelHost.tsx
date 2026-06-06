@@ -1,7 +1,7 @@
 import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
-import { LoadingState } from '../components/ui';
+import { ErrorState, LoadingState } from '../components/ui';
 import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlobals';
 import { getExtensionRegistryRevision } from './extensionRegistryEvents';
 import { createNativeExtensionClient } from './nativePaClient';
@@ -77,12 +77,11 @@ class SettingsPanelErrorBoundary extends React.Component<
   render() {
     if (!this.state.message) return this.props.children;
     return (
-      <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-[12px] text-danger">
-        <p className="font-medium">Extension settings failed to render.</p>
-        <p className="mt-1 font-mono">
-          {this.props.extensionId}:{this.props.componentId} — {this.state.message}
-        </p>
-      </div>
+      <ErrorState
+        title="Extension settings failed to render."
+        body={`${this.props.extensionId}:${this.props.componentId} - ${this.state.message}`}
+        className="p-4 font-mono"
+      />
     );
   }
 }
