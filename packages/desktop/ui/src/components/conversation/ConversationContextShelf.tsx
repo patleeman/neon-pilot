@@ -1,6 +1,6 @@
 import type { MentionItem } from '../../conversation/conversationMentions';
 import type { ConversationContextDocRef } from '../../shared/types';
-import { MetaLabel, SectionLabel, TextButton } from '../ui';
+import { IconButton, MetaLabel, SectionLabel, TextButton } from '../ui';
 
 export function ConversationContextShelf({
   attachedContextDocs,
@@ -30,17 +30,18 @@ export function ConversationContextShelf({
             >
               <MetaLabel tone="muted">{doc.kind}</MetaLabel>
               <span className="max-w-[18rem] truncate text-secondary">{doc.title}</span>
-              <button
+              <IconButton
+                compact
                 type="button"
                 onClick={() => {
                   onRemoveAttachedContextDoc(doc.path);
                 }}
                 disabled={contextDocsBusy}
-                className="ui-icon-button ui-icon-button-compact ml-0.5 shrink-0 leading-none disabled:opacity-50"
+                className="ml-0.5 shrink-0 leading-none disabled:opacity-50"
                 title={`Remove ${doc.title} from attached context`}
               >
                 ×
-              </button>
+              </IconButton>
             </span>
           ))}
         </div>
