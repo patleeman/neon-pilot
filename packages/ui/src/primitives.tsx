@@ -770,6 +770,35 @@ export function KeyValueItem({
   );
 }
 
+export type KeyValueTableColumns = 1 | 2 | 3 | 4;
+
+export function KeyValueTable({
+  items,
+  columns = 2,
+  className,
+  ...props
+}: {
+  items: Array<{
+    label: ReactNode;
+    value: ReactNode;
+    title?: string;
+    valueClassName?: string;
+  }>;
+  columns?: KeyValueTableColumns;
+  className?: string;
+} & HTMLAttributes<HTMLDListElement>) {
+  return (
+    <dl className={cx('ui-key-value-table', `ui-key-value-table-${columns}`, className)} {...props}>
+      {items.map((item, index) => (
+        <div key={typeof item.label === 'string' ? item.label : index} className="ui-key-value-table-item" title={item.title}>
+          <dt className="ui-key-value-table-label">{item.label}</dt>
+          <dd className={cx('ui-key-value-table-value', item.valueClassName)}>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export function DataTable({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cx('ui-data-table-shell', className)} {...props}>

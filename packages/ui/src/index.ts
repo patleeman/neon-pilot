@@ -54,6 +54,8 @@ export {
   Keycap,
   KeyValueItem,
   KeyValueList,
+  KeyValueTable,
+  type KeyValueTableColumns,
   LoadingState,
   MetaLabel,
   type MetaLabelTone,

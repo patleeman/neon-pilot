@@ -37,6 +37,7 @@ import {
   Keycap,
   KeyValueItem,
   KeyValueList,
+  KeyValueTable,
   LoadingState,
   MetaLabel,
   MetricTile,
@@ -286,6 +287,14 @@ const meta = {
             <KeyValueItem label="Package" value="installable-extensions/system-example" action={<Button variant="ghost">Open</Button>} />
             <KeyValueItem label="Permissions" value="Filesystem, shell, notifications" />
           </KeyValueList>
+          <KeyValueTable
+            columns={3}
+            items={[
+              { label: 'Files', value: '12' },
+              { label: 'Size', value: '18 KB' },
+              { label: 'Location', value: '/Users/patrick/.neon-pilot/logs', valueClassName: 'font-mono' },
+            ]}
+          />
           <div style={{ display: 'grid', gap: 8 }}>
             <SectionLabel>Progress</SectionLabel>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>

@@ -15,6 +15,7 @@ import {
   FilterToolbar,
   IconButton,
   IconLink,
+  KeyValueTable,
   LoadingState,
   MenuItem,
   PositionedMenu,
@@ -1688,18 +1689,24 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       </Select>
                     </Field>
                   ) : null}
-                  <div className="border-t border-border-subtle/70 pt-3 text-[12px] text-secondary">
-                    <div className="flex justify-between gap-4 border-b border-border-subtle/70 pb-2">
-                      <span className="text-dim">Run target</span>
-                      <span className="text-primary">{form.targetType === 'conversation' ? 'Conversation' : 'Background agent'}</span>
-                    </div>
-                    <div className="flex justify-between gap-4 pt-2">
-                      <span className="text-dim">Thread binding</span>
-                      <span className="text-primary">
-                        {form.threadMode === 'dedicated' ? 'Dedicated thread' : form.threadMode === 'existing' ? 'Existing thread' : 'None'}
-                      </span>
-                    </div>
-                  </div>
+                  <KeyValueTable
+                    className="border-t border-border-subtle/70 pt-3"
+                    items={[
+                      {
+                        label: 'Run target',
+                        value: form.targetType === 'conversation' ? 'Conversation' : 'Background agent',
+                      },
+                      {
+                        label: 'Thread binding',
+                        value:
+                          form.threadMode === 'dedicated'
+                            ? 'Dedicated thread'
+                            : form.threadMode === 'existing'
+                              ? 'Existing thread'
+                              : 'None',
+                      },
+                    ]}
+                  />
                 </div>
               </FormSection>
 

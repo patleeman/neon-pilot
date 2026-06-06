@@ -25,6 +25,7 @@ import {
   IconLink,
   KeyValueItem,
   KeyValueList,
+  KeyValueTable,
   MenuItem,
   PositionedMenu,
   MenuSeparator,
@@ -319,6 +320,24 @@ describe('design-system primitives', () => {
     expect(html).toContain('<dt');
     expect(html).toContain('<dd');
     expect(html).toContain('ui-key-value-list');
+  });
+
+  it('renders key value tables with column classes and definition semantics', () => {
+    const html = renderToStaticMarkup(
+      createElement(KeyValueTable, {
+        columns: 3,
+        items: [
+          { label: 'Files', value: '12' },
+          { label: 'Size', value: '18 KB', valueClassName: 'font-mono' },
+        ],
+      }),
+    );
+
+    expect(html).toContain('<dl');
+    expect(html).toContain('<dt');
+    expect(html).toContain('<dd');
+    expect(html).toContain('ui-key-value-table-3');
+    expect(html).toContain('font-mono');
   });
 
   it('renders data table anatomy', () => {

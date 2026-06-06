@@ -60,6 +60,8 @@ export {
   InlineMeta,
   KeyValueItem,
   KeyValueList,
+  KeyValueTable,
+  type KeyValueTableColumns,
   LoadingState,
   MetaLabel,
   MetricTile,
