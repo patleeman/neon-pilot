@@ -353,6 +353,11 @@ export function shouldResetEmptyArtifactsRail(input: {
   );
 }
 
+export function shouldAllowWorkbenchRailSurface(input: { activeToolSlot: WorkbenchRailMode | string; hasPairedDocument: boolean }): boolean {
+  if (input.activeToolSlot === 'knowledge') return true;
+  return input.hasPairedDocument;
+}
+
 export function clearWorkbenchOnlySearchParamsForCompact(search: string): string {
   const next = new URLSearchParams(search);
   next.delete('checkpoint');
@@ -1477,10 +1482,14 @@ export function Layout() {
     !((activeWorkbenchTool === 'files' || activeWorkbenchToolSlot === 'files') && !activeWorkbenchWorkspaceFileId) &&
     !(activeWorkbenchToolSlot === 'knowledge' && !activeWorkbenchKnowledgeFileId) &&
     !(isArtifactsRailMode(activeWorkbenchTool) && !activeWorkbenchArtifactId);
+  const activeWorkbenchAllowsRailSurface = shouldAllowWorkbenchRailSurface({
+    activeToolSlot: activeWorkbenchToolSlot,
+    hasPairedDocument: activeWorkbenchHasPairedDocument,
+  });
   const activeWorkbenchRailSurface =
     showWorkbench &&
     !isNewWorkbenchTabMode(activeWorkbenchTool) &&
-    activeWorkbenchHasPairedDocument &&
+    activeWorkbenchAllowsRailSurface &&
     activeExtensionWorkbenchSurface &&
     !isSinglePaneWorkbenchMode(activeWorkbenchTool, activeWorkbenchToolPanel)
       ? activeWorkbenchToolPanel

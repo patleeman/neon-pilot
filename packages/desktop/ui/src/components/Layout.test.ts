@@ -7,6 +7,7 @@ import {
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
   resolveActiveWorkspaceCwd,
+  shouldAllowWorkbenchRailSurface,
   shouldResetEmptyArtifactsRail,
 } from './Layout';
 import { isArtifactsRailMode, resolveActiveExtensionWorkbenchSurface, resolveWorkbenchRailMode } from './layout/workbenchRailModel';
@@ -66,6 +67,12 @@ describe('Layout workbench rail state', () => {
         hasArtifactsExtensionSurface: false,
       }),
     ).toBe(true);
+  });
+
+  it('keeps the knowledge picker rail available before a file is selected', () => {
+    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'knowledge', hasPairedDocument: false })).toBe(true);
+    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: false })).toBe(false);
+    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: true })).toBe(true);
   });
 
   it('normalizes declared rail slots to stable built-in modes', () => {
