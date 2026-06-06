@@ -210,11 +210,11 @@ function DraftConversationContextPanel() {
       <Section title="Working Directory">
         <div className="flex items-start gap-2">
           {hasExplicitCwd ? (
-            <p className="ui-card-body min-w-0 flex-1 break-all pr-1 font-mono text-primary" title={draftCwd}>
+            <CardBody className="min-w-0 flex-1 break-all pr-1 font-mono text-primary" title={draftCwd}>
               {draftCwd}
-            </p>
+            </CardBody>
           ) : (
-            <p className="ui-card-body min-w-0 flex-1 text-dim">No working directory set.</p>
+            <CardBody className="min-w-0 flex-1 text-dim">No working directory set.</CardBody>
           )}
           <div className="flex shrink-0 items-center gap-0.5">
             {hasExplicitCwd && !changingCwd && (
@@ -523,8 +523,8 @@ function CapabilitiesOverviewContext({
     return (
       <div className="px-4 py-4 space-y-4">
         <div className="space-y-1">
-          <p className="ui-card-title">Workflow presets</p>
-          <p className="ui-card-meta">Select a preset on the left to inspect its ordered workflow items and defaults.</p>
+          <CardTitle>Workflow presets</CardTitle>
+          <CardMeta>Select a preset on the left to inspect its ordered workflow items and defaults.</CardMeta>
         </div>
         <div className="space-y-2">
           <RailMetadataRow label="Presets" value={presets.length} />
@@ -533,7 +533,7 @@ function CapabilitiesOverviewContext({
         <div className="space-y-2 border-t border-border-subtle pt-4">
           <SectionLabel>Defaults</SectionLabel>
           {defaultPresetIds.length === 0 ? (
-            <p className="ui-card-meta">No default presets configured.</p>
+            <CardMeta>No default presets configured.</CardMeta>
           ) : (
             defaultPresetIds.map((presetId) => {
               const preset = presets.find((item) => item.id === presetId);
@@ -547,7 +547,7 @@ function CapabilitiesOverviewContext({
                   className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
                 >
                   <p className="text-[12px] font-medium text-primary">{preset.name}</p>
-                  <p className="ui-card-meta mt-1">{preset.items.length} items</p>
+                  <CardMeta className="mt-1">{preset.items.length} items</CardMeta>
                 </Link>
               );
             })
@@ -561,8 +561,8 @@ function CapabilitiesOverviewContext({
     return (
       <div className="px-4 py-4 space-y-4">
         <div className="space-y-1">
-          <p className="ui-card-title">Scheduled Tasks</p>
-          <p className="ui-card-meta">Select a task on the left to inspect its prompt, schedule, and recent runtime state.</p>
+          <CardTitle>Scheduled Tasks</CardTitle>
+          <CardMeta>Select a task on the left to inspect its prompt, schedule, and recent runtime state.</CardMeta>
         </div>
         <div className="space-y-2">
           <RailMetadataRow label="Enabled" value={tasks.filter((task) => task.enabled).length} />
@@ -572,7 +572,7 @@ function CapabilitiesOverviewContext({
         <div className="space-y-2 border-t border-border-subtle pt-4">
           <SectionLabel>Needs attention</SectionLabel>
           {failingTasks.length === 0 ? (
-            <p className="ui-card-meta">No scheduled tasks currently need attention.</p>
+            <CardMeta>No scheduled tasks currently need attention.</CardMeta>
           ) : (
             failingTasks.slice(0, 5).map((task) => (
               <Link
@@ -581,7 +581,7 @@ function CapabilitiesOverviewContext({
                 className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
               >
                 <p className="text-[12px] font-medium text-primary">{task.id}</p>
-                <p className="ui-card-meta mt-1">failed {task.lastRunAt ? timeAgo(task.lastRunAt) : 'recently'}</p>
+                <CardMeta className="mt-1">failed {task.lastRunAt ? timeAgo(task.lastRunAt) : 'recently'}</CardMeta>
               </Link>
             ))
           )}
@@ -594,8 +594,8 @@ function CapabilitiesOverviewContext({
     return (
       <div className="px-4 py-4 space-y-4">
         <div className="space-y-1">
-          <p className="ui-card-title">Tools</p>
-          <p className="ui-card-meta">Select a tool on the left to inspect its parameter schema and runtime role.</p>
+          <CardTitle>Tools</CardTitle>
+          <CardMeta>Select a tool on the left to inspect its parameter schema and runtime role.</CardMeta>
         </div>
         <div className="space-y-2">
           <RailMetadataRow label="Active tools" value={activeTools.length} />
@@ -604,7 +604,7 @@ function CapabilitiesOverviewContext({
         <div className="space-y-2 border-t border-border-subtle pt-4">
           <SectionLabel>Active by default</SectionLabel>
           {activeTools.length === 0 ? (
-            <p className="ui-card-meta">No active tools reported.</p>
+            <CardMeta>No active tools reported.</CardMeta>
           ) : (
             activeTools.slice(0, 6).map((tool) => (
               <Link
@@ -613,9 +613,9 @@ function CapabilitiesOverviewContext({
                 className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
               >
                 <p className="text-[12px] font-medium text-primary">{tool.name}</p>
-                <p className="ui-card-meta mt-1">
+                <CardMeta className="mt-1">
                   {toolParameterDetails(tool).length} parameter{toolParameterDetails(tool).length === 1 ? '' : 's'}
-                </p>
+                </CardMeta>
               </Link>
             ))
           )}
@@ -627,8 +627,8 @@ function CapabilitiesOverviewContext({
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="space-y-1">
-        <p className="ui-card-title">Capabilities</p>
-        <p className="ui-card-meta">Presets, scheduled tasks, and tools define what the agent can execute and automate.</p>
+        <CardTitle>Capabilities</CardTitle>
+        <CardMeta>Presets, scheduled tasks, and tools define what the agent can execute and automate.</CardMeta>
       </div>
       <div className="space-y-2">
         <RailMetadataRow label="Presets" value={presets.length} />
@@ -637,10 +637,10 @@ function CapabilitiesOverviewContext({
       </div>
       <div className="space-y-2 border-t border-border-subtle pt-4">
         <SectionLabel>Current health</SectionLabel>
-        <p className="ui-card-meta">
+        <CardMeta>
           {tasks.filter((task) => task.running).length} running scheduled task{tasks.filter((task) => task.running).length === 1 ? '' : 's'}{' '}
           · {failingTasks.length} failing · {unavailableCliCount} CLI issue{unavailableCliCount === 1 ? '' : 's'}.
-        </p>
+        </CardMeta>
       </div>
     </div>
   );
@@ -679,8 +679,8 @@ function CapabilitiesTaskContext({ taskId }: { taskId: string }) {
       <div className="shrink-0 space-y-4 border-b border-border-subtle px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="ui-card-title break-words">{data.id}</p>
-            <p className="ui-card-meta mt-1">{data.running ? 'running' : (data.lastStatus ?? (data.enabled ? 'enabled' : 'disabled'))}</p>
+            <CardTitle className="break-words">{data.id}</CardTitle>
+            <CardMeta className="mt-1">{data.running ? 'running' : (data.lastStatus ?? (data.enabled ? 'enabled' : 'disabled'))}</CardMeta>
           </div>
           <ToolbarButton
             onClick={() => {
@@ -732,10 +732,10 @@ function CapabilitiesToolContext({ tool }: { tool: AgentToolInfo }) {
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="space-y-1">
-        <p className="ui-card-title break-words">{tool.name}</p>
-        <p className="ui-card-meta">{tool.active ? 'Active by default' : 'Available on demand'}</p>
+        <CardTitle className="break-words">{tool.name}</CardTitle>
+        <CardMeta>{tool.active ? 'Active by default' : 'Available on demand'}</CardMeta>
       </div>
-      <p className="ui-card-body">{tool.description}</p>
+      <CardBody>{tool.description}</CardBody>
       <div className="space-y-2">
         <RailMetadataRow label="Default" value={tool.active ? 'Yes' : 'No'} />
         <RailMetadataRow label="Parameters" value={parameters.length} />
@@ -743,16 +743,16 @@ function CapabilitiesToolContext({ tool }: { tool: AgentToolInfo }) {
       <div className="space-y-2 border-t border-border-subtle pt-4">
         <SectionLabel>Parameters</SectionLabel>
         {parameters.length === 0 ? (
-          <p className="ui-card-meta">No parameters.</p>
+          <CardMeta>No parameters.</CardMeta>
         ) : (
           parameters.map((parameter) => (
             <div key={parameter.name} className="rounded-lg border border-border-subtle bg-base px-3 py-2">
               <p className="text-[12px] font-medium text-primary">{parameter.name}</p>
-              <p className="ui-card-meta mt-1">
+              <CardMeta className="mt-1">
                 {parameter.required ? 'required' : 'optional'}
                 {parameter.type ? ` · ${parameter.type}` : ''}
-              </p>
-              {parameter.description && <p className="text-[12px] leading-relaxed text-secondary mt-1">{parameter.description}</p>}
+              </CardMeta>
+              {parameter.description && <CardBody className="mt-1 leading-relaxed">{parameter.description}</CardBody>}
             </div>
           ))
         )}
@@ -820,10 +820,8 @@ function SettingsOverviewContext() {
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="space-y-1">
-        <p className="ui-card-title">Settings</p>
-        <p className="ui-card-meta">
-          This page controls runtime defaults, layout preferences, desktop connections, and integration settings.
-        </p>
+        <CardTitle>Settings</CardTitle>
+        <CardMeta>This page controls runtime defaults, layout preferences, desktop connections, and integration settings.</CardMeta>
       </div>
 
       <div className="space-y-2">
@@ -834,10 +832,10 @@ function SettingsOverviewContext() {
 
       <div className="space-y-2 border-t border-border-subtle pt-4">
         <SectionLabel>What lives here</SectionLabel>
-        <p className="ui-card-meta">
+        <CardMeta>
           Use Settings for stable preferences, interface controls, desktop connections, and inline runtime service panels. Use Background
           Work for shell commands, agent tasks, and recovery review.
-        </p>
+        </CardMeta>
       </div>
     </div>
   );
