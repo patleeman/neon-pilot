@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatModelTriggerLabel } from './frontend';
+import { formatModelTriggerLabel, MODEL_PICKER_MENU_STYLE } from './frontend';
 
 describe('formatModelTriggerLabel', () => {
+  it('keeps the model menu scrollable when shared menu chrome clips overflow', () => {
+    expect(MODEL_PICKER_MENU_STYLE).toEqual({
+      maxHeight: 'min(20rem, calc(100vh - 7rem))',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain',
+    });
+  });
+
   it('shows the saved current model while model metadata is still loading', () => {
     expect(formatModelTriggerLabel({ models: [], currentModel: 'gpt-5.4' })).toBe('gpt-5.4');
   });

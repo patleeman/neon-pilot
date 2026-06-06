@@ -7,6 +7,11 @@ const INLINE_TRIGGER_CLASS =
   'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-1.5 text-[11px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';
 const MENU_TRIGGER_CLASS =
   'h-9 w-full min-w-0 rounded-lg border border-border-subtle bg-surface/45 px-2.5 text-[12px] font-medium text-primary outline-none transition-colors hover:bg-surface/65 focus-visible:border-accent/50 focus-visible:bg-surface/65 disabled:cursor-default disabled:opacity-40';
+export const MODEL_PICKER_MENU_STYLE = {
+  maxHeight: 'min(20rem, calc(100vh - 7rem))',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+} as const;
 
 type Model = ComposerControlContext['models'][number];
 
@@ -580,7 +585,8 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
       <PositionedMenu
         placement="absolute"
         position={{ left: 0, bottom: '100%' }}
-        className={cx('mb-2 max-h-80 overflow-auto bg-base p-1.5', variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64')}
+        className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'left-0 w-full min-w-56' : 'left-0 w-64')}
+        style={MODEL_PICKER_MENU_STYLE}
       >
         {groupModels(context.models).map(([provider, providerModels]) => (
           <div key={provider} className="py-1">
