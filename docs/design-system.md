@@ -50,17 +50,24 @@ CI=true pnpm --dir packages/ui run build:storybook
 
 The shared package includes:
 
-- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, `CheckButton`, `ActionTile`
-- Status: `Pill`, `StatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
-- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`
+- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `IconButton`, `IconLink`, `CheckButton`, `ChoiceRow`, `ActionTile`
+- Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
+- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`, `AttachmentChip`, `AttachmentChipButton`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
-- Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
+- Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`, `AppPageEmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`, `SettingsSection`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
-- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`
 - Pages: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`
 - Utility: `cx`
+
+Host-backed extension components are also exposed through public SDK subpaths when they need app-owned data or behavior:
+
+- `@neon-pilot/extensions/ui`: app page shells, shared primitives, `ActivityTreeView`, `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `CheckpointInlineDiff`, `DiffActionButton`, `ContextMenuWrapper`, and file-tree helpers such as `useFileTreeModel`
+- `@neon-pilot/extensions/workbench-files`: `WorkspaceExplorer` and `WorkspaceFileDocument`
+
+Prefer package primitives for generic chrome. Use host-backed components only when the component depends on desktop/app state, workspace files, transcript rendering, activity-tree behavior, or native context menus.
 
 ## Extraction Priorities
 
@@ -77,6 +84,7 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 ## Migration Map
 
 - Raw action buttons -> `Button`, `ToolbarButton`, or `IconButton`
+- Raw selectable radio/checkbox option rows -> `ChoiceRow`
 - Raw text/search/number inputs -> `TextInput` or `SearchInput`
 - Raw selects -> `Select`
 - Raw textareas -> `Textarea`
@@ -89,3 +97,5 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Local bordered section cards with title/meta rows -> `SurfacePanel` with `PanelHeader`
 - Local bordered data cards -> `SurfacePanel`, `ResourceListItem`, `KeyValueList`, `KeyValueTable`, `DataTable`, or `Disclosure`
 - Local compact uppercase labels -> `SectionLabel` or `MetaLabel`
+- Local file trees or workspace file panels -> `useFileTreeModel` for app-integrated trees, or `WorkspaceExplorer`/`WorkspaceFileDocument` when the extension needs the existing workspace file UX
+- Local transcript/chat surfaces -> `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `MessageActionButton`, and transcript-specific primitives before rebuilding message chrome
