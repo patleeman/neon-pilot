@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn(() => '/agent') }));
+const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn(() => '/agent'), getStateRoot: vi.fn(() => '/tmp/neon-pilot-protocol-cli-test') }));
 const runtime = vi.hoisted(() => ({
   createRuntimeState: vi.fn(() => ({
     getRuntimeScope: vi.fn(() => 'shared'),
     buildLiveSessionResourceOptions: vi.fn(() => ({ additionalSkillPaths: ['/skills'] })),
   })),
 }));
-const extensionHostClient = vi.hoisted(() => ({ invokeProtocolEntrypoint: vi.fn(async () => undefined) }));
+const extensionHostClient = vi.hoisted(() => ({
+  invokeProtocolEntrypoint: vi.fn(async () => undefined),
+  readRegistryPresentation: vi.fn(async () => ({ cliCommandRegistrations: [] })),
+  invokeAction: vi.fn(async () => ({ ok: true, result: { text: 'ok' } })),
+}));
 const extensionHostRpcClient = vi.hoisted(() => ({
   createExtensionHostRpcClient: vi.fn(() => extensionHostClient),
 }));
@@ -24,19 +28,21 @@ import { main, PROTOCOL_CLI_EXIT_CODES, runProtocolCli } from './protocolCli.js'
 
 describe('protocol CLI', () => {
   let stderrWrite: ReturnType<typeof vi.spyOn>;
+  let stdoutWrite: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
     delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
     stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     process.exitCode = undefined;
   });
 
   it('prints usage and returns usage exit code for invalid invocations', async () => {
     await expect(runProtocolCli([])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
-    await expect(runProtocolCli(['other', 'acp'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
-    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Usage: neon-pilot protocol <protocol-id>\n'));
+    await expect(runProtocolCli(['other', 'acp'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.notFound);
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Usage: neon-pilot <command> [args]\n'));
     expect(extensionHostClient.invokeProtocolEntrypoint).not.toHaveBeenCalled();
   });
 
@@ -79,6 +85,55 @@ describe('protocol CLI', () => {
     expect(extensionHostClient.invokeProtocolEntrypoint).toHaveBeenCalledWith(
       expect.objectContaining({ protocolId: 'ds4-tools', input: { args: ['tools'] } }),
     );
+  });
+
+  it('lists extension-contributed CLI commands', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [{ extensionId: 'system-extension-manager', surfaceId: 'extensions-list', command: 'extensions list', action: 'manageExtension' }],
+    });
+
+    await expect(runProtocolCli(['commands', '--json'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"command": "extensions list"'));
+  });
+
+  it('dispatches extension-contributed CLI commands through extension actions', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-extension-manager',
+          surfaceId: 'extensions-validate',
+          command: 'extensions validate',
+          action: 'manageExtension',
+        },
+      ],
+    });
+    extensionHostClient.invokeAction.mockResolvedValueOnce({ ok: true, result: { text: 'Validated system-knowledge.' } });
+
+    await expect(runProtocolCli(['extensions', 'validate', 'system-knowledge', '--json'])).resolves.toBe(0);
+
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensionId: 'system-extension-manager',
+        actionId: 'manageExtension',
+        input: {
+          cli: {
+            command: 'extensions validate',
+            rawArgv: ['extensions', 'validate', 'system-knowledge', '--json'],
+            args: ['system-knowledge'],
+            flags: {},
+            json: true,
+            cwd: process.cwd(),
+          },
+        },
+      }),
+    );
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Validated system-knowledge'));
+  });
+
+  it('reports CLI install status as a built-in command', async () => {
+    await expect(runProtocolCli(['cli', 'status', '--json'])).resolves.toBe(0);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"binDir"'));
   });
 
   it('maps extension protocol errors to specific exit codes', async () => {
