@@ -272,6 +272,16 @@ export const MessageActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttri
   },
 );
 
+export const MediaPreviewButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
+  function MediaPreviewButton({ className, children, type = 'button', ...props }, ref) {
+    return (
+      <button ref={ref} type={type} className={cx('ui-media-preview-button', className)} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
+
 export type ComposerActionButtonTone = 'accent' | 'warning' | 'danger' | 'neutral' | 'disabled';
 export type ComposerActionButtonSize = 'icon' | 'label' | 'compactLabel';
 

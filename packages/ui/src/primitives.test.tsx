@@ -40,6 +40,7 @@ import {
   KeyValueItem,
   KeyValueList,
   KeyValueTable,
+  MediaPreviewButton,
   MenuItem,
   PositionedMenu,
   MenuSeparator,
@@ -166,6 +167,14 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-message-card-user');
     expect(html).toContain('ui-message-card-assistant');
     expect(html).toContain('ui-message-meta');
+  });
+
+  it('renders media preview buttons for inspectable transcript media', () => {
+    const html = renderToStaticMarkup(createElement(MediaPreviewButton, { 'aria-label': 'Inspect image' }, 'Preview'));
+
+    expect(html).toContain('ui-media-preview-button');
+    expect(html).toContain('type="button"');
+    expect(html).toContain('Inspect image');
   });
 
   it('renders composer action buttons with stable tone and size classes', () => {

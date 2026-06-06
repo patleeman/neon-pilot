@@ -431,6 +431,27 @@ body {
   color: rgb(var(--color-danger));
 }
 
+.ui-media-preview-button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: rgb(var(--color-elevated));
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: zoom-in;
+  transition: opacity 140ms ease;
+}
+
+.ui-media-preview-button:hover {
+  opacity: 0.95;
+}
+
+.ui-media-preview-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.24);
+}
+
 .ui-composer-action-button {
   display: inline-flex;
   flex-shrink: 0;

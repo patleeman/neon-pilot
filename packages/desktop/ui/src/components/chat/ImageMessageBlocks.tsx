@@ -1,7 +1,7 @@
 import { memo } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
-import { Button, IconButton, SurfacePanel } from '../ui';
+import { Button, IconButton, MediaPreviewButton, SurfacePanel } from '../ui';
 
 export type InspectableImage = {
   alt: string;
@@ -99,15 +99,13 @@ export function ImagePreview({
   return (
     <SurfacePanel muted className="overflow-hidden">
       {inspectableImage ? (
-        <button
-          type="button"
+        <MediaPreviewButton
           onClick={() => onInspect?.(inspectableImage)}
-          className="block w-full cursor-zoom-in bg-elevated text-left transition-opacity hover:opacity-95"
           aria-label={`Inspect image: ${caption ?? alt}`}
           title="Inspect image"
         >
           <img src={inspectableImage.src} alt={alt} className="block w-full object-contain bg-elevated" style={{ maxHeight }} />
-        </button>
+        </MediaPreviewButton>
       ) : (
         <div
           className="w-full bg-elevated flex flex-col items-center justify-center gap-2 px-4 py-5 text-dim"

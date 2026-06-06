@@ -80,6 +80,7 @@ export {
   type KeyValueTableColumns,
   formatKeyboardShortcutLabel,
   LoadingState,
+  MediaPreviewButton,
   MessageActionButton,
   MessageCard,
   MessageMeta,

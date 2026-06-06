@@ -57,6 +57,7 @@ import {
   KeyValueList,
   KeyValueTable,
   LoadingState,
+  MediaPreviewButton,
   MessageActionButton,
   MessageCard,
   MessageMeta,
@@ -158,6 +159,11 @@ const meta = {
           <MessageActionButton tone="accent">copied</MessageActionButton>
           <MessageActionButton tone="danger">copy failed</MessageActionButton>
           <MessageActionButton disabled>disabled</MessageActionButton>
+          <MediaPreviewButton style={{ width: 160, borderRadius: 6, overflow: 'hidden' }} aria-label="Inspect image preview">
+            <div style={{ aspectRatio: '16 / 9', background: 'rgb(var(--color-surface-2))', display: 'grid', placeItems: 'center' }}>
+              Image preview
+            </div>
+          </MediaPreviewButton>
           <ComposerActionButton tone="accent" aria-label="Send">
             ↑
           </ComposerActionButton>
