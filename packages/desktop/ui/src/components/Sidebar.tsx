@@ -76,7 +76,7 @@ import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPr
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { TextPromptDialog } from './shared/TextPromptDialog';
-import { SectionLabel } from './ui';
+import { PanelMessage, SectionLabel } from './ui';
 
 const SIDEBAR_CONVERSATION_PREFETCH_TAIL_BLOCKS = 120;
 const SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS = 40;
@@ -4073,13 +4073,13 @@ export function Sidebar() {
                 {!loading &&
                 renderedConversationItems.length === 0 &&
                 !(threadsOrganizeMode === 'project' && groupedConversationRows.length > 0) ? (
-                  <p className="px-4 py-2 text-[12px] text-dim">
+                  <PanelMessage className="px-4 py-2">
                     {threadsFilterMode === 'automation'
                       ? 'No automation threads yet.'
                       : threadsFilterMode === 'human'
                         ? 'No human threads yet.'
                         : 'No open conversations yet.'}
-                  </p>
+                  </PanelMessage>
                 ) : null}
 
                 {!LEGACY_THREAD_LIST_ENABLED ? (
@@ -4390,7 +4390,7 @@ export function Sidebar() {
                           group.items.length > 0 ? (
                             group.items.map(renderConversationRow)
                           ) : (
-                            <p className="px-4 pb-1 text-[12px] text-dim">No threads yet.</p>
+                            <PanelMessage className="px-4 pb-1 pt-0">No threads yet.</PanelMessage>
                           )
                         ) : null}
                       </div>

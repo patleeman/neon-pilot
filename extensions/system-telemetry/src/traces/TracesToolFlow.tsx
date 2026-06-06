@@ -3,14 +3,24 @@
  */
 
 import type { ToolFlowResult } from '@neon-pilot/extensions/data';
-import { DashboardGrid, DashboardGridCell, PanelHeader, ProgressBar, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  DashboardGrid,
+  DashboardGridCell,
+  PanelHeader,
+  PanelMessage,
+  ProgressBar,
+  SectionLabel,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="🔀 Tool Flow & Trajectories" meta="No tool sequences yet" metaClassName="bg-transparent px-0" />
-        <div className="p-6 text-center text-[12px] text-dim">Appears after multiple tool calls are recorded.</div>
+        <PanelMessage align="center" className="p-6">
+          Appears after multiple tool calls are recorded.
+        </PanelMessage>
       </SurfacePanel>
     );
   }
@@ -101,7 +111,9 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
               ))}
             </div>
           ) : (
-            <div className="text-[12px] text-dim py-3 text-center">No tool errors recorded yet.</div>
+            <PanelMessage align="center" className="py-3">
+              No tool errors recorded yet.
+            </PanelMessage>
           )}
         </DashboardGridCell>
       </DashboardGrid>

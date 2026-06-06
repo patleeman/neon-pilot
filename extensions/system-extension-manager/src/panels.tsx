@@ -16,6 +16,7 @@ import {
   MenuItem,
   MenuShell,
   Notice,
+  PanelMessage,
   SearchInput,
   Select,
   KeyValueItem,
@@ -1730,7 +1731,7 @@ function InstallExtensionModal({
                 })}
               </div>
             </div>
-            {visibleCatalogItems.length === 0 ? <p className="py-2 text-[12px] text-dim">No marketplace matches.</p> : null}
+            {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No marketplace matches.</PanelMessage> : null}
           </section>
         ) : null}
       </DialogBody>

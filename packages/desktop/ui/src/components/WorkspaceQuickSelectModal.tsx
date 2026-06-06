@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { buildConversationGroupLabels, getConversationGroupLabel } from '../conversation/conversationCwdGroups';
-import { Dialog, IconButton } from './ui';
+import { Dialog, IconButton, PanelMessage } from './ui';
 
 const CLOSE_PATH = 'M6 6l12 12M18 6 6 18';
 const WORKSPACE_ADD_PATH =
@@ -137,7 +137,7 @@ export function WorkspaceQuickSelectModal({
             );
           })
         ) : (
-          <p className="px-3 py-4 text-[12px] text-dim">No saved workspaces yet.</p>
+          <PanelMessage className="px-3 py-4">No saved workspaces yet.</PanelMessage>
         )}
 
         <button

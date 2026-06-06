@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
+import { CenteredLoadingState, PanelMessage } from '@neon-pilot/extensions/ui';
 import React, { lazy, Suspense } from 'react';
 
 const LazyExtensionManagerPage = lazy(async () => ({ default: (await import('./panels.js')).ExtensionManagerPage }));
@@ -18,7 +18,7 @@ export function ExtensionManagerPage(props: ExtensionSurfaceProps) {
 
 export function ExtensionRepositoriesSettingsPanel(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={<div className="py-2 text-[12px] text-dim">Loading extension repositories…</div>}>
+    <Suspense fallback={<PanelMessage className="py-2">Loading extension repositories...</PanelMessage>}>
       <LazyExtensionRepositoriesSettingsPanel {...props} />
     </Suspense>
   );

@@ -8,6 +8,7 @@ import {
   Field,
   Notice,
   PanelHeader,
+  PanelMessage,
   Pill,
   ResourceListItem,
   SectionLabel,
@@ -367,7 +368,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   New
                 </ToolbarButton>
               </div>
-              {savedWorkflows.length === 0 ? <div className="text-[12px] text-dim">No saved workflows yet.</div> : null}
+              {savedWorkflows.length === 0 ? <PanelMessage className="px-0 py-0">No saved workflows yet.</PanelMessage> : null}
               {savedWorkflows.map((item) => (
                 <SurfacePanel key={item.id} muted className="px-3 py-2 shadow-none">
                   <div className="truncate text-[13px] font-medium text-primary">{item.name}</div>
