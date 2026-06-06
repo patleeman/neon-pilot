@@ -1,3 +1,4 @@
+import { TextButton } from '@neon-pilot/extensions/ui';
 import { useId, useMemo, useState } from 'react';
 import { stringify } from 'yaml';
 
@@ -233,9 +234,9 @@ export function FrontmatterDisclosure({
                             }
                           }}
                         />
-                        <button type="button" className="kb-fm-add-field" disabled={!canAddField} onClick={addField}>
+                        <TextButton type="button" tone="accent" className="kb-fm-add-field" disabled={!canAddField} onClick={addField}>
                           Add field
-                        </button>
+                        </TextButton>
                       </div>
                     </td>
                   </tr>
