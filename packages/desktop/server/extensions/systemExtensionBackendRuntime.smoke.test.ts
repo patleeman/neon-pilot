@@ -569,6 +569,10 @@ const smokes = {
     const result = await module.bash({ command: 'echo smoke' }, ctx);
     assert(result.text.includes('echo smoke'), 'bash smoke did not execute shell stub');
   },
+  async 'system-settings'() {
+    assert(typeof module.manageSettings === 'function', 'manageSettings action missing');
+    await expectReject(() => module.manageSettings({ action: 'unknown' }, ctx), /Unsupported settings action/i);
+  },
   async 'system-self-preservation'() {
     await smokeAgentFactory('createSelfPreservationAgentExtension');
     const handler = registeredEvents.find((event) => event.eventName === 'tool_call')?.handler;
