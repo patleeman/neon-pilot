@@ -1,5 +1,6 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
 import {
+  CardMeta,
   cx,
   Field,
   LoadingState,
@@ -430,7 +431,7 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
                 </ToolbarButton>
               </>
             ) : (
-              <p className="ui-card-meta">Dictation is disabled.</p>
+              <CardMeta>Dictation is disabled.</CardMeta>
             )}
             {busy === 'Saving…' ? <LoadingState label="Saving..." /> : null}
             {message ? <Notice>{message}</Notice> : null}
