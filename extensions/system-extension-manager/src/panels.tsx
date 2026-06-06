@@ -1752,7 +1752,7 @@ function InstallExtensionModal({
       onClose={onClose}
       style={{
         width: 'min(52rem, calc(100vw - var(--neon-pilot-sidebar-offset, 0px) - 2rem))',
-        maxHeight: 'min(44rem, calc(100vh - 2rem))',
+        maxHeight: 'min(44rem, calc(100vh - 7.5rem))',
         marginBlock: '2rem',
         marginInlineStart: 'var(--neon-pilot-sidebar-offset, 0px)',
         alignSelf: 'flex-start',
@@ -1950,7 +1950,7 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
       onClose={onClose}
       style={{
         width: 'min(48rem, calc(100vw - var(--neon-pilot-sidebar-offset, 0px) - 2rem))',
-        maxHeight: 'min(44rem, calc(100vh - 2rem))',
+        maxHeight: 'min(44rem, calc(100vh - 7.5rem))',
         marginBlock: '2rem',
         marginInlineStart: 'var(--neon-pilot-sidebar-offset, 0px)',
         alignSelf: 'flex-start',
