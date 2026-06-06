@@ -29,6 +29,7 @@ export {
   FieldHint,
   FieldLabel,
   FilterToolbar,
+  IconButton,
   InlineMeta,
   KeyboardShortcutCaptureInput,
   KeyValueItem,

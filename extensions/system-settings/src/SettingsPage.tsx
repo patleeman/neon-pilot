@@ -20,6 +20,7 @@ import {
   formatThinkingLevelLabel,
   getDesktopBridge,
   groupModelsByProvider,
+  IconButton,
   isDesktopShell,
   KeyboardShortcutCaptureInput,
   type ModelEditorDraft,
@@ -69,8 +70,6 @@ import {
 } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const ICON_BUTTON_CLASS =
-  'ui-toolbar-button inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-0 text-[14px] shadow-none';
 const DANGER_ACTION_BUTTON_CLASS =
   'inline-flex h-8 shrink-0 items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-danger transition-colors hover:border-danger/60 hover:bg-danger/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/50 disabled:cursor-not-allowed disabled:opacity-40';
 const SETTINGS_QUICK_LINKS = [
@@ -3074,7 +3073,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 )}
                               </button>
                             )}
-                            <button
+                            <IconButton
                               type="button"
                               onClick={closeProviderEditor}
                               disabled={
@@ -3083,12 +3082,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 providerCredentialAction !== null ||
                                 oauthAction !== null
                               }
-                              className={ICON_BUTTON_CLASS}
                               aria-label="Close provider"
                               title="Close"
                             >
                               <SettingsIcon name="x" />
-                            </button>
+                            </IconButton>
                           </div>
                         </div>
                         <div className="flex min-w-0 flex-col gap-4">
@@ -3350,30 +3348,28 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     : 'No model rows yet for this provider.'}
                               </p>
                               <div className="flex flex-wrap items-center gap-2">
-                                <button
+                                <IconButton
                                   type="button"
                                   onClick={() => {
                                     startEditingProviderModel(NEW_MODEL_ID);
                                   }}
                                   disabled={!editableModelProviderId || modelDraftAction !== null}
-                                  className={ICON_BUTTON_CLASS}
                                   aria-label="Add model"
                                   title="Add model"
                                 >
                                   <SettingsIcon name="plus" />
-                                </button>
-                                <button
+                                </IconButton>
+                                <IconButton
                                   type="button"
                                   onClick={() => {
                                     void refetchModels({ resetLoading: false });
                                   }}
                                   disabled={modelsRefreshing}
-                                  className={ICON_BUTTON_CLASS}
                                   aria-label="Refresh models"
                                   title={modelsRefreshing ? 'Refreshing models' : 'Refresh models'}
                                 >
                                   <SettingsIcon name="refresh" />
-                                </button>
+                                </IconButton>
                               </div>
 
                               {editableModelProviderId ? (
@@ -3419,24 +3415,22 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <div key={model.id} className="group ui-list-row ui-list-row-hover justify-between px-2 py-1">
                                             <span className="min-w-0 truncate text-[12px] font-medium text-primary">{model.id}</span>
                                             <div className="flex flex-wrap gap-2">
-                                              <button
+                                              <IconButton
                                                 type="button"
                                                 onClick={() => {
                                                   startEditingProviderModel(model.id);
                                                 }}
-                                                className={ICON_BUTTON_CLASS}
                                                 aria-label={`Edit ${model.id}`}
                                                 title="Edit"
                                               >
                                                 <SettingsIcon name="edit" />
-                                              </button>
-                                              <button
+                                              </IconButton>
+                                              <IconButton
                                                 type="button"
                                                 onClick={() => {
                                                   void handleDeleteProviderModel(model.id);
                                                 }}
                                                 disabled={modelDraftAction !== null}
-                                                className={ICON_BUTTON_CLASS}
                                                 aria-label={`Remove ${model.id}`}
                                                 title="Remove"
                                               >
@@ -3445,7 +3439,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                 ) : (
                                                   <SettingsIcon name="trash" />
                                                 )}
-                                              </button>
+                                              </IconButton>
                                             </div>
                                           </div>
                                         ))}
@@ -3833,7 +3827,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         spellCheck={false}
                                         disabled={providerCredentialAction !== null || oauthLoginState?.status === 'running'}
                                       />
-                                      <button
+                                      <IconButton
                                         type="button"
                                         onClick={() => {
                                           void handleSaveProviderApiKey();
@@ -3843,12 +3837,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           oauthLoginState?.status === 'running' ||
                                           providerApiKey.trim().length === 0
                                         }
-                                        className={ICON_BUTTON_CLASS}
                                         aria-label="Save API key"
                                         title="Save API key"
                                       >
                                         {providerCredentialAction === 'saveKey' ? '…' : <SettingsIcon name="check" />}
-                                      </button>
+                                      </IconButton>
                                     </div>
                                   </div>
                                 ) : null}
