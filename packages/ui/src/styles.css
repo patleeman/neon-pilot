@@ -577,6 +577,28 @@ body {
   line-height: 1rem;
 }
 
+.ui-card-title {
+  margin: 0;
+  color: rgb(var(--color-primary));
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.375;
+}
+
+.ui-card-body {
+  margin: 0;
+  color: rgb(var(--color-secondary));
+  font-size: 0.75rem;
+  line-height: 1.625;
+}
+
+.ui-card-meta {
+  margin: 0;
+  color: rgb(var(--color-steel) / 0.76);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
 .ui-filter-toolbar {
   display: flex;
   flex-wrap: wrap;

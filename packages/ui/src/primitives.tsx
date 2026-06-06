@@ -405,6 +405,33 @@ export function InlineMeta({ children, className, ...props }: HTMLAttributes<HTM
   );
 }
 
+type CardTextElement = 'p' | 'span' | 'div' | 'label' | 'summary';
+type CardTextProps = HTMLAttributes<HTMLElement> & LabelHTMLAttributes<HTMLLabelElement> & { as?: CardTextElement };
+
+export function CardTitle({ as: Component = 'p', children, className, ...props }: CardTextProps) {
+  return (
+    <Component className={cx('ui-card-title', className)} {...props}>
+      {children}
+    </Component>
+  );
+}
+
+export function CardBody({ as: Component = 'p', children, className, ...props }: CardTextProps) {
+  return (
+    <Component className={cx('ui-card-body', className)} {...props}>
+      {children}
+    </Component>
+  );
+}
+
+export function CardMeta({ as: Component = 'p', children, className, ...props }: CardTextProps) {
+  return (
+    <Component className={cx('ui-card-meta', className)} {...props}>
+      {children}
+    </Component>
+  );
+}
+
 export const ActionTile = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & {

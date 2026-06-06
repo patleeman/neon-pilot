@@ -23,7 +23,7 @@ import type { AgentToolInfo, ScheduledTaskSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
 import { RichMarkdownRenderer } from './editor/RichMarkdownRenderer';
 import { addNotification } from './notifications/notificationStore';
-import { cx, ErrorState, IconButton, LoadingState, SectionLabel, ToolbarButton } from './ui';
+import { CardMeta, CardTitle, cx, ErrorState, IconButton, LoadingState, SectionLabel, ToolbarButton } from './ui';
 
 const ScheduledTaskPanel = lazy(() => import('./ScheduledTaskPanel').then((module) => ({ default: module.ScheduledTaskPanel })));
 
@@ -426,10 +426,10 @@ function ConversationsWorkspaceContext() {
     <div className="px-4 py-4 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="ui-card-title">Overview</p>
-          <p className="ui-card-meta">
+          <CardTitle>Overview</CardTitle>
+          <CardMeta>
             Browse pinned, open, and archived conversations in the main pane. Open one to switch this rail back into live session context.
-          </p>
+          </CardMeta>
         </div>
         <ToolbarButton
           onClick={() => {
@@ -451,7 +451,7 @@ function ConversationsWorkspaceContext() {
       <div className="space-y-2 border-t border-border-subtle pt-4">
         <SectionLabel>Needs review</SectionLabel>
         {attentionSessions.length === 0 ? (
-          <p className="ui-card-meta">No conversations currently need review.</p>
+          <CardMeta>No conversations currently need review.</CardMeta>
         ) : (
           <div className="space-y-2">
             {attentionSessions.slice(0, 5).map((session) => (
@@ -461,9 +461,9 @@ function ConversationsWorkspaceContext() {
                 className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
               >
                 <p className="text-[12px] font-medium text-primary break-words">{session.title}</p>
-                <p className="ui-card-meta mt-1">
+                <CardMeta className="mt-1">
                   {timeAgo(session.lastActivityAt ?? session.timestamp)} · {session.model?.split('/').pop() ?? 'model unknown'}
-                </p>
+                </CardMeta>
               </Link>
             ))}
           </div>
@@ -476,7 +476,7 @@ function ConversationsWorkspaceContext() {
           0,
           5,
         ).length === 0 ? (
-          <p className="ui-card-meta">No open conversations yet.</p>
+          <CardMeta>No open conversations yet.</CardMeta>
         ) : (
           <div className="space-y-2">
             {[...pinnedSessions.map((session) => ({ session, label: 'pinned' })), ...tabs.map((session) => ({ session, label: 'open' }))]
@@ -488,9 +488,9 @@ function ConversationsWorkspaceContext() {
                   className="block rounded-lg border border-border-subtle bg-base px-3 py-2 hover:bg-elevated/60"
                 >
                   <p className="text-[12px] font-medium text-primary break-words">{session.title}</p>
-                  <p className="ui-card-meta mt-1">
+                  <CardMeta className="mt-1">
                     {label} · {timeAgo(session.lastActivityAt ?? session.timestamp)}
-                  </p>
+                  </CardMeta>
                 </Link>
               ))}
           </div>

@@ -6,6 +6,9 @@ import {
   ActionTile,
   Button,
   ButtonLink,
+  CardBody,
+  CardMeta,
+  CardTitle,
   CheckButton,
   CodeBlock,
   cx,
@@ -175,6 +178,13 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-resource-list-item-selected');
     expect(html).toContain('Architecture diagram');
     expect(html).toContain('mermaid');
+  });
+
+  it('renders card typography primitives with stable classes', () => {
+    expect(renderToStaticMarkup(createElement(CardTitle, null, 'Overview'))).toContain('ui-card-title');
+    expect(renderToStaticMarkup(createElement(CardBody, null, 'Supporting copy'))).toContain('ui-card-body');
+    expect(renderToStaticMarkup(createElement(CardMeta, { as: 'span' }, 'Auto-saved'))).toContain('<span');
+    expect(renderToStaticMarkup(createElement(CardMeta, { as: 'span' }, 'Auto-saved'))).toContain('ui-card-meta');
   });
 
   it('renders action tiles with icon and description slots', () => {

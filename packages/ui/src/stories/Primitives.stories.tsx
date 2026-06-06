@@ -6,6 +6,9 @@ import {
   AppPageLayout,
   Button,
   ButtonLink,
+  CardBody,
+  CardMeta,
+  CardTitle,
   CenteredLoadingState,
   CenteredMessage,
   CheckButton,
@@ -229,6 +232,11 @@ const meta = {
               <MetaLabel tone="success">added</MetaLabel>
             </div>
             <SupportingText>Use supporting text for secondary settings copy, empty hints, paths, and status details.</SupportingText>
+            <div style={{ display: 'grid', gap: 4 }}>
+              <CardTitle>Card title</CardTitle>
+              <CardBody>Card body text describes a compact setting, row, or rail item.</CardBody>
+              <CardMeta as="span">compact metadata</CardMeta>
+            </div>
             <p style={{ margin: 0, fontSize: 13 }}>
               Long paths wrap safely in <InlineCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineCode>.
             </p>
