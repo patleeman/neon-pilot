@@ -4,6 +4,7 @@ import {
   AppPageIntro,
   AppPageLayout,
   AppPageToc,
+  CardBody,
   cx,
   DataTable,
   DataTableBody,
@@ -478,9 +479,9 @@ function CapabilityTable({
                     {labelForKind(row.kind)}
                   </Pill>
                 </div>
-                <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
+                <CardBody as="div" className="mt-0.5 max-w-[44rem] whitespace-normal break-words">
                   {row.description || fallbackDescription(row)}
-                </div>
+                </CardBody>
                 {row.diagnostics?.length ? <DiagnosticsSummary diagnostics={row.diagnostics} /> : null}
               </div>
             </DataTableCell>
