@@ -30,6 +30,7 @@ import {
   DialogFooter,
   DialogHeader,
   EmptyState,
+  ErrorState,
   Field,
   FilterToolbar,
   IconButton,
@@ -102,6 +103,12 @@ const meta = {
           <TextButton tone="danger">Remove</TextButton>
           <IconButton aria-label="More actions">•••</IconButton>
           <IconButton aria-label="Add item" shape="circle">
+            +
+          </IconButton>
+          <IconButton aria-label="Compact more actions" size="sm">
+            •••
+          </IconButton>
+          <IconButton aria-label="Compact add item" shape="circle" size="sm">
             +
           </IconButton>
           <IconLink href="#thread" aria-label="Open thread">

@@ -202,12 +202,24 @@ body {
   padding: 0.25rem;
 }
 
+.ui-icon-button-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  padding: 0;
+}
+
 .ui-icon-button-circle {
   width: 2rem;
   height: 2rem;
   flex-shrink: 0;
   border-radius: 999px;
   padding: 0;
+}
+
+.ui-icon-button-circle.ui-icon-button-sm {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .ui-icon-button-circle:hover {

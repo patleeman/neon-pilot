@@ -4,7 +4,7 @@ import { formatComposerActionLabel } from '../../conversation/conversationCompos
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { cx } from '../ui';
+import { cx, IconButton } from '../ui';
 import { ComposerActionIcon } from './ConversationComposerChrome';
 
 export type ConversationComposerSubmitLabel = 'Send' | 'Steer' | 'Follow up';
@@ -96,19 +96,19 @@ export function ConversationComposerActions({
       {visibleToolbarActions.length > 0 && (
         <div className="flex items-center gap-0.5 mr-1">
           {visibleToolbarActions.map((action) => (
-            <button
+            <IconButton
               key={action.id}
-              type="button"
+              size="sm"
               onClick={() => {
                 void getPaClient(action.extensionId).extension.invoke(action.action, {});
               }}
               disabled={composerDisabled}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-secondary transition-colors hover:bg-surface/45 hover:text-primary disabled:opacity-40"
+              className="hover:bg-surface/45 hover:text-primary disabled:opacity-40"
               title={action.title}
               aria-label={action.title}
             >
               <ToolbarActionIcon icon={action.icon} />
-            </button>
+            </IconButton>
           ))}
         </div>
       )}

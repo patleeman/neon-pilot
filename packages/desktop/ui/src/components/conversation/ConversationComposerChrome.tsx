@@ -1,6 +1,6 @@
 import { forwardRef, type ReactNode } from 'react';
 
-import { cx } from '../ui';
+import { cx, IconButton } from '../ui';
 
 export function FolderIcon({ className }: { className?: string }) {
   return (
@@ -75,16 +75,16 @@ export function BrowsePathButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <IconButton
+      size="sm"
       onClick={onClick}
       disabled={busy}
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-transparent text-secondary transition-colors hover:bg-surface/45 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:opacity-50"
+      className="border border-transparent hover:bg-surface/45 hover:text-primary focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:opacity-50"
       title={title}
       aria-label={ariaLabel}
     >
       <FolderPlusIcon className={cx(busy && 'animate-pulse')} />
-    </button>
+    </IconButton>
   );
 }
 

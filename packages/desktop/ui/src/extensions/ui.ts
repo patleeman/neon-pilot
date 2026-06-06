@@ -58,6 +58,7 @@ export {
   FilterToolbar,
   IconButton,
   type IconButtonShape,
+  type IconButtonSize,
   IconLink,
   InlineCode,
   InlineMeta,
