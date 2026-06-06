@@ -4,6 +4,8 @@
 
 import type { TraceAgentLoop } from '@neon-pilot/extensions/data';
 import {
+  CardMeta,
+  CompactCard,
   MetricTile,
   type MetricTone,
   PanelHeader,
@@ -69,9 +71,9 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
               <DurBar label="P99" pct={100} val={formatDuration(loop.durationP99Ms)} tone="danger" />
             </>
           ) : (
-            <div className="rounded-md border border-border-subtle bg-elevated px-3 py-4 text-center text-[11px] text-dim">
-              Duration percentiles need completed runs with timings.
-            </div>
+            <CompactCard tone="elevated" className="py-4 text-center">
+              <CardMeta>Duration percentiles need completed runs with timings.</CardMeta>
+            </CompactCard>
           )}
         </div>
       </div>
