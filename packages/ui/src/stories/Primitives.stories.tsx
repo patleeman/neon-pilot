@@ -20,6 +20,7 @@ import {
   Field,
   FilterToolbar,
   IconButton,
+  IconLink,
   Keycap,
   KeyValueItem,
   KeyValueList,
@@ -67,6 +68,9 @@ const meta = {
           <Button tone="accent">Save</Button>
           <Button tone="danger">Delete</Button>
           <IconButton aria-label="More actions">•••</IconButton>
+          <IconLink href="#thread" aria-label="Open thread">
+            ↗
+          </IconLink>
           <CheckButton checked aria-label="Completed" />
           <CheckButton checked={false} aria-label="Incomplete" />
         </div>

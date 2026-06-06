@@ -38,6 +38,7 @@ export {
   FieldLabel,
   FilterToolbar,
   IconButton,
+  IconLink,
   KeyValueItem,
   KeyValueList,
   LoadingState,

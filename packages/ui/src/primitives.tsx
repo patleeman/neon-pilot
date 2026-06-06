@@ -1,4 +1,5 @@
 import {
+  type AnchorHTMLAttributes,
   type ButtonHTMLAttributes,
   type CSSProperties,
   type DetailsHTMLAttributes,
@@ -94,6 +95,17 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
     );
   },
 );
+
+export const IconLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement> & { compact?: boolean }>(function IconLink(
+  { className, children, compact = false, ...props },
+  ref,
+) {
+  return (
+    <a ref={ref} className={cx('ui-icon-button', compact && 'ui-icon-button-compact', className)} {...props}>
+      {children}
+    </a>
+  );
+});
 
 export const CheckButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean }>(
   function CheckButton({ checked, className, children = '✓', type = 'button', ...props }, ref) {

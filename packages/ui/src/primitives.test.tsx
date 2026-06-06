@@ -16,6 +16,7 @@ import {
   Disclosure,
   Dialog,
   FilterToolbar,
+  IconLink,
   KeyValueItem,
   KeyValueList,
   MenuItem,
@@ -63,6 +64,14 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-check-button');
     expect(html).toContain('ui-check-button-checked');
     expect(html).toContain('aria-pressed="true"');
+  });
+
+  it('renders icon links with shared icon button classes', () => {
+    const html = renderToStaticMarkup(createElement(IconLink, { href: '#target', compact: true, 'aria-label': 'Open target' }, '↗'));
+
+    expect(html).toContain('href="#target"');
+    expect(html).toContain('ui-icon-button');
+    expect(html).toContain('ui-icon-button-compact');
   });
 
   it('renders notice semantics from tone', () => {

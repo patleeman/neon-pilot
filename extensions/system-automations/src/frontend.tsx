@@ -12,6 +12,7 @@ import {
   Field,
   FilterToolbar,
   IconButton,
+  IconLink,
   LoadingState,
   MenuItem,
   PositionedMenu,
@@ -880,14 +881,14 @@ function AutomationTable({
                     <div className="flex items-center justify-end gap-1.5">
                       {taskBusy ? <span className="text-[11px] text-dim">Working…</span> : null}
                       {task.threadConversationId ? (
-                        <a
-                          className="ui-icon-button ui-icon-button-compact"
+                        <IconLink
+                          compact
                           href={`/conversations/${encodeURIComponent(task.threadConversationId)}`}
                           title={`Open thread for ${taskName(task)}`}
                           aria-label={`Open thread for ${taskName(task)}`}
                         >
                           <OpenIcon />
-                        </a>
+                        </IconLink>
                       ) : null}
                       <IconButton
                         compact

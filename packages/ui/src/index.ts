@@ -30,6 +30,7 @@ export {
   FieldLabel,
   FilterToolbar,
   IconButton,
+  IconLink,
   Keycap,
   KeyValueItem,
   KeyValueList,
