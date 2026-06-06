@@ -13,9 +13,9 @@ describe('ConversationGoalPanel', () => {
     expect(html).toContain('Goal');
     expect(html).toContain('Ship goal mode');
     expect(html).toContain('Active');
-    // Spinner (animate-spin class) should appear before the Goal label
-    expect(html.indexOf('animate-spin')).toBeGreaterThan(-1);
-    expect(html.indexOf('animate-spin')).toBeLessThan(html.indexOf('Goal'));
+    // Spinner (ui-spinner class) should appear before the Goal label
+    expect(html.indexOf('ui-spinner')).toBeGreaterThan(-1);
+    expect(html.indexOf('ui-spinner')).toBeLessThan(html.indexOf('Goal'));
     // Cancel button should be present for active goals
     expect(html).toContain('Cancel');
     expect(html).toContain('aria-label="Cancel goal"');
@@ -37,6 +37,6 @@ describe('ConversationGoalPanel', () => {
     expect(html).toContain('Goal');
     expect(html).toContain('Paused');
     expect(html).not.toContain('Cancel');
-    expect(html).not.toContain('animate-spin');
+    expect(html).not.toContain('ui-spinner');
   });
 });

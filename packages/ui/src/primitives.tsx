@@ -168,6 +168,16 @@ export function Keycap({ children, className }: { children: ReactNode; className
   return <kbd className={cx('ui-kbd', className)}>{children}</kbd>;
 }
 
+export type SpinnerSize = 'xs' | 'sm';
+
+export function Spinner({
+  size = 'sm',
+  className,
+  ...props
+}: { size?: SpinnerSize; className?: string } & HTMLAttributes<HTMLSpanElement>) {
+  return <span aria-hidden="true" className={cx('ui-spinner', `ui-spinner-${size}`, className)} {...props} />;
+}
+
 export type TooltipPosition = 'top-right' | 'bottom-right';
 
 export function Tooltip({

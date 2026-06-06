@@ -1,7 +1,7 @@
 import { describeDeferredResumeStatus, formatDeferredResumeWhen } from '../../deferred-resume/deferredResumeIndicator';
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
-import { cx } from '../ui';
+import { cx, Spinner } from '../ui';
 
 function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
   if (task.scheduleType === 'cron' && task.cron) return task.cron;
@@ -161,7 +161,7 @@ export function ConversationActivityShelf({
           <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 text-[11px]">
             <div className="min-w-0 flex items-center gap-2">
               <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-accent" aria-hidden="true">
-                <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
+                <Spinner size="xs" />
               </span>
               <span className="shrink-0 text-secondary">Background Work</span>
               <span className="truncate text-dim">{backgroundExecutionIndicatorText}</span>

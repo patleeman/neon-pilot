@@ -1,6 +1,6 @@
 import type { ConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
 import { sessionNeedsAttention } from '../session/sessionIndicators';
-import { cx } from './ui';
+import { cx, Spinner } from './ui';
 
 function BackgroundWorkIcon({ kind }: { kind?: ConversationBackgroundWorkKind | null }) {
   if (kind === 'subagent') return <span aria-hidden="true">✦</span>;
@@ -35,7 +35,7 @@ export function ConversationStatusText({
         className={cx('flex h-3 w-3 items-center justify-center text-accent', className)}
         title="Agent is still running"
       >
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
+        <Spinner size="xs" />
       </span>
     );
   }

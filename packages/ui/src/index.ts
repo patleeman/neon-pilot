@@ -58,6 +58,8 @@ export {
   Select,
   SettingToggleRow,
   SettingsSection,
+  Spinner,
+  type SpinnerSize,
   Stat,
   StatGrid,
   SurfacePanel,

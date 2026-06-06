@@ -7,6 +7,7 @@ import {
   Select,
   SettingToggleRow,
   SettingsSection,
+  Spinner,
   TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
@@ -252,11 +253,7 @@ export function DictationButton({
         }
         aria-label={state === 'recording' ? 'Stop dictation' : 'Start dictation'}
       >
-        {state === 'transcribing' ? (
-          <span className="h-3.5 w-3.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
-        ) : (
-          <MicIcon />
-        )}
+        {state === 'transcribing' ? <Spinner /> : <MicIcon />}
       </button>
     </>
   );

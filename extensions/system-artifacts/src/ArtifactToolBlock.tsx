@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { cx, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
 import { memo } from 'react';
 
 export const ArtifactToolBlock = memo(function ArtifactToolBlock({
@@ -38,7 +38,7 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px]">
             {isRunning ? (
               <span className="inline-flex items-center gap-1.5 text-dim">
-                <span className="h-3.5 w-3.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
+                <Spinner />
                 saving artifact…
               </span>
             ) : (

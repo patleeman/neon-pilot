@@ -42,6 +42,7 @@ import {
   Select,
   SettingToggleRow,
   SettingsSection,
+  Spinner,
   Stat,
   StatGrid,
   SurfacePanel,
@@ -91,6 +92,11 @@ const meta = {
           <Pill tone="success">Done</Pill>
           <Pill tone="warning">Waiting</Pill>
           <Pill tone="danger">Failed</Pill>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgb(var(--color-accent))', fontSize: 11 }}>
+            <Spinner size="xs" />
+            Running
+          </span>
+          <Spinner />
           <Keycap>⌘</Keycap>
           <Keycap>K</Keycap>
           <span

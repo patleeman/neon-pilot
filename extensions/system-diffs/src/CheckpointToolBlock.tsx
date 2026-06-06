@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { CheckpointInlineDiff, cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CheckpointInlineDiff, cx, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
 import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo, useState } from 'react';
 
@@ -80,7 +80,7 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
           {!collapsed && isRunning ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
               <span className="inline-flex items-center gap-1.5 text-dim">
-                <span className="h-3.5 w-3.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
+                <Spinner />
                 saving checkpoint…
               </span>
             </div>

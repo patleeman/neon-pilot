@@ -1,5 +1,5 @@
 import type { ThreadGoal } from '../../shared/types';
-import { cx } from '../ui';
+import { cx, Spinner } from '../ui';
 
 export interface GoalPanelProps {
   goal: ThreadGoal | null;
@@ -24,7 +24,7 @@ export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
         {goal.status === 'active' ? (
           <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-accent" aria-hidden="true">
-            <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin" />
+            <Spinner size="xs" />
           </span>
         ) : null}
         <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-accent">Goal</span>
