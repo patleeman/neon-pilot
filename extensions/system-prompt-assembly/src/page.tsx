@@ -3,6 +3,7 @@ import { api, useApi } from '@neon-pilot/extensions/settings';
 import {
   AppPageIntro,
   AppPageLayout,
+  AppPageSection,
   AppPageToc,
   CardBody,
   cx,
@@ -295,13 +296,13 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
         />
 
-        <section id="system-prompt" className="scroll-mt-24 space-y-3 border-t border-border-subtle pt-10 first:border-t-0 first:pt-0">
-          <div>
-            <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">System Prompt</h2>
-            <p className="text-[14px] leading-6 text-secondary">
-              Customize the generated runtime instruction template. Nunjucks variables such as knowledge_root and skills_dir are available.
-            </p>
-          </div>
+        <AppPageSection
+          id="system-prompt"
+          title="System Prompt"
+          description="Customize the generated runtime instruction template. Nunjucks variables such as knowledge_root and skills_dir are available."
+          className="border-t border-border-subtle pt-10 first:border-t-0 first:pt-0"
+          bodyClassName="space-y-3"
+        >
           {systemPromptTemplateLoading && !systemPromptTemplateState ? (
             <Notice>Loading system prompt template...</Notice>
           ) : systemPromptTemplateError && !systemPromptTemplateState ? (
@@ -344,26 +345,22 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             </div>
           ) : null}
           {systemPromptTemplateSaveError ? <Notice tone="danger">{systemPromptTemplateSaveError}</Notice> : null}
-        </section>
+        </AppPageSection>
 
-        <section className="space-y-4 border-t border-border-subtle pt-10">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-[22px] font-semibold tracking-tight text-primary">Agent Context</h2>
-              <p className="text-[13px] leading-6 text-secondary">
-                {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and
-                context.
-                <span className="block text-[12px] text-dim">CWD {data.cwd ?? data.repoRoot}</span>
-              </p>
-            </div>
-            <SearchInput
-              className="w-72"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search agent context…"
-            />
-          </div>
-        </section>
+        <AppPageSection
+          title="Agent Context"
+          description={
+            <>
+              {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and context.
+              <span className="block text-[12px] text-dim">CWD {data.cwd ?? data.repoRoot}</span>
+            </>
+          }
+          actions={
+            <SearchInput className="w-72" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agent context…" />
+          }
+          className="border-t border-border-subtle pt-10"
+          titleClassName="text-[22px]"
+        />
 
         <CapabilitySection
           id="instructions"
@@ -433,20 +430,19 @@ function CapabilitySection({
   emptyTitle: string;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 space-y-5 border-t border-border-subtle pt-10">
-      <div className="max-w-3xl space-y-2">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-primary">{title}</h2>
-          <span className="text-[12px] text-dim">{formatCount(rows.length, 'entry')}</span>
-        </div>
-        <p className="text-[14px] leading-6 text-secondary">{description}</p>
-      </div>
+    <AppPageSection
+      id={id}
+      title={title}
+      description={description}
+      meta={formatCount(rows.length, 'entry')}
+      className="border-t border-border-subtle pt-10"
+    >
       {rows.length ? (
         <CapabilityTable rows={rows} busyId={busyId} onToggle={onToggle} />
       ) : (
         <EmptyState title={emptyTitle} body="Try a broader search query." />
       )}
-    </section>
+    </AppPageSection>
   );
 }
 

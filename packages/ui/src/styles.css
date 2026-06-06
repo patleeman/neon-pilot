@@ -2402,6 +2402,42 @@ body {
   scroll-margin-top: 2rem;
 }
 
+.ui-app-page-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ui-app-page-section-title {
+  margin: 0;
+  color: rgb(var(--color-primary));
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.ui-app-page-section-description {
+  max-width: 48rem;
+  color: rgb(var(--color-secondary));
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+}
+
+.ui-app-page-section-meta {
+  color: rgb(var(--color-dim));
+  font-size: 0.75rem;
+}
+
+.ui-app-page-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .ui-app-page-section-body {
   min-width: 0;
 }
@@ -2443,6 +2479,10 @@ body {
   }
 
   .ui-app-page-intro {
+    display: grid;
+  }
+
+  .ui-app-page-section-header {
     display: grid;
   }
 }

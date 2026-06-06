@@ -596,6 +596,21 @@ export const AppPage: Story = {
           summary="Use this page shape for extension-owned routes that need a focused tool surface instead of a marketing layout."
           actions={<ToolbarButton>Refresh</ToolbarButton>}
         />
+        <AppPageSection
+          title="Runtime Context"
+          description="Use AppPageSection for route subsections with title copy, optional counts, actions, and a consistent body gap."
+          meta="12 entries"
+          actions={<SearchInput placeholder="Search context..." style={{ width: 220 }} />}
+        >
+          <DataTable>
+            <DataTableBody>
+              <DataTableRow>
+                <DataTableCell>Instructions</DataTableCell>
+                <DataTableCell>Enabled</DataTableCell>
+              </DataTableRow>
+            </DataTableBody>
+          </DataTable>
+        </AppPageSection>
         <SurfacePanel style={{ padding: 18 }}>
           <EmptyState title="Ready" body="Build the workflow-specific UI here using shared primitives first." />
         </SurfacePanel>

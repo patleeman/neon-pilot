@@ -1969,28 +1969,42 @@ export function AppPageSection({
   id,
   title,
   description,
+  meta,
+  actions,
   children,
   className,
+  headerClassName,
+  titleClassName,
+  descriptionClassName,
   bodyClassName,
 }: {
   id?: string;
   title?: ReactNode;
   description?: ReactNode;
-  children: ReactNode;
+  meta?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
   className?: string;
+  headerClassName?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
   bodyClassName?: string;
 }) {
   return (
     <section id={id} className={cx('ui-app-page-section', className)}>
-      {title || description ? (
-        <div className="space-y-2">
-          {title ? (
-            <h2 className="text-[30px] font-semibold leading-tight tracking-[-0.02em] text-primary sm:text-[32px]">{title}</h2>
-          ) : null}
-          {description ? <div className="max-w-3xl text-[13px] leading-6 text-secondary">{description}</div> : null}
+      {title || description || meta || actions ? (
+        <div className={cx('ui-app-page-section-header', headerClassName)}>
+          <div className="min-w-0 space-y-2">
+            <div className="flex min-w-0 flex-wrap items-end justify-between gap-3">
+              {title ? <h2 className={cx('ui-app-page-section-title', titleClassName)}>{title}</h2> : null}
+              {meta ? <div className="ui-app-page-section-meta">{meta}</div> : null}
+            </div>
+            {description ? <div className={cx('ui-app-page-section-description', descriptionClassName)}>{description}</div> : null}
+          </div>
+          {actions ? <div className="ui-app-page-section-actions">{actions}</div> : null}
         </div>
       ) : null}
-      <div className={cx('ui-app-page-section-body', bodyClassName)}>{children}</div>
+      {children ? <div className={cx('ui-app-page-section-body', bodyClassName)}>{children}</div> : null}
     </section>
   );
 }

@@ -98,6 +98,7 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Local segmented filters -> `SegmentedControl`
 - Local tab rows -> `TabList`, `TabButton`, and `TabPanel`
 - Local search/filter header rows -> `FilterToolbar`
+- Local route section headers with title/description/count/actions -> `AppPageSection`
 - Local fixed/absolute menu shells -> `PositionedMenu` with `MenuItem`
 - Local loading/error/empty messages -> `LoadingState`, `ErrorState`, `EmptyState`, `PanelMessage`, `CenteredMessage`, or `Notice`
 - Local bordered section cards with title/meta rows -> `SurfacePanel` with `PanelHeader`
