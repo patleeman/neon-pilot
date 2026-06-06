@@ -86,6 +86,7 @@ import {
   TitleButton,
   TerminalBlock,
   Tooltip,
+  TreeItemButton,
   WorkbenchHeader,
   WorkbenchShell,
   WorkbenchTab,
@@ -142,6 +143,15 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-sidebar-nav-item-active');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('Settings');
+  });
+
+  it('renders semantic tree item buttons without imposing visual row styling', () => {
+    const html = renderToStaticMarkup(createElement(TreeItemButton, { selected: true, expanded: false }, 'Project row'));
+
+    expect(html).toContain('ui-tree-item-button');
+    expect(html).toContain('role="treeitem"');
+    expect(html).toContain('aria-selected="true"');
+    expect(html).toContain('aria-expanded="false"');
   });
 
   it('renders transcript message card primitives', () => {

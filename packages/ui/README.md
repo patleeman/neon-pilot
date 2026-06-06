@@ -24,7 +24,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `InlineTextInput`, `InlineSelect`, `Checkbox`, `KeyboardShortcutCaptureInput`, `Switch`, `SettingsPanel`, `SettingsRow`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `SwatchOption`, `TabList`, `TabButton`, `TabPanel`, `WorkbenchTab`, `WorkbenchTabButton`, `WorkbenchTabCloseButton`, `FilterToolbar`
-- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `MessageCard`, `MessageMeta`, `ToolResultCard`, `ResourcePickerDialog`, `ResourcePickerToolbar`, `ResourcePickerList`, `ResourceList`, `ResourceListRow`, `ResourceListItem`, `ResourceListLink`, `RowButton`, `InlineCode`, `InlineCodeButton`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`, `TerminalBlock`
+- Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `MessageCard`, `MessageMeta`, `ToolResultCard`, `ResourcePickerDialog`, `ResourcePickerToolbar`, `ResourcePickerList`, `ResourceList`, `ResourceListRow`, `ResourceListItem`, `ResourceListLink`, `RowButton`, `TreeItemButton`, `InlineCode`, `InlineCodeButton`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`, `TerminalBlock`
 - Pages and sections: `PageHeader`, `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageToc`, `AppPageEmptyState`, `SettingsSection`, `RuntimePage`, `RuntimeHeader`, `RuntimeHeaderControls`, `RuntimeStrip`, `RuntimeSection`, `RuntimeFooter`
 - Utility: `cx`
 
@@ -120,6 +120,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `ResourcePickerDialog` with `ResourcePickerToolbar`, `ResourcePickerList`, and `ResourceListItem` for modal pickers that select files, folders, workspaces, artifacts, drawings, saved resources, or extension-owned records. Keep domain-specific loading, filtering, and row actions in the caller, but do not rebuild modal sizing, header/body/footer chrome, searchable toolbar bands, or scroll containers by hand.
 - Use `ResourceList` and `ResourceListRow` for non-modal resource lists with a title, metadata badge, detail text, and trailing actions, such as skills, extension repositories, marketplace rows, saved presets, or installable resources. Use `ResourceListItem` when the whole row is a button, `ResourceListLink` when the whole row navigates, and `ResourceListRow` when the row contains independent controls.
 - Use `RowButton` for compact interactive rows with custom internals, such as file rows, command rows, disclosure headers, chooser rows, and nested list entries. Use `compact` for dense rails and `selected` for the active row.
+- Use `TreeItemButton` when the row participates in an ARIA tree and needs caller-owned density/styling, drag/drop props, and nested row anatomy. It supplies `role="treeitem"`, selected/expanded semantics, and a stable class without imposing resource-list or sidebar visuals.
 - Use `MetricTile` for compact value/label cards in dashboards. Prefer its `tone`, `size`, `align`, and `appearance="plain"` props over custom font and color utility recipes.
 - Use `DashboardGrid` with `DashboardGridCell` for compact metric and trace dashboards that need two-to-four columns with consistent dividers.
 - Use `InlineCode` for inline paths, ids, commands, commit hashes, and compact tokens. It wraps long values by default; set `wrap={false}` only for short fixed tokens.
@@ -141,6 +142,7 @@ These production areas already use the shared package and are useful examples fo
 - Tool result cards: artifact transcript renderers and extension-owned tool outputs
 - Status markers: context-usage status bar indicators
 - Compact rows: checkpoint file pickers, file-change headers, trace disclosure headers, and nested file lists
+- Tree rows: sidebar activity tree conversation and workspace rows
 - Feedback: extension manager diagnostics, automations page notices, and conversation bootstrap warnings
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, file-change tool diffs, inline run cards, and activity shelves
 - Message actions: transcript copy/edit/rewind/fork actions and message edit controls

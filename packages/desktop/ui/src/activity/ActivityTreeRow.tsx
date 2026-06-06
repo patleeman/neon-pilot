@@ -1,6 +1,7 @@
 import { type DragEvent, memo, useMemo } from 'react';
 
 import { recordActivityTreeRowRender } from '../client/perfDiagnostics';
+import { TreeItemButton } from '../components/ui';
 import type { ActivityTreeItem } from './activityTree';
 import {
   ActivityTreeDropMarker,
@@ -92,10 +93,8 @@ function ActivityTreeRowComponent({
   }, [item.accentColor, item.backgroundColor, rowModel.rowPaddingLeftRem]);
 
   return (
-    <button
-      type="button"
-      role="treeitem"
-      aria-selected={active ? 'true' : 'false'}
+    <TreeItemButton
+      selected={active}
       draggable={canDrag}
       onDragStart={canDrag ? (event) => onDragStart(item, event) : undefined}
       onDragOver={(event) => onDragOver(item, event)}
@@ -113,7 +112,7 @@ function ActivityTreeRowComponent({
       data-sidebar-session-id={rowModel.dataSidebarSessionId}
       data-sidebar-group-key={rowModel.dataSidebarGroupKey}
       title={canDrag ? 'Drag to reorder conversations' : rowModel.title}
-      aria-expanded={item.kind === 'group' ? expanded : undefined}
+      expanded={item.kind === 'group' ? expanded : undefined}
       onClick={() => {
         if (item.kind === 'group') {
           onToggleGroup(item);
@@ -150,7 +149,7 @@ function ActivityTreeRowComponent({
         onInlineAction={onInlineAction}
         onOpenContextMenu={onOpenContextMenu}
       />
-    </button>
+    </TreeItemButton>
   );
 }
 

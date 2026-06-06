@@ -123,6 +123,7 @@ import {
   Tooltip,
   ToolResultCard,
   ToolbarButton,
+  TreeItemButton,
   WorkbenchHeader,
   WorkbenchShell,
   WorkbenchTab,
@@ -200,6 +201,20 @@ const meta = {
             <span aria-hidden="true">*</span>
             <span style={{ flex: 1 }}>Settings</span>
           </SidebarNavButton>
+        </div>
+        <div role="tree" aria-label="Workspace tree" style={{ display: 'grid', gap: 2, width: 280, maxWidth: '100%' }}>
+          <TreeItemButton
+            selected
+            expanded
+            className="ui-sidebar-session-row ui-sidebar-session-row-active mx-0 w-full text-left"
+          >
+            <span aria-hidden="true">v</span>
+            <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Project</span>
+          </TreeItemButton>
+          <TreeItemButton className="ui-sidebar-session-row mx-0 w-full text-left">
+            <span aria-hidden="true">-</span>
+            <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Thread</span>
+          </TreeItemButton>
         </div>
         <div style={{ display: 'grid', gap: 2, width: 460, maxWidth: '100%' }}>
           <TaskListItem

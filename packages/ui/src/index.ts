@@ -166,6 +166,7 @@ export {
   ToolResultCard,
   type ToolResultCardTone,
   ToolbarButton,
+  TreeItemButton,
   WorkbenchHeader,
   WorkbenchShell,
   WorkbenchTab,

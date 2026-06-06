@@ -240,6 +240,28 @@ export const SidebarNavButton = forwardRef<
   );
 });
 
+export const TreeItemButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    selected?: boolean;
+    expanded?: boolean;
+  }
+>(function TreeItemButton({ selected = false, expanded, className, children, type = 'button', ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      role={props.role ?? 'treeitem'}
+      aria-selected={props['aria-selected'] ?? (selected ? 'true' : 'false')}
+      aria-expanded={props['aria-expanded'] ?? expanded}
+      className={cx('ui-tree-item-button', className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
+
 export const MessageActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { tone?: ButtonTone }>(
   function MessageActionButton({ className, children, type = 'button', tone = 'default', ...props }, ref) {
     return (
