@@ -48,6 +48,7 @@ export {
   type IconButtonShape,
   IconLink,
   InlineCode,
+  InlineMeta,
   KeyValueItem,
   KeyValueList,
   LoadingState,

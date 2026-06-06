@@ -40,6 +40,7 @@ export {
   type IconButtonShape,
   IconLink,
   InlineCode,
+  InlineMeta,
   Keycap,
   KeyValueItem,
   KeyValueList,

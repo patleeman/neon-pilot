@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { cx, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
 import { memo } from 'react';
 
 export const ArtifactToolBlock = memo(function ArtifactToolBlock({
@@ -37,10 +37,10 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
           {isError && block.output && <p className="mt-2 text-[12px] leading-relaxed text-danger/85">{block.output}</p>}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px]">
             {isRunning ? (
-              <span className="inline-flex items-center gap-1.5 text-dim">
+              <InlineMeta>
                 <Spinner />
                 saving artifact…
-              </span>
+              </InlineMeta>
             ) : (
               <button
                 type="button"
@@ -54,7 +54,7 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
                 {actionLabel}
               </button>
             )}
-            {artifact.updatedAt && <span className="text-dim">updated {timeAgo(artifact.updatedAt)}</span>}
+            {artifact.updatedAt && <InlineMeta>updated {timeAgo(artifact.updatedAt)}</InlineMeta>}
           </div>
         </div>
       </div>

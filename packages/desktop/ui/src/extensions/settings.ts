@@ -25,6 +25,7 @@ export {
   FieldHint,
   FieldLabel,
   FilterToolbar,
+  InlineMeta,
   KeyValueItem,
   KeyValueList,
   LoadingState,

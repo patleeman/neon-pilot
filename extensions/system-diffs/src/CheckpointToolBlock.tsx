@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { CheckpointInlineDiff, cx, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CheckpointInlineDiff, cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
 import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo, useState } from 'react';
 
@@ -65,11 +65,11 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
                   </span>
                 ) : null}
                 {typeof commentCount === 'number' && commentCount > 0 ? (
-                  <span className="text-dim">
+                  <InlineMeta>
                     {commentCount} comment{commentCount === 1 ? '' : 's'}
-                  </span>
+                  </InlineMeta>
                 ) : null}
-                {checkpoint.updatedAt && <span className="text-dim">updated {timeAgo(checkpoint.updatedAt)}</span>}
+                {checkpoint.updatedAt && <InlineMeta>updated {timeAgo(checkpoint.updatedAt)}</InlineMeta>}
               </span>
             </span>
             <span className={cx('mt-0.5 text-dim transition-transform', collapsed && '-rotate-90')} aria-hidden="true">
@@ -79,10 +79,10 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
           {!collapsed && isError && output && <p className="mt-2 text-[12px] leading-relaxed text-danger/85">{output}</p>}
           {!collapsed && isRunning ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-              <span className="inline-flex items-center gap-1.5 text-dim">
+              <InlineMeta>
                 <Spinner />
                 saving checkpoint…
-              </span>
+              </InlineMeta>
             </div>
           ) : !collapsed && !isError && checkpoint.conversationId ? (
             <CheckpointInlineDiff conversationId={checkpoint.conversationId} checkpointId={checkpoint.checkpointId} />

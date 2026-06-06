@@ -387,6 +387,14 @@ export function SupportingText({ children, className, ...props }: HTMLAttributes
   );
 }
 
+export function InlineMeta({ children, className, ...props }: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={cx('ui-inline-meta', className)} {...props}>
+      {children}
+    </span>
+  );
+}
+
 export function FilterToolbar({
   filters,
   search,

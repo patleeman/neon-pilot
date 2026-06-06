@@ -26,6 +26,7 @@ import {
   IconButton,
   IconLink,
   InlineCode,
+  InlineMeta,
   Keycap,
   KeyValueItem,
   KeyValueList,
@@ -243,6 +244,13 @@ const meta = {
           </KeyValueList>
           <div style={{ display: 'grid', gap: 8 }}>
             <SectionLabel>Progress</SectionLabel>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <InlineMeta>updated 2m ago</InlineMeta>
+              <InlineMeta>
+                <Spinner />
+                saving checkpoint...
+              </InlineMeta>
+            </div>
             <ProgressBar value={64} label="Trace coverage" />
             <ProgressBar value={42} tone="success" label="Successful calls" />
             <ProgressBar value={18} tone="warning" minPercent={2} label="Warnings" />
