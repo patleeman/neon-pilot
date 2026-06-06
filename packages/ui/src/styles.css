@@ -777,8 +777,11 @@ body {
 }
 
 .ui-resource-list-item {
-  display: block;
+  display: grid;
   width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0.625rem;
   border: 0;
   border-radius: 0.75rem;
   background: transparent;
@@ -812,9 +815,25 @@ body {
   color: rgb(var(--color-primary));
 }
 
+.ui-resource-list-item-with-leading {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.ui-resource-list-item-leading {
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  background: rgb(var(--color-elevated));
+  color: rgb(var(--color-primary));
+}
+
 .ui-resource-list-item-main {
-  display: flex;
+  display: grid;
   min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.5rem;
 }
@@ -839,6 +858,7 @@ body {
 
 .ui-resource-list-item-detail {
   display: block;
+  grid-column: 1 / -1;
   margin-top: 0.125rem;
   overflow: hidden;
   color: rgb(var(--color-dim));
@@ -846,6 +866,12 @@ body {
   font-size: 0.625rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ui-resource-list-item-extra {
+  display: block;
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .ui-row-button {

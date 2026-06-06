@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { buildConversationGroupLabels, getConversationGroupLabel } from '../conversation/conversationCwdGroups';
-import { CardMeta, CardTitle, Dialog, IconButton, PanelMessage } from './ui';
+import { Dialog, IconButton, PanelMessage, ResourceListItem } from './ui';
 
 const CLOSE_PATH = 'M6 6l12 12M18 6 6 18';
 const WORKSPACE_ADD_PATH =
@@ -118,43 +118,29 @@ export function WorkspaceQuickSelectModal({
           workspacePaths.map((workspacePath, index) => {
             const selected = cursor === index;
             return (
-              <button
+              <ResourceListItem
                 key={workspacePath}
-                type="button"
                 onClick={() => onSelectWorkspace(workspacePath)}
-                className={[
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
-                  selected ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/70 hover:text-primary',
-                ].join(' ')}
-              >
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="truncate">{getConversationGroupLabel(workspacePath, { labelsByCwd: workspaceLabels })}</CardTitle>
-                  <CardMeta className="truncate">{workspacePath}</CardMeta>
-                </div>
-              </button>
+                selected={selected}
+                label={getConversationGroupLabel(workspacePath, { labelsByCwd: workspaceLabels })}
+                detail={workspacePath}
+                className="rounded-lg px-3 py-2.5"
+              />
             );
           })
         ) : (
           <PanelMessage className="px-3 py-4">No saved workspaces yet.</PanelMessage>
         )}
 
-        <button
-          type="button"
+        <ResourceListItem
           onClick={onChooseNewFolder}
-          className={[
-            'mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
-            cursor === workspacePaths.length ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/70 hover:text-primary',
-          ].join(' ')}
+          selected={cursor === workspacePaths.length}
           disabled={choosingNewFolder}
-        >
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-elevated text-primary">
-            <Icon d={WORKSPACE_ADD_PATH} size={13} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <CardTitle>{choosingNewFolder ? 'Choosing folder...' : 'Choose a new folder'}</CardTitle>
-            <CardMeta>Use the system picker to add another workspace.</CardMeta>
-          </div>
-        </button>
+          label={choosingNewFolder ? 'Choosing folder...' : 'Choose a new folder'}
+          detail="Use the system picker to add another workspace."
+          leading={<Icon d={WORKSPACE_ADD_PATH} size={13} />}
+          className="mt-1 rounded-lg px-3 py-2.5"
+        />
       </div>
 
       <div className="border-t border-border-subtle px-4 py-2 text-[10px] text-dim/80">↑↓ move · ↵ select · esc close</div>

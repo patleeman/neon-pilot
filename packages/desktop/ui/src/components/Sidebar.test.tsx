@@ -260,7 +260,7 @@ describe('Sidebar', () => {
 
     expect(html).toContain('aria-label="Running conversation"');
     expect(html).toContain('aria-label="Conversation needs review"');
-    expect(html).toContain('animate-spin');
+    expect(html).toContain('ui-spinner');
     expect(html).not.toContain('>running<');
     expect(html).not.toContain('>needs review<');
   });
@@ -369,7 +369,7 @@ describe('Sidebar', () => {
     });
 
     expect(html).toContain('aria-label="Running conversation"');
-    expect(html).toContain('animate-spin');
+    expect(html).toContain('ui-spinner');
     expect(html).toContain('Morning briefing thread');
   });
 
@@ -995,7 +995,7 @@ describe('Sidebar', () => {
       expect(html).not.toContain('aria-label="Running conversation"');
       expect(html).not.toContain('aria-label="Background work running"');
       expect(html).not.toContain('aria-label="Conversation needs review"');
-      expect(html).not.toContain('animate-spin');
+      expect(html).not.toContain('ui-spinner');
     });
 
     it('shows a spinning indicator for a running live conversation', () => {
@@ -1006,7 +1006,7 @@ describe('Sidebar', () => {
       });
 
       expect(html).toContain('aria-label="Running conversation"');
-      expect(html).toContain('animate-spin');
+      expect(html).toContain('ui-spinner');
       expect(html).toContain('title="Agent is still running"');
       expect(html).not.toContain('aria-label="Background work running"');
       expect(html).not.toContain('aria-label="Conversation needs review"');
@@ -1036,7 +1036,7 @@ describe('Sidebar', () => {
       expect(html).toContain('✦');
       expect(html).toContain('title="Background work is running"');
       expect(html).not.toContain('aria-label="Running conversation"');
-      expect(html).not.toContain('animate-spin');
+      expect(html).not.toContain('ui-spinner');
       expect(html).not.toContain('aria-label="Conversation needs review"');
     });
 
@@ -1065,7 +1065,7 @@ describe('Sidebar', () => {
       expect(html).toContain('title="Background work is running"');
       expect(html).not.toContain('✦');
       expect(html).not.toContain('aria-label="Running conversation"');
-      expect(html).not.toContain('animate-spin');
+      expect(html).not.toContain('ui-spinner');
     });
 
     it('shows a needs-review dot when the conversation needs attention with no pending work', () => {
@@ -1079,7 +1079,7 @@ describe('Sidebar', () => {
       expect(html).toContain('title="Stopped with new output or linked updates you have not viewed yet"');
       expect(html).not.toContain('aria-label="Running conversation"');
       expect(html).not.toContain('aria-label="Background work running"');
-      expect(html).not.toContain('animate-spin');
+      expect(html).not.toContain('ui-spinner');
     });
 
     it('prefers the running indicator over needs-review when both are true', () => {
@@ -1091,7 +1091,7 @@ describe('Sidebar', () => {
 
       // Running takes priority — the needs-review indicator should not render.
       expect(html).toContain('aria-label="Running conversation"');
-      expect(html).toContain('animate-spin');
+      expect(html).toContain('ui-spinner');
       expect(html).not.toContain('aria-label="Conversation needs review"');
       expect(html).not.toContain('bg-warning');
     });
@@ -1106,7 +1106,7 @@ describe('Sidebar', () => {
 
       expect(html).toContain('aria-label="Pinned chat"');
       expect(html).toContain('aria-label="Running conversation"');
-      expect(html).toContain('animate-spin');
+      expect(html).toContain('ui-spinner');
       expect(html).toContain('Pinned active task');
     });
 
@@ -1155,7 +1155,7 @@ describe('Sidebar', () => {
       });
 
       expect(html).toContain('aria-label="Running conversation"');
-      expect(html).toContain('animate-spin');
+      expect(html).toContain('ui-spinner');
       expect(html).toContain('Automation thread');
     });
 

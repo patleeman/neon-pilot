@@ -193,12 +193,14 @@ describe('design-system primitives', () => {
         label: 'Architecture diagram',
         meta: 'mermaid',
         detail: 'artifact_123',
+        leading: '#',
         selected: true,
       }),
     );
 
     expect(html).toContain('ui-resource-list-item');
     expect(html).toContain('ui-resource-list-item-selected');
+    expect(html).toContain('ui-resource-list-item-leading');
     expect(html).toContain('Architecture diagram');
     expect(html).toContain('mermaid');
   });

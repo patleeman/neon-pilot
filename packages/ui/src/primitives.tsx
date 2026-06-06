@@ -558,6 +558,7 @@ export function ResourceListItem({
   label,
   meta,
   detail,
+  leading,
   selected = false,
   className,
   children,
@@ -567,17 +568,32 @@ export function ResourceListItem({
   label: ReactNode;
   meta?: ReactNode;
   detail?: ReactNode;
+  leading?: ReactNode;
   selected?: boolean;
   className?: string;
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type={type} className={cx('ui-resource-list-item', selected && 'ui-resource-list-item-selected', className)} {...props}>
+    <button
+      type={type}
+      className={cx(
+        'ui-resource-list-item',
+        leading != null && 'ui-resource-list-item-with-leading',
+        selected && 'ui-resource-list-item-selected',
+        className,
+      )}
+      {...props}
+    >
+      {leading ? (
+        <span className="ui-resource-list-item-leading" aria-hidden="true">
+          {leading}
+        </span>
+      ) : null}
       <span className="ui-resource-list-item-main">
         <span className="ui-resource-list-item-title">{label}</span>
         {meta ? <span className="ui-resource-list-item-meta">{meta}</span> : null}
+        {detail ? <span className="ui-resource-list-item-detail">{detail}</span> : null}
+        {children ? <div className="ui-resource-list-item-extra">{children}</div> : null}
       </span>
-      {detail ? <span className="ui-resource-list-item-detail">{detail}</span> : null}
-      {children}
     </button>
   );
 }

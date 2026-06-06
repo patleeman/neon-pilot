@@ -342,7 +342,7 @@ const meta = {
             <p style={{ margin: 0, fontSize: 13 }}>
               Long paths wrap safely in <InlineCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineCode>.
             </p>
-            <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" selected />
+            <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" leading="#" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
             <div style={{ display: 'grid', gap: 4 }}>
               <RowButton compact selected>
