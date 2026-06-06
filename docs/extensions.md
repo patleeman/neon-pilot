@@ -1089,7 +1089,7 @@ Guidelines:
 - Use semantic theme tokens: `bg-base`, `bg-surface`, `bg-elevated`, `text-primary`, `text-secondary`, `text-dim`, `border-border-subtle`, `text-accent`, `text-success`, `text-warning`, and `text-danger`.
 - Avoid hard-coded colors, custom shadows, gradients, decorative pills, and nested bordered cards. Spacing, typography, and alignment should do most of the hierarchy work.
 - Keep typography consistent: page titles come from `AppPageIntro`; section titles are usually `text-[18px] font-semibold tracking-tight`; body copy is usually `text-[13px] leading-6 text-secondary`.
-- Prefer `ToolbarButton`, `EmptyState`, `LoadingState`, `ErrorState`, `AppPageEmptyState`, and `AppPageSection` over local button/state implementations.
+- Prefer shared UI from `@neon-pilot/extensions/ui` over local lookalikes. Common first choices are `ToolbarButton`/`IconButton` for actions, `EmptyState`/`LoadingState`/`ErrorState` for feedback, `AppPageEmptyState`/`AppPageSection` for page structure, `SegmentedControl` for mutually exclusive modes, `DataTableActionGroup` for row actions, `RuntimeHeaderControls` for runtime refresh/reset headers, `RailSubsection` for compact rails, `ResourcePickerDialog` for file/resource selection, and `ChatView`/`ExtensionChatRail` for chat surfaces.
 - Right-rail and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers there.
 
 If a page needs a style that fights these defaults, first ask whether it should be a new shared primitive. One-off chrome is how UI entropy sneaks in wearing a fake mustache.

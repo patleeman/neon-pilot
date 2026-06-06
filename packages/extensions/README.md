@@ -269,11 +269,44 @@ Use these modules as the paved road:
 
 ```ts
 import type { ExtensionBackendContext, ExtensionManifest, ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageLayout, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  AppPageLayout,
+  AppPageIntro,
+  AppPageSection,
+  EmptyState,
+  ToolbarButton,
+  IconButton,
+  SegmentedControl,
+  DataTable,
+  DataTableActionGroup,
+  RuntimePage,
+  RuntimeHeaderControls,
+  RailSubsection,
+  ExtensionChatRail,
+  ChatView,
+  ResourcePickerDialog,
+} from '@neon-pilot/extensions/ui';
 import { api, timeAgo, useAppData } from '@neon-pilot/extensions/data';
 import { WorkbenchBrowserTab, WorkspaceExplorer } from '@neon-pilot/extensions/workbench';
 import { SettingsPage } from '@neon-pilot/extensions/settings';
 ```
+
+### Frontend UI components
+
+Extension frontend code should treat `@neon-pilot/extensions/ui` as the public design-system entrypoint. Do not import `@neon-pilot/ui` directly from extension code; the host exposes the compatible facade through this package.
+
+Start with the smallest shared primitive that fits the job, then compose upward:
+
+- Page chrome: `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageEmptyState`
+- Actions: `Button`, `ToolbarButton`, `IconButton`, `TextButton`, `CheckButton`
+- Forms: `Field`, `TextInput`, `TextAreaInput`, `SelectInput`, `CheckboxInput`, `SegmentedControl`, `Switch`, `ToggleRow`
+- Feedback: `LoadingState`, `ErrorState`, `EmptyState`, `InlineStatus`, `StatusBadge`
+- Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`
+- Runtime pages: `RuntimePage`, `RuntimeStatusStrip`, `RuntimeHeaderControls`, `MetricTile`, `DashboardGrid`
+- Rails and settings panels: `RailSubsection`, `SettingsForm`, `SettingsSection`, `SettingsField`
+- Chat and files: `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `ResourcePickerDialog`
+
+Use local markup for product-specific layout and content, but extract repeated chrome, action groups, pickers, chat surfaces, table actions, runtime summaries, and settings rows into shared UI instead of creating extension-local lookalikes. See [Design system](../../docs/design-system.md) and [`packages/ui`](../ui/README.md) for the full component catalog, Storybook guidance, and replacement checklist.
 
 System backend extensions can also import deliberate backend primitives through the backend seam:
 

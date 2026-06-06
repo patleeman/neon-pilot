@@ -58,8 +58,13 @@ than a full page; the host handles layout. Good for integration config and toggl
 ## Shared patterns across templates
 
 - `AppPageLayout` + `AppPageIntro` — standard page chrome (`max-w-[72rem]`, consistent header)
+- `AppPageSection` / `AppPageEmptyState` — standard page sections and empty page states
 - `LoadingState` / `ErrorState` / `EmptyState` — unified feedback components
-- `ToolbarButton` / `IconButton` — action buttons
+- `ToolbarButton` / `IconButton` / `TextButton` — action buttons
+- `SegmentedControl` / `Switch` / `ToggleRow` — mode and boolean controls
+- `DataTable` / `DataTableActionGroup` — management tables and row actions
+- `RuntimePage` / `RuntimeHeaderControls` / `MetricTile` — runtime status pages
+- `RailSubsection` / `ResourcePickerDialog` / `ChatView` / `ExtensionChatRail` — compact panels, file pickers, and chat surfaces
 - `pa.ui.notify` — toast notifications on error
 - `pa.ui.confirm` — confirmation dialogs before destructive actions
 - Backend actions declared in `extension.json` → exported functions in `src/backend.ts`
