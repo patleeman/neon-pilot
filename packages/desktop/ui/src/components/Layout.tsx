@@ -54,7 +54,7 @@ import {
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
 import { addNotification, NotificationProvider } from './notifications/notificationStore';
-import { cx } from './ui';
+import { cx, IconButton } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
 const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
@@ -159,13 +159,7 @@ function FileDocumentBar({
         </div>
       </div>
       {canToggleRail ? (
-        <button
-          type="button"
-          className="ui-icon-button ui-icon-button-compact shrink-0"
-          title={railLabel}
-          aria-label={railLabel}
-          onClick={() => onRailOpenChange(!railOpen)}
-        >
+        <IconButton compact className="shrink-0" title={railLabel} aria-label={railLabel} onClick={() => onRailOpenChange(!railOpen)}>
           <svg
             width="12"
             height="12"
@@ -181,11 +175,11 @@ function FileDocumentBar({
             <path d="M15 5v14" />
             <path d={railOpen ? 'm10 9-3 3 3 3' : 'm8 9 3 3-3 3'} />
           </svg>
-        </button>
+        </IconButton>
       ) : null}
-      <button
-        type="button"
-        className="ui-icon-button ui-icon-button-compact shrink-0"
+      <IconButton
+        compact
+        className="shrink-0"
         title="Refresh file and tree"
         aria-label="Refresh file and tree"
         onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT))}
@@ -203,7 +197,7 @@ function FileDocumentBar({
         >
           <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
         </svg>
-      </button>
+      </IconButton>
     </div>
   );
 }
