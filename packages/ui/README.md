@@ -15,7 +15,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 ## Current Components
 
-- Actions: `Button`, `ToolbarButton`, `IconButton`, `IconLink`, `CheckButton`
+- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `IconButton`, `IconLink`, `CheckButton`
 - Status: `Pill`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
@@ -67,9 +67,10 @@ export function MyExtensionPage() {
 Reach for the smallest primitive that covers the interaction before composing a new local control:
 
 - Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
+- Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `IconButton` for square icon-only actions such as close, remove, more, edit, or refresh. Always provide `aria-label` and usually `title`.
 - Use `IconLink` when the same square icon treatment navigates with a real `href`. Prefer it over styling anchors by hand.
-- `Button`, `ToolbarButton`, `IconButton`, `IconLink`, and `CheckButton` forward refs for focus management, anchored menus, and keyboard workflows.
+- `Button`, `ButtonLink`, `ToolbarButton`, `IconButton`, `IconLink`, and `CheckButton` forward refs for focus management, anchored menus, and keyboard workflows.
 - Use `Field` only when the child is a simple form control that can be labeled by wrapping it, such as `TextInput`, `Textarea`, or `Select`. For composite controls containing buttons, compose `FieldLabel` and `FieldHint` in a neutral container instead.
 - Use `TextInput`, `SearchInput`, `Textarea`, and `Select` instead of handwritten bordered controls. Override only sizing/background with `className`.
 - Use `Switch` or `SettingToggleRow` for boolean settings. `SettingToggleRow` is preferred when a title and description are part of the row.

@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 import { api } from '../client/api';
 import { recordClientPerfTimingOnce } from '../client/perfDiagnostics';
 import { Layout } from '../components/Layout';
+import { Button, ButtonLink } from '../components/ui';
 import { bumpConversationScopedEventVersions, INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS } from '../conversation/conversationEventVersions';
 import { resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
 import {
@@ -103,12 +104,12 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
             </div>
           ) : null}
           <div className="mt-5 flex flex-wrap gap-2">
-            <button className="ui-action-button" onClick={() => window.location.reload()}>
+            <Button variant="action" onClick={() => window.location.reload()}>
               Reload application
-            </button>
-            <a href="/conversations/new" className="ui-action-button">
+            </Button>
+            <ButtonLink href="/conversations/new" variant="action">
               New conversation
-            </a>
+            </ButtonLink>
           </div>
         </div>
       </main>

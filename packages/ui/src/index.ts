@@ -6,6 +6,7 @@ export {
   AppPageToc,
   type AppPageTocItem,
   Button,
+  ButtonLink,
   type ButtonTone,
   type ButtonVariant,
   CheckButton,

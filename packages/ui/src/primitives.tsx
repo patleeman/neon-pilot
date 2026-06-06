@@ -55,6 +55,18 @@ export const Button = forwardRef<
   );
 });
 
+export const ButtonLink = forwardRef<
+  HTMLAnchorElement,
+  AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: ButtonVariant; tone?: ButtonTone }
+>(function ButtonLink({ className, children, variant = 'toolbar', tone = 'default', ...props }, ref) {
+  const baseClass = variant === 'action' ? 'ui-action-button' : variant === 'ghost' ? 'ui-ghost-button' : 'ui-toolbar-button';
+  return (
+    <a ref={ref} className={cx(baseClass, buttonToneClass(tone), className)} {...props}>
+      {children}
+    </a>
+  );
+});
+
 export function PageHeader({
   children,
   actions,

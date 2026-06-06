@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   Button,
+  ButtonLink,
   CheckButton,
   CodeBlock,
   cx,
@@ -57,6 +58,14 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-action-button');
     expect(html).toContain('text-danger');
     expect(html).toContain('type="button"');
+  });
+
+  it('maps button links to stable button classes', () => {
+    const html = renderToStaticMarkup(createElement(ButtonLink, { href: '#new', variant: 'action', tone: 'accent' }, 'New'));
+
+    expect(html).toContain('href="#new"');
+    expect(html).toContain('ui-action-button');
+    expect(html).toContain('text-accent');
   });
 
   it('renders check button pressed state', () => {

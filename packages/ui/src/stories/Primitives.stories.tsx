@@ -4,6 +4,7 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
+  ButtonLink,
   CheckButton,
   CodeBlock,
   DataTable,
@@ -65,6 +66,9 @@ const meta = {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <ToolbarButton>Refresh</ToolbarButton>
           <Button variant="action">Open</Button>
+          <ButtonLink href="#open" variant="action">
+            Open Link
+          </ButtonLink>
           <Button tone="accent">Save</Button>
           <Button tone="danger">Delete</Button>
           <IconButton aria-label="More actions">•••</IconButton>

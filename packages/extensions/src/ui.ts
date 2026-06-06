@@ -189,6 +189,7 @@ export declare const FieldError: HostComponent;
 export declare const FieldHint: HostComponent;
 export declare const FieldLabel: HostComponent;
 export declare const FilterToolbar: HostComponent;
+export declare const ButtonLink: HostComponent;
 export declare const IconButton: HostComponent;
 export declare const IconLink: HostComponent;
 export declare const KeyValueItem: HostComponent;
