@@ -35,7 +35,7 @@ import {
   validateTaskForm,
 } from './scheduledTaskPanelModel';
 import { ScheduledTaskPromptText } from './ScheduledTaskPromptText';
-import { CardMeta, CardTitle, cx, ErrorState, LoadingState, Switch, ToolbarButton } from './ui';
+import { CardMeta, CardTitle, cx, ErrorState, LoadingState, Switch, TextButton, ToolbarButton } from './ui';
 
 const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
 const PROMPT_INPUT_CLASS =
@@ -923,13 +923,14 @@ export function ScheduledTaskPanel({
               <p className="ui-detail-value">{formatThreadModeLabel(taskDetail.threadMode)}</p>
               {taskDetail.threadTitle && <CardMeta className="mt-0.5 break-all">{taskDetail.threadTitle}</CardMeta>}
               {taskDetail.threadConversationId && (
-                <button
+                <TextButton
                   type="button"
                   onClick={() => navigate(`/conversations/${encodeURIComponent(taskDetail.threadConversationId)}`)}
-                  className="mt-1 text-[11px] text-accent transition-colors hover:text-accent/80"
+                  tone="accent"
+                  className="mt-1 text-[11px]"
                 >
                   Open thread →
-                </button>
+                </TextButton>
               )}
             </div>
           </div>

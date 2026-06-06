@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { api } from '../client/api';
-import { Spinner } from './ui';
+import { Spinner, TextButton } from './ui';
 
 export function ScheduledTaskLogSection({ taskId }: { taskId: string }) {
   const [log, setLog] = useState<string | null>(null);
@@ -33,10 +33,10 @@ export function ScheduledTaskLogSection({ taskId }: { taskId: string }) {
 
   return (
     <div className="border-t border-border-subtle pt-3">
-      <button onClick={loadLog} className="text-[11px] text-accent hover:underline flex items-center gap-1.5">
+      <TextButton onClick={loadLog} tone="accent" className="flex items-center gap-1.5 text-[11px]">
         {loading ? <Spinner /> : open ? '▾' : '▸'}
         Last run log
-      </button>
+      </TextButton>
       {open && log !== null && (
         <div className="mt-2">
           {logPath && <p className="text-[9px] font-mono text-dim/50 truncate mb-1">{logPath.split('/').slice(-1)[0]}</p>}

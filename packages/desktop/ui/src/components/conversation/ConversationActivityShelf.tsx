@@ -1,7 +1,7 @@
 import { describeDeferredResumeStatus, formatDeferredResumeWhen } from '../../deferred-resume/deferredResumeIndicator';
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
-import { cx, Spinner } from '../ui';
+import { cx, Spinner, TextButton } from '../ui';
 
 function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
   if (task.scheduleType === 'cron' && task.cron) return task.cron;
@@ -130,22 +130,14 @@ export function ConversationActivityShelf({
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       {onRunScheduledTaskNow && task.enabled && !task.running && (
-                        <button
-                          type="button"
-                          onClick={() => onRunScheduledTaskNow(task.id)}
-                          className="text-[11px] text-accent transition-colors hover:text-accent/80"
-                        >
+                        <TextButton type="button" onClick={() => onRunScheduledTaskNow(task.id)} tone="accent" className="text-[11px]">
                           run now
-                        </button>
+                        </TextButton>
                       )}
                       {onOpenScheduledTask && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenScheduledTask(task.id)}
-                          className="text-[11px] text-dim transition-colors hover:text-primary"
-                        >
+                        <TextButton type="button" onClick={() => onOpenScheduledTask(task.id)} className="text-[11px]">
                           open
-                        </button>
+                        </TextButton>
                       )}
                     </div>
                   </div>
@@ -167,9 +159,9 @@ export function ConversationActivityShelf({
               <span className="truncate text-dim">{backgroundExecutionIndicatorText}</span>
             </div>
             <div className="flex shrink-0 items-center gap-3 text-[11px]">
-              <button type="button" onClick={onToggleBackgroundRunDetails} className="text-dim transition-colors hover:text-primary">
+              <TextButton type="button" onClick={onToggleBackgroundRunDetails}>
                 {showBackgroundRunDetails ? 'hide' : 'details'}
-              </button>
+              </TextButton>
             </div>
           </div>
 
@@ -208,27 +200,28 @@ export function ConversationActivityShelf({
                       <div className="mt-0.5 truncate text-[11px] text-dim">{summary}</div>
                     </button>
                     {onOpenBackgroundRun && (
-                      <button
+                      <TextButton
                         type="button"
                         onClick={() => {
                           onOpenBackgroundRun(execution.id);
                         }}
-                        className="shrink-0 text-[11px] text-accent transition-colors hover:text-accent/80"
+                        tone="accent"
+                        className="shrink-0 text-[11px]"
                       >
                         open
-                      </button>
+                      </TextButton>
                     )}
                     {onCancelBackgroundRun && execution.capabilities.canCancel && (
-                      <button
+                      <TextButton
                         type="button"
                         onClick={() => {
                           onCancelBackgroundRun(execution.id);
                         }}
-                        className="shrink-0 text-[11px] text-dim transition-colors hover:text-danger disabled:opacity-40"
+                        className="shrink-0 text-[11px] text-dim hover:text-danger disabled:opacity-40"
                         disabled={cancelling}
                       >
                         {cancelling ? 'cancelling…' : 'cancel'}
-                      </button>
+                      </TextButton>
                     )}
                   </div>
                 );
@@ -248,14 +241,14 @@ export function ConversationActivityShelf({
             </div>
             <div className="flex shrink-0 items-center gap-3 text-[11px]">
               {hasReadyDeferredResumes && !isLiveSession && (
-                <button type="button" onClick={onContinueDeferredResumesNow} className="text-accent transition-colors hover:text-accent/80">
+                <TextButton type="button" onClick={onContinueDeferredResumesNow} tone="accent">
                   continue now
-                </button>
+                </TextButton>
               )}
               {deferredResumesBusy && <span className="text-dim">updating…</span>}
-              <button type="button" onClick={onToggleDeferredResumeDetails} className="text-dim transition-colors hover:text-primary">
+              <TextButton type="button" onClick={onToggleDeferredResumeDetails}>
                 {showDeferredResumeDetails ? 'hide' : 'details'}
-              </button>
+              </TextButton>
             </div>
           </div>
 
@@ -278,27 +271,28 @@ export function ConversationActivityShelf({
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     {resume.status === 'scheduled' && (
-                      <button
+                      <TextButton
                         type="button"
                         onClick={() => {
                           onFireDeferredResumeNow(resume.id);
                         }}
-                        className="text-[11px] text-accent transition-colors hover:text-accent/80 disabled:opacity-40"
+                        tone="accent"
+                        className="text-[11px] disabled:opacity-40"
                         disabled={deferredResumesBusy}
                       >
                         fire now
-                      </button>
+                      </TextButton>
                     )}
-                    <button
+                    <TextButton
                       type="button"
                       onClick={() => {
                         onCancelDeferredResume(resume.id);
                       }}
-                      className="text-[11px] text-dim transition-colors hover:text-danger disabled:opacity-40"
+                      className="text-[11px] text-dim hover:text-danger disabled:opacity-40"
                       disabled={deferredResumesBusy}
                     >
                       cancel
-                    </button>
+                    </TextButton>
                   </div>
                 </div>
               ))}
