@@ -59,6 +59,8 @@ Versions with an `-rc` prerelease suffix are packaged as **Neon Pilot RC** inste
 
 Stable versions keep the existing app name, bundle identifier, and `Neon-Pilot-*` artifact names. Dev/test launches disable update checks so local builds do not consume updater metadata.
 
+The CLI surface is shared by name across channels: the command users and agents run is `neon-pilot`. Channel-local app shells prepend their managed `neon-pilot` launcher first, and global shell installation remains user-controlled through `neon-pilot cli install`.
+
 Users can choose **Settings → App behavior → Update path** to follow either stable releases only or the test path, which allows release candidates and pre-release builds. Fresh RC runtime profiles default to the test path; stable profiles default to stable releases only.
 
 ## Release Flow

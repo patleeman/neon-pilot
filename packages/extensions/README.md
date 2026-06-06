@@ -827,7 +827,7 @@ Core owns the `neon-pilot` CLI shell. Extensions can add administrative commands
 }
 ```
 
-The backend action receives `{ cli: { command, rawArgv, args, flags, json, cwd } }`. Return `{ text }` for human-readable output and structured fields for `--json`. Keep CLI commands coarse and workflow-oriented. Agents should start with `neon-pilot commands --json` and use extension CLI commands for Neon Pilot administration instead of editing runtime files directly.
+The backend action receives `{ action, cli: { command, rawArgv, args, flags, json, cwd } }`, where `action` defaults to the final command token as a convenience hint. Return `{ text }` for human-readable output and structured fields for `--json`. Keep CLI commands coarse and workflow-oriented. Agents should start with `neon-pilot commands --json` and use extension CLI commands for Neon Pilot administration instead of editing runtime files directly. First-party self-administration commands include `extensions ...`, `settings ...`, and `conversations ...`.
 
 ## Storage
 

@@ -19,6 +19,8 @@ Use the `neon-pilot` CLI for Neon Pilot self-administration when it is available
 
    ```sh
    neon-pilot extensions list --json
+   neon-pilot settings list --json
+   neon-pilot conversations list --json
    neon-pilot cli status --json
    ```
 
@@ -35,5 +37,6 @@ Use the `neon-pilot` CLI for Neon Pilot self-administration when it is available
 
 - Core owns the `neon-pilot` CLI shell and built-in commands such as `commands`, `help`, `protocol`, and `cli status/install/uninstall`.
 - Extensions contribute product-specific CLI commands through `contributes.cliCommands`.
+- Built-in system extensions contribute the primary self-administration surfaces: `extensions ...`, `settings ...`, and `conversations ...`.
 - The agent shell receives Neon Pilot's channel-local CLI bin directory automatically. User shell installation is opt-in through `neon-pilot cli install`.
 - Do not edit internal runtime files directly when an extension-contributed CLI command exists for the same operation.
