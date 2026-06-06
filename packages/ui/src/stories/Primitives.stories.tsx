@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 import {
+  ActionTile,
   AppPageIntro,
   AppPageLayout,
   Button,
@@ -233,6 +234,10 @@ const meta = {
             </p>
             <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+              <ActionTile icon="□" label="File Explorer" description="Browse workspace files." />
+              <ActionTile icon="▸" label="Terminal" description="Open a terminal tab." meta="local" />
+            </div>
           </div>
           <StatGrid>
             <Stat label="Installed" value="31" />

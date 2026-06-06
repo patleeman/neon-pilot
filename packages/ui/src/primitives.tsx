@@ -405,6 +405,32 @@ export function InlineMeta({ children, className, ...props }: HTMLAttributes<HTM
   );
 }
 
+export const ActionTile = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    icon?: ReactNode;
+    label: ReactNode;
+    description?: ReactNode;
+    meta?: ReactNode;
+  }
+>(function ActionTile({ className, icon, label, description, meta, children, type = 'button', ...props }, ref) {
+  return (
+    <button ref={ref} type={type} className={cx('ui-action-tile', className)} {...props}>
+      {icon ? (
+        <span className="ui-action-tile-icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
+      <span className="ui-action-tile-main">
+        <span className="ui-action-tile-label">{label}</span>
+        {description ? <span className="ui-action-tile-description">{description}</span> : null}
+        {children}
+      </span>
+      {meta ? <span className="ui-action-tile-meta">{meta}</span> : null}
+    </button>
+  );
+});
+
 export function FilterToolbar({
   filters,
   search,
@@ -1402,7 +1428,7 @@ export function SettingToggleRow({
   switchLabel?: ReactNode;
 } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <SettingsRow title={title} description={description} disabled={disabled} className={className} {...props}>
+    <SettingsRow title={title} description={description} disabled={disabled} className={cx('ui-setting-toggle-row', className)} {...props}>
       <Switch
         checked={checked}
         disabled={disabled}

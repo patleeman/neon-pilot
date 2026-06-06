@@ -54,7 +54,7 @@ import {
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
 import { addNotification, NotificationProvider } from './notifications/notificationStore';
-import { CenteredMessage, cx, IconButton, PanelMessage } from './ui';
+import { ActionTile, CenteredMessage, cx, IconButton, PanelMessage } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
 const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
@@ -880,68 +880,40 @@ function WorkbenchNewTabPage({
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
         <div className="mt-6 grid gap-2 sm:grid-cols-2">
-          <button
-            type="button"
-            className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"
+          <ActionTile
+            icon="□"
+            label="File Explorer"
+            description="Browse workspace files."
             onClick={() => {
               onActiveToolChange(systemFilesExtensionSurface ? extensionToolPanelMode(systemFilesExtensionSurface) : 'files');
               onWorkspaceFileClear();
             }}
-          >
-            <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
-              □
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[13px] font-medium text-primary">File Explorer</span>
-              <span className="mt-1 block text-[12px] leading-5 text-secondary">Browse workspace files.</span>
-            </span>
-          </button>
+          />
           {onStartSideChat && conversationId ? (
-            <button
-              type="button"
+            <ActionTile
               disabled={sideChatStarting}
-              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2 disabled:opacity-40"
+              icon="◌"
+              label={sideChatStarting ? 'Opening...' : 'Chat'}
+              description="Open a new chat tab."
               onClick={handleStartSideChat}
-            >
-              <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
-                ◌
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[13px] font-medium text-primary">{sideChatStarting ? 'Opening…' : 'Chat'}</span>
-                <span className="mt-1 block text-[12px] leading-5 text-secondary">Open a new chat tab.</span>
-              </span>
-            </button>
+            />
           ) : null}
           {systemTerminalExtensionSurface ? (
-            <button
-              type="button"
-              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"
+            <ActionTile
+              icon="▸"
+              label="Terminal"
+              description="Open a terminal tab."
               onClick={() => openTool(systemTerminalExtensionSurface)}
-            >
-              <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
-                ▸
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[13px] font-medium text-primary">Terminal</span>
-                <span className="mt-1 block text-[12px] leading-5 text-secondary">Open a terminal tab.</span>
-              </span>
-            </button>
+            />
           ) : null}
           {availableTools.map((surface) => (
-            <button
+            <ActionTile
               key={`${surface.extensionId}:${surface.id}`}
-              type="button"
-              className="group flex min-h-[76px] items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-left transition hover:border-accent/50 hover:bg-surface-2"
+              icon={iconGlyphForExtensionSurface(surface.icon)}
+              label={labelForExtensionToolPanel(surface)}
+              description="Open in the workbench."
               onClick={() => openTool(surface)}
-            >
-              <span className="w-[18px] shrink-0 text-center text-[14px] opacity-70" aria-hidden="true">
-                {iconGlyphForExtensionSurface(surface.icon)}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] font-medium text-primary">{labelForExtensionToolPanel(surface)}</span>
-                <span className="mt-1 block text-[12px] leading-5 text-secondary">Open in the workbench.</span>
-              </span>
-            </button>
+            />
           ))}
         </div>
       </div>

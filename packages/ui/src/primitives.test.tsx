@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
+  ActionTile,
   Button,
   ButtonLink,
   CheckButton,
@@ -174,6 +175,17 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-resource-list-item-selected');
     expect(html).toContain('Architecture diagram');
     expect(html).toContain('mermaid');
+  });
+
+  it('renders action tiles with icon and description slots', () => {
+    const html = renderToStaticMarkup(
+      createElement(ActionTile, { icon: '▸', label: 'Terminal', description: 'Open a terminal tab.', meta: 'local' }),
+    );
+
+    expect(html).toContain('ui-action-tile');
+    expect(html).toContain('ui-action-tile-icon');
+    expect(html).toContain('Terminal');
+    expect(html).toContain('Open a terminal tab.');
   });
 
   it('renders code blocks with wrapping controls', () => {

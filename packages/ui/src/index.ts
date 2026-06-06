@@ -1,4 +1,5 @@
 export {
+  ActionTile,
   AppPageEmptyState,
   AppPageIntro,
   AppPageLayout,
