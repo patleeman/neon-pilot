@@ -1341,6 +1341,19 @@ export function Layout() {
   }, []);
 
   const effectiveSidebarOpen = sidebarOpen;
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.getPropertyValue('--neon-pilot-sidebar-offset');
+    root.style.setProperty('--neon-pilot-sidebar-offset', effectiveSidebarOpen ? `${sidebar.width}px` : '0px');
+    return () => {
+      if (previous) {
+        root.style.setProperty('--neon-pilot-sidebar-offset', previous);
+      } else {
+        root.style.removeProperty('--neon-pilot-sidebar-offset');
+      }
+    };
+  }, [effectiveSidebarOpen, sidebar.width]);
+
   const showWorkbench = appLayoutMode === 'workbench' && routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const canToggleWorkbench = routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const activeWorkbenchKnowledgeFileId = showWorkbench
