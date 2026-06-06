@@ -29,6 +29,7 @@ import {
   FolderIcon,
   IconButton,
   IconLink,
+  KeyboardShortcutCaptureInput,
   KeyValueItem,
   KeyValueList,
   KeyValueTable,
@@ -66,6 +67,7 @@ import {
   TextInput,
   TerminalBlock,
   Tooltip,
+  formatKeyboardShortcutLabel,
 } from './primitives';
 
 describe('design-system primitives', () => {
@@ -250,6 +252,13 @@ describe('design-system primitives', () => {
 
   it('renders checkbox with design-system class', () => {
     expect(renderToStaticMarkup(createElement(Checkbox, { checked: true, readOnly: true }))).toContain('ui-checkbox');
+  });
+
+  it('renders shortcut capture with formatted shortcut labels', () => {
+    expect(formatKeyboardShortcutLabel('CommandOrControl+Shift+P')).toBe('⌘/Ctrl + Shift + P');
+    expect(renderToStaticMarkup(createElement(KeyboardShortcutCaptureInput, { value: 'CommandOrControl+Shift+P', onChange: () => undefined }))).toContain(
+      'ui-shortcut-capture',
+    );
   });
 
   it('renders filter toolbars with filters and search slots', () => {

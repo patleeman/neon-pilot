@@ -7,6 +7,7 @@ import {
   forwardRef,
   type HTMLAttributes,
   type InputHTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
   type LabelHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -2059,6 +2060,213 @@ export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInp
 ) {
   return <input ref={ref} type={type} className={cx('ui-checkbox', className)} {...props} />;
 });
+
+const SHORTCUT_KEY_LABELS: Record<string, string> = {
+  Plus: '+',
+  Space: 'Space',
+  Minus: '-',
+  Comma: ',',
+  Period: '.',
+  Semicolon: ';',
+  Quote: "'",
+  BracketLeft: '[',
+  BracketRight: ']',
+  Backslash: '\\\\',
+  Slash: '/',
+  Backquote: '`',
+  IntlBackslash: '\\',
+};
+
+export function formatKeyboardShortcutLabel(shortcut: string) {
+  const labels = shortcut.split('+').map((part) => {
+    const trimmed = part.trim();
+    if (trimmed === 'CommandOrControl') return '⌘/Ctrl';
+    if (trimmed === 'Command') return '⌘';
+    if (trimmed === 'Control') return 'Ctrl';
+    if (trimmed === 'Shift') return 'Shift';
+    if (trimmed === 'Alt') return 'Alt';
+    if (trimmed === 'Meta') return 'Meta';
+    return SHORTCUT_KEY_LABELS[trimmed] ?? trimmed;
+  });
+  return labels.join(' + ');
+}
+
+function normalizeKeyboardShortcutKey(event: ReactKeyboardEvent): string | null {
+  if (/^Key[A-Z]$/.test(event.code)) return event.code.slice(3);
+  if (/^Digit[0-9]$/.test(event.code)) return event.code.slice(5);
+  if (/^F(?:[1-9]|1[0-9]|2[0-4])$/.test(event.code)) return event.code;
+
+  switch (event.code) {
+    case 'Space':
+      return 'Space';
+    case 'Tab':
+      return 'Tab';
+    case 'Enter':
+    case 'NumpadEnter':
+      return 'Enter';
+    case 'Escape':
+      return 'Escape';
+    case 'Backspace':
+      return 'Backspace';
+    case 'Delete':
+      return 'Delete';
+    case 'Insert':
+      return 'Insert';
+    case 'Home':
+      return 'Home';
+    case 'End':
+      return 'End';
+    case 'PageUp':
+      return 'PageUp';
+    case 'PageDown':
+      return 'PageDown';
+    case 'ArrowUp':
+      return 'Up';
+    case 'ArrowDown':
+      return 'Down';
+    case 'ArrowLeft':
+      return 'Left';
+    case 'ArrowRight':
+      return 'Right';
+    case 'Minus':
+      return '-';
+    case 'Equal':
+      return '=';
+    case 'BracketLeft':
+      return '[';
+    case 'BracketRight':
+      return ']';
+    case 'Backslash':
+      return '\\';
+    case 'Semicolon':
+      return ';';
+    case 'Quote':
+      return "'";
+    case 'Comma':
+      return ',';
+    case 'Period':
+      return '.';
+    case 'Slash':
+      return '/';
+    case 'Backquote':
+      return '`';
+    case 'NumpadAdd':
+      return 'Plus';
+    case 'NumpadSubtract':
+      return '-';
+    case 'NumpadMultiply':
+      return '*';
+    case 'NumpadDivide':
+      return '/';
+    case 'NumpadDecimal':
+      return '.';
+    default:
+      if (/^Numpad[0-9]$/.test(event.code)) return event.code.slice(6);
+      return null;
+  }
+}
+
+function resolveKeyboardShortcutFromEvent(event: ReactKeyboardEvent): string | null {
+  const key = normalizeKeyboardShortcutKey(event);
+  if (!key) return null;
+
+  const parts: string[] = [];
+  if (event.metaKey || event.ctrlKey) parts.push('CommandOrControl');
+  if (event.altKey) parts.push('Alt');
+  if (event.shiftKey) parts.push('Shift');
+
+  if (parts.length === 0 && !/^F(?:[1-9]|1[0-9]|2[0-4])$/.test(key)) {
+    return null;
+  }
+
+  parts.push(key);
+  return parts.join('+');
+}
+
+export function KeyboardShortcutCaptureInput({
+  id,
+  value,
+  placeholder,
+  disabled,
+  reservedHint = 'Some shortcuts are reserved by the app and cannot be captured here.',
+  onChange,
+  className,
+}: {
+  id?: string;
+  value: string;
+  placeholder?: string;
+  disabled?: boolean;
+  reservedHint?: ReactNode;
+  onChange: (shortcut: string) => void;
+  className?: string;
+}) {
+  const [capturing, setCapturing] = useState(false);
+  const [invalid, setInvalid] = useState(false);
+
+  return (
+    <button
+      id={id}
+      type="button"
+      disabled={disabled}
+      onClick={() => {
+        setCapturing(true);
+        setInvalid(false);
+      }}
+      onBlur={() => {
+        setCapturing(false);
+        setInvalid(false);
+      }}
+      onKeyDown={(event) => {
+        if (!capturing) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setCapturing(true);
+            setInvalid(false);
+          }
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (event.key === 'Escape') {
+          setCapturing(false);
+          setInvalid(false);
+          return;
+        }
+
+        const shortcut = resolveKeyboardShortcutFromEvent(event);
+        if (!shortcut) {
+          setInvalid(true);
+          return;
+        }
+
+        setInvalid(false);
+        setCapturing(false);
+        onChange(shortcut);
+      }}
+      className={cx('ui-shortcut-capture', capturing && 'ui-shortcut-capture-capturing', invalid && 'ui-shortcut-capture-invalid', className)}
+      aria-label={
+        capturing
+          ? 'Press a keyboard shortcut'
+          : value
+            ? `Keyboard shortcut ${formatKeyboardShortcutLabel(value)}`
+            : (placeholder ?? 'No shortcut assigned')
+      }
+    >
+      <span className={cx('ui-shortcut-capture-value', !value && !capturing && 'ui-shortcut-capture-placeholder')}>
+        {capturing
+          ? invalid
+            ? 'Use a modifier, or press an F-key...'
+            : 'Press shortcut...'
+          : value
+            ? formatKeyboardShortcutLabel(value)
+            : (placeholder ?? 'No shortcut assigned')}
+      </span>
+      {capturing && reservedHint ? <span className="ui-shortcut-capture-hint">{reservedHint}</span> : null}
+    </button>
+  );
+}
 
 export function Field({
   label,

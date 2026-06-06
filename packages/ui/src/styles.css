@@ -2450,6 +2450,75 @@ body {
   opacity: 0.5;
 }
 
+.ui-shortcut-capture {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid rgb(var(--color-border-subtle));
+  background: rgb(var(--color-elevated));
+  color: rgb(var(--color-primary));
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ui-shortcut-capture:hover,
+.ui-shortcut-capture:focus-visible {
+  border-color: rgb(var(--color-accent) / 0.5);
+  background: rgb(var(--color-surface));
+  outline: none;
+}
+
+.ui-shortcut-capture:focus-visible {
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
+}
+
+.ui-shortcut-capture:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ui-shortcut-capture-capturing {
+  border-color: rgb(var(--color-accent) / 0.6);
+  background: rgb(var(--color-surface));
+}
+
+.ui-shortcut-capture-invalid {
+  border-color: rgb(var(--color-danger) / 0.7);
+}
+
+.ui-shortcut-capture-value {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-shortcut-capture-placeholder {
+  color: rgb(var(--color-dim));
+}
+
+.ui-shortcut-capture-capturing .ui-shortcut-capture-value {
+  color: rgb(var(--color-accent));
+}
+
+.ui-shortcut-capture-invalid .ui-shortcut-capture-value {
+  color: rgb(var(--color-danger));
+}
+
+.ui-shortcut-capture-hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: rgb(var(--color-warning));
+  font-size: 0.625rem;
+  line-height: 1.1;
+}
+
 .ui-search-input {
   appearance: none;
   padding-left: 0.75rem;

@@ -45,6 +45,7 @@ import {
   InlineCode,
   InlineMeta,
   Keycap,
+  KeyboardShortcutCaptureInput,
   KeyValueItem,
   KeyValueList,
   KeyValueTable,
@@ -290,6 +291,9 @@ const meta = {
           </Field>
           <Field label="Auto-run">
             <Checkbox defaultChecked aria-label="Auto-run" />
+          </Field>
+          <Field label="Shortcut" hint="Use for settings and command keybinding editors.">
+            <KeyboardShortcutCaptureInput value="CommandOrControl+Shift+P" onChange={() => undefined} />
           </Field>
           <Switch checked label="Enabled" />
         </SurfacePanel>

@@ -20,6 +20,7 @@ import {
   getDesktopBridge,
   groupModelsByProvider,
   isDesktopShell,
+  KeyboardShortcutCaptureInput,
   type ModelEditorDraft,
   type ModelProviderApi,
   type ModelProviderConfig,
@@ -53,10 +54,10 @@ import {
   useApi,
   useExtensionRegistry,
   useTheme,
+  formatKeyboardShortcutLabel,
 } from '@neon-pilot/extensions/settings';
 import {
   createContext,
-  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   useCallback,
   useContext,
@@ -67,8 +68,6 @@ import {
 } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const SHORTCUT_CAPTURE_CLASS =
-  'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
 const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
 const ICON_BUTTON_CLASS =
   'ui-toolbar-button inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-0 text-[14px] shadow-none';
@@ -513,213 +512,6 @@ function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | nul
     : 'Neon Pilot only starts when you open it manually.';
 }
 
-const SHORTCUT_KEY_LABELS: Record<string, string> = {
-  Plus: '+',
-  Space: 'Space',
-  Minus: '-',
-  Comma: ',',
-  Period: '.',
-  Semicolon: ';',
-  Quote: "'",
-  BracketLeft: '[',
-  BracketRight: ']',
-  Backslash: '\\\\',
-  Slash: '/',
-  Backquote: '`',
-  IntlBackslash: '\\',
-};
-
-function formatKeyboardShortcutLabel(shortcut: string): string {
-  const labels = shortcut.split('+').map((part) => {
-    const trimmed = part.trim();
-    if (trimmed === 'CommandOrControl') return '⌘/Ctrl';
-    if (trimmed === 'Command') return '⌘';
-    if (trimmed === 'Control') return 'Ctrl';
-    if (trimmed === 'Shift') return 'Shift';
-    if (trimmed === 'Alt') return 'Alt';
-    if (trimmed === 'Meta') return 'Meta';
-    return SHORTCUT_KEY_LABELS[trimmed] ?? trimmed;
-  });
-  return labels.join(' + ');
-}
-
-function normalizeKeyboardShortcutKey(event: ReactKeyboardEvent): string | null {
-  if (/^Key[A-Z]$/.test(event.code)) return event.code.slice(3);
-  if (/^Digit[0-9]$/.test(event.code)) return event.code.slice(5);
-  if (/^F(?:[1-9]|1[0-9]|2[0-4])$/.test(event.code)) return event.code;
-
-  switch (event.code) {
-    case 'Space':
-      return 'Space';
-    case 'Tab':
-      return 'Tab';
-    case 'Enter':
-    case 'NumpadEnter':
-      return 'Enter';
-    case 'Escape':
-      return 'Escape';
-    case 'Backspace':
-      return 'Backspace';
-    case 'Delete':
-      return 'Delete';
-    case 'Insert':
-      return 'Insert';
-    case 'Home':
-      return 'Home';
-    case 'End':
-      return 'End';
-    case 'PageUp':
-      return 'PageUp';
-    case 'PageDown':
-      return 'PageDown';
-    case 'ArrowUp':
-      return 'Up';
-    case 'ArrowDown':
-      return 'Down';
-    case 'ArrowLeft':
-      return 'Left';
-    case 'ArrowRight':
-      return 'Right';
-    case 'Minus':
-      return '-';
-    case 'Equal':
-      return '=';
-    case 'BracketLeft':
-      return '[';
-    case 'BracketRight':
-      return ']';
-    case 'Backslash':
-      return '\\';
-    case 'Semicolon':
-      return ';';
-    case 'Quote':
-      return "'";
-    case 'Comma':
-      return ',';
-    case 'Period':
-      return '.';
-    case 'Slash':
-      return '/';
-    case 'Backquote':
-      return '`';
-    case 'NumpadAdd':
-      return 'Plus';
-    case 'NumpadSubtract':
-      return '-';
-    case 'NumpadMultiply':
-      return '*';
-    case 'NumpadDivide':
-      return '/';
-    case 'NumpadDecimal':
-      return '.';
-    default:
-      if (/^Numpad[0-9]$/.test(event.code)) return event.code.slice(6);
-      return null;
-  }
-}
-
-function resolveKeyboardShortcutFromEvent(event: ReactKeyboardEvent): string | null {
-  const key = normalizeKeyboardShortcutKey(event);
-  if (!key) return null;
-
-  const parts: string[] = [];
-  if (event.metaKey || event.ctrlKey) parts.push('CommandOrControl');
-  if (event.altKey) parts.push('Alt');
-  if (event.shiftKey) parts.push('Shift');
-
-  if (parts.length === 0 && !/^F(?:[1-9]|1[0-9]|2[0-4])$/.test(key)) {
-    return null;
-  }
-
-  parts.push(key);
-  return parts.join('+');
-}
-
-function KeyboardShortcutCaptureInput({
-  id,
-  value,
-  placeholder,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  value: string;
-  placeholder?: string;
-  disabled?: boolean;
-  onChange: (shortcut: string) => void;
-}) {
-  const [capturing, setCapturing] = useState(false);
-  const [invalid, setInvalid] = useState(false);
-
-  return (
-    <button
-      id={id}
-      type="button"
-      disabled={disabled}
-      onClick={() => {
-        setCapturing(true);
-        setInvalid(false);
-      }}
-      onBlur={() => {
-        setCapturing(false);
-        setInvalid(false);
-      }}
-      onKeyDown={(event) => {
-        if (!capturing) {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            setCapturing(true);
-            setInvalid(false);
-          }
-          return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (event.key === 'Escape') {
-          setCapturing(false);
-          setInvalid(false);
-          return;
-        }
-
-        const shortcut = resolveKeyboardShortcutFromEvent(event);
-        if (!shortcut) {
-          setInvalid(true);
-          return;
-        }
-
-        setInvalid(false);
-        setCapturing(false);
-        onChange(shortcut);
-      }}
-      className={cx(SHORTCUT_CAPTURE_CLASS, 'text-left', capturing && 'border-accent/60 bg-surface', invalid && 'border-danger/70')}
-      aria-label={
-        capturing
-          ? 'Press a keyboard shortcut'
-          : value
-            ? `Keyboard shortcut ${formatKeyboardShortcutLabel(value)}`
-            : (placeholder ?? 'No shortcut assigned')
-      }
-    >
-      <span className={cx('block truncate', !value && !capturing && 'text-dim', capturing && 'text-accent', invalid && 'text-danger')}>
-        {capturing
-          ? invalid
-            ? 'Use a modifier, or press an F-key…'
-            : 'Press shortcut…'
-          : value
-            ? formatKeyboardShortcutLabel(value)
-            : (placeholder ?? 'No shortcut assigned')}
-      </span>
-      {capturing ? (
-        <span className="mt-1 block text-[10px] leading-tight text-warning">
-          Some shortcuts (Cmd+Q, Cmd+W, Cmd+N) are reserved by the app and cannot be captured here. Use the desktop app menu to change them.
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
 export function DesktopKeyboardShortcutsSettingsSection() {
   const [preferencesState, setPreferencesState] = useState<DesktopAppPreferencesState | null>(null);
   const [draft, setDraft] = useState<DesktopAppPreferencesState['keyboardShortcuts']>(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS);
@@ -888,6 +680,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
                       <KeyboardShortcutCaptureInput
                         id={`settings-keyboard-${item.id}`}
                         value={item.enabled === false ? 'Disabled' : shortcutValue}
+                        reservedHint="Some shortcuts (Cmd+Q, Cmd+W, Cmd+N) are reserved by the app and cannot be captured here. Use the desktop app menu to change them."
                         onChange={(shortcut) => {
                           if (editableId) {
                             const nextDraft = { ...draft, [editableId]: shortcut };
@@ -1090,6 +883,7 @@ export function CommandsSettingsSection() {
                       value={keybinding.enabled ? value : ''}
                       placeholder={keybinding.enabled ? 'Click to record shortcut' : 'Shortcut disabled'}
                       disabled={busy}
+                      reservedHint="Some shortcuts (Cmd+Q, Cmd+W, Cmd+N) are reserved by the app and cannot be captured here. Use the desktop app menu to change them."
                       onChange={(shortcut) => {
                         setDrafts((current) => ({ ...current, [id]: shortcut }));
                         void saveKeybinding(keybinding, shortcut);
