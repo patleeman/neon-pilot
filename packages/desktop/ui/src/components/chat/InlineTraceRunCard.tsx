@@ -123,14 +123,9 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
         <button type="button" onClick={onToggle} aria-expanded={expanded} className="min-w-0 flex-1 text-left">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {detailRun && (
-              <span
-                className={cx(
-                  'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[8px] uppercase tracking-wider',
-                  runIsShell ? 'border-accent/20 text-accent/70 font-mono' : 'border-accent/20 text-accent',
-                )}
-              >
+              <MetaLabel tone="accent" className={cx('rounded-md border border-accent/20 px-1.5 py-0.5', runIsShell && 'font-mono')}>
                 {runIsShell ? '›_ Shell' : '✦ Agent'}
-              </span>
+              </MetaLabel>
             )}
             <Pill tone={status.tone}>{status.text}</Pill>
             <span className="truncate text-[12px] font-medium text-primary">{headline.title}</span>

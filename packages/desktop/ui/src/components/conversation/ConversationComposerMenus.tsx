@@ -4,7 +4,7 @@ import type { SlashMenuItem } from '../../commands/slashMenu';
 import { filterMentionItems, MAX_MENTION_MENU_ITEMS, type MentionItem } from '../../conversation/conversationMentions';
 import { getModelSelectionValue, groupModelsByProvider } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
-import { cx, IconButton, Pill, SectionLabel } from '../ui';
+import { cx, IconButton, MenuGroupLabel, MetaLabel, Pill, SectionLabel } from '../ui';
 
 const useMenuLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -45,7 +45,7 @@ export function ModelPicker({
       ) : (
         groups.map(([provider, providerModels]) => (
           <div key={provider}>
-            <p className="px-3 pt-2 pb-0.5 text-[9px] uppercase tracking-widest text-dim/60 font-semibold">{provider}</p>
+            <MenuGroupLabel className="px-3 pt-2 pb-0.5">{provider}</MenuGroupLabel>
             {providerModels.map((model) => {
               const modelValue = getModelSelectionValue(model, allModels);
               const isCurrent = modelValue === currentModel;
@@ -111,7 +111,7 @@ export function SlashMenu({ items, idx, onSelect }: { items: SlashMenuItem[]; id
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 max-w-[26rem] truncate whitespace-nowrap font-mono text-[12px] text-accent">{item.displayCmd}</span>
-              {item.source && <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-dim/60">{item.source}</span>}
+              {item.source && <MetaLabel tone="muted">{item.source}</MetaLabel>}
             </div>
             <p className="mt-0.5 truncate text-[12px] text-dim/90">{item.desc}</p>
           </div>

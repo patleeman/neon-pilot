@@ -1,7 +1,7 @@
 import { describeDeferredResumeStatus, formatDeferredResumeWhen } from '../../deferred-resume/deferredResumeIndicator';
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
-import { cx, Spinner, TextButton } from '../ui';
+import { cx, MetaLabel, Spinner, TextButton } from '../ui';
 
 function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
   if (task.scheduleType === 'cron' && task.cron) return task.cron;
@@ -195,7 +195,7 @@ export function ConversationActivityShelf({
                       <div className="flex min-w-0 items-center gap-2">
                         <span className={cx('shrink-0 font-medium', statusClass)}>{statusLabel}</span>
                         <span className="truncate text-primary">{execution.title}</span>
-                        <span className="shrink-0 text-[9px] uppercase tracking-wider text-dim/60">{command ? 'Bash' : 'Agent'}</span>
+                        <MetaLabel tone="muted">{command ? 'Bash' : 'Agent'}</MetaLabel>
                       </div>
                       <div className="mt-0.5 truncate text-[11px] text-dim">{summary}</div>
                     </button>
