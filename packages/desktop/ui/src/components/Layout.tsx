@@ -1468,9 +1468,15 @@ export function Layout() {
       extensionRightToolPanels.find((surface) => surface.extensionId === parsed.extensionId && surface.id === parsed.surfaceId) ?? null
     );
   }, [activeWorkbenchTool, extensionRightToolPanels]);
+  const activeWorkbenchToolSlot = activeWorkbenchToolPanel ? inferSurfaceToolSlot(activeWorkbenchToolPanel) : activeWorkbenchTool;
+  const activeWorkbenchHasPairedDocument =
+    !((activeWorkbenchTool === 'files' || activeWorkbenchToolSlot === 'files') && !activeWorkbenchWorkspaceFileId) &&
+    !(activeWorkbenchToolSlot === 'knowledge' && !activeWorkbenchKnowledgeFileId) &&
+    !(isArtifactsRailMode(activeWorkbenchTool) && !activeWorkbenchArtifactId);
   const activeWorkbenchRailSurface =
     showWorkbench &&
     !isNewWorkbenchTabMode(activeWorkbenchTool) &&
+    activeWorkbenchHasPairedDocument &&
     activeExtensionWorkbenchSurface &&
     !isSinglePaneWorkbenchMode(activeWorkbenchTool, activeWorkbenchToolPanel)
       ? activeWorkbenchToolPanel
