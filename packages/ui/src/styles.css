@@ -1426,7 +1426,7 @@ body {
   gap: 0.875rem;
 }
 
-.ui-setting-toggle-row {
+.ui-settings-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1437,27 +1437,31 @@ body {
   padding: 0.75rem;
 }
 
-.ui-setting-toggle-row-disabled {
+.ui-settings-row-disabled {
   opacity: 0.7;
 }
 
-.ui-setting-toggle-row-copy {
+.ui-settings-row-copy {
   min-width: 0;
   display: grid;
   gap: 0.25rem;
 }
 
-.ui-setting-toggle-row-title {
+.ui-settings-row-title {
   color: rgb(var(--color-primary));
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.25rem;
 }
 
-.ui-setting-toggle-row-description {
+.ui-settings-row-description {
   color: rgb(var(--color-secondary));
   font-size: 0.75rem;
   line-height: 1.25rem;
+}
+
+.ui-settings-row-actions {
+  flex-shrink: 0;
 }
 
 @media (min-width: 960px) {

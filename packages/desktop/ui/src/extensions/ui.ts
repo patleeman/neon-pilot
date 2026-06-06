@@ -69,6 +69,7 @@ export {
   type SectionLabelTone,
   SegmentedControl,
   Select,
+  SettingsRow,
   SettingToggleRow,
   SettingsSection,
   Spinner,

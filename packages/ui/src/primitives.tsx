@@ -1276,6 +1276,35 @@ export function SettingsSection({
   );
 }
 
+export function SettingsRow({
+  title,
+  description,
+  children,
+  disabled = false,
+  className,
+  copyClassName,
+  actionsClassName,
+  ...props
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+  copyClassName?: string;
+  actionsClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-settings-row', disabled && 'ui-settings-row-disabled', className)} {...props}>
+      <div className={cx('ui-settings-row-copy', copyClassName)}>
+        <div className="ui-settings-row-title">{title}</div>
+        {description ? <div className="ui-settings-row-description">{description}</div> : null}
+      </div>
+      {children ? <div className={cx('ui-settings-row-actions', actionsClassName)}>{children}</div> : null}
+    </div>
+  );
+}
+
 export function SettingToggleRow({
   title,
   description,
@@ -1295,11 +1324,7 @@ export function SettingToggleRow({
   switchLabel?: ReactNode;
 } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cx('ui-setting-toggle-row', disabled && 'ui-setting-toggle-row-disabled', className)} {...props}>
-      <div className="ui-setting-toggle-row-copy">
-        <div className="ui-setting-toggle-row-title">{title}</div>
-        {description ? <div className="ui-setting-toggle-row-description">{description}</div> : null}
-      </div>
+    <SettingsRow title={title} description={description} disabled={disabled} className={className} {...props}>
       <Switch
         checked={checked}
         disabled={disabled}
@@ -1307,7 +1332,7 @@ export function SettingToggleRow({
         aria-label={switchLabel ? undefined : typeof title === 'string' ? title : 'Toggle setting'}
         onClick={() => onCheckedChange(!checked)}
       />
-    </div>
+    </SettingsRow>
   );
 }
 

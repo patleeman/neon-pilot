@@ -68,6 +68,7 @@ export {
   SegmentedControl,
   type SegmentedControlOption,
   Select,
+  SettingsRow,
   SettingToggleRow,
   SettingsSection,
   Spinner,

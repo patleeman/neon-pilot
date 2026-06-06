@@ -46,6 +46,7 @@ import {
   SectionLabel,
   SegmentedControl,
   Select,
+  SettingsRow,
   SettingToggleRow,
   SettingsSection,
   Spinner,
@@ -275,6 +276,15 @@ const meta = {
         <h2 style={{ margin: 0, fontSize: 18 }}>Settings Section</h2>
         <SurfacePanel style={{ padding: 16 }}>
           <SettingsSection title="Runtime" description="Use this pattern for extension settings and editor forms.">
+            <SettingsRow
+              title="Update path"
+              description="Use settings rows when a setting needs copy plus a trailing control, button, or select."
+            >
+              <Select defaultValue="stable" style={{ minWidth: 180 }}>
+                <option value="stable">Stable</option>
+                <option value="test">Test</option>
+              </Select>
+            </SettingsRow>
             <SettingToggleRow
               title="Enable workflow"
               description="Use toggle rows for settings that need a title, supporting copy, and switch control."
