@@ -1,4 +1,4 @@
-import { cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CardBody, CardMeta, CardTitle, cx, Pill, SurfacePanel } from '@neon-pilot/extensions/ui';
 import { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React from 'react';
 
@@ -67,15 +67,15 @@ function CheckpointFallbackToolBlock({ block }: { block: CheckpointTranscriptBlo
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="truncate text-[13px] font-medium text-primary">{title}</span>
+            <CardTitle as="span" className="truncate">
+              {title}
+            </CardTitle>
             <Pill tone={isError ? 'danger' : 'success'} mono>
               {action}
             </Pill>
-            {isRunning ? <span className="text-[10px] text-dim">running…</span> : null}
+            {isRunning ? <CardMeta as="span">running…</CardMeta> : null}
           </div>
-          {message || paths.length > 0 ? (
-            <p className="mt-2 text-[11px] leading-relaxed text-secondary">{message ?? paths.join(', ')}</p>
-          ) : null}
+          {message || paths.length > 0 ? <CardBody className="mt-2 leading-relaxed">{message ?? paths.join(', ')}</CardBody> : null}
           {output ? (
             <pre
               className={cx('mt-2 whitespace-pre-wrap break-words text-[11px] leading-relaxed', isError ? 'text-danger/85' : 'text-dim')}

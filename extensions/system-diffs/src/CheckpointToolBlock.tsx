@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { CheckpointInlineDiff, cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CardMeta, CardTitle, CheckpointInlineDiff, cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
 import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo, useState } from 'react';
 
@@ -49,13 +49,13 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
           >
             <span className="min-w-0 flex-1">
               <span className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="truncate text-[13px] font-medium text-primary">{checkpoint.subject}</span>
+                <CardTitle as="span" className="truncate">
+                  {checkpoint.subject}
+                </CardTitle>
                 <Pill tone={isError ? 'danger' : 'success'} mono>
                   {checkpoint.shortSha}
                 </Pill>
-                {typeof checkpoint.fileCount === 'number' ? (
-                  <span className="text-[10px] text-dim">{checkpoint.fileCount} files</span>
-                ) : null}
+                {typeof checkpoint.fileCount === 'number' ? <CardMeta as="span">{checkpoint.fileCount} files</CardMeta> : null}
               </span>
               <span className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px]">
                 {typeof checkpoint.linesAdded === 'number' && typeof checkpoint.linesDeleted === 'number' ? (

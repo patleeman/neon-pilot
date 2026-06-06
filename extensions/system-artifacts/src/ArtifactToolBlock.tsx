@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { CardBody, cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CardBody, CardMeta, CardTitle, cx, InlineMeta, Pill, Spinner, SurfacePanel, TextButton } from '@neon-pilot/extensions/ui';
 import { memo } from 'react';
 
 export const ArtifactToolBlock = memo(function ArtifactToolBlock({
@@ -26,13 +26,15 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="truncate text-[13px] font-medium text-primary">{artifact.title}</span>
+            <CardTitle as="span" className="truncate">
+              {artifact.title}
+            </CardTitle>
             <Pill tone={isError ? 'danger' : 'accent'} mono>
               {artifact.kind}
             </Pill>
-            {artifact.revision !== undefined && <span className="text-[10px] text-dim">rev {artifact.revision}</span>}
+            {artifact.revision !== undefined && <CardMeta as="span">rev {artifact.revision}</CardMeta>}
           </div>
-          <p className="mt-1 break-all font-mono text-[11px] text-secondary">{artifact.artifactId}</p>
+          <CardMeta className="mt-1 break-all font-mono text-secondary">{artifact.artifactId}</CardMeta>
           {block.output && !isError && <CardBody className="mt-2 leading-relaxed">{block.output}</CardBody>}
           {isError && block.output && <p className="mt-2 text-[12px] leading-relaxed text-danger/85">{block.output}</p>}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px]">
@@ -42,17 +44,15 @@ export const ArtifactToolBlock = memo(function ArtifactToolBlock({
                 saving artifact…
               </InlineMeta>
             ) : (
-              <button
+              <TextButton
                 type="button"
                 onClick={() => onOpenArtifact?.(artifact.artifactId ?? '')}
                 disabled={!onOpenArtifact}
-                className={cx(
-                  'text-accent transition-colors hover:text-accent/80 disabled:cursor-default disabled:text-dim',
-                  isActive && 'text-dim hover:text-dim',
-                )}
+                tone="accent"
+                className={cx('disabled:cursor-default disabled:text-dim', isActive && 'text-dim hover:text-dim')}
               >
                 {actionLabel}
-              </button>
+              </TextButton>
             )}
             {artifact.updatedAt && <InlineMeta>updated {timeAgo(artifact.updatedAt)}</InlineMeta>}
           </div>
