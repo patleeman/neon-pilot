@@ -161,6 +161,7 @@ The manifest declares what your extension contributes:
 | `views`                       | UI surfaces (pages, panels, sidebar replacements)                                             | See `docs/views.md`                                                                       |
 | `nav`                         | Left sidebar navigation items; can reference a sidebar view with `sidebarView`                 |                                                                                           |
 | `commands`                    | Extension actions invokable by command IDs                                                    | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
+| `cliCommands`                 | Product administration commands contributed to the `neon-pilot` CLI                           | [See below](#cli-commands-clicommands)                                                    |
 | `keybindings`                 | Keyboard shortcuts that execute commands                                                      | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `slashCommands`               | `/command` in composer                                                                        |                                                                                           |
 | `tools`                       | Agent-callable tools                                                                          |                                                                                           |
@@ -517,6 +518,31 @@ The backend action receives:
 The action can return a string, `{ prompt }`, or `{ text }` to send a generated prompt; `{ replaceComposerText }` or `{ appendComposerText }` to update the composer without sending; `{ notice: { text, tone } }` to show feedback; or any other object/empty result to mark the command handled.
 
 Use `slashCommands` for composer-triggered extension code. Use `pi.registerCommand(...)` inside `backend.agentExtension` only when the command must run inside the live agent session runtime; that does not automatically make the command appear in the composer slash menu.
+
+### CLI Commands (`cliCommands`)
+
+Core owns the `neon-pilot` CLI shell. Extensions contribute product-specific verbs with `contributes.cliCommands`; the CLI discovers enabled extensions and routes matching commands to the declared backend action through the extension host boundary.
+
+```json
+{
+  "backend": {
+    "actions": [{ "id": "manageExample", "handler": "manageExample" }]
+  },
+  "contributes": {
+    "cliCommands": [
+      {
+        "id": "example-list",
+        "command": "example list",
+        "description": "List example records.",
+        "action": "manageExample",
+        "jsonDefault": true
+      }
+    ]
+  }
+}
+```
+
+The action receives `{ cli: { command, rawArgv, args, flags, json, cwd } }`. Return `{ text }` for human output and structured fields for `--json`. Keep CLI commands coarse and administrative; do not expose every UI button as a command. Agents should discover commands with `neon-pilot commands --json` and prefer extension-contributed CLI commands over direct runtime file edits.
 
 ### Quick-open surfaces (`quickOpen`)
 

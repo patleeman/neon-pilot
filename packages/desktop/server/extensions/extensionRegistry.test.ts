@@ -16,6 +16,7 @@ import {
   isExtensionEnabled,
   invalidateExtensionRegistryReadCaches,
   listExtensionAssemblyProviderRegistrations,
+  listExtensionCliCommandRegistrations,
   listExtensionCommandRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionInstallSummaries,
@@ -117,6 +118,48 @@ describe('extension registry', () => {
 
     const commands = listExtensionCommandRegistrations().filter((command) => command.extensionId === 'backend-only');
     expect(commands.map((command) => command.surfaceId)).toEqual(['visible']);
+
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  it('indexes extension-contributed CLI commands for enabled extensions', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'cli-owner');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'cli-owner',
+        name: 'CLI Owner',
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'manage', title: 'Manage', handler: 'manage' }] },
+        contributes: {
+          cliCommands: [
+            {
+              id: 'things-list',
+              command: 'things list',
+              description: 'List things.',
+              action: 'manage',
+              aliases: ['thing ls'],
+              jsonDefault: true,
+            },
+          ],
+        },
+      }),
+    );
+    setExtensionEnabled('cli-owner', true, stateRoot);
+
+    expect(listExtensionCliCommandRegistrations()).toContainEqual(
+      expect.objectContaining({
+        extensionId: 'cli-owner',
+        surfaceId: 'things-list',
+        command: 'things list',
+        action: 'manage',
+        aliases: ['thing ls'],
+        jsonDefault: true,
+      }),
+    );
 
     rmSync(stateRoot, { recursive: true, force: true });
   });
