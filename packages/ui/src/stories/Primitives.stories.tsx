@@ -80,6 +80,7 @@ import {
   RowButton,
   RuntimeFooter,
   RuntimeHeader,
+  RuntimeHeaderControls,
   RuntimePage,
   RuntimeSection,
   RuntimeStrip,
@@ -478,7 +479,12 @@ const meta = {
                 detail="AGENTS.md"
                 actions={<Button variant="ghost">Disabled</Button>}
               />
-              <ResourceListLink href="#resource-link" label="Default workflow" meta="4 items" detail="Navigates to the workflow detail route." />
+              <ResourceListLink
+                href="#resource-link"
+                label="Default workflow"
+                meta="4 items"
+                detail="Navigates to the workflow detail route."
+              />
             </ResourceList>
             <div style={{ borderTop: '1px solid rgb(var(--color-border-subtle))' }}>
               <ShelfSection
@@ -543,7 +549,11 @@ const meta = {
                 <ResourcePickerList>
                   <ResourceListItem label="neon-pilot" detail="/Users/patrick/workingdir/neon-pilot" selected />
                   <ResourceListItem label="neon-pilot-extensions" detail="/Users/patrick/workingdir/neon-pilot-extensions" />
-                  <ResourceListItem label="Choose a new folder" detail="Use the system picker to add another workspace." leading={<FolderIcon />} />
+                  <ResourceListItem
+                    label="Choose a new folder"
+                    detail="Use the system picker to add another workspace."
+                    leading={<FolderIcon />}
+                  />
                 </ResourcePickerList>
               </ResourcePickerDialog>
             </div>
@@ -796,7 +806,16 @@ export const RuntimeWorkspace: Story = {
         <RuntimeHeader
           title="Local Model Runtime"
           summary="Use this workspace shape for extension pages that install, start, monitor, and inspect a local backend."
-          actions={<ToolbarButton>Refresh</ToolbarButton>}
+          actions={
+            <RuntimeHeaderControls
+              switchLabel="Server"
+              switchChecked
+              onSwitchChange={() => undefined}
+              status="Running"
+              tone="running"
+              onRefresh={() => undefined}
+            />
+          }
         />
         <RuntimeStrip
           status="Server ready"

@@ -108,6 +108,7 @@ export {
   RingStatusDot,
   RuntimeFooter,
   RuntimeHeader,
+  RuntimeHeaderControls,
   RuntimePage,
   RuntimeSection,
   RuntimeStatusDot,

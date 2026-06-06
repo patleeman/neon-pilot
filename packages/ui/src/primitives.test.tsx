@@ -55,6 +55,7 @@ import {
   ResourceListLink,
   ResourceListRow,
   RuntimeFooter,
+  RuntimeHeaderControls,
   RuntimeSection,
   RuntimeStatusDot,
   RuntimeStrip,
@@ -229,7 +230,11 @@ describe('design-system primitives', () => {
       ),
     );
     const sectionHtml = renderToStaticMarkup(
-      createElement(RuntimeSection, { title: 'Runtime logs', action: createElement('button', null, 'Refresh') }, createElement(TerminalBlock, null, 'ok')),
+      createElement(
+        RuntimeSection,
+        { title: 'Runtime logs', action: createElement('button', null, 'Refresh') },
+        createElement(TerminalBlock, null, 'ok'),
+      ),
     );
     const footerHtml = renderToStaticMarkup(
       createElement(RuntimeFooter, { summary: 'Advanced details', open: true, onToggle: () => undefined }, 'Details'),
@@ -242,6 +247,28 @@ describe('design-system primitives', () => {
     expect(sectionHtml).toContain('Runtime logs');
     expect(sectionHtml).toContain('min-h-44');
     expect(footerHtml).toContain('aria-expanded="true"');
+  });
+
+  it('renders runtime header controls with server switch, status, and refresh action', () => {
+    const html = renderToStaticMarkup(
+      createElement(RuntimeHeaderControls, {
+        switchLabel: 'Server',
+        switchChecked: true,
+        onSwitchChange: () => undefined,
+        status: 'Running',
+        tone: 'running',
+        onRefresh: () => undefined,
+        refreshLabel: 'Refresh runtime',
+      }),
+    );
+
+    expect(html).toContain('role="switch"');
+    expect(html).toContain('aria-checked="true"');
+    expect(html).toContain('aria-label="Server"');
+    expect(html).toContain('Server');
+    expect(html).toContain('Running');
+    expect(html).toContain('ui-status-dot-success');
+    expect(html).toContain('Refresh runtime');
   });
 
   it('renders workbench and rail layout primitives', () => {
@@ -336,9 +363,9 @@ describe('design-system primitives', () => {
 
   it('renders shortcut capture with formatted shortcut labels', () => {
     expect(formatKeyboardShortcutLabel('CommandOrControl+Shift+P')).toBe('⌘/Ctrl + Shift + P');
-    expect(renderToStaticMarkup(createElement(KeyboardShortcutCaptureInput, { value: 'CommandOrControl+Shift+P', onChange: () => undefined }))).toContain(
-      'ui-shortcut-capture',
-    );
+    expect(
+      renderToStaticMarkup(createElement(KeyboardShortcutCaptureInput, { value: 'CommandOrControl+Shift+P', onChange: () => undefined })),
+    ).toContain('ui-shortcut-capture');
   });
 
   it('renders filter toolbars with filters and search slots', () => {

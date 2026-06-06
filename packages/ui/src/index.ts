@@ -110,6 +110,7 @@ export {
   RowButton,
   RuntimeFooter,
   RuntimeHeader,
+  RuntimeHeaderControls,
   RuntimePage,
   RuntimeSection,
   RuntimeStatusDot,

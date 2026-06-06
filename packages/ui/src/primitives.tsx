@@ -536,6 +536,73 @@ export function RuntimeHeader({
   return <AppPageIntro title={title} summary={summary} actions={actions} className={className} />;
 }
 
+export function RuntimeHeaderControls({
+  status,
+  tone,
+  onRefresh,
+  refreshLabel = 'Refresh',
+  switchLabel,
+  switchChecked,
+  switchDisabled,
+  onSwitchChange,
+  children,
+  className,
+}: {
+  status: ReactNode;
+  tone: RuntimeStatusTone;
+  onRefresh?: () => void;
+  refreshLabel?: string;
+  switchLabel?: ReactNode;
+  switchChecked?: boolean;
+  switchDisabled?: boolean;
+  onSwitchChange?: (checked: boolean) => void;
+  children?: ReactNode;
+  className?: string;
+}) {
+  const hasSwitch = switchLabel != null && switchChecked != null && onSwitchChange != null;
+  return (
+    <div className={cx('flex flex-wrap items-center gap-3', className)}>
+      {hasSwitch ? (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={switchChecked}
+          aria-label={typeof switchLabel === 'string' ? switchLabel : undefined}
+          disabled={switchDisabled}
+          onClick={() => onSwitchChange(!switchChecked)}
+          className="group inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span
+            aria-hidden="true"
+            className={cx(
+              'relative inline-flex h-[18px] w-[32px] shrink-0 rounded-full border p-[1px] transition-all',
+              switchChecked ? 'border-accent/55 bg-accent/75 shadow-sm' : 'border-border-default bg-surface/40 group-hover:bg-surface/60',
+            )}
+          >
+            <span
+              className={cx(
+                'h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform',
+                switchChecked ? 'translate-x-[14px]' : 'translate-x-0',
+              )}
+            />
+          </span>
+          <span>{switchLabel}</span>
+        </button>
+      ) : null}
+      <div className="inline-flex items-center gap-2 text-sm text-secondary">
+        <RuntimeStatusDot tone={tone} />
+        <span className="font-medium text-primary">{status}</span>
+      </div>
+      {children}
+      {onRefresh ? (
+        <ToolbarButton type="button" onClick={onRefresh} aria-label={refreshLabel} title={refreshLabel}>
+          ↻
+        </ToolbarButton>
+      ) : null}
+    </div>
+  );
+}
+
 export function RuntimeStrip({
   status,
   tone,
@@ -1121,7 +1188,8 @@ export function ResourceListLink({
   leading?: ReactNode;
   selected?: boolean;
   className?: string;
-} & AnchorHTMLAttributes<HTMLAnchorElement> & Record<string, unknown>) {
+} & AnchorHTMLAttributes<HTMLAnchorElement> &
+  Record<string, unknown>) {
   const Component = as ?? 'a';
   return (
     <Component
@@ -2492,7 +2560,12 @@ export function KeyboardShortcutCaptureInput({
         setCapturing(false);
         onChange(shortcut);
       }}
-      className={cx('ui-shortcut-capture', capturing && 'ui-shortcut-capture-capturing', invalid && 'ui-shortcut-capture-invalid', className)}
+      className={cx(
+        'ui-shortcut-capture',
+        capturing && 'ui-shortcut-capture-capturing',
+        invalid && 'ui-shortcut-capture-invalid',
+        className,
+      )}
       aria-label={
         capturing
           ? 'Press a keyboard shortcut'
