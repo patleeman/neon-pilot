@@ -14,7 +14,16 @@
  */
 
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, ErrorState, LoadingState, Stat, StatGrid, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  ErrorState,
+  LoadingState,
+  SegmentedControl,
+  Stat,
+  StatGrid,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import { useState } from 'react';
 
 import { TracesAgentLoop } from './traces/TracesAgentLoop';
@@ -139,22 +148,7 @@ function TimeRangeSelector({ value, onChange }: { value: TraceRange; onChange: (
     { label: '30D', value: '30d' },
   ];
 
-  return (
-    <div className="flex gap-1 rounded-xl bg-surface/40 p-1">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors ${
-            value === opt.value ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:bg-surface/60 hover:text-primary'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
+  return <SegmentedControl ariaLabel="Telemetry time range" value={value} options={options} onChange={onChange} />;
 }
 
 // ── Pulse Row ────────────────────────────────────────────────────────────────
