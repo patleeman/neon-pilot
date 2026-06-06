@@ -36,6 +36,7 @@ import {
   readDesktopEnvironment,
   type SecretsState,
   type SecretStatusEntry,
+  Select,
   SettingsField,
   SettingsPanel,
   SettingsPanelHost,
@@ -409,8 +410,8 @@ function ThemeDefaultSelect({
     <label className="space-y-1.5 text-xs font-medium text-secondary">
       <span>{label}</span>
       <span className="relative block">
-        <select
-          className="h-9 w-full min-w-0 appearance-none truncate rounded-lg border border-border-subtle bg-surface/70 px-3 pr-9 text-[12px] font-medium text-primary outline-none transition-colors hover:border-border-default hover:bg-surface focus-visible:border-accent/50 focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-accent/20"
+        <Select
+          className="h-9 min-w-0 truncate bg-surface/70 pr-9 text-[12px] font-medium"
           value={value}
           onChange={(event) => onChange(event.target.value)}
         >
@@ -419,7 +420,7 @@ function ThemeDefaultSelect({
               {theme.label}
             </option>
           ))}
-        </select>
+        </Select>
         <svg
           aria-hidden="true"
           viewBox="0 0 20 20"
@@ -1409,18 +1410,18 @@ export function DesktopConnectionsSettingsPanel() {
               <label className="block text-[12px] font-medium text-secondary" htmlFor="desktop-update-path">
                 Update path
               </label>
-              <select
+              <Select
                 id="desktop-update-path"
                 value={appPreferencesState.updatePath}
                 onChange={(event) => {
                   void handleUpdateAppPreferences({ updatePath: event.target.value === 'test' ? 'test' : 'stable' });
                 }}
                 disabled={action !== null || !appPreferencesState.update.supported}
-                className={`${INPUT_CLASS} max-w-sm`}
+                className="max-w-sm"
               >
                 <option value="stable">Stable releases only</option>
                 <option value="test">Test releases and RCs</option>
-              </select>
+              </Select>
               <p className="ui-card-meta break-words">
                 Stable follows production releases. Test allows release candidates and pre-release builds for early validation.
               </p>
@@ -1769,19 +1770,18 @@ function ExtensionSecretsSection() {
           <label className="ui-card-meta" htmlFor="settings-secret-backend">
             Backend
           </label>
-          <select
+          <Select
             id="settings-secret-backend"
             value={activeBackend}
             onChange={(event) => {
               void saveBackend(event.target.value);
             }}
-            className={INPUT_CLASS}
             disabled={savingBackend}
           >
             <option value="keychain">macOS Keychain</option>
             <option value="file">Local file</option>
             <option value="env-only">Environment only</option>
-          </select>
+          </Select>
           <p className="ui-card-meta">
             {activeBackend === 'keychain'
               ? 'Recommended on macOS. Secrets are stored in the system Keychain.'
@@ -3038,14 +3038,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                       <label className="ui-card-meta" htmlFor="settings-model">
                         Model
                       </label>
-                      <select
+                      <Select
                         id="settings-model"
                         value={modelState.currentModel}
                         onChange={(event) => {
                           void handleModelPreferenceChange({ model: event.target.value }, 'model');
                         }}
                         disabled={savingPreference !== null || modelState.models.length === 0}
-                        className={INPUT_CLASS}
                       >
                         {groupedModels.map(([provider, models]) => (
                           <optgroup key={provider} label={provider}>
@@ -3056,7 +3055,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                             ))}
                           </optgroup>
                         ))}
-                      </select>
+                      </Select>
                       <p className="ui-card-meta">
                         {savingPreference === 'model' ? 'Saving default model...' : formatModelSummary(selectedModel, 'No model selected.')}
                       </p>
@@ -3064,21 +3063,20 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                       <label className="ui-card-meta pt-1" htmlFor="settings-thinking">
                         Thinking level
                       </label>
-                      <select
+                      <Select
                         id="settings-thinking"
                         value={modelState.currentThinkingLevel}
                         onChange={(event) => {
                           void handleModelPreferenceChange({ thinkingLevel: event.target.value }, 'thinking');
                         }}
                         disabled={savingPreference !== null}
-                        className={INPUT_CLASS}
                       >
                         {THINKING_LEVEL_OPTIONS.map((option) => (
                           <option key={option.value || 'unset'} value={option.value}>
                             {option.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       <p className="ui-card-meta">
                         {savingPreference === 'thinking'
                           ? 'Saving thinking level…'
@@ -3214,13 +3212,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 <h4 className="text-[13px] font-medium text-primary">Add provider</h4>
                               </div>
                               <div className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-center">
-                                <select
+                                <Select
                                   id="settings-model-provider-picker"
                                   value={modelProviderPickerId}
                                   onChange={(event) => {
                                     setModelProviderPickerId(event.target.value);
                                   }}
-                                  className={`${INPUT_CLASS} h-9 py-1.5 text-[12px]`}
+                                  className="h-9 py-1.5 text-[12px]"
                                 >
                                   <option value="">Choose provider…</option>
                                   {unconfiguredModelProviderIds.map((providerId) => (
@@ -3229,7 +3227,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     </option>
                                   ))}
                                   <option value={ADD_CUSTOM_PROVIDER_ID}>Add custom provider…</option>
-                                </select>
+                                </Select>
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -3420,13 +3418,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         <label className="ui-card-meta" htmlFor="settings-model-provider-api">
                                           API
                                         </label>
-                                        <select
+                                        <Select
                                           id="settings-model-provider-api"
                                           value={modelProviderDraft.api}
                                           onChange={(event) => {
                                             setModelProviderDraft((current) => ({ ...current, api: event.target.value }));
                                           }}
-                                          className={INPUT_CLASS}
                                           disabled={modelProviderAction !== null}
                                         >
                                           <option value="">Use built-in or inherit</option>
@@ -3435,7 +3432,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                               {option.label}
                                             </option>
                                           ))}
-                                        </select>
+                                        </Select>
                                       </div>
                                     </div>
 
@@ -3784,13 +3781,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-api">
                                             API
                                           </label>
-                                          <select
+                                          <Select
                                             id="settings-provider-model-api"
                                             value={modelDraft.api}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, api: event.target.value }));
                                             }}
-                                            className={INPUT_CLASS}
                                             disabled={modelDraftAction !== null}
                                           >
                                             <option value="">Inherit provider API</option>
@@ -3799,7 +3795,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                 {option.label}
                                               </option>
                                             ))}
-                                          </select>
+                                          </Select>
                                         </div>
 
                                         <div className="space-y-2 min-w-0">
