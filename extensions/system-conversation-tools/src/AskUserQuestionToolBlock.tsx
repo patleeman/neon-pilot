@@ -8,7 +8,7 @@ import {
   resolveAskUserQuestionOptionHotkey,
   shouldAdvanceAskUserQuestionAfterSelection,
 } from '@neon-pilot/extensions/data';
-import { Button, cx, Pill } from '@neon-pilot/extensions/ui';
+import { Button, cx, MetaLabel, Pill } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface AskUserQuestionState {
@@ -578,9 +578,9 @@ export function AskUserQuestionToolBlock({
                     className="mt-3 border-t border-border-subtle pt-3"
                   >
                     {presentation.questions.length > 1 && (
-                      <p className="text-[12px] uppercase tracking-[0.12em] text-dim/65">
+                      <MetaLabel tone="muted">
                         Question {activeQuestionIndex + 1} of {presentation.questions.length}
-                      </p>
+                      </MetaLabel>
                     )}
                     <p className="mt-1.5 text-[13px] font-medium leading-snug text-primary break-words">{activeQuestion.label}</p>
                     {activeQuestion.details && (
@@ -647,7 +647,7 @@ export function AskUserQuestionToolBlock({
             )
           ) : answerPreview ? (
             <div className="mt-2.5 space-y-1">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-dim/65">Your reply</p>
+              <MetaLabel tone="muted">Your reply</MetaLabel>
               <p className="text-[12px] leading-relaxed text-secondary break-words">{answerPreview}</p>
             </div>
           ) : state.status === 'superseded' ? (
