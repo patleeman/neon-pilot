@@ -647,7 +647,7 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <SettingsSection id={id} title={title} description={description} className="scroll-mt-8 md:grid-cols-[11rem_minmax(0,1fr)]">
+    <SettingsSection id={id} title={title} description={description} className="scroll-mt-8 xl:grid-cols-[11rem_minmax(0,1fr)]">
       {children}
     </SettingsSection>
   );
@@ -1356,6 +1356,8 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
             <AppPageLayout
               shellClassName="max-w-[72rem]"
               contentClassName="space-y-0"
+              gridClassName="!grid-cols-[minmax(0,1fr)] xl:!grid-cols-[minmax(0,1fr)_14rem]"
+              asideClassName="hidden xl:block"
               aside={
                 <AppPageToc
                   items={EDITOR_TOC_ITEMS}
@@ -1367,12 +1369,12 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                 />
               }
             >
-              <div className="flex items-start justify-between gap-4 pb-10">
+              <div className="flex flex-col items-start justify-between gap-4 pb-10 sm:flex-row">
                 <div className="min-w-0">
                   <TextButton className="text-[13px]" onClick={closeEditor}>
                     ← Automations
                   </TextButton>
-                  <h2 className="mt-6 text-[32px] font-semibold leading-[1.05] tracking-[-0.025em] text-primary">
+                  <h2 className="mt-6 text-[30px] font-semibold leading-[1.06] tracking-normal text-primary">
                     {editingId ? 'Edit automation' : 'New automation'}
                   </h2>
                   <p className="mt-2 text-[13px] text-secondary">
@@ -1386,7 +1388,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     </ToolbarButton>
                   </div>
                 ) : (
-                  <ToolbarButton type="button" onClick={() => void createWithChat()}>
+                  <ToolbarButton type="button" className="self-start" onClick={() => void createWithChat()}>
                     Create with chat
                   </ToolbarButton>
                 )}
