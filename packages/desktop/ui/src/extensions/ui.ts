@@ -103,6 +103,7 @@ export {
   TabButton,
   TabList,
   TabPanel,
+  TaskListItem,
   TextButton,
   Textarea,
   TextInput,

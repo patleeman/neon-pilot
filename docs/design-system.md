@@ -50,7 +50,7 @@ CI=true pnpm --dir packages/ui run build:storybook
 
 The shared package includes:
 
-- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `IconButton`, `IconLink`, `CheckButton`, `ChoiceRow`, `ActionTile`
+- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `IconButton`, `IconLink`, `CheckButton`, `TaskListItem`, `ChoiceRow`, `ActionTile`
 - Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`, `AttachmentChip`, `AttachmentChipButton`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
@@ -84,6 +84,7 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 ## Migration Map
 
 - Raw action buttons -> `Button`, `ToolbarButton`, or `IconButton`
+- Raw todo/checklist rows -> `TaskListItem` with `CheckButton`
 - Raw selectable radio/checkbox option rows -> `ChoiceRow`
 - Raw text/search/number inputs -> `TextInput` or `SearchInput`
 - Raw selects -> `Select`

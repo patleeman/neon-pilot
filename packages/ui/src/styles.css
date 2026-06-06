@@ -431,6 +431,71 @@ body {
   color: rgb(var(--color-success));
 }
 
+.ui-task-list-item {
+  display: grid;
+  min-height: 1.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.375rem;
+  color: rgb(var(--color-primary));
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.ui-task-list-item:hover {
+  background: rgb(var(--color-base) / 0.6);
+}
+
+.ui-task-list-item-control {
+  display: flex;
+  min-width: 1.4rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-task-list-item-main {
+  min-width: 0;
+}
+
+.ui-task-list-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-task-list-item-checked .ui-task-list-item-label {
+  color: rgb(var(--color-dim));
+  text-decoration: line-through;
+}
+
+.ui-task-list-item-detail {
+  overflow: hidden;
+  color: rgb(var(--color-dim));
+  font-size: 0.625rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-task-list-item-extra {
+  min-width: 0;
+}
+
+.ui-task-list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.ui-task-list-item:hover .ui-task-list-item-actions,
+.ui-task-list-item:focus-within .ui-task-list-item-actions {
+  opacity: 1;
+}
+
 .ui-pill {
   display: inline-flex;
   align-items: center;

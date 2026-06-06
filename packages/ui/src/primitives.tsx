@@ -185,6 +185,37 @@ export const CheckButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HT
   },
 );
 
+export function TaskListItem({
+  label,
+  detail,
+  checked = false,
+  control,
+  actions,
+  className,
+  children,
+  ...props
+}: {
+  label: ReactNode;
+  detail?: ReactNode;
+  checked?: boolean;
+  control?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+  children?: ReactNode;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-task-list-item', checked && 'ui-task-list-item-checked', className)} {...props}>
+      {control ? <div className="ui-task-list-item-control">{control}</div> : null}
+      <div className="ui-task-list-item-main">
+        <div className="ui-task-list-item-label">{label}</div>
+        {detail ? <div className="ui-task-list-item-detail">{detail}</div> : null}
+        {children ? <div className="ui-task-list-item-extra">{children}</div> : null}
+      </div>
+      {actions ? <div className="ui-task-list-item-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
 export function Pill({
   tone = 'muted',
   mono = false,

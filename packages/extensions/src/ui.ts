@@ -220,6 +220,7 @@ export declare const Switch: HostComponent;
 export declare const TabButton: HostComponent;
 export declare const TabList: HostComponent;
 export declare const Textarea: HostComponent;
+export declare const TaskListItem: HostComponent;
 export declare const TextInput: HostComponent;
 export declare const Tooltip: HostComponent;
 export declare const ToolbarButton: HostComponent;

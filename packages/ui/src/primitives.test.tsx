@@ -23,6 +23,7 @@ import {
   Disclosure,
   Dialog,
   FilterToolbar,
+  IconButton,
   IconLink,
   KeyValueItem,
   KeyValueList,
@@ -47,6 +48,7 @@ import {
   TabButton,
   TabList,
   TabPanel,
+  TaskListItem,
   TextInput,
   Tooltip,
 } from './primitives';
@@ -81,6 +83,25 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-check-button');
     expect(html).toContain('ui-check-button-checked');
     expect(html).toContain('aria-pressed="true"');
+  });
+
+  it('renders task list items with control, detail, actions, and done state', () => {
+    const html = renderToStaticMarkup(
+      createElement(TaskListItem, {
+        checked: true,
+        label: 'Review component docs',
+        detail: 'Agent-facing README pass',
+        control: createElement(CheckButton, { checked: true, 'aria-label': 'Reopen task' }),
+        actions: createElement(IconButton, { compact: true, 'aria-label': 'Delete task' }, '×'),
+      }),
+    );
+
+    expect(html).toContain('ui-task-list-item');
+    expect(html).toContain('ui-task-list-item-checked');
+    expect(html).toContain('ui-task-list-item-control');
+    expect(html).toContain('Review component docs');
+    expect(html).toContain('Agent-facing README pass');
+    expect(html).toContain('Delete task');
   });
 
   it('renders choice rows with checked state and descriptive slots', () => {

@@ -15,7 +15,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 ## Current Components
 
-- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `IconButton`, `IconLink`, `CheckButton`, `ActionTile`
+- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `IconButton`, `IconLink`, `CheckButton`, `TaskListItem`, `ActionTile`
 - Attachment controls: `AttachmentChip`, `AttachmentChipButton`
 - Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`
@@ -74,6 +74,8 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `IconButton` for icon-only actions such as close, remove, more, edit, refresh, or composer controls. Use `size="sm"` for dense 28px chrome, and `shape="circle"` for composer controls and compact round affordances. Always provide `aria-label` and usually `title`.
 - Use `IconLink` when the same square icon treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `ActionTile` for dashboard, chooser, new-tab, and empty-state actions that need an icon, label, description, and optional meta. Prefer it over rebuilding bordered action cards.
+- Use `CheckButton` for compact binary state controls where the row label is adjacent, such as todo completion, checklist steps, or small selectable resources.
+- Use `TaskListItem` for compact checklist/todo rows with a control, label, optional detail text, done styling, and hover/focus actions. It is the default primitive for todo shelves, agent task lists, setup checklists, and queue items.
 - Use `ChoiceRow` for selectable radio/checkbox option rows with an indicator, label, and optional details. It is the default primitive for ask-user prompts, setup wizards, and compact extension decision flows.
 - Use `AttachmentChip` with `AttachmentChipButton` for compact file, image, drawing, and generated-asset rows in composer shelves, attachment lists, and upload previews. Keep file-specific labels, thumbnails, and actions in the caller.
 - `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, and `CheckButton` forward refs for focus management, anchored menus, and keyboard workflows.

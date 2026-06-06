@@ -77,6 +77,7 @@ import {
   TabButton,
   TabList,
   TabPanel,
+  TaskListItem,
   TextButton,
   Textarea,
   TextInput,
@@ -122,6 +123,29 @@ const meta = {
           </IconLink>
           <CheckButton checked aria-label="Completed" />
           <CheckButton checked={false} aria-label="Incomplete" />
+        </div>
+        <div style={{ display: 'grid', gap: 2, width: 460, maxWidth: '100%' }}>
+          <TaskListItem
+            label="Review extension docs"
+            detail="Document the UI component import path."
+            control={<CheckButton checked={false} aria-label="Mark review complete" />}
+            actions={
+              <IconButton compact aria-label="Delete review task">
+                ×
+              </IconButton>
+            }
+          />
+          <TaskListItem
+            checked
+            label="Replace bespoke rows"
+            detail="Todo shelf now uses TaskListItem."
+            control={<CheckButton checked aria-label="Reopen row replacement task" />}
+            actions={
+              <IconButton compact aria-label="Delete row replacement task">
+                ×
+              </IconButton>
+            }
+          />
         </div>
         <div style={{ display: 'grid', gap: 6, width: 420, maxWidth: '100%' }}>
           <ChoiceRow

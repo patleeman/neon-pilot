@@ -1,4 +1,4 @@
-import { CardMeta, CheckButton, IconButton, Notice, TextButton, cx } from '@neon-pilot/extensions/ui';
+import { CheckButton, IconButton, Notice, TaskListItem, TextButton } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type TodoStatus = 'todo' | 'done';
@@ -204,24 +204,23 @@ export function TodoShelf({
             </Notice>
           ) : null}
           {visibleItems.map((item) => (
-            <div
+            <TaskListItem
               key={item.id}
-              className="group grid min-h-7 grid-cols-[1.4rem_minmax(0,1fr)_auto] items-center gap-1 rounded-md hover:bg-base/60"
-            >
-              <CheckButton
-                checked={isDone(item)}
-                disabled={Boolean(busyId)}
-                title={isDone(item) ? 'Reopen todo' : 'Mark complete'}
-                aria-label={isDone(item) ? 'Reopen todo' : 'Mark complete'}
-                onClick={() =>
-                  void run(item.id, () => invoke<TodoState>('updateItem', { id: item.id, status: isDone(item) ? 'todo' : 'done' }))
-                }
-              />
-              <div className="min-w-0">
-                <div className={cx('truncate', isDone(item) ? 'text-dim line-through' : 'text-primary')}>{item.text}</div>
-                {item.note ? <CardMeta className="truncate text-[10px]">{item.note}</CardMeta> : null}
-              </div>
-              <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              checked={isDone(item)}
+              label={item.text}
+              detail={item.note}
+              control={
+                <CheckButton
+                  checked={isDone(item)}
+                  disabled={Boolean(busyId)}
+                  title={isDone(item) ? 'Reopen todo' : 'Mark complete'}
+                  aria-label={isDone(item) ? 'Reopen todo' : 'Mark complete'}
+                  onClick={() =>
+                    void run(item.id, () => invoke<TodoState>('updateItem', { id: item.id, status: isDone(item) ? 'todo' : 'done' }))
+                  }
+                />
+              }
+              actions={
                 <IconButton
                   compact
                   className="text-[12px] text-secondary hover:bg-surface hover:text-danger"
@@ -232,8 +231,8 @@ export function TodoShelf({
                 >
                   ×
                 </IconButton>
-              </div>
-            </div>
+              }
+            />
           ))}
         </div>
       ) : null}
