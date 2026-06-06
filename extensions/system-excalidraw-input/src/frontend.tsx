@@ -1,4 +1,5 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
+import { IconButton } from '@neon-pilot/extensions/ui';
 import { lazy, Suspense, useEffect } from 'react';
 
 import type { ExcalidrawEditorSavePayload } from './editorModal';
@@ -69,8 +70,8 @@ export function ExcalidrawInputTool({
   };
 
   return (
-    <button
-      type="button"
+    <IconButton
+      shape="circle"
       onPointerDown={(event) => {
         event.preventDefault();
         if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) {
@@ -84,12 +85,11 @@ export function ExcalidrawInputTool({
         }
       }}
       disabled={toolContext.composerDisabled}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-elevated/60 hover:text-primary disabled:opacity-40"
       title="Create drawing"
       aria-label="Create drawing"
     >
       <PencilIcon />
-    </button>
+    </IconButton>
   );
 }
 

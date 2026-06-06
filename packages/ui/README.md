@@ -69,7 +69,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.
-- Use `IconButton` for square icon-only actions such as close, remove, more, edit, or refresh. Always provide `aria-label` and usually `title`.
+- Use `IconButton` for icon-only actions such as close, remove, more, edit, or refresh. Use `shape="circle"` for composer controls and compact round affordances. Always provide `aria-label` and usually `title`.
 - Use `IconLink` when the same square icon treatment navigates with a real `href`. Prefer it over styling anchors by hand.
 - `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, and `CheckButton` forward refs for focus management, anchored menus, and keyboard workflows.
 - Use `Field` only when the child is a simple form control that can be labeled by wrapping it, such as `TextInput`, `Textarea`, or `Select`. For composite controls containing buttons, compose `FieldLabel` and `FieldHint` in a neutral container instead.

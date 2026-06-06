@@ -39,6 +39,7 @@ export {
   FieldLabel,
   FilterToolbar,
   IconButton,
+  type IconButtonShape,
   IconLink,
   KeyValueItem,
   KeyValueList,

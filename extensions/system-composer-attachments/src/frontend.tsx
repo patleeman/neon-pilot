@@ -1,4 +1,5 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
+import { IconButton } from '@neon-pilot/extensions/ui';
 
 export function AttachFilesComposerControl({
   controlContext,
@@ -13,8 +14,8 @@ export function AttachFilesComposerControl({
   };
 
   return (
-    <button
-      type="button"
+    <IconButton
+      shape="circle"
       onPointerDown={(event) => {
         event.preventDefault();
         if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) {
@@ -28,7 +29,6 @@ export function AttachFilesComposerControl({
         }
       }}
       disabled={context.composerDisabled}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-elevated/60 hover:text-primary disabled:opacity-40"
       title="Attach image or file"
       aria-label="Attach image or file"
     >
@@ -45,6 +45,6 @@ export function AttachFilesComposerControl({
         <path d="M12 5v14" />
         <path d="M5 12h14" />
       </svg>
-    </button>
+    </IconButton>
   );
 }

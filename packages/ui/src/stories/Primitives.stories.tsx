@@ -77,6 +77,9 @@ const meta = {
           <TextButton>Inline action</TextButton>
           <TextButton tone="danger">Remove</TextButton>
           <IconButton aria-label="More actions">•••</IconButton>
+          <IconButton aria-label="Add item" shape="circle">
+            +
+          </IconButton>
           <IconLink href="#thread" aria-label="Open thread">
             ↗
           </IconLink>

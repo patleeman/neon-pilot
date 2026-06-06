@@ -108,15 +108,23 @@ export const TextButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
   },
 );
 
-export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }>(
-  function IconButton({ className, children, compact = false, type = 'button', ...props }, ref) {
-    return (
-      <button ref={ref} type={type} className={cx('ui-icon-button', compact && 'ui-icon-button-compact', className)} {...props}>
-        {children}
-      </button>
-    );
-  },
-);
+export type IconButtonShape = 'square' | 'circle';
+
+export const IconButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean; shape?: IconButtonShape }
+>(function IconButton({ className, children, compact = false, shape = 'square', type = 'button', ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cx('ui-icon-button', compact && 'ui-icon-button-compact', shape === 'circle' && 'ui-icon-button-circle', className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
 
 export const IconLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement> & { compact?: boolean }>(function IconLink(
   { className, children, compact = false, ...props },
