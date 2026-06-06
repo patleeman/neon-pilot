@@ -9,7 +9,7 @@ import {
   getNeonPilotCliBinDir,
   installUserCliSymlink,
 } from './cliEnvironment.js';
-import { getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
+import { createInProcessExtensionHostClient, getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 
@@ -75,6 +75,16 @@ function createExtensionHostClientFromEnv(): ExtensionHostClient | null {
   const token = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim();
   if (!baseUrl || !token) return null;
   return createExtensionHostRpcClient({ baseUrl, token });
+}
+
+function getCliExtensionHostClient(): ExtensionHostClient {
+  const rpcClient = createExtensionHostClientFromEnv();
+  if (rpcClient) return rpcClient;
+  try {
+    return getExtensionHostClient();
+  } catch {
+    return createInProcessExtensionHostClient();
+  }
 }
 
 function classifyError(error: unknown): number {
@@ -159,7 +169,7 @@ async function invokeProtocolCli(protocolId: string, protocolArgs: string[], opt
   const signal = options?.signal ?? new AbortController().signal;
 
   try {
-    const extensionHostClient = createExtensionHostClientFromEnv() ?? getExtensionHostClient();
+    const extensionHostClient = getCliExtensionHostClient();
     await extensionHostClient.invokeProtocolEntrypoint({
       protocolId,
       input: { args: protocolArgs },
@@ -227,7 +237,7 @@ function commandMatches(registration: CliCommandRegistration, argv: string[]): {
 }
 
 async function readCliCommandRegistrations(): Promise<CliCommandRegistration[]> {
-  const extensionHostClient = createExtensionHostClientFromEnv() ?? getExtensionHostClient();
+  const extensionHostClient = getCliExtensionHostClient();
   const presentation = await extensionHostClient.readRegistryPresentation();
   return (presentation.cliCommandRegistrations ?? []).flatMap((entry): CliCommandRegistration[] => {
     if (
@@ -308,6 +318,19 @@ function formatActionResult(result: unknown, json: boolean): string {
   return `${JSON.stringify(result, null, 2)}\n`;
 }
 
+function actionFromCliCommand(command: string): string | undefined {
+  const lastToken = commandTokens(command).at(-1);
+  if (!lastToken) return undefined;
+  if (lastToken === 'list') return 'list';
+  if (lastToken === 'validate') return 'validate';
+  if (lastToken === 'reload') return 'reload';
+  if (lastToken === 'enable') return 'enable';
+  if (lastToken === 'disable') return 'disable';
+  if (lastToken === 'paths') return 'readSearchPaths';
+  if (lastToken === 'sources') return 'readExtensionSources';
+  return undefined;
+}
+
 async function invokeContributedCliCommand(argv: string[], options?: { signal?: AbortSignal }): Promise<number> {
   try {
     const registrations = await readCliCommandRegistrations();
@@ -330,11 +353,13 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
     const rawArgs = argv.slice(match.length);
     const json = wantsJson(rawArgs) || match.registration.jsonDefault === true;
     const parsed = parseFlags(stripJsonFlag(rawArgs));
-    const extensionHostClient = createExtensionHostClientFromEnv() ?? getExtensionHostClient();
+    const extensionHostClient = getCliExtensionHostClient();
+    const inputAction = actionFromCliCommand(match.registration.command);
     const invokeResult = await extensionHostClient.invokeAction({
       extensionId: match.registration.extensionId,
       actionId: match.registration.action,
       input: {
+        ...(inputAction ? { action: inputAction } : {}),
         cli: {
           command: match.registration.command,
           rawArgv: argv,
