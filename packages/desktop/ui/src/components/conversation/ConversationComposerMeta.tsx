@@ -4,6 +4,7 @@ import type { ConversationContextUsageTokensPresentation } from '../../conversat
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { StatusBarItemHost } from '../../extensions/StatusBarItemHost';
 import { type ExtensionStatusBarItemRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import { RowButton, TextButton } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
 export type ConversationGitSummaryPresentation =
@@ -157,32 +158,34 @@ export function ConversationComposerMeta({
               title={conversationCwdPickBusy ? 'Choosing folder…' : 'Choose folder'}
               ariaLabel="Choose folder"
             />
-            <button
+            <TextButton
               type="submit"
-              className="h-7 rounded-md px-2 text-[10px] text-accent transition-colors hover:bg-surface/45 disabled:opacity-50"
+              tone="accent"
+              className="h-7 rounded-md px-2 text-[10px] hover:bg-surface/45"
               disabled={conversationCwdBusy || conversationCwdPickBusy}
             >
               {conversationCwdBusy ? 'Switching…' : 'Switch'}
-            </button>
-            <button
+            </TextButton>
+            <TextButton
               type="button"
-              className="h-7 rounded-md px-2 text-[10px] text-secondary transition-colors hover:bg-surface/45 hover:text-primary disabled:opacity-50"
+              className="h-7 rounded-md px-2 text-[10px] hover:bg-surface/45"
               onClick={onCancelConversationCwdEdit}
               disabled={conversationCwdBusy || conversationCwdPickBusy}
             >
               Cancel
-            </button>
+            </TextButton>
           </form>
         ) : (
-          <button
+          <RowButton
             type="button"
             onClick={onBeginConversationCwdEdit}
-            className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-secondary transition-colors hover:bg-surface/45 hover:text-primary xl:w-[26rem] xl:flex-none"
+            compact
+            className="max-w-full flex-1 gap-1.5 px-1.5 py-1 text-secondary xl:w-[26rem] xl:flex-none"
             title={neutralChatCwd ? 'Chat - no workspace' : currentCwd ? `Working directory: ${currentCwd}` : 'Set working directory'}
           >
             {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
             <span className="ui-truncate-start min-w-0 flex-1 font-mono text-[11px]">{currentCwdLabel || 'Set working directory'}</span>
-          </button>
+          </RowButton>
         )}
 
         {(draft ? draftCwdError : conversationCwdError) ? (
@@ -223,7 +226,7 @@ function StatusBarItem({
   }
 
   return (
-    <button
+    <TextButton
       type="button"
       disabled={busy}
       onClick={() => {
@@ -233,10 +236,10 @@ function StatusBarItem({
           .catch(() => {})
           .finally(() => setBusy(false));
       }}
-      className="shrink-0 truncate max-w-[6rem] font-mono text-secondary transition-colors hover:text-primary disabled:opacity-50"
+      className="max-w-[6rem] shrink-0 truncate font-mono"
       title={item.label}
     >
       {busy ? `${item.label}…` : item.label}
-    </button>
+    </TextButton>
   );
 }
