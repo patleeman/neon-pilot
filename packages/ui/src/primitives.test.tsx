@@ -6,10 +6,12 @@ import {
   ActionTile,
   Button,
   ButtonLink,
+  BrowsePathButton,
   CardBody,
   CardMeta,
   CardTitle,
   CheckButton,
+  ChatBubbleIcon,
   ChoiceRow,
   CodeBlock,
   CompactCard,
@@ -23,6 +25,7 @@ import {
   Disclosure,
   Dialog,
   FilterToolbar,
+  FolderIcon,
   IconButton,
   IconLink,
   KeyValueItem,
@@ -76,6 +79,28 @@ describe('design-system primitives', () => {
     expect(html).toContain('href="#new"');
     expect(html).toContain('ui-action-button');
     expect(html).toContain('text-accent');
+  });
+
+  it('renders shared path picker chrome and workspace icons', () => {
+    const html = renderToStaticMarkup(
+      createElement('div', null, [
+        createElement(FolderIcon, { key: 'folder', className: 'folder' }),
+        createElement(ChatBubbleIcon, { key: 'chat', className: 'chat' }),
+        createElement(BrowsePathButton, {
+          key: 'browse',
+          busy: true,
+          title: 'Choose workspace folder',
+          ariaLabel: 'Choose workspace folder',
+          onClick: () => undefined,
+        }),
+      ]),
+    );
+
+    expect(html).toContain('folder');
+    expect(html).toContain('chat');
+    expect(html).toContain('Choose workspace folder');
+    expect(html).toContain('animate-pulse');
+    expect(html).toContain('ui-icon-button-sm');
   });
 
   it('renders check button pressed state', () => {

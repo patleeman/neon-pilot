@@ -169,6 +169,97 @@ export const IconLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLA
   );
 });
 
+export function FolderIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.75 7.5A1.5 1.5 0 0 1 5.25 6h4.018a1.5 1.5 0 0 1 1.06.44l1.172 1.17a1.5 1.5 0 0 0 1.06.44h6.19a1.5 1.5 0 0 1 1.5 1.5v7.95a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V7.5Z" />
+      <path d="M3.75 9.75h16.5" />
+    </svg>
+  );
+}
+
+export function ChatBubbleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v6.75a2.25 2.25 0 0 1-2.25 2.25H12l-4.5 3v-3H6.75A2.25 2.25 0 0 1 4.5 13.5V6.75Z" />
+    </svg>
+  );
+}
+
+export function FolderPlusIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.75 7.5A1.5 1.5 0 0 1 5.25 6h4.018a1.5 1.5 0 0 1 1.06.44l1.172 1.17a1.5 1.5 0 0 0 1.06.44h6.19a1.5 1.5 0 0 1 1.5 1.5v7.95a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V7.5Z" />
+      <path d="M3.75 9.75h16.5" />
+      <path d="M16.5 12.5v6" />
+      <path d="M13.5 15.5h6" />
+    </svg>
+  );
+}
+
+export function BrowsePathButton({
+  busy,
+  title,
+  ariaLabel,
+  onClick,
+  className,
+}: {
+  busy: boolean;
+  title: string;
+  ariaLabel: string;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <IconButton
+      size="sm"
+      onClick={onClick}
+      disabled={busy}
+      className={cx(
+        'border border-transparent hover:bg-surface/45 hover:text-primary focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base disabled:opacity-50',
+        className,
+      )}
+      title={title}
+      aria-label={ariaLabel}
+    >
+      <FolderPlusIcon className={cx(busy && 'animate-pulse')} />
+    </IconButton>
+  );
+}
+
 export const CheckButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean }>(
   function CheckButton({ checked, className, children = '✓', type = 'button', ...props }, ref) {
     return (

@@ -8,12 +8,14 @@ import {
   AppPageLayout,
   Button,
   ButtonLink,
+  BrowsePathButton,
   CardBody,
   CardMeta,
   CardTitle,
   CenteredLoadingState,
   CenteredMessage,
   CheckButton,
+  ChatBubbleIcon,
   ChoiceRow,
   CodeBlock,
   CompactCard,
@@ -34,6 +36,7 @@ import {
   ErrorState,
   Field,
   FilterToolbar,
+  FolderIcon,
   IconButton,
   IconLink,
   InlineCode,
@@ -102,6 +105,7 @@ const meta = {
           </ButtonLink>
           <Button tone="accent">Save</Button>
           <Button tone="danger">Delete</Button>
+          <BrowsePathButton busy={false} title="Choose workspace folder" ariaLabel="Choose workspace folder" onClick={() => undefined} />
           <TextButton>Inline action</TextButton>
           <TextButton tone="danger">Remove</TextButton>
           <MessageActionButton>copy</MessageActionButton>
@@ -123,6 +127,8 @@ const meta = {
           </IconLink>
           <CheckButton checked aria-label="Completed" />
           <CheckButton checked={false} aria-label="Incomplete" />
+          <FolderIcon className="text-secondary" />
+          <ChatBubbleIcon className="text-secondary" />
         </div>
         <div style={{ display: 'grid', gap: 2, width: 460, maxWidth: '100%' }}>
           <TaskListItem
