@@ -54,7 +54,7 @@ import {
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
 import { addNotification, NotificationProvider } from './notifications/notificationStore';
-import { cx, IconButton } from './ui';
+import { CenteredMessage, cx, IconButton, PanelMessage } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
 const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
@@ -620,7 +620,7 @@ function WorkbenchDocumentPane({
     );
   } else if (activeTool === 'chat' && activeChatConversationId) {
     mainContent = (
-      <Suspense fallback={<div className="px-4 py-3 text-[12px] text-dim">Loading chat…</div>}>
+      <Suspense fallback={<PanelMessage>Loading chat...</PanelMessage>}>
         <ChatRail key={activeChatConversationId} conversationId={activeChatConversationId} workspaceCwd={workspaceCwd ?? null} />
       </Suspense>
     );
@@ -670,19 +670,13 @@ function WorkbenchDocumentPane({
     );
   } else if (isArtifactsRailMode(activeTool) && conversationId && artifactId) {
     mainContent = (
-      <Suspense fallback={<div className="px-4 py-3 text-[12px] text-dim">Loading artifact…</div>}>
+      <Suspense fallback={<PanelMessage>Loading artifact...</PanelMessage>}>
         <ConversationArtifactWorkbenchPane conversationId={conversationId} artifactId={artifactId} />
       </Suspense>
     );
   } else if (activeTool === 'files') {
     mainContent = (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a file</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a file from the Files tab to keep it beside the transcript.</p>
-        </div>
-      </div>
+      <CenteredMessage eyebrow="Workbench" title="Open a file" body="Pick a file from the Files tab to keep it beside the transcript." />
     );
   }
 
@@ -1218,14 +1212,14 @@ function WorkbenchKnowledgeRail({
               cwd={workspaceCwd}
             />
           ) : (
-            <Suspense fallback={<div className="px-3 py-2 text-[12px] text-dim">Loading files…</div>}>
+            <Suspense fallback={<PanelMessage className="px-3 py-2">Loading files...</PanelMessage>}>
               <WorkspaceExplorer cwd={workspaceCwd} onDraftPrompt={onWorkspaceFileClear} railOnly={true} />
             </Suspense>
           )}
         </div>
       ) : isArtifactsRailMode(activeTool) ? (
         <div className="min-h-0 flex-1 overflow-hidden">
-          <Suspense fallback={<div className="px-3 py-2 text-[12px] text-dim">Loading artifacts…</div>}>
+          <Suspense fallback={<PanelMessage className="px-3 py-2">Loading artifacts...</PanelMessage>}>
             <ConversationArtifactRailContent
               artifacts={artifacts}
               activeArtifactId={activeArtifactId}
