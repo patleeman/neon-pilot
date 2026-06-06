@@ -467,7 +467,7 @@ function Ds4HealthIndicator({
           {health.restarting ? 'Restarting' : 'Restart server'}
         </MenuButton>
         <MenuSeparator />
-        <MenuGroupLabel className="text-[10px] uppercase tracking-[0.12em] text-dim">Interventions</MenuGroupLabel>
+        <MenuGroupLabel>Interventions</MenuGroupLabel>
         {interventionItems.map((item) => (
           <MenuCheckbox
             key={item.key}
@@ -584,7 +584,7 @@ function ModelSelect({ context, variant }: { context: ComposerControlContext; va
       >
         {groupModels(context.models).map(([provider, providerModels]) => (
           <div key={provider} className="py-1">
-            <MenuGroupLabel className="pb-1 text-[10px] uppercase tracking-[0.14em] text-dim/70">{provider}</MenuGroupLabel>
+            <MenuGroupLabel className="pb-1">{provider}</MenuGroupLabel>
             {providerModels.map((model) => {
               const value = modelSelectionValue(model, context.models);
               const checked = selectedModel?.provider === model.provider && selectedModel.id === model.id;

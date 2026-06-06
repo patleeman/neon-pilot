@@ -107,7 +107,7 @@ These production areas already use the shared package and are useful examples fo
 - Extension page shell and states: `system-telemetry`, `system-skills`, `system-extension-manager`
 - Forms and settings: `system-automations`, `system-knowledge`, desktop `SettingsField`
 - Search and filters: `system-extension-manager`, `system-automations`
-- Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`
+- Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`, `system-model-picker`
 - Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
 - Transcript chrome: desktop browser comment shelves, app error recovery panels, and file-change tool diffs
 - Compact editors: scheduled task advanced options and other dense field groups
