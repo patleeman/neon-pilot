@@ -1,5 +1,5 @@
 import type { KnowledgeEntry } from '@neon-pilot/extensions/data';
-import { PanelMessage } from '@neon-pilot/extensions/ui';
+import { PanelMessage, RowButton } from '@neon-pilot/extensions/ui';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 
@@ -70,13 +70,12 @@ const WikiLinkList = forwardRef<WikiLinkListRef, WikiLinkListProps>(function Wik
   return (
     <div className="kb-wikilink-popup">
       {items.map((item, i) => (
-        <button
+        <RowButton
           key={item.id}
           type="button"
-          className={[
-            'flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] truncate',
-            i === selectedIndex ? 'bg-accent/15 text-primary' : 'text-secondary hover:bg-accent/8 hover:text-primary',
-          ].join(' ')}
+          compact
+          selected={i === selectedIndex}
+          className="gap-2 px-3 py-1.5 text-[12px]"
           onMouseDown={(e) => {
             e.preventDefault();
             command(item);
@@ -87,7 +86,7 @@ const WikiLinkList = forwardRef<WikiLinkListRef, WikiLinkListProps>(function Wik
           </span>
           <span className="truncate">{item.name.replace(/\.md$/, '')}</span>
           <span className="text-dim truncate text-[10px] ml-auto">{item.id.split('/').slice(0, -1).join('/')}</span>
-        </button>
+        </RowButton>
       ))}
     </div>
   );

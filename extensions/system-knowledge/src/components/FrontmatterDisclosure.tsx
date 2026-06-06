@@ -1,4 +1,4 @@
-import { TextButton } from '@neon-pilot/extensions/ui';
+import { IconButton, RowButton, TextButton } from '@neon-pilot/extensions/ui';
 import { useId, useMemo, useState } from 'react';
 import { stringify } from 'yaml';
 
@@ -104,8 +104,9 @@ export function FrontmatterDisclosure({
 
   return (
     <div className={open ? 'kb-fm-panel kb-fm-panel-open' : 'kb-fm-panel'}>
-      <button
+      <RowButton
         type="button"
+        compact
         className="kb-fm-toggle"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
@@ -118,7 +119,7 @@ export function FrontmatterDisclosure({
         <span className="kb-fm-chevron" aria-hidden="true">
           ⌄
         </span>
-      </button>
+      </RowButton>
       {open ? (
         <div id={contentId} className="kb-fm-body">
           {parseError ? (
@@ -140,8 +141,9 @@ export function FrontmatterDisclosure({
                           <span key={tag} className="kb-fm-tag">
                             <span>{tag}</span>
                             {onChange ? (
-                              <button
+                              <IconButton
                                 type="button"
+                                compact
                                 className="kb-fm-tag-remove"
                                 aria-label={`Remove tag ${tag}`}
                                 onClick={() => {
@@ -152,7 +154,7 @@ export function FrontmatterDisclosure({
                                 }}
                               >
                                 ×
-                              </button>
+                              </IconButton>
                             ) : null}
                           </span>
                         ))}
