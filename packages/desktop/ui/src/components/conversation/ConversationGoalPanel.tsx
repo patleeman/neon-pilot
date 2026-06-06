@@ -1,5 +1,5 @@
 import type { ThreadGoal } from '../../shared/types';
-import { cx, Spinner } from '../ui';
+import { cx, MetaLabel, Spinner } from '../ui';
 
 export interface GoalPanelProps {
   goal: ThreadGoal | null;
@@ -27,7 +27,9 @@ export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
             <Spinner size="xs" />
           </span>
         ) : null}
-        <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-accent">Goal</span>
+        <MetaLabel tone="accent" className="font-bold">
+          Goal
+        </MetaLabel>
         <span className="min-w-0 flex-1 truncate text-primary">{goal.objective}</span>
         <span className={cx('shrink-0 text-[11px] font-medium', statusConfig.className)}>{statusConfig.label}</span>
         {goal.status === 'active' ? (

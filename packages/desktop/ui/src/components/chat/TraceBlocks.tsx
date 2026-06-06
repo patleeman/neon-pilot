@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
-import { Pill, SurfacePanel } from '../ui';
+import { MetaLabel, Pill, SectionLabel, SurfacePanel } from '../ui';
 import { readLinkedRuns } from './linkedRuns.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
@@ -39,7 +39,7 @@ export const ThinkingBlock = memo(function ThinkingBlock({
       >
         <Pill tone="muted">Thinking</Pill>
         {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
-        {autoOpen && <span className="text-[10px] uppercase tracking-[0.14em] text-dim/55">live</span>}
+        {autoOpen && <MetaLabel tone="muted">live</MetaLabel>}
         <span className="text-dim text-[10px]">{open ? 'hide' : 'show'}</span>
       </button>
       {open && (
@@ -81,12 +81,16 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
       {open && (
         <div className="border-t border-border-subtle/70 px-2.5 py-2 space-y-2 bg-black/5">
           <div>
-            <p className="text-[10px] uppercase tracking-wider opacity-40 mb-1">prompt</p>
+            <SectionLabel tone="muted" className="mb-1 block opacity-70">
+              prompt
+            </SectionLabel>
             <p className="opacity-70 leading-relaxed">{block.prompt}</p>
           </div>
           {block.summary && (
             <div>
-              <p className="text-[10px] uppercase tracking-wider opacity-40 mb-1">result</p>
+              <SectionLabel tone="muted" className="mb-1 block opacity-70">
+                result
+              </SectionLabel>
               <p className="opacity-80 leading-relaxed">{block.summary}</p>
             </div>
           )}
@@ -380,7 +384,7 @@ export function TraceClusterBlock({
             </span>
           )}
           <span className="flex-1" />
-          {stableActive && <span className="text-[10px] uppercase tracking-[0.14em] text-accent/80">live</span>}
+          {stableActive && <MetaLabel tone="accent">live</MetaLabel>}
           {throughputLabel && (
             <span
               className="font-mono text-accent/80"

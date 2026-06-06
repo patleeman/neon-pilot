@@ -17,7 +17,7 @@ import {
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
-import { cx, Pill, StatusDot } from '../ui';
+import { cx, MetaLabel, Pill, SectionLabel, StatusDot } from '../ui';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
   INLINE_RUN_POLL_INTERVAL_MS,
@@ -31,7 +31,7 @@ import { describeInlineRunStatus, inferStatusFromLinkedRunDetail } from './linke
 function InlineRunMetadataRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-[auto,minmax(0,1fr)] items-start gap-2">
-      <span className="text-[10px] uppercase tracking-[0.12em] text-dim">{label}</span>
+      <MetaLabel tone="muted">{label}</MetaLabel>
       <span className="break-words text-[11px] text-primary">{value}</span>
     </div>
   );
@@ -180,9 +180,9 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
 
           {(detailRun || snapshot.log) && (
             <div className="rounded-md border border-border-subtle/70 bg-elevated/40 overflow-hidden">
-              <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle/60 px-2 py-1.5 text-[10px] uppercase tracking-[0.12em] text-dim">
+              <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle/60 px-2 py-1.5 text-dim">
                 <StatusDot tone={runStreaming ? 'accent' : 'muted'} className={runStreaming ? 'animate-pulse' : 'opacity-40'} />
-                <span>{outputLabel}</span>
+                <MetaLabel tone="muted">{outputLabel}</MetaLabel>
                 <span className="min-w-0 truncate font-mono normal-case tracking-normal text-dim/80">{outputPathLabel}</span>
               </div>
               <div className="max-h-56 overflow-auto px-2 py-2">
@@ -233,13 +233,13 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
                   <div className="mt-3 space-y-2 border-t border-border-subtle/60 pt-2.5">
                     {detailRun.status?.lastError && (
                       <div className="space-y-1">
-                        <p className="text-[10px] uppercase tracking-[0.12em] text-dim">Last error</p>
+                        <SectionLabel tone="muted">Last error</SectionLabel>
                         <p className="whitespace-pre-wrap break-words text-[11px] text-danger/90">{detailRun.status.lastError}</p>
                       </div>
                     )}
                     {detailRun.problems.length > 0 && (
                       <div className="space-y-1">
-                        <p className="text-[10px] uppercase tracking-[0.12em] text-dim">Problems</p>
+                        <SectionLabel tone="muted">Problems</SectionLabel>
                         <div className="space-y-1 text-[11px] text-danger/90">
                           {detailRun.problems.map((problem) => (
                             <p key={problem}>• {problem}</p>
