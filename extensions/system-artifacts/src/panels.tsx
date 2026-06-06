@@ -1,5 +1,5 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { CodeBlock, ResourceListItem, SectionLabel } from '@neon-pilot/extensions/ui';
+import { CodeBlock, ResourceListItem, SectionLabel, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -338,9 +338,9 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
             {artifact ? <span className="hidden shrink-0 text-[11px] text-dim sm:inline">rev {artifact.revision}</span> : null}
           </div>
           {artifact ? (
-            <button type="button" onClick={() => void copySource()} className="ui-toolbar-button shrink-0 px-2 py-1 text-[10px]">
+            <ToolbarButton onClick={() => void copySource()} className="shrink-0 px-2 py-1 text-[10px]">
               {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
-            </button>
+            </ToolbarButton>
           ) : null}
         </div>
       </div>

@@ -17,6 +17,7 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   AppPageIntro,
   AppPageLayout,
+  Button,
   ErrorState,
   LoadingState,
   SegmentedControl,
@@ -76,9 +77,9 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
       <div className="flex h-full items-center justify-center px-6">
         <div className="text-center space-y-3">
           <ErrorState message={error} />
-          <button type="button" onClick={refetch} className="ui-action-button text-[11px]">
+          <Button variant="action" onClick={refetch} className="text-[11px]">
             Try again
-          </button>
+          </Button>
         </div>
       </div>
     );
