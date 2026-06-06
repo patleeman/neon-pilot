@@ -8,7 +8,7 @@ import { Markdown } from '@tiptap/markdown';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { StarterKit } from '@tiptap/starter-kit';
-import { EditorToolbarButton } from '@neon-pilot/extensions/ui';
+import { EditorToolbarButton, RowButton } from '@neon-pilot/extensions/ui';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { knowledgeApi } from '../lib/knowledgeApi';
@@ -385,8 +385,7 @@ function BacklinksPanel({ fileId, onNavigate }: { fileId: string; onNavigate: (i
 
   return (
     <div className={open ? 'kb-bl-panel kb-bl-panel-open' : 'kb-bl-panel'}>
-      <button
-        type="button"
+      <RowButton
         className="kb-bl-toggle"
         onClick={() => {
           const nextOpen = !open;
@@ -405,7 +404,7 @@ function BacklinksPanel({ fileId, onNavigate }: { fileId: string; onNavigate: (i
         <span className="kb-bl-chevron" aria-hidden="true">
           ⌄
         </span>
-      </button>
+      </RowButton>
 
       {open ? (
         <div id={contentId} className="kb-bl-body">
@@ -416,10 +415,10 @@ function BacklinksPanel({ fileId, onNavigate }: { fileId: string; onNavigate: (i
           ) : (
             <div className="kb-backlinks-list">
               {backlinks.map((bl) => (
-                <button key={bl.id} type="button" className="kb-backlink-item" onClick={() => onNavigate(bl.id)}>
+                <RowButton key={bl.id} className="kb-backlink-item" onClick={() => onNavigate(bl.id)}>
                   <span className="kb-backlink-name">{bl.name.replace(/\.md$/, '')}</span>
                   <span className="kb-backlink-excerpt">{bl.excerpt}</span>
-                </button>
+                </RowButton>
               ))}
             </div>
           )}
