@@ -22,6 +22,7 @@ import {
   KeyValueList,
   Stat,
   StatGrid,
+  Switch,
   TabButton,
   TabList,
   TextButton,
@@ -371,36 +372,21 @@ function isQuarantined(extension: ExtensionInstallSummary): boolean {
 function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInstallSummary; busy: boolean; onToggle: () => void }) {
   const locked = isLocked(extension);
   return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 text-[12px] text-secondary transition-colors hover:text-primary disabled:opacity-50"
-      disabled={busy || locked}
+    <span
+      className="inline-flex"
       onClick={(event) => {
-        if (locked) return;
         event.stopPropagation();
-        onToggle();
       }}
-      aria-label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
       title={locked ? 'This extension is required by the application.' : undefined}
     >
-      <span
-        className={cx(
-          'relative h-5 w-9 rounded-full border transition-colors',
-          locked
-            ? 'border-border-subtle bg-surface/40'
-            : extension.enabled
-              ? 'border-success/40 bg-success/20'
-              : 'border-border-subtle bg-surface/60',
-        )}
-      >
-        <span
-          className={cx(
-            'absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition-[left,background-color]',
-            locked ? 'left-[18px] bg-dim' : extension.enabled ? 'left-[18px] bg-success' : 'left-1 bg-dim',
-          )}
-        />
-      </span>
-    </button>
+      <Switch
+        checked={extension.enabled}
+        disabled={busy || locked}
+        onClick={onToggle}
+        aria-label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
+        label={locked ? 'Always on' : undefined}
+      />
+    </span>
   );
 }
 
