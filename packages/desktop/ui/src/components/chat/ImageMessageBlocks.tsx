@@ -1,7 +1,7 @@
 import { memo } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
-import { Button, SurfacePanel } from '../ui';
+import { Button, IconButton, SurfacePanel } from '../ui';
 
 export type InspectableImage = {
   alt: string;
@@ -46,14 +46,15 @@ export function ImageInspectModal({ image, onClose }: { image: InspectableImage;
                 </p>
               ) : null}
             </div>
-            <button
-              type="button"
+            <IconButton
+              shape="circle"
+              compact
               onClick={onClose}
               aria-label="Close image preview"
-              className="pointer-events-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/45 text-[16px] leading-none text-white/80 transition-colors hover:bg-black/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              className="pointer-events-auto h-8 w-8 shrink-0 border-white/15 bg-black/45 text-[16px] leading-none text-white/80 hover:bg-black/60 hover:text-white focus-visible:ring-white/25 focus-visible:ring-offset-black"
             >
               ×
-            </button>
+            </IconButton>
           </div>
           <img src={image.src} alt={image.alt} className="h-full w-full object-contain" />
         </div>
