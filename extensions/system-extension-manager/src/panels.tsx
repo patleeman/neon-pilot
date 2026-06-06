@@ -1320,13 +1320,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           <DataTableCell className="min-w-0 py-4 pl-0 pr-6">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <button
-                  type="button"
-                  className="truncate text-left text-[14px] font-semibold text-primary transition-colors hover:text-accent"
+                <TextButton
+                  className="truncate text-left text-[14px] font-semibold"
                   onClick={() => setDetailsExtensionId(extension.id)}
                 >
                   {extension.name}
-                </button>
+                </TextButton>
                 <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
               </div>
               <CardBody as="div" className="mt-0.5 max-w-[42rem] whitespace-normal break-words">

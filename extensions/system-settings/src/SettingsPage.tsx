@@ -884,16 +884,17 @@ export function CommandsSettingsSection() {
                         void saveKeybinding(keybinding, shortcut);
                       }}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[15px] text-dim transition-colors hover:bg-surface hover:text-primary disabled:opacity-50"
+                    <IconButton
+                      compact
+                      size="sm"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[15px]"
                       disabled={busy}
                       aria-label={keybinding.enabled ? `Clear shortcut for ${keybinding.title}` : `Enable shortcut for ${keybinding.title}`}
                       title={keybinding.enabled ? 'Clear shortcut' : 'Enable shortcut'}
                       onClick={() => void toggleKeybinding(keybinding)}
                     >
                       {keybinding.enabled ? '×' : '+'}
-                    </button>
+                    </IconButton>
                   </div>
                 );
               })}
