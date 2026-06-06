@@ -9,7 +9,7 @@ import { useApi } from '../hooks/useApi';
 import { formatDate } from '../shared/utils';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { CodeBlock, cx, ErrorState, IconButton, LoadingState, MetaLabel, SectionLabel } from './ui';
+import { CodeBlock, ErrorState, IconButton, LoadingState, MetaLabel, RowButton, SectionLabel, TabButton } from './ui';
 
 function formatArtifactLoadError(error: string | null): string | null {
   if (!error) {
@@ -229,21 +229,18 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                   {artifacts.map((item) => {
                     const selected = item.id === selectedArtifactId;
                     return (
-                      <button
+                      <RowButton
                         key={item.id}
-                        type="button"
                         onClick={() => openArtifact(item.id)}
-                        className={cx(
-                          'rounded-xl px-3 py-2.5 text-left transition-colors',
-                          selected ? 'bg-elevated text-primary' : 'text-secondary hover:bg-elevated/60 hover:text-primary',
-                        )}
+                        selected={selected}
+                        className="px-3 py-2.5"
                       >
                         <div className="flex items-center gap-2">
                           <span className="truncate text-[12px] font-medium">{item.title}</span>
                           <MetaLabel tone="muted">{item.kind}</MetaLabel>
                         </div>
                         <div className="mt-0.5 text-[10px] text-dim font-mono">{item.id}</div>
-                      </button>
+                      </RowButton>
                     );
                   })}
                 </div>
@@ -258,19 +255,14 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                   {artifacts.map((item) => {
                     const selected = item.id === selectedArtifactId;
                     return (
-                      <button
+                      <TabButton
                         key={item.id}
-                        type="button"
                         onClick={() => openArtifact(item.id)}
-                        className={cx(
-                          'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors',
-                          selected
-                            ? 'border-accent/30 bg-accent/10 text-accent'
-                            : 'border-border-subtle bg-surface text-secondary hover:bg-elevated hover:text-primary',
-                        )}
+                        active={selected}
+                        className="shrink-0"
                       >
                         {item.title}
-                      </button>
+                      </TabButton>
                     );
                   })}
                 </div>
