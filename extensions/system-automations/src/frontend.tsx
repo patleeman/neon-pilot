@@ -4,12 +4,14 @@ import { timeAgo } from '@neon-pilot/extensions/data';
 import {
   AppPageIntro,
   AppPageLayout,
+  AppPageSection,
   AppPageToc,
   Button,
   CardBody,
   CardMeta,
   cx,
   DataTable,
+  DataTableActionGroup,
   DataTableBody,
   DataTableCell,
   DataTableHead,
@@ -898,7 +900,7 @@ function AutomationTable({
                     </CardMeta>
                   </DataTableCell>
                   <DataTableCell>
-                    <div className="flex items-center justify-end gap-1.5">
+                    <DataTableActionGroup>
                       {taskBusy ? <span className="text-[11px] text-dim">Working…</span> : null}
                       {task.threadConversationId ? (
                         <IconLink
@@ -935,7 +937,7 @@ function AutomationTable({
                         onToggleLog={() => onToggleLog(task.id)}
                         onDelete={() => onDeleteTask(task)}
                       />
-                    </div>
+                    </DataTableActionGroup>
                   </DataTableCell>
                 </DataTableRow>
                 {logById[task.id] ? (
@@ -953,15 +955,6 @@ function AutomationTable({
         </DataTableBody>
       </DataTable>
     </section>
-  );
-}
-
-function SectionHeader({ title, count, tone = 'default' }: { title: string; count: string; tone?: 'default' | 'warning' }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <h2 className="text-[18px] font-semibold tracking-tight text-primary">{title}</h2>
-      <span className={cx('text-[12px]', tone === 'warning' ? 'text-warning' : 'text-dim')}>{count}</span>
-    </div>
   );
 }
 
@@ -1866,8 +1859,12 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     )}
 
                     {visiblePastDueTasks.length > 0 ? (
-                      <section className="space-y-3 border-t border-border-subtle/70 pt-4">
-                        <SectionHeader title="Past due" count={`${visiblePastDueTasks.length} shown`} tone="warning" />
+                      <AppPageSection
+                        title="Past due"
+                        meta={<span className="text-warning">{visiblePastDueTasks.length} shown</span>}
+                        className="border-t border-border-subtle/70 pt-4"
+                        titleClassName="text-[18px]"
+                      >
                         <AutomationTable
                           tasks={visiblePastDueTasks}
                           logById={logById}
@@ -1878,7 +1875,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                           onToggleLog={(taskId) => void toggleLog(taskId)}
                           onDeleteTask={(task) => void deleteTask(task)}
                         />
-                      </section>
+                      </AppPageSection>
                     ) : null}
                   </div>
                 ) : (
