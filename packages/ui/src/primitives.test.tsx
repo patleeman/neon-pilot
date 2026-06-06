@@ -62,6 +62,8 @@ import {
   SectionLabel,
   SegmentedControl,
   SettingToggleRow,
+  ShelfHeader,
+  ShelfSection,
   Stat,
   StatGrid,
   SupportingText,
@@ -264,6 +266,29 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-rail-section');
     expect(html).toContain('Files');
     expect(html).toContain('Ready');
+  });
+
+  it('renders compact shelf section primitives', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        ShelfSection,
+        {
+          header: createElement(ShelfHeader, {
+            leading: '↻',
+            title: 'Background Work',
+            detail: '2 running',
+            actions: createElement(Button, { variant: 'ghost' }, 'details'),
+          }),
+        },
+        createElement('div', null, 'Run summary'),
+      ),
+    );
+
+    expect(html).toContain('ui-shelf-section');
+    expect(html).toContain('ui-shelf-header');
+    expect(html).toContain('Background Work');
+    expect(html).toContain('2 running');
+    expect(html).toContain('Run summary');
   });
 
   it('renders setting toggle rows with switch semantics', () => {

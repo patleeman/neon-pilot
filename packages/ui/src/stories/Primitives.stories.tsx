@@ -91,6 +91,8 @@ import {
   SettingsRow,
   SettingToggleRow,
   SettingsSection,
+  ShelfHeader,
+  ShelfSection,
   Spinner,
   Stat,
   StatGrid,
@@ -478,6 +480,26 @@ const meta = {
               />
               <ResourceListLink href="#resource-link" label="Default workflow" meta="4 items" detail="Navigates to the workflow detail route." />
             </ResourceList>
+            <div style={{ borderTop: '1px solid rgb(var(--color-border-subtle))' }}>
+              <ShelfSection
+                header={
+                  <ShelfHeader
+                    leading={<Spinner size="xs" />}
+                    title="Background Work"
+                    detail="2 running"
+                    actions={<TextButton>details</TextButton>}
+                  />
+                }
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <MetaLabel tone="accent">Agent</MetaLabel>
+                  <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    Building extension UI primitives
+                  </span>
+                  <TextButton tone="accent">open</TextButton>
+                </div>
+              </ShelfSection>
+            </div>
             <WorkbenchShell
               style={{ height: 280, border: '1px solid rgb(var(--color-border-subtle))' }}
               header={

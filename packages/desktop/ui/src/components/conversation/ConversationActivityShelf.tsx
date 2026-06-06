@@ -1,7 +1,7 @@
 import { describeDeferredResumeStatus, formatDeferredResumeWhen } from '../../deferred-resume/deferredResumeIndicator';
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
-import { cx, MetaLabel, Spinner, TextButton } from '../ui';
+import { cx, MetaLabel, ShelfHeader, ShelfSection, Spinner, TextButton } from '../ui';
 
 function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
   if (task.scheduleType === 'cron' && task.cron) return task.cron;
@@ -88,24 +88,24 @@ export function ConversationActivityShelf({
   return (
     <>
       {scheduledTasks.length > 0 && (
-        <>
-          <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 text-[11px]">
-            <div className="min-w-0 flex items-center gap-2">
-              <span className="shrink-0 text-accent">↻</span>
-              <span className="shrink-0 text-secondary">Automations</span>
-              <span className="truncate text-dim">{scheduledTaskIndicatorText}</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-3 text-[11px]">
-              {onToggleScheduledTaskDetails && (
-                <button type="button" onClick={onToggleScheduledTaskDetails} className="text-dim transition-colors hover:text-primary">
-                  {showScheduledTaskDetails ? 'hide' : 'details'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {showScheduledTaskDetails && (
-            <div className="flex flex-col gap-2 border-b border-border-subtle px-3 pt-2.5 pb-2.5">
+        <ShelfSection
+          header={
+            <ShelfHeader
+              leading={<span className="text-accent">↻</span>}
+              title="Automations"
+              detail={scheduledTaskIndicatorText}
+              actions={
+                onToggleScheduledTaskDetails ? (
+                  <TextButton type="button" onClick={onToggleScheduledTaskDetails}>
+                    {showScheduledTaskDetails ? 'hide' : 'details'}
+                  </TextButton>
+                ) : null
+              }
+            />
+          }
+        >
+          {showScheduledTaskDetails ? (
+            <>
               {scheduledTasks.map((task) => {
                 const status = formatScheduledTaskStatus(task);
                 return (
@@ -143,30 +143,32 @@ export function ConversationActivityShelf({
                   </div>
                 );
               })}
-            </div>
-          )}
-        </>
+            </>
+          ) : null}
+        </ShelfSection>
       )}
 
       {backgroundExecutions.length > 0 && (
-        <>
-          <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 text-[11px]">
-            <div className="min-w-0 flex items-center gap-2">
-              <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-accent" aria-hidden="true">
-                <Spinner size="xs" />
-              </span>
-              <span className="shrink-0 text-secondary">Background Work</span>
-              <span className="truncate text-dim">{backgroundExecutionIndicatorText}</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-3 text-[11px]">
-              <TextButton type="button" onClick={onToggleBackgroundRunDetails}>
-                {showBackgroundRunDetails ? 'hide' : 'details'}
-              </TextButton>
-            </div>
-          </div>
-
-          {showBackgroundRunDetails && (
-            <div className="flex flex-col gap-2 border-b border-border-subtle px-3 pt-2.5 pb-2.5">
+        <ShelfSection
+          header={
+            <ShelfHeader
+              leading={
+                <span className="inline-flex h-3 w-3 items-center justify-center text-accent" aria-hidden="true">
+                  <Spinner size="xs" />
+                </span>
+              }
+              title="Background Work"
+              detail={backgroundExecutionIndicatorText}
+              actions={
+                <TextButton type="button" onClick={onToggleBackgroundRunDetails}>
+                  {showBackgroundRunDetails ? 'hide' : 'details'}
+                </TextButton>
+              }
+            />
+          }
+        >
+          {showBackgroundRunDetails ? (
+            <>
               {backgroundExecutions.map((execution) => {
                 const statusLabel = formatExecutionStatusLabel(execution.status);
                 const statusClass =
@@ -226,34 +228,36 @@ export function ConversationActivityShelf({
                   </div>
                 );
               })}
-            </div>
-          )}
-        </>
+            </>
+          ) : null}
+        </ShelfSection>
       )}
 
       {deferredResumes.length > 0 && (
-        <>
-          <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 text-[11px]">
-            <div className="min-w-0 flex items-center gap-2">
-              <span className={cx('shrink-0', hasReadyDeferredResumes ? 'text-warning' : 'text-dim')}>⏰</span>
-              <span className="shrink-0 text-secondary">Attention</span>
-              <span className="truncate text-dim">{deferredResumeIndicatorText}</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-3 text-[11px]">
-              {hasReadyDeferredResumes && !isLiveSession && (
-                <TextButton type="button" onClick={onContinueDeferredResumesNow} tone="accent">
-                  continue now
-                </TextButton>
-              )}
-              {deferredResumesBusy && <span className="text-dim">updating…</span>}
-              <TextButton type="button" onClick={onToggleDeferredResumeDetails}>
-                {showDeferredResumeDetails ? 'hide' : 'details'}
-              </TextButton>
-            </div>
-          </div>
-
-          {showDeferredResumeDetails && (
-            <div className="flex flex-col gap-2 border-b border-border-subtle px-3 pt-2.5 pb-2.5">
+        <ShelfSection
+          header={
+            <ShelfHeader
+              leading={<span className={cx(hasReadyDeferredResumes ? 'text-warning' : 'text-dim')}>⏰</span>}
+              title="Attention"
+              detail={deferredResumeIndicatorText}
+              actions={
+                <>
+                  {hasReadyDeferredResumes && !isLiveSession && (
+                    <TextButton type="button" onClick={onContinueDeferredResumesNow} tone="accent">
+                      continue now
+                    </TextButton>
+                  )}
+                  {deferredResumesBusy && <span className="text-dim">updating…</span>}
+                  <TextButton type="button" onClick={onToggleDeferredResumeDetails}>
+                    {showDeferredResumeDetails ? 'hide' : 'details'}
+                  </TextButton>
+                </>
+              }
+            />
+          }
+        >
+          {showDeferredResumeDetails ? (
+            <>
               {deferredResumes.map((resume) => (
                 <div key={resume.id} className="flex items-start gap-3 text-[12px]">
                   <div className="min-w-0 flex-1">
@@ -296,9 +300,9 @@ export function ConversationActivityShelf({
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-        </>
+            </>
+          ) : null}
+        </ShelfSection>
       )}
     </>
   );

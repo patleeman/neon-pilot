@@ -1360,6 +1360,64 @@ export function RailSection({
   );
 }
 
+export function ShelfSection({
+  header,
+  children,
+  className,
+  bodyClassName,
+  ...props
+}: {
+  header?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <section className={cx('ui-shelf-section', className)} {...props}>
+      {header}
+      {children ? <div className={cx('ui-shelf-section-body', bodyClassName)}>{children}</div> : null}
+    </section>
+  );
+}
+
+export function ShelfHeader({
+  title,
+  detail,
+  leading,
+  actions,
+  className,
+  titleClassName,
+  detailClassName,
+  ...props
+}: {
+  title: ReactNode;
+  detail?: ReactNode;
+  leading?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+  titleClassName?: string;
+  detailClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-shelf-header', className)} {...props}>
+      <div className="ui-shelf-header-main">
+        {leading ? <span className="ui-shelf-header-leading">{leading}</span> : null}
+        <span className={cx('ui-shelf-header-title', titleClassName)}>{title}</span>
+        {detail ? <span className={cx('ui-shelf-header-detail', detailClassName)}>{detail}</span> : null}
+      </div>
+      {actions ? <div className="ui-shelf-header-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
+export function ShelfBody({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-shelf-body', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export function PanelHeader({
   title,
   meta,

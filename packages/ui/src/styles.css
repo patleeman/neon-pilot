@@ -1705,6 +1705,60 @@ body {
   padding: 0.5rem;
 }
 
+.ui-shelf-section {
+  border-bottom: 1px solid rgb(var(--color-border-subtle));
+}
+
+.ui-shelf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  color: rgb(var(--color-secondary));
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+.ui-shelf-header-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ui-shelf-header-leading {
+  flex-shrink: 0;
+}
+
+.ui-shelf-header-title {
+  flex-shrink: 0;
+  color: rgb(var(--color-secondary));
+}
+
+.ui-shelf-header-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: rgb(var(--color-dim));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-shelf-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ui-shelf-section-body,
+.ui-shelf-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+}
+
 .ui-stat-grid {
   display: grid;
   gap: 0.5rem;
