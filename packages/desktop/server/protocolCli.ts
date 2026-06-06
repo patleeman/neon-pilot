@@ -3,6 +3,12 @@ import { pathToFileURL } from 'node:url';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
+import {
+  ensureNeonPilotCliLauncher,
+  getDefaultUserCliInstallPath,
+  getNeonPilotCliBinDir,
+  installUserCliSymlink,
+} from './cliEnvironment.js';
 import { getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
@@ -53,6 +59,7 @@ function usage(): string {
     '',
     'Built-in commands:',
     '  commands [--json]             List extension-contributed CLI commands',
+    '  cli status|install|uninstall  Manage the optional user-shell CLI symlink',
     '  help [command]                Show help',
     '  protocol <protocol-id> ...    Invoke a raw extension protocol entrypoint',
     '',
@@ -98,12 +105,54 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
     return listCliCommands(argv.slice(1));
   }
 
+  if (command === 'cli') {
+    return manageCliInstall(argv.slice(1));
+  }
+
   if (!command) {
     process.stderr.write(`${usage()}\n`);
     return PROTOCOL_CLI_EXIT_CODES.usage;
   }
 
   return invokeContributedCliCommand(argv, options);
+}
+
+async function manageCliInstall(args: string[]): Promise<number> {
+  const [action = 'status'] = args;
+  const repoRoot = process.cwd();
+  const target = ensureNeonPilotCliLauncher({ repoRoot });
+  const linkPath = getDefaultUserCliInstallPath();
+  const payload = {
+    target,
+    binDir: getNeonPilotCliBinDir(),
+    linkPath,
+    globallyInstalled: false,
+  };
+  try {
+    const { existsSync, lstatSync, readlinkSync, unlinkSync } = await import('node:fs');
+    const isOwned = existsSync(linkPath) && lstatSync(linkPath).isSymbolicLink() && readlinkSync(linkPath) === target;
+    if (action === 'status') {
+      const result = { ...payload, globallyInstalled: isOwned };
+      process.stdout.write(wantsJson(args) ? `${JSON.stringify(result, null, 2)}\n` : `Neon Pilot CLI: ${target}\nUser shell link: ${isOwned ? linkPath : 'not installed'}\n`);
+      return 0;
+    }
+    if (action === 'install') {
+      const installed = installUserCliSymlink({ target });
+      process.stdout.write(wantsJson(args) ? `${JSON.stringify({ ...payload, linkPath: installed, globallyInstalled: true }, null, 2)}\n` : `Installed ${installed} -> ${target}\n`);
+      return 0;
+    }
+    if (action === 'uninstall') {
+      if (isOwned) unlinkSync(linkPath);
+      process.stdout.write(wantsJson(args) ? `${JSON.stringify({ ...payload, globallyInstalled: false, removed: isOwned }, null, 2)}\n` : `${isOwned ? `Removed ${linkPath}` : 'No Neon Pilot-owned user shell link found.'}\n`);
+      return 0;
+    }
+    process.stderr.write(`Unknown cli action: ${action}\n`);
+    return PROTOCOL_CLI_EXIT_CODES.usage;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    return PROTOCOL_CLI_EXIT_CODES.runtimeFailure;
+  }
 }
 
 async function invokeProtocolCli(protocolId: string, protocolArgs: string[], options?: { signal?: AbortSignal }): Promise<number> {
@@ -298,7 +347,7 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
       serverContextSnapshot: buildServerContextSnapshot(),
       signal: options?.signal,
     });
-    if (!invokeResult.ok) throw new Error(invokeResult.error);
+    if (!invokeResult.ok) throw new Error('error' in invokeResult ? invokeResult.error : 'Extension CLI command failed.');
     process.stdout.write(formatActionResult(invokeResult.result, json));
     return 0;
   } catch (error) {
