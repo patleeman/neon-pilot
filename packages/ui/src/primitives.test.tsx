@@ -353,13 +353,18 @@ describe('design-system primitives', () => {
     const html = renderToStaticMarkup(
       createElement(
         DataTable,
-        null,
+        {
+          columns: createElement('colgroup', null, createElement('col', { className: 'w-1/2' })),
+          tableClassName: 'table-fixed',
+        },
         createElement(DataTableHead, null, createElement(DataTableRow, null, createElement(DataTableHeaderCell, null, 'Name'))),
         createElement(DataTableBody, null, createElement(DataTableRow, null, createElement(DataTableCell, null, 'Extension'))),
       ),
     );
 
     expect(html).toContain('<table');
+    expect(html).toContain('<colgroup');
+    expect(html).toContain('table-fixed');
     expect(html).toContain('ui-data-table-head');
     expect(html).toContain('ui-data-table-cell');
   });

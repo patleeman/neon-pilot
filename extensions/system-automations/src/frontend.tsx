@@ -9,6 +9,12 @@ import {
   CardBody,
   CardMeta,
   cx,
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
   EmptyState,
   ErrorState,
   Field,
@@ -837,30 +843,35 @@ function AutomationTable({
   onDeleteTask: (task: ScheduledTaskSummary) => void;
 }) {
   return (
-    <section className="min-w-0 overflow-x-auto overflow-y-visible">
-      <table className="w-full min-w-[54rem] table-fixed border-collapse text-left text-[13px]">
-        <colgroup>
-          <col className="w-[46%]" />
-          <col className="w-[22%]" />
-          <col className="w-[18%]" />
-          <col className="w-[14%]" />
-        </colgroup>
-        <thead className="sticky top-0 z-10 bg-base/95 backdrop-blur">
-          <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-dim">
-            <th className="py-2 pr-4 font-semibold">Name</th>
-            <th className="py-2 px-3 font-semibold">Schedule</th>
-            <th className="py-2 px-3 font-semibold">Status</th>
-            <th className="py-2 pl-3 text-right font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+    <section>
+      <DataTable
+        className="overflow-x-auto overflow-y-visible"
+        tableClassName="min-w-[54rem] table-fixed"
+        columns={
+          <colgroup>
+            <col className="w-[46%]" />
+            <col className="w-[22%]" />
+            <col className="w-[18%]" />
+            <col className="w-[14%]" />
+          </colgroup>
+        }
+      >
+        <DataTableHead>
+          <DataTableRow className="hover:bg-transparent">
+            <DataTableHeaderCell className="pl-0">Name</DataTableHeaderCell>
+            <DataTableHeaderCell>Schedule</DataTableHeaderCell>
+            <DataTableHeaderCell>Status</DataTableHeaderCell>
+            <DataTableHeaderCell className="text-right">Actions</DataTableHeaderCell>
+          </DataTableRow>
+        </DataTableHead>
+        <DataTableBody>
           {tasks.map((task) => {
             const scope = taskScopeText(task);
             const taskBusy = busy === `run:${task.id}` || busy === `delete:${task.id}`;
             return (
               <Fragment key={task.id}>
-                <tr className="group border-t border-border-subtle/70 transition-colors hover:bg-surface/30">
-                  <td className="min-w-0 py-3 pr-4 align-middle">
+                <DataTableRow className="group">
+                  <DataTableCell className="min-w-0 pl-0 pr-4">
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className={cx('h-2.5 w-2.5 shrink-0 rounded-full border', statusClass(task, nowMs))} />
@@ -874,18 +885,18 @@ function AutomationTable({
                         {scope ? ` · ${scope}` : ''}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-3 py-3 align-middle">
+                  </DataTableCell>
+                  <DataTableCell>
                     <div className="text-[13px] text-primary">{taskScheduleSummary(task)}</div>
                     <div className="mt-0.5 break-all font-mono text-[11px] text-dim">{task.cron ?? task.at ?? 'Manual'}</div>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 align-middle">
+                  </DataTableCell>
+                  <DataTableCell className="whitespace-nowrap">
                     <div className={cx('text-[12px]', statusTextClass(task, nowMs))}>{statusText(task, nowMs)}</div>
                     <CardMeta as="div" className="mt-0.5">
                       {taskLastRunText(task, nowMs)}
                     </CardMeta>
-                  </td>
-                  <td className="py-3 pl-3 align-middle">
+                  </DataTableCell>
+                  <DataTableCell>
                     <div className="flex items-center justify-end gap-1.5">
                       {taskBusy ? <span className="text-[11px] text-dim">Working…</span> : null}
                       {task.threadConversationId ? (
@@ -924,22 +935,22 @@ function AutomationTable({
                         onDelete={() => onDeleteTask(task)}
                       />
                     </div>
-                  </td>
-                </tr>
+                  </DataTableCell>
+                </DataTableRow>
                 {logById[task.id] ? (
-                  <tr className="border-t border-border-subtle/40 bg-surface/20">
-                    <td colSpan={4} className="px-4 py-3">
+                  <DataTableRow className="bg-surface/20 hover:bg-surface/20">
+                    <DataTableCell colSpan={4} className="px-4 py-3">
                       <pre className="max-h-56 overflow-auto whitespace-pre-wrap border-l-2 border-border-subtle pl-3 text-[12px] leading-5 text-secondary">
                         {logById[task.id]}
                       </pre>
-                    </td>
-                  </tr>
+                    </DataTableCell>
+                  </DataTableRow>
                 ) : null}
               </Fragment>
             );
           })}
-        </tbody>
-      </table>
+        </DataTableBody>
+      </DataTable>
     </section>
   );
 }

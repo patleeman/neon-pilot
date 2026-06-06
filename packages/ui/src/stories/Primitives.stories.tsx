@@ -318,7 +318,16 @@ const meta = {
             <CodeBlock compact>{'{\n  "cwd": "/Users/patrick/workingdir/neon-pilot",\n  "mode": "review"\n}'}</CodeBlock>
           </Disclosure>
           <CodeBlock>{'pa.extension.invoke("readState", { id: "system-example" })'}</CodeBlock>
-          <DataTable>
+          <DataTable
+            tableClassName="table-fixed"
+            columns={
+              <colgroup>
+                <col className="w-1/2" />
+                <col className="w-1/4" />
+                <col className="w-1/4" />
+              </colgroup>
+            }
+          >
             <DataTableHead>
               <DataTableRow>
                 <DataTableHeaderCell>Name</DataTableHeaderCell>

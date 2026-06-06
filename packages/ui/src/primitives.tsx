@@ -799,10 +799,23 @@ export function KeyValueTable({
   );
 }
 
-export function DataTable({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export function DataTable({
+  children,
+  className,
+  columns,
+  tableClassName,
+  ...props
+}: {
+  children: ReactNode;
+  columns?: ReactNode;
+  tableClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cx('ui-data-table-shell', className)} {...props}>
-      <table className="ui-data-table">{children}</table>
+      <table className={cx('ui-data-table', tableClassName)}>
+        {columns}
+        {children}
+      </table>
     </div>
   );
 }
