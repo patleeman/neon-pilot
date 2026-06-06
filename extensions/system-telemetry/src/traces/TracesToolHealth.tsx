@@ -8,9 +8,11 @@ import {
   type MetricTone,
   PanelHeader,
   PanelMessage,
+  Pill,
   ProgressBar,
   ProgressRow,
   SectionLabel,
+  StatusDot,
   SurfacePanel,
 } from '@neon-pilot/extensions/ui';
 
@@ -140,16 +142,18 @@ function ComplexityStat({ label, value, tone = 'default' }: { label: string; val
 function ToolCard({ tool }: { tool: TraceToolHealth }) {
   const successRate = tool.calls > 0 ? ((tool.calls - tool.errors) / tool.calls) * 100 : 100;
   const hasTrouble = tool.errors > 0 && successRate < 95;
-  const dotClass = tool.errors === 0 ? 'bg-success' : hasTrouble ? 'bg-danger' : 'bg-warning';
+  const dotTone = tool.errors === 0 ? 'success' : hasTrouble ? 'danger' : 'warning';
 
   const okCalls = tool.calls - tool.errors;
 
   return (
-    <div className={`rounded-lg p-3 border ${hasTrouble ? 'border-danger/20 bg-danger/[0.03]' : 'border-transparent bg-elevated'}`}>
+    <SurfacePanel muted className={hasTrouble ? 'border-danger/20 bg-danger/[0.03] p-3' : 'border-transparent p-3'}>
       <div className="flex items-center gap-2 mb-2.5">
-        <span className={`w-1.5 h-1.5 rounded-md ${dotClass}`} />
+        <StatusDot tone={dotTone} size="xs" />
         <span className="text-[13px] font-semibold">{tool.toolName}</span>
-        <span className="ml-auto text-[10px] text-dim bg-surface px-1.5 py-0.5 rounded-md">{tool.calls} calls</span>
+        <Pill className="ml-auto" mono>
+          {tool.calls} calls
+        </Pill>
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1">
         <Stat
@@ -171,7 +175,7 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
           {tool.errors > 0 && <span className="text-danger">{tool.errors} err</span>}
         </div>
       </div>
-    </div>
+    </SurfacePanel>
   );
 }
 
