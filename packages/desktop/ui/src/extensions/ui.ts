@@ -149,6 +149,7 @@ export {
   TextButton,
   Textarea,
   TextInput,
+  TextLink,
   TextPromptDialog,
   type TextPromptDialogProps,
   TerminalBlock,

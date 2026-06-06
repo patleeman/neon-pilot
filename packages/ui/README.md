@@ -15,7 +15,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 ## Current Components
 
-- Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `ComposerActionButton`, `EditorToolbar`, `EditorToolbarGroup`, `EditorToolbarButton`, `IconButton`, `IconLink`, `BrowsePathButton`, `CheckButton`, `TaskListItem`, `ActionTile`
+- Actions: `Button`, `ButtonLink`, `TextLink`, `ToolbarButton`, `TextButton`, `MessageActionButton`, `ComposerActionButton`, `EditorToolbar`, `EditorToolbarGroup`, `EditorToolbarButton`, `IconButton`, `IconLink`, `BrowsePathButton`, `CheckButton`, `TaskListItem`, `ActionTile`
 - Attachment controls: `AttachmentChip`, `AttachmentChipButton`
 - Status: `Pill`, `StatusDot`, `RingStatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`, `WorkbenchShell`, `WorkbenchHeader`, `RailSection`, `RailSubsection`, `ShelfSection`, `ShelfHeader`, `ShelfBody`
@@ -70,6 +70,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `Button` for semantic app actions. `variant="toolbar"` is quiet chrome, `variant="action"` is stronger and works for compact transcript/tool action controls, and `variant="ghost"` is best for selectable cards or low-emphasis row actions.
 - Use `Button tone="danger"` for destructive actions such as delete, remove, revoke, and reset instead of local danger button classes.
 - Use `ButtonLink` when the same text-button treatment navigates with a real `href`. Prefer it over styling anchors by hand.
+- Use `TextLink` for inline prose links in notices, hints, setup copy, help text, and empty states. Prefer it over handwritten `text-accent underline` anchors.
 - Use `TextButton` for inline detail actions in rows, key-value lists, and compact headers where bordered button chrome would add visual noise.
 - Use `MessageActionButton` for low-emphasis transcript, message, and tool-output actions such as copy, edit, rerun, fork, and extension-provided message actions.
 - Use `ComposerActionButton` for round composer submit, steer, follow-up, stop, and disabled-send affordances. Set `tone="accent"` for send/submit, `tone="warning"` for steer, `tone="neutral"` for follow-up, `tone="danger"` for stop, and `tone="disabled"` for unavailable send/submit states. Use `size="icon"` for icon-only send/stop buttons, `size="compactLabel"` for 32px inline steer/follow-up buttons, and `size="label"` for 36px submit-answer buttons.

@@ -329,6 +329,34 @@ body {
   color: rgb(var(--color-primary));
 }
 
+.ui-text-link {
+  color: rgb(var(--color-accent));
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-underline-offset: 0.18em;
+  transition:
+    color 140ms ease,
+    text-decoration-color 140ms ease;
+}
+
+.ui-text-link:hover {
+  color: rgb(var(--color-primary));
+}
+
+.ui-text-link.text-danger {
+  color: rgb(var(--color-danger));
+}
+
+.ui-text-link.text-warning {
+  color: rgb(var(--color-warning));
+}
+
+.ui-text-link:focus-visible {
+  outline: none;
+  border-radius: 0.1875rem;
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
+}
+
 .ui-message-action-button {
   display: inline-flex;
   user-select: none;

@@ -86,6 +86,17 @@ export const ButtonLink = forwardRef<
   );
 });
 
+export const TextLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement> & { tone?: ButtonTone }>(function TextLink(
+  { className, children, tone = 'accent', ...props },
+  ref,
+) {
+  return (
+    <a ref={ref} className={cx('ui-text-link', buttonToneClass(tone), className)} {...props}>
+      {children}
+    </a>
+  );
+});
+
 export function PageHeader({
   children,
   actions,

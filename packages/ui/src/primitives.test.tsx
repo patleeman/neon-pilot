@@ -80,6 +80,7 @@ import {
   TabPanel,
   TaskListItem,
   TextInput,
+  TextLink,
   TerminalBlock,
   Tooltip,
   WorkbenchHeader,
@@ -109,6 +110,14 @@ describe('design-system primitives', () => {
 
     expect(html).toContain('href="#new"');
     expect(html).toContain('ui-action-button');
+    expect(html).toContain('text-accent');
+  });
+
+  it('maps text links to stable inline link classes', () => {
+    const html = renderToStaticMarkup(createElement(TextLink, { href: '#settings' }, 'Settings'));
+
+    expect(html).toContain('href="#settings"');
+    expect(html).toContain('ui-text-link');
     expect(html).toContain('text-accent');
   });
 

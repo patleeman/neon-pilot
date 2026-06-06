@@ -114,6 +114,7 @@ import {
   TextButton,
   Textarea,
   TextInput,
+  TextLink,
   TextPromptDialog,
   TerminalBlock,
   Tooltip,
@@ -142,6 +143,7 @@ const meta = {
           <BrowsePathButton busy={false} title="Choose workspace folder" ariaLabel="Choose workspace folder" onClick={() => undefined} />
           <TextButton>Inline action</TextButton>
           <TextButton tone="danger">Remove</TextButton>
+          <TextLink href="#settings">Settings link</TextLink>
           <MessageActionButton>copy</MessageActionButton>
           <MessageActionButton tone="accent">copied</MessageActionButton>
           <MessageActionButton tone="danger">copy failed</MessageActionButton>
