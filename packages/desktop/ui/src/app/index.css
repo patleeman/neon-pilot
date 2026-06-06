@@ -563,6 +563,10 @@
     @apply items-center;
   }
 
+  .ui-conversation-setup-empty.ui-app-page-empty-shell-start {
+    @apply pt-0;
+  }
+
   .ui-section-label {
     @apply text-[10px] font-semibold uppercase tracking-wider;
     color: rgb(var(--color-teal) / 0.88);

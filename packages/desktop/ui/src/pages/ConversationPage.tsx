@@ -5898,7 +5898,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                           }
                         }}
                         placeholder="Name this conversation"
-                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[34px]"
+                        className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[26px] font-semibold leading-[1.08] tracking-normal text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35"
                         disabled={titleSaving}
                       />
                       <IconButton
@@ -5950,7 +5950,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                       </IconButton>
                     </form>
                   ) : draft ? (
-                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px]">
+                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[26px] font-semibold leading-[1.08] tracking-normal text-primary">
                       {title}
                     </h1>
                   ) : (
@@ -6085,7 +6085,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           ) : (
             <AppPageEmptyState
               align={showNewConversationSetup ? 'start' : 'center'}
-              className={showNewConversationSetup ? 'px-4 pt-12 sm:px-6' : undefined}
+              className={showNewConversationSetup ? 'ui-conversation-setup-empty px-4 sm:px-6' : undefined}
               contentClassName={showNewConversationSetup ? `${DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS} text-left` : undefined}
               icon={
                 showNewConversationSetup ? undefined : (
