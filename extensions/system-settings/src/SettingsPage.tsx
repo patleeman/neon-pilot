@@ -69,7 +69,6 @@ import {
 } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
 const ICON_BUTTON_CLASS =
   'ui-toolbar-button inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-0 text-[14px] shadow-none';
 const DANGER_ACTION_BUTTON_CLASS =
@@ -731,17 +730,16 @@ export function DesktopKeyboardShortcutsSettingsSection() {
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="ui-card-meta">{saving ? 'Saving…' : dirty ? 'Unsaved change pending…' : 'Auto-saved'}</span>
-            <button
+            <ToolbarButton
               type="button"
               onClick={() => {
                 setDraft(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS);
                 void saveKeyboardShortcuts(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS);
               }}
               disabled={saving || duplicateShortcut !== null}
-              className={ACTION_BUTTON_CLASS}
             >
               Reset to defaults
-            </button>
+            </ToolbarButton>
           </div>
         </div>
       ) : null}
@@ -1619,26 +1617,24 @@ function ExtensionSecretsSection() {
                       spellCheck={false}
                       disabled={!secret.writable || savingKey === secret.key}
                     />
-                    <button
+                    <ToolbarButton
                       type="button"
-                      className={ACTION_BUTTON_CLASS}
                       disabled={!secret.writable || savingKey === secret.key || !(drafts[secret.key] ?? '').trim()}
                       onClick={() => {
                         void saveSecret(secret);
                       }}
                     >
                       {savingKey === secret.key ? 'Saving…' : secret.configured ? 'Replace' : 'Save'}
-                    </button>
-                    <button
+                    </ToolbarButton>
+                    <ToolbarButton
                       type="button"
-                      className={ACTION_BUTTON_CLASS}
                       disabled={!secret.writable || savingKey === secret.key || !secret.configured || secret.source === 'env'}
                       onClick={() => {
                         void removeSecret(secret);
                       }}
                     >
                       Remove
-                    </button>
+                    </ToolbarButton>
                   </div>
                   {!secret.writable ? (
                     <p className="ui-card-meta">The active backend is read-only. Set the environment variable instead.</p>
@@ -2941,16 +2937,15 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         <span className="ui-card-meta">
                           {savingDefaultCwd ? 'Saving…' : defaultCwdDirty ? 'Auto-save pending…' : 'Auto-saved'}
                         </span>
-                        <button
+                        <ToolbarButton
                           type="button"
                           onClick={() => {
                             void handleDefaultCwdSave('');
                           }}
                           disabled={savingDefaultCwd || pickingDefaultCwd || defaultCwdState.currentCwd.length === 0}
-                          className={ACTION_BUTTON_CLASS}
                         >
                           Use process cwd
-                        </button>
+                        </ToolbarButton>
                       </div>
                       <p className="ui-card-meta">
                         Absolute, <span className="font-mono text-[11px]">~/…</span>, or relative. Leave blank to use the runtime process
@@ -3020,7 +3015,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                   ))}
                                   <option value={ADD_CUSTOM_PROVIDER_ID}>Add custom provider…</option>
                                 </Select>
-                                <button
+                                <ToolbarButton
                                   type="button"
                                   onClick={() => {
                                     if (modelProviderPickerId === ADD_CUSTOM_PROVIDER_ID) {
@@ -3030,10 +3025,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     }
                                   }}
                                   disabled={!modelProviderPickerId}
-                                  className={`${ACTION_BUTTON_CLASS} h-9 shrink-0`}
+                                  className="h-9 shrink-0"
                                 >
                                   Continue
-                                </button>
+                                </ToolbarButton>
                               </div>
                             </div>
                           </div>
@@ -3307,18 +3302,17 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 </p>
 
                                 <div className="flex flex-wrap gap-2">
-                                  <button
+                                  <ToolbarButton
                                     type="submit"
                                     disabled={modelProviderAction !== null || modelProviderDraft.id.trim().length === 0}
-                                    className={ACTION_BUTTON_CLASS}
                                   >
                                     {modelProviderAction === 'save'
                                       ? 'Saving provider…'
                                       : selectedModelProviderId === NEW_MODEL_PROVIDER_ID
                                         ? 'Create provider'
                                         : 'Save provider'}
-                                  </button>
-                                  <button
+                                  </ToolbarButton>
+                                  <ToolbarButton
                                     type="button"
                                     onClick={() => {
                                       void handleDeleteModelProvider();
@@ -3328,10 +3322,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       selectedModelProviderId === NEW_MODEL_PROVIDER_ID ||
                                       !selectedModelProvider
                                     }
-                                    className={ACTION_BUTTON_CLASS}
                                   >
                                     {modelProviderAction === 'delete' ? 'Removing…' : 'Remove provider'}
-                                  </button>
+                                  </ToolbarButton>
                                 </div>
 
                                 {modelProviderMessage && <p className="text-[12px] text-success">{modelProviderMessage}</p>}
@@ -3492,14 +3485,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         />
                                       </div>
                                       <div className="flex gap-2">
-                                        <button
+                                        <ToolbarButton
                                           type="submit"
                                           disabled={modelDraftAction !== null || modelDraft.id.trim().length === 0}
-                                          className={ACTION_BUTTON_CLASS}
                                         >
                                           {modelDraftAction === 'save' ? 'Adding…' : 'Add model'}
-                                        </button>
-                                        <button
+                                        </ToolbarButton>
+                                        <ToolbarButton
                                           type="button"
                                           onClick={() => {
                                             setEditingModelId(null);
@@ -3508,10 +3500,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                             setModelDraftMessage(null);
                                           }}
                                           disabled={modelDraftAction !== null}
-                                          className={ACTION_BUTTON_CLASS}
                                         >
                                           Cancel
-                                        </button>
+                                        </ToolbarButton>
                                       </div>
                                     </form>
                                   )}
@@ -3787,14 +3778,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       </div>
 
                                       <div className="flex flex-wrap gap-2">
-                                        <button
+                                        <ToolbarButton
                                           type="submit"
                                           disabled={modelDraftAction !== null || modelDraft.id.trim().length === 0}
-                                          className={ACTION_BUTTON_CLASS}
                                         >
                                           {modelDraftAction === 'save' ? 'Saving model…' : 'Save model'}
-                                        </button>
-                                        <button
+                                        </ToolbarButton>
+                                        <ToolbarButton
                                           type="button"
                                           onClick={() => {
                                             setEditingModelId(null);
@@ -3803,10 +3793,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                             setModelDraftMessage(null);
                                           }}
                                           disabled={modelDraftAction !== null}
-                                          className={ACTION_BUTTON_CLASS}
                                         >
                                           Cancel
-                                        </button>
+                                        </ToolbarButton>
                                       </div>
                                     </form>
                                   )}
@@ -3866,7 +3855,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
 
                                 <div className="flex flex-wrap gap-2">
                                   {modalProviderAuth.oauthSupported && (
-                                    <button
+                                    <ToolbarButton
                                       type="button"
                                       onClick={() => {
                                         void handleStartProviderOAuthLogin();
@@ -3876,7 +3865,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         oauthAction !== null ||
                                         selectedProviderLogin?.status === 'running'
                                       }
-                                      className={`${ACTION_BUTTON_CLASS} inline-flex items-center gap-2`}
+                                      className="inline-flex items-center gap-2"
                                       aria-label={`Start OAuth login (${modalProviderAuth.id})`}
                                       title={`Start OAuth login (${modalProviderAuth.id})`}
                                     >
@@ -3888,7 +3877,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           OAuth Login
                                         </>
                                       )}
-                                    </button>
+                                    </ToolbarButton>
                                   )}
                                 </div>
 
@@ -3937,26 +3926,24 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                             }}
                                           />
                                           <div className="flex shrink-0 gap-2">
-                                            <button
+                                            <ToolbarButton
                                               type="button"
                                               onClick={() => {
                                                 void handleOpenProviderOAuthUrl(selectedProviderLogin.authUrl);
                                               }}
                                               disabled={oauthAction !== null}
-                                              className={ACTION_BUTTON_CLASS}
                                             >
                                               Open
-                                            </button>
-                                            <button
+                                            </ToolbarButton>
+                                            <ToolbarButton
                                               type="button"
                                               onClick={() => {
                                                 void handleCopyProviderOAuthUrl(selectedProviderLogin.authUrl);
                                               }}
                                               disabled={oauthAction !== null || !navigator.clipboard}
-                                              className={ACTION_BUTTON_CLASS}
                                             >
                                               Copy
-                                            </button>
+                                            </ToolbarButton>
                                           </div>
                                         </div>
                                       </div>
@@ -3967,7 +3954,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         {oauthPromptOptions.length > 0 ? (
                                           <div className="flex flex-wrap gap-2">
                                             {oauthPromptOptions.map((option) => (
-                                              <button
+                                              <ToolbarButton
                                                 key={option.id}
                                                 type="button"
                                                 onClick={() => {
@@ -3987,10 +3974,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                     });
                                                 }}
                                                 disabled={oauthAction !== null}
-                                                className={`${ACTION_BUTTON_CLASS} capitalize`}
+                                                className="capitalize"
                                               >
                                                 {oauthAction === 'submit' ? 'Submitting…' : option.label}
-                                              </button>
+                                              </ToolbarButton>
                                             ))}
                                           </div>
                                         ) : (
@@ -4016,30 +4003,28 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                                 disabled={oauthAction !== null}
                                               />
                                             </div>
-                                            <button
+                                            <ToolbarButton
                                               type="submit"
                                               disabled={
                                                 oauthAction !== null ||
                                                 (!selectedProviderLogin.prompt.allowEmpty && oauthInputValue.trim().length === 0)
                                               }
-                                              className={ACTION_BUTTON_CLASS}
                                             >
                                               {oauthAction === 'submit' ? 'Submitting…' : 'Submit'}
-                                            </button>
+                                            </ToolbarButton>
                                           </form>
                                         )}
                                       </div>
                                     )}
-                                    <button
+                                    <ToolbarButton
                                       type="button"
                                       onClick={() => {
                                         void handleCancelProviderOAuthLogin();
                                       }}
                                       disabled={oauthAction !== null}
-                                      className={ACTION_BUTTON_CLASS}
                                     >
                                       {oauthAction === 'cancel' ? 'Cancelling…' : 'Cancel OAuth login'}
-                                    </button>
+                                    </ToolbarButton>
                                   </div>
                                 )}
                               </div>
