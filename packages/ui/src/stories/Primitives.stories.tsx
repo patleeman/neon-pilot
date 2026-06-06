@@ -65,7 +65,9 @@ import {
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
+  ResourceList,
   ResourceListItem,
+  ResourceListRow,
   RingStatusDot,
   RowButton,
   RuntimeFooter,
@@ -412,6 +414,20 @@ const meta = {
             </p>
             <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" leading="#" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
+            <ResourceList>
+              <ResourceListRow
+                title="Review changed files"
+                meta={<MetaLabel tone="muted">Extension</MetaLabel>}
+                detail="extensions/system-example/skills/review/SKILL.md"
+                actions={<Button variant="ghost">Enabled</Button>}
+              />
+              <ResourceListRow
+                title="Sync docs"
+                meta={<MetaLabel tone="success">Project</MetaLabel>}
+                detail="AGENTS.md"
+                actions={<Button variant="ghost">Disabled</Button>}
+              />
+            </ResourceList>
             <div style={{ position: 'relative', minHeight: 340, overflow: 'hidden', border: '1px dashed rgb(var(--color-border-subtle))' }}>
               <ResourcePickerDialog
                 title="Open workspace"

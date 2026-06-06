@@ -35,6 +35,7 @@ import {
   PositionedMenu,
   MenuSeparator,
   MenuShell,
+  MetaLabel,
   Notice,
   PanelHeader,
   Pill,
@@ -42,7 +43,9 @@ import {
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
+  ResourceList,
   ResourceListItem,
+  ResourceListRow,
   RuntimeFooter,
   RuntimeSection,
   RuntimeStatusDot,
@@ -304,6 +307,23 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-resource-list-item-leading');
     expect(html).toContain('Architecture diagram');
     expect(html).toContain('mermaid');
+
+    const rowHtml = renderToStaticMarkup(
+      createElement(
+        ResourceList,
+        null,
+        createElement(ResourceListRow, {
+          title: 'Skill name',
+          meta: createElement(MetaLabel, { tone: 'muted' }, 'Extension'),
+          detail: 'extensions/system-example/skills/example/SKILL.md',
+          actions: createElement(Button, { variant: 'ghost' }, 'Enabled'),
+        }),
+      ),
+    );
+
+    expect(rowHtml).toContain('ui-resource-list-bordered');
+    expect(rowHtml).toContain('ui-resource-list-row');
+    expect(rowHtml).toContain('ui-resource-list-row-actions');
   });
 
   it('renders card typography primitives with stable classes', () => {

@@ -26,6 +26,8 @@ import {
   MenuShell,
   Notice,
   PanelMessage,
+  ResourceList,
+  ResourceListRow,
   SearchInput,
   SectionLabel,
   Select,
@@ -682,17 +684,20 @@ function ExtensionRepositoriesControl({
           {busyId === 'extension-source' ? 'Adding...' : 'Add repo'}
         </Button>
       </div>
-      <div className="divide-y divide-border-subtle/70 border-y border-border-subtle/70">
+      <ResourceList>
         {sources.map((source) => (
-          <div key={source.id} className="flex items-center justify-between gap-3 py-2 text-[12px]">
-            <div className="min-w-0">
-              <div className="truncate font-medium text-primary">{sourceLabel(source)}</div>
-              <div className="truncate text-dim">
+          <ResourceListRow
+            key={source.id}
+            title={sourceLabel(source)}
+            detail={
+              <>
                 {source.owner}/{source.repo}
                 {source.enabled ? '' : ' · disabled'}
-              </div>
-            </div>
-            {source.id !== 'neon-pilot' ? (
+              </>
+            }
+            titleClassName="text-[12px]"
+            actions={
+              source.id !== 'neon-pilot' ? (
               <Button
                 variant="action"
                 className="px-3 py-1.5 text-[12px]"
@@ -701,10 +706,11 @@ function ExtensionRepositoriesControl({
               >
                 Remove
               </Button>
-            ) : null}
-          </div>
+              ) : null
+            }
+          />
         ))}
-      </div>
+      </ResourceList>
       {sourceErrors.length ? (
         <div className="space-y-1 text-[12px] text-danger">
           {sourceErrors.map((error) => (
@@ -1712,19 +1718,19 @@ function InstallExtensionModal({
                 placeholder="Search marketplace"
               />
             </div>
-            <div className="max-h-[28rem] overflow-y-auto border-y border-border-subtle/70">
-              <div className="divide-y divide-border-subtle/70">
+            <div className="max-h-[28rem] overflow-y-auto">
+              <ResourceList>
                 {visibleCatalogItems.map((item) => {
                   const itemBusy = catalogBusyId === item.id;
                   const unavailablePackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
                   return (
-                    <div key={item.id} className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-medium text-primary">{item.name}</div>
-                        <CardBody as="div" className="mt-0.5">
-                          {item.description || packageKindLabel(item)}
-                        </CardBody>
-                      </div>
+                    <ResourceListRow
+                      key={item.id}
+                      title={item.name}
+                      detail={item.description || packageKindLabel(item)}
+                      titleClassName="text-[13px]"
+                      detailClassName="text-[12px] font-sans text-secondary"
+                      actions={
                       <Button
                         variant="action"
                         className="px-3 py-1.5 text-[12px]"
@@ -1733,10 +1739,11 @@ function InstallExtensionModal({
                       >
                         {itemBusy ? 'Installing...' : item.installed ? 'Installed' : unavailablePackage ? 'Planned' : 'Install'}
                       </Button>
-                    </div>
+                      }
+                    />
                   );
                 })}
-              </div>
+              </ResourceList>
             </div>
             {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No marketplace matches.</PanelMessage> : null}
           </section>

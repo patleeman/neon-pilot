@@ -975,6 +975,63 @@ export function ResourcePickerList({
   );
 }
 
+export function ResourceList({
+  children,
+  className,
+  bordered = true,
+  ...props
+}: {
+  children: ReactNode;
+  className?: string;
+  bordered?: boolean;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-resource-list', bordered && 'ui-resource-list-bordered', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function ResourceListRow({
+  title,
+  meta,
+  detail,
+  actions,
+  leading,
+  children,
+  className,
+  titleClassName,
+  detailClassName,
+  actionsClassName,
+  ...props
+}: {
+  title: ReactNode;
+  meta?: ReactNode;
+  detail?: ReactNode;
+  actions?: ReactNode;
+  leading?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  titleClassName?: string;
+  detailClassName?: string;
+  actionsClassName?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-resource-list-row', leading != null && 'ui-resource-list-row-with-leading', className)} {...props}>
+      {leading ? <div className="ui-resource-list-row-leading">{leading}</div> : null}
+      <div className="ui-resource-list-row-main">
+        <div className="ui-resource-list-row-title-line">
+          <div className={cx('ui-resource-list-row-title', titleClassName)}>{title}</div>
+          {meta ? <div className="ui-resource-list-row-meta">{meta}</div> : null}
+        </div>
+        {detail ? <div className={cx('ui-resource-list-row-detail', detailClassName)}>{detail}</div> : null}
+        {children ? <div className="ui-resource-list-row-extra">{children}</div> : null}
+      </div>
+      {actions ? <div className={cx('ui-resource-list-row-actions', actionsClassName)}>{actions}</div> : null}
+    </div>
+  );
+}
+
 export function ResourceListItem({
   label,
   meta,

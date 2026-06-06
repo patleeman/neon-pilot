@@ -9,6 +9,8 @@ import {
   FilterToolbar,
   LoadingState,
   MetaLabel,
+  ResourceList,
+  ResourceListRow,
   SearchInput,
   TabButton,
   TabList,
@@ -144,18 +146,16 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
         {filtered.length === 0 ? (
           <EmptyState title="No skills" body="No skills match the current filters." />
         ) : (
-          <div className="divide-y divide-subtle border-y border-subtle">
+          <ResourceList className="border-subtle">
             {filtered.map((skill) => (
-              <div key={`${skill.source}:${skill.id}:${skill.path}`} className="py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="truncate text-[13px] font-semibold text-primary">{skill.name}</h3>
-                      <MetaLabel tone="muted">{sourceLabel(skill)}</MetaLabel>
-                    </div>
-                    {skill.description ? <p className="mt-1 text-[12px] text-secondary">{skill.description}</p> : null}
-                    <p className="mt-1 truncate text-[11px] text-dim">{skill.sourceLabel ?? skill.path}</p>
-                  </div>
+              <ResourceListRow
+                key={`${skill.source}:${skill.id}:${skill.path}`}
+                title={skill.name}
+                meta={<MetaLabel tone="muted">{sourceLabel(skill)}</MetaLabel>}
+                detail={skill.sourceLabel ?? skill.path}
+                titleClassName="text-[13px]"
+                detailClassName="text-[11px]"
+                actions={
                   <Button
                     variant="ghost"
                     onClick={() => void toggleSkill(skill)}
@@ -166,10 +166,12 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                   >
                     {skill.enabled ? 'Enabled' : 'Disabled'}
                   </Button>
-                </div>
-              </div>
+                }
+              >
+                {skill.description ? <p className="text-[12px] text-secondary">{skill.description}</p> : null}
+              </ResourceListRow>
             ))}
-          </div>
+          </ResourceList>
         )}
       </TabPanel>
     </AppPageLayout>
