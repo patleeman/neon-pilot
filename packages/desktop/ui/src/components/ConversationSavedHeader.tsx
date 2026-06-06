@@ -1,5 +1,7 @@
 import type { FormEvent } from 'react';
 
+import { ToolbarButton } from './ui';
+
 interface ConversationSavedHeaderProps {
   title: string;
   cwd: string | null;
@@ -70,12 +72,12 @@ export function ConversationSavedHeader({
             className="min-w-[16rem] flex-1 rounded-lg border border-border-default bg-surface px-3 py-1.5 text-[12px] font-mono text-primary outline-none transition-colors focus:border-accent/60"
             disabled={cwdSaveBusy}
           />
-          <button type="submit" className="ui-toolbar-button text-accent" disabled={cwdSaveBusy}>
+          <ToolbarButton type="submit" className="text-accent" disabled={cwdSaveBusy}>
             {cwdSaveBusy ? 'Switching…' : 'Switch'}
-          </button>
-          <button type="button" className="ui-toolbar-button" onClick={onCancelEditingCwd} disabled={cwdSaveBusy}>
+          </ToolbarButton>
+          <ToolbarButton onClick={onCancelEditingCwd} disabled={cwdSaveBusy}>
             Cancel
-          </button>
+          </ToolbarButton>
         </form>
       )}
       {cwdError && <p className="text-[11px] text-danger/80">{cwdError}</p>}
