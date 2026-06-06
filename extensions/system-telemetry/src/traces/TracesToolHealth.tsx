@@ -148,10 +148,10 @@ function ToolCard({ tool }: { tool: TraceToolHealth }) {
 
   return (
     <SurfacePanel muted className={hasTrouble ? 'border-danger/20 bg-danger/[0.03] p-3' : 'border-transparent p-3'}>
-      <div className="flex items-center gap-2 mb-2.5">
-        <StatusDot tone={dotTone} size="xs" />
-        <span className="text-[13px] font-semibold">{tool.toolName}</span>
-        <Pill className="ml-auto" mono>
+      <div className="mb-2.5 flex min-w-0 items-center gap-2">
+        <StatusDot tone={dotTone} size="xs" className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{tool.toolName}</span>
+        <Pill className="shrink-0" mono>
           {tool.calls} calls
         </Pill>
       </div>

@@ -185,9 +185,9 @@ function BarRow({
       progressValue={pct * 100}
       minPercent={2}
       tone={tone}
-      labelWidth="6.25rem"
-      valueWidth="4.375rem"
-      badgeWidth="5rem"
+      labelWidth="4.75rem"
+      valueWidth="3.75rem"
+      badgeWidth="3.75rem"
       badgeClassName={badgeCls}
     />
   );
@@ -202,8 +202,8 @@ function CacheRow({ label, value, pct, tone }: { label: string; value: string; p
       minPercent={2}
       tone={tone}
       progressClassName="h-5"
-      labelWidth="5.625rem"
-      valueWidth="5rem"
+      labelWidth="4.75rem"
+      valueWidth="4rem"
     />
   );
 }
