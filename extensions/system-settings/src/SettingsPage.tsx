@@ -36,12 +36,15 @@ import {
   readDesktopEnvironment,
   type SecretsState,
   type SecretStatusEntry,
+  SearchInput,
   Select,
   SettingsField,
   SettingsPanel,
   SettingsPanelHost,
   subscribeDesktopProviderOAuthLogin,
   type TelemetryDbMaintenanceResult,
+  Textarea,
+  TextInput,
   type ThemeAccent,
   type ThemePreference,
   THINKING_LEVEL_OPTIONS,
@@ -64,7 +67,7 @@ import {
 } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const INPUT_CLASS =
+const SHORTCUT_CAPTURE_CLASS =
   'w-full rounded-md border border-border-subtle bg-elevated px-3 py-2 text-[13px] text-primary shadow-none transition-colors focus:border-accent/50 focus:bg-surface focus:outline-none disabled:opacity-50';
 const ACTION_BUTTON_CLASS = 'ui-toolbar-button rounded-md px-3 py-1.5 text-[12px] shadow-none';
 const ICON_BUTTON_CLASS =
@@ -248,9 +251,6 @@ const COMMON_PROVIDER_IDS = ['anthropic', 'openai', 'opencode-go', 'google'];
 const NEW_MODEL_PROVIDER_ID = '__new-model-provider__';
 const NEW_MODEL_ID = '__new-model__';
 const ADD_CUSTOM_PROVIDER_ID = '__add-custom-provider__';
-const JSON_TEXTAREA_CLASS = `${INPUT_CLASS} min-h-[88px] font-mono text-[11px] leading-5`;
-const COMPACT_META_INPUT_CLASS = `${INPUT_CLASS} px-2.5 py-1.5 text-[12px]`;
-
 function formatModelProviderSummary(provider: ModelProviderConfig): string {
   if (provider.models.length === 0) {
     return 'Provider override only';
@@ -693,7 +693,7 @@ function KeyboardShortcutCaptureInput({
         setCapturing(false);
         onChange(shortcut);
       }}
-      className={cx(INPUT_CLASS, 'text-left', capturing && 'border-accent/60 bg-surface', invalid && 'border-danger/70')}
+      className={cx(SHORTCUT_CAPTURE_CLASS, 'text-left', capturing && 'border-accent/60 bg-surface', invalid && 'border-danger/70')}
       aria-label={
         capturing
           ? 'Press a keyboard shortcut'
@@ -1066,7 +1066,7 @@ export function CommandsSettingsSection() {
 
   return (
     <div className="space-y-4">
-      <input className={INPUT_CLASS} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands…" />
+      <SearchInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands…" />
       {loading ? <p className="ui-card-meta">Loading commands…</p> : null}
       <div className="divide-y divide-border-subtle/70">
         {visibleRows.map((command) => (
@@ -1813,7 +1813,7 @@ function ExtensionSecretsSection() {
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <input
+                    <TextInput
                       type="password"
                       value={drafts[secret.key] ?? ''}
                       placeholder={secret.configured ? 'Enter a new value to replace the stored secret' : 'Enter secret value'}
@@ -1822,7 +1822,7 @@ function ExtensionSecretsSection() {
                         setErrorMessage(null);
                         setNotice(null);
                       }}
-                      className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-[13px]`}
+                      className="min-w-0 flex-1 font-mono text-[13px]"
                       autoComplete="off"
                       spellCheck={false}
                       disabled={!secret.writable || savingKey === secret.key}
@@ -3110,7 +3110,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         Path
                       </label>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <input
+                        <TextInput
                           id="settings-default-cwd"
                           value={defaultCwdDraft}
                           onChange={(event) => {
@@ -3119,7 +3119,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                               setDefaultCwdSaveError(null);
                             }
                           }}
-                          className={`${INPUT_CLASS} min-w-0 flex-1 font-mono text-[13px]`}
+                          className="min-w-0 flex-1 font-mono text-[13px]"
                           placeholder="~/workingdir/repo"
                           autoComplete="off"
                           spellCheck={false}
@@ -3353,13 +3353,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     <label className="ui-card-meta" htmlFor="settings-model-provider-id">
                                       Provider id
                                     </label>
-                                    <input
+                                    <TextInput
                                       id="settings-model-provider-id"
                                       value={modelProviderDraft.id}
                                       onChange={(event) => {
                                         setModelProviderDraft((current) => ({ ...current, id: event.target.value }));
                                       }}
-                                      className={`${INPUT_CLASS} font-mono text-[13px]`}
+                                      className="font-mono text-[13px]"
                                       placeholder="ollama"
                                       autoComplete="off"
                                       spellCheck={false}
@@ -3371,13 +3371,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     <label className="ui-card-meta" htmlFor="settings-model-provider-api-key">
                                       Provider API key
                                     </label>
-                                    <input
+                                    <TextInput
                                       id="settings-model-provider-api-key"
                                       value={modelProviderDraft.apiKey}
                                       onChange={(event) => {
                                         setModelProviderDraft((current) => ({ ...current, apiKey: event.target.value }));
                                       }}
-                                      className={`${INPUT_CLASS} font-mono text-[13px]`}
+                                      className="font-mono text-[13px]"
                                       placeholder="ollama, ENV_VAR, or !command"
                                       autoComplete="off"
                                       spellCheck={false}
@@ -3400,13 +3400,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         <label className="ui-card-meta" htmlFor="settings-model-provider-base-url">
                                           Base URL
                                         </label>
-                                        <input
+                                        <TextInput
                                           id="settings-model-provider-base-url"
                                           value={modelProviderDraft.baseUrl}
                                           onChange={(event) => {
                                             setModelProviderDraft((current) => ({ ...current, baseUrl: event.target.value }));
                                           }}
-                                          className={`${INPUT_CLASS} font-mono text-[13px]`}
+                                          className="font-mono text-[13px]"
                                           placeholder="http://localhost:11434/v1"
                                           autoComplete="off"
                                           spellCheck={false}
@@ -3459,13 +3459,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         <label className="ui-card-meta" htmlFor="settings-model-provider-headers">
                                           Headers (JSON)
                                         </label>
-                                        <textarea
+                                        <Textarea
                                           id="settings-model-provider-headers"
                                           value={modelProviderDraft.headersText}
                                           onChange={(event) => {
                                             setModelProviderDraft((current) => ({ ...current, headersText: event.target.value }));
                                           }}
-                                          className={JSON_TEXTAREA_CLASS}
+                                          className="min-h-[88px] font-mono text-[11px] leading-5"
                                           placeholder={'{\n  "x-app": "neon-pilot"\n}'}
                                           spellCheck={false}
                                           disabled={modelProviderAction !== null}
@@ -3476,13 +3476,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         <label className="ui-card-meta" htmlFor="settings-model-provider-compat">
                                           Compat (JSON)
                                         </label>
-                                        <textarea
+                                        <Textarea
                                           id="settings-model-provider-compat"
                                           value={modelProviderDraft.compatText}
                                           onChange={(event) => {
                                             setModelProviderDraft((current) => ({ ...current, compatText: event.target.value }));
                                           }}
-                                          className={JSON_TEXTAREA_CLASS}
+                                          className="min-h-[88px] font-mono text-[11px] leading-5"
                                           placeholder={'{\n  "supportsDeveloperRole": false\n}'}
                                           spellCheck={false}
                                           disabled={modelProviderAction !== null}
@@ -3493,13 +3493,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         <label className="ui-card-meta" htmlFor="settings-model-provider-overrides">
                                           Model overrides (JSON)
                                         </label>
-                                        <textarea
+                                        <Textarea
                                           id="settings-model-provider-overrides"
                                           value={modelProviderDraft.modelOverridesText}
                                           onChange={(event) => {
                                             setModelProviderDraft((current) => ({ ...current, modelOverridesText: event.target.value }));
                                           }}
-                                          className={JSON_TEXTAREA_CLASS}
+                                          className="min-h-[88px] font-mono text-[11px] leading-5"
                                           placeholder={'{\n  "claude-sonnet-4-6": {\n    "name": "Claude Sonnet 4.6 (Proxy)"\n  }\n}'}
                                           spellCheck={false}
                                           disabled={modelProviderAction !== null}
@@ -3687,13 +3687,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                         <label className="ui-card-meta" htmlFor="settings-provider-model-id">
                                           Model id
                                         </label>
-                                        <input
+                                        <TextInput
                                           id="settings-provider-model-id"
                                           value={modelDraft.id}
                                           onChange={(event) => {
                                             setModelDraft((current) => ({ ...current, id: event.target.value }));
                                           }}
-                                          className={`${INPUT_CLASS} font-mono text-[13px]`}
+                                          className="font-mono text-[13px]"
                                           placeholder="gpt-5.6"
                                           autoComplete="off"
                                           spellCheck={false}
@@ -3745,13 +3745,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-id">
                                             Model id
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-id"
                                             value={modelDraft.id}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, id: event.target.value }));
                                             }}
-                                            className={`${INPUT_CLASS} font-mono text-[13px]`}
+                                            className="font-mono text-[13px]"
                                             placeholder="llama3.1:8b"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3763,13 +3763,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-name">
                                             Name
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-name"
                                             value={modelDraft.name}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, name: event.target.value }));
                                             }}
-                                            className={INPUT_CLASS}
                                             placeholder="Llama 3.1 8B"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3802,13 +3801,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-base-url">
                                             Base URL override
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-base-url"
                                             value={modelDraft.baseUrl}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, baseUrl: event.target.value }));
                                             }}
-                                            className={`${INPUT_CLASS} font-mono text-[13px]`}
+                                            className="font-mono text-[13px]"
                                             placeholder="https://proxy.example.com/v1"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3820,13 +3819,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-context">
                                             Context window
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-context"
                                             value={modelDraft.contextWindow}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, contextWindow: event.target.value }));
                                             }}
-                                            className={`${COMPACT_META_INPUT_CLASS} font-mono`}
+                                            className="px-2.5 py-1.5 font-mono text-[12px]"
                                             inputMode="numeric"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3838,13 +3837,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-max-tokens">
                                             Max tokens
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-max-tokens"
                                             value={modelDraft.maxTokens}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, maxTokens: event.target.value }));
                                             }}
-                                            className={`${COMPACT_META_INPUT_CLASS} font-mono`}
+                                            className="px-2.5 py-1.5 font-mono text-[12px]"
                                             inputMode="numeric"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3892,13 +3891,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-cost-input">
                                             Input cost / 1M
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-cost-input"
                                             value={modelDraft.costInput}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, costInput: event.target.value }));
                                             }}
-                                            className={`${COMPACT_META_INPUT_CLASS} font-mono`}
+                                            className="px-2.5 py-1.5 font-mono text-[12px]"
                                             inputMode="decimal"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3910,13 +3909,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-cost-output">
                                             Output cost / 1M
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-cost-output"
                                             value={modelDraft.costOutput}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, costOutput: event.target.value }));
                                             }}
-                                            className={`${COMPACT_META_INPUT_CLASS} font-mono`}
+                                            className="px-2.5 py-1.5 font-mono text-[12px]"
                                             inputMode="decimal"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3928,13 +3927,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-cost-cache-read">
                                             Cache read / 1M
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-cost-cache-read"
                                             value={modelDraft.costCacheRead}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, costCacheRead: event.target.value }));
                                             }}
-                                            className={`${COMPACT_META_INPUT_CLASS} font-mono`}
+                                            className="px-2.5 py-1.5 font-mono text-[12px]"
                                             inputMode="decimal"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3946,13 +3945,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-cost-cache-write">
                                             Cache write / 1M
                                           </label>
-                                          <input
+                                          <TextInput
                                             id="settings-provider-model-cost-cache-write"
                                             value={modelDraft.costCacheWrite}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, costCacheWrite: event.target.value }));
                                             }}
-                                            className={`${COMPACT_META_INPUT_CLASS} font-mono`}
+                                            className="px-2.5 py-1.5 font-mono text-[12px]"
                                             inputMode="decimal"
                                             autoComplete="off"
                                             spellCheck={false}
@@ -3966,13 +3965,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-headers">
                                             Headers (JSON)
                                           </label>
-                                          <textarea
+                                          <Textarea
                                             id="settings-provider-model-headers"
                                             value={modelDraft.headersText}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, headersText: event.target.value }));
                                             }}
-                                            className={JSON_TEXTAREA_CLASS}
+                                            className="min-h-[88px] font-mono text-[11px] leading-5"
                                             placeholder={'{\n  "x-provider-key": "HEADER_VALUE"\n}'}
                                             spellCheck={false}
                                             disabled={modelDraftAction !== null}
@@ -3983,13 +3982,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           <label className="ui-card-meta" htmlFor="settings-provider-model-compat">
                                             Compat (JSON)
                                           </label>
-                                          <textarea
+                                          <Textarea
                                             id="settings-provider-model-compat"
                                             value={modelDraft.compatText}
                                             onChange={(event) => {
                                               setModelDraft((current) => ({ ...current, compatText: event.target.value }));
                                             }}
-                                            className={JSON_TEXTAREA_CLASS}
+                                            className="min-h-[88px] font-mono text-[11px] leading-5"
                                             placeholder={'{\n  "supportsReasoningEffort": false\n}'}
                                             spellCheck={false}
                                             disabled={modelDraftAction !== null}
@@ -4043,14 +4042,13 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       API key
                                     </label>
                                     <div className="flex min-w-0 gap-2">
-                                      <input
+                                      <TextInput
                                         id="settings-provider-api-key-modal"
                                         type="password"
                                         value={providerApiKey}
                                         onChange={(event) => {
                                           setProviderApiKey(event.target.value);
                                         }}
-                                        className={INPUT_CLASS}
                                         placeholder="sk-… or op://Private/API key/password"
                                         autoComplete="off"
                                         spellCheck={false}
@@ -4139,11 +4137,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           OAuth login URL
                                         </label>
                                         <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
-                                          <input
+                                          <TextInput
                                             id="settings-provider-oauth-url"
                                             value={selectedProviderLogin.authUrl}
                                             readOnly
-                                            className={INPUT_CLASS}
                                             spellCheck={false}
                                             onFocus={(event) => {
                                               event.currentTarget.select();
@@ -4218,13 +4215,12 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                               <label className="ui-card-meta" htmlFor="settings-provider-oauth-input">
                                                 Authorization code
                                               </label>
-                                              <input
+                                              <TextInput
                                                 id="settings-provider-oauth-input"
                                                 value={oauthInputValue}
                                                 onChange={(event) => {
                                                   setOauthInputValue(event.target.value);
                                                 }}
-                                                className={INPUT_CLASS}
                                                 placeholder={selectedProviderLogin.prompt.placeholder || 'Enter code…'}
                                                 autoComplete="off"
                                                 disabled={oauthAction !== null}
