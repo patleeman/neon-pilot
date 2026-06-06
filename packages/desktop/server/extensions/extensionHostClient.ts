@@ -624,6 +624,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     if (request.type === 'readRegistryPresentation') {
       const {
         listExtensionInstallSummaries,
+        listExtensionCliCommandRegistrations,
         listExtensionCommandRegistrations,
         listExtensionKeybindingRegistrations,
         listExtensionMentionRegistrations,
@@ -639,6 +640,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
           schema: readExtensionSchema() as unknown as Record<string, unknown>,
           installSummaries: listExtensionInstallSummaries() as unknown as Array<Record<string, unknown>>,
           commandRegistrations: listExtensionCommandRegistrations() as unknown as Array<Record<string, unknown>>,
+          cliCommandRegistrations: listExtensionCliCommandRegistrations() as unknown as Array<Record<string, unknown>>,
           keybindingRegistrations: listExtensionKeybindingRegistrations() as unknown as Array<Record<string, unknown>>,
           slashCommandRegistrations: listExtensionSlashCommandRegistrations() as unknown as Array<Record<string, unknown>>,
           mentionRegistrations: listExtensionMentionRegistrations() as unknown as Array<Record<string, unknown>>,

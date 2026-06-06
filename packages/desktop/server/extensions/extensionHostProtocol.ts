@@ -248,6 +248,7 @@ export interface ExtensionHostRegistryPresentation {
   schema: Record<string, unknown>;
   installSummaries: Array<Record<string, unknown>>;
   commandRegistrations: Array<Record<string, unknown>>;
+  cliCommandRegistrations: Array<Record<string, unknown>>;
   keybindingRegistrations: Array<Record<string, unknown>>;
   slashCommandRegistrations: Array<Record<string, unknown>>;
   mentionRegistrations: Array<Record<string, unknown>>;

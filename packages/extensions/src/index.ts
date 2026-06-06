@@ -302,6 +302,19 @@ export interface ExtensionCommandContribution {
   enablement?: string;
 }
 
+export interface ExtensionCliCommandContribution {
+  id: string;
+  /** Space-separated command path after the neon-pilot executable, e.g. "extensions list". */
+  command: string;
+  title?: string;
+  description?: string;
+  /** Backend action id invoked with parsed CLI args and flags. */
+  action: string;
+  aliases?: string[];
+  /** Print structured data by default when the command returns it. */
+  jsonDefault?: boolean;
+}
+
 export interface ExtensionKeybindingContribution {
   id: string;
   title: string;
@@ -760,6 +773,7 @@ export interface ExtensionContributions {
   views?: ExtensionViewContribution[];
   nav?: ExtensionNavContribution[];
   commands?: ExtensionCommandContribution[];
+  cliCommands?: ExtensionCliCommandContribution[];
   keybindings?: ExtensionKeybindingContribution[];
   slashCommands?: ExtensionSlashCommandContribution[];
   mentions?: ExtensionMentionContribution[];

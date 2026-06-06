@@ -31,6 +31,20 @@ export function validateCommandContributions(value: unknown): void {
   }
 }
 
+export function validateCliCommandContributions(value: unknown): void {
+  for (const [index, command] of assertRecordArray(value, 'contributes.cliCommands').entries()) {
+    requireString(command.id, `contributes.cliCommands[${index}].id`);
+    requireString(command.command, `contributes.cliCommands[${index}].command`);
+    requireString(command.action, `contributes.cliCommands[${index}].action`);
+    validateOptionalString(command.title, `contributes.cliCommands[${index}].title`);
+    validateOptionalString(command.description, `contributes.cliCommands[${index}].description`);
+    if (command.aliases !== undefined) requireStringArray(command.aliases, `contributes.cliCommands[${index}].aliases`);
+    if (command.jsonDefault !== undefined && typeof command.jsonDefault !== 'boolean') {
+      throw new Error(`Extension manifest contributes.cliCommands[${index}].jsonDefault must be a boolean.`);
+    }
+  }
+}
+
 export function validateKeybindingContributions(value: unknown): void {
   for (const [index, keybinding] of assertRecordArray(value, 'contributes.keybindings').entries()) {
     requireString(keybinding.id, `contributes.keybindings[${index}].id`);

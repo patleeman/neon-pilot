@@ -103,6 +103,7 @@ export interface ExtensionContributions {
   views?: ExtensionViewContribution[];
   nav?: ExtensionNavContribution[];
   commands?: ExtensionCommandContribution[];
+  cliCommands?: ExtensionCliCommandContribution[];
   keybindings?: ExtensionKeybindingContribution[];
   slashCommands?: ExtensionSlashCommandContribution[];
   mentions?: ExtensionMentionContribution[];
@@ -514,6 +515,16 @@ export interface ExtensionCommandContribution {
   category?: string;
   description?: string;
   enablement?: string;
+}
+
+export interface ExtensionCliCommandContribution {
+  id: string;
+  command: string;
+  title?: string;
+  description?: string;
+  action: string;
+  aliases?: string[];
+  jsonDefault?: boolean;
 }
 
 export interface ExtensionKeybindingContribution {

@@ -14,6 +14,7 @@ import {
 import { validateExtensionBackendContribution } from './extensionBackendValidation.js';
 import {
   validateCommandContributions,
+  validateCliCommandContributions,
   validateKeybindingContributions,
   validateMentionContributions,
   validateNavigationContributions,
@@ -291,6 +292,18 @@ export interface ExtensionCommandRegistration {
   category?: string;
   description?: string;
   enablement?: string;
+}
+
+export interface ExtensionCliCommandRegistration {
+  extensionId: string;
+  surfaceId: string;
+  packageType: ExtensionPackageType;
+  command: string;
+  action: string;
+  title?: string;
+  description?: string;
+  aliases: string[];
+  jsonDefault: boolean;
 }
 
 export interface ExtensionKeybindingRegistration {
@@ -863,6 +876,10 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     validateCommandContributions(contributes.commands);
   }
 
+  if (contributes.cliCommands !== undefined) {
+    validateCliCommandContributions(contributes.cliCommands);
+  }
+
   if (contributes.keybindings !== undefined) {
     validateKeybindingContributions(contributes.keybindings);
   }
@@ -1310,6 +1327,22 @@ export function listExtensionCommandRegistrations(): ExtensionCommandRegistratio
     return [...contributed, ...autoCommands];
   });
   return [...legacy, ...native];
+}
+
+export function listExtensionCliCommandRegistrations(): ExtensionCliCommandRegistration[] {
+  return readExtensionRegistrySnapshot().extensions.flatMap((extension) =>
+    (extension.contributes?.cliCommands ?? []).map((command) => ({
+      extensionId: extension.id,
+      surfaceId: command.id,
+      packageType: extension.packageType,
+      command: command.command.trim().replace(/\s+/g, ' '),
+      action: command.action,
+      ...(command.title ? { title: command.title } : {}),
+      ...(command.description ? { description: command.description } : {}),
+      aliases: (command.aliases ?? []).map((alias) => alias.trim().replace(/\s+/g, ' ')).filter(Boolean),
+      jsonDefault: command.jsonDefault === true,
+    })),
+  );
 }
 
 export function listExtensionKeybindingRegistrations(stateRoot: string = getStateRoot()): ExtensionKeybindingRegistration[] {
