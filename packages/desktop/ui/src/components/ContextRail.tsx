@@ -23,7 +23,7 @@ import type { AgentToolInfo, ScheduledTaskSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
 import { RichMarkdownRenderer } from './editor/RichMarkdownRenderer';
 import { addNotification } from './notifications/notificationStore';
-import { CardMeta, CardTitle, cx, ErrorState, IconButton, LoadingState, SectionLabel, ToolbarButton } from './ui';
+import { CardMeta, CardTitle, CompactCard, cx, ErrorState, IconButton, LoadingState, SectionLabel, ToolbarButton } from './ui';
 
 const ScheduledTaskPanel = lazy(() => import('./ScheduledTaskPanel').then((module) => ({ default: module.ScheduledTaskPanel })));
 
@@ -746,14 +746,14 @@ function CapabilitiesToolContext({ tool }: { tool: AgentToolInfo }) {
           <CardMeta>No parameters.</CardMeta>
         ) : (
           parameters.map((parameter) => (
-            <div key={parameter.name} className="rounded-lg border border-border-subtle bg-base px-3 py-2">
+            <CompactCard key={parameter.name}>
               <p className="text-[12px] font-medium text-primary">{parameter.name}</p>
               <CardMeta className="mt-1">
                 {parameter.required ? 'required' : 'optional'}
                 {parameter.type ? ` · ${parameter.type}` : ''}
               </CardMeta>
               {parameter.description && <CardBody className="mt-1 leading-relaxed">{parameter.description}</CardBody>}
-            </div>
+            </CompactCard>
           ))
         )}
       </div>

@@ -11,6 +11,7 @@ import {
   CardTitle,
   CheckButton,
   CodeBlock,
+  CompactCard,
   cx,
   DataTable,
   DataTableBody,
@@ -185,6 +186,18 @@ describe('design-system primitives', () => {
     expect(renderToStaticMarkup(createElement(CardBody, null, 'Supporting copy'))).toContain('ui-card-body');
     expect(renderToStaticMarkup(createElement(CardMeta, { as: 'span' }, 'Auto-saved'))).toContain('<span');
     expect(renderToStaticMarkup(createElement(CardMeta, { as: 'span' }, 'Auto-saved'))).toContain('ui-card-meta');
+  });
+
+  it('renders compact cards with tone, padding, and polymorphic element classes', () => {
+    const html = renderToStaticMarkup(
+      createElement(CompactCard, { as: 'article', tone: 'surface', padding: 'sm', interactive: true }, 'Parameter'),
+    );
+
+    expect(html).toContain('<article');
+    expect(html).toContain('ui-compact-card');
+    expect(html).toContain('ui-compact-card-sm');
+    expect(html).toContain('ui-compact-card-surface');
+    expect(html).toContain('ui-compact-card-interactive');
   });
 
   it('renders action tiles with icon and description slots', () => {

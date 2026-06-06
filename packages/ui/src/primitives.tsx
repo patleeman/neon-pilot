@@ -407,6 +407,9 @@ export function InlineMeta({ children, className, ...props }: HTMLAttributes<HTM
 
 type CardTextElement = 'p' | 'span' | 'div' | 'label' | 'summary';
 type CardTextProps = HTMLAttributes<HTMLElement> & LabelHTMLAttributes<HTMLLabelElement> & { as?: CardTextElement };
+type CompactCardElement = 'div' | 'section' | 'article' | 'li';
+export type CompactCardPadding = 'sm' | 'md';
+export type CompactCardTone = 'base' | 'surface' | 'elevated';
 
 export function CardTitle({ as: Component = 'p', children, className, ...props }: CardTextProps) {
   return (
@@ -427,6 +430,36 @@ export function CardBody({ as: Component = 'p', children, className, ...props }:
 export function CardMeta({ as: Component = 'p', children, className, ...props }: CardTextProps) {
   return (
     <Component className={cx('ui-card-meta', className)} {...props}>
+      {children}
+    </Component>
+  );
+}
+
+export function CompactCard({
+  as: Component = 'div',
+  children,
+  className,
+  padding = 'md',
+  tone = 'base',
+  interactive = false,
+  ...props
+}: HTMLAttributes<HTMLElement> & {
+  as?: CompactCardElement;
+  padding?: CompactCardPadding;
+  tone?: CompactCardTone;
+  interactive?: boolean;
+}) {
+  return (
+    <Component
+      className={cx(
+        'ui-compact-card',
+        `ui-compact-card-${padding}`,
+        `ui-compact-card-${tone}`,
+        interactive && 'ui-compact-card-interactive',
+        className,
+      )}
+      {...props}
+    >
       {children}
     </Component>
   );

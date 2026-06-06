@@ -599,6 +599,49 @@ body {
   line-height: 1rem;
 }
 
+.ui-compact-card {
+  border: 1px solid rgb(var(--color-border-subtle));
+  border-radius: 0.5rem;
+  color: rgb(var(--color-secondary));
+}
+
+.ui-compact-card-sm {
+  padding: 0.5rem 0.625rem;
+}
+
+.ui-compact-card-md {
+  padding: 0.5rem 0.75rem;
+}
+
+.ui-compact-card-base {
+  background: rgb(var(--color-base));
+}
+
+.ui-compact-card-surface {
+  background: rgb(var(--color-surface));
+}
+
+.ui-compact-card-elevated {
+  background: rgb(var(--color-elevated));
+}
+
+.ui-compact-card-interactive {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.ui-compact-card-interactive:hover {
+  background: rgb(var(--color-elevated) / 0.6);
+  color: rgb(var(--color-primary));
+}
+
+.ui-compact-card-interactive:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--color-accent) / 0.25);
+}
+
 .ui-filter-toolbar {
   display: flex;
   flex-wrap: wrap;

@@ -13,6 +13,7 @@ import {
   CenteredMessage,
   CheckButton,
   CodeBlock,
+  CompactCard,
   ConfirmDialog,
   DataTable,
   DataTableBody,
@@ -237,6 +238,10 @@ const meta = {
               <CardBody>Card body text describes a compact setting, row, or rail item.</CardBody>
               <CardMeta as="span">compact metadata</CardMeta>
             </div>
+            <CompactCard style={{ display: 'grid', gap: 4 }}>
+              <CardTitle>Compact card</CardTitle>
+              <CardMeta>Use for small rail, settings, and metadata blocks.</CardMeta>
+            </CompactCard>
             <p style={{ margin: 0, fontSize: 13 }}>
               Long paths wrap safely in <InlineCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineCode>.
             </p>

@@ -17,7 +17,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 
 - Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, `CheckButton`, `ActionTile`
 - Status: `Pill`, `StatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
-- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`
+- Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
 - Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`
@@ -89,6 +89,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `PanelMessage` for compact loading, empty, and error copy inside rails, menus, and bounded panels.
 - Use `ErrorState` for blocking load failures; pass `title` plus `body` or `message` when a heading helps. Use `Notice tone="danger"` for inline validation, save, and action feedback.
 - Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.
+- Use `CompactCard` for small bordered metadata blocks in rails, settings, dashboards, and extension panels. Compose it with `CardTitle`, `CardBody`, and `CardMeta`; set `as="article"` or `as="li"` only when the surrounding structure needs that semantic element.
 - Use `SectionLabel` for compact uppercase section, chart, and metadata labels. Set `tone="muted"` for low-emphasis labels in dense dashboards.
 - Use `MetaLabel` for inline uppercase metadata tags such as file status, artifact kind, and live/current badges.
 - Use `CardTitle`, `CardBody`, and `CardMeta` for compact rail, settings, and panel typography instead of raw `ui-card-*` class names. Set `as="span"`, `as="label"`, or `as="summary"` only when semantics require it.
