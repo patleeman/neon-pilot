@@ -6,6 +6,8 @@ import {
   AppPageLayout,
   AppPageToc,
   Button,
+  CardBody,
+  CardMeta,
   cx,
   EmptyState,
   ErrorState,
@@ -863,9 +865,9 @@ function AutomationTable({
                         <span className={cx('h-2.5 w-2.5 shrink-0 rounded-full border', statusClass(task, nowMs))} />
                         <div className="truncate text-[14px] font-semibold text-primary">{taskName(task)}</div>
                       </div>
-                      <div className="mt-0.5 max-w-[44rem] whitespace-normal break-words text-[12px] leading-5 text-secondary">
+                      <CardBody as="div" className="mt-0.5 max-w-[44rem] whitespace-normal break-words">
                         {task.prompt || 'No prompt summary.'}
-                      </div>
+                      </CardBody>
                       <div className="mt-1 text-[11px] text-dim">
                         {task.id} · {taskTargetLabel(task)}
                         {scope ? ` · ${scope}` : ''}
@@ -878,7 +880,9 @@ function AutomationTable({
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 align-middle">
                     <div className={cx('text-[12px]', statusTextClass(task, nowMs))}>{statusText(task, nowMs)}</div>
-                    <div className="mt-0.5 text-[12px] text-secondary">{taskLastRunText(task, nowMs)}</div>
+                    <CardMeta as="div" className="mt-0.5">
+                      {taskLastRunText(task, nowMs)}
+                    </CardMeta>
                   </td>
                   <td className="py-3 pl-3 align-middle">
                     <div className="flex items-center justify-end gap-1.5">
