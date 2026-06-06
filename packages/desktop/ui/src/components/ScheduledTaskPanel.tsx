@@ -35,7 +35,20 @@ import {
   validateTaskForm,
 } from './scheduledTaskPanelModel';
 import { ScheduledTaskPromptText } from './ScheduledTaskPromptText';
-import { CardMeta, CardTitle, cx, ErrorState, InlineSelect, InlineTextInput, LoadingState, SectionLabel, Switch, TextButton, ToolbarButton } from './ui';
+import {
+  CardMeta,
+  CardTitle,
+  cx,
+  ErrorState,
+  InlineSelect,
+  InlineTextInput,
+  LoadingState,
+  RailSubsection,
+  SectionLabel,
+  Switch,
+  TextButton,
+  ToolbarButton,
+} from './ui';
 
 const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
 const PROMPT_INPUT_CLASS =
@@ -869,68 +882,65 @@ export function ScheduledTaskPanel({
         </ToolbarButton>
       </div>
 
-      <div className="border-t border-border-subtle pt-3">
-        <div className="ui-detail-list">
-          <div className="ui-detail-row">
-            <span className="ui-detail-label">schedule</span>
-            <div className="min-w-0">
-              <p className="ui-detail-value">{formatTaskSchedule(taskDetail)}</p>
-              <CardMeta className="mt-0.5 font-mono break-all">{taskDetail.cron ?? taskDetail.at}</CardMeta>
-            </div>
+      <RailSubsection title="Details" bodyClassName="ui-detail-list">
+        <div className="ui-detail-row">
+          <span className="ui-detail-label">schedule</span>
+          <div className="min-w-0">
+            <p className="ui-detail-value">{formatTaskSchedule(taskDetail)}</p>
+            <CardMeta className="mt-0.5 font-mono break-all">{taskDetail.cron ?? taskDetail.at}</CardMeta>
           </div>
-          {taskDetail.model && (
-            <div className="ui-detail-row">
-              <span className="ui-detail-label">model</span>
-              <p className="ui-detail-value break-all">{taskDetail.model}</p>
-            </div>
-          )}
-          {taskDetail.cwd && (
-            <div className="ui-detail-row">
-              <span className="ui-detail-label">cwd</span>
-              <p className="ui-detail-value break-all">{taskDetail.cwd}</p>
-            </div>
-          )}
-          <div className="ui-detail-row">
-            <span className="ui-detail-label">thread</span>
-            <div className="min-w-0">
-              <p className="ui-detail-value">{formatThreadModeLabel(taskDetail.threadMode)}</p>
-              {taskDetail.threadTitle && <CardMeta className="mt-0.5 break-all">{taskDetail.threadTitle}</CardMeta>}
-              {taskDetail.threadConversationId && (
-                <TextButton
-                  type="button"
-                  onClick={() => navigate(`/conversations/${encodeURIComponent(taskDetail.threadConversationId)}`)}
-                  tone="accent"
-                  className="mt-1 text-[11px]"
-                >
-                  Open thread →
-                </TextButton>
-              )}
-            </div>
-          </div>
-          {taskDetail.scheduleType === 'cron' && (
-            <div className="ui-detail-row">
-              <span className="ui-detail-label">catch-up</span>
-              <p className="ui-detail-value">{formatCatchUpWindowLabel(taskDetail.catchUpWindowSeconds)}</p>
-            </div>
-          )}
-          {taskDetail.timeoutSeconds !== undefined && (
-            <div className="ui-detail-row">
-              <span className="ui-detail-label">timeout</span>
-              <p className="ui-detail-value">{taskDetail.timeoutSeconds}s</p>
-            </div>
-          )}
-          {taskDetail.schedulerLastEvaluatedAt && (
-            <div className="ui-detail-row">
-              <span className="ui-detail-label">scheduler</span>
-              <p className="ui-detail-value">checked {timeAgo(taskDetail.schedulerLastEvaluatedAt)}</p>
-            </div>
-          )}
         </div>
-      </div>
+        {taskDetail.model && (
+          <div className="ui-detail-row">
+            <span className="ui-detail-label">model</span>
+            <p className="ui-detail-value break-all">{taskDetail.model}</p>
+          </div>
+        )}
+        {taskDetail.cwd && (
+          <div className="ui-detail-row">
+            <span className="ui-detail-label">cwd</span>
+            <p className="ui-detail-value break-all">{taskDetail.cwd}</p>
+          </div>
+        )}
+        <div className="ui-detail-row">
+          <span className="ui-detail-label">thread</span>
+          <div className="min-w-0">
+            <p className="ui-detail-value">{formatThreadModeLabel(taskDetail.threadMode)}</p>
+            {taskDetail.threadTitle && <CardMeta className="mt-0.5 break-all">{taskDetail.threadTitle}</CardMeta>}
+            {taskDetail.threadConversationId && (
+              <TextButton
+                type="button"
+                onClick={() => navigate(`/conversations/${encodeURIComponent(taskDetail.threadConversationId)}`)}
+                tone="accent"
+                className="mt-1 text-[11px]"
+              >
+                Open thread →
+              </TextButton>
+            )}
+          </div>
+        </div>
+        {taskDetail.scheduleType === 'cron' && (
+          <div className="ui-detail-row">
+            <span className="ui-detail-label">catch-up</span>
+            <p className="ui-detail-value">{formatCatchUpWindowLabel(taskDetail.catchUpWindowSeconds)}</p>
+          </div>
+        )}
+        {taskDetail.timeoutSeconds !== undefined && (
+          <div className="ui-detail-row">
+            <span className="ui-detail-label">timeout</span>
+            <p className="ui-detail-value">{taskDetail.timeoutSeconds}s</p>
+          </div>
+        )}
+        {taskDetail.schedulerLastEvaluatedAt && (
+          <div className="ui-detail-row">
+            <span className="ui-detail-label">scheduler</span>
+            <p className="ui-detail-value">checked {timeAgo(taskDetail.schedulerLastEvaluatedAt)}</p>
+          </div>
+        )}
+      </RailSubsection>
 
       {taskDetail.activity && taskDetail.activity.length > 0 && (
-        <div className="border-t border-border-subtle pt-3">
-          <p className="ui-section-label mb-2">Recent scheduler activity</p>
+        <RailSubsection title="Recent scheduler activity">
           <div className="space-y-2">
             {taskDetail.activity.slice(0, 5).map((entry) => (
               <div key={entry.id} className="text-[12px] leading-relaxed">
@@ -941,13 +951,12 @@ export function ScheduledTaskPanel({
               </div>
             ))}
           </div>
-        </div>
+        </RailSubsection>
       )}
 
-      <div className="border-t border-border-subtle pt-3">
-        <p className="ui-section-label mb-2">Prompt</p>
+      <RailSubsection title="Prompt">
         <ScheduledTaskPromptText value={taskDetail.prompt} />
-      </div>
+      </RailSubsection>
 
       <ScheduledTaskLogSection taskId={id} />
     </div>
