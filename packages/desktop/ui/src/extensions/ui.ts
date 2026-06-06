@@ -70,6 +70,8 @@ export {
   IconLink,
   InlineCode,
   InlineMeta,
+  InlineSelect,
+  InlineTextInput,
   KeyboardShortcutCaptureInput,
   KeyValueItem,
   KeyValueList,

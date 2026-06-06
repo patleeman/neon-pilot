@@ -63,6 +63,8 @@ export {
   IconLink,
   InlineCode,
   InlineMeta,
+  InlineSelect,
+  InlineTextInput,
   Keycap,
   KeyboardShortcutCaptureInput,
   KeyValueItem,

@@ -1,4 +1,4 @@
-import { type SelectHTMLAttributes, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { isScheduledTaskDetail } from '../automation/scheduledTaskDetail';
@@ -35,15 +35,11 @@ import {
   validateTaskForm,
 } from './scheduledTaskPanelModel';
 import { ScheduledTaskPromptText } from './ScheduledTaskPromptText';
-import { CardMeta, CardTitle, cx, ErrorState, LoadingState, SectionLabel, Switch, TextButton, ToolbarButton } from './ui';
+import { CardMeta, CardTitle, cx, ErrorState, InlineSelect, InlineTextInput, LoadingState, SectionLabel, Switch, TextButton, ToolbarButton } from './ui';
 
 const TITLE_INPUT_CLASS = 'w-full min-w-0 bg-transparent text-[16px] font-medium text-primary placeholder:text-dim/75 outline-none';
 const PROMPT_INPUT_CLASS =
   'min-h-0 flex-1 w-full resize-none overflow-y-auto bg-transparent px-1 pb-3 pt-2 text-[15px] leading-7 text-primary placeholder:text-dim/75 outline-none';
-const INLINE_FIELD_CLASS =
-  'h-8 min-w-0 rounded-md border border-transparent bg-transparent px-1.5 text-[12px] font-medium text-secondary outline-none transition-colors hover:bg-surface/45 hover:text-primary focus-visible:border-border-subtle focus-visible:bg-surface/55 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-accent/20 disabled:cursor-default disabled:opacity-40';
-const INLINE_INPUT_CLASS = INLINE_FIELD_CLASS;
-const INLINE_SELECT_CLASS = `${INLINE_FIELD_CLASS} appearance-none pr-6`;
 const FIELD_HELP_CLASS = 'text-[12px] leading-relaxed text-secondary';
 export function taskStatusMeta(task: ScheduledTaskDetail): { text: string; cls: string } {
   if (task.running) return { text: 'running', cls: 'text-accent' };
@@ -75,30 +71,6 @@ function dayButtonClass(active: boolean): string {
     active
       ? 'border-border-default bg-surface/65 text-primary'
       : 'border-border-subtle bg-base/60 text-secondary hover:border-border-default hover:bg-surface/55 hover:text-primary',
-  );
-}
-
-function InlineSelect({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <label className="relative inline-flex min-w-0 items-center">
-      <select {...props} className={cx(INLINE_SELECT_CLASS, className)}>
-        {children}
-      </select>
-      <svg
-        aria-hidden="true"
-        width="11"
-        height="11"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="pointer-events-none absolute right-2.5 text-dim/70"
-      >
-        <path d="m6 9 6 6 6-6" />
-      </svg>
-    </label>
   );
 }
 
@@ -159,13 +131,13 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
             </InlineSelect>
 
             {value.builder.cadence === 'hourly' && (
-              <input
+              <InlineTextInput
                 type="number"
                 min={0}
                 max={59}
                 value={value.builder.minute}
                 onChange={(event) => updateBuilder({ minute: Number.parseInt(event.target.value || '0', 10) || 0 })}
-                className={cx(INLINE_INPUT_CLASS, 'w-[5rem]')}
+                className="w-[5rem]"
                 name="cronMinute"
                 inputMode="numeric"
                 aria-label="Minute past the hour"
@@ -174,24 +146,24 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
 
             {value.builder.cadence === 'interval' && (
               <>
-                <input
+                <InlineTextInput
                   type="number"
                   min={1}
                   max={23}
                   value={value.builder.intervalHours}
                   onChange={(event) => updateBuilder({ intervalHours: Number.parseInt(event.target.value || '1', 10) || 1 })}
-                  className={cx(INLINE_INPUT_CLASS, 'w-[5rem]')}
+                  className="w-[5rem]"
                   name="cronIntervalHours"
                   inputMode="numeric"
                   aria-label="Every N hours"
                 />
-                <input
+                <InlineTextInput
                   type="number"
                   min={0}
                   max={59}
                   value={value.builder.minute}
                   onChange={(event) => updateBuilder({ minute: Number.parseInt(event.target.value || '0', 10) || 0 })}
-                  className={cx(INLINE_INPUT_CLASS, 'w-[5rem]')}
+                  className="w-[5rem]"
                   name="cronIntervalMinute"
                   inputMode="numeric"
                   aria-label="Minute past the hour"
@@ -203,24 +175,24 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
               value.builder.cadence === 'weekdays' ||
               value.builder.cadence === 'weekly' ||
               value.builder.cadence === 'monthly') && (
-              <input
+              <InlineTextInput
                 type="time"
                 value={formatTimeInputValue(value.builder.hour, value.builder.minute)}
                 onChange={(event) => handleTimeChange(event.target.value)}
-                className={cx(INLINE_INPUT_CLASS, 'w-[8.5rem]')}
+                className="w-[8.5rem]"
                 name="cronTime"
                 aria-label="Recurring schedule time"
               />
             )}
 
             {value.builder.cadence === 'monthly' && (
-              <input
+              <InlineTextInput
                 type="number"
                 min={1}
                 max={31}
                 value={value.builder.dayOfMonth}
                 onChange={(event) => updateBuilder({ dayOfMonth: Number.parseInt(event.target.value || '1', 10) || 1 })}
-                className={cx(INLINE_INPUT_CLASS, 'w-[5rem]')}
+                className="w-[5rem]"
                 name="cronDayOfMonth"
                 inputMode="numeric"
                 aria-label="Day of month"
@@ -228,10 +200,10 @@ function CronBuilderEditor({ value, onChange }: { value: CronEditorState; onChan
             )}
           </>
         ) : (
-          <input
+          <InlineTextInput
             value={value.rawCron}
             onChange={(event) => onChange({ ...value, rawCron: event.target.value })}
-            className={cx(INLINE_INPUT_CLASS, 'w-full max-w-[18rem] font-mono')}
+            className="w-full max-w-[18rem] font-mono"
             placeholder="0 9 * * 1-5"
             name="cron"
             aria-label="Cron expression"
@@ -360,13 +332,13 @@ function TaskAdvancedMenu({
 
             <div className="space-y-1.5">
               <SectionLabel tone="muted">Catch-up window</SectionLabel>
-              <input
+              <InlineTextInput
                 type="number"
                 min={1}
                 step={1}
                 value={value.catchUpWindowMinutes}
                 onChange={(event) => onChange({ catchUpWindowMinutes: event.target.value })}
-                className={cx(INLINE_INPUT_CLASS, 'w-full')}
+                className="w-full"
                 name="catchUpWindowMinutes"
                 inputMode="numeric"
                 aria-label="Run if missed within minutes"
@@ -663,11 +635,11 @@ function TaskEditorForm({
                     <CronBuilderEditor value={value.cronEditor} onChange={(cronEditor) => onChange({ cronEditor })} />
                   </div>
                 ) : (
-                  <input
+                  <InlineTextInput
                     type="datetime-local"
                     value={value.atValue}
                     onChange={(event) => onChange({ atValue: event.target.value })}
-                    className={cx(INLINE_INPUT_CLASS, 'w-full max-w-[18rem]')}
+                    className="w-full max-w-[18rem]"
                     name="runAt"
                     aria-label="Run at"
                   />

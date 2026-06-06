@@ -2429,6 +2429,65 @@ body {
   color: rgb(var(--color-dim));
 }
 
+.ui-inline-input,
+.ui-inline-select {
+  min-width: 0;
+  height: 2rem;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 0 0.375rem;
+  color: rgb(var(--color-secondary));
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  outline: none;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ui-inline-input:hover,
+.ui-inline-select:hover {
+  background: rgb(var(--color-surface) / 0.45);
+  color: rgb(var(--color-primary));
+}
+
+.ui-inline-input:focus-visible,
+.ui-inline-select:focus-visible {
+  border-color: rgb(var(--color-border-subtle));
+  background: rgb(var(--color-surface) / 0.55);
+  color: rgb(var(--color-primary));
+  box-shadow: 0 0 0 1px rgb(var(--color-accent) / 0.2);
+}
+
+.ui-inline-input:disabled,
+.ui-inline-select:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.ui-inline-select-shell {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.ui-inline-select {
+  appearance: none;
+  padding-right: 1.5rem;
+}
+
+.ui-inline-select-icon {
+  pointer-events: none;
+  position: absolute;
+  right: 0.625rem;
+  color: rgb(var(--color-dim) / 0.7);
+}
+
 .ui-checkbox {
   width: 1rem;
   height: 1rem;

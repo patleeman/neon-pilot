@@ -2054,6 +2054,40 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   );
 });
 
+export const InlineTextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function InlineTextInput(
+  { className, ...props },
+  ref,
+) {
+  return <input ref={ref} className={cx('ui-inline-input', className)} {...props} />;
+});
+
+export const InlineSelect = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function InlineSelect(
+  { className, children, ...props },
+  ref,
+) {
+  return (
+    <label className="ui-inline-select-shell">
+      <select ref={ref} className={cx('ui-inline-select', className)} {...props}>
+        {children}
+      </select>
+      <svg
+        aria-hidden="true"
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="ui-inline-select-icon"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </label>
+  );
+});
+
 export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Checkbox(
   { className, type = 'checkbox', ...props },
   ref,

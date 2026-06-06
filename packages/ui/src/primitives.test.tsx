@@ -29,6 +29,8 @@ import {
   FolderIcon,
   IconButton,
   IconLink,
+  InlineSelect,
+  InlineTextInput,
   KeyboardShortcutCaptureInput,
   KeyValueItem,
   KeyValueList,
@@ -248,6 +250,15 @@ describe('design-system primitives', () => {
 
   it('renders text input with design-system class', () => {
     expect(renderToStaticMarkup(createElement(TextInput, { value: 'hello', readOnly: true }))).toContain('ui-text-input');
+  });
+
+  it('renders inline form controls with dense design-system classes', () => {
+    expect(renderToStaticMarkup(createElement(InlineTextInput, { value: '10', readOnly: true }))).toContain('ui-inline-input');
+    expect(
+      renderToStaticMarkup(
+        createElement(InlineSelect, { value: 'daily', disabled: true }, createElement('option', { value: 'daily' }, 'Daily')),
+      ),
+    ).toContain('ui-inline-select');
   });
 
   it('renders checkbox with design-system class', () => {

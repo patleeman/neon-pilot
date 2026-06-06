@@ -44,6 +44,8 @@ import {
   IconLink,
   InlineCode,
   InlineMeta,
+  InlineSelect,
+  InlineTextInput,
   Keycap,
   KeyboardShortcutCaptureInput,
   KeyValueItem,
@@ -295,6 +297,13 @@ const meta = {
           <Field label="Shortcut" hint="Use for settings and command keybinding editors.">
             <KeyboardShortcutCaptureInput value="CommandOrControl+Shift+P" onChange={() => undefined} />
           </Field>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <InlineSelect defaultValue="daily" aria-label="Cadence">
+              <option value="daily">Every day</option>
+              <option value="weekly">Weekly</option>
+            </InlineSelect>
+            <InlineTextInput defaultValue="09:00" aria-label="Time" style={{ width: 84 }} />
+          </div>
           <Switch checked label="Enabled" />
         </SurfacePanel>
       </section>
