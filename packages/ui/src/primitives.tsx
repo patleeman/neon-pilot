@@ -3,6 +3,7 @@ import {
   type ButtonHTMLAttributes,
   type CSSProperties,
   type DetailsHTMLAttributes,
+  type FormEvent,
   forwardRef,
   type HTMLAttributes,
   type InputHTMLAttributes,
@@ -10,6 +11,10 @@ import {
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
+  useEffect,
+  useId,
+  useRef,
+  useState,
 } from 'react';
 
 export function cx(...parts: Array<string | false | null | undefined>) {
@@ -788,6 +793,79 @@ export function DialogFooter({ children, className, ...props }: HTMLAttributes<H
     <div className={cx('ui-dialog-footer', className)} {...props}>
       {children}
     </div>
+  );
+}
+
+export interface TextPromptDialogProps {
+  title: string;
+  label: string;
+  initialValue?: string;
+  placeholder?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  allowEmpty?: boolean;
+  className?: string;
+  backdropClassName?: string;
+  backdropStyle?: CSSProperties;
+  onCancel: () => void;
+  onSubmit: (value: string) => void;
+}
+
+export function TextPromptDialog({
+  title,
+  label,
+  initialValue = '',
+  placeholder,
+  confirmLabel = 'Continue',
+  cancelLabel = 'Cancel',
+  allowEmpty = false,
+  className,
+  backdropClassName,
+  backdropStyle,
+  onCancel,
+  onSubmit,
+}: TextPromptDialogProps) {
+  const [value, setValue] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const titleId = useId();
+  const canSubmit = allowEmpty || value.trim().length > 0;
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!canSubmit) return;
+    onSubmit(value);
+  };
+
+  return (
+    <Dialog
+      onClose={onCancel}
+      labelledBy={titleId}
+      className={cx('max-w-md', className)}
+      backdropClassName={backdropClassName}
+      backdropStyle={backdropStyle}
+    >
+      <form onSubmit={submit}>
+        <DialogHeader title={title} titleId={titleId} />
+        <DialogBody>
+          <Field label={label}>
+            <TextInput ref={inputRef} value={value} onChange={(event) => setValue(event.target.value)} placeholder={placeholder} />
+          </Field>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button type="submit" variant="action" tone="accent" disabled={!canSubmit}>
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Dialog>
   );
 }
 

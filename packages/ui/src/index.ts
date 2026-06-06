@@ -83,6 +83,8 @@ export {
   TextButton,
   Textarea,
   TextInput,
+  TextPromptDialog,
+  type TextPromptDialogProps,
   Tooltip,
   type TooltipPosition,
   ToolbarButton,

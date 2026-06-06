@@ -81,6 +81,8 @@ export {
   TextButton,
   Textarea,
   TextInput,
+  TextPromptDialog,
+  type TextPromptDialogProps,
   Tooltip,
   ToolbarButton,
 } from '../components/ui';

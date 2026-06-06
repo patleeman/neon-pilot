@@ -18,7 +18,7 @@ Use this package for reusable React UI primitives and extension-friendly app pat
 - Actions: `Button`, `ButtonLink`, `ToolbarButton`, `TextButton`, `IconButton`, `IconLink`, `CheckButton`
 - Status: `Pill`, `StatusDot`, `Spinner`, `Keycap`, `Tooltip`, `Notice`
 - Surfaces: `SurfacePanel`, `PanelHeader`
-- Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`
+- Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `TextPromptDialog`
 - Feedback: `LoadingState`, `ErrorState`, `EmptyState`
 - Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingToggleRow`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
@@ -80,6 +80,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 - Use `FilterToolbar` to align filter controls, search inputs, and optional actions on list pages.
 - Use `MenuShell`, `MenuItem`, `MenuGroupLabel`, and `MenuSeparator` for menu contents. Use `PositionedMenu` when a menu needs fixed, absolute, or static placement without rebuilding menu chrome.
 - Use `Dialog` and its header/body/footer pieces for modal shells before creating local fixed overlays. `Dialog` accepts `backdropClassName` and `backdropStyle` for host-specific overlay alignment or blur without rewriting the shell.
+- Use `TextPromptDialog` for simple rename, create, and move prompts that need one text input plus Cancel/Submit actions.
 - Use `StatusDot` for compact colored status markers and `Spinner` for compact inline progress markers. Use `LoadingState`, `Notice`, `ErrorState`, and `EmptyState` for larger feedback surfaces. Avoid page-specific loading/error markup unless the layout requires it.
 - Use `ErrorState` for blocking load failures; pass `title` plus `body` or `message` when a heading helps. Use `Notice tone="danger"` for inline validation, save, and action feedback.
 - Use `SurfacePanel` with `PanelHeader` for repeated bordered data sections with a title, count, status, or action area.

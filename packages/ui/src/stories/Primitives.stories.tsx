@@ -59,6 +59,7 @@ import {
   TextButton,
   Textarea,
   TextInput,
+  TextPromptDialog,
   Tooltip,
   ToolbarButton,
 } from '../primitives';
@@ -318,6 +319,17 @@ const meta = {
               Create
             </Button>
           </DialogFooter>
+        </div>
+        <div style={{ position: 'relative', minHeight: 260, overflow: 'hidden', border: '1px dashed rgb(var(--color-border-subtle))' }}>
+          <TextPromptDialog
+            title="Rename Workspace"
+            label="Workspace name"
+            initialValue="Neon Pilot"
+            confirmLabel="Rename"
+            backdropStyle={{ position: 'absolute', inset: 0, background: 'rgb(0 0 0 / 0.18)' }}
+            onCancel={() => undefined}
+            onSubmit={() => undefined}
+          />
         </div>
       </section>
     </div>
