@@ -8,6 +8,7 @@ import {
   ErrorState,
   FilterToolbar,
   LoadingState,
+  MetaLabel,
   SearchInput,
   TabButton,
   TabList,
@@ -150,7 +151,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="truncate text-[13px] font-semibold text-primary">{skill.name}</h3>
-                      <span className="text-[10px] uppercase tracking-wide text-dim">{sourceLabel(skill)}</span>
+                      <MetaLabel tone="muted">{sourceLabel(skill)}</MetaLabel>
                     </div>
                     {skill.description ? <p className="mt-1 text-[12px] text-secondary">{skill.description}</p> : null}
                     <p className="mt-1 truncate text-[11px] text-dim">{skill.sourceLabel ?? skill.path}</p>

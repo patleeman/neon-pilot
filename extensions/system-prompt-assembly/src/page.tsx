@@ -15,6 +15,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  MetaLabel,
   Notice,
   Pill,
   SearchInput,
@@ -475,9 +476,7 @@ function CapabilityTable({
               <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="truncate text-[14px] font-semibold text-primary">{row.title}</div>
-                  <Pill tone="muted" className="shrink-0 text-[10px] uppercase">
-                    {labelForKind(row.kind)}
-                  </Pill>
+                  <MetaLabel tone="muted">{labelForKind(row.kind)}</MetaLabel>
                 </div>
                 <CardBody as="div" className="mt-0.5 max-w-[44rem] whitespace-normal break-words">
                   {row.description || fallbackDescription(row)}
@@ -565,17 +564,18 @@ function ContributionSummary({ row }: { row: RuntimeCapability }) {
     return (
       <div className="flex flex-wrap items-center gap-1.5">
         {entries.map((entry) => (
-          <span
+          <Pill
             key={entry.label}
+            tone="muted"
             title={`${entry.label}: ${String(entry.value)}`}
             aria-label={`${entry.label}: ${String(entry.value)}`}
-            className="inline-flex min-w-8 items-center justify-center gap-1 rounded-md bg-surface/70 px-1.5 py-1 text-[11px] text-secondary"
+            className="min-w-8 justify-center rounded-md"
           >
             <span aria-hidden="true" className="text-dim">
               {entry.icon}
             </span>
             <span>{String(entry.value)}</span>
-          </span>
+          </Pill>
         ))}
       </div>
     );
