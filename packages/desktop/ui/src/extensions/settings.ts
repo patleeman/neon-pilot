@@ -48,6 +48,7 @@ export {
   SectionLabel,
   SegmentedControl,
   Select,
+  SettingsPanel,
   SettingsRow,
   SettingToggleRow,
   SettingsSection,

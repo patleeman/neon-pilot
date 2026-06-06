@@ -96,6 +96,7 @@ export {
   type SectionLabelTone,
   SegmentedControl,
   Select,
+  SettingsPanel,
   SettingsRow,
   SettingToggleRow,
   SettingsSection,

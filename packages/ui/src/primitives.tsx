@@ -1772,6 +1772,37 @@ export function SettingsSection({
   );
 }
 
+export function SettingsPanel({
+  id,
+  title,
+  description,
+  actions,
+  children,
+  className,
+  contentClassName,
+}: {
+  id?: string;
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+}) {
+  return (
+    <section id={id} className={cx('ui-settings-panel', className)}>
+      <div className="ui-settings-panel-header">
+        <div className="ui-settings-panel-copy">
+          <h3 className="ui-settings-panel-title">{title}</h3>
+          {description ? <p className="ui-settings-panel-description">{description}</p> : null}
+        </div>
+        {actions ? <div className="ui-settings-panel-actions">{actions}</div> : null}
+      </div>
+      <div className={cx('ui-settings-panel-content', contentClassName)}>{children}</div>
+    </section>
+  );
+}
+
 export function SettingsRow({
   title,
   description,

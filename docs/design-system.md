@@ -57,7 +57,7 @@ The shared package includes:
 - Surfaces: `SurfacePanel`, `PanelHeader`, `PanelMessage`, `CompactCard`, `AttachmentChip`, `AttachmentChipButton`
 - Overlays: `Dialog`, `DialogHeader`, `DialogBody`, `DialogFooter`, `ConfirmDialog`, `TextPromptDialog`
 - Feedback: `CenteredState`, `CenteredLoadingState`, `CenteredMessage`, `LoadingState`, `ErrorState`, `EmptyState`, `AppPageEmptyState`
-- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsRow`, `SettingToggleRow`, `SettingsSection`
+- Forms: `Field`, `FieldLabel`, `FieldHint`, `FieldError`, `TextInput`, `SearchInput`, `Textarea`, `Select`, `Switch`, `SettingsPanel`, `SettingsRow`, `SettingToggleRow`, `SettingsSection`
 - Menus: `MenuShell`, `PositionedMenu`, `MenuGroupLabel`, `MenuItem`, `MenuSeparator`
 - Selection and filtering: `SegmentedControl`, `TabList`, `TabButton`, `TabPanel`, `FilterToolbar`
 - Data display: `SectionLabel`, `MetaLabel`, `CardTitle`, `CardBody`, `CardMeta`, `SupportingText`, `InlineMeta`, `ResourceListItem`, `RowButton`, `InlineCode`, `CodeBlock`, `Disclosure`, `ProgressBar`, `ProgressRow`, `Stat`, `StatGrid`, `MetricTile`, `DashboardGrid`, `DashboardGridCell`, `KeyValueList`, `KeyValueItem`, `KeyValueTable`, `DataTable`, `DataTableHead`, `DataTableBody`, `DataTableRow`, `DataTableHeaderCell`, `DataTableCell`, `DataTableEmptyRow`, `DataTableActionGroup`
@@ -94,6 +94,7 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 - Raw local `Field`, `TextInput`, `Select`, or `Pill` helpers in external extensions -> SDK imports from `@neon-pilot/extensions/ui`
 - Raw textareas -> `Textarea`
 - Boolean settings -> `Switch` or `SettingToggleRow`
+- Local nested settings cards or provider subsections -> `SettingsPanel`
 - Local segmented filters -> `SegmentedControl`
 - Local tab rows -> `TabList`, `TabButton`, and `TabPanel`
 - Local search/filter header rows -> `FilterToolbar`

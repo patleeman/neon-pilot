@@ -36,6 +36,7 @@ import {
   type SecretsState,
   type SecretStatusEntry,
   SettingsField,
+  SettingsPanel,
   SettingsPanelHost,
   subscribeDesktopProviderOAuthLogin,
   type TelemetryDbMaintenanceResult,
@@ -462,35 +463,6 @@ function SettingsSection({
         {description ? <p className="text-[14px] leading-6 text-secondary">{description}</p> : null}
       </div>
       {children}
-    </section>
-  );
-}
-
-function SettingsPanel({
-  id,
-  title,
-  description,
-  actions,
-  children,
-  className,
-}: {
-  id?: string;
-  title: ReactNode;
-  description?: ReactNode;
-  actions?: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <section id={id} className={cx('scroll-mt-24 space-y-4 border-t border-border-subtle py-7 first:border-t-0 first:pt-0', className)}>
-      <div className="min-w-0 space-y-2">
-        <div className="space-y-1.5">
-          <h3 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-primary">{title}</h3>
-          {description ? <p className="max-w-2xl text-[12px] leading-5 text-secondary">{description}</p> : null}
-        </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2 pt-0.5">{actions}</div> : null}
-      </div>
-      <div className="min-w-0 space-y-3.5">{children}</div>
     </section>
   );
 }

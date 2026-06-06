@@ -30,6 +30,7 @@ export type UnifiedSettingsEntry = unknown;
 export declare const DesktopConnectionsSettingsPanel: HostComponent; // App behavior panel
 export declare const DesktopKeyboardShortcutsSettingsSection: HostComponent;
 export declare const SettingsPage: HostComponent;
+export declare const SettingsPanel: HostComponent;
 export declare const AppPageIntro: HostComponent;
 export declare const AppPageLayout: HostComponent;
 export declare const AppPageSection: HostComponent;

@@ -216,6 +216,7 @@ export declare const SearchInput: HostComponent;
 export declare const SectionLabel: HostComponent;
 export declare const SegmentedControl: HostComponent;
 export declare const Select: HostComponent;
+export declare const SettingsPanel: HostComponent;
 export declare const SettingToggleRow: HostComponent;
 export declare const SettingsSection: HostComponent;
 export declare const Stat: HostComponent;

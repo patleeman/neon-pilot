@@ -99,6 +99,7 @@ export {
   SegmentedControl,
   type SegmentedControlOption,
   Select,
+  SettingsPanel,
   SettingsRow,
   SettingToggleRow,
   SettingsSection,

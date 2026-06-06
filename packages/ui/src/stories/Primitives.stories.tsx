@@ -69,6 +69,7 @@ import {
   SectionLabel,
   SegmentedControl,
   Select,
+  SettingsPanel,
   SettingsRow,
   SettingToggleRow,
   SettingsSection,
@@ -481,6 +482,14 @@ const meta = {
         <h2 style={{ margin: 0, fontSize: 18 }}>Settings Section</h2>
         <SurfacePanel style={{ padding: 16 }}>
           <SettingsSection title="Runtime" description="Use this pattern for extension settings and editor forms.">
+            <SettingsPanel title="Provider" description="Use SettingsPanel for repeated subpanels inside larger settings sections.">
+              <Field label="Base URL">
+                <TextInput defaultValue="https://api.example.local/v1" />
+              </Field>
+              <SettingsRow title="Use provider defaults" description="Let the extension infer missing values when possible.">
+                <Switch checked label="Enabled" />
+              </SettingsRow>
+            </SettingsPanel>
             <SettingsRow
               title="Update path"
               description="Use settings rows when a setting needs copy plus a trailing control, button, or select."
