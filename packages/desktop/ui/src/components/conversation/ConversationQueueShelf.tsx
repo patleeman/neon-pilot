@@ -4,7 +4,7 @@ import {
   summarizeQueuedRunCallbackPrompt,
   truncateConversationShelfText,
 } from '../../conversation/conversationComposerPresentation';
-import { Pill, SectionLabel, ShelfSection } from '../ui';
+import { Pill, SectionLabel, ShelfSection, TextButton } from '../ui';
 
 export interface ConversationPendingQueueItem {
   id: string;
@@ -60,13 +60,13 @@ export function ConversationQueueShelf({
                   {imageSummary ? <p className="mt-0.5 text-[11px] text-dim">{imageSummary}</p> : null}
                 </div>
                 {message.restorable !== false ? (
-                  <button
+                  <TextButton
                     type="button"
                     onClick={() => {
                       onRestoreQueuedPrompt(message.type, message.queueIndex, message.id);
                     }}
                     disabled={conversationNeedsTakeover}
-                    className="shrink-0 pt-0.5 text-[11px] text-dim transition-colors hover:text-primary disabled:cursor-default disabled:opacity-50"
+                    className="shrink-0 pt-0.5 text-[11px]"
                     title={
                       conversationNeedsTakeover
                         ? 'Take over this conversation before restoring queued prompts'
@@ -75,7 +75,7 @@ export function ConversationQueueShelf({
                     aria-label="Restore queued prompt to the composer"
                   >
                     restore
-                  </button>
+                  </TextButton>
                 ) : (
                   <span className="shrink-0 pt-0.5 text-[11px] text-dim/70">remote</span>
                 )}

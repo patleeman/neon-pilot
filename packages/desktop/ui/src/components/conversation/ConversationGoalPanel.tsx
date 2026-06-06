@@ -1,5 +1,5 @@
 import type { ThreadGoal } from '../../shared/types';
-import { cx, MetaLabel, Spinner } from '../ui';
+import { Button, cx, MetaLabel, Spinner } from '../ui';
 
 export interface GoalPanelProps {
   goal: ThreadGoal | null;
@@ -33,17 +33,19 @@ export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
         <span className="min-w-0 flex-1 truncate text-primary">{goal.objective}</span>
         <span className={cx('shrink-0 text-[11px] font-medium', statusConfig.className)}>{statusConfig.label}</span>
         {goal.status === 'active' ? (
-          <button
+          <Button
+            variant="action"
+            tone="danger"
             type="button"
             onClick={onCancel}
-            className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-danger/70 transition-colors hover:bg-danger/10 hover:text-danger"
+            className="shrink-0 text-[11px]"
             aria-label="Cancel goal"
           >
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="1.2" />
             </svg>
             Cancel
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>
