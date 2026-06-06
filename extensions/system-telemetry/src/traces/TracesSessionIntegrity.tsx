@@ -6,6 +6,7 @@
  */
 
 import type { AppTelemetryEventRow } from '@neon-pilot/extensions/data';
+import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeaderCell, DataTableRow } from '@neon-pilot/extensions/ui';
 
 interface Props {
   events: AppTelemetryEventRow[];
@@ -22,35 +23,33 @@ export function TracesSessionIntegrity({ events }: Props) {
         <h3 className="text-sm font-semibold text-primary">Session Integrity</h3>
         <span className="text-[11px] text-dim">{events.length} prompt cache misses</span>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border-subtle">
-        <table className="w-full text-left text-[12px]">
-          <thead>
-            <tr className="border-b border-border-subtle bg-surface/50">
-              <th className="px-3 py-2 font-medium text-dim">Time</th>
-              <th className="px-3 py-2 font-medium text-dim">Session</th>
-              <th className="px-3 py-2 font-medium text-dim">Old Size</th>
-              <th className="px-3 py-2 font-medium text-dim">New Size</th>
-              <th className="px-3 py-2 font-medium text-dim">Loader</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((event) => {
-              const meta = parseMetadata(event.metadataJson);
-              return (
-                <tr key={event.id} className="border-b border-border-subtle last:border-b-0 hover:bg-surface/30">
-                  <td className="px-3 py-2 text-secondary whitespace-nowrap">{formatTime(event.ts)}</td>
-                  <td className="px-3 py-2 text-secondary max-w-[180px] truncate" title={event.sessionId ?? undefined}>
-                    {event.sessionId ?? '—'}
-                  </td>
-                  <td className="px-3 py-2 text-secondary whitespace-nowrap font-mono">{meta.oldSize ?? '?'}</td>
-                  <td className="px-3 py-2 text-secondary whitespace-nowrap font-mono">{meta.newSize ?? '?'}</td>
-                  <td className="px-3 py-2 text-secondary whitespace-nowrap">{meta.cacheLoader ?? '?'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable className="rounded-lg border border-border-subtle">
+        <DataTableHead>
+          <DataTableRow className="bg-surface/50 hover:bg-surface/50">
+            <DataTableHeaderCell>Time</DataTableHeaderCell>
+            <DataTableHeaderCell>Session</DataTableHeaderCell>
+            <DataTableHeaderCell>Old Size</DataTableHeaderCell>
+            <DataTableHeaderCell>New Size</DataTableHeaderCell>
+            <DataTableHeaderCell>Loader</DataTableHeaderCell>
+          </DataTableRow>
+        </DataTableHead>
+        <DataTableBody>
+          {events.map((event) => {
+            const meta = parseMetadata(event.metadataJson);
+            return (
+              <DataTableRow key={event.id}>
+                <DataTableCell className="whitespace-nowrap text-secondary">{formatTime(event.ts)}</DataTableCell>
+                <DataTableCell className="max-w-[180px] truncate text-secondary" title={event.sessionId ?? undefined}>
+                  {event.sessionId ?? '—'}
+                </DataTableCell>
+                <DataTableCell className="whitespace-nowrap font-mono text-secondary">{meta.oldSize ?? '?'}</DataTableCell>
+                <DataTableCell className="whitespace-nowrap font-mono text-secondary">{meta.newSize ?? '?'}</DataTableCell>
+                <DataTableCell className="whitespace-nowrap text-secondary">{meta.cacheLoader ?? '?'}</DataTableCell>
+              </DataTableRow>
+            );
+          })}
+        </DataTableBody>
+      </DataTable>
     </section>
   );
 }

@@ -3,7 +3,16 @@
  */
 
 import type { TraceToolHealth } from '@neon-pilot/extensions/data';
-import { MetricTile, type MetricTone, PanelHeader, PanelMessage, ProgressBar, ProgressRow, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  MetricTile,
+  type MetricTone,
+  PanelHeader,
+  PanelMessage,
+  ProgressBar,
+  ProgressRow,
+  SectionLabel,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 
 export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
   if (!tools || tools.length === 0) {
@@ -45,7 +54,7 @@ function BashBreakdown({ tools }: { tools: TraceToolHealth[] }) {
   return (
     <div className="border-t border-border-subtle px-4 pb-4 pt-3">
       <div className="mb-2 flex items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-secondary">Bash breakdown</span>
+        <SectionLabel tone="secondary">Bash breakdown</SectionLabel>
         <span className="ml-auto text-[10px] text-dim">Top command families</span>
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
