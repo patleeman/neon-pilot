@@ -9,7 +9,7 @@ import { formatDate } from '../shared/utils';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
-import { ErrorState, LoadingState, ResourceListItem, SectionLabel } from './ui';
+import { ErrorState, LoadingState, ResourceListItem, SectionLabel, ToolbarButton } from './ui';
 
 export { useConversationArtifactSummaries };
 
@@ -154,15 +154,14 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
             {artifact ? <span className="hidden shrink-0 text-[11px] text-dim sm:inline">rev {artifact.revision}</span> : null}
           </div>
           {artifact ? (
-            <button
-              type="button"
+            <ToolbarButton
               onClick={() => {
                 void copySource();
               }}
-              className="ui-toolbar-button shrink-0 px-2 py-1 text-[10px]"
+              className="shrink-0 px-2 py-1 text-[10px]"
             >
               {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
-            </button>
+            </ToolbarButton>
           ) : null}
         </div>
       </div>
