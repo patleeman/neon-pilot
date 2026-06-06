@@ -1,6 +1,6 @@
 import type { ConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
 import { sessionNeedsAttention } from '../session/sessionIndicators';
-import { cx, Spinner } from './ui';
+import { cx, Spinner, StatusDot } from './ui';
 
 function BackgroundWorkIcon({ kind }: { kind?: ConversationBackgroundWorkKind | null }) {
   if (kind === 'subagent') return <span aria-hidden="true">✦</span>;
@@ -11,7 +11,7 @@ function BackgroundWorkIcon({ kind }: { kind?: ConversationBackgroundWorkKind | 
       </span>
     );
   }
-  return <span aria-hidden="true" className="h-2 w-2 rounded-full bg-current" />;
+  return <StatusDot tone="current" />;
 }
 
 export function ConversationStatusText({
@@ -61,8 +61,10 @@ export function ConversationStatusText({
     <span
       role="img"
       aria-label="Conversation needs review"
-      className={cx('block h-2 w-2 rounded-full bg-warning', className)}
+      className={className}
       title="Stopped with new output or linked updates you have not viewed yet"
-    />
+    >
+      <StatusDot tone="warning" />
+    </span>
   );
 }

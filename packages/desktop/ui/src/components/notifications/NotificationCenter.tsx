@@ -7,13 +7,13 @@
 import { useMemo, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
-import { cx } from '../ui';
+import { cx, StatusDot, type StatusDotTone } from '../ui';
 import { type NotificationItem, type NotificationType, useNotificationStore } from './notificationStore';
 
-const TYPE_DOT_CLASS: Record<NotificationType, string> = {
-  info: 'bg-steel',
-  warning: 'bg-warning',
-  error: 'bg-red-500',
+const TYPE_DOT_TONE: Record<NotificationType, StatusDotTone> = {
+  info: 'steel',
+  warning: 'warning',
+  error: 'danger',
 };
 
 const TYPE_LABEL: Record<NotificationType, string> = {
@@ -94,7 +94,7 @@ function NotificationRow({
       }}
     >
       <div className="flex items-start gap-2">
-        <span className={cx('mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full', TYPE_DOT_CLASS[item.type])} aria-hidden="true" />
+        <StatusDot tone={TYPE_DOT_TONE[item.type]} size="xs" className="mt-0.5" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-medium uppercase tracking-wider text-dim">{TYPE_LABEL[item.type]}</span>

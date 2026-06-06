@@ -20,6 +20,8 @@ import {
   Select,
   SegmentedControl,
   SettingsSection,
+  StatusDot,
+  type StatusDotTone,
   Switch,
   TextButton,
   Textarea,
@@ -608,7 +610,7 @@ function schedulerHealthLabel(health: ScheduledTaskSchedulerHealth | null) {
 
 function SchedulerHealthDot({ health }: { health: ScheduledTaskSchedulerHealth | null }) {
   const label = schedulerHealthLabel(health);
-  const statusClass = health?.status === 'stale' ? 'bg-warning' : health?.status === 'healthy' ? 'bg-success' : 'bg-dim';
+  const tone: StatusDotTone = health?.status === 'stale' ? 'warning' : health?.status === 'healthy' ? 'success' : 'muted';
   return (
     <span
       tabIndex={0}
@@ -616,7 +618,7 @@ function SchedulerHealthDot({ health }: { health: ScheduledTaskSchedulerHealth |
       aria-label={label}
       className="inline-flex h-8 w-8 items-center justify-center rounded-md text-secondary outline-none transition-colors hover:bg-elevated focus:bg-elevated"
     >
-      <span className={cx('h-2.5 w-2.5 rounded-full', statusClass)} />
+      <StatusDot tone={tone} size="md" />
     </span>
   );
 }

@@ -45,6 +45,7 @@ import {
   Spinner,
   Stat,
   StatGrid,
+  StatusDot,
   SurfacePanel,
   SupportingText,
   Switch,
@@ -92,6 +93,9 @@ const meta = {
           <Pill tone="success">Done</Pill>
           <Pill tone="warning">Waiting</Pill>
           <Pill tone="danger">Failed</Pill>
+          <StatusDot tone="success" />
+          <StatusDot tone="warning" />
+          <StatusDot tone="danger" />
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgb(var(--color-accent))', fontSize: 11 }}>
             <Spinner size="xs" />
             Running

@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import React from 'react';
 
-import { MenuItem, MenuSeparator, MenuShell } from '../ui';
+import { MenuItem, MenuSeparator, MenuShell, StatusDot } from '../ui';
 import type { ReplySelectionContextMenuState, TranscriptSelectionAction } from './useChatReplySelection.js';
 
 void React;
@@ -10,7 +10,7 @@ export function StreamingIndicator({ label }: { label: string }) {
   return (
     <div className="flex gap-2 items-start" role="status" aria-live="polite">
       <div className="flex items-center gap-2 pt-1 text-[12px] text-secondary italic">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent animate-pulse not-italic" />
+        <StatusDot tone="accent" size="xs" className="animate-pulse not-italic" />
         <span>{label}</span>
       </div>
     </div>

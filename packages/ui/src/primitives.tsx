@@ -164,6 +164,34 @@ export function Pill({
   );
 }
 
+const STATUS_DOT_TONE_CLASSES = {
+  muted: 'ui-status-dot-muted',
+  accent: 'ui-status-dot-accent',
+  success: 'ui-status-dot-success',
+  warning: 'ui-status-dot-warning',
+  danger: 'ui-status-dot-danger',
+  steel: 'ui-status-dot-steel',
+  current: 'ui-status-dot-current',
+} as const;
+
+export type StatusDotTone = keyof typeof STATUS_DOT_TONE_CLASSES;
+export type StatusDotSize = 'xs' | 'sm' | 'md';
+
+export function StatusDot({
+  tone = 'muted',
+  size = 'sm',
+  className,
+  ...props
+}: { tone?: StatusDotTone; size?: StatusDotSize; className?: string } & HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx('ui-status-dot', `ui-status-dot-${size}`, STATUS_DOT_TONE_CLASSES[tone], className)}
+      {...props}
+    />
+  );
+}
+
 export function Keycap({ children, className }: { children: ReactNode; className?: string }) {
   return <kbd className={cx('ui-kbd', className)}>{children}</kbd>;
 }

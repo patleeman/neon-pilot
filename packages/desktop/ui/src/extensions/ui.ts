@@ -62,6 +62,7 @@ export {
   Spinner,
   Stat,
   StatGrid,
+  StatusDot,
   SurfacePanel,
   SupportingText,
   Switch,

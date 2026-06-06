@@ -17,7 +17,7 @@ import {
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
-import { cx, Pill } from '../ui';
+import { cx, Pill, StatusDot } from '../ui';
 import {
   INLINE_RUN_LOG_TAIL_LINES,
   INLINE_RUN_POLL_INTERVAL_MS,
@@ -181,7 +181,7 @@ export function InlineTraceRunCard({ run, expanded, onToggle }: { run: LinkedRun
           {(detailRun || snapshot.log) && (
             <div className="rounded-md border border-border-subtle/70 bg-elevated/40 overflow-hidden">
               <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle/60 px-2 py-1.5 text-[10px] uppercase tracking-[0.12em] text-dim">
-                <span className={cx('h-2 w-2 rounded-full', runStreaming ? 'bg-accent animate-pulse' : 'bg-border-default')} />
+                <StatusDot tone={runStreaming ? 'accent' : 'muted'} className={runStreaming ? 'animate-pulse' : 'opacity-40'} />
                 <span>{outputLabel}</span>
                 <span className="min-w-0 truncate font-mono normal-case tracking-normal text-dim/80">{outputPathLabel}</span>
               </div>
