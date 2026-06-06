@@ -450,6 +450,14 @@ export function CodeBlock({
   );
 }
 
+export function InlineCode({ children, className, wrap = true, ...props }: HTMLAttributes<HTMLElement> & { wrap?: boolean }) {
+  return (
+    <code className={cx('ui-inline-code', wrap && 'ui-inline-code-wrap', className)} {...props}>
+      {children}
+    </code>
+  );
+}
+
 export function Disclosure({
   summary,
   children,

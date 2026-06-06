@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 
 import { type ParsedSkillBlock, parseSkillBlock } from '../../markdown/markdownExtensions';
 import { extractMarkdownTextContent, InlineMarkdownCode } from '../MarkdownInlineCode';
-import { cx } from '../ui';
+import { cx, InlineCode } from '../ui';
 
 // ── Markdown renderer ─────────────────────────────────────────────────────────
 
@@ -31,11 +31,7 @@ function looksLikeCommitHash(value: string): boolean {
 
 function CommitHashButton({ hash, onOpenCheckpoint }: { hash: string; onOpenCheckpoint?: (checkpointId: string) => void }) {
   if (!onOpenCheckpoint) {
-    return (
-      <code className="font-mono text-[0.82em] bg-elevated px-1 py-0.5 rounded text-accent whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-        {hash}
-      </code>
-    );
+    return <InlineCode>{hash}</InlineCode>;
   }
 
   return (

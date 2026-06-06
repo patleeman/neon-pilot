@@ -713,6 +713,21 @@ body {
   overflow-wrap: anywhere;
 }
 
+.ui-inline-code {
+  border-radius: 0.25rem;
+  background: rgb(var(--color-elevated));
+  padding: 0.125rem 0.25rem;
+  color: rgb(var(--color-accent));
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+}
+
+.ui-inline-code-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .ui-disclosure {
   overflow: hidden;
   border-radius: 0.5rem;

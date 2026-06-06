@@ -37,6 +37,7 @@ export {
   IconButton,
   type IconButtonShape,
   IconLink,
+  InlineCode,
   Keycap,
   KeyValueItem,
   KeyValueList,

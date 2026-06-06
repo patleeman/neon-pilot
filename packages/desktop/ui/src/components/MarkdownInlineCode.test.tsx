@@ -10,8 +10,7 @@ describe('InlineMarkdownCode', () => {
   it('uses wrap-friendly inline code styling for long tokens', () => {
     const html = renderToString(<InlineMarkdownCode>packages/desktop/ui/src/pages/ConversationPage.tsx</InlineMarkdownCode>);
 
-    expect(html).toContain('break-words');
-    expect(html).toContain('[overflow-wrap:anywhere]');
-    expect(html).toContain('whitespace-pre-wrap');
+    expect(html).toContain('ui-inline-code');
+    expect(html).toContain('ui-inline-code-wrap');
   });
 });

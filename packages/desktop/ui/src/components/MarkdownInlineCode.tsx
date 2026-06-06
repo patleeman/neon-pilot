@@ -1,7 +1,6 @@
 import { Children, isValidElement, type ReactNode } from 'react';
 
-const DEFAULT_INLINE_CODE_CLASS =
-  'font-mono text-[0.82em] bg-elevated px-1 py-0.5 rounded text-accent whitespace-pre-wrap break-words [overflow-wrap:anywhere]';
+import { InlineCode } from './ui';
 
 export function extractMarkdownTextContent(children: ReactNode): string {
   let text = '';
@@ -28,7 +27,7 @@ export function extractMarkdownTextContent(children: ReactNode): string {
 export function InlineMarkdownCode({
   className,
   children,
-  inlineCodeClassName = DEFAULT_INLINE_CODE_CLASS,
+  inlineCodeClassName,
 }: {
   className?: string;
   children?: ReactNode;
@@ -38,7 +37,7 @@ export function InlineMarkdownCode({
   const isBlock = content.includes('\n') || Boolean(className?.includes('language-'));
 
   if (!isBlock) {
-    return <code className={inlineCodeClassName}>{content}</code>;
+    return <InlineCode className={inlineCodeClassName}>{content}</InlineCode>;
   }
 
   return <code className={className}>{content}</code>;
