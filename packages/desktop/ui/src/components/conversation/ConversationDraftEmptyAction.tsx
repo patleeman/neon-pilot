@@ -114,7 +114,7 @@ export function ConversationDraftEmptyAction({
         <SectionLabel tone="muted">{hasDraftCwd ? 'Workspace' : 'Chat'}</SectionLabel>
       </div>
       <div className="flex w-full flex-nowrap items-start justify-start gap-2">
-        <div ref={pickerRef} className="relative min-w-0 flex-1 sm:min-w-[18rem] sm:max-w-[32rem]">
+        <div ref={pickerRef} className="relative min-w-0 max-w-[32rem] flex-1">
           <span className="sr-only">Saved workspace</span>
           <RowButton
             compact

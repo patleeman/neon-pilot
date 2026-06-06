@@ -97,7 +97,7 @@ describe('ConversationDraftEmptyAction', () => {
 
       const pickerWrapper = workspaceButton?.closest('div');
       expect(pickerWrapper?.className).toContain('min-w-0');
-      expect(pickerWrapper?.className).toContain('sm:min-w-[18rem]');
+      expect(pickerWrapper?.className).not.toContain('min-w-[18rem]');
       expect(pickerWrapper?.parentElement?.className).toContain('flex-nowrap');
 
       act(() => workspaceButton?.click());
