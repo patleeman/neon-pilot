@@ -8,7 +8,7 @@ import {
   parseExcalidrawSceneFromSourceData,
   serializeExcalidrawScene,
 } from '@neon-pilot/extensions/excalidraw';
-import { ResourceListItem, SectionLabel } from '@neon-pilot/extensions/ui';
+import { IconButton, ResourceListItem, SectionLabel, ToolbarButton } from '@neon-pilot/extensions/ui';
 import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react';
 
 export interface ExcalidrawEditorSavePayload {
@@ -286,57 +286,47 @@ function ExcalidrawEditor({
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex justify-end gap-2 border-b border-border-subtle px-3 py-2">
         {onMoveToWorkbench ? (
-          <button
-            type="button"
+          <IconButton
+            compact
             onClick={() => {
               void handleMoveToWorkbench();
             }}
-            className="ui-icon-button ui-icon-button-compact"
             disabled={busy || !LoadedExcalidraw || loadError !== null}
             title={moving ? 'Moving to Workbench...' : (moveLabel ?? 'Save and move to Workbench')}
             aria-label={moveLabel ?? 'Save and move to Workbench'}
           >
             <Ico d={moving ? ICON.refresh : ICON.panel} size={12} />
-          </button>
+          </IconButton>
         ) : null}
         {onCancel ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="ui-icon-button ui-icon-button-compact"
-            disabled={busy}
-            title={cancelLabel ?? 'Cancel'}
-            aria-label={cancelLabel ?? 'Cancel'}
-          >
+          <IconButton compact onClick={onCancel} disabled={busy} title={cancelLabel ?? 'Cancel'} aria-label={cancelLabel ?? 'Cancel'}>
             <Ico d={ICON.x} size={12} />
-          </button>
+          </IconButton>
         ) : null}
-        <button
-          type="button"
+        <ToolbarButton
           onClick={() => {
             void handlePersist();
           }}
-          className="ui-toolbar-button ui-icon-button-compact gap-1.5 px-2.5"
+          className="ui-icon-button-compact gap-1.5 px-2.5"
           disabled={!onPersist || busy || !LoadedExcalidraw || loadError !== null}
           title={!onPersist ? 'Save requires an existing conversation' : persisting ? 'Saving...' : persistButtonLabel}
           aria-label={persistButtonLabel}
         >
           <Ico d={persisting ? ICON.refresh : ICON.save} size={12} />
           <span>{persisting ? 'Saving...' : persistButtonLabel}</span>
-        </button>
-        <button
-          type="button"
+        </ToolbarButton>
+        <ToolbarButton
           onClick={() => {
             void handleAttach();
           }}
-          className="ui-toolbar-button ui-icon-button-compact gap-1.5 bg-accent px-2.5 text-white hover:bg-accent/90 disabled:bg-accent/50 disabled:text-white/70"
+          className="ui-icon-button-compact gap-1.5 bg-accent px-2.5 text-white hover:bg-accent/90 disabled:bg-accent/50 disabled:text-white/70"
           disabled={busy || !LoadedExcalidraw || loadError !== null}
           title={attaching ? 'Attaching...' : attachButtonLabel}
           aria-label={attachButtonLabel}
         >
           <Ico d={attaching ? ICON.refresh : ICON.attach} size={12} />
           <span>{attaching ? 'Attaching...' : attachButtonLabel}</span>
-        </button>
+        </ToolbarButton>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -698,19 +688,17 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
         <div className="flex min-w-0 items-center gap-1">
           <SectionLabel className="flex-1">Drawings</SectionLabel>
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              className="ui-icon-button ui-icon-button-compact"
+            <IconButton
+              compact
               onClick={() => void loadDrawings()}
               disabled={loading}
               title={loading ? 'Refreshing drawings...' : 'Refresh drawings'}
               aria-label="Refresh drawings"
             >
               <Ico d={ICON.refresh} size={12} />
-            </button>
-            <button
-              type="button"
-              className="ui-icon-button ui-icon-button-compact"
+            </IconButton>
+            <IconButton
+              compact
               onClick={() => {
                 const draft = publishDraftDrawing(pa, createDraftDrawing());
                 pa.workbench.setDetailState('drawing-detail', {
@@ -724,7 +712,7 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
               aria-label="New drawing"
             >
               <Ico d={ICON.plus} size={12} />
-            </button>
+            </IconButton>
           </div>
         </div>
       </div>
