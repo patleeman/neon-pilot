@@ -1662,7 +1662,12 @@ function InstallExtensionModal({
       aria-label="Install extension"
       className="max-w-3xl bg-base"
       onClose={onClose}
-      style={{ marginBlock: '4rem', alignSelf: 'flex-start' }}
+      style={{
+        width: 'min(52rem, calc(100vw - 2rem))',
+        maxHeight: 'min(44rem, calc(100vh - 2rem))',
+        marginBlock: '2rem',
+        alignSelf: 'flex-start',
+      }}
     >
       <DialogHeader
         title="Install Extension"
@@ -1726,19 +1731,18 @@ function InstallExtensionModal({
                 placeholder="Search marketplace"
               />
             </div>
-            <div className="max-h-[28rem] overflow-y-auto">
-              <ResourceList>
-                {visibleCatalogItems.map((item) => {
-                  const itemBusy = catalogBusyId === item.id;
-                  const unavailablePackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
-                  return (
-                    <ResourceListRow
-                      key={item.id}
-                      title={item.name}
-                      detail={item.description || packageKindLabel(item)}
-                      titleClassName="text-[13px]"
-                      detailClassName="text-[12px] font-sans text-secondary"
-                      actions={
+            <ResourceList>
+              {visibleCatalogItems.map((item) => {
+                const itemBusy = catalogBusyId === item.id;
+                const unavailablePackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
+                return (
+                  <ResourceListRow
+                    key={item.id}
+                    title={item.name}
+                    detail={item.description || packageKindLabel(item)}
+                    titleClassName="text-[13px]"
+                    detailClassName="text-[12px] font-sans text-secondary"
+                    actions={
                       <Button
                         variant="action"
                         className="px-3 py-1.5 text-[12px]"
@@ -1747,12 +1751,11 @@ function InstallExtensionModal({
                       >
                         {itemBusy ? 'Installing...' : item.installed ? 'Installed' : unavailablePackage ? 'Planned' : 'Install'}
                       </Button>
-                      }
-                    />
-                  );
-                })}
-              </ResourceList>
-            </div>
+                    }
+                  />
+                );
+              })}
+            </ResourceList>
             {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No marketplace matches.</PanelMessage> : null}
           </section>
         ) : null}

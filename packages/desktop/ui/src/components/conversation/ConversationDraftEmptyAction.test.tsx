@@ -17,7 +17,6 @@ const baseProps: React.ComponentProps<typeof ConversationDraftEmptyAction> = {
   onClearDraftCwdSelection: vi.fn(),
   onSelectDraftWorkspace: vi.fn(),
   onPickDraftCwd: vi.fn(),
-  onToggleRelatedThread: vi.fn(),
 };
 
 function renderAction(overrides: Partial<React.ComponentProps<typeof ConversationDraftEmptyAction>> = {}) {
@@ -35,8 +34,18 @@ describe('ConversationDraftEmptyAction', () => {
     expect(html).toContain('Chat');
     expect(html).toContain('Saved workspace');
     expect(html).toContain('Chat — no workspace');
-    expect(html).toContain('/repo');
     expect(html).toContain('Choose workspace folder');
+  });
+
+  it('summarizes selected workspace paths', () => {
+    const html = renderAction({
+      hasDraftCwd: true,
+      draftCwdValue: '/Users/patrick/workingdir/neon-pilot',
+    });
+
+    expect(html).toContain('Workspace');
+    expect(html).toContain('neon-pilot');
+    expect(html).toContain('/Users/patrick/workingdir');
   });
 
   it('renders cwd errors without remote controls', () => {

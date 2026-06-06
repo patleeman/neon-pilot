@@ -1,13 +1,33 @@
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { cx, SectionLabel } from '../ui';
+import { cx, RowButton, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
 const DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS = 'max-w-[38rem]';
-const EMPTY_STATE_WORKSPACE_SELECT_CLASS =
-  'h-8 w-full min-w-0 truncate appearance-none bg-transparent px-0 pr-7 text-[12px] outline-none transition-colors disabled:cursor-default disabled:opacity-60';
 
 export { DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS };
+
+type WorkspacePickerOption = {
+  value: string;
+  label: string;
+  detail: string;
+};
+
+function formatWorkspaceOption(workspacePath: string): WorkspacePickerOption {
+  if (!workspacePath) {
+    return {
+      value: '',
+      label: 'Chat — no workspace',
+      detail: 'No attached workspace',
+    };
+  }
+
+  const normalizedPath = workspacePath.replace(/\/+$/, '') || workspacePath;
+  const segments = normalizedPath.split('/').filter(Boolean);
+  const label = segments.at(-1) ?? normalizedPath;
+  const detail = segments.length > 1 ? normalizedPath.slice(0, Math.max(1, normalizedPath.length - label.length - 1)) : normalizedPath;
+  return { value: workspacePath, label, detail };
+}
 
 export function ConversationDraftEmptyAction({
   hasDraftCwd,
@@ -32,55 +52,128 @@ export function ConversationDraftEmptyAction({
   onPickDraftCwd: () => void;
   extensionPanels?: ReactNode;
 }) {
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+  const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
+  const workspacePickerDisabled = draftCwdPickBusy || (savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0);
+  const workspaceOptions = useMemo(
+    () => [
+      {
+        value: '',
+        label: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Loading workspaces…' : 'Chat — no workspace',
+        detail: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Fetching saved workspace paths' : 'No attached workspace',
+      },
+      ...availableDraftWorkspacePaths.map(formatWorkspaceOption),
+    ],
+    [availableDraftWorkspacePaths, savedWorkspacePathsLoading],
+  );
+  const selectedWorkspace = useMemo(
+    () => (hasDraftCwd ? formatWorkspaceOption(draftCwdValue) : workspaceOptions[0]),
+    [draftCwdValue, hasDraftCwd, workspaceOptions],
+  );
+
+  useEffect(() => {
+    if (!workspacePickerOpen) return;
+
+    function handleDocumentMouseDown(event: MouseEvent) {
+      if (pickerRef.current?.contains(event.target as Node)) return;
+      setWorkspacePickerOpen(false);
+    }
+
+    function handleDocumentKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setWorkspacePickerOpen(false);
+    }
+
+    document.addEventListener('mousedown', handleDocumentMouseDown);
+    document.addEventListener('keydown', handleDocumentKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentMouseDown);
+      document.removeEventListener('keydown', handleDocumentKeyDown);
+    };
+  }, [workspacePickerOpen]);
+
+  function selectWorkspace(nextWorkspacePath: string) {
+    setWorkspacePickerOpen(false);
+    if (!nextWorkspacePath) {
+      onClearDraftCwdSelection();
+      return;
+    }
+
+    onSelectDraftWorkspace(nextWorkspacePath);
+  }
+
   return (
     <div className="mt-4 w-full space-y-3">
       <div className="flex items-center justify-start gap-2">
         {hasDraftCwd ? <FolderIcon className="text-accent" /> : <ChatBubbleIcon className="text-accent" />}
         <SectionLabel tone="muted">{hasDraftCwd ? 'Workspace' : 'Chat'}</SectionLabel>
       </div>
-      <div className="flex w-full flex-wrap items-center justify-start gap-1.5">
-        <label className="relative min-w-[16rem] max-w-full flex-1 rounded-md border border-border-subtle bg-surface/45 px-2 shadow-sm">
+      <div className="flex w-full flex-wrap items-start justify-start gap-2">
+        <div ref={pickerRef} className="relative min-w-[18rem] max-w-full flex-1 sm:max-w-[32rem]">
           <span className="sr-only">Saved workspace</span>
-          <select
-            value={draftCwdValue}
-            onChange={(event) => {
-              const nextWorkspacePath = event.target.value.trim();
-              if (!nextWorkspacePath) {
-                onClearDraftCwdSelection();
-                return;
-              }
-
-              onSelectDraftWorkspace(nextWorkspacePath);
-            }}
-            className={cx(EMPTY_STATE_WORKSPACE_SELECT_CLASS, hasDraftCwd ? 'font-mono text-primary' : 'text-secondary')}
+          <RowButton
+            compact
+            className={cx(
+              'min-h-11 w-full justify-start rounded-md border border-border-subtle bg-surface/45 px-2.5 py-2 text-left shadow-sm',
+              workspacePickerDisabled && 'cursor-default opacity-60',
+            )}
+            aria-haspopup="listbox"
+            aria-expanded={workspacePickerOpen}
             aria-label="Saved workspace"
             title={hasDraftCwd ? draftCwdValue : 'Start as a chat with no attached workspace.'}
-            disabled={draftCwdPickBusy || (savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0)}
+            disabled={workspacePickerDisabled}
+            onClick={() => setWorkspacePickerOpen((open) => !open)}
           >
-            <option value="">
-              {savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Loading workspaces…' : 'Chat — no workspace'}
-            </option>
-            {availableDraftWorkspacePaths.map((workspacePath) => (
-              <option key={workspacePath} value={workspacePath}>
-                {workspacePath}
-              </option>
-            ))}
-          </select>
-          <svg
-            aria-hidden="true"
-            width="11"
-            height="11"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-dim/70"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </label>
+            <span className="min-w-0 flex-1">
+              <span className={cx('block truncate text-[12px]', hasDraftCwd ? 'font-mono text-primary' : 'text-secondary')}>
+                {selectedWorkspace.label}
+              </span>
+              <span className="block truncate text-[11px] text-dim">{selectedWorkspace.detail}</span>
+            </span>
+            <svg
+              aria-hidden="true"
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="ml-2 shrink-0 text-dim/70"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </RowButton>
+
+          {workspacePickerOpen && !workspacePickerDisabled ? (
+            <div
+              className="absolute left-0 right-0 top-full z-50 mt-1 overflow-y-auto rounded-lg border border-border-subtle bg-base p-1 shadow-xl"
+              style={{ maxHeight: 'min(18rem, 42vh)' }}
+            >
+              <div role="listbox" aria-label="Saved workspaces" className="space-y-0.5">
+                {workspaceOptions.map((option) => (
+                  <RowButton
+                    key={option.value}
+                    compact
+                    role="option"
+                    selected={option.value === draftCwdValue}
+                    aria-selected={option.value === draftCwdValue}
+                    className="w-full justify-start px-2 py-2 text-left"
+                    title={option.value || option.detail}
+                    onClick={() => selectWorkspace(option.value)}
+                  >
+                    <span className="min-w-0">
+                      <span className={cx('block truncate text-[12px]', option.value ? 'font-mono text-primary' : 'text-secondary')}>
+                        {option.label}
+                      </span>
+                      <span className="block truncate text-[11px] text-dim">{option.detail}</span>
+                    </span>
+                  </RowButton>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <BrowsePathButton
           busy={draftCwdPickBusy}
