@@ -111,6 +111,7 @@ export {
   ResourceListLink,
   ResourceListRow,
   RingStatusDot,
+  RowButton,
   RuntimeFooter,
   RuntimeHeader,
   RuntimeHeaderControls,

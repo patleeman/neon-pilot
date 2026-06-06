@@ -11,7 +11,15 @@ vi.mock('@neon-pilot/extensions/data', () => ({
 vi.mock('@neon-pilot/extensions/ui', () => ({
   CheckpointInlineDiff: ({ checkpointId }: { checkpointId: string }) => <div>inline diff {checkpointId}</div>,
   SurfacePanel: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
+  RowButton: ({ children, compact: _compact, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }) => (
+    <button {...props}>{children}</button>
+  ),
+  CardBody: ({ children, className }: { children: React.ReactNode; className?: string }) => <span className={className}>{children}</span>,
+  CardMeta: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  CardTitle: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  InlineMeta: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   Pill: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Spinner: () => <span>loading</span>,
   cx: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
 }));
 

@@ -1,5 +1,5 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { CardMeta, CardTitle, CheckpointInlineDiff, cx, InlineMeta, Pill, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { CardMeta, CardTitle, CheckpointInlineDiff, cx, InlineMeta, Pill, RowButton, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
 import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo, useState } from 'react';
 
@@ -41,9 +41,10 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
       <div className="flex items-start gap-2.5">
         <span className="mt-0.5 text-[13px] text-success">✓</span>
         <div className="min-w-0 flex-1">
-          <button
+          <RowButton
             type="button"
-            className="group -mx-1 flex w-[calc(100%+0.5rem)] min-w-0 items-start justify-between gap-3 rounded-md px-1 text-left transition-colors hover:bg-hover/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/30"
+            compact
+            className="group -mx-1 w-[calc(100%+0.5rem)] items-start justify-between gap-3 px-1 py-1"
             aria-expanded={!collapsed}
             onClick={() => setCollapsed((current) => !current)}
           >
@@ -75,7 +76,7 @@ const CheckpointToolBlock = memo(function CheckpointToolBlock({
             <span className={cx('mt-0.5 text-dim transition-transform', collapsed && '-rotate-90')} aria-hidden="true">
               ▾
             </span>
-          </button>
+          </RowButton>
           {!collapsed && isError && output && <p className="mt-2 text-[12px] leading-relaxed text-danger/85">{output}</p>}
           {!collapsed && isRunning ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
