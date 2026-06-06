@@ -9,6 +9,7 @@ import {
   CenteredMessage,
   type ExtensionSurfaceProps,
   MetaLabel,
+  SectionLabel,
   SurfacePanel,
   lazyRouteWithRecovery,
   useApi,
@@ -127,7 +128,7 @@ export function KnowledgePageSurface() {
             </div>
 
             <aside className="space-y-5 border-t border-border-subtle pt-5 lg:border-t-0 lg:pt-0">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-dim/85">On this page</div>
+              <SectionLabel tone="muted">On this page</SectionLabel>
               <div className="space-y-3 text-[13px] leading-6 text-secondary">
                 <div>
                   <h3 className="text-[13px] font-semibold text-primary">What Goes In Here</h3>

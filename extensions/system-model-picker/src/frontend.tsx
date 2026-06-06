@@ -1,5 +1,5 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
-import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu } from '@neon-pilot/extensions/ui';
+import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, SectionLabel } from '@neon-pilot/extensions/ui';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -686,11 +686,15 @@ export function ModelPreferencesComposerControl({
     return (
       <div className="flex flex-col gap-2">
         <div>
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">Model</p>
+          <SectionLabel tone="muted" className="mb-1 block">
+            Model
+          </SectionLabel>
           <ModelSelect context={context} variant="menu" />
         </div>
         <div>
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-dim/70">Thinking</p>
+          <SectionLabel tone="muted" className="mb-1 block">
+            Thinking
+          </SectionLabel>
           <ThinkingSelect context={context} variant="menu" />
         </div>
       </div>
