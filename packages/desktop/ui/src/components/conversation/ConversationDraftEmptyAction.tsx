@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cx, RowButton, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
 
-const DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS = 'w-full max-w-[38rem] items-stretch';
+const DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS = 'mx-auto w-full max-w-[38rem] items-stretch';
 
 export { DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS };
 

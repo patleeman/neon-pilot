@@ -57,6 +57,7 @@ function renderInteractive(overrides: Partial<React.ComponentProps<typeof Conver
 
 describe('ConversationDraftEmptyAction', () => {
   it('exports a full-width bounded empty-state content class', () => {
+    expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('mx-auto');
     expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('w-full');
     expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('max-w-[38rem]');
     expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('items-stretch');
