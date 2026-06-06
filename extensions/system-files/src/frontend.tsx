@@ -1,10 +1,11 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
 import { lazy, Suspense } from 'react';
 
 const LazyWorkspaceFilesPanel = lazy(async () => ({ default: (await import('./panels.js')).WorkspaceFilesPanel }));
 const LazyWorkspaceFileDetailPanel = lazy(async () => ({ default: (await import('./panels.js')).WorkspaceFileDetailPanel }));
 
-const fallback = <div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading workspace…</div>;
+const fallback = <CenteredLoadingState label="Loading workspace..." />;
 
 export function WorkspaceFilesPanel(props: ExtensionSurfaceProps) {
   return (

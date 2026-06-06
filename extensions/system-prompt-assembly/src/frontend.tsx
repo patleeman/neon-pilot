@@ -1,8 +1,9 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
 import React, { lazy, Suspense } from 'react';
 
 const LazyPromptAssemblyPage = lazy(async () => ({ default: (await import('./page.js')).PromptAssemblyPage }));
-const fallback = <div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading prompt assembly…</div>;
+const fallback = <CenteredLoadingState label="Loading prompt assembly..." />;
 
 export function PromptAssemblyPage(props: ExtensionSurfaceProps) {
   return (

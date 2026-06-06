@@ -5,6 +5,7 @@ import {
   AppPageLayout,
   Button,
   ButtonLink,
+  CenteredLoadingState,
   CheckButton,
   CodeBlock,
   ConfirmDialog,
@@ -314,6 +315,9 @@ const meta = {
         </Notice>
         <SurfacePanel muted style={{ display: 'grid', gap: 14, padding: 16 }}>
           <LoadingState label="Loading extension state…" />
+          <div style={{ minHeight: 120, border: '1px dashed rgb(var(--color-border-subtle))' }}>
+            <CenteredLoadingState label="Loading extension route..." />
+          </div>
           <ErrorState title="Failed to load" body="The extension backend returned an unexpected response." />
           <EmptyState title="No Results" body="Clear the filter to show all registered extensions." />
         </SurfacePanel>

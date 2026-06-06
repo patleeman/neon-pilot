@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { CenteredLoadingState } from '../components/ui';
 import { lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 
 const ExtensionPage = lazyRouteWithRecovery('extension-page', () =>
@@ -16,7 +17,7 @@ export function ExtensionRouteHost() {
   const routeKey = buildExtensionRouteKey(location.pathname, location.search);
 
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center px-6 text-[12px] text-dim">Loading…</div>}>
+    <Suspense fallback={<CenteredLoadingState label="Loading..." />}>
       <ExtensionPage key={routeKey} />
     </Suspense>
   );

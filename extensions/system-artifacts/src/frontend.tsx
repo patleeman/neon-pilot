@@ -1,10 +1,11 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
 import { lazy, Suspense } from 'react';
 
 const LazyArtifactsPanel = lazy(async () => ({ default: (await import('./panels.js')).ArtifactsPanel }));
 const LazyArtifactDetailPanel = lazy(async () => ({ default: (await import('./panels.js')).ArtifactDetailPanel }));
 const LazyArtifactTranscriptRenderer = lazy(async () => ({ default: (await import('./panels.js')).ArtifactTranscriptRenderer }));
-const fallback = <div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading artifacts…</div>;
+const fallback = <CenteredLoadingState label="Loading artifacts..." />;
 
 export function ArtifactTranscriptRenderer(props: never) {
   return (

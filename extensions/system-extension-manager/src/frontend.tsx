@@ -1,11 +1,12 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
 import React, { lazy, Suspense } from 'react';
 
 const LazyExtensionManagerPage = lazy(async () => ({ default: (await import('./panels.js')).ExtensionManagerPage }));
 const LazyExtensionRepositoriesSettingsPanel = lazy(async () => ({
   default: (await import('./panels.js')).ExtensionRepositoriesSettingsPanel,
 }));
-const fallback = <div className="flex h-full items-center justify-center px-4 text-[12px] text-dim">Loading extensions…</div>;
+const fallback = <CenteredLoadingState label="Loading extensions..." />;
 
 export function ExtensionManagerPage(props: ExtensionSurfaceProps) {
   return (

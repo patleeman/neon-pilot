@@ -4,7 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 import { api } from '../client/api';
 import { recordClientPerfTimingOnce } from '../client/perfDiagnostics';
 import { Layout } from '../components/Layout';
-import { Button, ButtonLink } from '../components/ui';
+import { Button, ButtonLink, CenteredLoadingState } from '../components/ui';
 import { bumpConversationScopedEventVersions, INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS } from '../conversation/conversationEventVersions';
 import { resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
 import {
@@ -141,11 +141,7 @@ function readConversationNavigationStart(conversationId: string): number | null 
 }
 
 function suspendRoute(element: React.ReactNode) {
-  return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center px-6 text-[12px] text-dim">Loading…</div>}>
-      {element}
-    </Suspense>
-  );
+  return <Suspense fallback={<CenteredLoadingState label="Loading..." />}>{element}</Suspense>;
 }
 
 function DraftConversationRoute() {

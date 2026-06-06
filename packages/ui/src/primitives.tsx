@@ -1106,6 +1106,22 @@ export function LoadingState({ label, className }: { label: string; className?: 
   );
 }
 
+export function CenteredState({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-centered-state', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function CenteredLoadingState({ label = 'Loading...', className }: { label?: string; className?: string }) {
+  return (
+    <CenteredState className={className}>
+      <LoadingState label={label} />
+    </CenteredState>
+  );
+}
+
 export function ErrorState({
   title,
   message,
