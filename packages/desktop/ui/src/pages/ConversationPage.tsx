@@ -22,7 +22,17 @@ import {
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
 import { addNotification } from '../components/notifications/notificationStore';
-import { AppPageEmptyState, EmptyState, IconButton, LoadingState, Notice, PageHeader, SectionLabel, ToolbarButton } from '../components/ui';
+import {
+  AppPageEmptyState,
+  EmptyState,
+  IconButton,
+  LoadingState,
+  Notice,
+  PageHeader,
+  SectionLabel,
+  TextButton,
+  ToolbarButton,
+} from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
 import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
 import {
@@ -5891,9 +5901,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                         className="min-w-0 flex-1 rounded-2xl border border-transparent bg-transparent px-3 py-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary outline-none transition-colors placeholder:text-dim/60 hover:border-border-subtle/70 hover:bg-base/25 focus:border-accent/45 focus:bg-base/35 sm:text-[34px]"
                         disabled={titleSaving}
                       />
-                      <button
+                      <IconButton
                         type="submit"
-                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+                        shape="circle"
+                        size="sm"
+                        className="h-8 w-8 text-accent hover:bg-accent/10 hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={titleSaving}
                         title={titleSaving ? 'Saving…' : 'Save title'}
                         aria-label={titleSaving ? 'Saving title' : 'Save title'}
@@ -5911,10 +5923,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                         >
                           <path d="M20 6 9 17l-5-5" />
                         </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+                      </IconButton>
+                      <IconButton
+                        shape="circle"
+                        size="sm"
+                        className="h-8 w-8 text-secondary hover:bg-surface-hover hover:text-primary focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={cancelTitleEdit}
                         disabled={titleSaving}
                         title="Cancel title edit"
@@ -5934,7 +5947,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                           <path d="m18 6-12 12" />
                           <path d="m6 6 12 12" />
                         </svg>
-                      </button>
+                      </IconButton>
                     </form>
                   ) : draft ? (
                     <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-primary sm:text-[34px]">
@@ -6053,14 +6066,13 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                         <span className="text-dim" aria-hidden>
                           ·
                         </span>
-                        <button
-                          type="button"
+                        <TextButton
                           onClick={() => loadOlderMessages(undefined, { tailBlockStep: previousTranscriptBlockStep })}
                           disabled={sessionLoading}
                           className="font-medium text-accent hover:text-primary disabled:pointer-events-none disabled:text-secondary/60"
                         >
                           {sessionLoading ? 'Loading earlier…' : `Load previous ${previousTranscriptPercent}%`}
-                        </button>
+                        </TextButton>
                       </div>
                       <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border-subtle to-border-subtle" aria-hidden />
                     </div>
@@ -6115,14 +6127,14 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
           )}
         </div>
         {!showConversationLoadingState && showScrollToBottomControl && (
-          <button
+          <TextButton
             onClick={() => {
               scrollToBottom({ behavior: 'smooth', force: true });
             }}
             className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 ui-pill ui-pill-muted shadow-md"
           >
             ↓ scroll to bottom
-          </button>
+          </TextButton>
         )}
         {showInlineConversationLoadingState && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-base/85 px-6 py-4 backdrop-blur-sm">
