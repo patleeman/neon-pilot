@@ -11,7 +11,7 @@ import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../../extensions/extensionRegi
 import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
 import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '../../local/workbenchBrowserTabs';
-import { Button, TextInput, ToolbarButton } from '../ui';
+import { Button, Textarea, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 
@@ -457,8 +457,8 @@ export function WorkbenchBrowserTab({
               Comment on {commentDraft.target.role ?? 'element'}
               {commentDraft.target.accessibleName ? `: ${commentDraft.target.accessibleName}` : ''}
             </p>
-            <textarea
-              className="mt-2 min-h-[72px] w-full resize-none rounded-md border border-border-subtle bg-base px-2 py-1.5 text-[12px] leading-5 text-primary outline-none focus:border-accent/60"
+            <Textarea
+              className="mt-2 min-h-[72px] resize-none bg-base px-2 py-1.5 text-[12px] leading-5"
               value={commentDraft.text}
               onChange={(event) => setCommentDraft((current) => (current ? { ...current, text: event.target.value } : null))}
               onKeyDown={(event) => {
