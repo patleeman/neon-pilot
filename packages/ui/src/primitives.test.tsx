@@ -26,6 +26,9 @@ import {
   DataTableRow,
   Disclosure,
   Dialog,
+  EditorToolbar,
+  EditorToolbarButton,
+  EditorToolbarGroup,
   FilterToolbar,
   FolderIcon,
   IconButton,
@@ -139,6 +142,26 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-composer-action-button-danger');
     expect(html).toContain('ui-composer-action-button-disabled');
     expect(html).toContain('ui-composer-action-button-label');
+  });
+
+  it('renders editor toolbar primitives with active and status classes', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        EditorToolbar,
+        { sticky: true },
+        createElement(EditorToolbarGroup, null, [
+          createElement(EditorToolbarButton, { key: 'save', icon: true, statusTone: 'saved', 'aria-label': 'Save' }, 'S'),
+          createElement(EditorToolbarButton, { key: 'bold', active: true }, 'B'),
+        ]),
+      ),
+    );
+
+    expect(html).toContain('ui-editor-toolbar-sticky');
+    expect(html).toContain('ui-editor-toolbar-group');
+    expect(html).toContain('ui-editor-toolbar-button-icon');
+    expect(html).toContain('ui-editor-toolbar-button-saved');
+    expect(html).toContain('ui-editor-toolbar-button-active');
+    expect(html).toContain('aria-pressed="true"');
   });
 
   it('renders shared path picker chrome and workspace icons', () => {

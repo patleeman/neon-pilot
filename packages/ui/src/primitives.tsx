@@ -10,6 +10,7 @@ import {
   type InputHTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
   type LabelHTMLAttributes,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type SelectHTMLAttributes,
   type TdHTMLAttributes,
@@ -111,6 +112,79 @@ export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<
 ) {
   return (
     <button ref={ref} type={type} className={cx('ui-toolbar-button', className)} {...props}>
+      {children}
+    </button>
+  );
+});
+
+export function EditorToolbar({
+  children,
+  className,
+  sticky = false,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & {
+  sticky?: boolean;
+}) {
+  return (
+    <div className={cx('ui-editor-toolbar', sticky && 'ui-editor-toolbar-sticky', className)} aria-label="Editor toolbar" {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function EditorToolbarGroup({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-editor-toolbar-group', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export const EditorToolbarButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    active?: boolean;
+    icon?: boolean;
+    onPress?: () => void;
+    preventMouseDownDefault?: boolean;
+    statusTone?: 'saved' | 'saving' | 'unsaved' | 'error' | 'running';
+  }
+>(function EditorToolbarButton(
+  {
+    active = false,
+    children,
+    className,
+    icon = false,
+    onMouseDown,
+    onPress,
+    preventMouseDownDefault = true,
+    statusTone,
+    type = 'button',
+    ...props
+  },
+  ref,
+) {
+  const handleMouseDown = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (preventMouseDownDefault) event.preventDefault();
+    onMouseDown?.(event);
+    if (!event.defaultPrevented || preventMouseDownDefault) onPress?.();
+  };
+
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cx(
+        'ui-editor-toolbar-button',
+        icon && 'ui-editor-toolbar-button-icon',
+        active && 'ui-editor-toolbar-button-active',
+        statusTone && `ui-editor-toolbar-button-${statusTone}`,
+        className,
+      )}
+      aria-pressed={active || undefined}
+      onMouseDown={handleMouseDown}
+      {...props}
+    >
       {children}
     </button>
   );

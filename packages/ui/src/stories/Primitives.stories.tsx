@@ -36,6 +36,9 @@ import {
   DialogBody,
   DialogFooter,
   DialogHeader,
+  EditorToolbar,
+  EditorToolbarButton,
+  EditorToolbarGroup,
   EmptyState,
   ErrorState,
   Field,
@@ -216,6 +219,33 @@ const meta = {
             details="Start a separate branch before applying the change."
           />
         </div>
+        <EditorToolbar sticky={false} style={{ maxWidth: 520 }} aria-label="Writing toolbar">
+          <EditorToolbarGroup>
+            <EditorToolbarButton icon statusTone="saved" title="Save" aria-label="Save">
+              S
+            </EditorToolbarButton>
+          </EditorToolbarGroup>
+          <EditorToolbarGroup>
+            <EditorToolbarButton active title="Bold">
+              B
+            </EditorToolbarButton>
+            <EditorToolbarButton title="Italic">I</EditorToolbarButton>
+            <EditorToolbarButton title="Link">[]</EditorToolbarButton>
+            <EditorToolbarButton icon title="Insert image" aria-label="Insert image">
+              #
+            </EditorToolbarButton>
+          </EditorToolbarGroup>
+          <EditorToolbarGroup>
+            <EditorToolbarButton title="Bulleted list">-</EditorToolbarButton>
+            <EditorToolbarButton title="Numbered list">1.</EditorToolbarButton>
+            <EditorToolbarButton title="Code block">{'{ }'}</EditorToolbarButton>
+          </EditorToolbarGroup>
+          <EditorToolbarGroup>
+            <EditorToolbarButton icon statusTone="running" title="Reviewing" aria-label="Reviewing">
+              R
+            </EditorToolbarButton>
+          </EditorToolbarGroup>
+        </EditorToolbar>
       </section>
 
       <section style={{ display: 'grid', gap: 12 }}>

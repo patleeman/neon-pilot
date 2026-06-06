@@ -147,6 +147,7 @@ body {
 .ui-toolbar-button:focus-visible,
 .ui-action-button:focus-visible,
 .ui-ghost-button:focus-visible,
+.ui-editor-toolbar-button:focus-visible,
 .ui-text-button:focus-visible,
 .ui-icon-button:focus-visible,
 .ui-composer-action-button:focus-visible,
@@ -171,6 +172,138 @@ body {
 .ui-switch:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.ui-editor-toolbar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+  border: 1px solid rgb(var(--color-border-subtle));
+  border-radius: 0.5rem;
+  background: rgb(var(--color-surface));
+  padding: 0.3125rem;
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.12);
+}
+
+.ui-editor-toolbar-sticky {
+  position: sticky;
+  top: 0.75rem;
+}
+
+.ui-editor-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-right: 0.1875rem;
+  padding-right: 0.375rem;
+  border-right: 1px solid rgb(var(--color-border-subtle));
+}
+
+.ui-editor-toolbar-group:last-child {
+  margin-right: 0;
+  padding-right: 0;
+  border-right: 0;
+}
+
+.ui-editor-toolbar-button {
+  position: relative;
+  display: inline-flex;
+  min-width: 1.625rem;
+  height: 1.625rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.3125rem;
+  background: transparent;
+  padding: 0 0.4375rem;
+  color: rgb(var(--color-secondary));
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+}
+
+.ui-editor-toolbar-button-icon {
+  width: 1.625rem;
+  padding: 0;
+}
+
+.ui-editor-toolbar-button:hover {
+  background: rgb(var(--color-surface-hover, var(--color-elevated)));
+  color: rgb(var(--color-primary));
+}
+
+.ui-editor-toolbar-button:disabled {
+  cursor: default;
+  opacity: 0.46;
+}
+
+.ui-editor-toolbar-button-active,
+.ui-editor-toolbar-button-running {
+  background: rgb(var(--color-accent) / 0.16);
+  color: rgb(var(--color-accent));
+}
+
+.ui-editor-toolbar-button-running svg {
+  animation: ui-editor-toolbar-spin 1.1s linear infinite;
+}
+
+.ui-editor-toolbar-button-saved::after,
+.ui-editor-toolbar-button-saving::after,
+.ui-editor-toolbar-button-unsaved::after,
+.ui-editor-toolbar-button-error::after {
+  content: '';
+  position: absolute;
+  right: 0.1875rem;
+  top: 0.1875rem;
+  width: 0.34375rem;
+  height: 0.34375rem;
+  border-radius: 999px;
+  background: rgb(var(--color-dim));
+}
+
+.ui-editor-toolbar-button-saved::after {
+  background: rgb(var(--color-success));
+}
+
+.ui-editor-toolbar-button-saving::after {
+  background: rgb(var(--color-accent));
+  animation: ui-editor-toolbar-pulse 1s ease-in-out infinite;
+}
+
+.ui-editor-toolbar-button-unsaved::after {
+  background: rgb(var(--color-warning));
+}
+
+.ui-editor-toolbar-button-error::after {
+  background: rgb(var(--color-danger));
+}
+
+@keyframes ui-editor-toolbar-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-editor-toolbar-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ui-text-button {
