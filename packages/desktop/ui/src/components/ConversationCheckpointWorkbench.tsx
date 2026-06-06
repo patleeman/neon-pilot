@@ -8,7 +8,7 @@ import { formatDate } from '../shared/utils';
 import { CheckpointDiffSection, fileDisplayPath } from './checkpoints/CheckpointDiffView';
 import { UNCOMMITTED_SENTINEL, useConversationCheckpointSummaries, useUncommittedDiff } from './conversationCheckpointHooks';
 import { addNotification } from './notifications/notificationStore';
-import { cx, ErrorState, LoadingState, SegmentedControl } from './ui';
+import { CenteredLoadingState, CenteredMessage, cx, ErrorState, PanelMessage, SectionLabel, SegmentedControl } from './ui';
 
 type DiffViewMode = 'unified' | 'split';
 
@@ -52,7 +52,7 @@ function DiffRailShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="shrink-0 px-3 py-2">
-        <p className="ui-section-label">Diffs</p>
+        <SectionLabel>Diffs</SectionLabel>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">{children}</div>
     </div>
@@ -112,7 +112,7 @@ export function ConversationDiffRailContent({
   if (loading && checkpoints.length === 0 && !uncommittedLoading) {
     return (
       <DiffRailShell>
-        <LoadingState label="Loading diffs…" className="justify-center h-full" />
+        <CenteredLoadingState label="Loading diffs..." />
       </DiffRailShell>
     );
   }
@@ -151,7 +151,7 @@ export function ConversationDiffRailContent({
     if (!workspaceCwd) {
       return (
         <DiffRailShell>
-          <div className="px-2.5 py-2 text-[12px] text-dim">No diffs in this conversation.</div>
+          <PanelMessage className="px-2.5 py-2">No diffs in this conversation.</PanelMessage>
         </DiffRailShell>
       );
     }
@@ -176,7 +176,7 @@ export function ConversationDiffRailContent({
           />
         ) : workspaceCwd && uncommittedLoading ? (
           <div className="rounded-lg px-2.5 py-2">
-            <p className="text-[11px] text-dim">Checking uncommitted changes…</p>
+            <PanelMessage className="px-0 py-0">Checking uncommitted changes...</PanelMessage>
           </div>
         ) : null}
 
@@ -265,7 +265,7 @@ export function ConversationDiffRailContent({
                       </button>
                     ))
                   ) : (
-                    <div className="px-2 py-1.5 text-[11px] text-dim">Loading files…</div>
+                    <PanelMessage className="px-2 py-1.5">Loading files...</PanelMessage>
                   )}
                   {files && files.length > 12 ? (
                     <div className="px-2 py-1 text-[10px] text-dim">+{files.length - 12} more files</div>
@@ -373,7 +373,7 @@ function UncommittedRailEntry({
       ) : null}
       {showFiles && loading && files.length === 0 ? (
         <div className="pb-1 pl-7 pr-1">
-          <div className="px-2 py-1.5 text-[11px] text-dim">Loading files…</div>
+          <PanelMessage className="px-2 py-1.5">Loading files...</PanelMessage>
         </div>
       ) : null}
     </div>
@@ -541,15 +541,7 @@ export function ConversationCheckpointWorkbenchPane({
   }, [scrollToFile, checkpoint]);
 
   if (!checkpointId) {
-    return (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Diffs</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Select a diff</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">Pick a saved conversation diff from the right rail.</p>
-        </div>
-      </div>
-    );
+    return <CenteredMessage eyebrow="Diffs" title="Select a diff" body="Pick a saved conversation diff from the right rail." />;
   }
 
   // Uncommitted mode — show working tree diffs
@@ -565,11 +557,7 @@ export function ConversationCheckpointWorkbenchPane({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-secondary">
-              {checkpoint ? (
-                <span className="font-mono text-steel">{checkpoint.shortSha}</span>
-              ) : (
-                <span className="ui-section-label">Diff</span>
-              )}
+              {checkpoint ? <span className="font-mono text-steel">{checkpoint.shortSha}</span> : <SectionLabel>Diff</SectionLabel>}
               {checkpointSubtitle ? <span className="truncate">{checkpointSubtitle}</span> : null}
               {checkpoint ? (
                 <span className="font-mono tabular-nums">
@@ -589,15 +577,13 @@ export function ConversationCheckpointWorkbenchPane({
       <div className="min-h-0 flex flex-1 overflow-hidden">
         <div className="min-h-0 flex-1 overflow-hidden">
           {loading && !checkpoint ? (
-            <LoadingState label="Loading diff…" className="justify-center h-full" />
+            <CenteredLoadingState label="Loading diff..." />
           ) : error || !checkpoint ? (
             <ErrorState message={error || 'Diff not found.'} className="px-4 py-4" />
           ) : (
             <div ref={viewerScrollRef} className="h-full overflow-auto overscroll-contain bg-panel">
               {checkpoint.files.length === 0 ? (
-                <div className="flex h-full items-center justify-center px-6 text-[13px] text-secondary">
-                  No changed files were captured for this diff.
-                </div>
+                <CenteredMessage title="No changed files" body="No changed files were captured for this diff." />
               ) : (
                 <div className="mx-auto max-w-[1500px] px-5 py-4">
                   {checkpoint.files.map((file) => (
@@ -742,21 +728,17 @@ function UncommittedDiffPaneView({
 
   if (!workspaceCwd) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Uncommitted changes</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Open a local conversation</h2>
-          <p className="mt-2 text-[13px] leading-6 text-secondary">
-            Uncommitted changes are shown for local conversations with a git workspace.
-          </p>
-        </div>
-      </div>
+      <CenteredMessage
+        eyebrow="Uncommitted changes"
+        title="Open a local conversation"
+        body="Uncommitted changes are shown for local conversations with a git workspace."
+      />
     );
   }
 
   // Avoid flashing empty state — treat initial mount as still loading
   if ((loading || !result) && !error) {
-    return <LoadingState label="Checking uncommitted changes…" className="justify-center h-full" />;
+    return <CenteredLoadingState label="Checking uncommitted changes..." />;
   }
 
   if (error && !result) {
@@ -769,7 +751,7 @@ function UncommittedDiffPaneView({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-secondary">
-              <span className="ui-section-label">Uncommitted</span>
+              <SectionLabel>Uncommitted</SectionLabel>
               {result?.branch ? <span className="truncate font-mono text-steel">{result.branch}</span> : null}
               {result ? (
                 <span className="font-mono tabular-nums">
@@ -786,7 +768,7 @@ function UncommittedDiffPaneView({
       <div className="min-h-0 flex flex-1 overflow-hidden">
         <div className="min-h-0 flex-1 overflow-hidden">
           {files.length === 0 ? (
-            <div className="flex h-full items-center justify-center px-6 text-[13px] text-secondary">No uncommitted changes.</div>
+            <CenteredMessage title="No uncommitted changes" />
           ) : (
             <div ref={viewerScrollRef} className="h-full overflow-auto overscroll-contain bg-panel">
               <div className="mx-auto max-w-[1500px] px-5 py-4">
