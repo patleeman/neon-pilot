@@ -20,6 +20,7 @@ import {
   Notice,
   PanelMessage,
   SearchInput,
+  SectionLabel,
   Select,
   KeyValueItem,
   KeyValueList,
@@ -1686,7 +1687,7 @@ function InstallExtensionModal({
         </p>
 
         <section className="space-y-2">
-          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Extension repositories</h3>
+          <SectionLabel>Extension repositories</SectionLabel>
           <ExtensionRepositoriesControl
             sources={catalogSources}
             sourceErrors={catalogSourceErrors}
@@ -1701,7 +1702,7 @@ function InstallExtensionModal({
         {catalogItems.length ? (
           <section className="space-y-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">Marketplace</h3>
+              <SectionLabel>Marketplace</SectionLabel>
               <SearchInput
                 className="h-8 min-w-0 bg-base text-[12px] sm:w-72"
                 value={marketplaceQuery}
@@ -2011,7 +2012,7 @@ function DetailBlock({ title, action, children }: { title: string; action?: Reac
   return (
     <section>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-dim">{title}</h3>
+        <SectionLabel>{title}</SectionLabel>
         {action}
       </div>
       {children}
