@@ -879,6 +879,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   const navigate = useNavigate();
   const [detailsExtensionId, setDetailsExtensionId] = useState<string | null>(null);
   const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [compactExtensionsLayout, setCompactExtensionsLayout] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < 1024,
+  );
   const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogSources, setCatalogSources] = useState<ExtensionCatalogSource[]>([]);
@@ -944,6 +947,13 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       window.clearInterval(catalogRefreshInterval);
     };
   }, [load, loadCatalog]);
+
+  useEffect(() => {
+    const updateLayout = () => setCompactExtensionsLayout(window.innerWidth < 1024);
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, []);
 
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
@@ -1303,6 +1313,66 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   const sectionSummary = `${visibleExtensions.length} installed · ${visibleExtensions.filter((extension) => extension.enabled).length} enabled`;
 
+  const renderExtensionActions = (
+    extension: ExtensionInstallSummary,
+    busy: boolean,
+    catalogItem: InstallableExtensionCatalogItem | undefined,
+    route: string | null,
+  ) => (
+    <DataTableActionGroup>
+      {busy ? <span className="text-[11px] text-dim">Working…</span> : null}
+      {route && extension.enabled ? (
+        <IconLink
+          compact
+          href={route}
+          title={`Open ${extension.name}`}
+          aria-label={`Open ${extension.name}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            navigate(route);
+          }}
+        >
+          <OpenIcon />
+        </IconLink>
+      ) : null}
+      {hasExtensionSettings(extension) ? (
+        <IconLink
+          compact
+          href={`/settings#${extensionSettingsSectionId(extension)}`}
+          title={`Configure ${extension.name} in Settings`}
+          aria-label={`Configure ${extension.name} in Settings`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            navigate(`/settings#${extensionSettingsSectionId(extension)}`);
+          }}
+        >
+          <GearIcon />
+        </IconLink>
+      ) : null}
+      <IconButton
+        compact
+        title={`Details for ${extension.name}`}
+        aria-label={`Details for ${extension.name}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          setDetailsExtensionId(extension.id);
+        }}
+      >
+        <DetailsIcon />
+      </IconButton>
+      <ExtensionActionsMenu
+        extension={extension}
+        busy={busy}
+        onOpenFolder={() => openFolder(extension)}
+        onDelete={() => void deleteExtension(extension)}
+        onUpdate={catalogItem?.updateAvailable && extension.packageType !== 'system' ? () => void updateExtension(extension) : undefined}
+        onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
+      />
+    </DataTableActionGroup>
+  );
+
   const renderExtensionRows = (items: ExtensionInstallSummary[]) =>
     items.map((extension) => {
       const route = firstRoute(extension);
@@ -1364,78 +1434,96 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             )}
           </DataTableCell>
           <DataTableCell className="py-4 pr-0">
-            <DataTableActionGroup>
-              {busy ? <span className="text-[11px] text-dim">Working…</span> : null}
-              {route && extension.enabled ? (
-                <IconLink
-                  compact
-                  href={route}
-                  title={`Open ${extension.name}`}
-                  aria-label={`Open ${extension.name}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    navigate(route);
-                  }}
-                >
-                  <OpenIcon />
-                </IconLink>
-              ) : null}
-              {hasExtensionSettings(extension) ? (
-                <IconLink
-                  compact
-                  href={`/settings#${extensionSettingsSectionId(extension)}`}
-                  title={`Configure ${extension.name} in Settings`}
-                  aria-label={`Configure ${extension.name} in Settings`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    navigate(`/settings#${extensionSettingsSectionId(extension)}`);
-                  }}
-                >
-                  <GearIcon />
-                </IconLink>
-              ) : null}
-              <IconButton
-                compact
-                title={`Details for ${extension.name}`}
-                aria-label={`Details for ${extension.name}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setDetailsExtensionId(extension.id);
-                }}
-              >
-                <DetailsIcon />
-              </IconButton>
-              <ExtensionActionsMenu
-                extension={extension}
-                busy={busy}
-                onOpenFolder={() => openFolder(extension)}
-                onDelete={() => void deleteExtension(extension)}
-                onUpdate={
-                  catalogItem?.updateAvailable && extension.packageType !== 'system' ? () => void updateExtension(extension) : undefined
-                }
-                onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
-              />
-            </DataTableActionGroup>
+            {renderExtensionActions(extension, busy, catalogItem, route)}
           </DataTableCell>
         </DataTableRow>
       );
     });
 
+  const renderExtensionCards = (items: ExtensionInstallSummary[]) => (
+    <div className="divide-y divide-border-subtle border-y border-border-subtle lg:hidden">
+      {items.map((extension) => {
+        const route = firstRoute(extension);
+        const busy = busyId === extension.id;
+        const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
+        const unavailableCatalogItem =
+          extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogItem;
+        const selected = detailsExtensionId === extension.id;
+        return (
+          <div
+            key={`installed-card:${extension.id}`}
+            className={cx('space-y-3 py-4', selected ? 'bg-accent/10 px-3' : '')}
+            onClick={() => setDetailsExtensionId(extension.id)}
+          >
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <TextButton className="text-left text-[14px] font-semibold" onClick={() => setDetailsExtensionId(extension.id)}>
+                    {extension.name}
+                  </TextButton>
+                  <span className="text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
+                </div>
+                <CardBody as="div" className="mt-1 max-w-none whitespace-normal break-words">
+                  {extension.description || 'No description provided.'}
+                </CardBody>
+              </div>
+              <span className={cx('shrink-0 text-[12px]', extensionStatusClass(extension, unavailableCatalogItem))}>
+                {extensionStatusLabel(extension, unavailableCatalogItem)}
+              </span>
+            </div>
+            {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
+              <div className="text-[12px] text-danger">
+                {extension.status === 'invalid'
+                  ? (extension.errors?.[0] ?? 'Invalid extension manifest.')
+                  : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0])}
+              </div>
+            ) : null}
+            {unavailableCatalogItem ? (
+              <div className="text-[12px] text-warning">No longer available from the installable extension catalog.</div>
+            ) : null}
+            {catalogItem?.updateAvailable ? (
+              <div className="text-[12px] text-accent">
+                Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}
+                {' -> '}
+                {catalogItem.availableVersion ?? catalogItem.version}
+              </div>
+            ) : null}
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+              <div className="min-w-0 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</div>
+              <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
+                {extension.status === 'invalid' ? (
+                  <span className="text-[12px] text-danger">Invalid</span>
+                ) : (
+                  <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
+                )}
+              </div>
+              <div className="flex justify-start sm:justify-end" onClick={(event) => event.stopPropagation()}>
+                {renderExtensionActions(extension, busy, catalogItem, route)}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   const renderExtensionTable = (items: ExtensionInstallSummary[]) => (
-    <DataTable className="overflow-auto">
-      <DataTableHead>
-        <DataTableRow className="hover:bg-transparent">
-          <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
-          <DataTableHeaderCell>Status</DataTableHeaderCell>
-          <DataTableHeaderCell>Appears in</DataTableHeaderCell>
-          <DataTableHeaderCell>Enabled</DataTableHeaderCell>
-          <DataTableHeaderCell className="pr-0 text-right">Actions</DataTableHeaderCell>
-        </DataTableRow>
-      </DataTableHead>
-      <DataTableBody>{renderExtensionRows(items)}</DataTableBody>
-    </DataTable>
+    compactExtensionsLayout ? (
+      renderExtensionCards(items)
+    ) : (
+      <DataTable className="overflow-auto">
+        <DataTableHead>
+          <DataTableRow className="hover:bg-transparent">
+            <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
+            <DataTableHeaderCell>Status</DataTableHeaderCell>
+            <DataTableHeaderCell>Appears in</DataTableHeaderCell>
+            <DataTableHeaderCell>Enabled</DataTableHeaderCell>
+            <DataTableHeaderCell className="pr-0 text-right">Actions</DataTableHeaderCell>
+          </DataTableRow>
+        </DataTableHead>
+        <DataTableBody>{renderExtensionRows(items)}</DataTableBody>
+      </DataTable>
+    )
   );
 
   if (loading) {
@@ -1856,7 +1944,18 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
   const extension = extensions.find((e) => e.id === extensionId) ?? null;
 
   return (
-    <Dialog aria-label="Extension details" className="max-w-3xl bg-base" onClose={onClose}>
+    <Dialog
+      aria-label="Extension details"
+      className="max-w-3xl bg-base"
+      onClose={onClose}
+      style={{
+        width: 'min(48rem, calc(100vw - var(--neon-pilot-sidebar-offset, 0px) - 2rem))',
+        maxHeight: 'min(44rem, calc(100vh - 2rem))',
+        marginBlock: '2rem',
+        marginInlineStart: 'var(--neon-pilot-sidebar-offset, 0px)',
+        alignSelf: 'flex-start',
+      }}
+    >
       <DialogHeader
         title="Extension details"
         className="px-6 py-4"
