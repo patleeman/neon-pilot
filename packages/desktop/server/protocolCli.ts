@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -11,9 +9,8 @@ import {
   getNeonPilotCliBinDir,
   installUserCliSymlink,
 } from './cliEnvironment.js';
-import { createInProcessExtensionHostClient, getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
+import { getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
-import { setDefaultExtensionBackendWorkerUrl } from './extensions/extensionBackendWorkerClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 
 export const PROTOCOL_CLI_EXIT_CODES = {
@@ -56,12 +53,6 @@ function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
   };
 }
 
-function configureStandaloneCliRuntime(repoRoot = process.cwd()): void {
-  const workerPath = resolve(repoRoot, 'packages/desktop/server/dist/extensions/extensionBackendWorker.js');
-  if (!existsSync(workerPath)) return;
-  setDefaultExtensionBackendWorkerUrl(pathToFileURL(workerPath));
-}
-
 function usage(): string {
   return [
     'Usage: neon-pilot <command> [args]',
@@ -89,12 +80,7 @@ function createExtensionHostClientFromEnv(): ExtensionHostClient | null {
 function getCliExtensionHostClient(): ExtensionHostClient {
   const rpcClient = createExtensionHostClientFromEnv();
   if (rpcClient) return rpcClient;
-  try {
-    return getExtensionHostClient();
-  } catch {
-    configureStandaloneCliRuntime();
-    return createInProcessExtensionHostClient();
-  }
+  return getExtensionHostClient();
 }
 
 function classifyError(error: unknown): number {
