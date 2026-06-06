@@ -2,7 +2,19 @@ import { useMemo, useState } from 'react';
 
 import type { ConversationAttachmentRecord, ConversationAttachmentSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
-import { Button, cx, Dialog, DialogBody, DialogHeader, Pill, SurfacePanel, ToolbarButton } from './ui';
+import {
+  CardMeta,
+  CardTitle,
+  cx,
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  PanelMessage,
+  Pill,
+  SurfacePanel,
+  TextButton,
+  ToolbarButton,
+} from './ui';
 
 interface AttachSelection {
   attachment: ConversationAttachmentSummary;
@@ -84,7 +96,11 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
 
       <DialogBody className="space-y-2">
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 && <p className="py-8 text-center text-[12px] text-dim">No drawings match this filter.</p>}
+          {filtered.length === 0 && (
+            <PanelMessage align="center" className="py-8">
+              No drawings match this filter.
+            </PanelMessage>
+          )}
 
           {filtered.map((attachment) => {
             const isExpanded = expandedAttachmentId === attachment.id;
@@ -95,10 +111,10 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
               <SurfacePanel key={attachment.id} className="px-3 py-2.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium text-primary truncate">{attachment.title}</p>
-                    <p className="mt-1 text-[11px] text-dim font-mono">
+                    <CardTitle className="truncate">{attachment.title}</CardTitle>
+                    <CardMeta className="mt-1 font-mono">
                       {attachment.id} · rev {attachment.currentRevision} · updated {timeAgo(attachment.updatedAt)}
-                    </p>
+                    </CardMeta>
                   </div>
                   <div className="flex items-center gap-2">
                     <ToolbarButton onClick={() => onAttach({ attachment, revision: attachment.currentRevision })}>
@@ -117,7 +133,7 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
 
                 {isExpanded && (
                   <div className="mt-2.5 border-t border-border-subtle pt-2 space-y-1.5">
-                    {isLoading && <p className="text-[11px] text-dim">Loading revisions…</p>}
+                    {isLoading && <PanelMessage className="px-0 py-0">Loading revisions…</PanelMessage>}
 
                     {!isLoading &&
                       record &&
@@ -132,17 +148,19 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
                               <span>· {timeAgo(revision.createdAt)}</span>
                               {revision.note && <span className="truncate">· {revision.note}</span>}
                             </div>
-                            <Button
-                              variant="ghost"
+                            <TextButton
                               className="text-[11px] text-accent hover:text-accent/80"
+                              tone="accent"
                               onClick={() => onAttach({ attachment, revision: revision.revision })}
                             >
                               Attach
-                            </Button>
+                            </TextButton>
                           </div>
                         ))}
 
-                    {!isLoading && record && record.revisions.length === 0 && <p className="text-[11px] text-dim">No saved revisions.</p>}
+                    {!isLoading && record && record.revisions.length === 0 && (
+                      <PanelMessage className="px-0 py-0">No saved revisions.</PanelMessage>
+                    )}
                   </div>
                 )}
               </SurfacePanel>
