@@ -54,6 +54,7 @@ const bundleOutputs = [
 ];
 
 const backendApiLazyModuleEntries = [
+  ['cliEnvironment.js', 'server/cliEnvironment.ts'],
   ['conversations/conversationAutoTitle.js', 'server/conversations/conversationAutoTitle.ts'],
   ['conversations/conversationCwd.js', 'server/conversations/conversationCwd.ts'],
   ['conversations/conversationInspectWorkerClient.js', 'server/conversations/conversationInspectWorkerClient.ts'],

@@ -5,10 +5,16 @@ const settingsApi = vi.hoisted(() => ({
   readExtensionSettingsSchema: vi.fn(),
   updateExtensionSettings: vi.fn(),
 }));
+const cliApi = vi.hoisted(() => ({
+  readNeonPilotCliInstallStatus: vi.fn(),
+  installNeonPilotUserCli: vi.fn(),
+  uninstallNeonPilotUserCli: vi.fn(),
+}));
 
 vi.mock('@neon-pilot/extensions/backend/settings', () => settingsApi);
+vi.mock('@neon-pilot/extensions/backend/cli', () => cliApi);
 
-import { manageSettings } from './backend.js';
+import { manageCli, manageSettings } from './backend.js';
 
 const schema = [
   {
@@ -38,6 +44,9 @@ describe('system-settings backend CLI', () => {
       'conversation.pinnedToolCalls': false,
       'conversation.transcriptDisclosure': 'auto',
     });
+    cliApi.readNeonPilotCliInstallStatus.mockResolvedValue({ globallyInstalled: false, linkPath: '/bin/neon-pilot' });
+    cliApi.installNeonPilotUserCli.mockResolvedValue({ globallyInstalled: true, linkPath: '/bin/neon-pilot' });
+    cliApi.uninstallNeonPilotUserCli.mockResolvedValue({ globallyInstalled: false, linkPath: '/bin/neon-pilot', removed: true });
   });
 
   it('lists settings with optional prefix filtering', async () => {
@@ -68,5 +77,16 @@ describe('system-settings backend CLI', () => {
     await expect(
       manageSettings({ cli: { command: 'settings set', args: ['unknown.value', 'true'] } }, {} as never),
     ).rejects.toThrow('Unknown setting: unknown.value');
+  });
+
+  it('routes CLI install management through the host CLI backend API', async () => {
+    await expect(manageCli({ action: 'status' }, {} as never)).resolves.toMatchObject({ globallyInstalled: false });
+    await expect(manageCli({ action: 'install' }, {} as never)).resolves.toMatchObject({ globallyInstalled: true });
+    await expect(manageCli({ action: 'uninstall' }, {} as never)).resolves.toMatchObject({ removed: true });
+
+    expect(cliApi.readNeonPilotCliInstallStatus).toHaveBeenCalledOnce();
+    expect(cliApi.installNeonPilotUserCli).toHaveBeenCalledOnce();
+    expect(cliApi.uninstallNeonPilotUserCli).toHaveBeenCalledOnce();
+    await expect(manageCli({ action: 'repair' }, {} as never)).rejects.toThrow('Unsupported CLI action: repair');
   });
 });

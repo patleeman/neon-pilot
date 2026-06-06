@@ -24,6 +24,7 @@ export default defineConfig({
       '@neon-pilot/extensions/backend/automations': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/automations.ts'),
       '@neon-pilot/extensions/backend/browser': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/browser.ts'),
       '@neon-pilot/extensions/backend/checkpoints': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/checkpoints.ts'),
+      '@neon-pilot/extensions/backend/cli': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/cli.ts'),
       '@neon-pilot/extensions/backend/compaction': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/compaction.ts'),
       '@neon-pilot/extensions/backend/conversations': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/conversations.ts'),
       '@neon-pilot/extensions/backend/events': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/events.ts'),

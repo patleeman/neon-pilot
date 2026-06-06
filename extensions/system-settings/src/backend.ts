@@ -1,5 +1,10 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
+  installNeonPilotUserCli,
+  readNeonPilotCliInstallStatus,
+  uninstallNeonPilotUserCli,
+} from '@neon-pilot/extensions/backend/cli';
+import {
   readExtensionSettings,
   readExtensionSettingsSchema,
   updateExtensionSettings,
@@ -89,4 +94,13 @@ export async function manageSettings(input: unknown, _ctx: ExtensionBackendConte
   }
 
   throw new Error(`Unsupported settings action: ${action}`);
+}
+
+export async function manageCli(input: unknown, _ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const action = typeof body.action === 'string' ? body.action : 'status';
+  if (action === 'status') return readNeonPilotCliInstallStatus();
+  if (action === 'install') return installNeonPilotUserCli();
+  if (action === 'uninstall') return uninstallNeonPilotUserCli();
+  throw new Error(`Unsupported CLI action: ${action}`);
 }

@@ -134,6 +134,15 @@
           "enabled": true,
           "inputActions": ["list", "schema", "get", "set"]
         }
+      },
+      {
+        "id": "manageCli",
+        "handler": "manageCli",
+        "title": "Manage Neon Pilot CLI",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["status", "install", "uninstall"]
+        }
       }
     ]
   },

@@ -542,7 +542,7 @@ Core owns the `neon-pilot` CLI shell. Extensions contribute product-specific ver
 }
 ```
 
-The action receives `{ action, cli: { command, rawArgv, args, flags, json, cwd } }`, where `action` defaults to the final command token as a convenience hint. Return `{ text }` for human output and structured fields for `--json`. Keep CLI commands coarse and administrative; do not expose every UI button as a command. Agents should discover commands with `neon-pilot commands --json` and prefer extension-contributed CLI commands over direct runtime file edits. System extensions use this surface for `extensions ...`, `settings ...`, and `conversations ...` administration.
+The action receives `{ action, cli: { command, rawArgv, args, flags, json, cwd } }`, where `action` defaults to the final command token as a convenience hint. Return `{ text }` for human output and structured fields for `--json`. Keep CLI commands coarse and administrative; do not expose every UI button as a command. Agents should discover commands with `neon-pilot commands --json` and prefer extension-contributed CLI commands over direct runtime file edits. System extensions use this surface for `extensions ...`, `settings ...`, and `conversations ...` administration. CLI commands route through the same extension host and permission boundary as UI actions; do not expose secret reads or raw host file mutation through CLI handlers.
 
 ### Quick-open surfaces (`quickOpen`)
 

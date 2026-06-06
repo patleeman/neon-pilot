@@ -4,11 +4,11 @@ import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
 import {
-  ensureNeonPilotCliLauncher,
-  getDefaultUserCliInstallPath,
-  getNeonPilotCliBinDir,
-  installUserCliSymlink,
+  installNeonPilotUserCli,
+  readNeonPilotCliInstallStatus,
+  uninstallNeonPilotUserCli,
 } from './cliEnvironment.js';
+import { readNeonPilotCliControlPlaneRecord } from './cliControlPlane.js';
 import { getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
@@ -77,9 +77,23 @@ function createExtensionHostClientFromEnv(): ExtensionHostClient | null {
   return createExtensionHostRpcClient({ baseUrl, token });
 }
 
-function getCliExtensionHostClient(): ExtensionHostClient {
+async function createExtensionHostClientFromControlPlane(): Promise<ExtensionHostClient | null> {
+  const record = readNeonPilotCliControlPlaneRecord();
+  if (!record) return null;
+  const client = createExtensionHostRpcClient({ baseUrl: record.extensionHost.baseUrl, token: record.extensionHost.token });
+  try {
+    await client.health();
+    return client;
+  } catch {
+    return null;
+  }
+}
+
+async function getCliExtensionHostClient(): Promise<ExtensionHostClient> {
   const rpcClient = createExtensionHostClientFromEnv();
   if (rpcClient) return rpcClient;
+  const controlPlaneClient = await createExtensionHostClientFromControlPlane();
+  if (controlPlaneClient) return controlPlaneClient;
   return getExtensionHostClient();
 }
 
@@ -126,30 +140,20 @@ export async function runProtocolCli(argv: string[], options?: { signal?: AbortS
 async function manageCliInstall(args: string[]): Promise<number> {
   const [action = 'status'] = args;
   const repoRoot = process.cwd();
-  const target = ensureNeonPilotCliLauncher({ repoRoot });
-  const linkPath = getDefaultUserCliInstallPath();
-  const payload = {
-    target,
-    binDir: getNeonPilotCliBinDir(),
-    linkPath,
-    globallyInstalled: false,
-  };
   try {
-    const { existsSync, lstatSync, readlinkSync, unlinkSync } = await import('node:fs');
-    const isOwned = existsSync(linkPath) && lstatSync(linkPath).isSymbolicLink() && readlinkSync(linkPath) === target;
     if (action === 'status') {
-      const result = { ...payload, globallyInstalled: isOwned };
-      process.stdout.write(wantsJson(args) ? `${JSON.stringify(result, null, 2)}\n` : `Neon Pilot CLI: ${target}\nUser shell link: ${isOwned ? linkPath : 'not installed'}\n`);
+      const result = readNeonPilotCliInstallStatus({ repoRoot });
+      process.stdout.write(wantsJson(args) ? `${JSON.stringify(result, null, 2)}\n` : `Neon Pilot CLI: ${result.target}\nUser shell link: ${result.globallyInstalled ? result.linkPath : 'not installed'}\n`);
       return 0;
     }
     if (action === 'install') {
-      const installed = installUserCliSymlink({ target });
-      process.stdout.write(wantsJson(args) ? `${JSON.stringify({ ...payload, linkPath: installed, globallyInstalled: true }, null, 2)}\n` : `Installed ${installed} -> ${target}\n`);
+      const result = installNeonPilotUserCli({ repoRoot });
+      process.stdout.write(wantsJson(args) ? `${JSON.stringify(result, null, 2)}\n` : `Installed ${result.linkPath} -> ${result.target}\n`);
       return 0;
     }
     if (action === 'uninstall') {
-      if (isOwned) unlinkSync(linkPath);
-      process.stdout.write(wantsJson(args) ? `${JSON.stringify({ ...payload, globallyInstalled: false, removed: isOwned }, null, 2)}\n` : `${isOwned ? `Removed ${linkPath}` : 'No Neon Pilot-owned user shell link found.'}\n`);
+      const result = uninstallNeonPilotUserCli({ repoRoot });
+      process.stdout.write(wantsJson(args) ? `${JSON.stringify(result, null, 2)}\n` : `${result.removed ? `Removed ${result.linkPath}` : 'No Neon Pilot-owned user shell link found.'}\n`);
       return 0;
     }
     process.stderr.write(`Unknown cli action: ${action}\n`);
@@ -165,7 +169,7 @@ async function invokeProtocolCli(protocolId: string, protocolArgs: string[], opt
   const signal = options?.signal ?? new AbortController().signal;
 
   try {
-    const extensionHostClient = getCliExtensionHostClient();
+    const extensionHostClient = await getCliExtensionHostClient();
     await extensionHostClient.invokeProtocolEntrypoint({
       protocolId,
       input: { args: protocolArgs },
@@ -233,7 +237,7 @@ function commandMatches(registration: CliCommandRegistration, argv: string[]): {
 }
 
 async function readCliCommandRegistrations(): Promise<CliCommandRegistration[]> {
-  const extensionHostClient = getCliExtensionHostClient();
+  const extensionHostClient = await getCliExtensionHostClient();
   const presentation = await extensionHostClient.readRegistryPresentation();
   return (presentation.cliCommandRegistrations ?? []).flatMap((entry): CliCommandRegistration[] => {
     if (
@@ -341,7 +345,7 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
     const rawArgs = argv.slice(match.length);
     const json = wantsJson(rawArgs) || match.registration.jsonDefault === true;
     const parsed = parseFlags(stripJsonFlag(rawArgs));
-    const extensionHostClient = getCliExtensionHostClient();
+    const extensionHostClient = await getCliExtensionHostClient();
     const inputAction = actionFromCliCommand(match.registration.command);
     const invokeResult = await extensionHostClient.invokeAction({
       extensionId: match.registration.extensionId,
@@ -379,6 +383,13 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   if (!process.env.VITEST) process.exit(code);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+function isProtocolCliEntrypoint(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  if (import.meta.url === pathToFileURL(entry).href) return true;
+  return /(?:^|\/)protocolCli\.(?:ts|js)$/.test(entry);
+}
+
+if (isProtocolCliEntrypoint()) {
   void main();
 }

@@ -8,12 +8,16 @@ const runtime = vi.hoisted(() => ({
   })),
 }));
 const extensionHostClient = vi.hoisted(() => ({
+  health: vi.fn(async () => ({ status: 'ready' })),
   invokeProtocolEntrypoint: vi.fn(async () => undefined),
   readRegistryPresentation: vi.fn(async () => ({ cliCommandRegistrations: [] })),
   invokeAction: vi.fn(async () => ({ ok: true, result: { text: 'ok' } })),
 }));
 const extensionHostRpcClient = vi.hoisted(() => ({
   createExtensionHostRpcClient: vi.fn(() => extensionHostClient),
+}));
+const cliControlPlane = vi.hoisted(() => ({
+  readNeonPilotCliControlPlaneRecord: vi.fn(() => null),
 }));
 
 vi.mock('@neon-pilot/core', () => core);
@@ -23,6 +27,7 @@ vi.mock('./extensions/extensionHostClient.js', () => ({
   setExtensionHostClient: vi.fn(),
 }));
 vi.mock('./extensions/extensionHostRpcClient.js', () => extensionHostRpcClient);
+vi.mock('./cliControlPlane.js', () => cliControlPlane);
 
 import { main, PROTOCOL_CLI_EXIT_CODES, runProtocolCli } from './protocolCli.js';
 
@@ -37,6 +42,7 @@ describe('protocol CLI', () => {
     stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     process.exitCode = undefined;
+    cliControlPlane.readNeonPilotCliControlPlaneRecord.mockReturnValue(null);
   });
 
   it('prints usage and returns usage exit code for invalid invocations', async () => {
@@ -85,6 +91,27 @@ describe('protocol CLI', () => {
     expect(extensionHostClient.invokeProtocolEntrypoint).toHaveBeenCalledWith(
       expect.objectContaining({ protocolId: 'ds4-tools', input: { args: ['tools'] } }),
     );
+  });
+
+  it('discovers a running app extension host from the CLI control-plane file', async () => {
+    cliControlPlane.readNeonPilotCliControlPlaneRecord.mockReturnValueOnce({
+      version: 1,
+      pid: 123,
+      updatedAt: '2026-06-06T00:00:00.000Z',
+      extensionHost: { baseUrl: 'http://127.0.0.1:9876', token: 'control-token' },
+    });
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [{ extensionId: 'system-settings', surfaceId: 'settings-list', command: 'settings list', action: 'manageSettings' }],
+    });
+
+    await expect(runProtocolCli(['commands', '--json'])).resolves.toBe(0);
+
+    expect(extensionHostRpcClient.createExtensionHostRpcClient).toHaveBeenCalledWith({
+      baseUrl: 'http://127.0.0.1:9876',
+      token: 'control-token',
+    });
+    expect(extensionHostClient.health).toHaveBeenCalled();
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"command": "settings list"'));
   });
 
   it('lists extension-contributed CLI commands', async () => {

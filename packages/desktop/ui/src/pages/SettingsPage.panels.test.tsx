@@ -137,5 +137,7 @@ describe('SettingsPage — untested panel rendering', () => {
     const html = renderPage('/settings');
     expect(html).toContain('Desktop');
     expect(html).toContain('App behavior');
+    expect(html).toContain('Command line');
+    expect(html).toContain('Loading CLI status...');
   });
 });

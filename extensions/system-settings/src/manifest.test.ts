@@ -51,6 +51,10 @@ describe('system-settings manifest', () => {
           id: 'manageSettings',
           worker: expect.objectContaining({ enabled: true, inputActions: ['list', 'schema', 'get', 'set'] }),
         }),
+        expect.objectContaining({
+          id: 'manageCli',
+          worker: expect.objectContaining({ enabled: true, inputActions: ['status', 'install', 'uninstall'] }),
+        }),
       ]),
     );
   });

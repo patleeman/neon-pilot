@@ -88,6 +88,14 @@ const VisibleSettingsSectionsContext = createContext<ReadonlySet<SettingsQuickLi
 type ModelOption = ModelState['models'][number];
 type SettingsIconName = 'check' | 'edit' | 'external' | 'key' | 'plus' | 'refresh' | 'trash' | 'x';
 
+interface CliInstallStatus {
+  target: string;
+  binDir: string;
+  linkPath: string;
+  globallyInstalled: boolean;
+  removed?: boolean;
+}
+
 function SettingsIcon({ name }: { name: SettingsIconName }) {
   const paths: Record<SettingsIconName, ReactNode> = {
     check: <path d="m5 12 4 4L19 6" />,
@@ -1102,6 +1110,85 @@ function SettingsTableOfContents({
   return <AppPageToc items={items} activeId={activeId} onNavigate={onNavigate} ariaLabel="Settings sections" />;
 }
 
+function unwrapExtensionActionResult<T>(response: { ok: true; result: unknown } | { ok: false; error: string }): T {
+  if (!response.ok) throw new Error(response.error);
+  return response.result as T;
+}
+
+function NeonPilotCliSettingsPanel() {
+  const [status, setStatus] = useState<CliInstallStatus | null>(null);
+  const [action, setAction] = useState<'refresh' | 'install' | 'uninstall' | null>('refresh');
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setAction('refresh');
+    setError(null);
+    try {
+      const result = await api.invokeExtensionAction('system-settings', 'manageCli', { action: 'status' });
+      setStatus(unwrapExtensionActionResult<CliInstallStatus>(result));
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setAction(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  async function runCliAction(nextAction: 'install' | 'uninstall') {
+    setAction(nextAction);
+    setError(null);
+    try {
+      const result = await api.invokeExtensionAction('system-settings', 'manageCli', { action: nextAction });
+      setStatus(unwrapExtensionActionResult<CliInstallStatus>(result));
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setAction(null);
+    }
+  }
+
+  return (
+    <SettingsPanel
+      title="Command line"
+      description="Global shell launcher for Neon Pilot administration."
+      actions={
+        <>
+          <ToolbarButton type="button" onClick={() => void refresh()} disabled={action !== null}>
+            {action === 'refresh' ? 'Refreshing...' : 'Refresh'}
+          </ToolbarButton>
+          {status?.globallyInstalled ? (
+            <ToolbarButton type="button" onClick={() => void runCliAction('uninstall')} disabled={action !== null}>
+              {action === 'uninstall' ? 'Removing...' : 'Uninstall'}
+            </ToolbarButton>
+          ) : (
+            <ToolbarButton type="button" className="text-accent" onClick={() => void runCliAction('install')} disabled={action !== null}>
+              {action === 'install' ? 'Installing...' : 'Install'}
+            </ToolbarButton>
+          )}
+        </>
+      }
+    >
+      {status ? (
+        <div className="space-y-2 text-[13px]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className={status.globallyInstalled ? 'text-success' : 'text-secondary'}>
+              {status.globallyInstalled ? 'Installed' : 'Not installed'}
+            </span>
+            <code className="break-all text-secondary">{status.linkPath}</code>
+          </div>
+          <p className="ui-card-meta break-all">Target: {status.target}</p>
+        </div>
+      ) : (
+        <p className="ui-card-meta">Loading CLI status...</p>
+      )}
+      {error ? <p className="text-[12px] text-danger">{error}</p> : null}
+    </SettingsPanel>
+  );
+}
+
 export function DesktopConnectionsSettingsPanel() {
   const [appPreferencesState, setAppPreferencesState] = useState<DesktopAppPreferencesState | null>(null);
   const [action, setAction] = useState<'save-app-preferences' | null>(null);
@@ -1236,6 +1323,7 @@ export function DesktopConnectionsSettingsPanel() {
         )}
         {appPreferencesError ? <p className="text-[12px] text-danger">{appPreferencesError}</p> : null}
       </SettingsPanel>
+      <NeonPilotCliSettingsPanel />
     </div>
   );
 }

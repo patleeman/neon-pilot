@@ -5,6 +5,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { DesktopApiStreamEvent } from '../hosts/types.js';
+import {
+  removeNeonPilotCliControlPlaneRecord,
+  writeNeonPilotCliControlPlaneRecord,
+} from '../../server/cliControlPlane.js';
 
 export interface LocalBackendWorkbenchBrowserToolHost {
   isActive(conversationId: string): Promise<boolean>;
@@ -144,6 +148,7 @@ export class LocalBackendProcesses {
     this.token = undefined;
     this.extensionHostBaseUrl = undefined;
     this.extensionHostToken = undefined;
+    removeNeonPilotCliControlPlaneRecord();
 
     if (this.startPromise) {
       try {
@@ -592,12 +597,14 @@ export class LocalBackendProcesses {
 
     this.token = ready.token || token;
     this.baseUrl = `http://127.0.0.1:${String(ready.port)}`;
+    this.writeCliControlPlaneRecord();
     this.lastStartPerf = { totalMs: 0, spawnMs: 0, readyWaitMs: 0, assignMs: 0 };
     child.once('exit', () => {
       if (this.child === child) {
         this.child = undefined;
         this.baseUrl = undefined;
         this.token = undefined;
+        this.writeCliControlPlaneRecord();
       }
     });
   }
@@ -682,6 +689,7 @@ export class LocalBackendProcesses {
       this.extensionHostBaseUrl = `http://127.0.0.1:${String(ready.port)}`;
       process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = this.extensionHostBaseUrl;
       process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = this.extensionHostToken;
+      this.writeCliControlPlaneRecord();
     }
     child.once('exit', () => {
       if (this.extensionHostChild === child) {
@@ -690,9 +698,22 @@ export class LocalBackendProcesses {
         this.extensionHostToken = undefined;
         delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
         delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
+        removeNeonPilotCliControlPlaneRecord();
       }
     });
     return ready;
+  }
+
+  private writeCliControlPlaneRecord(): void {
+    if (!this.extensionHostBaseUrl || !this.extensionHostToken) return;
+    writeNeonPilotCliControlPlaneRecord({
+      pid: process.pid,
+      extensionHost: {
+        baseUrl: this.extensionHostBaseUrl,
+        token: this.extensionHostToken,
+      },
+      ...(this.baseUrl && this.token ? { localBackend: { baseUrl: this.baseUrl, token: this.token } } : {}),
+    });
   }
 
   private isNativeWorkbenchBrowserRequest(value: unknown): value is NativeWorkbenchBrowserRequest {

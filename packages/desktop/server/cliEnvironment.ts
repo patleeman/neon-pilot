@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { delimiter, dirname, join, resolve } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
@@ -43,4 +43,41 @@ export function installUserCliSymlink(input: { target: string; linkPath?: string
   if (existsSync(linkPath)) unlinkSync(linkPath);
   symlinkSync(input.target, linkPath);
   return linkPath;
+}
+
+export interface NeonPilotCliInstallStatus {
+  target: string;
+  binDir: string;
+  linkPath: string;
+  globallyInstalled: boolean;
+}
+
+export function readNeonPilotCliInstallStatus(input: { repoRoot: string; stateRoot?: string } | string): NeonPilotCliInstallStatus {
+  const options = typeof input === 'string' ? { repoRoot: input } : input;
+  const target = ensureNeonPilotCliLauncher(options);
+  const linkPath = getDefaultUserCliInstallPath();
+  let globallyInstalled = false;
+  try {
+    globallyInstalled = existsSync(linkPath) && lstatSync(linkPath).isSymbolicLink() && readlinkSync(linkPath) === target;
+  } catch {
+    globallyInstalled = false;
+  }
+  return {
+    target,
+    binDir: getNeonPilotCliBinDir(options.stateRoot),
+    linkPath,
+    globallyInstalled,
+  };
+}
+
+export function installNeonPilotUserCli(input: { repoRoot: string; stateRoot?: string } | string): NeonPilotCliInstallStatus {
+  const status = readNeonPilotCliInstallStatus(input);
+  installUserCliSymlink({ target: status.target, linkPath: status.linkPath });
+  return { ...status, globallyInstalled: true };
+}
+
+export function uninstallNeonPilotUserCli(input: { repoRoot: string; stateRoot?: string } | string): NeonPilotCliInstallStatus & { removed: boolean } {
+  const status = readNeonPilotCliInstallStatus(input);
+  if (status.globallyInstalled) unlinkSync(status.linkPath);
+  return { ...status, globallyInstalled: false, removed: status.globallyInstalled };
 }

@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,8 +25,14 @@ function canUseBuiltCli() {
   }
 }
 
+const cliArgs = process.argv.slice(2);
 const command = canUseBuiltCli() ? process.execPath : tsxPath;
-const args = canUseBuiltCli() ? [cliDistPath, ...process.argv.slice(2)] : [cliSourcePath, ...process.argv.slice(2)];
+const args = canUseBuiltCli()
+  ? [cliDistPath, ...cliArgs]
+  : [
+      '--eval',
+      `import(${JSON.stringify(pathToFileURL(cliSourcePath).href)}).then((module) => module.main(${JSON.stringify(cliArgs)}))`,
+    ];
 
 const child = spawn(command, args, {
   stdio: 'inherit',
