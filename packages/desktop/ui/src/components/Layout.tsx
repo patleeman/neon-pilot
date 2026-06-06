@@ -885,11 +885,11 @@ function WorkbenchNewTabPage({
   }, [onStartSideChat, conversationId]);
 
   return (
-    <div className="flex h-full items-center justify-center px-4 text-center select-text sm:px-8">
-      <div className="w-full max-w-xl">
+    <div className="flex h-full min-w-0 items-center justify-center px-2 text-center select-text sm:px-4">
+      <div className="w-full min-w-0" style={{ maxWidth: 'min(36rem, 100%)' }}>
         <SectionLabel tone="secondary">Workbench</SectionLabel>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
-        <div className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(min(13rem,100%),1fr))] gap-2">
+        <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(10rem,100%),1fr))] gap-2">
           <ActionTile
             icon="□"
             label="File Explorer"
@@ -1278,15 +1278,16 @@ export function Layout() {
     storageKey: WORKBENCH_EXPLORER_WIDTH_STORAGE_KEY,
     side: 'right',
   });
+  const [workbenchExplorerOpen, setWorkbenchExplorerOpen] = useState(() => readStoredWorkbenchExplorerOpen());
+  const workbenchMainMinWidth = 260;
   const workbenchDocument = useResize({
     initial: 520,
-    min: 360,
-    max: Math.max(360, viewportWidth - sidebar.width - workbenchExplorer.width - 460),
+    min: 220,
+    max: Math.max(220, viewportWidth - sidebar.width - (workbenchExplorerOpen ? workbenchExplorer.width : 0) - workbenchMainMinWidth),
     storageKey: WORKBENCH_DOCUMENT_WIDTH_STORAGE_KEY,
     side: 'right',
   });
   const [railOpen, setRailOpen] = useState(true);
-  const [workbenchExplorerOpen, setWorkbenchExplorerOpen] = useState(() => readStoredWorkbenchExplorerOpen());
   const pageSearchRootRef = useRef<HTMLDivElement | null>(null);
   const [registeredRightRailControl, setRegisteredRightRailControl] = useState<DesktopRightRailControl | null>(null);
   const railWidth = rail.width;
@@ -1474,6 +1475,7 @@ export function Layout() {
     !isSinglePaneWorkbenchMode(activeWorkbenchTool, activeWorkbenchToolPanel)
       ? activeWorkbenchToolPanel
       : null;
+  const effectiveWorkbenchExplorerOpen = workbenchExplorerOpen && activeWorkbenchRailSurface !== null;
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [commandPaletteMounted, setCommandPaletteMounted] = useState(false);
   const [pendingCommandPaletteOpen, setPendingCommandPaletteOpen] = useState<OpenCommandPaletteDetail | null>(null);
@@ -2258,12 +2260,12 @@ export function Layout() {
               <RouteContentBoundary resetKey={`${location.pathname}${location.search}`} pathname={location.pathname}>
                 {showWorkbench ? (
                   <>
-                    <main className="flex-1 min-w-[360px] overflow-y-auto overflow-x-hidden select-text">
+                    <main className="min-w-[260px] flex-1 overflow-y-auto overflow-x-hidden select-text">
                       <Outlet />
                     </main>
                     <ResizeHandle onMouseDown={workbenchDocument.onMouseDown} onDoubleClick={workbenchDocument.reset} />
                     <WorkbenchPanel
-                      width={workbenchDocument.width + workbenchExplorer.width}
+                      width={workbenchDocument.width + (effectiveWorkbenchExplorerOpen ? workbenchExplorer.width : 0)}
                       conversationId={activeConversationId}
                       artifactId={activeWorkbenchArtifactId}
                       knowledgeFileId={activeWorkbenchKnowledgeFileId}
@@ -2279,7 +2281,7 @@ export function Layout() {
                       extensionToolPanels={extensionRightToolPanels}
                       browserTabsState={browserTabsState}
                       openTabs={openWorkbenchTabs}
-                      railOpen={workbenchExplorerOpen}
+                      railOpen={effectiveWorkbenchExplorerOpen}
                       railWidth={workbenchExplorer.width}
                       onRailResizeMouseDown={workbenchExplorer.onMouseDown}
                       onRailResizeReset={workbenchExplorer.reset}
