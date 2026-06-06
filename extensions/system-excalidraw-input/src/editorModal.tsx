@@ -8,7 +8,15 @@ import {
   parseExcalidrawSceneFromSourceData,
   serializeExcalidrawScene,
 } from '@neon-pilot/extensions/excalidraw';
-import { IconButton, ResourceListItem, SectionLabel, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  CenteredLoadingState,
+  CenteredMessage,
+  IconButton,
+  PanelMessage,
+  ResourceListItem,
+  SectionLabel,
+  ToolbarButton,
+} from '@neon-pilot/extensions/ui';
 import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react';
 
 export interface ExcalidrawEditorSavePayload {
@@ -357,7 +365,7 @@ function ExcalidrawEditor({
             </div>
           </ExcalidrawErrorBoundary>
         ) : (
-          <div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-dim">Loading Excalidraw…</div>
+          <CenteredLoadingState label="Loading Excalidraw..." />
         )}
       </div>
     </div>
@@ -650,19 +658,23 @@ export function ExcalidrawWorkbenchPanel({ pa, context }: { pa: NativeExtensionC
   const visibleDrawings = [...drafts, ...drawings.filter((drawing) => !drafts.some((draft) => draft.id === drawing.id))];
   let content: ReactNode;
   if (loading && visibleDrawings.length === 0) {
-    content = <div className="px-4 py-3 text-[12px] text-dim">Loading drawings…</div>;
+    content = <PanelMessage>Loading drawings...</PanelMessage>;
   } else if (error && visibleDrawings.length === 0) {
-    content = <div className="px-4 py-3 text-[12px] text-danger">{error}</div>;
+    content = <PanelMessage tone="danger">{error}</PanelMessage>;
   } else if (visibleDrawings.length === 0) {
     content = (
-      <div className="px-4 py-3 text-[12px] text-dim">
+      <PanelMessage>
         {context.conversationId ? 'No drawings in this conversation.' : 'No drawings in this draft conversation.'}
-      </div>
+      </PanelMessage>
     );
   } else {
     content = (
       <div className="flex flex-col gap-1.5">
-        {error ? <div className="px-2 py-1 text-[12px] text-danger">{error}</div> : null}
+        {error ? (
+          <PanelMessage tone="danger" className="px-2 py-1">
+            {error}
+          </PanelMessage>
+        ) : null}
         {visibleDrawings.map((drawing) => {
           const busy = busyId === drawing.id;
           const isDraft = 'draft' in drawing && drawing.draft;
@@ -761,14 +773,7 @@ export function ExcalidrawWorkbenchDetail({
   }, [detailStateKey, pa, state]);
 
   if (!state) {
-    return (
-      <div className="flex h-full items-center justify-center px-6 text-center select-text">
-        <div className="max-w-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-steel/80">Workbench</p>
-          <h2 className="mt-2 text-lg font-semibold text-primary text-balance">Opening drawing</h2>
-        </div>
-      </div>
-    );
+    return <CenteredMessage eyebrow="Workbench" title="Opening drawing" />;
   }
 
   return (

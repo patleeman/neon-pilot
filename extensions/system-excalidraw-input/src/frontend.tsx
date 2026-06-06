@@ -1,5 +1,5 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
-import { IconButton } from '@neon-pilot/extensions/ui';
+import { CenteredLoadingState, IconButton } from '@neon-pilot/extensions/ui';
 import { lazy, Suspense, useEffect } from 'react';
 
 import type { ExcalidrawEditorSavePayload } from './editorModal';
@@ -95,9 +95,7 @@ export function ExcalidrawInputTool({
 
 export function ExcalidrawEditorModal(props: Parameters<typeof LazyExcalidrawEditorModal>[0]) {
   return (
-    <Suspense
-      fallback={<div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-dim">Loading Excalidraw…</div>}
-    >
+    <Suspense fallback={<CenteredLoadingState label="Loading Excalidraw..." />}>
       <LazyExcalidrawEditorModal {...props} />
     </Suspense>
   );
@@ -105,9 +103,7 @@ export function ExcalidrawEditorModal(props: Parameters<typeof LazyExcalidrawEdi
 
 export function ExcalidrawWorkbenchPanel(props: Parameters<typeof LazyExcalidrawWorkbenchPanel>[0]) {
   return (
-    <Suspense
-      fallback={<div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-dim">Loading drawing…</div>}
-    >
+    <Suspense fallback={<CenteredLoadingState label="Loading drawing..." />}>
       <LazyExcalidrawWorkbenchPanel {...props} />
     </Suspense>
   );
@@ -115,9 +111,7 @@ export function ExcalidrawWorkbenchPanel(props: Parameters<typeof LazyExcalidraw
 
 export function ExcalidrawWorkbenchDetail(props: Parameters<typeof LazyExcalidrawWorkbenchDetail>[0]) {
   return (
-    <Suspense
-      fallback={<div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-dim">Loading drawing…</div>}
-    >
+    <Suspense fallback={<CenteredLoadingState label="Loading drawing..." />}>
       <LazyExcalidrawWorkbenchDetail {...props} />
     </Suspense>
   );
