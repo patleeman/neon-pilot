@@ -9,8 +9,10 @@ import {
   Dialog,
   DialogBody,
   DialogHeader,
+  FilterToolbar,
   PanelMessage,
   Pill,
+  SearchInput,
   SurfacePanel,
   TextButton,
   ToolbarButton,
@@ -80,18 +82,21 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
       />
 
       <div className="border-b border-border-subtle px-4 pb-3">
-        <div className="flex items-center gap-2 rounded-xl border border-border-subtle bg-elevated px-3 py-2">
-          <span className="text-dim text-[12px]">⌕</span>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="flex-1 bg-transparent text-[13px] text-primary placeholder:text-dim outline-none"
-            placeholder="Filter drawings by id or title…"
-          />
-          <Pill tone="muted" mono className="tabular-nums">
-            {filtered.length}
-          </Pill>
-        </div>
+        <FilterToolbar
+          search={
+            <SearchInput
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="bg-elevated text-[13px]"
+              placeholder="Filter drawings by id or title..."
+            />
+          }
+          actions={
+            <Pill tone="muted" mono className="tabular-nums">
+              {filtered.length}
+            </Pill>
+          }
+        />
       </div>
 
       <DialogBody className="space-y-2">
