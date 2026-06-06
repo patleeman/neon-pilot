@@ -885,11 +885,11 @@ function WorkbenchNewTabPage({
   }, [onStartSideChat, conversationId]);
 
   return (
-    <div className="flex h-full items-center justify-center px-8 text-center select-text">
+    <div className="flex h-full items-center justify-center px-4 text-center select-text sm:px-8">
       <div className="w-full max-w-xl">
         <SectionLabel tone="secondary">Workbench</SectionLabel>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
-        <div className="mt-6 grid gap-2 sm:grid-cols-2">
+        <div className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(min(13rem,100%),1fr))] gap-2">
           <ActionTile
             icon="□"
             label="File Explorer"

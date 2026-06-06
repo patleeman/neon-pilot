@@ -1663,7 +1663,7 @@ function InstallExtensionModal({
       className="max-w-3xl bg-base"
       onClose={onClose}
       style={{
-        width: 'min(52rem, calc(100vw - 2rem))',
+        width: 'min(52rem, calc(100% - 2rem), max(22rem, calc(100vw - 32rem)))',
         maxHeight: 'min(44rem, calc(100vh - 2rem))',
         marginBlock: '2rem',
         alignSelf: 'flex-start',
