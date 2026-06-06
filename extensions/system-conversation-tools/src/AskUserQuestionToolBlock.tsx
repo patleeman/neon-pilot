@@ -8,7 +8,7 @@ import {
   resolveAskUserQuestionOptionHotkey,
   shouldAdvanceAskUserQuestionAfterSelection,
 } from '@neon-pilot/extensions/data';
-import { cx, Pill } from '@neon-pilot/extensions/ui';
+import { Button, cx, Pill } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface AskUserQuestionState {
@@ -511,19 +511,19 @@ export function AskUserQuestionToolBlock({
                     const answered = (answers[question.id]?.length ?? 0) > 0;
                     const active = index === activeQuestionIndex;
                     return (
-                      <button
+                      <Button
+                        variant="action"
                         key={question.id}
                         ref={(node) => {
                           questionTabRefs.current[index] = node;
                         }}
-                        type="button"
                         role="tab"
                         aria-selected={active}
                         aria-controls={`ask-user-question-panel-${question.id}`}
                         onClick={() => activateQuestion(index)}
                         onKeyDown={(event) => handleQuestionTabKeyDown(index, event)}
                         className={cx(
-                          'ui-action-button min-w-0 px-2 py-1 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
+                          'min-w-0 px-2 py-1 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
                           active ? 'text-primary hover:text-primary' : answered ? 'text-secondary' : 'text-dim',
                         )}
                       >
@@ -534,39 +534,39 @@ export function AskUserQuestionToolBlock({
                           {answered ? '✓' : active ? '•' : '○'}
                         </span>
                         <span className="truncate">{question.label}</span>
-                      </button>
+                      </Button>
                     );
                   })}
                   {hasInteractiveOptions && onSubmit && (
                     <>
                       {isActiveCheckQuestion && !isLastQuestion && (
-                        <button
-                          type="button"
+                        <Button
+                          variant="action"
                           disabled={!canAdvanceToNextQuestion || submitting}
                           onClick={advanceToNextQuestion}
                           className={cx(
-                            'ui-action-button px-1.5 py-0.5 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
+                            'px-1.5 py-0.5 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
                             canAdvanceToNextQuestion && !submitting ? 'text-accent' : 'text-dim',
                           )}
                         >
                           Next →
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        variant="action"
                         ref={submitButtonRef}
-                        type="button"
                         disabled={!canSubmit || submitting}
                         onClick={() => {
                           void submitIfReady();
                         }}
                         onKeyDown={handleSubmitKeyDown}
                         className={cx(
-                          'ui-action-button px-1.5 py-0.5 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
+                          'px-1.5 py-0.5 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
                           canSubmit && !submitting ? 'text-accent' : 'text-dim',
                         )}
                       >
                         {submitLabel}
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>

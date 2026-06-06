@@ -42,21 +42,17 @@ function buttonToneClass(tone: ButtonTone) {
   return null;
 }
 
-export function Button({
-  className,
-  children,
-  type = 'button',
-  variant = 'toolbar',
-  tone = 'default',
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; tone?: ButtonTone }) {
+export const Button = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; tone?: ButtonTone }
+>(function Button({ className, children, type = 'button', variant = 'toolbar', tone = 'default', ...props }, ref) {
   const baseClass = variant === 'action' ? 'ui-action-button' : variant === 'ghost' ? 'ui-ghost-button' : 'ui-toolbar-button';
   return (
-    <button type={type} className={cx(baseClass, buttonToneClass(tone), className)} {...props}>
+    <button ref={ref} type={type} className={cx(baseClass, buttonToneClass(tone), className)} {...props}>
       {children}
     </button>
   );
-}
+});
 
 export function PageHeader({
   children,
@@ -78,46 +74,42 @@ export function PageHeader({
   );
 }
 
-export function ToolbarButton({ className, children, type = 'button', ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function ToolbarButton(
+  { className, children, type = 'button', ...props },
+  ref,
+) {
   return (
-    <button type={type} className={cx('ui-toolbar-button', className)} {...props}>
+    <button ref={ref} type={type} className={cx('ui-toolbar-button', className)} {...props}>
       {children}
     </button>
   );
-}
+});
 
-export function IconButton({
-  className,
-  children,
-  compact = false,
-  type = 'button',
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }) {
-  return (
-    <button type={type} className={cx('ui-icon-button', compact && 'ui-icon-button-compact', className)} {...props}>
-      {children}
-    </button>
-  );
-}
+export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }>(
+  function IconButton({ className, children, compact = false, type = 'button', ...props }, ref) {
+    return (
+      <button ref={ref} type={type} className={cx('ui-icon-button', compact && 'ui-icon-button-compact', className)} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
 
-export function CheckButton({
-  checked,
-  className,
-  children = '✓',
-  type = 'button',
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean }) {
-  return (
-    <button
-      type={type}
-      aria-pressed={checked}
-      className={cx('ui-check-button', checked && 'ui-check-button-checked', className)}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
+export const CheckButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean }>(
+  function CheckButton({ checked, className, children = '✓', type = 'button', ...props }, ref) {
+    return (
+      <button
+        ref={ref}
+        type={type}
+        aria-pressed={checked}
+        className={cx('ui-check-button', checked && 'ui-check-button-checked', className)}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  },
+);
 
 export function Pill({
   tone = 'muted',
