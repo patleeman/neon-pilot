@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { buildConversationGroupLabels, getConversationGroupLabel } from '../conversation/conversationCwdGroups';
-import { Dialog, IconButton, PanelMessage, ResourceListItem } from './ui';
+import { IconButton, PanelMessage, ResourceListItem, ResourcePickerDialog, ResourcePickerList } from './ui';
 
 const CLOSE_PATH = 'M6 6l12 12M18 6 6 18';
 const WORKSPACE_ADD_PATH =
@@ -82,8 +82,9 @@ export function WorkspaceQuickSelectModal({
   }, [cursor, onChooseNewFolder, onClose, onSelectWorkspace, optionCount, workspacePaths]);
 
   return (
-    <Dialog
-      aria-label="Choose workspace"
+    <ResourcePickerDialog
+      title="Open workspace"
+      description="Choose one of the saved workspaces or pick a new folder."
       onClose={onClose}
       backdropStyle={{
         background: 'rgb(0 0 0 / 0.52)',
@@ -100,20 +101,14 @@ export function WorkspaceQuickSelectModal({
         boxShadow: '0 28px 80px rgb(0 0 0 / 0.35)',
         overscrollBehavior: 'contain',
       }}
+      actions={
+        <IconButton compact onClick={onClose} className="-mr-1 shrink-0" aria-label="Close workspace picker">
+          <Icon d={CLOSE_PATH} size={12} />
+        </IconButton>
+      }
+      footer="↑↓ move · ↵ select · esc close"
     >
-      <div className="border-b border-border-subtle px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold text-primary">Open workspace</h2>
-            <p className="mt-1 text-[12px] leading-5 text-secondary">Choose one of the saved workspaces or pick a new folder.</p>
-          </div>
-          <IconButton compact onClick={onClose} className="-mr-1 shrink-0" aria-label="Close workspace picker">
-            <Icon d={CLOSE_PATH} size={12} />
-          </IconButton>
-        </div>
-      </div>
-
-      <div className="overflow-y-auto px-2 py-2" style={{ overscrollBehavior: 'contain' }}>
+      <ResourcePickerList className="px-2 py-2">
         {workspacePaths.length > 0 ? (
           workspacePaths.map((workspacePath, index) => {
             const selected = cursor === index;
@@ -141,9 +136,7 @@ export function WorkspaceQuickSelectModal({
           leading={<Icon d={WORKSPACE_ADD_PATH} size={13} />}
           className="mt-1 rounded-lg px-3 py-2.5"
         />
-      </div>
-
-      <div className="border-t border-border-subtle px-4 py-2 text-[10px] text-dim/80">↑↓ move · ↵ select · esc close</div>
-    </Dialog>
+      </ResourcePickerList>
+    </ResourcePickerDialog>
   );
 }

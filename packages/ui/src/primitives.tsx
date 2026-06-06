@@ -898,6 +898,83 @@ export function FilterToolbar({
   );
 }
 
+export function ResourcePickerDialog({
+  title,
+  description,
+  actions,
+  children,
+  footer,
+  onClose,
+  className,
+  bodyClassName,
+  backdropStyle,
+  style,
+  ...props
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  onClose?: () => void;
+  className?: string;
+  bodyClassName?: string;
+  backdropStyle?: CSSProperties;
+  style?: CSSProperties;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <Dialog
+      aria-label={typeof title === 'string' ? title : undefined}
+      onClose={onClose}
+      className={className}
+      backdropStyle={backdropStyle}
+      style={{
+        width: 'min(840px, calc(100vw - 2rem))',
+        maxHeight: 'calc(100vh - 5rem)',
+        ...style,
+      }}
+      {...props}
+    >
+      <DialogHeader title={title} description={description} actions={actions} />
+      <DialogBody className={cx('ui-resource-picker-body', bodyClassName)}>{children}</DialogBody>
+      {footer ? <div className="ui-resource-picker-footer">{footer}</div> : null}
+    </Dialog>
+  );
+}
+
+export function ResourcePickerToolbar({
+  filters,
+  search,
+  actions,
+  className,
+}: {
+  filters?: ReactNode;
+  search?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cx('ui-resource-picker-toolbar', className)}>
+      <FilterToolbar filters={filters} search={search} actions={actions} />
+    </div>
+  );
+}
+
+export function ResourcePickerList({
+  children,
+  className,
+  ...props
+}: {
+  children: ReactNode;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-resource-picker-list', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export function ResourceListItem({
   label,
   meta,

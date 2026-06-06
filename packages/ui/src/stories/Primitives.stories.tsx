@@ -62,6 +62,9 @@ import {
   PositionedMenu,
   ProgressBar,
   ProgressRow,
+  ResourcePickerDialog,
+  ResourcePickerList,
+  ResourcePickerToolbar,
   ResourceListItem,
   RingStatusDot,
   RowButton,
@@ -409,6 +412,29 @@ const meta = {
             </p>
             <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" leading="#" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
+            <div style={{ position: 'relative', minHeight: 340, overflow: 'hidden', border: '1px dashed rgb(var(--color-border-subtle))' }}>
+              <ResourcePickerDialog
+                title="Open workspace"
+                description="Use ResourcePickerDialog for bounded modal pickers with searchable resource rows."
+                footer="↑↓ move · ↵ select · esc close"
+                backdropStyle={{ position: 'absolute', inset: 0, background: 'rgb(0 0 0 / 0.18)' }}
+                style={{ maxHeight: 310 }}
+              >
+                <ResourcePickerToolbar
+                  search={<SearchInput placeholder="Filter workspaces..." />}
+                  actions={
+                    <Pill tone="muted" mono>
+                      3
+                    </Pill>
+                  }
+                />
+                <ResourcePickerList>
+                  <ResourceListItem label="neon-pilot" detail="/Users/patrick/workingdir/neon-pilot" selected />
+                  <ResourceListItem label="neon-pilot-extensions" detail="/Users/patrick/workingdir/neon-pilot-extensions" />
+                  <ResourceListItem label="Choose a new folder" detail="Use the system picker to add another workspace." leading={<FolderIcon />} />
+                </ResourcePickerList>
+              </ResourcePickerDialog>
+            </div>
             <div style={{ display: 'grid', gap: 4 }}>
               <RowButton compact selected>
                 <span style={{ color: 'rgb(var(--color-dim))' }}>▸</span>

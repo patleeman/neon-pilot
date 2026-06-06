@@ -39,6 +39,9 @@ import {
   PanelHeader,
   Pill,
   ProgressBar,
+  ResourcePickerDialog,
+  ResourcePickerList,
+  ResourcePickerToolbar,
   ResourceListItem,
   RuntimeFooter,
   RuntimeSection,
@@ -252,6 +255,23 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-filter-toolbar');
     expect(html).toContain('ui-filter-toolbar-filters');
     expect(html).toContain('ui-filter-toolbar-search');
+  });
+
+  it('renders resource picker dialog anatomy', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        ResourcePickerDialog,
+        { title: 'Open workspace', description: 'Choose a saved workspace.', footer: '↑↓ move · ↵ select · esc close' },
+        createElement(ResourcePickerToolbar, { search: createElement(SearchInput, { placeholder: 'Filter...' }), actions: '12' }),
+        createElement(ResourcePickerList, null, createElement(ResourceListItem, { label: 'neon-pilot', detail: '/repo/neon-pilot' })),
+      ),
+    );
+
+    expect(html).toContain('ui-resource-picker-body');
+    expect(html).toContain('ui-resource-picker-toolbar');
+    expect(html).toContain('ui-resource-picker-list');
+    expect(html).toContain('ui-resource-picker-footer');
+    expect(html).toContain('Open workspace');
   });
 
   it('renders panel headers with title and meta slots', () => {

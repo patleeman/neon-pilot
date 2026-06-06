@@ -917,6 +917,33 @@ body {
   min-width: min(100%, 18rem);
 }
 
+.ui-resource-picker-toolbar {
+  border-bottom: 1px solid rgb(var(--color-border-subtle));
+  padding: 0 1rem 0.75rem;
+}
+
+.ui-resource-picker-body {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ui-resource-picker-list {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ui-resource-picker-footer {
+  border-top: 1px solid rgb(var(--color-border-subtle));
+  padding: 0.5rem 1rem;
+  font-size: 0.625rem;
+  line-height: 1rem;
+  color: rgb(var(--color-text-dim) / 0.8);
+}
+
 .ui-resource-list-item {
   display: grid;
   width: 100%;
