@@ -53,6 +53,7 @@ export {
   ResourceListItem,
   SearchInput,
   SectionLabel,
+  type SectionLabelTone,
   SegmentedControl,
   type SegmentedControlOption,
   Select,

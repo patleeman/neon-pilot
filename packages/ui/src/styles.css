@@ -446,11 +446,26 @@ body {
 }
 
 .ui-section-label {
-  color: rgb(var(--color-teal) / 0.88);
   font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.ui-section-label-default {
+  color: rgb(var(--color-teal) / 0.88);
+}
+
+.ui-section-label-muted {
+  color: rgb(var(--color-dim));
+}
+
+.ui-section-label-secondary {
+  color: rgb(var(--color-secondary));
+}
+
+.ui-section-label-accent {
+  color: rgb(var(--color-accent));
 }
 
 .ui-supporting-text {

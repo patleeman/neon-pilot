@@ -55,6 +55,7 @@ export {
   ResourceListItem,
   SearchInput,
   SectionLabel,
+  type SectionLabelTone,
   SegmentedControl,
   Select,
   SettingToggleRow,

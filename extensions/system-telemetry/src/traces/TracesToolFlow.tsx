@@ -3,7 +3,7 @@
  */
 
 import type { ToolFlowResult } from '@neon-pilot/extensions/data';
-import { PanelHeader, ProgressBar, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { PanelHeader, ProgressBar, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
@@ -24,7 +24,9 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
       <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
         {/* Cell 1: Top transitions — Sankey-like flow */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Top Tool Transitions</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Top Tool Transitions
+          </SectionLabel>
           <div className="space-y-1">
             {data.transitions.slice(0, 10).map((t, i) => {
               const maxCount = data.transitions[0]?.count ?? 1;
@@ -48,7 +50,9 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
 
         {/* Cell 2: Co-occurrence grid */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Top Tool Pairs</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Top Tool Pairs
+          </SectionLabel>
           <div className="space-y-1">
             {data.coOccurrences.slice(0, 10).map((c, i) => {
               const maxCount = data.coOccurrences[0]?.sessions ?? 1;
@@ -68,7 +72,9 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
 
         {/* Cell 3: Failure trajectories */}
         <div className="p-4 col-span-2">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Failure Trajectories (last 3 calls before error)</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Failure Trajectories (last 3 calls before error)
+          </SectionLabel>
           {data.failureTrajectories.length > 0 ? (
             <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
               {data.failureTrajectories.slice(0, 15).map((f, i) => (

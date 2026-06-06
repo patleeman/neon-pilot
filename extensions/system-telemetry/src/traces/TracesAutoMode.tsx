@@ -2,7 +2,7 @@
  * Auto Mode tracking display
  */
 
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
   if (!data || data.recentEvents.length === 0) {
@@ -20,7 +20,9 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
       <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
         {/* Cell 1: Summary stats */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Activity</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Activity
+          </SectionLabel>
           <div className="flex gap-2 mb-4">
             <QuickStat value={String(data.currentActive)} label="Currently Active" cls="text-accent" />
             <QuickStat value={String(data.enabledCount)} label="Times Enabled" cls="text-success" />
@@ -28,7 +30,9 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
           </div>
           {data.topStopReasons.length > 0 && (
             <div className="pt-3 border-t border-border-subtle">
-              <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-2">Top Stop Reasons</div>
+              <SectionLabel tone="muted" className="mb-2 block">
+                Top Stop Reasons
+              </SectionLabel>
               <div className="space-y-1">
                 {data.topStopReasons.map((r, i) => {
                   const maxCount = data.topStopReasons[0]?.count ?? 1;
@@ -49,7 +53,9 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
 
         {/* Cell 2: Recent events log */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Recent Events</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Recent Events
+          </SectionLabel>
           <div className="max-h-[200px] overflow-y-auto space-y-0.5">
             {data.recentEvents.slice(0, 15).map((e, i) => (
               <div key={i} className="flex items-center gap-2 py-1 text-[11px] border-b border-border-subtle/20 last:border-0">
@@ -70,7 +76,7 @@ function QuickStat({ value, label, cls }: { value: string; label: string; cls: s
   return (
     <div className="flex-1 bg-elevated rounded-lg p-2.5 text-center">
       <div className={`text-[17px] font-semibold font-mono ${cls}`}>{value}</div>
-      <div className="text-[9px] uppercase tracking-[0.08em] text-dim">{label}</div>
+      <SectionLabel tone="muted">{label}</SectionLabel>
     </div>
   );
 }

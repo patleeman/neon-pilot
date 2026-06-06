@@ -203,6 +203,7 @@ const meta = {
           <PanelHeader title="Panel header" meta="12 items" className="-m-4 mb-0" />
           <div style={{ display: 'grid', gap: 6 }}>
             <SectionLabel>Artifacts</SectionLabel>
+            <SectionLabel tone="muted">Muted Label</SectionLabel>
             <SupportingText>Use supporting text for secondary settings copy, empty hints, paths, and status details.</SupportingText>
             <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" selected />
             <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />

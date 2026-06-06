@@ -273,9 +273,16 @@ export function ProgressBar({
   );
 }
 
-export function SectionLabel({ children, className, ...props }: HTMLAttributes<HTMLSpanElement>) {
+export type SectionLabelTone = 'default' | 'muted' | 'secondary' | 'accent';
+
+export function SectionLabel({
+  children,
+  className,
+  tone = 'default',
+  ...props
+}: HTMLAttributes<HTMLSpanElement> & { tone?: SectionLabelTone }) {
   return (
-    <span className={cx('ui-section-label', className)} {...props}>
+    <span className={cx('ui-section-label', `ui-section-label-${tone}`, className)} {...props}>
       {children}
     </span>
   );

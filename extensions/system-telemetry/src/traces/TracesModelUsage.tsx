@@ -3,7 +3,7 @@
  */
 
 import type { CacheEfficiencyAggregate, TraceModelUsage, TraceThroughput } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { PanelHeader, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
 
 export function TracesModelUsage({
   models,
@@ -42,7 +42,9 @@ export function TracesModelUsage({
       <div className="grid grid-cols-2 divide-x divide-y divide-border-subtle">
         {/* Cell 1: Tokens by model */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Tokens by Model</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Tokens by Model
+          </SectionLabel>
           <div className="flex gap-4 flex-wrap pb-3 mb-3 border-b border-border-subtle">
             <Metric value={formatNumber(totalTokens)} label="Total" cls="text-accent" />
             <Metric value={formatNumber(tokensInput)} label="Input" />
@@ -69,7 +71,9 @@ export function TracesModelUsage({
 
         {/* Cell 2: Cost treemap */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Cost Breakdown</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Cost Breakdown
+          </SectionLabel>
           <div className="flex flex-wrap gap-1 mb-3">
             {(() => {
               const top = models.slice(0, 4);
@@ -100,7 +104,9 @@ export function TracesModelUsage({
 
         {/* Cell 3: Throughput */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Throughput</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Throughput
+          </SectionLabel>
           <div className="flex gap-2 mb-3">
             <QuickStat value={`${totalThroughputTokensPerSec}`} label="tok/s avg" cls="text-accent" />
             <QuickStat value={`${peakThroughputTokensPerSec}`} label="tok/s peak" cls="text-warning" />
@@ -122,7 +128,9 @@ export function TracesModelUsage({
 
         {/* Cell 4: Cache stats */}
         <div className="p-4">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-dim mb-3">Prompt Cache</div>
+          <SectionLabel tone="muted" className="mb-3 block">
+            Prompt Cache
+          </SectionLabel>
           <CacheRow
             label="Cached input"
             value={formatNumber(tokensCached)}
@@ -149,7 +157,7 @@ function Metric({ value, label, cls = '' }: { value: string; label: string; cls?
   return (
     <div className="text-center">
       <div className={`text-[18px] font-semibold font-mono tracking-tight ${cls}`}>{value}</div>
-      <div className="text-[10px] uppercase tracking-[0.08em] text-dim">{label}</div>
+      <SectionLabel tone="muted">{label}</SectionLabel>
     </div>
   );
 }
@@ -158,7 +166,7 @@ function QuickStat({ value, label, cls = '' }: { value: string; label: string; c
   return (
     <div className="flex-1 bg-elevated rounded-lg p-2.5 text-center">
       <div className={`text-[17px] font-semibold font-mono ${cls}`}>{value}</div>
-      <div className="text-[10px] uppercase tracking-[0.08em] text-dim">{label}</div>
+      <SectionLabel tone="muted">{label}</SectionLabel>
     </div>
   );
 }
