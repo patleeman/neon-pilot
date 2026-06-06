@@ -31,7 +31,7 @@ import { useTheme } from '../../ui-state/theme';
 import { ContextMenuWrapper } from '../shared/ContextMenuWrapper';
 import { TextPromptDialog } from '../shared/TextPromptDialog';
 import { useFileTreeModel } from '../shared/useFileTreeModel';
-import { cx, EmptyState, LoadingState, MenuItem, MenuSeparator, Pill } from '../ui';
+import { Button, cx, EmptyState, IconButton, LoadingState, MenuItem, MenuSeparator, Pill, ToolbarButton } from '../ui';
 import { addWorkspaceOpenFile, readWorkspaceOpenFiles, removeWorkspaceOpenFile, writeWorkspaceOpenFiles } from './openWorkspaceFiles';
 
 interface WorkspaceExplorerProps {
@@ -892,25 +892,20 @@ export function WorkspaceExplorer({
               {changes.length}
             </Pill>
           )}
-          <button
-            type="button"
-            className="ui-icon-button ui-icon-button-compact"
+          <IconButton
+            compact
             title="Refresh workspace"
+            aria-label="Refresh workspace"
             onClick={() => {
               void loadRoot();
             }}
           >
             ↻
-          </button>
+          </IconButton>
           {!railOnly && (
-            <button
-              type="button"
-              className="ui-icon-button ui-icon-button-compact"
-              title="Hide file explorer"
-              onClick={() => setOpen(false)}
-            >
+            <IconButton compact title="Hide file explorer" aria-label="Hide file explorer" onClick={() => setOpen(false)}>
               ×
-            </button>
+            </IconButton>
           )}
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-1.5">
@@ -959,13 +954,9 @@ export function WorkspaceExplorer({
                 </div>
                 <WorkspaceStatusBadge status={selectedFile.gitStatus} />
                 {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
-                  <button
-                    type="button"
-                    className={cx('ui-toolbar-button text-[11px]', showDiff && 'text-accent')}
-                    onClick={() => setShowDiff((value) => !value)}
-                  >
+                  <ToolbarButton className={cx('text-[11px]', showDiff && 'text-accent')} onClick={() => setShowDiff((value) => !value)}>
                     {showDiff ? 'Diff on' : 'Diff off'}
-                  </button>
+                  </ToolbarButton>
                 )}
               </div>
               <div className="min-h-0 flex-1 overflow-hidden">
@@ -976,9 +967,8 @@ export function WorkspaceExplorer({
                     body="Metadata and git status are shown by default. Open anyway when you explicitly want to load the text."
                     action={
                       !selectedFile.binary ? (
-                        <button
-                          type="button"
-                          className="ui-action-button"
+                        <Button
+                          variant="action"
                           onClick={async () => {
                             if (!cwd) return;
                             setFileState({ status: 'loading', data: selectedFile, error: null });
@@ -987,7 +977,7 @@ export function WorkspaceExplorer({
                           }}
                         >
                           Open anyway
-                        </button>
+                        </Button>
                       ) : undefined
                     }
                   />
@@ -1004,27 +994,24 @@ export function WorkspaceExplorer({
                 )}
               </div>
               <div className="flex items-center gap-2 border-t border-border-subtle px-3 py-2">
-                <button
-                  type="button"
-                  className="ui-toolbar-button text-[11px]"
+                <ToolbarButton
+                  className="text-[11px]"
                   onClick={() => onDraftPrompt(buildPrompt(root, 'explain this file', selectedFile.path))}
                 >
                   Ask about file
-                </button>
-                <button
-                  type="button"
-                  className="ui-toolbar-button text-[11px]"
+                </ToolbarButton>
+                <ToolbarButton
+                  className="text-[11px]"
                   onClick={() => onDraftPrompt(buildPrompt(root, 'rename this file', selectedFile.path))}
                 >
                   Rename
-                </button>
-                <button
-                  type="button"
-                  className="ui-toolbar-button text-[11px] text-danger"
+                </ToolbarButton>
+                <ToolbarButton
+                  className="text-[11px] text-danger"
                   onClick={() => onDraftPrompt(buildPrompt(root, 'delete this file after confirming it is safe', selectedFile.path))}
                 >
                   Delete
-                </button>
+                </ToolbarButton>
               </div>
             </>
           ) : null}
@@ -1290,13 +1277,9 @@ export function WorkspaceFileDocument({
       )}
       {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
         <div className="flex items-center justify-end border-b border-border-subtle bg-surface px-3 py-1.5">
-          <button
-            type="button"
-            className={cx('ui-toolbar-button px-2 text-[10px]', showDiff && 'text-accent')}
-            onClick={() => setShowDiff((value) => !value)}
-          >
+          <ToolbarButton className={cx('px-2 text-[10px]', showDiff && 'text-accent')} onClick={() => setShowDiff((value) => !value)}>
             {showDiff ? 'Diff on' : 'Diff off'}
-          </button>
+          </ToolbarButton>
         </div>
       )}
       <div
@@ -1311,15 +1294,14 @@ export function WorkspaceFileDocument({
             body="Metadata and git status are shown by default. Open anyway when you explicitly want to load the text."
             action={
               !selectedFile.binary ? (
-                <button
-                  type="button"
-                  className="ui-action-button"
+                <Button
+                  variant="action"
                   onClick={() => {
                     void loadFile({ force: true });
                   }}
                 >
                   Open anyway
-                </button>
+                </Button>
               ) : undefined
             }
           />
