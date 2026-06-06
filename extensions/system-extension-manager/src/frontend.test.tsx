@@ -361,10 +361,8 @@ describe('ExtensionManagerPage', () => {
       } as never,
     ]);
     mocks.deleteExtension.mockResolvedValue({ ok: true, extensionId: 'system-onboarding', deleted: true });
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
-
     renderPageWithPa({
-      ui: { toast: vi.fn(), notify: vi.fn() },
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn().mockResolvedValue(true) },
       commands: { list: vi.fn().mockResolvedValue([]) },
       extensions: { callAction },
     });
@@ -408,10 +406,8 @@ describe('ExtensionManagerPage', () => {
         version: '0.0.1',
       } as never,
     ]);
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
-
     renderPageWithPa({
-      ui: { toast: vi.fn(), notify: vi.fn() },
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn().mockResolvedValue(true) },
       commands: { list: vi.fn().mockResolvedValue([]) },
       extensions: { callAction },
     });
@@ -485,10 +481,8 @@ describe('ExtensionManagerPage', () => {
         version: '0.1.2',
       } as never,
     ]);
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
-
     renderPageWithPa({
-      ui: { toast: vi.fn(), notify: vi.fn() },
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn().mockResolvedValue(true) },
       commands: { list: vi.fn().mockResolvedValue([]) },
       extensions: { callAction },
     });

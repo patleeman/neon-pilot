@@ -23,6 +23,7 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
+  IconLink,
   LoadingState,
   MenuItem,
   MenuShell,
@@ -1367,28 +1368,34 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <DataTableActionGroup>
               {busy ? <span className="text-[11px] text-dim">Working…</span> : null}
               {route && extension.enabled ? (
-                <Link
-                  className="ui-icon-button ui-icon-button-compact"
-                  to={route}
+                <IconLink
+                  compact
+                  href={route}
                   title={`Open ${extension.name}`}
                   aria-label={`Open ${extension.name}`}
-                  onClick={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    navigate(route);
+                  }}
                 >
                   <OpenIcon />
-                </Link>
+                </IconLink>
               ) : null}
               {hasExtensionSettings(extension) ? (
-                <Link
-                  className="ui-icon-button ui-icon-button-compact"
-                  to={`/settings#${extensionSettingsSectionId(extension)}`}
+                <IconLink
+                  compact
+                  href={`/settings#${extensionSettingsSectionId(extension)}`}
                   title={`Configure ${extension.name} in Settings`}
                   aria-label={`Configure ${extension.name} in Settings`}
                   onClick={(event) => {
+                    event.preventDefault();
                     event.stopPropagation();
+                    navigate(`/settings#${extensionSettingsSectionId(extension)}`);
                   }}
                 >
                   <GearIcon />
-                </Link>
+                </IconLink>
               ) : null}
               <IconButton
                 compact
