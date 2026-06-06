@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 
-import { ToolbarButton } from './ui';
+import { TextInput, ToolbarButton } from './ui';
 
 interface ConversationSavedHeaderProps {
   title: string;
@@ -56,7 +56,7 @@ export function ConversationSavedHeader({
             onSaveCwd();
           }}
         >
-          <input
+          <TextInput
             autoFocus
             value={cwdDraft}
             onChange={(event) => onCwdDraftChange(event.target.value)}
@@ -69,7 +69,7 @@ export function ConversationSavedHeader({
             placeholder={cwd ?? '~/workingdir/repo'}
             spellCheck={false}
             aria-label="Conversation working directory"
-            className="min-w-[16rem] flex-1 rounded-lg border border-border-default bg-surface px-3 py-1.5 text-[12px] font-mono text-primary outline-none transition-colors focus:border-accent/60"
+            className="min-w-[16rem] flex-1 font-mono"
             disabled={cwdSaveBusy}
           />
           <ToolbarButton type="submit" className="text-accent" disabled={cwdSaveBusy}>

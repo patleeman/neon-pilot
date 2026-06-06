@@ -11,7 +11,7 @@ import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../../extensions/extensionRegi
 import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
 import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '../../local/workbenchBrowserTabs';
-import { Button, ToolbarButton } from '../ui';
+import { Button, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 
@@ -399,9 +399,9 @@ export function WorkbenchBrowserTab({
         >
           {state?.loading ? '×' : '↻'}
         </button>
-        <input
+        <TextInput
           ref={urlInputRef}
-          className="min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1 text-[12px] text-primary outline-none focus:border-accent/60"
+          className="min-w-0 flex-1"
           value={urlDraft}
           onChange={(event) => handleUrlInputChange(event.target.value)}
           placeholder="https://example.com"
