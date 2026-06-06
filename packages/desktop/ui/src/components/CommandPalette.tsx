@@ -35,7 +35,7 @@ import type {
 import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch } from '../shared/types';
 import { useAllSessions, useSessionsReady } from '../store';
-import { cx } from './ui';
+import { cx, RowButton, SegmentedControl } from './ui';
 
 type ExtensionQuickOpenProvider = {
   list?: () => Promise<ExtensionQuickOpenItem[]> | ExtensionQuickOpenItem[];
@@ -785,27 +785,19 @@ export function CommandPalette() {
           </div>
 
           <div className="mt-2.5 flex items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-1 rounded-md bg-surface p-0.5">
-              {scopeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    setScope(option.value);
-                    setCursor(0);
-                    setActionError(null);
-                    setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
-                    window.requestAnimationFrame(() => inputRef.current?.focus());
-                  }}
-                  className={cx(
-                    'rounded px-2 py-0.5 font-mono text-[10px] transition-colors',
-                    scope === option.value ? 'bg-panel text-primary shadow-sm' : 'text-dim hover:bg-panel/70 hover:text-secondary',
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              value={scope}
+              options={scopeOptions}
+              ariaLabel="Command palette scope"
+              className="font-mono text-[10px]"
+              onChange={(nextScope) => {
+                setScope(nextScope);
+                setCursor(0);
+                setActionError(null);
+                setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
+                window.requestAnimationFrame(() => inputRef.current?.focus());
+              }}
+            />
 
             <div className="flex items-center gap-2 font-mono text-[10px] text-dim/70">
               <span>{visibleCount > 0 ? `${cursor + 1}/${visibleCount}` : '0/0'}</span>
@@ -855,18 +847,18 @@ export function CommandPalette() {
                 const secondaryText = [item.subtitle, item.meta].filter(Boolean).join(' · ');
 
                 return (
-                  <button
+                  <RowButton
                     key={item.id}
                     data-command-palette-idx={itemIndex}
-                    type="button"
                     onMouseEnter={() => setCursor(itemIndex)}
                     onClick={() => {
                       void activateItem(item);
                     }}
                     disabled={item.disabled || isBusy}
+                    selected={isSelected}
                     className={cx(
-                      'group flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors disabled:cursor-not-allowed',
-                      isSelected ? 'bg-accent/12 text-accent' : 'hover:bg-surface/70',
+                      'group flex w-full items-start gap-2 px-2.5 py-1.5 disabled:cursor-not-allowed',
+                      isSelected && 'text-accent',
                       item.disabled && 'opacity-55',
                     )}
                     title={item.subtitle ?? item.title}
@@ -888,7 +880,7 @@ export function CommandPalette() {
                     </div>
 
                     {isBusy && <span className="mt-0.5 shrink-0 text-[10px] text-dim/60 font-mono">…</span>}
-                  </button>
+                  </RowButton>
                 );
               })}
 
