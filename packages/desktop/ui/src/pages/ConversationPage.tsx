@@ -22,7 +22,7 @@ import {
 } from '../components/conversation/ConversationDraftEmptyAction';
 import { ConversationGoalPanel } from '../components/conversation/ConversationGoalPanel';
 import { addNotification } from '../components/notifications/notificationStore';
-import { AppPageEmptyState, EmptyState, LoadingState, Notice, PageHeader, SectionLabel } from '../components/ui';
+import { AppPageEmptyState, EmptyState, IconButton, LoadingState, Notice, PageHeader, SectionLabel, ToolbarButton } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
 import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
 import {
@@ -6306,17 +6306,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   {composerAttachmentProviders.length > 0 ? (
                     <div className="mb-2 flex flex-wrap gap-1.5">
                       {composerAttachmentProviders.map((provider) => (
-                        <button
+                        <ToolbarButton
                           key={`${provider.extensionId}:${provider.id}`}
-                          type="button"
-                          className="ui-toolbar-button px-2 py-1 text-[11px]"
+                          className="px-2 py-1 text-[11px]"
                           onClick={() => {
                             void invokeComposerAttachmentProvider(provider);
                           }}
                         >
                           {provider.icon ? <span aria-hidden="true">{provider.icon}</span> : null}
                           <span>{provider.title}</span>
-                        </button>
+                        </ToolbarButton>
                       ))}
                     </div>
                   ) : null}
@@ -6349,13 +6348,12 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                     <div className="border-b border-border-subtle/60 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
                         <SectionLabel tone="muted">Browser comments</SectionLabel>
-                        <button
-                          type="button"
-                          className="ui-toolbar-button px-2 py-1 text-[11px]"
+                        <ToolbarButton
+                          className="px-2 py-1 text-[11px]"
                           onClick={() => setPendingBrowserComments([])}
                         >
                           Clear
-                        </button>
+                        </ToolbarButton>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {pendingBrowserComments.map((entry) => (
@@ -6365,14 +6363,16 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                           >
                             <span className="max-w-[26rem] truncate text-primary">{formatBrowserCommentTargetLabel(entry.target)}</span>
                             <span className="max-w-[20rem] truncate">{entry.comment}</span>
-                            <button
-                              type="button"
-                              className="ml-1 text-dim hover:text-primary"
+                            <IconButton
+                              compact
+                              size="sm"
+                              className="ml-1"
                               aria-label="Remove browser comment"
+                              title="Remove browser comment"
                               onClick={() => setPendingBrowserComments((current) => current.filter((comment) => comment.id !== entry.id))}
                             >
                               ×
-                            </button>
+                            </IconButton>
                           </div>
                         ))}
                       </div>
