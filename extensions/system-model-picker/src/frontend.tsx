@@ -646,99 +646,6 @@ function ThinkingSelect({ context, variant }: { context: ComposerControlContext;
   );
 }
 
-function autoRouterLabel(context: ComposerControlContext): string {
-  const state = context.autoRouter?.state ?? 'off';
-  if (state === 'recommendation-pending') return 'Auto: Review';
-  if (state === 'settled') return 'Auto: Settled';
-  if (state === 'blocked') return 'Auto: Blocked';
-  if (state === 'routing') return 'Auto: Routing';
-  return 'Auto';
-}
-
-function AutoRouterToggle({ context, variant }: { context: ComposerControlContext; variant: 'inline' | 'menu' }) {
-  const autoRouter = context.autoRouter;
-  if (!autoRouter) return null;
-  const disabled = context.savingPreference !== null;
-  const triggerClass = variant === 'menu' ? MENU_TRIGGER_CLASS : cx(INLINE_TRIGGER_CLASS, 'max-w-[7.5rem] min-w-[5.25rem]');
-  const pending = autoRouter.pendingRecommendation;
-  const modeOptions: Array<{ value: NonNullable<typeof pending>['mode']; label: string }> = [
-    { value: 'direct-swap', label: 'Direct swap' },
-    { value: 'raw-transcript-switch', label: 'Pass transcript' },
-    { value: 'compact-and-switch', label: 'Compact & switch' },
-    { value: 'fresh-with-instructions', label: 'Fresh handoff' },
-  ];
-
-  return (
-    <details
-      data-model-picker-menu
-      className={variant === 'menu' ? 'relative min-w-0' : 'relative inline-flex min-w-0 items-center'}
-      onToggle={(event) => {
-        if (event.currentTarget.open) closeOtherComposerMenus(event.currentTarget);
-      }}
-    >
-      <summary
-        className={cx(
-          'flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden',
-          triggerClass,
-          autoRouter.enabled && 'text-accent',
-          pending && 'border-accent/40 bg-accent/10 text-accent',
-          disabled && 'pointer-events-none opacity-40',
-        )}
-        aria-label="Auto router"
-        aria-disabled={disabled}
-        title={autoRouter.enabled ? 'Auto router is enabled for this conversation.' : 'Auto router is disabled for this conversation.'}
-      >
-        <span className="min-w-0 truncate">{autoRouterLabel(context)}</span>
-        <Chevron className="static shrink-0" />
-      </summary>
-      <PositionedMenu
-        placement="absolute"
-        position={{ right: 0, bottom: '100%' }}
-        className={cx('mb-2 bg-base p-1.5', variant === 'menu' ? 'w-full min-w-56' : 'w-72')}
-      >
-        <MenuCheckbox
-          checked={autoRouter.enabled}
-          disabled={disabled}
-          label={autoRouter.enabled ? 'Enabled for this conversation' : 'Disabled for this conversation'}
-          onChange={autoRouter.setEnabled}
-        />
-        <MenuSeparator />
-        <div className="px-2 py-1.5 text-[11px] leading-relaxed text-secondary">
-          <div className="flex justify-between gap-3">
-            <span className="text-dim">Window</span>
-            <span className="min-w-0 truncate text-primary">{autoRouter.routingWindowLabel ?? 'configurable'}</span>
-          </div>
-          <div className="mt-1 flex justify-between gap-3">
-            <span className="text-dim">Judge</span>
-            <span className="min-w-0 truncate text-primary">{autoRouter.judgeLabel ?? 'configurable'}</span>
-          </div>
-        </div>
-        {pending ? (
-          <>
-            <MenuSeparator />
-            <div className="px-2 py-1.5 text-[11px] leading-relaxed text-secondary">
-              <p className="font-medium text-primary">Switch to {pending.targetModel}</p>
-              <p className="mt-1 break-words">{pending.reason}</p>
-            </div>
-            {modeOptions.map((option) => (
-              <MenuButton
-                key={option.value}
-                onClick={() => autoRouter.acceptRecommendation?.(pending.id, option.value)}
-                checked={pending.mode === option.value}
-              >
-                {option.label}
-              </MenuButton>
-            ))}
-            <MenuButton onClick={() => autoRouter.rejectRecommendation?.(pending.id)}>Stay on current model</MenuButton>
-          </>
-        ) : null}
-        <MenuSeparator />
-        <MenuButton onClick={() => autoRouter.openSettings?.()}>Open auto router settings</MenuButton>
-      </PositionedMenu>
-    </details>
-  );
-}
-
 function Chevron({ className }: { className?: string }) {
   return (
     <svg
@@ -790,12 +697,6 @@ export function ModelPreferencesComposerControl({
           </SectionLabel>
           <ThinkingSelect context={context} variant="menu" />
         </div>
-        <div>
-          <SectionLabel tone="muted" className="mb-1 block">
-            Auto router
-          </SectionLabel>
-          <AutoRouterToggle context={context} variant="menu" />
-        </div>
       </div>
     );
   }
@@ -803,7 +704,6 @@ export function ModelPreferencesComposerControl({
     <>
       <ModelSelect context={context} variant="inline" />
       <ThinkingSelect context={context} variant="inline" />
-      <AutoRouterToggle context={context} variant="inline" />
       <Ds4HealthIndicator health={ds4Health} variant="inline" active={ds4Health.isDs4 && context.streamIsStreaming} />
     </>
   );

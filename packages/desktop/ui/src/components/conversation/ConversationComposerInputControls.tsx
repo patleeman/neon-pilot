@@ -26,13 +26,6 @@ function getComposerPreferenceInlineLimit(composerShellWidth: number | null): nu
   return 0;
 }
 
-const AUTO_ROUTER_LOCAL_STORAGE_KEY = 'neon-pilot:auto-router-enabled';
-
-function readStoredAutoRouterEnabled(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(AUTO_ROUTER_LOCAL_STORAGE_KEY) === 'true';
-}
-
 function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps, next: ConversationComposerInputControlsProps): boolean {
   // The component manages its own localInput copy. Skip re-render when only
   // the `input` prop changes (the parent re-syncs every keystroke).
@@ -151,16 +144,11 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 }: ConversationComposerInputControlsProps) {
   const { composerControls = [], composerInputTools } = useExtensionRegistry();
   const [localInput, setLocalInputState] = useState(input);
-  const [autoRouterEnabled, setAutoRouterEnabledState] = useState(readStoredAutoRouterEnabled);
   const previousInputPropRef = useRef(input);
   const localInputRef = useRef(input);
   const setLocalInput = (nextInput: string) => {
     localInputRef.current = nextInput;
     setLocalInputState(nextInput);
-  };
-  const setAutoRouterEnabled = (enabled: boolean) => {
-    setAutoRouterEnabledState(enabled);
-    window.localStorage.setItem(AUTO_ROUTER_LOCAL_STORAGE_KEY, enabled ? 'true' : 'false');
   };
 
   useEffect(() => {
@@ -240,16 +228,6 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     savingPreference,
     selectModel: onSelectModel,
     selectThinkingLevel: onSelectThinkingLevel,
-    autoRouter: {
-      enabled: autoRouterEnabled,
-      state: autoRouterEnabled ? 'routing' : 'off',
-      routingWindowLabel: 'first 6 turns',
-      judgeLabel: 'configurable judge',
-      setEnabled: setAutoRouterEnabled,
-      openSettings: () => {
-        window.location.assign('/settings#settings-extension-settings');
-      },
-    },
   };
 
   const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
