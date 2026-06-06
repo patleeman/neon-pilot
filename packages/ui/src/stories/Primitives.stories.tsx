@@ -14,6 +14,7 @@ import {
   CenteredLoadingState,
   CenteredMessage,
   CheckButton,
+  ChoiceRow,
   CodeBlock,
   CompactCard,
   ConfirmDialog,
@@ -121,6 +122,23 @@ const meta = {
           </IconLink>
           <CheckButton checked aria-label="Completed" />
           <CheckButton checked={false} aria-label="Incomplete" />
+        </div>
+        <div style={{ display: 'grid', gap: 6, width: 420, maxWidth: '100%' }}>
+          <ChoiceRow
+            role="radio"
+            aria-checked="true"
+            checked
+            indicator="◉"
+            label="Use the current branch"
+            details="Keep this work scoped to the branch already open in the workspace."
+          />
+          <ChoiceRow
+            role="radio"
+            aria-checked="false"
+            indicator="◯"
+            label="Create a new branch"
+            details="Start a separate branch before applying the change."
+          />
         </div>
       </section>
 

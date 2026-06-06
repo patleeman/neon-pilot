@@ -10,6 +10,7 @@ import {
   CardMeta,
   CardTitle,
   CheckButton,
+  ChoiceRow,
   CodeBlock,
   CompactCard,
   cx,
@@ -80,6 +81,25 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-check-button');
     expect(html).toContain('ui-check-button-checked');
     expect(html).toContain('aria-pressed="true"');
+  });
+
+  it('renders choice rows with checked state and descriptive slots', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoiceRow, {
+        checked: true,
+        role: 'radio',
+        'aria-checked': true,
+        indicator: '◉',
+        label: 'Approve plan',
+        details: 'Continue with the selected implementation path.',
+      }),
+    );
+
+    expect(html).toContain('ui-choice-row');
+    expect(html).toContain('ui-choice-row-checked');
+    expect(html).toContain('role="radio"');
+    expect(html).toContain('Approve plan');
+    expect(html).toContain('Continue with the selected implementation path.');
   });
 
   it('renders icon links with shared icon button classes', () => {

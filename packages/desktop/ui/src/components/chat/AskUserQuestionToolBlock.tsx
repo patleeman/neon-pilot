@@ -13,7 +13,7 @@ import {
   resolveAskUserQuestionOptionHotkey,
   shouldAdvanceAskUserQuestionAfterSelection,
 } from '../../transcript/askUserQuestions';
-import { Button, cx, MetaLabel, Pill } from '../ui';
+import { Button, ChoiceRow, cx, MetaLabel, Pill } from '../ui';
 
 export { describeAskUserQuestionState };
 
@@ -576,37 +576,23 @@ export function AskUserQuestionToolBlock({
                           const checked = selectedValues.includes(option.value);
                           const indicator = activeQuestion.style === 'check' ? (checked ? '☑' : '☐') : checked ? '◉' : '◯';
                           return (
-                            <button
+                            <ChoiceRow
                               key={`${activeQuestion.id}:${option.value}`}
                               ref={(node) => {
                                 optionRefs.current[optionIndex] = node;
                               }}
-                              type="button"
                               role={activeQuestion.style === 'check' ? 'checkbox' : 'radio'}
                               aria-checked={checked}
                               aria-label={option.label}
                               aria-keyshortcuts={optionIndex < 9 ? String(optionIndex + 1) : undefined}
                               onClick={() => handleOptionSelect(activeQuestionIndex, optionIndex)}
                               onKeyDown={(event) => handleOptionKeyDown(optionIndex, event)}
-                              className={cx(
-                                'ui-list-row -mx-0.5 w-full items-start gap-3 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
-                                checked ? 'ui-list-row-selected' : 'ui-list-row-hover',
-                                submitting && 'cursor-default opacity-60',
-                              )}
-                            >
-                              <span
-                                className={cx('mt-0.5 w-5 shrink-0 text-[12px]', checked ? 'text-accent' : 'text-dim')}
-                                aria-hidden="true"
-                              >
-                                {indicator}
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="ui-row-title block break-words text-[13px] leading-snug">{option.label}</span>
-                                {option.details && (
-                                  <span className="ui-row-summary block break-words text-[12px] leading-relaxed">{option.details}</span>
-                                )}
-                              </span>
-                            </button>
+                              checked={checked}
+                              indicator={indicator}
+                              label={option.label}
+                              details={option.details}
+                              className={cx('-mx-0.5 focus-visible:ring-offset-surface', submitting && 'cursor-default opacity-60')}
+                            />
                           );
                         })}
                       </div>

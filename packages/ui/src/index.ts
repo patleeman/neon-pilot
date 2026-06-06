@@ -20,6 +20,7 @@ export {
   CenteredMessage,
   CenteredState,
   CheckButton,
+  ChoiceRow,
   CodeBlock,
   CompactCard,
   type CompactCardPadding,

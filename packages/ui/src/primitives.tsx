@@ -601,6 +601,31 @@ export const RowButton = forwardRef<
   );
 });
 
+export const ChoiceRow = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    checked?: boolean;
+    indicator?: ReactNode;
+    label: ReactNode;
+    details?: ReactNode;
+  }
+>(function ChoiceRow({ checked = false, indicator, label, details, className, children, type = 'button', ...props }, ref) {
+  return (
+    <button ref={ref} type={type} className={cx('ui-choice-row', checked && 'ui-choice-row-checked', className)} {...props}>
+      {indicator != null ? (
+        <span className={cx('ui-choice-row-indicator', checked && 'ui-choice-row-indicator-checked')} aria-hidden="true">
+          {indicator}
+        </span>
+      ) : null}
+      <span className="ui-choice-row-main">
+        <span className="ui-choice-row-label">{label}</span>
+        {details ? <span className="ui-choice-row-details">{details}</span> : null}
+        {children}
+      </span>
+    </button>
+  );
+});
+
 export type AttachmentChipSize = 'sm' | 'md';
 
 export function AttachmentChip({
