@@ -1,5 +1,5 @@
 import { useApi, useInvalidateOnTopics } from '@neon-pilot/extensions/settings';
-import { Button, Field, LoadingState, Notice, Textarea, TextInput, ToolbarButton, cx } from '@neon-pilot/extensions/ui';
+import { Button, CardMeta, Field, LoadingState, Notice, Textarea, TextInput, ToolbarButton, cx } from '@neon-pilot/extensions/ui';
 import { useEffect, useMemo, useState } from 'react';
 
 import { knowledgeApi } from '../lib/knowledgeApi';
@@ -233,22 +233,22 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
         </Field>
         {isOnboarding ? null : (
           <>
-            <p className="ui-card-meta break-all">
+            <CardMeta className="break-all">
               Managed mirror · <span className="font-mono text-[11px]">{knowledgeBaseState.managedRoot}</span>
-            </p>
-            <p className="ui-card-meta break-all">
+            </CardMeta>
+            <CardMeta className="break-all">
               Agent-visible knowledge paths ·{' '}
               <span className="font-mono text-[11px]">
                 {(knowledgeBaseState.effectiveRoots ?? [knowledgeBaseState.effectiveRoot]).join(', ')}
               </span>
-            </p>
-            <p className={cx('ui-card-meta break-all', action === null && syncPresentation.toneClass)}>
+            </CardMeta>
+            <CardMeta className={cx('break-all', action === null && syncPresentation.toneClass)}>
               {actionProgressText ?? syncPresentation.text}
-            </p>
-            <p className="ui-card-meta break-all">
+            </CardMeta>
+            <CardMeta className="break-all">
               Recovery copies · <span className="font-mono text-[11px]">{knowledgeBaseState.recoveryDir}</span> ·{' '}
               {knowledgeBaseState.recoveredEntryCount} saved
-            </p>
+            </CardMeta>
           </>
         )}
         {isOnboarding ? (
@@ -275,7 +275,7 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
         ) : null}
         {isOnboarding ? null : (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="ui-card-meta">{action === 'save' ? 'Saving…' : dirty ? 'Auto-save pending…' : 'Auto-saved'}</span>
+            <CardMeta as="span">{action === 'save' ? 'Saving…' : dirty ? 'Auto-save pending…' : 'Auto-saved'}</CardMeta>
             <ToolbarButton
               type="button"
               onClick={() => {
@@ -308,10 +308,10 @@ export function KnowledgeSettingsPanel({ variant = 'settings' }: { variant?: 'se
           </div>
         )}
         {isOnboarding ? null : (
-          <p className="ui-card-meta">
+          <CardMeta>
             Neon Pilot can index a managed git mirror and any local directories listed above. Folder and file @ mentions read from all
             agent-visible knowledge paths.
-          </p>
+          </CardMeta>
         )}
       </form>
 
