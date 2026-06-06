@@ -1041,6 +1041,11 @@ function WorkbenchTabStrip({
     [onActiveTabChange],
   );
 
+  const activeTabRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [activeTabId, openTabs.length]);
+
   const openNewTab = useCallback(() => {
     onOpenNewTab();
     clearWorkbenchSelection();
@@ -1051,6 +1056,7 @@ function WorkbenchTabStrip({
       {openTabs.map((tab) => (
         <WorkbenchTab
           key={tab.id}
+          ref={activeTabId === tab.id ? activeTabRef : undefined}
           active={activeTabId === tab.id}
           title={labelForTab(tab)}
         >

@@ -1417,22 +1417,20 @@ export const RowButton = forwardRef<
   );
 });
 
-export function WorkbenchTab({
-  active = false,
-  className,
-  children,
-  ...props
-}: {
-  active?: boolean;
-  className?: string;
-  children: ReactNode;
-} & HTMLAttributes<HTMLDivElement>) {
+export const WorkbenchTab = forwardRef<
+  HTMLDivElement,
+  {
+    active?: boolean;
+    className?: string;
+    children: ReactNode;
+  } & HTMLAttributes<HTMLDivElement>
+>(function WorkbenchTab({ active = false, className, children, ...props }, ref) {
   return (
-    <div className={cx('ui-workbench-tab', active && 'ui-workbench-tab-active', className)} {...props}>
+    <div ref={ref} className={cx('ui-workbench-tab', active && 'ui-workbench-tab-active', className)} {...props}>
       {children}
     </div>
   );
-}
+});
 
 export const WorkbenchTabButton = forwardRef<
   HTMLButtonElement,
