@@ -697,22 +697,20 @@ export function DesktopKeyboardShortcutsSettingsSection() {
                       />
                       {item.extensionId ? (
                         <>
-                          <button
+                          <ToolbarButton
                             type="button"
-                            className={ACTION_BUTTON_CLASS}
                             disabled={saving}
                             onClick={() => void saveExtensionKeybinding(item, { enabled: item.enabled === false })}
                           >
                             {item.enabled === false ? 'Enable' : 'Disable'}
-                          </button>
-                          <button
+                          </ToolbarButton>
+                          <ToolbarButton
                             type="button"
-                            className={ACTION_BUTTON_CLASS}
                             disabled={saving}
                             onClick={() => void saveExtensionKeybinding(item, { reset: true })}
                           >
                             Reset
-                          </button>
+                          </ToolbarButton>
                         </>
                       ) : null}
                     </div>
@@ -1042,15 +1040,15 @@ function TelemetryLogsSettingsPanel() {
       description="Local diagnostics and troubleshooting exports."
       actions={
         <>
-          <button type="button" className={ACTION_BUTTON_CLASS} onClick={openLogFolder} disabled={!data?.logDir || action !== null}>
+          <ToolbarButton type="button" onClick={openLogFolder} disabled={!data?.logDir || action !== null}>
             {action === 'open' ? 'Opening…' : 'Open log folder'}
-          </button>
-          <button type="button" className={ACTION_BUTTON_CLASS} onClick={exportLogs} disabled={action !== null}>
+          </ToolbarButton>
+          <ToolbarButton type="button" onClick={exportLogs} disabled={action !== null}>
             {action === 'export' ? 'Exporting…' : 'Export diagnostics bundle'}
-          </button>
-          <button type="button" className={ACTION_BUTTON_CLASS} onClick={maintainTelemetryDb} disabled={action !== null}>
+          </ToolbarButton>
+          <ToolbarButton type="button" onClick={maintainTelemetryDb} disabled={action !== null}>
             {action === 'maintain' ? 'Cleaning…' : 'Clean up telemetry index'}
-          </button>
+          </ToolbarButton>
         </>
       }
     >
