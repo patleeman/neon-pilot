@@ -47,6 +47,7 @@ import {
   Pill,
   ProgressBar,
   RailSection,
+  RailSubsection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
@@ -293,6 +294,16 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-rail-section');
     expect(html).toContain('Files');
     expect(html).toContain('Ready');
+  });
+
+  it('renders compact rail subsections for bordered rail groups', () => {
+    const html = renderToStaticMarkup(
+      createElement(RailSubsection, { title: 'Needs review' }, createElement(ResourceListItem, { label: 'task.md', meta: 'failed' })),
+    );
+
+    expect(html).toContain('border-t border-border-subtle');
+    expect(html).toContain('Needs review');
+    expect(html).toContain('task.md');
   });
 
   it('renders compact shelf section primitives', () => {

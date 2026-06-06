@@ -98,6 +98,7 @@ export {
   ProgressBar,
   ProgressRow,
   RailSection,
+  RailSubsection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,

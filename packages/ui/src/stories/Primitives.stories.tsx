@@ -69,6 +69,7 @@ import {
   ProgressBar,
   ProgressRow,
   RailSection,
+  RailSubsection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,
@@ -524,6 +525,9 @@ const meta = {
                     <ResourceListItem label="index.html" meta="current" selected />
                     <ResourceListItem label="styles.css" meta="asset" />
                   </ResourceList>
+                  <RailSubsection title="Needs review" className="mt-3">
+                    <ResourceListItem label="contract.md" meta="failed validation" />
+                  </RailSubsection>
                 </RailSection>
                 <div style={{ minHeight: 0, overflow: 'auto', borderLeft: '1px solid rgb(var(--color-border-subtle))', padding: 16 }}>
                   <CodeBlock compact>{'<main>\\n  <h1>Preview</h1>\\n</main>'}</CodeBlock>

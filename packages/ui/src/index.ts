@@ -99,6 +99,7 @@ export {
   type ProgressBarTone,
   ProgressRow,
   RailSection,
+  RailSubsection,
   ResourcePickerDialog,
   ResourcePickerList,
   ResourcePickerToolbar,

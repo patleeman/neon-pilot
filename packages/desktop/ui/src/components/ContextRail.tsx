@@ -23,7 +23,19 @@ import type { AgentToolInfo, ScheduledTaskSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
 import { RichMarkdownRenderer } from './editor/RichMarkdownRenderer';
 import { addNotification } from './notifications/notificationStore';
-import { CardMeta, CardTitle, CompactCard, cx, ErrorState, IconButton, LoadingState, ResourceListLink, SectionLabel, ToolbarButton } from './ui';
+import {
+  CardMeta,
+  CardTitle,
+  CompactCard,
+  cx,
+  ErrorState,
+  IconButton,
+  LoadingState,
+  RailSubsection,
+  ResourceListLink,
+  SectionLabel,
+  ToolbarButton,
+} from './ui';
 
 const ScheduledTaskPanel = lazy(() => import('./ScheduledTaskPanel').then((module) => ({ default: module.ScheduledTaskPanel })));
 
@@ -46,10 +58,9 @@ export function prefetchConversationRailData(input: {
 
 function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cx('space-y-3 border-t border-border-subtle pt-4 first:border-t-0 first:pt-0', className)}>
-      <h3 className="text-[13px] font-semibold text-primary">{title}</h3>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <RailSubsection title={title} className={className} bodyClassName="space-y-3">
+      {children}
+    </RailSubsection>
   );
 }
 
@@ -448,8 +459,7 @@ function ConversationsWorkspaceContext() {
         <RailMetadataRow label="Needs review" value={attentionSessions.length} />
       </div>
 
-      <div className="space-y-2 border-t border-border-subtle pt-4">
-        <SectionLabel>Needs review</SectionLabel>
+      <RailSubsection title="Needs review">
         {attentionSessions.length === 0 ? (
           <CardMeta>No conversations currently need review.</CardMeta>
         ) : (
@@ -465,10 +475,9 @@ function ConversationsWorkspaceContext() {
             ))}
           </div>
         )}
-      </div>
+      </RailSubsection>
 
-      <div className="space-y-2 border-t border-border-subtle pt-4">
-        <SectionLabel>Open now</SectionLabel>
+      <RailSubsection title="Open now">
         {[...pinnedSessions.map((session) => ({ session, label: 'pinned' })), ...tabs.map((session) => ({ session, label: 'open' }))].slice(
           0,
           5,
@@ -489,7 +498,7 @@ function ConversationsWorkspaceContext() {
               ))}
           </div>
         )}
-      </div>
+      </RailSubsection>
     </div>
   );
 }
@@ -524,8 +533,7 @@ function CapabilitiesOverviewContext({
           <RailMetadataRow label="Presets" value={presets.length} />
           <RailMetadataRow label="Defaults" value={defaultPresetIds.length} />
         </div>
-        <div className="space-y-2 border-t border-border-subtle pt-4">
-          <SectionLabel>Defaults</SectionLabel>
+        <RailSubsection title="Defaults">
           {defaultPresetIds.length === 0 ? (
             <CardMeta>No default presets configured.</CardMeta>
           ) : (
@@ -545,7 +553,7 @@ function CapabilitiesOverviewContext({
               );
             })
           )}
-        </div>
+        </RailSubsection>
       </div>
     );
   }
@@ -562,22 +570,23 @@ function CapabilitiesOverviewContext({
           <RailMetadataRow label="Running" value={tasks.filter((task) => task.running).length} />
           <RailMetadataRow label="Failing" value={failingTasks.length} />
         </div>
-        <div className="space-y-2 border-t border-border-subtle pt-4">
-          <SectionLabel>Needs attention</SectionLabel>
+        <RailSubsection title="Needs attention">
           {failingTasks.length === 0 ? (
             <CardMeta>No scheduled tasks currently need attention.</CardMeta>
           ) : (
-            failingTasks.slice(0, 5).map((task) => (
-              <ResourceListLink
-                key={task.id}
-                as={Link}
-                to={`/capabilities${buildCapabilitiesSearch(location.search, { section: 'scheduled', taskId: task.id })}`}
-                label={task.id}
-                meta={`failed ${task.lastRunAt ? timeAgo(task.lastRunAt) : 'recently'}`}
-              />
-            ))
+            failingTasks
+              .slice(0, 5)
+              .map((task) => (
+                <ResourceListLink
+                  key={task.id}
+                  as={Link}
+                  to={`/capabilities${buildCapabilitiesSearch(location.search, { section: 'scheduled', taskId: task.id })}`}
+                  label={task.id}
+                  meta={`failed ${task.lastRunAt ? timeAgo(task.lastRunAt) : 'recently'}`}
+                />
+              ))
           )}
-        </div>
+        </RailSubsection>
       </div>
     );
   }
@@ -593,22 +602,23 @@ function CapabilitiesOverviewContext({
           <RailMetadataRow label="Active tools" value={activeTools.length} />
           <RailMetadataRow label="CLI issues" value={unavailableCliCount} />
         </div>
-        <div className="space-y-2 border-t border-border-subtle pt-4">
-          <SectionLabel>Active by default</SectionLabel>
+        <RailSubsection title="Active by default">
           {activeTools.length === 0 ? (
             <CardMeta>No active tools reported.</CardMeta>
           ) : (
-            activeTools.slice(0, 6).map((tool) => (
-              <ResourceListLink
-                key={tool.name}
-                as={Link}
-                to={`/capabilities${buildCapabilitiesSearch(location.search, { section: 'tools', toolName: tool.name })}`}
-                label={tool.name}
-                meta={`${toolParameterDetails(tool).length} parameter${toolParameterDetails(tool).length === 1 ? '' : 's'}`}
-              />
-            ))
+            activeTools
+              .slice(0, 6)
+              .map((tool) => (
+                <ResourceListLink
+                  key={tool.name}
+                  as={Link}
+                  to={`/capabilities${buildCapabilitiesSearch(location.search, { section: 'tools', toolName: tool.name })}`}
+                  label={tool.name}
+                  meta={`${toolParameterDetails(tool).length} parameter${toolParameterDetails(tool).length === 1 ? '' : 's'}`}
+                />
+              ))
           )}
-        </div>
+        </RailSubsection>
       </div>
     );
   }
@@ -624,13 +634,12 @@ function CapabilitiesOverviewContext({
         <RailMetadataRow label="Scheduled" value={tasks.filter((task) => task.enabled).length} />
         <RailMetadataRow label="Tools" value={activeTools.length} />
       </div>
-      <div className="space-y-2 border-t border-border-subtle pt-4">
-        <SectionLabel>Current health</SectionLabel>
+      <RailSubsection title="Current health">
         <CardMeta>
           {tasks.filter((task) => task.running).length} running scheduled task{tasks.filter((task) => task.running).length === 1 ? '' : 's'}{' '}
           · {failingTasks.length} failing · {unavailableCliCount} CLI issue{unavailableCliCount === 1 ? '' : 's'}.
         </CardMeta>
-      </div>
+      </RailSubsection>
     </div>
   );
 }
@@ -706,10 +715,9 @@ function CapabilitiesTaskContext({ taskId }: { taskId: string }) {
           <SectionLabel>Prompt</SectionLabel>
           <RailMarkdownPreview content={data.prompt} />
         </div>
-        <div className="space-y-2 border-t border-border-subtle pt-4">
-          <SectionLabel>Task file</SectionLabel>
+        <RailSubsection title="Task file">
           <RailMarkdownPreview content={data.fileContent} />
-        </div>
+        </RailSubsection>
       </div>
     </div>
   );
@@ -729,8 +737,7 @@ function CapabilitiesToolContext({ tool }: { tool: AgentToolInfo }) {
         <RailMetadataRow label="Default" value={tool.active ? 'Yes' : 'No'} />
         <RailMetadataRow label="Parameters" value={parameters.length} />
       </div>
-      <div className="space-y-2 border-t border-border-subtle pt-4">
-        <SectionLabel>Parameters</SectionLabel>
+      <RailSubsection title="Parameters">
         {parameters.length === 0 ? (
           <CardMeta>No parameters.</CardMeta>
         ) : (
@@ -745,7 +752,7 @@ function CapabilitiesToolContext({ tool }: { tool: AgentToolInfo }) {
             </CompactCard>
           ))
         )}
-      </div>
+      </RailSubsection>
     </div>
   );
 }
@@ -819,13 +826,12 @@ function SettingsOverviewContext() {
         <RailMetadataRow label="Layout" value="Sidebar width, rail width, and reset actions" />
       </div>
 
-      <div className="space-y-2 border-t border-border-subtle pt-4">
-        <SectionLabel>What lives here</SectionLabel>
+      <RailSubsection title="What lives here">
         <CardMeta>
           Use Settings for stable preferences, interface controls, desktop connections, and inline runtime service panels. Use Background
           Work for shell commands, agent tasks, and recovery review.
         </CardMeta>
-      </div>
+      </RailSubsection>
     </div>
   );
 }

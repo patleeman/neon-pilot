@@ -1428,6 +1428,33 @@ export function RailSection({
   );
 }
 
+export function RailSubsection({
+  title,
+  actions,
+  children,
+  className,
+  bodyClassName,
+  headerClassName,
+  ...props
+}: {
+  title: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  headerClassName?: string;
+} & HTMLAttributes<HTMLElement>) {
+  return (
+    <section className={cx('space-y-2 border-t border-border-subtle pt-4 first:border-t-0 first:pt-0', className)} {...props}>
+      <div className={cx('flex items-center justify-between gap-2', headerClassName)}>
+        <SectionLabel>{title}</SectionLabel>
+        {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
+      </div>
+      <div className={cx('space-y-2', bodyClassName)}>{children}</div>
+    </section>
+  );
+}
+
 export function ShelfSection({
   header,
   children,
