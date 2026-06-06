@@ -46,6 +46,7 @@ export {
   Pill,
   PositionedMenu,
   ProgressBar,
+  RailSubsection,
   ResourceListItem,
   SearchInput,
   SectionLabel,

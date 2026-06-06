@@ -10,6 +10,7 @@ import {
   PanelHeader,
   PanelMessage,
   Pill,
+  RailSubsection,
   ResourceListItem,
   SectionLabel,
   SurfacePanel,
@@ -355,9 +356,9 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                 />
               ))}
             </div>
-            <div className="space-y-2 border-t border-border-subtle pt-4">
-              <div className="flex items-center justify-between gap-2">
-                <SectionLabel>Saved</SectionLabel>
+            <RailSubsection
+              title="Saved"
+              actions={
                 <ToolbarButton
                   onClick={() => {
                     setDraft(EMPTY_DRAFT);
@@ -367,7 +368,8 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                 >
                   New
                 </ToolbarButton>
-              </div>
+              }
+            >
               {savedWorkflows.length === 0 ? <PanelMessage className="px-0 py-0">No saved workflows yet.</PanelMessage> : null}
               {savedWorkflows.map((item) => (
                 <SurfacePanel key={item.id} muted className="px-3 py-2 shadow-none">
@@ -442,9 +444,8 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 </SurfacePanel>
               ) : null}
-            </div>
-            <div className="space-y-2 border-t border-border-subtle pt-4">
-              <SectionLabel>Examples</SectionLabel>
+            </RailSubsection>
+            <RailSubsection title="Examples">
               {templates.map((item) => (
                 <SurfacePanel key={item.id} muted className="px-3 py-2 shadow-none">
                   <div className="truncate text-[13px] font-medium text-primary">{item.name}</div>
@@ -454,7 +455,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                   </div>
                 </SurfacePanel>
               ))}
-            </div>
+            </RailSubsection>
           </section>
 
           <section className="min-w-0 space-y-4 border-t border-border-subtle pt-4">

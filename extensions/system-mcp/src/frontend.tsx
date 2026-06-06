@@ -3,6 +3,7 @@ import {
   Field,
   Notice,
   Pill,
+  RailSubsection,
   Select,
   SettingsSection,
   SupportingText,
@@ -327,8 +328,7 @@ export function McpSettingsPanel() {
               </form>
             ) : null}
 
-            <div className="space-y-3">
-              <SupportingText>Explicit servers</SupportingText>
+            <RailSubsection title="Explicit servers">
               {explicitServers.length > 0 ? (
                 explicitServers.map((name) => {
                   const server = mcpState.servers.find((entry) => entry.name === name);
@@ -394,10 +394,9 @@ export function McpSettingsPanel() {
               ) : (
                 <SupportingText>No explicit servers. Add one above to create a managed MCP configuration.</SupportingText>
               )}
-            </div>
+            </RailSubsection>
 
-            <div className="space-y-3">
-              <SupportingText>Skill-bundled servers</SupportingText>
+            <RailSubsection title="Skill-bundled servers">
               {mcpState.bundledSkills.length > 0 ? (
                 mcpState.bundledSkills.map((bundle) => (
                   <div key={bundle.manifestPath} className="space-y-1.5 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
@@ -424,7 +423,7 @@ export function McpSettingsPanel() {
               ) : (
                 <SupportingText>No skill-local mcp.json wrappers found in the active skill set.</SupportingText>
               )}
-            </div>
+            </RailSubsection>
           </div>
         ) : null}
       </SettingsSection>
