@@ -76,18 +76,22 @@ Each release command performs these steps in order:
 6. **Release note edit** — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and important reliability/build changes; do not dump raw commit messages
 7. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot, including TypeScript, Settings page render tests, extension smoke tests, and packaged extension validation
 8. **Build** — builds signed desktop artifacts locally
-9. **Notarize** — submits the built `.app` for Apple notarization
-10. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
-11. **Git push** — pushes the version commit and tag to the remote
-12. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
+9. **Extension golden smoke** — launches the packaged app in isolated state, verifies the release-critical extension matrix, opens extension routes, and invokes representative extension backend actions
+10. **Notarize** — submits the built `.app` for Apple notarization
+11. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
+12. **Git push** — pushes the version commit and tag to the remote
+13. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
 
-Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full signed desktop app with Electron Builder `--publish never`, packages installable extensions, validates packaged extensions, then runs the automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
+Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full signed desktop app with Electron Builder `--publish never`, packages installable extensions, validates packaged extensions, then runs the extension golden smoke, automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
 
 ## Automated Smoke Test
 
-The release script runs an automated smoke test after signing and notarization, before pushing the tag. It launches the built `.app` with:
+The release script runs automated smoke tests after signing and notarization, before pushing the tag. The extension golden smoke launches the built `.app` with fresh-machine roots:
 
 - An isolated temporary `NEON_PILOT_STATE_ROOT`
+- An isolated temporary `NEON_PILOT_CONFIG_ROOT`
+- An isolated temporary `NEON_PILOT_KNOWLEDGE_ROOT`
+- Isolated HOME and XDG cache/config/data/state roots
 - A dedicated daemon socket
 - No interference from an already-running user daemon
 
@@ -99,11 +103,30 @@ The check verifies:
 4. Agent-readable packaged resources exist (`docs/README.md`, bundled system extension READMEs, extension skills, and manifest-declared extension bundles)
 5. Packaged renderer API endpoints return successful responses for extensions, gateways, and models
 6. Packaged extension backends import successfully with Electron-style `process.resourcesPath`
-7. A live conversation can be created and its `bash` tool returns output
-8. The Knowledge route renders
-9. A conversation route renders
-10. A seeded old-profile startup idle smoke passes with 2,500 synthetic historical conversations, no prebuilt conversation context DB, bounded CPU, and no local model process startup
-11. The full desktop performance smoke reports usable startup readiness (`appUsableMs`, including composer and extension registry availability), draft submit click-to-visible latency, route-switch latency, conversation search latency, model fetch latency, long-transcript open latency, basic interaction timing, idle CPU, and renderer heap delta within the packaged-app gates
+7. The extension golden matrix in `scripts/release-extension-golden-matrix.json` passes against the packaged app: required extensions are enabled, release-critical extension routes render, representative backend actions execute through the real extension host route, expected agent tools appear in `/api/tools`, and safe action-backed tools invoke successfully
+8. A live conversation can be created and its `bash` tool returns output
+9. The Knowledge route renders
+10. A conversation route renders
+11. A seeded old-profile startup idle smoke passes with 2,500 synthetic historical conversations, no prebuilt conversation context DB, bounded CPU, and no local model process startup
+12. The full desktop performance smoke reports usable startup readiness (`appUsableMs`, including composer and extension registry availability), draft submit click-to-visible latency, route-switch latency, conversation search latency, model fetch latency, long-transcript open latency, basic interaction timing, idle CPU, and renderer heap delta within the packaged-app gates
+
+### Extension golden matrix
+
+Release-critical extension behavior is owned by `scripts/release-extension-golden-matrix.json` and executed by:
+
+```bash
+pnpm run smoke:release-extensions -- --app="/Applications/Neon Pilot RC.app"
+```
+
+Use this matrix for workflows that have repeatedly caused post-release breakage or are part of the expected packaged app experience. A golden case should use the same path the user relies on: installed extension registry state, real nav route rendering, backend actions invoked through `/api/extensions/:id/actions/:actionId`, and agent tool visibility through `/api/tools`. Prefer a small number of high-signal workflows over exhaustive component coverage.
+
+Agent tools should be tested in layers:
+
+- **Inventory**: add the tool name to `agentTools.expectedNames` so `/api/tools` proves the packaged agent runtime can see and inject it.
+- **Safe invocation**: add an `agentTools.invocations` case when the action can run without live model calls, network dependency, or user interaction.
+- **Context-dependent tools**: keep them in inventory coverage, and add a conversation-backed smoke when correctness depends on `toolContext` fields such as `conversationId`, `cwd`, session state, streaming updates, or transcript rendering. Do not fake those through direct action calls.
+
+For optional first-party extensions distributed from `patleeman/neon-pilot-extensions`, add their release zips to `installablePackages` or their catalog ids to `catalogInstalls` before promoting an RC to stable. The gate then proves the candidate app can install/load those artifacts instead of only proving the source tree builds.
 
 Optional first-party extensions are distributed separately from the app bundle from [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions). Build their release bundles with the extension builder/packer, publish `.neon-extension.zip` artifacts to GitHub releases, and keep their `extension.json` compatibility ranges aligned with supported Neon Pilot versions.
 

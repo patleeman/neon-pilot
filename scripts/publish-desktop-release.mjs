@@ -705,6 +705,7 @@ function resolveReleaseSmokePaths(releaseDir, buildRoot) {
   return {
     appPath,
     smokeScriptPath: resolve(buildRoot, 'scripts', 'smoke-desktop-release.mjs'),
+    extensionGoldenSmokeScriptPath: resolve(buildRoot, 'scripts', 'release-extension-golden-smoke.mjs'),
     startupIdleSmokeScriptPath: resolve(buildRoot, 'scripts', 'smoke-startup-idle.mjs'),
     perfSmokeScriptPath: resolve(buildRoot, 'scripts', 'perf-desktop-smoke.mjs'),
   };
@@ -752,10 +753,13 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
     return;
   }
 
-  const { appPath, smokeScriptPath, startupIdleSmokeScriptPath, perfSmokeScriptPath } = resolveReleaseSmokePaths(releaseDir, buildRoot);
+  const { appPath, smokeScriptPath, extensionGoldenSmokeScriptPath, startupIdleSmokeScriptPath, perfSmokeScriptPath } =
+    resolveReleaseSmokePaths(releaseDir, buildRoot);
   if (!isTruthyEnv(env.NEON_PILOT_RELEASE_SKIP_AUTOMATED_SMOKE)) {
     console.log('Running automated release smoke test against the built app with isolated daemon state...');
     run('node', [smokeScriptPath, appPath], { cwd: buildRoot, env });
+    console.log('Running extension golden release smoke against the built app...');
+    run('node', [extensionGoldenSmokeScriptPath, appPath], { cwd: buildRoot, env });
     console.log('Running seeded-profile startup idle smoke test against the built app...');
     run('node', [startupIdleSmokeScriptPath, `--app=${appPath}`, '--seconds=30', '--sessions=2500', '--blocks=80', '--max-cpu=130'], {
       cwd: buildRoot,
@@ -819,6 +823,7 @@ if (!packagedAppForExtensionCheck) {
   fail('Packaged desktop app not found; cannot validate packaged extensions.');
 }
 run('node', ['scripts/check-packaged-extensions.mjs', packagedAppForExtensionCheck], { cwd: buildRoot, env });
+run('node', ['scripts/release-extension-golden-smoke.mjs', packagedAppForExtensionCheck], { cwd: buildRoot, env });
 requirePreNotarizationSmokeTest(env, releaseDir, buildRoot);
 
 const desktopReleaseFiles = collectReleaseFiles(releaseDir, version);

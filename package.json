@@ -51,6 +51,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:extensions": "vitest run packages/desktop/server/extensions/extensionIntegration.smoke.test.ts packages/desktop/server/extensions/systemExtensionBackendRuntime.smoke.test.ts packages/desktop/server/routes/registerAll.smoke.test.ts",
+    "test:release-hardening": "vitest run scripts/release-extension-golden-smoke.test.mjs scripts/release-smoke-args.test.mjs",
+    "smoke:release-extensions": "node scripts/release-extension-golden-smoke.mjs",
     "test:smoke": "pnpm run test:extensions && pnpm run smoke:startup-idle",
     "clean": "pnpm -r run clean --if-present && rm -f tsconfig.tsbuildinfo",
     "ab:run": "node scripts/agent-browser-session.mjs run",

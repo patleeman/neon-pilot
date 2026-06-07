@@ -72,6 +72,9 @@ if (!appPath) {
 console.log('Validating packaged extensions against the built app...');
 run('node', ['scripts/check-packaged-extensions.mjs', appPath]);
 
+console.log('Running extension golden release smoke against the built app...');
+run('node', ['scripts/release-extension-golden-smoke.mjs', appPath]);
+
 console.log('Running automated release smoke test against the built app...');
 run('node', ['scripts/smoke-desktop-release.mjs', appPath]);
 

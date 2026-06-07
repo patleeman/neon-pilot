@@ -51,6 +51,7 @@ Before calling an extension done, an agent must be able to answer each item with
 - **User path validated**: the route, rail, Settings section, command, composer control, or tool invocation was opened or invoked through the app/extension host.
 - **States covered**: UI surfaces show useful loading, empty, error, and success states; backend-only extensions return useful error text/details for malformed input.
 - **Docs local**: the extension has or updates a `README.md` with build, reload, validation, and usage notes for the next agent.
+- **Release matrix updated**: if the extension is release-critical or fixes a released regression, add a route/action/install case to `scripts/release-extension-golden-matrix.json` so packaged-app verification catches future breakage.
 
 ## Core vs extensions
 
@@ -159,7 +160,7 @@ The manifest declares what your extension contributes:
 | Field                         | Purpose                                                                                       | Docs                                                                                      |
 | ----------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `views`                       | UI surfaces (pages, panels, sidebar replacements)                                             | See `docs/views.md`                                                                       |
-| `nav`                         | Left sidebar navigation items; can reference a sidebar view with `sidebarView`                 |                                                                                           |
+| `nav`                         | Left sidebar navigation items; can reference a sidebar view with `sidebarView`                |                                                                                           |
 | `commands`                    | Extension actions invokable by command IDs                                                    | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `cliCommands`                 | Product administration commands contributed to the `neon-pilot` CLI                           | [See below](#cli-commands-clicommands)                                                    |
 | `keybindings`                 | Keyboard shortcuts that execute commands                                                      | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |

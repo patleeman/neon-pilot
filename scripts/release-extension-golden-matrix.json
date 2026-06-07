@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "description": "Release-blocking extension workflows exercised against a packaged desktop app.",
+  "requiredExtensions": [
+    "system-extension-manager",
+    "system-artifacts",
+    "system-knowledge",
+    "system-settings",
+    "system-automations",
+    "system-conversation-tools",
+    "system-diffs",
+    "system-dynamic-workflows",
+    "system-mcp",
+    "system-telemetry",
+    "system-todo",
+    "system-runs"
+  ],
+  "appRoutes": [
+    {
+      "path": "/conversations/new",
+      "selectors": ["textarea"]
+    },
+    {
+      "path": "/settings/providers",
+      "text": ["Providers"]
+    },
+    {
+      "path": "/settings/desktop",
+      "text": ["Desktop"]
+    }
+  ],
+  "registryMinimums": {
+    "routes": 7,
+    "surfaces": 10,
+    "composerShelves": 2,
+    "composerControls": 2,
+    "composerInputTools": 1,
+    "composerButtons": 1,
+    "transcriptRenderers": 4,
+    "settings": 1
+  },
+  "routes": [
+    {
+      "extensionId": "system-extension-manager",
+      "path": "/extensions",
+      "text": ["Extensions"]
+    },
+    {
+      "extensionId": "system-knowledge",
+      "path": "/knowledge",
+      "text": ["Knowledge"]
+    },
+    {
+      "extensionId": "system-settings",
+      "path": "/settings",
+      "text": ["Settings"]
+    },
+    {
+      "extensionId": "system-automations",
+      "path": "/automations",
+      "text": ["Automations"]
+    },
+    {
+      "extensionId": "system-dynamic-workflows",
+      "path": "/workflows",
+      "text": ["Workflows"]
+    },
+    {
+      "extensionId": "system-telemetry",
+      "path": "/telemetry",
+      "text": ["Telemetry"]
+    }
+  ],
+  "actions": [
+    {
+      "extensionId": "system-extension-manager",
+      "actionId": "listExtensions",
+      "input": {},
+      "text": ["system-extension-manager", "system-knowledge"]
+    },
+    {
+      "extensionId": "system-extension-manager",
+      "actionId": "readSearchPaths",
+      "input": {},
+      "text": ["defaultLocation"]
+    },
+    {
+      "extensionId": "system-todo",
+      "actionId": "getState",
+      "input": { "conversationId": "release-golden-smoke" },
+      "text": ["items"]
+    },
+    {
+      "extensionId": "system-knowledge",
+      "actionId": "knowledgeListFiles",
+      "input": {},
+      "text": ["ok"]
+    }
+  ],
+  "agentTools": {
+    "expectedNames": [
+      "artifact",
+      "bash",
+      "background_bash",
+      "checkpoint",
+      "conversation_admin",
+      "conversation_inspect",
+      "mcp",
+      "scheduled_task",
+      "subagent",
+      "todo"
+    ],
+    "invocations": [
+      {
+        "name": "bash",
+        "extensionId": "system-runs",
+        "actionId": "bash",
+        "input": { "command": "printf neon-tool-smoke" },
+        "text": ["neon-tool-smoke"]
+      },
+      {
+        "name": "scheduled_task",
+        "extensionId": "system-automations",
+        "actionId": "scheduledTask",
+        "input": { "action": "list" },
+        "text": ["tasks"]
+      },
+      {
+        "name": "conversation_inspect",
+        "extensionId": "system-conversation-tools",
+        "actionId": "conversationInspect",
+        "input": { "action": "list", "limit": 1 },
+        "text": ["ok"]
+      },
+      {
+        "name": "mcp",
+        "extensionId": "system-mcp",
+        "actionId": "mcpTool",
+        "input": { "action": "list" },
+        "text": ["servers"]
+      }
+    ]
+  },
+  "installablePackages": [],
+  "catalogInstalls": []
+}

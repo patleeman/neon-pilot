@@ -32,15 +32,16 @@ pnpm run check    # types, lint, format, full test suite, extension static check
 
 Focused checks:
 
-| Command                     | Use when                                                                            |
-| --------------------------- | ----------------------------------------------------------------------------------- |
-| `pnpm run check:types`      | TypeScript/import/unused-symbol risk                                                |
-| `pnpm run lint`             | Lint/import-order risk                                                              |
-| `pnpm run fmt`              | Formatting-only verification                                                        |
-| `pnpm test`                 | Broad regression pass; deterministic unit, integration, smoke, and regression tests |
-| `pnpm run test:extensions`  | Focused extension runtime smoke tests                                               |
-| `pnpm run check:extensions` | Extension static checks plus focused extension smoke tests                          |
-| `pnpm run check:coverage`   | Periodic coverage review; advisory, not blocking                                    |
+| Command                           | Use when                                                                            |
+| --------------------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm run check:types`            | TypeScript/import/unused-symbol risk                                                |
+| `pnpm run lint`                   | Lint/import-order risk                                                              |
+| `pnpm run fmt`                    | Formatting-only verification                                                        |
+| `pnpm test`                       | Broad regression pass; deterministic unit, integration, smoke, and regression tests |
+| `pnpm run test:extensions`        | Focused extension runtime smoke tests                                               |
+| `pnpm run check:extensions`       | Extension static checks plus focused extension smoke tests                          |
+| `pnpm run test:release-hardening` | Focused tests for release smoke wiring and the extension golden matrix              |
+| `pnpm run check:coverage`         | Periodic coverage review; advisory, not blocking                                    |
 
 `check:extensions:static` enforces the extension/core boundary. Extension runtime source must use `@neon-pilot/extensions` public APIs instead of importing `@neon-pilot/core`, `@neon-pilot/desktop`, or app package internals directly. Host backend API modules must stay narrow and lazy-load host implementations rather than statically re-exporting core/desktop modules.
 
@@ -63,6 +64,14 @@ pnpm run perf:desktop -- --app="/Applications/Neon Pilot RC.app" --sessions=2500
 ```
 
 This runs the fuller startup/application performance suite against a packaged app: app-shell readiness, old-profile idle CPU, draft submit click-to-visible timing, pending prompt paint, route switches, model fetch, conversation search, long-transcript open, previous-page loading, recovery, fork/rewind creation and open-time checks, basic interaction timing, and renderer heap delta. Pass `--skip-fork` only for a deliberately narrower local run. `appUsableMs` is the startup readiness gate: it waits for React hydration, an enabled composer, and the extension registry/critical extension UI to be available. `startupReadyMs` and `appHydratedMs` are diagnostic paint/hydration timings, not sufficient readiness on their own. `draftSubmitVisibleMs` measures from clicking Send on `/conversations/new` until the submitted prompt is visible on the saved conversation route; setup time to navigate to the draft page is reported separately as `draftSubmitSetupMs`. `draftSubmitPendingPromptBlockVisibleMs`, `longTranscriptLoadPreviousMs`, repeated conversation switch max, recovery/open timings, and fork/rewind open timings are enforced separately so regressions do not hide inside a broad pass. The smoke refuses stale desktop UI/server/main bundles for the source files it covers; rebuild the touched bundle first when it reports a stale output.
+
+Packaged extension golden smoke:
+
+```bash
+pnpm run smoke:release-extensions -- --app="/Applications/Neon Pilot RC.app"
+```
+
+This launches the packaged app with isolated state, config, knowledge, user-data, HOME, and XDG roots, reads `scripts/release-extension-golden-matrix.json`, verifies required extensions are enabled in the real registry, opens every golden extension route, checks expected agent tools through `/api/tools`, and invokes representative backend/tool actions through `/api/extensions/:id/actions/:actionId`. Add release-critical extension workflows to the matrix when a regression would block a release or when a new extension surface becomes part of the expected app experience. The matrix also supports installable package zips and catalog installs so optional first-party extension artifacts can be promoted through the same gate.
 
 For local iteration on transcript/new-conversation latency, prefer the Testing app instead of RC so release state stays untouched:
 
