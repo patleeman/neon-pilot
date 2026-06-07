@@ -366,12 +366,13 @@ export function ChatRailComposer({
 
   return (
     <ConversationComposer
-      layoutMode="main"
+      layoutMode={layout === 'compact' ? 'rail' : 'main'}
       className={cx(
-        'bg-gradient-to-t from-base via-base to-transparent pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors',
+        'min-w-0 bg-gradient-to-t from-base via-base to-transparent pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors',
         layout === 'compact' ? 'px-3 sm:px-4' : 'px-8 sm:px-10',
         dragOver && 'bg-accent/5',
       )}
+      childrenClassName="relative min-w-0 w-full"
       dragOver={dragOver}
       streamIsStreaming={isStreaming}
       onDragOver={(event) => {

@@ -44,4 +44,18 @@ describe('ConversationComposerContainer', () => {
     expect(shellShelf).toBeNull();
     expect(html.indexOf('test-shelf')).toBeLessThan(html.indexOf('ui-input-shell'));
   });
+
+  it('uses compact padding for rail layout', () => {
+    const html = renderToString(
+      <ConversationComposerContainer
+        layout="rail"
+        dragOver={false}
+        hasInteractiveOverlay={false}
+        inputControls={<div className="test-input">Input</div>}
+      />,
+    );
+
+    expect(html).toContain('px-3');
+    expect(html).toContain('py-3');
+  });
 });

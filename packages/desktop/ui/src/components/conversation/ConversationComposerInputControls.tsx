@@ -293,8 +293,8 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
           />
         </div>
 
-        <div className="flex flex-nowrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0">
-          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0 min-[420px]:flex-nowrap">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 min-[420px]:flex-nowrap">
             {visibleLeadingControls.map((control) => (
               <ComposerButtonHost
                 key={`${control.extensionId}:${control.id}`}
@@ -323,23 +323,25 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             />
           </div>
 
-          <ConversationComposerActions
-            composerDisabled={composerDisabled}
-            streamIsStreaming={streamIsStreaming}
-            conversationNeedsTakeover={conversationNeedsTakeover}
-            composerHasContent={composerHasContent}
-            composerShowsQuestionSubmit={composerShowsQuestionSubmit}
-            composerQuestionCanSubmit={composerQuestionCanSubmit}
-            composerQuestionRemainingCount={composerQuestionRemainingCount}
-            composerQuestionSubmitting={composerQuestionSubmitting}
-            composerSubmitLabel={composerSubmitLabel}
-            composerAltHeld={composerAltHeld}
-            onInsertComposerText={onInsertComposerText}
-            onAppendComposerText={onAppendComposerText}
-            onSubmitComposerQuestion={onSubmitComposerQuestion}
-            onSubmitComposerActionForModifiers={onSubmitComposerActionForModifiers}
-            onAbortStream={onAbortStream}
-          />
+          <div className="ml-auto shrink-0">
+            <ConversationComposerActions
+              composerDisabled={composerDisabled}
+              streamIsStreaming={streamIsStreaming}
+              conversationNeedsTakeover={conversationNeedsTakeover}
+              composerHasContent={composerHasContent}
+              composerShowsQuestionSubmit={composerShowsQuestionSubmit}
+              composerQuestionCanSubmit={composerQuestionCanSubmit}
+              composerQuestionRemainingCount={composerQuestionRemainingCount}
+              composerQuestionSubmitting={composerQuestionSubmitting}
+              composerSubmitLabel={composerSubmitLabel}
+              composerAltHeld={composerAltHeld}
+              onInsertComposerText={onInsertComposerText}
+              onAppendComposerText={onAppendComposerText}
+              onSubmitComposerQuestion={onSubmitComposerQuestion}
+              onSubmitComposerActionForModifiers={onSubmitComposerActionForModifiers}
+              onAbortStream={onAbortStream}
+            />
+          </div>
         </div>
       </div>
     </div>

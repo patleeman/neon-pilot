@@ -140,6 +140,14 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('aria-label="Send"');
   });
 
+  it('allows the composer action row to wrap in narrow rail layouts', () => {
+    const html = renderControls({ composerShellWidth: 320 });
+
+    expect(html).toContain('flex-wrap');
+    expect(html).toContain('min-[420px]:flex-nowrap');
+    expect(html).toContain('ml-auto shrink-0');
+  });
+
   it('renders question-submit states', () => {
     const html = renderControls({
       pendingAskUserQuestion: true,
