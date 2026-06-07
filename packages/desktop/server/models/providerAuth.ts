@@ -87,6 +87,8 @@ const BUILT_IN_API_KEY_PROVIDER_SET = new Set<string>(BUILT_IN_API_KEY_PROVIDERS
 const NON_MODEL_SECRET_PROVIDERS = new Set(['telegram']);
 const OAUTH_LOGIN_RETENTION_MS = 30 * 60_000;
 const OAUTH_LOGIN_TIMEOUT_MS = 5 * 60_000;
+const OPENAI_CODEX_PROVIDER_ID = 'openai-codex';
+const OPENAI_CODEX_DEVICE_CODE_LOGIN_METHOD = 'device_code';
 const oauthLoginRuns = new Map<string, ProviderOAuthLoginRun>();
 const oauthLoginListeners = new Map<string, Set<(state: ProviderOAuthLoginState) => void>>();
 const oauthLoginGlobalListeners = new Set<(state: ProviderOAuthLoginState) => void>();
@@ -320,6 +322,14 @@ function normalizeSelectInput(prompt: OAuthSelectPrompt, input: string): string 
   return match?.id ?? trimmed;
 }
 
+function selectProviderOAuthLoginMethod(provider: string, prompt: OAuthSelectPrompt): string | undefined {
+  if (provider === OPENAI_CODEX_PROVIDER_ID && prompt.options.some((option) => option.id === OPENAI_CODEX_DEVICE_CODE_LOGIN_METHOD)) {
+    return OPENAI_CODEX_DEVICE_CODE_LOGIN_METHOD;
+  }
+
+  return undefined;
+}
+
 function rejectPendingInput(run: ProviderOAuthLoginRun, reason: string): void {
   const pendingInput = run.pendingInput;
   run.pendingInput = null;
@@ -489,7 +499,15 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
       onProgress: (message) => {
         appendProgress(run, message);
       },
-      onSelect: async (prompt) => normalizeSelectInput(prompt, await createPromptAwaiter(run, toSelectPromptState(prompt))),
+      onSelect: async (prompt) => {
+        const selectedMethod = selectProviderOAuthLoginMethod(provider, prompt);
+        if (selectedMethod) {
+          appendProgress(run, 'Using device code login for OpenAI Codex.');
+          return selectedMethod;
+        }
+
+        return normalizeSelectInput(prompt, await createPromptAwaiter(run, toSelectPromptState(prompt)));
+      },
       onManualCodeInput: async () =>
         createPromptAwaiter(run, {
           message: 'Paste the full redirect URL from the browser address bar. If the browser shows State mismatch, paste that URL here.',

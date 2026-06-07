@@ -302,7 +302,16 @@ describe('providerAuth OAuth helpers', () => {
     const authFile = '/tmp/provider-auth.json';
 
     setOAuthProviders(authFile, [{ id: 'openai-codex', name: 'OpenAI' }]);
+    const selectPromptSpy = vi.fn();
     setLoginImplementation(authFile, 'openai-codex', async (handlers) => {
+      const selectedMethod = await handlers.onSelect({
+        message: 'Select OpenAI Codex login method:',
+        options: [
+          { id: 'browser', label: 'Browser login (default)' },
+          { id: 'device_code', label: 'Device code login (headless)' },
+        ],
+      });
+      selectPromptSpy(selectedMethod);
       handlers.onDeviceCode({
         verificationUri: 'https://auth.openai.com/codex/device',
         userCode: 'ABCD-1234',
@@ -314,6 +323,7 @@ describe('providerAuth OAuth helpers', () => {
     const initialState = startProviderOAuthLogin(authFile, 'openai-codex');
     await flushAsyncWork();
 
+    expect(selectPromptSpy).toHaveBeenCalledWith('device_code');
     expect(getProviderOAuthLoginState(initialState.id)).toMatchObject({
       status: 'running',
       authUrl: 'https://auth.openai.com/codex/device',
@@ -324,6 +334,8 @@ describe('providerAuth OAuth helpers', () => {
         userCode: 'ABCD-1234',
         expiresInSeconds: 600,
       },
+      prompt: null,
+      progress: ['Using device code login for OpenAI Codex.'],
     });
   });
 
