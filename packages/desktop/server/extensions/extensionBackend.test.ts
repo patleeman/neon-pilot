@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createBackendContext,
+  checkEnabledExtensionBackendHealth,
   invokeExtensionAction,
   invokeExtensionRoute,
   loadExtensionAgentFactory,
@@ -63,6 +64,35 @@ afterEach(() => {
 });
 
 describe('extension backend action invocation', () => {
+  it('retries transient backend health load failures before recording a failure', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'health-ext');
+    let healthExtAttempts = 0;
+    const workerRunner = {
+      loadModule: vi.fn(async (extensionId: string) => {
+        if (extensionId === 'health-ext') {
+          healthExtAttempts += 1;
+          if (healthExtAttempts === 1) throw new Error('worker warming');
+        }
+        return {};
+      }),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    const results = await checkEnabledExtensionBackendHealth();
+
+    expect(results).toContainEqual({ extensionId: 'health-ext', ok: true });
+    expect(healthExtAttempts).toBe(2);
+    expect(isExtensionEnabled('health-ext', stateRoot)).toBe(true);
+  });
+
   it('uses the server route settings file in backend contexts', () => {
     const context = createBackendContext('settings-aware-ext', {
       getRuntimeScope: () => 'shared',

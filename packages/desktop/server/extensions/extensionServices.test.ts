@@ -12,6 +12,7 @@ const runExtensionBackendExportInWorker = vi.fn();
 const runnerRun = vi.fn(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler());
 const findExtensionEntry = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
+const markExtensionStartupActive = vi.fn();
 const recordExtensionFailure = vi.fn();
 const setExtensionHealthError = vi.fn();
 const clearExtensionHealthError = vi.fn();
@@ -33,6 +34,7 @@ vi.mock('./extensionBackendRunner.js', () => ({
 vi.mock('./extensionRegistry.js', () => ({
   findExtensionEntry,
   listExtensionInstallSummaries,
+  markExtensionStartupActive,
   recordExtensionFailure,
   setExtensionHealthError,
   clearExtensionHealthError,
@@ -64,6 +66,7 @@ describe('extensionServices', () => {
       runnerRun,
       findExtensionEntry,
       listExtensionInstallSummaries,
+      markExtensionStartupActive,
       recordExtensionFailure,
       setExtensionHealthError,
       clearExtensionHealthError,
@@ -128,6 +131,8 @@ describe('extensionServices', () => {
     expect(listRunningExtensionServices()[0]).toMatchObject({ extensionId: 'ext', serviceId: 'sync', startedAt: expect.any(String) });
     expect(clearExtensionHealthError).toHaveBeenCalledWith('ext');
     expect(clearExtensionFailureRecordsForOperation).toHaveBeenCalledWith('ext', 'service sync startup');
+    expect(markExtensionStartupActive).toHaveBeenCalledWith('ext');
+    expect(markExtensionStartupActive).toHaveBeenCalledWith(undefined);
 
     await stopExtensionServices('ext');
     expect(stop).toHaveBeenCalledOnce();
@@ -230,6 +235,18 @@ describe('extensionServices', () => {
       message: 'Extension service failed: Missing service handler export "missing".',
       severity: 'error',
     });
+  });
+
+  it('retries transient service startup failures before recording a failure', async () => {
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
+    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } } });
+    runExtensionBackendExportInWorker.mockRejectedValueOnce(new Error('worker not ready')).mockResolvedValueOnce({ ok: true });
+
+    await expect(startExtensionServices()).resolves.toEqual([{ extensionId: 'ext', serviceId: 'sync', ok: true }]);
+
+    expect(runExtensionBackendExportInWorker).toHaveBeenCalledTimes(2);
+    expect(recordExtensionFailure).not.toHaveBeenCalled();
+    expect(clearExtensionFailureRecordsForOperation).toHaveBeenCalledWith('ext', 'service sync startup');
   });
 
   it('clears service diagnostics after successful health checks', async () => {

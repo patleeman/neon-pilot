@@ -21,6 +21,7 @@ import {
   listExtensionComposerInputToolRegistrations,
   listExtensionInstallSummaries,
   listExtensionKeybindingRegistrations,
+  markExtensionStartupActive,
   listExtensionModelProfileRegistrations,
   listExtensionPromptAssemblyHookRegistrations,
   listExtensionSkillRegistrations,
@@ -582,6 +583,22 @@ describe('extension registry', () => {
     });
     completeExtensionStartupGuard(stateRoot);
     expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
+  });
+
+  it('safe-mode startup disables only the active runtime extension when the marker has a suspect', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    for (const id of ['runtime-board', 'runtime-chat']) {
+      const extensionRoot = join(stateRoot, 'extensions', id);
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id, name: id }));
+    }
+
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
+    markExtensionStartupActive('runtime-chat', stateRoot);
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: true, disabledIds: ['runtime-chat'] });
+
+    expect(isExtensionEnabled('runtime-board', stateRoot)).toBe(true);
+    expect(isExtensionEnabled('runtime-chat', stateRoot)).toBe(false);
   });
 
   it('keeps default-disabled extensions off until explicitly enabled', () => {

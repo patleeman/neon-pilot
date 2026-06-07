@@ -120,7 +120,7 @@ import {
   buildLegacyExtensionSlashCommandRegistrations,
   buildNativeExtensionSlashCommandRegistrations,
 } from './extensionSlashCommandRegistrations.js';
-import { buildExtensionStartupGuardResult, buildExtensionStartupMarker } from './extensionStartupMarker.js';
+import { buildExtensionStartupGuardResult, buildExtensionStartupMarker, parseExtensionStartupMarker } from './extensionStartupMarker.js';
 import { validateExtensionSurfaceContributions } from './extensionSurfaceValidation.js';
 import { buildExtensionToolRegistrations as buildExtensionToolContributionRegistrations } from './extensionToolContributions.js';
 import {
@@ -794,18 +794,17 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
   const safeMode = existsSync(markerPath);
   const disabledIds: string[] = [];
   if (safeMode) {
+    const marker = parseExtensionStartupMarker(readFileSync(markerPath, 'utf8'));
     const config = readExtensionRegistryConfig(stateRoot);
     const at = new Date().toISOString();
     const entries = listExtensionEntries(stateRoot);
-    const plan = planStartupGuardQuarantines(
-      config,
-      entries.map((entry) => ({
-        id: entry.manifest.id,
-        source: entry.source,
-        enabled: isExtensionEntryEnabled(entry, config),
-      })),
-      at,
-    );
+    const candidates = entries.map((entry) => ({
+      id: entry.manifest.id,
+      source: entry.source,
+      enabled: isExtensionEntryEnabled(entry, config),
+    }));
+    const suspect = marker?.activeExtensionId ? candidates.find((candidate) => candidate.id === marker.activeExtensionId) : undefined;
+    const plan = planStartupGuardQuarantines(config, suspect ? [suspect] : candidates, at);
     disabledIds.push(...plan.disabledIds);
     writeExtensionRegistryConfig(plan.config, stateRoot);
     for (const extensionId of plan.disabledIds) {
@@ -819,6 +818,13 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
   mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
   writeFileSync(markerPath, buildExtensionStartupMarker(new Date().toISOString()));
   return buildExtensionStartupGuardResult({ safeMode, disabledIds });
+}
+
+export function markExtensionStartupActive(extensionId: string | undefined, stateRoot: string = getStateRoot()): void {
+  const markerPath = getExtensionStartupMarkerPath(stateRoot);
+  if (!existsSync(markerPath)) return;
+  const existing = parseExtensionStartupMarker(readFileSync(markerPath, 'utf8'));
+  writeFileSync(markerPath, buildExtensionStartupMarker(existing?.startedAt ?? new Date().toISOString(), extensionId));
 }
 
 function publishExtensionQuarantineNotification(input: { extensionId: string; message: string; details: string }): void {

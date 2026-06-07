@@ -9,6 +9,7 @@ import {
   clearExtensionHealthError,
   findExtensionEntry,
   listExtensionInstallSummaries,
+  markExtensionStartupActive,
   recordExtensionFailure,
   setExtensionHealthError,
 } from './extensionRegistry.js';
@@ -30,6 +31,21 @@ export function listRunningExtensionServices(): RunningExtensionService[] {
 
 export function isExtensionServiceRunning(extensionId: string, serviceId: string): boolean {
   return runningServices.has(serviceKey(extensionId, serviceId));
+}
+
+async function retryExtensionStartupOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const attempts = 2;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (error instanceof ExtensionProcessTerminationBlockedError || attempt === attempts) break;
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 150 * attempt));
+    }
+  }
+  throw lastError;
 }
 
 export async function stopExtensionServices(extensionId: string): Promise<void> {
@@ -65,17 +81,21 @@ async function startOneExtensionService(
   try {
     const SERVICE_STARTUP_TIMEOUT_MS = 30_000;
     const operation = extensionBackendOperation('service-startup', `service ${service.id} startup`, { target: service.id });
-    const result = await Promise.race([
-      service.worker?.enabled
-        ? runExtensionBackendExportInWorker(extensionId, service.handler, operation, [{ serviceId: service.id }], serverContext)
-        : Promise.reject(new Error(`Extension service "${service.id}" must declare worker.enabled before it can run.`)),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Service "${service.id}" startup timed out after ${SERVICE_STARTUP_TIMEOUT_MS / 1000}s.`)),
-          SERVICE_STARTUP_TIMEOUT_MS,
-        ).unref(),
-      ),
-    ]);
+    markExtensionStartupActive(extensionId);
+    const result = await retryExtensionStartupOperation(() =>
+      Promise.race([
+        service.worker?.enabled
+          ? runExtensionBackendExportInWorker(extensionId, service.handler, operation, [{ serviceId: service.id }], serverContext)
+          : Promise.reject(new Error(`Extension service "${service.id}" must declare worker.enabled before it can run.`)),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`Service "${service.id}" startup timed out after ${SERVICE_STARTUP_TIMEOUT_MS / 1000}s.`)),
+            SERVICE_STARTUP_TIMEOUT_MS,
+          ).unref(),
+        ),
+      ]),
+    );
+    markExtensionStartupActive(undefined);
     if (typeof result === 'function') {
       throw new Error(`Extension service "${service.id}" returned an in-process stop function; use stopHandler instead.`);
     }
@@ -95,6 +115,7 @@ async function startOneExtensionService(
     logInfo('extension service started', { extensionId, serviceId: service.id });
     return { extensionId, serviceId: service.id, ok: true };
   } catch (error) {
+    markExtensionStartupActive(undefined);
     const message = error instanceof Error ? error.message : String(error);
     setExtensionHealthError(extensionId, message);
     if (error instanceof ExtensionProcessTerminationBlockedError) {

@@ -42,6 +42,7 @@ import {
   isExtensionEnabled,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
+  markExtensionStartupActive,
   listExtensionRuntimeProviderRegistrations,
   recordExtensionFailure,
   setExtensionEnabled,
@@ -653,6 +654,21 @@ function loadExtensionBackendForHealthCheck(extensionId: string): Promise<Extens
   return getWorkerImportBackendRunner().loadModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
 }
 
+async function retryExtensionStartupOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const attempts = 2;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (error instanceof ExtensionProcessTerminationBlockedError || attempt === attempts) break;
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 150 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 function loadExtensionBackendForSelfTest(extensionId: string): Promise<ExtensionBackendModule> {
   return getWorkerImportBackendRunner().loadModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
 }
@@ -1216,10 +1232,13 @@ export async function checkEnabledExtensionBackendHealth(): Promise<Array<{ exte
   const results = await Promise.all(
     enabledWithBackend.map(async (summary): Promise<{ extensionId: string; ok: boolean; error?: string }> => {
       try {
-        await loadExtensionBackendForHealthCheck(summary.id);
+        markExtensionStartupActive(summary.id);
+        await retryExtensionStartupOperation(() => loadExtensionBackendForHealthCheck(summary.id));
+        markExtensionStartupActive(undefined);
         clearExtensionHealthError(summary.id);
         return { extensionId: summary.id, ok: true };
       } catch (error) {
+        markExtensionStartupActive(undefined);
         const message = error instanceof Error ? error.message : String(error);
         setExtensionHealthError(summary.id, message);
         if (error instanceof ExtensionProcessTerminationBlockedError) {
