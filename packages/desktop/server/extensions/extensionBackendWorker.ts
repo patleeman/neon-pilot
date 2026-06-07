@@ -4,6 +4,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parentPort } from 'node:worker_threads';
 
+import { getStateRoot } from '@neon-pilot/core';
+
 import { prependNeonPilotCliBin } from '../cliEnvironment.js';
 
 import type { ExtensionBackendModule } from './extensionBackendRunner.js';
@@ -132,7 +134,7 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
   const runtimeDir = options.runtimeDir ?? process.cwd();
   const runtimeSettingsFilePath = options.runtimeSettingsFilePath ?? '';
   const authFile = options.authFile ?? '';
-  const stateRoot = options.stateRoot ?? '';
+  const stateRoot = options.stateRoot?.trim() || getStateRoot();
   const modelWriteContext = {
     runtimeScope,
     repoRoot,

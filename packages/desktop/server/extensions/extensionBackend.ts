@@ -1,7 +1,7 @@
 import { join, resolve } from 'node:path';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, queryAppTelemetryEvents } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getStateRoot, queryAppTelemetryEvents } from '@neon-pilot/core';
 
 import { registerFileSystemAuthorityHostEvents } from '../filesystem/filesystemAuthority.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from '../routes/context.js';
@@ -776,7 +776,7 @@ function workerBackendContextOptions(
     runtimeDir: getPiAgentRuntimeDir(),
     runtimeSettingsFilePath: resolveRuntimeSettingsFilePath(getPiAgentRuntimeDir(), serverContext),
     authFile: serverContext?.getAuthFile?.(),
-    stateRoot: serverContext?.getStateRoot?.(),
+    stateRoot: serverContext?.getStateRoot?.() ?? getStateRoot(),
     liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
     toolContext: workerBackendToolContext(toolContext, updateHandleId),
     ...(agentToolContext ? { agentToolContext } : {}),
@@ -1186,6 +1186,20 @@ export async function runExtensionSelfTest(
         ok: hasExport,
         ...(hasExport ? {} : { error: `Missing export ${handlerName}` }),
       });
+    }
+
+    for (const service of entry.manifest.backend.services ?? []) {
+      const handlers = [service.handler, service.healthCheck, service.stopHandler].filter(
+        (handler): handler is string => typeof handler === 'string' && handler.trim().length > 0,
+      );
+      for (const handlerName of handlers) {
+        const hasExport = await hasExtensionBackendExportForSelfTest(extensionId, handlerName);
+        checks.push({
+          name: `service export: ${service.id}.${handlerName}`,
+          ok: hasExport,
+          ...(hasExport ? {} : { error: `Missing export ${handlerName}` }),
+        });
+      }
     }
 
     const actionInputs = PRODUCT_CRITICAL_EXTENSION_SELF_TESTS[extensionId] ?? {};

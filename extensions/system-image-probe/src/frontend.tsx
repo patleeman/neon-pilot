@@ -1,6 +1,6 @@
 import { api, type ModelState, useApi } from '@neon-pilot/extensions/settings';
 import { Field, LoadingState, Notice, Select, SupportingText, SurfacePanel } from '@neon-pilot/extensions/ui';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type ModelOption = ModelState['models'][number];
 
@@ -12,22 +12,34 @@ export function ImageProbeSettings() {
   const { data: modelState, loading, error } = useApi(api.models);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [selectedVisionModel, setSelectedVisionModel] = useState('');
   const imageCapableModels = useMemo(
     () => (modelState?.models ?? []).filter((model) => model.input?.includes('image')),
     [modelState?.models],
   );
 
+  useEffect(() => {
+    setSelectedVisionModel(modelState?.currentVisionModel ?? '');
+  }, [modelState?.currentVisionModel]);
+
   async function handleVisionModelChange(visionModel: string) {
-    if (!modelState || saving || visionModel === (modelState.currentVisionModel ?? '')) {
+    if (!modelState || saving) {
+      return;
+    }
+    const previousVisionModel = modelState.currentVisionModel ?? '';
+    if (visionModel === previousVisionModel) {
+      setSelectedVisionModel(visionModel);
       return;
     }
 
+    setSelectedVisionModel(visionModel);
     setSaving(true);
     setSaveError(null);
 
     try {
       await api.updateModelPreferences({ visionModel });
     } catch (nextError) {
+      setSelectedVisionModel(previousVisionModel);
       setSaveError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
       setSaving(false);
@@ -55,14 +67,14 @@ export function ImageProbeSettings() {
               hint={
                 saving
                   ? 'Saving vision model...'
-                  : modelState.currentVisionModel
-                    ? `Image probing uses ${modelState.currentVisionModel}.`
+                  : selectedVisionModel
+                    ? `Image probing uses ${selectedVisionModel}.`
                     : 'Required before probing uploaded images with text-only models.'
               }
             >
               <Select
                 id="settings-image-probe-vision-model"
-                value={modelState.currentVisionModel ?? ''}
+                value={selectedVisionModel}
                 onChange={(event) => {
                   void handleVisionModelChange(event.target.value);
                 }}
