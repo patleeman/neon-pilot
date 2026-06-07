@@ -46,6 +46,22 @@ Neon Pilot keeps core small and pushes user-facing behavior into extensions.
 
 Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patleeman/neon-pilot/releases/latest).
 
+For agent-driven install and bootstrap on macOS, use the packaged installer flow:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/main/install.sh | bash -s -- --install-cli --bootstrap --json
+```
+
+Then configure and verify through the CLI:
+
+```bash
+neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4 --json
+printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin --json
+neon-pilot bootstrap doctor --json
+```
+
+See [Agent bootstrap](./docs/agent-bootstrap.md) for the complete external-agent setup contract, including provider setup, verification commands, and Hermes/MCP configuration.
+
 ## Development
 
 ```bash
@@ -74,6 +90,7 @@ Start with [neonpilot.net/docs](https://neonpilot.net/docs/) or [docs/README.md]
 
 Important repo docs:
 
+- [Agent bootstrap](./docs/agent-bootstrap.md)
 - [Development workflow](./docs/development.md)
 - [Extension authoring](./docs/extensions.md)
 - [Build an extension with your agent](./docs/build-an-extension.md)
