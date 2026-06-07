@@ -372,7 +372,9 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
           request.actionId,
           request.input,
           await resolveRequestServerContext(request),
-          request.toolContext ?? createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
+          request.toolContext
+            ? { ...createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot), ...request.toolContext }
+            : createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
           request.agentToolContext,
         ),
       };
