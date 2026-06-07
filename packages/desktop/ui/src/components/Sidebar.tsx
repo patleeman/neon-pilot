@@ -1,7 +1,9 @@
 import {
   type DragEvent,
+  type CSSProperties,
   memo,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -9,6 +11,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { type ActivityTreeItem, buildActivityTreeItems, buildConversationActivityId } from '../activity/activityTree';
@@ -680,12 +683,7 @@ function TopNavItem({
   );
 
   return (
-    <SidebarNavButton
-      onClick={handleClick}
-      active={active}
-      data-route={to}
-      className="w-full text-left"
-    >
+    <SidebarNavButton onClick={handleClick} active={active} data-route={to} className="w-full text-left">
       <svg
         width="15"
         height="15"
@@ -754,6 +752,23 @@ function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[
       </div>
     </div>
   );
+}
+
+function renderSidebarMenuPortal(menu: ReactNode) {
+  if (typeof document === 'undefined') return menu;
+  return createPortal(menu, document.body);
+}
+
+function getSidebarMenuPositionStyle(position: { x: number; y: number }, minWidth: number): CSSProperties {
+  return {
+    bottom: 'auto',
+    left: position.x,
+    marginBottom: 0,
+    minWidth,
+    position: 'fixed',
+    right: 'auto',
+    top: position.y,
+  };
 }
 
 function ThreadsFilterButton({
@@ -873,71 +888,73 @@ function ThreadsFilterButton({
       >
         <Ico d={PATH.filter} size={12} />
       </IconButton>
-      {menuOpen && menuPosition ? (
-        <div
-          ref={menuRootRef}
-          className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[172px]"
-          style={{ left: menuPosition.x, top: menuPosition.y }}
-          role="menu"
-          aria-label="Threads organization options"
-        >
-          <div className="space-y-px">
-            <div className="px-2.5 pt-2 pb-1 text-[12px] font-medium text-dim">Show</div>
-            {renderMenuItem({
-              label: 'All threads',
-              icon: PATH.list,
-              checked: filterMode === 'all',
-              onClick: () => onChangeFilterMode('all'),
-            })}
-            {renderMenuItem({
-              label: 'Human threads',
-              icon: PATH.conversations,
-              checked: filterMode === 'human',
-              onClick: () => onChangeFilterMode('human'),
-            })}
-            {renderMenuItem({
-              label: 'Automation threads',
-              icon: PATH.automations,
-              checked: filterMode === 'automation',
-              onClick: () => onChangeFilterMode('automation'),
-            })}
-            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Organize</div>
-            {renderMenuItem({
-              label: 'By project',
-              icon: PATH.workspace,
-              checked: organizeMode === 'project',
-              onClick: () => onChangeOrganizeMode('project'),
-            })}
-            {renderMenuItem({
-              label: 'Chronological list',
-              icon: PATH.list,
-              checked: organizeMode === 'chronological',
-              onClick: () => onChangeOrganizeMode('chronological'),
-            })}
-            <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
-            <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Order</div>
-            {renderMenuItem({
-              label: 'Created',
-              icon: PATH.clock,
-              checked: sortMode === 'created',
-              onClick: () => onChangeSortMode('created'),
-            })}
-            {renderMenuItem({
-              label: 'Updated',
-              icon: PATH.sparkles,
-              checked: sortMode === 'updated',
-              onClick: () => onChangeSortMode('updated'),
-            })}
-            {renderMenuItem({
-              label: 'Manual order',
-              icon: PATH.grip,
-              checked: sortMode === 'manual',
-              onClick: () => onChangeSortMode('manual'),
-            })}
-          </div>
-        </div>
-      ) : null}
+      {menuOpen && menuPosition
+        ? renderSidebarMenuPortal(
+            <div
+              ref={menuRootRef}
+              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[172px]"
+              style={getSidebarMenuPositionStyle(menuPosition, 172)}
+              role="menu"
+              aria-label="Threads organization options"
+            >
+              <div className="space-y-px">
+                <div className="px-2.5 pt-2 pb-1 text-[12px] font-medium text-dim">Show</div>
+                {renderMenuItem({
+                  label: 'All threads',
+                  icon: PATH.list,
+                  checked: filterMode === 'all',
+                  onClick: () => onChangeFilterMode('all'),
+                })}
+                {renderMenuItem({
+                  label: 'Human threads',
+                  icon: PATH.conversations,
+                  checked: filterMode === 'human',
+                  onClick: () => onChangeFilterMode('human'),
+                })}
+                {renderMenuItem({
+                  label: 'Automation threads',
+                  icon: PATH.automations,
+                  checked: filterMode === 'automation',
+                  onClick: () => onChangeFilterMode('automation'),
+                })}
+                <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
+                <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Organize</div>
+                {renderMenuItem({
+                  label: 'By project',
+                  icon: PATH.workspace,
+                  checked: organizeMode === 'project',
+                  onClick: () => onChangeOrganizeMode('project'),
+                })}
+                {renderMenuItem({
+                  label: 'Chronological list',
+                  icon: PATH.list,
+                  checked: organizeMode === 'chronological',
+                  onClick: () => onChangeOrganizeMode('chronological'),
+                })}
+                <div className="my-1 h-px bg-border-subtle" aria-hidden="true" />
+                <div className="px-2.5 pt-1 pb-1 text-[12px] font-medium text-dim">Order</div>
+                {renderMenuItem({
+                  label: 'Created',
+                  icon: PATH.clock,
+                  checked: sortMode === 'created',
+                  onClick: () => onChangeSortMode('created'),
+                })}
+                {renderMenuItem({
+                  label: 'Updated',
+                  icon: PATH.sparkles,
+                  checked: sortMode === 'updated',
+                  onClick: () => onChangeSortMode('updated'),
+                })}
+                {renderMenuItem({
+                  label: 'Manual order',
+                  icon: PATH.grip,
+                  checked: sortMode === 'manual',
+                  onClick: () => onChangeSortMode('manual'),
+                })}
+              </div>
+            </div>,
+          )
+        : null}
     </>
   );
 }
@@ -1167,62 +1184,64 @@ function ConversationCwdGroupHeader({
           <Ico d={PATH.plus} size={11} />
         </IconButton>
       </div>
-      {menuOpen && menuPosition ? (
-        <div
-          ref={menuRootRef}
-          className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[214px]"
-          style={{ left: menuPosition.x, top: menuPosition.y }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              setMenuOpen(false);
-            }
-          }}
-          role="menu"
-          aria-label={`Workspace actions for ${label}`}
-        >
-          <div className="space-y-px">
-            {onOpenInFinder ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onOpenInFinder);
-                }}
-              >
-                Open in Finder
-              </MenuItem>
-            ) : null}
-            {onEditName ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onEditName);
-                }}
-              >
-                Edit Name
-              </MenuItem>
-            ) : null}
-            {showMenuDivider ? <MenuSeparator className="my-1" /> : null}
-            {onArchiveThreads ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onArchiveThreads);
-                }}
-              >
-                Archive Threads
-              </MenuItem>
-            ) : null}
-            {onRemove ? (
-              <MenuItem
-                onClick={() => {
-                  void runMenuHandler(onRemove);
-                }}
-                tone="danger"
-              >
-                Remove
-              </MenuItem>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      {menuOpen && menuPosition
+        ? renderSidebarMenuPortal(
+            <div
+              ref={menuRootRef}
+              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[214px]"
+              style={getSidebarMenuPositionStyle(menuPosition, 214)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setMenuOpen(false);
+                }
+              }}
+              role="menu"
+              aria-label={`Workspace actions for ${label}`}
+            >
+              <div className="space-y-px">
+                {onOpenInFinder ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onOpenInFinder);
+                    }}
+                  >
+                    Open in Finder
+                  </MenuItem>
+                ) : null}
+                {onEditName ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onEditName);
+                    }}
+                  >
+                    Edit Name
+                  </MenuItem>
+                ) : null}
+                {showMenuDivider ? <MenuSeparator className="my-1" /> : null}
+                {onArchiveThreads ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onArchiveThreads);
+                    }}
+                  >
+                    Archive Threads
+                  </MenuItem>
+                ) : null}
+                {onRemove ? (
+                  <MenuItem
+                    onClick={() => {
+                      void runMenuHandler(onRemove);
+                    }}
+                    tone="danger"
+                  >
+                    Remove
+                  </MenuItem>
+                ) : null}
+              </div>
+            </div>,
+          )
+        : null}
     </div>
   );
 }
@@ -1704,92 +1723,94 @@ const OpenConversationRow = memo(function OpenConversationRow({
           </span>
         )}
       </div>
-      {menuOpen && menuPosition ? (
-        <div
-          ref={menuRootRef}
-          className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
-          style={{ left: menuPosition.x, top: menuPosition.y }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              setMenuOpen(false);
-            }
-          }}
-          role="menu"
-          aria-label={`Conversation actions for ${session.title}`}
-        >
-          <div className="space-y-px">
-            {pinned && onUnpin ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onUnpin();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Unpin
-              </MenuItem>
-            ) : null}
-            {!pinned && onPin ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onPin();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Pin
-              </MenuItem>
-            ) : null}
-            {onArchive ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onArchive();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Archive
-              </MenuItem>
-            ) : null}
-            {onOpenInNewWindow ? (
-              <MenuItem
-                onClick={async () => {
-                  const succeeded = await onOpenInNewWindow?.();
-                  if (succeeded !== false) {
-                    setMenuOpen(false);
-                  }
-                }}
-                disabled={busyExtensionMenuId !== null}
-              >
-                Open in Separate Window
-              </MenuItem>
-            ) : null}
-            {conversationExtensionMenuItems.length > 0 && (
-              <>
-                <MenuSeparator className="mx-2 my-1" />
-                {conversationExtensionMenuItems.map((menu) => (
+      {menuOpen && menuPosition
+        ? renderSidebarMenuPortal(
+            <div
+              ref={menuRootRef}
+              className="ui-menu-shell ui-context-menu-shell fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
+              style={getSidebarMenuPositionStyle(menuPosition, 224)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setMenuOpen(false);
+                }
+              }}
+              role="menu"
+              aria-label={`Conversation actions for ${session.title}`}
+            >
+              <div className="space-y-px">
+                {pinned && onUnpin ? (
                   <MenuItem
-                    key={menu.id}
-                    onClick={() => {
-                      void handleExtensionContextMenuClick(menu);
+                    onClick={async () => {
+                      const succeeded = await onUnpin();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
                     }}
                     disabled={busyExtensionMenuId !== null}
                   >
-                    {getExtensionContextMenuTitle(menu)}
+                    Unpin
                   </MenuItem>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-      ) : null}
+                ) : null}
+                {!pinned && onPin ? (
+                  <MenuItem
+                    onClick={async () => {
+                      const succeeded = await onPin();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    Pin
+                  </MenuItem>
+                ) : null}
+                {onArchive ? (
+                  <MenuItem
+                    onClick={async () => {
+                      const succeeded = await onArchive();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    Archive
+                  </MenuItem>
+                ) : null}
+                {onOpenInNewWindow ? (
+                  <MenuItem
+                    onClick={async () => {
+                      const succeeded = await onOpenInNewWindow?.();
+                      if (succeeded !== false) {
+                        setMenuOpen(false);
+                      }
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    Open in Separate Window
+                  </MenuItem>
+                ) : null}
+                {conversationExtensionMenuItems.length > 0 && (
+                  <>
+                    <MenuSeparator className="mx-2 my-1" />
+                    {conversationExtensionMenuItems.map((menu) => (
+                      <MenuItem
+                        key={menu.id}
+                        onClick={() => {
+                          void handleExtensionContextMenuClick(menu);
+                        }}
+                        disabled={busyExtensionMenuId !== null}
+                      >
+                        {getExtensionContextMenuTitle(menu)}
+                      </MenuItem>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>,
+          )
+        : null}
     </div>
   );
 });
