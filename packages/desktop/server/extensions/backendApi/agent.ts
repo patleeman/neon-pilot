@@ -977,7 +977,7 @@ export async function runAgentTask(
             input: call.params,
             runtime: {
               ...(input.modelRef ? { modelRef: input.modelRef } : {}),
-              directToolNames: ['bash', 'read', 'edit'],
+              directToolNames: [...new Set([...allowedToolNames, 'bash', 'read', 'edit'])],
             },
             toolContext: {
               conversationId: record.liveSessionId ?? record.id,

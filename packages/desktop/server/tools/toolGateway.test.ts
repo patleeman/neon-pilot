@@ -103,20 +103,20 @@ describe('tool gateway', () => {
     });
   });
 
-  it('lists and invokes withheld extension tools when direct tools are supplied', async () => {
+  it('only lists and invokes allowlisted extension tools when direct tools are supplied', async () => {
     toolInventory.listToolDefinitionsAsync.mockResolvedValueOnce([
       {
-        id: 'core/bash',
-        name: 'bash',
-        description: 'Direct bash',
+        id: 'system-writing-studio/get-canvas',
+        name: 'writing_studio_get_canvas',
+        description: 'Read Writing Studio canvas',
         inputSchema: {},
         raw: {
-          extensionId: 'core',
+          extensionId: 'system-writing-studio',
           packageType: 'system',
-          id: 'bash',
-          name: 'bash',
-          action: 'bash',
-          description: 'Direct bash',
+          id: 'get-canvas',
+          name: 'writing_studio_get_canvas',
+          action: 'writingStudioGetCanvas',
+          description: 'Read Writing Studio canvas',
           inputSchema: {},
         },
         priority: 0,
@@ -140,15 +140,64 @@ describe('tool gateway', () => {
     ]);
 
     await expect(
-      listInvocableExtensionTools({ modelRef: 'ds4/deepseek-v4-flash', repoRoot: '/repo', directToolNames: ['bash', 'read', 'edit'] }),
+      listInvocableExtensionTools({
+        modelRef: 'ds4/deepseek-v4-flash',
+        repoRoot: '/repo',
+        directToolNames: ['writing_studio_get_canvas', 'bash', 'read', 'edit'],
+      }),
     ).resolves.toEqual([
       expect.objectContaining({
-        name: 'subagent',
-        source: expect.objectContaining({ extensionId: 'system-runs', toolId: 'subagent', action: 'subagent' }),
+        name: 'writing_studio_get_canvas',
+        source: expect.objectContaining({
+          extensionId: 'system-writing-studio',
+          toolId: 'get-canvas',
+          action: 'writingStudioGetCanvas',
+        }),
       }),
     ]);
 
     toolInventory.listToolDefinitionsAsync.mockResolvedValueOnce([
+      {
+        id: 'system-writing-studio/get-canvas',
+        name: 'writing_studio_get_canvas',
+        description: 'Read Writing Studio canvas',
+        inputSchema: {},
+        raw: {
+          extensionId: 'system-writing-studio',
+          packageType: 'system',
+          id: 'get-canvas',
+          name: 'writing_studio_get_canvas',
+          action: 'writingStudioGetCanvas',
+          description: 'Read Writing Studio canvas',
+          inputSchema: {},
+        },
+        priority: 0,
+      },
+    ]);
+
+    await expect(
+      invokeExtensionToolByName({
+        name: 'writing_studio_get_canvas',
+        input: { documentId: 'doc-1' },
+        runtime: {
+          modelRef: 'ds4/deepseek-v4-flash',
+          repoRoot: '/repo',
+          directToolNames: ['writing_studio_get_canvas', 'bash', 'read', 'edit'],
+        },
+      }),
+    ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
+
+    expect(extensionHostClient.invokeAction).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        extensionId: 'system-writing-studio',
+        actionId: 'writingStudioGetCanvas',
+        input: { documentId: 'doc-1' },
+      }),
+    );
+  });
+
+  it('does not expose unrelated extension tools from a direct tool allowlist', async () => {
+    toolInventory.listToolDefinitionsAsync.mockResolvedValue([
       {
         id: 'system-runs/subagent',
         name: 'subagent',
@@ -168,19 +217,14 @@ describe('tool gateway', () => {
     ]);
 
     await expect(
+      listInvocableExtensionTools({ modelRef: 'ds4/deepseek-v4-flash', repoRoot: '/repo', directToolNames: ['bash', 'read', 'edit'] }),
+    ).resolves.toEqual([]);
+    await expect(
       invokeExtensionToolByName({
         name: 'subagent',
         input: { prompt: 'check this' },
         runtime: { modelRef: 'ds4/deepseek-v4-flash', repoRoot: '/repo', directToolNames: ['bash', 'read', 'edit'] },
       }),
-    ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
-
-    expect(extensionHostClient.invokeAction).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        extensionId: 'system-runs',
-        actionId: 'subagent',
-        input: { prompt: 'check this' },
-      }),
-    );
+    ).rejects.toThrow('Tool is not available: subagent');
   });
 });

@@ -63,7 +63,7 @@ async function invocableRegistrations(input?: ToolGatewayRuntimeContext) {
   for (const definition of definitions) {
     if (!definition.raw) continue;
     const name = effectiveExtensionToolName(definition);
-    if (direct.has(name)) continue;
+    if (!direct.has(name)) continue;
     const existing = byName.get(name);
     if (!existing || definition.priority > existing.priority || (definition.priority === existing.priority && definition.id.localeCompare(existing.id) < 0)) {
       byName.set(name, definition);
