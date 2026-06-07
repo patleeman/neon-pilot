@@ -962,7 +962,8 @@ describe('Sidebar', () => {
     expect(html).toContain('Hermes Sessions');
     expect(html).toContain('aria-label="Primary navigation"');
     expect(html).toContain('relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3');
-    expect(html).toContain('relative z-0 flex-1 min-h-0 overflow-hidden');
+    expect(html).toContain('relative z-0 isolate flex-1 min-h-0 overflow-hidden');
+    expect(html).toContain('style="contain:layout paint"');
     expect(html).not.toContain('ui-section-label flex-1">Threads');
     expect(html).not.toContain('aria-label="Find threads and archived conversations"');
   });

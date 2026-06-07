@@ -3805,7 +3805,7 @@ export function Sidebar() {
         />
 
         {activeSidebarSurface ? (
-          <div className="relative z-0 flex-1 min-h-0 overflow-hidden">
+          <div className="relative z-0 isolate flex-1 min-h-0 overflow-hidden" style={{ contain: 'layout paint' }}>
             <NativeExtensionSurfaceHost
               surface={activeSidebarSurface}
               pathname={location.pathname}
