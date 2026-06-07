@@ -84,6 +84,16 @@ const MARKETPLACE_SOURCES: MarketplaceSource[] = [
   },
 ];
 
+class FirstPartyReleaseCatalogFetchError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'FirstPartyReleaseCatalogFetchError';
+  }
+}
+
 export interface InstallableExtensionCatalogItem extends CatalogSeed {
   version: string;
   tag: string;
@@ -134,6 +144,8 @@ function bundleUrlForRepo(repo: GithubExtensionSourceRepo, id: string, tag: stri
 function localBundlePathFor(id: string): string | null {
   const candidates = [
     typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'installable-extension-bundles') : null,
+    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'dist', 'installable-extensions') : null,
+    resolve(process.cwd(), 'dist', 'installable-extensions'),
   ].filter((value): value is string => Boolean(value));
   for (const root of candidates) {
     const bundlePath = resolve(root, `${id}.neon-extension.zip`);
@@ -159,7 +171,9 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
   const enabledConfigured = configured.filter((source) => source.enabled);
   const sourceErrors: Array<{ sourceId: string; message: string }> = [];
   const firstPartySeeds = await fetchFirstPartyReleaseCatalog(tag).catch((error) => {
-    sourceErrors.push({ sourceId: FIRST_PARTY_SOURCE_ID, message: error instanceof Error ? error.message : String(error) });
+    if (!(error instanceof FirstPartyReleaseCatalogFetchError && error.status === 404)) {
+      sourceErrors.push({ sourceId: FIRST_PARTY_SOURCE_ID, message: error instanceof Error ? error.message : String(error) });
+    }
     return INSTALLABLE_EXTENSION_CATALOG;
   });
   const remoteSeeds = (
@@ -341,7 +355,9 @@ async function fetchGithubSourceManifest(source: ExtensionCatalogSource): Promis
 async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]> {
   const url = `https://github.com/${encodeURIComponent(FIRST_PARTY_REPO.owner)}/${encodeURIComponent(FIRST_PARTY_REPO.repo)}/releases/download/${encodeURIComponent(tag)}/neon-extension-catalog.json`;
   const response = await fetch(url);
-  if (!response.ok) throw new Error(`Failed to fetch first-party extension release catalog: HTTP ${response.status}`);
+  if (!response.ok) {
+    throw new FirstPartyReleaseCatalogFetchError(`Failed to fetch first-party extension release catalog: HTTP ${response.status}`, response.status);
+  }
   const parsed = (await response.json()) as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('First-party extension release catalog is not an object.');

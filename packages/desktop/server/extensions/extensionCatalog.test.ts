@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -135,7 +135,7 @@ describe('extension catalog', () => {
     );
   });
 
-  it('falls back to the baked first-party catalog when the release catalog cannot be fetched', async () => {
+  it('falls back quietly to the baked first-party catalog when the release catalog is not published', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -147,10 +147,26 @@ describe('extension catalog', () => {
     const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
     const catalog = await listInstallableExtensionCatalog();
 
+    expect(catalog.sourceErrors).toEqual([]);
+    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-browser' })]));
+  });
+
+  it('reports non-404 first-party release catalog fetch failures while using the baked catalog', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+      })),
+    );
+
+    const { listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog();
+
     expect(catalog.sourceErrors).toEqual([
       expect.objectContaining({
         sourceId: 'neon-pilot',
-        message: 'Failed to fetch first-party extension release catalog: HTTP 404',
+        message: 'Failed to fetch first-party extension release catalog: HTTP 500',
       }),
     ]);
     expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-browser' })]));
@@ -249,6 +265,34 @@ describe('extension catalog', () => {
     findExtensionEntry.mockReturnValue({ manifest: { id: 'system-browser' } });
     const { installCatalogExtension } = await import('./extensionCatalog.js');
     await expect(installCatalogExtension({ id: 'system-browser' })).rejects.toThrow('already installed');
+  });
+
+  it('installs catalog extensions from repo-built bundles when available', async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-bundles-'));
+    const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
+    const bundlePath = join(bundleDir, 'system-alleycat.neon-extension.zip');
+    mkdirSync(bundleDir, { recursive: true });
+    writeFileSync(bundlePath, new Uint8Array([1, 2, 3, 4]));
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          packages: [{ id: 'system-alleycat', tag: 'v0.10.2', artifact: 'system-alleycat.neon-extension.zip' }],
+        }),
+      })),
+    );
+    importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-alleycat', enabled: true }, packageRoot: '/tmp/ext' });
+    summaries.mockReturnValue([{ id: 'system-alleycat', name: 'Alleycat', enabled: false, version: '0.1.0' }]);
+
+    const { installCatalogExtension } = await import('./extensionCatalog.js');
+    const result = await installCatalogExtension({ id: 'system-alleycat' });
+
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(result.extension).toMatchObject({ id: 'system-alleycat', enabled: false });
+    rmSync(repoRoot, { recursive: true, force: true });
   });
 
   it('updates catalog extensions and preserves the enabled state', async () => {
