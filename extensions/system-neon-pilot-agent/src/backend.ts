@@ -1,4 +1,8 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
 import type { ExtensionBackendContext, ExtensionProtocolContext } from '@neon-pilot/extensions';
+import { updateExtensionSettings } from '@neon-pilot/extensions/backend/settings';
 import {
   abortAgentConversation,
   createAgentConversation,
@@ -53,6 +57,16 @@ type RunsApi = {
   pingDaemon: typeof pingDaemon;
   rerunDurableRun: typeof rerunDurableRun;
   startBackgroundRun: typeof startBackgroundRun;
+};
+
+type BootstrapCliEnvelope = {
+  cli?: {
+    command?: unknown;
+    args?: unknown;
+    flags?: unknown;
+    cwd?: unknown;
+    stdinText?: unknown;
+  };
 };
 
 let agentApiOverride: Partial<AgentApi> | null = null;
@@ -121,6 +135,32 @@ function readBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
+function readCli(input: JsonRecord): Required<BootstrapCliEnvelope>['cli'] {
+  return isRecord(input.cli) ? input.cli : {};
+}
+
+function readCliArgs(input: JsonRecord): string[] {
+  const cli = readCli(input);
+  return Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+}
+
+function readCliFlags(input: JsonRecord): Record<string, unknown> {
+  const cli = readCli(input);
+  return isRecord(cli.flags) ? cli.flags : {};
+}
+
+function readCliFlag(input: JsonRecord, key: string): unknown {
+  return readCliFlags(input)[key];
+}
+
+function readCliStdin(input: JsonRecord): string | undefined {
+  return readString(readCli(input).stdinText);
+}
+
+function readCliCwd(input: JsonRecord): string | undefined {
+  return readString(readCli(input).cwd);
+}
+
 function readToolMode(value: unknown, fallback: ToolMode = 'none'): ToolMode {
   return value === 'default' ? 'default' : value === 'none' ? 'none' : fallback;
 }
@@ -164,6 +204,154 @@ function readAllowedTools(value: unknown): string[] | undefined {
     .map((item) => item.trim())
     .filter(Boolean);
   return tools.length ? tools : undefined;
+}
+
+function normalizeAction(action: string, input: JsonRecord): string {
+  const command = readString(readCli(input).command);
+  if (!command?.startsWith('bootstrap ')) return action;
+  if (command === 'bootstrap doctor') return 'bootstrap_doctor';
+  if (command === 'bootstrap configure') return 'bootstrap_configure';
+  if (command === 'bootstrap defaults set') return 'bootstrap_defaults_set';
+  if (command === 'bootstrap provider set-key') return 'bootstrap_provider_set_key';
+  if (command === 'bootstrap provider save') return 'bootstrap_provider_save';
+  if (command === 'bootstrap provider model') return 'bootstrap_provider_model';
+  return action;
+}
+
+function readRuntimeSettings(filePath: string): JsonRecord {
+  if (!existsSync(filePath)) return {};
+  try {
+    const parsed = JSON.parse(readFileSync(filePath, 'utf-8')) as unknown;
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function updateRuntimeSettings(ctx: ExtensionBackendContext, patch: JsonRecord): JsonRecord {
+  const filePath = ctx.runtimeSettingsFilePath;
+  const current = readRuntimeSettings(filePath);
+  const next = { ...current };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined || value === null || value === '') {
+      delete next[key];
+    } else {
+      next[key] = value;
+    }
+  }
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, `${JSON.stringify(next, null, 2)}\n`);
+  return next;
+}
+
+function publicRuntimeSettings(ctx: ExtensionBackendContext): JsonRecord {
+  const settings = readRuntimeSettings(ctx.runtimeSettingsFilePath);
+  return {
+    defaultProvider: readString(settings.defaultProvider) ?? null,
+    defaultModel: readString(settings.defaultModel) ?? null,
+    defaultCwd: readString(settings.defaultCwd) ?? null,
+    defaultThinkingLevel: readString(settings.defaultThinkingLevel) ?? null,
+    defaultServiceTier: readString(settings.defaultServiceTier) ?? null,
+  };
+}
+
+function mcpConfig() {
+  return {
+    mcpServers: {
+      'neon-pilot': {
+        command: 'neon-pilot',
+        args: ['protocol', 'neon-pilot-agent-mcp'],
+      },
+    },
+  };
+}
+
+async function applyBootstrapDefaults(input: JsonRecord, ctx: ExtensionBackendContext): Promise<JsonRecord> {
+  const patch: JsonRecord = {};
+  const provider = readString(input.provider ?? readCliFlag(input, 'provider'));
+  const model = readString(input.model ?? readCliFlag(input, 'model'));
+  const cwd = readString(input.cwd ?? readCliFlag(input, 'cwd')) ?? readCliCwd(input);
+  const thinkingLevel = readString(input.thinkingLevel ?? readCliFlag(input, 'thinking-level'));
+  const serviceTier = readString(input.serviceTier ?? readCliFlag(input, 'service-tier'));
+  if (provider) patch.defaultProvider = provider;
+  if (model) patch.defaultModel = model;
+  if (cwd) patch.defaultCwd = cwd;
+  if (thinkingLevel) patch.defaultThinkingLevel = thinkingLevel;
+  if (serviceTier) patch.defaultServiceTier = serviceTier;
+  return updateRuntimeSettings(ctx, patch);
+}
+
+async function bootstrapDoctor(ctx: ExtensionBackendContext) {
+  const settings = await loadSettings(ctx);
+  const daemon = await runsApi()
+    .pingDaemon()
+    .catch(() => false);
+  const models = await ctx.models.list().catch(() => []);
+  const runtimeSettings = publicRuntimeSettings(ctx);
+  const checks = {
+    cliEnabled: settings.cliEnabled,
+    mcpEnabled: settings.mcpEnabled,
+    daemon,
+    defaultProviderConfigured: Boolean(runtimeSettings.defaultProvider),
+    defaultModelConfigured: Boolean(runtimeSettings.defaultModel),
+    modelInventoryReadable: Array.isArray(models),
+  };
+  const ready = Object.values(checks).every(Boolean);
+  return {
+    ready,
+    checks,
+    runtimeSettings,
+    modelCount: Array.isArray(models) ? models.length : 0,
+    mcp: mcpConfig(),
+  };
+}
+
+async function bootstrapConfigure(input: JsonRecord, ctx: ExtensionBackendContext) {
+  const cliEnabled = readBoolean(input.cliEnabled ?? readCliFlag(input, 'cli')) ?? true;
+  const mcpEnabled = readBoolean(input.mcpEnabled ?? readCliFlag(input, 'mcp')) ?? true;
+  await updateSettings({ cliEnabled, mcpEnabled }, ctx);
+  const secretsProvider = readString(input.secretsProvider ?? readCliFlag(input, 'secrets-provider'));
+  if (secretsProvider) {
+    await updateExtensionSettings({ 'secrets.provider': secretsProvider });
+  }
+  await applyBootstrapDefaults(input, ctx);
+  return bootstrapDoctor(ctx);
+}
+
+async function bootstrapProviderSetKey(input: JsonRecord, ctx: ExtensionBackendContext) {
+  const provider = requiredString(input.provider ?? readCliFlag(input, 'provider') ?? readCliArgs(input)[0], 'provider');
+  const apiKey = readString(input.apiKey) ?? readCliStdin(input);
+  if (!apiKey) throw new Error('api key is required. Pass it with --stdin or apiKey.');
+  await ctx.models.saveProvider({ provider, apiKey });
+  return { provider, credentialStored: true };
+}
+
+async function bootstrapProviderSave(input: JsonRecord, ctx: ExtensionBackendContext) {
+  const provider = requiredString(input.provider ?? readCliFlag(input, 'provider') ?? readCliArgs(input)[0], 'provider');
+  const baseUrl = readString(input.baseUrl ?? readCliFlag(input, 'base-url'));
+  const api = readString(input.api ?? readCliFlag(input, 'api'));
+  const authHeader = readBoolean(input.authHeader ?? readCliFlag(input, 'auth-header'));
+  await ctx.models.saveProvider({
+    provider,
+    ...(baseUrl ? { baseUrl } : {}),
+    ...(api ? { api } : {}),
+    ...(authHeader !== undefined ? { authHeader } : {}),
+  });
+  return { provider, saved: true };
+}
+
+async function bootstrapProviderModel(input: JsonRecord, ctx: ExtensionBackendContext) {
+  const args = readCliArgs(input);
+  const provider = requiredString(input.provider ?? readCliFlag(input, 'provider') ?? args[0], 'provider');
+  const modelId = requiredString(input.modelId ?? input.model ?? readCliFlag(input, 'model-id') ?? readCliFlag(input, 'model') ?? args[1], 'modelId');
+  const contextWindow = readNumber(input.contextWindow ?? readCliFlag(input, 'context-window'));
+  await ctx.models.saveProviderModel({
+    provider,
+    modelId,
+    ...(readString(input.name ?? readCliFlag(input, 'name')) ? { name: readString(input.name ?? readCliFlag(input, 'name')) } : {}),
+    ...(contextWindow ? { contextWindow } : {}),
+  });
+  return { provider, modelId, saved: true };
 }
 
 function defaultTaskSlug(prompt: string): string {
@@ -253,7 +441,7 @@ export async function updateSettings(input: unknown, ctx: ExtensionBackendContex
 
 export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContext) {
   const params = isRecord(input) ? input : {};
-  const action = requiredString(params.action, 'action');
+  const action = normalizeAction(requiredString(params.action, 'action'), params);
 
   switch (action) {
     case 'run_task': {
@@ -405,6 +593,40 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
       });
     }
 
+    case 'bootstrap_doctor': {
+      const result = await bootstrapDoctor(ctx);
+      return textResult(JSON.stringify(result, null, 2), { action, ...result });
+    }
+
+    case 'bootstrap_configure': {
+      const result = await bootstrapConfigure(params, ctx);
+      return textResult(JSON.stringify(result, null, 2), { action, ...result });
+    }
+
+    case 'bootstrap_defaults_set': {
+      const settings = await applyBootstrapDefaults(params, ctx);
+      return textResult('Updated Neon Pilot runtime defaults.', {
+        action,
+        runtimeSettings: publicRuntimeSettings(ctx),
+        settings,
+      });
+    }
+
+    case 'bootstrap_provider_set_key': {
+      const result = await bootstrapProviderSetKey(params, ctx);
+      return textResult(`Stored credential for ${result.provider}.`, { action, ...result });
+    }
+
+    case 'bootstrap_provider_save': {
+      const result = await bootstrapProviderSave(params, ctx);
+      return textResult(`Saved provider ${result.provider}.`, { action, ...result });
+    }
+
+    case 'bootstrap_provider_model': {
+      const result = await bootstrapProviderModel(params, ctx);
+      return textResult(`Saved model ${result.provider}/${result.modelId}.`, { action, ...result });
+    }
+
     case 'capabilities':
       return textResult(
         JSON.stringify(
@@ -424,6 +646,12 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
               'runs_logs',
               'runs_cancel',
               'runs_rerun',
+              'bootstrap_doctor',
+              'bootstrap_configure',
+              'bootstrap_defaults_set',
+              'bootstrap_provider_set_key',
+              'bootstrap_provider_save',
+              'bootstrap_provider_model',
             ],
           },
           null,
@@ -467,6 +695,12 @@ function cliUsage(): string {
   neon-pilot protocol neon-pilot-agent conversation create [--title <text>] [--cwd <path>] [--tools none|default] [--json]
   neon-pilot protocol neon-pilot-agent conversation send <conversationId> --prompt <text> [--json]
   neon-pilot protocol neon-pilot-agent conversation close <conversationId> [--json]
+  neon-pilot protocol neon-pilot-agent bootstrap doctor [--json]
+  neon-pilot protocol neon-pilot-agent bootstrap configure [--provider <id>] [--model <id>] [--secrets-provider keychain|file|env-only] [--json]
+  neon-pilot protocol neon-pilot-agent bootstrap defaults set --provider <id> --model <id> [--cwd <path>] [--json]
+  neon-pilot protocol neon-pilot-agent bootstrap provider set-key <provider> --stdin [--json]
+  neon-pilot protocol neon-pilot-agent bootstrap provider save <provider> [--base-url <url>] [--api openai|anthropic] [--json]
+  neon-pilot protocol neon-pilot-agent bootstrap provider model <provider> <modelId> [--context-window <tokens>] [--json]
   neon-pilot protocol neon-pilot-agent capabilities [--json]
 `;
 }
@@ -491,6 +725,18 @@ function inputFromCli(args: string[]): { input: JsonRecord; json: boolean } {
   if (command === 'subagents' && subcommand === 'follow-up') {
     return { input: { ...common, action: 'subagent_follow_up', runId: idOrAction }, json };
   }
+  if (command === 'bootstrap') {
+    if (subcommand === 'doctor') return { input: { ...common, action: 'bootstrap_doctor' }, json };
+    if (subcommand === 'configure') return { input: { ...common, action: 'bootstrap_configure' }, json };
+    if (subcommand === 'defaults' && idOrAction === 'set') return { input: { ...common, action: 'bootstrap_defaults_set' }, json };
+    if (subcommand === 'provider') {
+      if (idOrAction === 'set-key') return { input: { ...common, action: 'bootstrap_provider_set_key', provider: maybeAction }, json };
+      if (idOrAction === 'save') return { input: { ...common, action: 'bootstrap_provider_save', provider: maybeAction }, json };
+      if (idOrAction === 'model') {
+        return { input: { ...common, action: 'bootstrap_provider_model', provider: maybeAction, modelId: args[4] }, json };
+      }
+    }
+  }
   if (command === 'conversation') {
     if (subcommand === 'create') return { input: { ...common, action: 'conversation_create' }, json };
     if (subcommand === 'send') return { input: { ...common, action: 'conversation_send', conversationId: idOrAction }, json };
@@ -509,9 +755,20 @@ export async function neonPilotAgentCli(input: unknown, ctx: ExtensionProtocolCo
   await assertEntrypointEnabled(ctx, 'cliEnabled', 'CLI');
   const args = isRecord(input) && Array.isArray(input.args) ? input.args.filter((arg): arg is string => typeof arg === 'string') : [];
   const parsed = inputFromCli(args);
+  if (parsed.input.action === 'bootstrap_provider_set_key' && parsed.input.stdin === true) {
+    parsed.input.cli = { stdinText: await readAllStdin(ctx.stdio.stdin) };
+  }
   const result = await neonPilotAgent(parsed.input, ctx);
   const payload = isRecord(result) && isRecord(result.details) ? result.details : result;
   ctx.stdio.stdout.write(parsed.json ? `${JSON.stringify(payload, null, 2)}\n` : `${String((result as { text?: unknown }).text ?? '')}\n`);
+}
+
+async function readAllStdin(stdin: NodeJS.ReadableStream): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  }
+  return Buffer.concat(chunks).toString('utf-8');
 }
 
 const MCP_TOOLS = [

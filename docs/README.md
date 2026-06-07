@@ -18,6 +18,7 @@ See [Getting Started](getting-started.md) for the full setup.
 ## Start here
 
 - [Getting Started](getting-started.md) — install from source and verify the app
+- [Agent bootstrap](agent-bootstrap.md) — packaged install, CLI setup, provider configuration, and external-agent verification
 - [Views](views.md) — Conversation, Workbench layouts
 - [Conversation context](conversation-context.md) — attach files, folders, and generated context
 - [Conversations](conversations.md) — live threads, branching, async follow-through

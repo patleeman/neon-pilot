@@ -223,6 +223,15 @@ function parseFlags(args: string[]): { positional: string[]; flags: Record<strin
   return { positional, flags };
 }
 
+async function readCliStdinIfRequested(flags: Record<string, string | boolean>): Promise<string | undefined> {
+  if (flags.stdin !== true && flags['api-key-stdin'] !== true) return undefined;
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
+
 function commandTokens(command: string): string[] {
   return command.trim().split(/\s+/).filter(Boolean);
 }
@@ -345,6 +354,7 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
     const rawArgs = argv.slice(match.length);
     const json = wantsJson(rawArgs) || match.registration.jsonDefault === true;
     const parsed = parseFlags(stripJsonFlag(rawArgs));
+    const stdinText = await readCliStdinIfRequested(parsed.flags);
     const extensionHostClient = await getCliExtensionHostClient();
     const inputAction = actionFromCliCommand(match.registration.command);
     const invokeResult = await extensionHostClient.invokeAction({
@@ -359,6 +369,7 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
           flags: parsed.flags,
           json,
           cwd: process.cwd(),
+          ...(stdinText !== undefined ? { stdinText } : {}),
         },
       },
       serverContextSnapshot: buildServerContextSnapshot(),

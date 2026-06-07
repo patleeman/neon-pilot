@@ -44,11 +44,20 @@ neon-pilot extensions list --json
 neon-pilot settings list --json
 neon-pilot settings get conversation.pinnedToolCalls --json
 neon-pilot settings set conversation.pinnedToolCalls false
+neon-pilot bootstrap doctor --json
+neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4 --json
+printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin --json
 neon-pilot conversations list --json
 neon-pilot conversations search "query text" --json
 ```
 
 Agents should prefer JSON for inspection and automation, list or inspect before mutating, and use CLI commands instead of editing runtime files directly when a command exists.
+
+## Agent Bootstrap
+
+External agents can install and configure Neon Pilot through the packaged installer and bootstrap commands. See [Agent bootstrap](agent-bootstrap.md) for the end-to-end flow.
+
+Provider credentials must not be passed in command arguments. Use `--stdin`, Keychain-backed storage, OAuth/device flows, or environment fallback where explicitly configured.
 
 ## Security
 

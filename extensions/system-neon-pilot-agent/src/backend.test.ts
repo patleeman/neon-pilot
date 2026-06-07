@@ -1,4 +1,7 @@
 import { PassThrough } from 'node:stream';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,10 +25,13 @@ function createStorage(initial: Record<string, unknown> = {}) {
 }
 
 function ctx(overrides: Record<string, unknown> = {}) {
+  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-agent-test-'));
   return {
     runtime: { getRepoRoot: () => '/repo' },
+    runtimeSettingsFilePath: join(tempRoot, 'runtime', 'settings.json'),
     toolContext: { cwd: '/repo', conversationId: 'conversation-1', sessionFile: '/session.jsonl' },
     storage: createStorage(),
+    models: { list: vi.fn(async () => []), saveProvider: vi.fn(async () => ({})), saveProviderModel: vi.fn(async () => ({})) },
     ui: { invalidate: vi.fn() },
     ...overrides,
   } as never;
@@ -108,6 +114,68 @@ describe('system-neon-pilot-agent backend', () => {
     );
 
     expect(JSON.parse(output)).toMatchObject({ action: 'run_task' });
+  });
+
+  it('runs bootstrap doctor with readiness checks and MCP config', async () => {
+    __setNeonPilotAgentApisForTest({ runs: { pingDaemon: vi.fn(async () => true) } });
+    const context = ctx({
+      models: { list: vi.fn(async () => [{ id: 'gpt-5.4', provider: 'openai-codex' }]) },
+    });
+
+    await neonPilotAgent({ action: 'bootstrap_defaults_set', provider: 'openai-codex', model: 'gpt-5.4' }, context);
+    await expect(neonPilotAgent({ action: 'bootstrap_doctor' }, context)).resolves.toMatchObject({
+      details: {
+        ready: true,
+        checks: {
+          cliEnabled: true,
+          mcpEnabled: true,
+          daemon: true,
+          defaultProviderConfigured: true,
+          defaultModelConfigured: true,
+          modelInventoryReadable: true,
+        },
+        mcp: { mcpServers: { 'neon-pilot': { command: 'neon-pilot' } } },
+      },
+    });
+  });
+
+  it('stores provider keys from CLI stdin without exposing the key in output details', async () => {
+    const saveProvider = vi.fn(async () => ({}));
+    const context = ctx({ models: { list: vi.fn(async () => []), saveProvider, saveProviderModel: vi.fn(async () => ({})) } });
+
+    await expect(
+      neonPilotAgent(
+        {
+          action: 'set-key',
+          cli: { command: 'bootstrap provider set-key', args: ['openai'], flags: { stdin: true }, stdinText: 'sk-secret\n' },
+        },
+        context,
+      ),
+    ).resolves.toMatchObject({
+      text: 'Stored credential for openai.',
+      details: { action: 'bootstrap_provider_set_key', provider: 'openai', credentialStored: true },
+    });
+    expect(saveProvider).toHaveBeenCalledWith({ provider: 'openai', apiKey: 'sk-secret' });
+  });
+
+  it('writes runtime defaults for agent bootstrap', async () => {
+    const context = ctx();
+    await neonPilotAgent(
+      {
+        action: 'set',
+        cli: {
+          command: 'bootstrap defaults set',
+          flags: { provider: 'openai-codex', model: 'gpt-5.4', cwd: '/Users/patrick/workingdir' },
+        },
+      },
+      context,
+    );
+
+    expect(JSON.parse(readFileSync((context as { runtimeSettingsFilePath: string }).runtimeSettingsFilePath, 'utf-8'))).toMatchObject({
+      defaultProvider: 'openai-codex',
+      defaultModel: 'gpt-5.4',
+      defaultCwd: '/Users/patrick/workingdir',
+    });
   });
 
   it('rejects CLI protocol calls when the CLI entrypoint is disabled', async () => {

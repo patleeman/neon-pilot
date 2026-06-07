@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PassThrough } from 'node:stream';
 
 const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn(() => '/agent'), getStateRoot: vi.fn(() => '/tmp/neon-pilot-protocol-cli-test') }));
 const runtime = vi.hoisted(() => ({
@@ -187,6 +188,39 @@ describe('protocol CLI', () => {
         }),
       }),
     );
+  });
+
+  it('passes stdin to contributed CLI actions only when requested', async () => {
+    const originalStdin = process.stdin;
+    const stdin = new PassThrough();
+    Object.defineProperty(process, 'stdin', { value: stdin, configurable: true });
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-neon-pilot-agent',
+          surfaceId: 'bootstrap-provider-set-key',
+          command: 'bootstrap provider set-key',
+          action: 'neonPilotAgent',
+          jsonDefault: true,
+        },
+      ],
+    });
+    stdin.end('sk-secret\n');
+
+    await expect(runProtocolCli(['bootstrap', 'provider', 'set-key', 'openai', '--stdin'])).resolves.toBe(0);
+
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          cli: expect.objectContaining({
+            args: ['openai'],
+            flags: { stdin: true },
+            stdinText: 'sk-secret\n',
+          }),
+        }),
+      }),
+    );
+    Object.defineProperty(process, 'stdin', { value: originalStdin, configurable: true });
   });
 
   it('reports CLI install status as a built-in command', async () => {

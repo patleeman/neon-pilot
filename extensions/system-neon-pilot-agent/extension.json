@@ -48,6 +48,50 @@
     ]
   },
   "contributes": {
+    "cliCommands": [
+      {
+        "id": "bootstrap-doctor",
+        "command": "bootstrap doctor",
+        "description": "Check whether Neon Pilot is ready for external agent control.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true
+      },
+      {
+        "id": "bootstrap-configure",
+        "command": "bootstrap configure",
+        "description": "Configure Neon Pilot defaults and external-agent entrypoints.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true
+      },
+      {
+        "id": "bootstrap-defaults-set",
+        "command": "bootstrap defaults set",
+        "description": "Set default provider, model, cwd, thinking level, and service tier.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true
+      },
+      {
+        "id": "bootstrap-provider-set-key",
+        "command": "bootstrap provider set-key",
+        "description": "Store a provider API key through the configured secrets backend. Use --stdin.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true
+      },
+      {
+        "id": "bootstrap-provider-save",
+        "command": "bootstrap provider save",
+        "description": "Create or update a model provider definition.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true
+      },
+      {
+        "id": "bootstrap-provider-model",
+        "command": "bootstrap provider model",
+        "description": "Create or update a provider model definition.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true
+      }
+    ],
     "settingsComponent": {
       "id": "neon-pilot-agent",
       "component": "NeonPilotAgentSettingsPanel",
@@ -55,7 +99,13 @@
       "label": "Neon Pilot Agent",
       "description": "Enable or disable the CLI and MCP entrypoints that expose Neon Pilot to other agents.",
       "order": 45
-    }
+    },
+    "skills": [
+      {
+        "path": "skills/neon-pilot-control/SKILL.md",
+        "title": "Neon Pilot Control"
+      }
+    ]
   },
   "permissions": ["agent:run", "agent:conversations", "runs:read", "runs:write", "settings:read", "settings:write"]
 }
