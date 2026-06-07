@@ -95,6 +95,14 @@ function createSystemExtension() {
   } as never;
 }
 
+function createSystemExtensionWithoutRowActions() {
+  return {
+    ...createSystemExtension(),
+    id: 'system-menu-test-empty-actions',
+    packageRoot: undefined,
+  } as never;
+}
+
 function renderPage(options?: { toast?: ReturnType<typeof vi.fn>; notify?: ReturnType<typeof vi.fn> }) {
   const toast = options?.toast ?? vi.fn();
   const notify = options?.notify ?? vi.fn();
@@ -154,6 +162,14 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Snapshot')).toBeNull();
     expect(screen.queryByText('Export')).toBeNull();
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
+  });
+
+  it('does not render an empty row actions menu for extensions with no actions', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createSystemExtensionWithoutRowActions()]);
+    renderPage();
+
+    expect(await screen.findByText('System Menu Test')).toBeTruthy();
+    expect(screen.queryByLabelText('More actions')).toBeNull();
   });
 
   it('keeps the row actions menu inside the viewport near the window bottom', async () => {

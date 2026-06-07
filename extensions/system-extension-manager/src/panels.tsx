@@ -315,6 +315,11 @@ function ExtensionActionsMenu({
     action();
   }, []);
   const canDelete = extension.packageType !== 'system';
+  const hasActions = Boolean(extension.packageRoot || onUpdate || onReinstall || canDelete);
+
+  if (!hasActions) {
+    return null;
+  }
 
   return (
     <div ref={rootRef} className="relative" onClick={(event) => event.stopPropagation()}>
