@@ -24,7 +24,7 @@ import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { getModelSelectionValue, resolveSelectableModel, THINKING_LEVEL_OPTIONS } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
-import { IconButton } from '../ui';
+import { cx, IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
@@ -148,6 +148,7 @@ function CoreModelPreferenceControls({
   models,
   currentModel,
   currentThinkingLevel,
+  compact,
   onSelectModel,
   onSelectThinkingLevel,
 }: {
@@ -155,18 +156,21 @@ function CoreModelPreferenceControls({
   models: ModelInfo[];
   currentModel: string;
   currentThinkingLevel: string;
+  compact: boolean;
   onSelectModel: (modelId: string) => void;
   onSelectThinkingLevel: (thinkingLevel: string) => void;
 }) {
   const selectedModel = resolveSelectableModel(models, currentModel);
-  const selectClassName =
-    'h-8 max-w-[10rem] min-w-0 rounded-md border border-transparent bg-transparent px-2 text-[11px] font-medium text-secondary outline-none hover:bg-surface/55 hover:text-primary focus:border-accent/30 focus:bg-surface/55 focus:text-primary disabled:opacity-50';
+  const selectBaseClassName =
+    'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-2 text-[11px] font-medium text-secondary outline-none hover:bg-surface/55 hover:text-primary focus:border-accent/30 focus:bg-surface/55 focus:text-primary disabled:opacity-50';
+  const modelSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[8.25rem]' : 'max-w-[10rem]');
+  const thinkingSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[5.75rem]' : 'max-w-[7rem]');
   return (
     <>
       <select
         aria-label="Conversation model"
         title="Conversation model"
-        className={selectClassName}
+        className={modelSelectClassName}
         disabled={disabled || models.length === 0}
         value={selectedModel ? getModelSelectionValue(selectedModel, models) : currentModel}
         onChange={(event) => onSelectModel(event.target.value)}
@@ -181,7 +185,7 @@ function CoreModelPreferenceControls({
       <select
         aria-label="Thinking level"
         title="Thinking level"
-        className="h-8 max-w-[7rem] min-w-0 rounded-md border border-transparent bg-transparent px-2 text-[11px] font-medium text-secondary outline-none hover:bg-surface/55 hover:text-primary focus:border-accent/30 focus:bg-surface/55 focus:text-primary disabled:opacity-50"
+        className={thinkingSelectClassName}
         disabled={disabled}
         value={currentThinkingLevel}
         onChange={(event) => onSelectThinkingLevel(event.target.value)}
@@ -410,6 +414,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
   const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
   const visiblePreferenceControls = visibleComposerControls.filter((control) => control.slot === 'preferences');
+  const shouldKeepControlRowInline = composerShellWidth === null || composerShellWidth >= 420;
 
   return (
     <div className="px-3 pt-2.5 pb-2.5">
@@ -471,8 +476,18 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
           />
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0 min-[420px]:flex-nowrap">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 min-[420px]:flex-nowrap">
+        <div
+          className={cx(
+            'flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0',
+            shouldKeepControlRowInline && 'flex-nowrap',
+          )}
+        >
+          <div
+            className={cx(
+              'flex min-w-0 flex-1 flex-wrap items-center gap-1.5',
+              shouldKeepControlRowInline && 'flex-nowrap',
+            )}
+          >
             <CoreAttachControl disabled={composerDisabled} onOpenFilePicker={onOpenFilePicker} />
             {visibleLeadingControls.map((control) => (
               <ComposerButtonHost
@@ -505,6 +520,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               models={models}
               currentModel={currentModel}
               currentThinkingLevel={currentThinkingLevel}
+              compact={!shouldKeepControlRowInline}
               onSelectModel={onSelectModel}
               onSelectThinkingLevel={onSelectThinkingLevel}
             />

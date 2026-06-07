@@ -206,9 +206,19 @@ describe('ConversationComposerInputControls', () => {
   it('allows the composer action row to wrap in narrow rail layouts', () => {
     const html = renderControls({ composerShellWidth: 320 });
 
-    expect(html).toContain('flex-wrap');
-    expect(html).toContain('min-[420px]:flex-nowrap');
+    expect(html).toContain('border-t border-dashed border-border-subtle px-1 py-2 pb-0');
+    expect(html).toContain('flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0');
+    expect(html).toContain('flex min-w-0 flex-1 flex-wrap items-center gap-1.5');
+    expect(html).not.toContain(
+      'flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0 flex-nowrap',
+    );
     expect(html).toContain('ml-auto shrink-0');
+  });
+
+  it('keeps the composer action row inline when the measured composer is wide enough', () => {
+    const html = renderControls({ composerShellWidth: 640 });
+
+    expect(html).toContain('flex-nowrap');
   });
 
   it('renders saved thinking preference labels before model metadata is loaded', () => {
