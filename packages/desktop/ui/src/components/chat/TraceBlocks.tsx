@@ -4,6 +4,7 @@ import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
 import { Button, MetaLabel, Pill, RowButton, SectionLabel, SurfacePanel, TextButton } from '../ui';
 import { readLinkedRuns } from './linkedRuns.js';
+import type { ChatViewLayout } from './chatViewTypes.js';
 import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { buildSummaryPreview } from './summaryPreview.js';
@@ -280,6 +281,7 @@ export function TraceClusterBlock({
   resumeBusy,
   resumeTitle,
   resumeLabel,
+  layout = 'default',
   transcriptDisclosureMode,
   diffDisclosureMode,
   showPinnedToolCalls,
@@ -300,6 +302,7 @@ export function TraceClusterBlock({
   resumeBusy?: boolean;
   resumeTitle?: string | null;
   resumeLabel?: string;
+  layout?: ChatViewLayout;
   transcriptDisclosureMode: ConversationTranscriptDisclosureMode;
   diffDisclosureMode: ConversationDiffDisclosureMode;
   showPinnedToolCalls: boolean;
@@ -313,6 +316,7 @@ export function TraceClusterBlock({
   const isActive = live || summary.hasRunning;
   const stableActive = useGracefulTraceClusterActive(isActive);
   const throughputLabel = useMemo(() => getStreamingThroughputLabel(blocks, stableActive), [blocks, stableActive]);
+  const compact = layout === 'compact';
   const title = stableActive ? 'Working' : 'Internal work';
   const autoOpen = transcriptDisclosureMode === 'expanded' ? true : shouldAutoOpenTraceCluster(stableActive, false);
   const open = resolveDisclosureOpen(autoOpen, preference);
@@ -353,21 +357,31 @@ export function TraceClusterBlock({
   const visibleStartIndex = blocks.length - visibleBlocks.length;
   return (
     <div className="space-y-1.5">
-      <div className="grid w-full grid-cols-[auto_1fr] items-center gap-2 text-[11px] text-dim/70">
+      <div
+        className={
+          compact
+            ? 'flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-dim/70'
+            : 'grid w-full grid-cols-[auto_1fr] items-center gap-2 text-[11px] text-dim/70'
+        }
+      >
         <RowButton
           compact
           onMouseEnter={hydrateDeferredBlocks}
           onFocus={hydrateDeferredBlocks}
           onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
           aria-expanded={open}
-          className="flex min-w-0 max-w-[78vw] items-center gap-1.5 p-0 text-dim/70 hover:bg-transparent sm:max-w-[42rem]"
+          className={
+            compact
+              ? 'flex min-w-0 max-w-full flex-1 flex-wrap items-center gap-1.5 p-0 text-dim/70 hover:bg-transparent'
+              : 'flex min-w-0 max-w-[78vw] items-center gap-1.5 p-0 text-dim/70 hover:bg-transparent sm:max-w-[42rem]'
+          }
         >
-          <span className="font-medium text-primary">{title}</span>
-          <span className="text-secondary">
+          <span className="shrink-0 font-medium text-primary">{title}</span>
+          <span className="shrink-0 text-secondary">
             · {summary.stepCount} step{summary.stepCount === 1 ? '' : 's'}
           </span>
           {summary.categories.length > 0 && (
-            <span className="flex items-center gap-1">
+            <span className="flex min-w-0 flex-wrap items-center gap-1">
               {expandedCategories.map((category) => (
                 <Pill key={category.key} tone={traceSummaryTone(category)} mono={category.kind === 'tool'}>
                   {category.label}
@@ -390,7 +404,7 @@ export function TraceClusterBlock({
           {durationLabel && !isActive && <span className="text-dim">{durationLabel}</span>}
           <span className="text-dim">{open ? 'hide' : 'show'}</span>
         </RowButton>
-        <span className="h-px bg-border-subtle" aria-hidden="true" />
+        <span className={compact ? 'h-px min-w-8 flex-1 bg-border-subtle' : 'h-px bg-border-subtle'} aria-hidden="true" />
       </div>
       <ResumeConversationAction onResume={onResume} busy={resumeBusy} title={resumeTitle} label={resumeLabel} variant="inline" />
 

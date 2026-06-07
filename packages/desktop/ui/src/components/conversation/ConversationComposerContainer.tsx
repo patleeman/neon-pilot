@@ -33,7 +33,7 @@ export const ConversationComposerContainer = forwardRef<HTMLDivElement, Conversa
     ref,
   ) {
     return (
-      <div className={cx('min-w-0', layout === 'rail' && 'w-full max-w-full overflow-hidden px-3 py-3', className)} {...containerProps}>
+      <div className={cx('min-w-0', layout === 'rail' && 'w-full max-w-full overflow-hidden px-1.5 py-3', className)} {...containerProps}>
         {shelves ? <div className="mb-2">{shelves}</div> : null}
         <ConversationComposerShell
           ref={ref}

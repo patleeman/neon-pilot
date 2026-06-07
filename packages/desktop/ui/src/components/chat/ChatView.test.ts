@@ -757,6 +757,38 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('1 step');
   });
 
+  it('wraps trace cluster metadata in compact transcript layout', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChatView, {
+        layout: 'compact',
+        messages: [
+          {
+            type: 'tool_use',
+            ts: '2026-03-11T18:00:00.000Z',
+            tool: 'writing_studio_get_canvas',
+            input: { documentId: 'draft-1' },
+            output: 'Loaded the canvas.',
+            status: 'ok',
+          },
+          {
+            type: 'tool_use',
+            ts: '2026-03-11T18:00:01.000Z',
+            tool: 'writing_studio_add_annotation',
+            input: { documentId: 'draft-1', comment: 'Tighten this paragraph.' },
+            output: 'Added annotation.',
+            status: 'ok',
+          },
+        ],
+        isStreaming: false,
+      }),
+    );
+
+    expect(html).toContain('flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-dim/70');
+    expect(html).toContain('max-w-full flex-1 flex-wrap');
+    expect(html).toContain('writing_studio_get_canvas');
+    expect(html).not.toContain('sm:max-w-[42rem]');
+  });
+
   it('renders pending ask_user tool calls as generic tool blocks in composer mode', () => {
     const html = renderToStaticMarkup(
       createElement(ChatView, {

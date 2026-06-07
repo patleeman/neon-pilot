@@ -125,6 +125,7 @@ export function ChatRenderItemView({
           resumeBusy={resumeConversationBusy}
           resumeTitle={resumeConversationTitle}
           resumeLabel={resumeConversationLabel}
+          layout={layout}
           transcriptDisclosureMode={transcriptDisclosureMode}
           diffDisclosureMode={diffDisclosureMode}
           showPinnedToolCalls={showPinnedToolCalls}
