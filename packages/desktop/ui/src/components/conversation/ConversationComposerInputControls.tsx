@@ -11,7 +11,11 @@ import { type ClipboardEventHandler, type KeyboardEventHandler, memo, type RefOb
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
-import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import {
+  type ExtensionComposerControlRegistration,
+  type ExtensionComposerInputToolRegistration,
+  useExtensionRegistry,
+} from '../../extensions/useExtensionRegistry';
 import type { ModelInfo } from '../../shared/types';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
@@ -24,6 +28,64 @@ function getComposerPreferenceInlineLimit(composerShellWidth: number | null): nu
   if (width >= 560) return 2;
   if (width >= 460) return 1;
   return 0;
+}
+
+const CORE_ATTACH_FILES_CONTROL: ExtensionComposerControlRegistration = {
+  extensionId: 'system-composer-attachments',
+  id: 'attach-files',
+  component: 'AttachFilesComposerControl',
+  slot: 'leading',
+  title: 'Attach image or file',
+  priority: 0,
+};
+
+const CORE_MODEL_PREFERENCES_CONTROL: ExtensionComposerControlRegistration = {
+  extensionId: 'system-model-picker',
+  id: 'model-preferences',
+  component: 'ModelPreferencesComposerControl',
+  slot: 'preferences',
+  title: 'Model preferences',
+  priority: 10,
+};
+
+const CORE_EXCALIDRAW_INPUT_TOOL: ExtensionComposerInputToolRegistration = {
+  extensionId: 'system-excalidraw-input',
+  id: 'excalidraw',
+  component: 'ExcalidrawInputTool',
+  title: 'Create drawing',
+  priority: 100,
+};
+
+function ensureCoreComposerControls(
+  composerControls: ExtensionComposerControlRegistration[],
+): ExtensionComposerControlRegistration[] {
+  const next = [...composerControls];
+  if (!next.some((control) => control.extensionId === CORE_ATTACH_FILES_CONTROL.extensionId && control.id === CORE_ATTACH_FILES_CONTROL.id)) {
+    next.push(CORE_ATTACH_FILES_CONTROL);
+  }
+  if (
+    !next.some(
+      (control) => control.extensionId === CORE_MODEL_PREFERENCES_CONTROL.extensionId && control.id === CORE_MODEL_PREFERENCES_CONTROL.id,
+    )
+  ) {
+    next.push(CORE_MODEL_PREFERENCES_CONTROL);
+  }
+  return next.sort(
+    (a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.extensionId.localeCompare(b.extensionId) || a.id.localeCompare(b.id),
+  );
+}
+
+function ensureCoreComposerInputTools(
+  composerInputTools: ExtensionComposerInputToolRegistration[],
+): ExtensionComposerInputToolRegistration[] {
+  if (
+    composerInputTools.some(
+      (tool) => tool.extensionId === CORE_EXCALIDRAW_INPUT_TOOL.extensionId && tool.id === CORE_EXCALIDRAW_INPUT_TOOL.id,
+    )
+  ) {
+    return composerInputTools;
+  }
+  return [...composerInputTools, CORE_EXCALIDRAW_INPUT_TOOL].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 }
 
 function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps, next: ConversationComposerInputControlsProps): boolean {
@@ -142,7 +204,9 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   onAbortStream,
   conversationId,
 }: ConversationComposerInputControlsProps) {
-  const { composerControls = [], composerInputTools } = useExtensionRegistry();
+  const { composerControls = [], composerInputTools = [] } = useExtensionRegistry();
+  const effectiveComposerControls = useMemo(() => ensureCoreComposerControls(composerControls), [composerControls]);
+  const effectiveComposerInputTools = useMemo(() => ensureCoreComposerInputTools(composerInputTools), [composerInputTools]);
   const [localInput, setLocalInputState] = useState(input);
   const previousInputPropRef = useRef(input);
   const localInputRef = useRef(input);
@@ -182,7 +246,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
   const visibleComposerInputTools = useMemo(
     () =>
-      composerInputTools.filter((tool) => {
+      effectiveComposerInputTools.filter((tool) => {
         const expr = tool.when;
         if (!expr) return true;
         const clauses = expr.split(/\s*&&\s*/).filter(Boolean);
@@ -194,12 +258,12 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
         }
         return true;
       }),
-    [composerHasContent, composerInputTools, streamIsStreaming],
+    [composerHasContent, effectiveComposerInputTools, streamIsStreaming],
   );
 
   const visibleComposerControls = useMemo(
     () =>
-      composerControls.filter((button) => {
+      effectiveComposerControls.filter((button) => {
         const expr = button.when;
         if (!expr) return true;
         const clauses = expr.split(/\s*&&\s*/).filter(Boolean);
@@ -211,7 +275,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
         }
         return true;
       }),
-    [composerControls, composerHasContent, streamIsStreaming],
+    [effectiveComposerControls, composerHasContent, streamIsStreaming],
   );
 
   const composerControlContext = {

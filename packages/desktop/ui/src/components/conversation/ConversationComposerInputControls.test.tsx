@@ -9,6 +9,33 @@ import type { ModelInfo } from '../../shared/types';
 import { ConversationComposerInputControls } from './ConversationComposerInputControls';
 import { ConversationRunModePanel } from './ConversationRunModePanel';
 
+const extensionRegistryState = vi.hoisted(() => ({
+  composerControls: [
+    {
+      extensionId: 'system-composer-attachments',
+      id: 'attach-files',
+      component: 'AttachFilesComposerControl',
+      slot: 'leading',
+      priority: 0,
+    },
+    {
+      extensionId: 'system-model-picker',
+      id: 'model-preferences',
+      component: 'ModelPreferencesComposerControl',
+      slot: 'preferences',
+      priority: 10,
+    },
+  ],
+  composerInputTools: [] as Array<{
+    extensionId: string;
+    id: string;
+    component: string;
+    title?: string;
+    priority?: number;
+  }>,
+  toolbarActions: [],
+}));
+
 vi.mock('../../extensions/ComposerButtonHost', () => ({
   ComposerButtonHost: ({ registration }: { registration: { id: string } }) => {
     if (registration.id === 'attach-files') return <button title="Attach image or file">Attach</button>;
@@ -17,27 +44,14 @@ vi.mock('../../extensions/ComposerButtonHost', () => ({
   },
 }));
 
+vi.mock('../../extensions/ComposerInputToolHost', () => ({
+  ComposerInputToolHost: ({ registration }: { registration: { id: string; title?: string } }) => (
+    <button title={registration.title ?? registration.id}>{registration.id}</button>
+  ),
+}));
+
 vi.mock('../../extensions/useExtensionRegistry', () => ({
-  useExtensionRegistry: () => ({
-    composerControls: [
-      {
-        extensionId: 'system-composer-attachments',
-        id: 'attach-files',
-        component: 'AttachFilesComposerControl',
-        slot: 'leading',
-        priority: 0,
-      },
-      {
-        extensionId: 'system-model-picker',
-        id: 'model-preferences',
-        component: 'ModelPreferencesComposerControl',
-        slot: 'preferences',
-        priority: 10,
-      },
-    ],
-    composerInputTools: [],
-    toolbarActions: [],
-  }),
+  useExtensionRegistry: () => extensionRegistryState,
 }));
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
@@ -131,13 +145,45 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
 }
 
 describe('ConversationComposerInputControls', () => {
+  beforeEach(() => {
+    extensionRegistryState.composerControls = [
+      {
+        extensionId: 'system-composer-attachments',
+        id: 'attach-files',
+        component: 'AttachFilesComposerControl',
+        slot: 'leading',
+        priority: 0,
+      },
+      {
+        extensionId: 'system-model-picker',
+        id: 'model-preferences',
+        component: 'ModelPreferencesComposerControl',
+        slot: 'preferences',
+        priority: 10,
+      },
+    ];
+    extensionRegistryState.composerInputTools = [];
+  });
+
   it('renders textarea, attachment controls, preferences, and disabled send', () => {
     const html = renderControls();
 
     expect(html).toContain('Message Neon Pilot');
     expect(html).toContain('Attach image or file');
     expect(html).toContain('Conversation model');
+    expect(html).toContain('Create drawing');
     expect(html).toContain('aria-label="Send"');
+  });
+
+  it('falls back to core composer controls when extension registry controls are unavailable', () => {
+    extensionRegistryState.composerControls = [];
+    extensionRegistryState.composerInputTools = [];
+
+    const html = renderControls();
+
+    expect(html).toContain('Attach image or file');
+    expect(html).toContain('Conversation model');
+    expect(html).toContain('Create drawing');
   });
 
   it('allows the composer action row to wrap in narrow rail layouts', () => {
