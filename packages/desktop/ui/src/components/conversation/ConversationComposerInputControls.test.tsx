@@ -37,9 +37,26 @@ const extensionRegistryState = vi.hoisted(() => ({
 }));
 
 vi.mock('../../extensions/ComposerButtonHost', () => ({
-  ComposerButtonHost: ({ registration }: { registration: { id: string } }) => {
+  ComposerButtonHost: ({
+    buttonContext,
+    registration,
+  }: {
+    buttonContext: { currentModel: string; currentThinkingLevel: string; models: ModelInfo[] };
+    registration: { id: string };
+  }) => {
     if (registration.id === 'attach-files') return <button title="Attach image or file">Attach</button>;
-    if (registration.id === 'model-preferences') return <span>Conversation model</span>;
+    if (registration.id === 'model-preferences') {
+      const selectedModel = buttonContext.models.find((model) => model.id === buttonContext.currentModel);
+      const modelLabel = selectedModel?.name ?? (buttonContext.currentModel.trim() || 'Select model');
+      const thinkingLabel = buttonContext.currentThinkingLevel === 'xhigh' ? 'Extra high' : buttonContext.currentThinkingLevel || 'Unset';
+      return (
+        <span>
+          {modelLabel}
+          {' '}
+          {thinkingLabel}
+        </span>
+      );
+    }
     return <span>{registration.id}</span>;
   },
 }));
@@ -170,7 +187,7 @@ describe('ConversationComposerInputControls', () => {
 
     expect(html).toContain('Message Neon Pilot');
     expect(html).toContain('Attach image or file');
-    expect(html).toContain('Conversation model');
+    expect(html).toContain('Model A');
     expect(html).toContain('Create drawing');
     expect(html).toContain('aria-label="Send"');
   });
@@ -192,6 +209,17 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('flex-wrap');
     expect(html).toContain('min-[420px]:flex-nowrap');
     expect(html).toContain('ml-auto shrink-0');
+  });
+
+  it('renders saved thinking preference labels before model metadata is loaded', () => {
+    const html = renderControls({
+      currentModel: 'openai/gpt-5.4',
+      currentThinkingLevel: 'xhigh',
+      models: [],
+    });
+
+    expect(html).toContain('Select model');
+    expect(html).toContain('Extra high');
   });
 
   it('renders question-submit states', () => {

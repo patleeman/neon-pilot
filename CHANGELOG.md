@@ -14,6 +14,19 @@
 
 - 293 commits since the previous release.
 
+## 0.10.3-rc.4 — 2026-06-05
+
+### Highlights
+
+- Restores saved default model and thinking-level selections in new conversations before the full model catalog finishes loading.
+- Keeps the model picker showing the saved model id instead of falling back to "Select model" when model metadata is still unavailable.
+- Keeps extension action menus within the visible viewport so menu options stay reachable near window edges.
+- Adds regression coverage for lazy composer metadata and saved model preferences so this path is checked in release builds.
+
+### Notes
+
+- 4 commits since the previous release.
+
 ## 0.10.3-rc.3 — 2026-06-05
 
 ### Highlights
