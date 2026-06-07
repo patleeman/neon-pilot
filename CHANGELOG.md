@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.3 — 2026-06-07
+
+### Highlights
+
+- Adds a headless agent bootstrap path so a fresh Mac install can be configured from the command line instead of requiring the UI.
+- Ships a packaged `neon-pilot` CLI entrypoint that can reach the protocol CLI from the signed app bundle.
+- Fixes the public curl install command to use the repository's `master` branch.
+- Improves install-script readiness feedback when the CLI launcher is missing or delayed.
+- Documents the agent bootstrap workflow and bundles the `neon-pilot-control` skill for agent-driven setup.
+
+### Notes
+
+- 1 commit since the previous release.
+
 ## 0.11.2 — 2026-06-07
 
 ### Highlights
