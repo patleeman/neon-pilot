@@ -177,4 +177,24 @@ describe('liveSessionStateSnapshot', () => {
     expect(extensionHostClient.resolveModelProfile).toHaveBeenCalledWith({ provider: 'openai', model: 'gpt-5.5' });
     expect(readSessionBlocksByFileMock).not.toHaveBeenCalled();
   });
+
+  it('treats waiting durable run state as idle even if pi session still reports streaming', async () => {
+    const { buildLiveSessionSnapshot, readLiveSessionStateSnapshotFromEntry } = await import('./liveSessionStateSnapshot.js');
+
+    const entry = {
+      lastDurableRunState: 'waiting',
+      session: {
+        sessionFile: '/tmp/session.jsonl',
+        isStreaming: true,
+        model: { provider: 'openai', id: 'gpt' },
+        state: { messages: [] },
+        systemPrompt: '',
+        sessionManager: { getEntries: () => [] },
+        getSessionStats: () => ({ tokens: { input: 0, output: 0, total: 0 }, cost: 0 }),
+      },
+    } as never;
+
+    expect(buildLiveSessionSnapshot(entry)).toMatchObject({ isStreaming: false });
+    await expect(readLiveSessionStateSnapshotFromEntry(entry, 'Done')).resolves.toMatchObject({ isStreaming: false });
+  });
 });

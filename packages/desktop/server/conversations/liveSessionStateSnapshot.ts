@@ -31,6 +31,7 @@ export interface LiveSessionSnapshotHost {
   activeStaleTurnCustomType?: string | null;
   lastCompactionSummaryTitle?: string | null;
   isCompacting?: boolean;
+  lastDurableRunState?: string;
 }
 
 export interface LiveSessionStateSnapshot {
@@ -101,13 +102,22 @@ function isSmallLiveSessionFile(filePath: string): boolean {
   }
 }
 
+function isLiveSessionSnapshotStreaming(entry: LiveSessionSnapshotHost): boolean {
+  if (entry.isCompacting) return true;
+  if (entry.lastDurableRunState === 'waiting') return false;
+  return Boolean(
+    entry.session.isStreaming || entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering',
+  );
+}
+
 export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlocks?: number): LiveSessionSnapshot {
-  if (!entry.session.isStreaming && !entry.isCompacting && hasNoLiveSessionEntries(entry.session)) {
+  const isStreaming = isLiveSessionSnapshotStreaming(entry);
+  if (!isStreaming && !entry.isCompacting && hasNoLiveSessionEntries(entry.session)) {
     return {
       blocks: [],
       blockOffset: 0,
       totalBlocks: 0,
-      isStreaming: entry.session.isStreaming,
+      isStreaming,
     };
   }
 
@@ -120,7 +130,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blocks: applyLatestCompactionSummaryTitle(liveBlocks, entry.lastCompactionSummaryTitle),
       blockOffset: 0,
       totalBlocks: liveBlocks.length,
-      isStreaming: entry.session.isStreaming,
+      isStreaming,
     };
   }
 
@@ -129,7 +139,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blocks: [],
       blockOffset: 0,
       totalBlocks: 0,
-      isStreaming: entry.session.isStreaming,
+      isStreaming,
     };
   }
 
@@ -139,19 +149,19 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
       blocks: applyLatestCompactionSummaryTitle(liveBlocks, entry.lastCompactionSummaryTitle),
       blockOffset: 0,
       totalBlocks: liveBlocks.length,
-      isStreaming: entry.session.isStreaming,
+      isStreaming,
     };
   }
 
   // session.state.messages is the *current context window*, not a chronological display transcript.
   // After compaction it can reorder blocks as: summary → pre-compaction tail → post-compaction tail.
   // For idle live sessions we should render the durable transcript from disk exactly as persisted.
-  if (!entry.session.isStreaming && !entry.isCompacting) {
+  if (!isStreaming && !entry.isCompacting) {
     return {
       blocks: applyLatestCompactionSummaryTitle(persisted.blocks, entry.lastCompactionSummaryTitle),
       blockOffset: persisted.blockOffset,
       totalBlocks: persisted.totalBlocks,
-      isStreaming: entry.session.isStreaming,
+      isStreaming,
     };
   }
 
@@ -160,7 +170,7 @@ export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlo
     blocks: applyLatestCompactionSummaryTitle(blocks, entry.lastCompactionSummaryTitle),
     blockOffset: persisted.blockOffset,
     totalBlocks: persisted.blockOffset + blocks.length,
-    isStreaming: entry.session.isStreaming,
+    isStreaming,
   };
 }
 
@@ -170,11 +180,12 @@ export async function readLiveSessionStateSnapshotFromEntry(
   tailBlocks?: number,
 ): Promise<LiveSessionStateSnapshot> {
   const snapshot = buildLiveSessionSnapshot(entry, tailBlocks);
+  const isStreaming = snapshot.isStreaming;
   const modelProfile = await readSessionModelProfile(entry.session);
   if (
     snapshot.blocks.length === 0 &&
     snapshot.totalBlocks === 0 &&
-    !entry.session.isStreaming &&
+    !isLiveSessionSnapshotStreaming(entry) &&
     !entry.isCompacting &&
     !entry.currentTurnError &&
     hasNoLiveSessionEntries(entry.session)
@@ -182,7 +193,7 @@ export async function readLiveSessionStateSnapshotFromEntry(
     return {
       ...snapshot,
       hasSnapshot: true,
-      isStreaming: entry.session.isStreaming,
+      isStreaming,
       isCompacting: false,
       hasStaleTurnState: false,
       goalState: null,
@@ -215,7 +226,7 @@ export async function readLiveSessionStateSnapshotFromEntry(
   return {
     ...snapshot,
     hasSnapshot: true,
-    isStreaming: entry.session.isStreaming,
+    isStreaming,
     isCompacting: entry.isCompacting === true,
     hasStaleTurnState: hasQueuedOrActiveStaleTurn(entry),
     goalState: readGoalFromEntries(entry.session.sessionManager.getEntries()),
