@@ -8,6 +8,15 @@ describe('extensionInstallSummaryDiagnostics', () => {
     expect(buildExtensionQuarantineDiagnostic({ reason: 'boom', failures: 3, at: 'now' })).toBe(
       'Extension disabled by circuit breaker: boom (3 failures at now)',
     );
+    expect(
+      buildExtensionQuarantineDiagnostic({
+        reason: 'Disabled by extension safe mode after an unclean startup.',
+        failures: 0,
+        at: '2026-06-07T13:50:37.668Z',
+      }),
+    ).toBe(
+      'Extension disabled by startup safe mode: Neon Pilot found a stale extension startup marker from a previous launch. No extension-specific failure was recorded, so this was a protective quarantine rather than a circuit-breaker failure. Recorded at 2026-06-07T13:50:37.668Z.',
+    );
   });
 
   it('merges normal, quarantine, and health diagnostics', () => {

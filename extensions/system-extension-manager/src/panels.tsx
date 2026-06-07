@@ -390,7 +390,12 @@ function isLocked(extension: ExtensionInstallSummary): boolean {
 }
 
 function isQuarantined(extension: ExtensionInstallSummary): boolean {
-  return Boolean(extension.diagnostics?.some((message) => message.toLowerCase().includes('disabled by circuit breaker')));
+  return Boolean(
+    extension.diagnostics?.some((message) => {
+      const normalized = message.toLowerCase();
+      return normalized.includes('disabled by circuit breaker') || normalized.includes('disabled by startup safe mode');
+    }),
+  );
 }
 
 function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInstallSummary; busy: boolean; onToggle: () => void }) {
