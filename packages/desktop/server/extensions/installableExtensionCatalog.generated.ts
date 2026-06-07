@@ -15,8 +15,8 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     "id": "system-alleycat",
     "name": "Kitty Litter Mobile Pairing (Alleycat)",
     "description": "Pair the Kitty Litter iOS app directly with Neon Pilot using a PA-owned Alleycat-compatible host and Codex-shaped conversation APIs.",
-    "version": "0.1.0",
-    "tag": "v0.10.2"
+    "version": "0.1.1",
+    "tag": "v0.11.1"
   },
   {
     "id": "system-auto-router",

@@ -66,6 +66,8 @@ Package rules:
 - Do not require install-time compilation, npm install, or postinstall scripts.
 - Use only the public extension SDK imports supplied by the host.
 
+Neon Pilot validates required runtime artifacts before import and again before enabling a backend extension. Invalid or partially removed runtime extensions must remain uninstallable; uninstall clears registry, quarantine, and failure state even when the package directory is already gone.
+
 ## Compatibility
 
 Every distributed extension should declare the Neon Pilot and extension API versions it targets:

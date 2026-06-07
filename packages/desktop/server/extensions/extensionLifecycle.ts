@@ -432,10 +432,13 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   const id = normalizeExtensionId(extensionId);
   const entry = findExtensionEntry(id, stateRoot);
   if (!entry) {
-    const { readInvalidRuntimeExtensionEntries } = await import('./extensionRegistry.js');
+    const { clearExtensionFailureRecords, readInvalidRuntimeExtensionEntries, removeExtensionFromRegistry } = await import('./extensionRegistry.js');
     const invalidEntry = readInvalidRuntimeExtensionEntries(stateRoot).find((candidate) => candidate.id === id);
+    removeExtensionFromRegistry(id, stateRoot);
+    clearExtensionFailureRecords(id, stateRoot);
     if (!invalidEntry?.packageRoot) {
-      throw new Error('Extension not found.');
+      invalidateExtensionRegistryReadCaches(stateRoot);
+      return { ok: true as const, extensionId: id, deleted: false };
     }
     const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
     assertInside(runtimeRoot, invalidEntry.packageRoot);

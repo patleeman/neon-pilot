@@ -11,14 +11,18 @@ const invalidateExtensionRegistryReadCaches = vi.fn();
 const listExtensionInstallSummaries = vi.fn();
 const parseExtensionManifest = vi.fn((manifest) => manifest);
 const readInvalidRuntimeExtensionEntries = vi.fn(() => []);
+const removeExtensionFromRegistry = vi.fn();
+const clearExtensionFailureRecords = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({
+  clearExtensionFailureRecords,
   findExtensionEntry,
   getRuntimeExtensionsRoot,
   invalidateExtensionRegistryReadCaches,
   listExtensionInstallSummaries,
   parseExtensionManifest,
   readInvalidRuntimeExtensionEntries,
+  removeExtensionFromRegistry,
 }));
 
 type ExecFileSync = typeof import('node:child_process').execFileSync;
@@ -48,6 +52,8 @@ describe('extensionLifecycle', () => {
     invalidateExtensionRegistryReadCaches.mockReset();
     listExtensionInstallSummaries.mockReset().mockReturnValue([{ id: 'my-extension', name: 'My Extension' }]);
     readInvalidRuntimeExtensionEntries.mockReset().mockReturnValue([]);
+    removeExtensionFromRegistry.mockReset();
+    clearExtensionFailureRecords.mockReset();
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
     execFileSync.mockImplementation((command, args) => {
@@ -195,6 +201,16 @@ describe('extensionLifecycle', () => {
       deleted: true,
     });
     expect(existsSync(packageRoot)).toBe(false);
+  });
+
+  it('clears stale registry state when deleting a missing runtime extension by id', async () => {
+    await expect(deleteRuntimeExtension('missing-extension', stateRoot)).resolves.toEqual({
+      ok: true,
+      extensionId: 'missing-extension',
+      deleted: false,
+    });
+    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('missing-extension', stateRoot);
+    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('missing-extension', stateRoot);
   });
 
   it('rejects unsafe or missing extension bundles', () => {

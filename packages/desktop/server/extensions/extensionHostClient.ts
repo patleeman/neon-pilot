@@ -461,6 +461,20 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
             },
           };
         }
+        if (entry.manifest.backend?.entry) {
+          const { runExtensionSelfTest } = await import('./extensionBackend.js');
+          const selfTest = await runExtensionSelfTest(entry.manifest.id);
+          if (!selfTest.ok) {
+            return {
+              ok: true,
+              enabledResult: {
+                ok: false,
+                status: 400,
+                error: selfTest.checks.find((check) => !check.ok)?.error ?? 'Extension backend failed validation.',
+              },
+            };
+          }
+        }
       }
       const serverContext = await resolveRequestServerContext(request);
       let actionResult: ExtensionHostActionInvokeResult | undefined;
