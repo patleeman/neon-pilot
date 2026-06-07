@@ -12,6 +12,7 @@ import {
   listExtensionInstallSummaries,
   parseExtensionManifest,
 } from './extensionRegistry.js';
+import type { ExtensionManifest } from './extensionManifest.js';
 
 export interface CreateRuntimeExtensionInput {
   id?: unknown;
@@ -369,6 +370,31 @@ function findExtractedManifestRoot(extractRoot: string): string {
   return candidates[0] as string;
 }
 
+function isSourceBackendEntry(entryPath: string): boolean {
+  return /\.[cm]?tsx?$/.test(entryPath);
+}
+
+function requirePackagedArtifact(packageRoot: string, relativePath: string, label: string): void {
+  const artifactPath = join(packageRoot, relativePath);
+  if (!existsSync(artifactPath) || !statSync(artifactPath).isFile()) {
+    throw new Error(`Extension bundle is missing ${label}: ${relativePath}. Build the extension before installing it.`);
+  }
+}
+
+function assertImportableRuntimeArtifacts(packageRoot: string, manifest: ExtensionManifest): void {
+  const hasRuntimeCode = Boolean(manifest.frontend?.entry || manifest.backend?.entry);
+  if (hasRuntimeCode) {
+    requirePackagedArtifact(packageRoot, join('dist', 'build-manifest.json'), 'build manifest');
+  }
+  if (manifest.frontend?.entry) {
+    requirePackagedArtifact(packageRoot, manifest.frontend.entry, 'frontend artifact');
+  }
+  if (manifest.backend?.entry) {
+    const backendEntry = isSourceBackendEntry(manifest.backend.entry) ? join('dist', 'backend.mjs') : manifest.backend.entry;
+    requirePackagedArtifact(packageRoot, backendEntry, 'backend artifact');
+  }
+}
+
 export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, stateRoot: string = getStateRoot()) {
   const zipPath = normalizeOptionalString(input.zipPath);
   if (!zipPath) {
@@ -385,6 +411,7 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
     const packageRoot = findExtractedManifestRoot(extractRoot);
     assertInside(extractRoot, packageRoot);
     const manifest = parseExtensionManifest(JSON.parse(readFileSync(join(packageRoot, 'extension.json'), 'utf-8')));
+    assertImportableRuntimeArtifacts(packageRoot, manifest);
     const id = normalizeExtensionId(manifest.id);
     const destination = join(getRuntimeExtensionsRoot(stateRoot), id);
     if (existsSync(destination) || findExtensionEntry(id)) {

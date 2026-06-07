@@ -54,8 +54,17 @@ describe('extensionLifecycle', () => {
       if (command === 'zipinfo') return 'bundle/extension.json\n' as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
         const extractRoot = String(args?.[3]);
-        mkdirSync(join(extractRoot, 'bundle'), { recursive: true });
-        writeFileSync(join(extractRoot, 'bundle', 'extension.json'), JSON.stringify({ id: 'imported-ext', name: 'Imported' }));
+        mkdirSync(join(extractRoot, 'bundle', 'dist'), { recursive: true });
+        writeFileSync(
+          join(extractRoot, 'bundle', 'extension.json'),
+          JSON.stringify({
+            id: 'imported-ext',
+            name: 'Imported',
+            backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping' }] },
+          }),
+        );
+        writeFileSync(join(extractRoot, 'bundle', 'dist', 'backend.mjs'), 'export async function ping() {}');
+        writeFileSync(join(extractRoot, 'bundle', 'dist', 'build-manifest.json'), '{}');
         return Buffer.from('');
       }
       return Buffer.from('');
@@ -134,6 +143,35 @@ describe('extensionLifecycle', () => {
 
     expect(imported).toEqual({ ok: true, extension: { id: 'imported-ext' }, packageRoot: join(runtimeRoot, 'imported-ext') });
     expect(existsSync(join(runtimeRoot, 'imported-ext', 'extension.json'))).toBe(true);
+  });
+
+  it('rejects bundles that declare a backend without a built backend artifact', () => {
+    const zipPath = join(stateRoot, 'source-only.neon-extension.zip');
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(zipPath, 'zip');
+    execFileSync.mockImplementation((command, args) => {
+      if (command === 'zipinfo') return 'bundle/extension.json\nbundle/src/backend.ts\n' as ReturnType<ExecFileSync>;
+      if (command === 'unzip') {
+        const extractRoot = String(args?.[3]);
+        mkdirSync(join(extractRoot, 'bundle', 'src'), { recursive: true });
+        writeFileSync(
+          join(extractRoot, 'bundle', 'extension.json'),
+          JSON.stringify({
+            id: 'source-only-ext',
+            name: 'Source Only',
+            backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping' }] },
+          }),
+        );
+        writeFileSync(join(extractRoot, 'bundle', 'src', 'backend.ts'), 'export async function ping() {}');
+        return Buffer.from('');
+      }
+      return Buffer.from('');
+    });
+
+    expect(() => importRuntimeExtensionBundle({ zipPath }, stateRoot)).toThrow(
+      'Extension bundle is missing build manifest: dist/build-manifest.json',
+    );
+    expect(existsSync(join(runtimeRoot, 'source-only-ext'))).toBe(false);
   });
 
   it('deletes invalid runtime extension packages by id', async () => {
