@@ -327,17 +327,18 @@ describe('providerAuth OAuth helpers', () => {
     });
   });
 
-  it('cancels earlier running logins for the same provider and supports explicit cancellation', async () => {
+  it('reuses the running login for a provider and supports explicit cancellation', async () => {
     const { cancelProviderOAuthLogin, getProviderOAuthLoginState, startProviderOAuthLogin } = await loadProviderAuth();
     const authFile = '/tmp/provider-auth.json';
 
     setOAuthProviders(authFile, [{ id: 'openrouter', name: 'OpenRouter' }]);
-    setLoginImplementation(authFile, 'openrouter', async (handlers) => {
+    const loginImplementation = vi.fn(async (handlers: MockLoginHandlers) => {
       await handlers.onPrompt({
         message: 'Enter any value',
         allowEmpty: true,
       });
     });
+    setLoginImplementation(authFile, 'openrouter', loginImplementation);
 
     const firstRun = startProviderOAuthLogin(authFile, 'openrouter');
     await flushAsyncWork();
@@ -345,11 +346,12 @@ describe('providerAuth OAuth helpers', () => {
     const secondRun = startProviderOAuthLogin(authFile, 'openrouter');
     await flushAsyncWork();
 
-    expect(getProviderOAuthLoginState(firstRun.id)).toMatchObject({ status: 'cancelled', prompt: null });
-    expect(getProviderOAuthLoginState(secondRun.id)).toMatchObject({ status: 'running' });
+    expect(secondRun.id).toBe(firstRun.id);
+    expect(loginImplementation).toHaveBeenCalledTimes(1);
+    expect(getProviderOAuthLoginState(firstRun.id)).toMatchObject({ status: 'running' });
 
-    expect(cancelProviderOAuthLogin(secondRun.id)).toMatchObject({ status: 'cancelled', prompt: null });
-    expect(cancelProviderOAuthLogin(secondRun.id)).toMatchObject({ status: 'cancelled', prompt: null });
+    expect(cancelProviderOAuthLogin(firstRun.id)).toMatchObject({ status: 'cancelled', prompt: null });
+    expect(cancelProviderOAuthLogin(firstRun.id)).toMatchObject({ status: 'cancelled', prompt: null });
   });
 
   it('validates oauth login start and submit flows, reports failures, and prunes old finished runs', async () => {

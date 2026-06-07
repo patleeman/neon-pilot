@@ -427,8 +427,7 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
 
   for (const run of oauthLoginRuns.values()) {
     if (run.provider === provider && run.status === 'running') {
-      run.abortController.abort();
-      finalizeOAuthLogin(run, 'cancelled', '');
+      return toPublicLoginState(run);
     }
   }
 
