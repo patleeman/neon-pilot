@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.2 — 2026-06-07
+
+### Highlights
+
+- Adds release-blocking golden coverage for the packaged extension experience, including main chat, settings, extension routes, backend actions, and agent tool inventory.
+- Verifies representative action-backed tools in the running packaged app before publishing, including `bash`, scheduled tasks, conversation inspection, and MCP listing.
+- Adds a live-conversation smoke for context-dependent tools so `todo` is invoked with real `conversationId`, `sessionId`, and `cwd` state and confirmed in the rendered conversation.
+- Runs packaged release smoke from fresh-machine roots to catch issues hidden by existing local auth, sessions, settings, caches, or knowledge state.
+- Tightens runtime extension cleanup and backend self-test behavior so invalid or partially removed extensions can be recovered without leaving stale registry or failure state behind.
+
+### Notes
+
+- Patch release hardening for extension and tool regressions found immediately after 0.11.1.
+
 ## 0.11.1 — 2026-06-07
 
 ### Highlights

@@ -102,6 +102,7 @@
     },
     "skills": [
       {
+        "id": "neon-pilot-control",
         "path": "skills/neon-pilot-control/SKILL.md",
         "title": "Neon Pilot Control"
       }

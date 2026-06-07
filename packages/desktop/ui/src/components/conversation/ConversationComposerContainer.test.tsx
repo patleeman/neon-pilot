@@ -25,7 +25,7 @@ function findByClass(node: ParsedNode, className: string): ParsedNode | null {
 }
 
 describe('ConversationComposerContainer', () => {
-  it('renders shelves above the bordered input shell', () => {
+  it('renders shelves inside the bordered input shell', () => {
     const html = renderToString(
       <ConversationComposerContainer
         dragOver={false}
@@ -41,8 +41,8 @@ describe('ConversationComposerContainer', () => {
 
     expect(shell).not.toBeNull();
     expect(shelf).not.toBeNull();
-    expect(shellShelf).toBeNull();
-    expect(html.indexOf('test-shelf')).toBeLessThan(html.indexOf('ui-input-shell'));
+    expect(shellShelf).not.toBeNull();
+    expect(html.indexOf('ui-input-shell')).toBeLessThan(html.indexOf('test-shelf'));
   });
 
   it('uses compact padding for rail layout', () => {

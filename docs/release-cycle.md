@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.1** — patch release.
+**v0.11.2** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.1
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.2
 
 Highlights in this train:
 
-- Makes extension safe-mode recovery less aggressive and clearer when startup failures occur.
-- Restores extension navigation, sidebar surfaces, fullscreen modals, and action menus across compact layouts.
-- Improves provider OAuth and device-code login reliability.
-- Fixes persisted chat hydration and narrow composer preferences.
-- Rejects source-only extension bundles before a broken runtime package is activated.
+- Adds release-blocking golden coverage for the packaged extension experience.
+- Verifies representative action-backed tools in the running packaged app before publishing.
+- Adds live-conversation smoke coverage for context-dependent agent tools.
+- Runs packaged release smoke from fresh-machine roots to catch stale local-state blind spots.
+- Tightens invalid runtime extension cleanup and backend self-test behavior.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
