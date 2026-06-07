@@ -4,16 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.10.2** — patch release being prepared.
+**v0.11.1-rc.0** — patch release candidate being prepared.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.10.2
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.1-rc.0
 
 Highlights in this train:
 
-- Keeps Browser default-installed and Todos default-enabled while preserving user removals/disables.
-- Fixes Extension Manager catalog/install state for already-installed and uninstalled first-party packages.
-- Fixes Alleycat worker service startup so the mobile pairing host can start without circuit-breaker quarantine.
-- Keeps packaged installable bundles aligned with the app so catalog installs work before release assets are uploaded.
+- Makes extension safe-mode recovery less aggressive and clearer when startup failures occur.
+- Restores extension navigation, sidebar surfaces, fullscreen modals, and action menus across compact layouts.
+- Improves provider OAuth and device-code login reliability.
+- Fixes persisted chat hydration and narrow composer preferences.
+- Rejects source-only extension bundles before a broken runtime package is activated.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

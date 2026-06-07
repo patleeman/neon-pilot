@@ -523,6 +523,7 @@ describe('registerExtensionRoutes', () => {
       }),
     );
     writeFileSync(join(extensionRoot, 'dist', 'frontend.js'), 'export function AgentBoardPage() {}');
+    writeFileSync(join(extensionRoot, 'dist', 'build-manifest.json'), '{}');
 
     const harness = createHarness();
     const exportRes = createResponse();

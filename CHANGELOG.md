@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.1-rc.0 — 2026-06-07
+
+### Highlights
+
+- Makes extension safe-mode recovery less aggressive and clearer, so individual startup failures do not broadly quarantine unrelated extensions.
+- Restores extension navigation, sidebar surfaces, fullscreen modals, and action menus across compact and edge-of-window layouts.
+- Improves provider OAuth and device-code login reliability, including active-login reuse and state mismatch recovery.
+- Fixes persisted chat hydration and narrow composer preferences so chat rails stay usable after reloads and resizing.
+- Rejects source-only extension bundles during runtime import so users get an actionable install error before a broken package is activated.
+
+### Notes
+
+- 22 commits since the previous release.
+
 ## 0.11.0 — 2026-06-07
 
 ### Highlights

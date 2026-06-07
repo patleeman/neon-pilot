@@ -55,7 +55,7 @@ describe('ConversationComposerContainer', () => {
       />,
     );
 
-    expect(html).toContain('px-3');
+    expect(html).toContain('px-1.5');
     expect(html).toContain('py-3');
   });
 });
