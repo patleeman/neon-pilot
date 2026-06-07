@@ -721,9 +721,17 @@ export function readConversationSessionDetail(input: { conversationId: string; t
   const tailBlocks = normalizeSessionDetailTailBlocks(input.tailBlocks);
   const liveSessionFile = readLiveSession(input.conversationId)?.sessionFile?.trim();
   if (liveSessionFile && existsSync(liveSessionFile)) {
-    return readSessionBlocksByFileWithTelemetry(liveSessionFile, tailBlocks ? { tailBlocks } : undefined);
+    const sessionRead = readSessionBlocksByFileWithTelemetry(liveSessionFile, tailBlocks ? { tailBlocks } : undefined);
+    if (tailBlocks && sessionRead.detail && sessionRead.detail.totalBlocks > 0 && sessionRead.detail.blocks.length === 0) {
+      return readSessionBlocksByFileWithTelemetry(liveSessionFile);
+    }
+    return sessionRead;
   }
-  return readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
+  const sessionRead = readSessionBlocksWithTelemetry(input.conversationId, tailBlocks ? { tailBlocks } : undefined);
+  if (tailBlocks && sessionRead.detail && sessionRead.detail.totalBlocks > 0 && sessionRead.detail.blocks.length === 0) {
+    return readSessionBlocksWithTelemetry(input.conversationId);
+  }
+  return sessionRead;
 }
 
 export function readConversationSessionEntryBlocks(input: { conversationId: string; entryIds: string[] }) {

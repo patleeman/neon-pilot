@@ -683,12 +683,21 @@ export async function readDesktopConversationState(input: {
 
   const detail = inlineConversationSessionDetailAssetsCapability(conversationId, sessionRead.detail);
   const assetInlineAtMs = performance.now();
+  const storedStream = createEmptyDesktopConversationStreamState();
   return {
     conversationId,
     sessionDetail: detail,
     liveSession: { live: false },
     ...(extensionMetadataNamespaces.length > 0 ? { extensionMetadataNamespaces } : {}),
-    stream: createEmptyDesktopConversationStreamState(),
+    stream: {
+      ...storedStream,
+      blocks: detail.blocks as DesktopConversationMessageBlock[],
+      blockOffset: detail.blockOffset,
+      totalBlocks: detail.totalBlocks,
+      hasSnapshot: true,
+      title: typeof detail.meta === 'object' && detail.meta && 'title' in detail.meta ? String(detail.meta.title ?? '') || null : null,
+      contextUsage: detail.contextUsage,
+    },
     perf: {
       sessionMetaMs: Math.round(sessionMetaAtMs - startedAtMs),
       liveSnapshotMs: Math.round(liveSnapshotAtMs - sessionMetaAtMs),

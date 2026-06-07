@@ -708,6 +708,7 @@ describe('readDesktopConversationState', () => {
     }));
 
     const { createEmptyDesktopConversationStreamState, readDesktopConversationState } = await import('./desktopConversationState.js');
+    const storedStream = createEmptyDesktopConversationStreamState();
     const state = await readDesktopConversationState({
       conversationId: 'conv-stored',
       profile: 'default',
@@ -737,7 +738,15 @@ describe('readDesktopConversationState', () => {
         inlined: true,
       },
       liveSession: { live: false },
-      stream: createEmptyDesktopConversationStreamState(),
+      stream: {
+        ...storedStream,
+        blocks: [{ id: 'msg-1', type: 'text', ts: '2026-04-11T12:00:00.000Z', text: 'stored reply' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        title: 'Stored conversation',
+        contextUsage: { tokens: 9 },
+      },
       perf: expect.any(Object),
     });
   });
