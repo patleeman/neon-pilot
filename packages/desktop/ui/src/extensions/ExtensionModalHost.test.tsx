@@ -86,9 +86,10 @@ describe('resolveExtensionModalSizeClasses', () => {
   it('makes fullscreen extension modals fill nearly the whole viewport', () => {
     const classes = resolveExtensionModalSizeClasses('fullscreen');
 
-    expect(classes.dialogClassName).toContain('w-[min(96vw,calc(100vw-1.5rem))]');
-    expect(classes.dialogClassName).toContain('h-[min(94vh,calc(100vh-1.5rem))]');
+    expect(classes.dialogClassName).toContain('!w-[calc(100vw-1rem)]');
+    expect(classes.dialogClassName).toContain('!h-[calc(100vh-1rem)]');
     expect(classes.bodyClassName).toContain('overflow-hidden');
+    expect(classes.bodyClassName).toContain('flex-1');
     expect(classes.bodyClassName).toContain('p-0');
   });
 });
