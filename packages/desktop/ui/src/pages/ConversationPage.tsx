@@ -6126,7 +6126,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                   ? undefined
                   : isLiveSession
                     ? 'This conversation is live but has no messages yet. Send a prompt to get started.'
-                    : 'Start a Pi session to populate this conversation.'
+                    : 'Send a message in Neon Pilot to start this conversation.'
               }
               action={newConversationSetupAction}
             />
