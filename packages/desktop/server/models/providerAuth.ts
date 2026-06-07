@@ -492,8 +492,8 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
       onSelect: async (prompt) => normalizeSelectInput(prompt, await createPromptAwaiter(run, toSelectPromptState(prompt))),
       onManualCodeInput: async () =>
         createPromptAwaiter(run, {
-          message: 'Paste redirect URL below, or complete login in your browser.',
-          placeholder: 'https://localhost:1455/auth/callback?code=...',
+          message: 'Paste the full redirect URL from the browser address bar. If the browser shows State mismatch, paste that URL here.',
+          placeholder: 'http://localhost:1455/auth/callback?code=...',
           allowEmpty: false,
           manualCode: true,
         }),

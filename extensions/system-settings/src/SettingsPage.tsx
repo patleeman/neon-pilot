@@ -2177,7 +2177,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     if (oauthLoginState?.status !== 'running' || !oauthLoginState.authUrl) {
       return;
     }
-
     const authUrl = oauthLoginState.authUrl;
     if (openedOAuthAuthUrlRef.current === authUrl) {
       return;
@@ -4063,6 +4062,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     {selectedProviderLogin.prompt && (
                                       <div className="space-y-2">
                                         <p className="ui-card-meta">Login method</p>
+                                        <p className="text-[12px] leading-5 text-secondary">{selectedProviderLogin.prompt.message}</p>
                                         {oauthPromptOptions.length > 0 ? (
                                           <div className="flex flex-wrap gap-2">
                                             {oauthPromptOptions.map((option) => (
