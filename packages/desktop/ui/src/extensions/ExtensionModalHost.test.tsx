@@ -83,11 +83,12 @@ describe('resolveExtensionModalSizeClasses', () => {
     expect(classes.bodyClassName).toContain('overflow-auto');
   });
 
-  it('makes fullscreen extension modals fill nearly the whole viewport', () => {
+  it('makes fullscreen extension modals fill the usable viewport below desktop chrome', () => {
     const classes = resolveExtensionModalSizeClasses('fullscreen');
 
-    expect(classes.dialogClassName).toContain('!w-[calc(100vw-1rem)]');
-    expect(classes.dialogClassName).toContain('!h-[calc(100vh-1rem)]');
+    expect(classes.backdropClassName).toContain('!pt-[calc(2.75rem+0.5rem)]');
+    expect(classes.dialogClassName).toContain('!w-[calc(100vw-1.5rem)]');
+    expect(classes.dialogClassName).toContain('!h-[calc(100vh-4rem)]');
     expect(classes.bodyClassName).toContain('overflow-hidden');
     expect(classes.bodyClassName).toContain('flex-1');
     expect(classes.bodyClassName).toContain('p-0');

@@ -291,7 +291,7 @@ function ExcalidrawEditor({
   const attachButtonLabel = saveLabel ?? 'Attach to chat';
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="flex justify-end gap-2 border-b border-border-subtle px-3 py-2">
         {onMoveToWorkbench ? (
           <IconButton
@@ -344,7 +344,7 @@ function ExcalidrawEditor({
           </div>
         ) : LoadedExcalidraw ? (
           <ExcalidrawErrorBoundary>
-            <div className="excalidraw-embed-lite h-full w-full">
+            <div className="excalidraw-embed-lite h-full w-full min-w-0">
               <LoadedExcalidraw
                 theme={excalidrawTheme}
                 UIOptions={EMBEDDED_UI_OPTIONS}

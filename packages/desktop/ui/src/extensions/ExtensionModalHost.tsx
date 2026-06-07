@@ -19,13 +19,15 @@ type ExtensionModalSize = 'default' | 'large' | 'fullscreen';
 
 export function resolveExtensionModalSizeClasses(size: ExtensionModalSize | undefined): {
   dialogClassName: string;
+  backdropClassName?: string;
   bodyClassName?: string;
 } {
   switch (size) {
     case 'fullscreen':
       return {
+        backdropClassName: '!items-start !p-3 !pt-[calc(2.75rem+0.5rem)]',
         dialogClassName:
-          '!h-[calc(100vh-1rem)] !max-h-[calc(100vh-1rem)] !w-[calc(100vw-1rem)] !max-w-none rounded-lg border-border-default bg-surface',
+          '!h-[calc(100vh-4rem)] !max-h-[calc(100vh-4rem)] !w-[calc(100vw-1.5rem)] !max-w-none rounded-lg border-border-default bg-surface',
         bodyClassName: 'flex min-h-0 flex-1 overflow-hidden p-0',
       };
     case 'large':
@@ -201,6 +203,7 @@ export function ExtensionModalHost() {
         onClose={() => handleClose()}
         labelledBy={modal.title ? 'extension-modal-title' : undefined}
         aria-label={modal.title ? undefined : 'Extension dialog'}
+        backdropClassName={modalSizeClasses.backdropClassName}
         onKeyDown={(e) => {
           if (e.key === 'Escape') handleClose();
         }}
