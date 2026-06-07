@@ -1282,7 +1282,12 @@ export async function startExtensionStartupActions(
     }
 
     try {
-      await invokeExtensionAction(summary.id, startupActionId, {}, serverContext);
+      markExtensionStartupActive(summary.id);
+      try {
+        await invokeExtensionAction(summary.id, startupActionId, {}, serverContext);
+      } finally {
+        markExtensionStartupActive(undefined);
+      }
       results.push({ extensionId: summary.id, ok: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

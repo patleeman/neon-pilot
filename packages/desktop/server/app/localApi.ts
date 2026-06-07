@@ -626,7 +626,6 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
         .then(() => {
           notifyExtensionStartupStatus();
         })
-        .then(() => extensionHostClient.completeStartupGuard())
         .catch((error) => {
           logError('extension startup dispatch failed', { message: (error as Error).message });
           publishAppEvent({
@@ -634,6 +633,11 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
             extensionId: 'core',
             message: `Extension startup failed: ${(error as Error).message}`,
             severity: 'error',
+          });
+        })
+        .finally(() => {
+          void extensionHostClient?.completeStartupGuard().catch((error) => {
+            logError('extension startup guard completion failed', { message: (error as Error).message });
           });
         });
     }, EXTENSION_STARTUP_ACTIONS_DELAY_MS);

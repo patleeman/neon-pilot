@@ -804,7 +804,7 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
       enabled: isExtensionEntryEnabled(entry, config),
     }));
     const suspect = marker?.activeExtensionId ? candidates.find((candidate) => candidate.id === marker.activeExtensionId) : undefined;
-    const plan = planStartupGuardQuarantines(config, suspect ? [suspect] : candidates, at);
+    const plan = planStartupGuardQuarantines(config, suspect ? [suspect] : [], at);
     disabledIds.push(...plan.disabledIds);
     writeExtensionRegistryConfig(plan.config, stateRoot);
     for (const extensionId of plan.disabledIds) {

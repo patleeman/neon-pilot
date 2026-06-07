@@ -561,26 +561,22 @@ describe('extension registry', () => {
     expect(records['recovering-board']).toEqual([{ at: expect.any(String), operation: 'action run', error: 'boom' }]);
   });
 
-  it('safe-mode startup disables enabled runtime extensions after an unclean startup marker', () => {
+  it('safe-mode startup leaves runtime extensions enabled when an unclean startup marker has no suspect', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const extensionRoot = join(stateRoot, 'extensions', 'runtime-board');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'runtime-board', name: 'Runtime Board' }));
 
     expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
-    expect(beginExtensionStartupGuard(stateRoot)).toEqual({
-      safeMode: true,
-      disabledIds: expect.arrayContaining(['runtime-board']),
-    });
-    expect(isExtensionEnabled('runtime-board', stateRoot)).toBe(false);
-    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('extensions', 'notifications');
-    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({
-      type: 'notification',
-      extensionId: 'runtime-board',
-      message: 'Extension quarantined by safe mode and was disabled.',
-      details: 'Neon Pilot detected an unclean startup and disabled enabled runtime extensions before loading them again.',
-      severity: 'warning',
-    });
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: true, disabledIds: [] });
+    expect(isExtensionEnabled('runtime-board', stateRoot)).toBe(true);
+    expect(appEvents.invalidateAppTopics).not.toHaveBeenCalledWith('extensions', 'notifications');
+    expect(appEvents.publishAppEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensionId: 'runtime-board',
+        message: 'Extension quarantined by safe mode and was disabled.',
+      }),
+    );
     completeExtensionStartupGuard(stateRoot);
     expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
   });
