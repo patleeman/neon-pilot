@@ -22,7 +22,7 @@ import type { ComposerDrawingAttachment } from '../../conversation/promptAttachm
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { getModelSelectionValue, resolveSelectableModel, THINKING_LEVEL_OPTIONS } from '../../model/modelPreferences';
+import { getModelSelectionValue, groupModelsByProvider, resolveSelectableModel, THINKING_LEVEL_OPTIONS } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
@@ -171,6 +171,7 @@ function CoreModelPreferenceControls({
   onSelectThinkingLevel: (thinkingLevel: string) => void;
 }) {
   const selectedModel = resolveSelectableModel(models, currentModel);
+  const modelGroups = groupModelsByProvider(models);
   const selectBaseClassName =
     'h-8 min-w-0 truncate rounded-md border border-transparent bg-transparent px-2 text-[11px] font-medium text-secondary outline-none hover:bg-surface/55 hover:text-primary focus:border-accent/30 focus:bg-surface/55 focus:text-primary disabled:opacity-50';
   const modelSelectClassName = cx(selectBaseClassName, compact ? 'max-w-[8.25rem]' : 'max-w-[10rem]');
@@ -186,10 +187,14 @@ function CoreModelPreferenceControls({
         onChange={(event) => onSelectModel(event.target.value)}
       >
         {models.length === 0 ? <option value="">Select model</option> : null}
-        {models.map((model) => (
-          <option key={`${model.provider}:${model.id}`} value={getModelSelectionValue(model, models)}>
-            {modelOptionLabel(model)}
-          </option>
+        {modelGroups.map(([provider, providerModels]) => (
+          <optgroup key={provider} label={provider}>
+            {providerModels.map((model) => (
+              <option key={`${model.provider}:${model.id}`} value={getModelSelectionValue(model, models)}>
+                {modelOptionLabel(model)}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
       <select

@@ -203,6 +203,21 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('Create drawing');
   });
 
+  it('segments core model options by provider', () => {
+    extensionRegistryState.composerControls = [];
+    extensionRegistryState.composerInputTools = [];
+
+    const html = renderControls({
+      models: [
+        { id: 'model-a', provider: 'Provider A', name: 'Model A', context: 128000 },
+        { id: 'model-b', provider: 'Provider B', name: 'Model B', context: 128000 },
+      ],
+    });
+
+    expect(html).toContain('<optgroup label="Provider A">');
+    expect(html).toContain('<optgroup label="Provider B">');
+  });
+
   it('allows the composer action row to wrap in narrow rail layouts', () => {
     const html = renderControls({ composerShellWidth: 320 });
 
