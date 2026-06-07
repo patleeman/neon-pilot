@@ -6,17 +6,25 @@
  * The component manages a localInput copy so keystroke-sensitive state (menus)
  * stays inside this subtree without propagating every change to the parent.
  */
-import { type ClipboardEventHandler, type KeyboardEventHandler, memo, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ClipboardEventHandler,
+  type KeyboardEventHandler,
+  memo,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
-import {
-  type ExtensionComposerControlRegistration,
-  type ExtensionComposerInputToolRegistration,
-  useExtensionRegistry,
-} from '../../extensions/useExtensionRegistry';
+import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import { getModelSelectionValue, resolveSelectableModel, THINKING_LEVEL_OPTIONS } from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
+import { IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
@@ -30,62 +38,162 @@ function getComposerPreferenceInlineLimit(composerShellWidth: number | null): nu
   return 0;
 }
 
-const CORE_ATTACH_FILES_CONTROL: ExtensionComposerControlRegistration = {
-  extensionId: 'system-composer-attachments',
-  id: 'attach-files',
-  component: 'AttachFilesComposerControl',
-  slot: 'leading',
-  title: 'Attach image or file',
-  priority: 0,
-};
+const CORE_COMPOSER_CONTROL_KEYS = new Set(['system-composer-attachments:attach-files', 'system-model-picker:model-preferences']);
+const CORE_COMPOSER_INPUT_TOOL_KEYS = new Set(['system-excalidraw-input:excalidraw']);
 
-const CORE_MODEL_PREFERENCES_CONTROL: ExtensionComposerControlRegistration = {
-  extensionId: 'system-model-picker',
-  id: 'model-preferences',
-  component: 'ModelPreferencesComposerControl',
-  slot: 'preferences',
-  title: 'Model preferences',
-  priority: 10,
-};
+function composerRegistrationKey(registration: { extensionId: string; id: string }): string {
+  return `${registration.extensionId}:${registration.id}`;
+}
 
-const CORE_EXCALIDRAW_INPUT_TOOL: ExtensionComposerInputToolRegistration = {
-  extensionId: 'system-excalidraw-input',
-  id: 'excalidraw',
-  component: 'ExcalidrawInputTool',
-  title: 'Create drawing',
-  priority: 100,
-};
+function modelOptionLabel(model: ModelInfo): string {
+  return model.label ?? model.name ?? model.id;
+}
 
-function ensureCoreComposerControls(
-  composerControls: ExtensionComposerControlRegistration[],
-): ExtensionComposerControlRegistration[] {
-  const next = [...composerControls];
-  if (!next.some((control) => control.extensionId === CORE_ATTACH_FILES_CONTROL.extensionId && control.id === CORE_ATTACH_FILES_CONTROL.id)) {
-    next.push(CORE_ATTACH_FILES_CONTROL);
-  }
-  if (
-    !next.some(
-      (control) => control.extensionId === CORE_MODEL_PREFERENCES_CONTROL.extensionId && control.id === CORE_MODEL_PREFERENCES_CONTROL.id,
-    )
-  ) {
-    next.push(CORE_MODEL_PREFERENCES_CONTROL);
-  }
-  return next.sort(
-    (a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.extensionId.localeCompare(b.extensionId) || a.id.localeCompare(b.id),
+function CoreComposerIcon({ path }: { path: string }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={path} />
+    </svg>
   );
 }
 
-function ensureCoreComposerInputTools(
-  composerInputTools: ExtensionComposerInputToolRegistration[],
-): ExtensionComposerInputToolRegistration[] {
-  if (
-    composerInputTools.some(
-      (tool) => tool.extensionId === CORE_EXCALIDRAW_INPUT_TOOL.extensionId && tool.id === CORE_EXCALIDRAW_INPUT_TOOL.id,
-    )
-  ) {
-    return composerInputTools;
-  }
-  return [...composerInputTools, CORE_EXCALIDRAW_INPUT_TOOL].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+function CoreAttachControl({ disabled, onOpenFilePicker }: { disabled: boolean; onOpenFilePicker: () => void }) {
+  return (
+    <IconButton
+      shape="circle"
+      type="button"
+      onPointerDown={(event) => {
+        event.preventDefault();
+        if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) onOpenFilePicker();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenFilePicker();
+        }
+      }}
+      disabled={disabled}
+      title="Attach image or file"
+      aria-label="Attach image or file"
+    >
+      <CoreComposerIcon path="M12 5v14M5 12h14" />
+    </IconButton>
+  );
+}
+
+function CoreDrawingControl({
+  conversationId,
+  disabled,
+  onUpsertDrawingAttachment,
+}: {
+  conversationId?: string | null;
+  disabled: boolean;
+  onUpsertDrawingAttachment: (payload: Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>) => void;
+}) {
+  const openDrawingModal = useCallback(async () => {
+    const result = await new Promise<unknown>((resolve, reject) => {
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot-extension-modal', {
+          detail: {
+            extensionId: 'system-excalidraw-input',
+            component: 'ExcalidrawEditorModal',
+            props: { conversationId, saveLabel: 'Attach to chat' },
+            size: 'fullscreen',
+            resolve,
+            reject,
+          },
+        }),
+      );
+    });
+    if (result && typeof result === 'object') {
+      onUpsertDrawingAttachment(result as Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>);
+    }
+  }, [conversationId, onUpsertDrawingAttachment]);
+
+  return (
+    <IconButton
+      shape="circle"
+      type="button"
+      onPointerDown={(event) => {
+        event.preventDefault();
+        if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) void openDrawingModal();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          void openDrawingModal();
+        }
+      }}
+      disabled={disabled}
+      title="Create drawing"
+      aria-label="Create drawing"
+    >
+      <CoreComposerIcon path="M12 3.75l1.07 3.43a1.5 1.5 0 0 0 .93.94l3.43 1.07-3.43 1.07a1.5 1.5 0 0 0-.93.93L12 15.62l-1.07-3.43a1.5 1.5 0 0 0-.93-.93L6.57 10.19 10 9.12a1.5 1.5 0 0 0 .93-.94L12 3.75Zm6 10.5.54 1.71a.75.75 0 0 0 .47.47l1.71.54-1.71.54a.75.75 0 0 0-.47.47L18 20.69l-.54-1.71a.75.75 0 0 0-.47-.47l-1.71-.54 1.71-.54a.75.75 0 0 0 .47-.47L18 14.25Z" />
+    </IconButton>
+  );
+}
+
+function CoreModelPreferenceControls({
+  disabled,
+  models,
+  currentModel,
+  currentThinkingLevel,
+  onSelectModel,
+  onSelectThinkingLevel,
+}: {
+  disabled: boolean;
+  models: ModelInfo[];
+  currentModel: string;
+  currentThinkingLevel: string;
+  onSelectModel: (modelId: string) => void;
+  onSelectThinkingLevel: (thinkingLevel: string) => void;
+}) {
+  const selectedModel = resolveSelectableModel(models, currentModel);
+  const selectClassName =
+    'h-8 max-w-[10rem] min-w-0 rounded-md border border-transparent bg-transparent px-2 text-[11px] font-medium text-secondary outline-none hover:bg-surface/55 hover:text-primary focus:border-accent/30 focus:bg-surface/55 focus:text-primary disabled:opacity-50';
+  return (
+    <>
+      <select
+        aria-label="Conversation model"
+        title="Conversation model"
+        className={selectClassName}
+        disabled={disabled || models.length === 0}
+        value={selectedModel ? getModelSelectionValue(selectedModel, models) : currentModel}
+        onChange={(event) => onSelectModel(event.target.value)}
+      >
+        {models.length === 0 ? <option value="">Select model</option> : null}
+        {models.map((model) => (
+          <option key={`${model.provider}:${model.id}`} value={getModelSelectionValue(model, models)}>
+            {modelOptionLabel(model)}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="Thinking level"
+        title="Thinking level"
+        className="h-8 max-w-[7rem] min-w-0 rounded-md border border-transparent bg-transparent px-2 text-[11px] font-medium text-secondary outline-none hover:bg-surface/55 hover:text-primary focus:border-accent/30 focus:bg-surface/55 focus:text-primary disabled:opacity-50"
+        disabled={disabled}
+        value={currentThinkingLevel}
+        onChange={(event) => onSelectThinkingLevel(event.target.value)}
+      >
+        {THINKING_LEVEL_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </>
+  );
 }
 
 function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps, next: ConversationComposerInputControlsProps): boolean {
@@ -205,8 +313,14 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   conversationId,
 }: ConversationComposerInputControlsProps) {
   const { composerControls = [], composerInputTools = [] } = useExtensionRegistry();
-  const effectiveComposerControls = useMemo(() => ensureCoreComposerControls(composerControls), [composerControls]);
-  const effectiveComposerInputTools = useMemo(() => ensureCoreComposerInputTools(composerInputTools), [composerInputTools]);
+  const extensionComposerControls = useMemo(
+    () => composerControls.filter((control) => !CORE_COMPOSER_CONTROL_KEYS.has(composerRegistrationKey(control))),
+    [composerControls],
+  );
+  const extensionComposerInputTools = useMemo(
+    () => composerInputTools.filter((tool) => !CORE_COMPOSER_INPUT_TOOL_KEYS.has(composerRegistrationKey(tool))),
+    [composerInputTools],
+  );
   const [localInput, setLocalInputState] = useState(input);
   const previousInputPropRef = useRef(input);
   const localInputRef = useRef(input);
@@ -246,7 +360,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
   const visibleComposerInputTools = useMemo(
     () =>
-      effectiveComposerInputTools.filter((tool) => {
+      extensionComposerInputTools.filter((tool) => {
         const expr = tool.when;
         if (!expr) return true;
         const clauses = expr.split(/\s*&&\s*/).filter(Boolean);
@@ -258,12 +372,12 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
         }
         return true;
       }),
-    [composerHasContent, effectiveComposerInputTools, streamIsStreaming],
+    [composerHasContent, extensionComposerInputTools, streamIsStreaming],
   );
 
   const visibleComposerControls = useMemo(
     () =>
-      effectiveComposerControls.filter((button) => {
+      extensionComposerControls.filter((button) => {
         const expr = button.when;
         if (!expr) return true;
         const clauses = expr.split(/\s*&&\s*/).filter(Boolean);
@@ -275,7 +389,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
         }
         return true;
       }),
-    [effectiveComposerControls, composerHasContent, streamIsStreaming],
+    [extensionComposerControls, composerHasContent, streamIsStreaming],
   );
 
   const composerControlContext = {
@@ -359,6 +473,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
         <div className="flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0 min-[420px]:flex-nowrap">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 min-[420px]:flex-nowrap">
+            <CoreAttachControl disabled={composerDisabled} onOpenFilePicker={onOpenFilePicker} />
             {visibleLeadingControls.map((control) => (
               <ComposerButtonHost
                 key={`${control.extensionId}:${control.id}`}
@@ -366,6 +481,11 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
                 buttonContext={{ ...composerControlContext, renderMode: 'inline' }}
               />
             ))}
+            <CoreDrawingControl
+              conversationId={conversationId}
+              disabled={composerDisabled}
+              onUpsertDrawingAttachment={onUpsertDrawingAttachment}
+            />
             {visibleComposerInputTools.map((tool) => (
               <ComposerInputToolHost
                 key={`${tool.extensionId}:${tool.id}`}
@@ -380,6 +500,14 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
                 }}
               />
             ))}
+            <CoreModelPreferenceControls
+              disabled={composerDisabled}
+              models={models}
+              currentModel={currentModel}
+              currentThinkingLevel={currentThinkingLevel}
+              onSelectModel={onSelectModel}
+              onSelectThinkingLevel={onSelectThinkingLevel}
+            />
             <ConversationPreferencesRow
               composerButtons={visiblePreferenceControls}
               composerButtonContext={composerControlContext}
