@@ -107,7 +107,7 @@ function renderPage(options?: { toast?: ReturnType<typeof vi.fn>; notify?: Retur
   const toast = options?.toast ?? vi.fn();
   const notify = options?.notify ?? vi.fn();
 
-  render(
+  return render(
     <MemoryRouter>
       <ExtensionManagerPage
         pa={{ ui: { toast, notify }, commands: { list: vi.fn().mockResolvedValue([]) } } as never}
@@ -210,6 +210,24 @@ describe('ExtensionManagerPage', () => {
     expect(Number.parseFloat(menu.style.top)).toBeLessThan(560);
     expect(Number.parseFloat(menu.style.top) + 92).toBeLessThanOrEqual(592);
     expect(Number.parseFloat(menu.style.right)).toBeGreaterThanOrEqual(8);
+    expect(menu.style.left).toBe('auto');
+    expect(menu.style.bottom).toBe('auto');
+  });
+
+  it('keeps extension row actions in a stable right-side column', async () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1280);
+    const { container } = renderPage();
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    const actionsHeader = screen.getByText('Actions');
+    const actionsCell = actionsHeader.closest('table')?.querySelector('tbody td:last-child');
+    const moreButton = screen.getByLabelText('More actions');
+
+    expect(actionsCell?.className).toContain('w-40');
+    expect(actionsCell?.className).toContain('text-right');
+    expect(moreButton.className).toContain('h-7');
+    expect(moreButton.className).toContain('w-7');
+    expect(container.querySelector('table')?.className).toContain('table-fixed');
   });
 
   it('shows a single extensions list with source labels and no catalog tab', async () => {

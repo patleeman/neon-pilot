@@ -322,10 +322,11 @@ function ExtensionActionsMenu({
   }
 
   return (
-    <div ref={rootRef} className="relative" onClick={(event) => event.stopPropagation()}>
+    <div ref={rootRef} className="relative flex h-7 w-7 shrink-0 items-center justify-center" onClick={(event) => event.stopPropagation()}>
       <IconButton
         ref={buttonRef}
         compact
+        className="h-7 w-7 shrink-0"
         title={busy ? 'Working…' : 'More actions'}
         aria-label={busy ? 'Working…' : 'More actions'}
         aria-haspopup="menu"
@@ -346,6 +347,8 @@ function ExtensionActionsMenu({
               style={{
                 top: menuPosition.top,
                 right: menuPosition.right,
+                bottom: 'auto',
+                left: 'auto',
                 maxHeight: menuPosition.maxHeight,
                 overflowY: 'auto',
                 visibility: menuPosition.visibility,
@@ -1324,11 +1327,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     catalogItem: InstallableExtensionCatalogItem | undefined,
     route: string | null,
   ) => (
-    <DataTableActionGroup>
-      {busy ? <span className="text-[11px] text-dim">Working…</span> : null}
+    <DataTableActionGroup className="min-w-[9rem] shrink-0">
+      {busy ? <span className="shrink-0 text-[11px] text-dim">Working…</span> : null}
       {route && extension.enabled ? (
         <IconLink
           compact
+          className="h-7 w-7 shrink-0"
           href={route}
           title={`Open ${extension.name}`}
           aria-label={`Open ${extension.name}`}
@@ -1344,6 +1348,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       {hasExtensionSettings(extension) ? (
         <IconLink
           compact
+          className="h-7 w-7 shrink-0"
           href={`/settings#${extensionSettingsSectionId(extension)}`}
           title={`Configure ${extension.name} in Settings`}
           aria-label={`Configure ${extension.name} in Settings`}
@@ -1358,6 +1363,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       ) : null}
       <IconButton
         compact
+        className="h-7 w-7 shrink-0"
         title={`Details for ${extension.name}`}
         aria-label={`Details for ${extension.name}`}
         onClick={(event) => {
@@ -1438,7 +1444,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
             )}
           </DataTableCell>
-          <DataTableCell className="py-4 pr-0">
+          <DataTableCell className="w-40 min-w-40 py-4 pr-0 text-right">
             {renderExtensionActions(extension, busy, catalogItem, route)}
           </DataTableCell>
         </DataTableRow>
@@ -1516,7 +1522,14 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     compactExtensionsLayout ? (
       renderExtensionCards(items)
     ) : (
-      <DataTable className="overflow-auto">
+      <DataTable className="overflow-auto" tableClassName="min-w-[58rem] table-fixed">
+        <colgroup>
+          <col className="w-[44%]" />
+          <col className="w-[9rem]" />
+          <col />
+          <col className="w-[8rem]" />
+          <col className="w-40" />
+        </colgroup>
         <DataTableHead>
           <DataTableRow className="hover:bg-transparent">
             <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
