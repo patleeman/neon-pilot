@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { ExtensionModalHost } from './ExtensionModalHost';
+import { ExtensionModalHost, resolveExtensionModalSizeClasses } from './ExtensionModalHost';
 
 describe('ExtensionModalHost confirm bridge', () => {
   afterEach(() => {
@@ -63,5 +63,32 @@ describe('ExtensionModalHost confirm bridge', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
 
     await expect(result).resolves.toBe(false);
+  });
+});
+
+describe('resolveExtensionModalSizeClasses', () => {
+  it('keeps default extension modals compact', () => {
+    const classes = resolveExtensionModalSizeClasses(undefined);
+
+    expect(classes.dialogClassName).toContain('max-w-2xl');
+    expect(classes.dialogClassName).toContain('max-h-[85vh]');
+    expect(classes.bodyClassName).toBeUndefined();
+  });
+
+  it('provides an intermediate large modal size', () => {
+    const classes = resolveExtensionModalSizeClasses('large');
+
+    expect(classes.dialogClassName).toContain('w-[min(78rem,calc(100vw-2rem))]');
+    expect(classes.dialogClassName).toContain('h-[min(86vh,calc(100vh-2rem))]');
+    expect(classes.bodyClassName).toContain('overflow-auto');
+  });
+
+  it('makes fullscreen extension modals fill nearly the whole viewport', () => {
+    const classes = resolveExtensionModalSizeClasses('fullscreen');
+
+    expect(classes.dialogClassName).toContain('w-[min(96vw,calc(100vw-1.5rem))]');
+    expect(classes.dialogClassName).toContain('h-[min(94vh,calc(100vh-1.5rem))]');
+    expect(classes.bodyClassName).toContain('overflow-hidden');
+    expect(classes.bodyClassName).toContain('p-0');
   });
 });

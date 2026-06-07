@@ -1046,7 +1046,7 @@ The `pa` client provides:
 - `pa.extension.invoke(actionId, input)` — call backend actions
 - `pa.ui.toast(message, type)` — show toast notification
 - `pa.ui.confirm(options)` — show confirmation dialog (`{ title?, message }`)
-- `pa.ui.openModal(options)` — open a custom modal dialog (`{ title?, component, props? }`). The `component` must be a named export from your extension's frontend entry. It receives `{ pa, props, close }`. Returns a promise that resolves when the modal is closed.
+- `pa.ui.openModal(options)` — open a custom modal dialog (`{ title?, component, props?, size? }`). The `component` must be a named export from your extension's frontend entry. It receives `{ pa, props, close }`. Returns a promise that resolves when the modal is closed. Use `size: 'default'` or omit it for focused forms and confirmations, `size: 'large'` for resource pickers or detail editors, and `size: 'fullscreen'` for canvas/workspace tools such as drawing editors that need nearly the whole viewport.
 - `pa.storage.*` — read/write extension state
 - `pa.workspace.*` — workspace file operations
 - `pa.browser.*` — browser control

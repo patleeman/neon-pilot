@@ -10,9 +10,36 @@ interface ModalState {
   title?: string;
   component: string;
   props: Record<string, unknown>;
-  size?: 'default' | 'fullscreen';
+  size?: ExtensionModalSize;
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
+}
+
+type ExtensionModalSize = 'default' | 'large' | 'fullscreen';
+
+export function resolveExtensionModalSizeClasses(size: ExtensionModalSize | undefined): {
+  dialogClassName: string;
+  bodyClassName?: string;
+} {
+  switch (size) {
+    case 'fullscreen':
+      return {
+        dialogClassName:
+          'h-[min(94vh,calc(100vh-1.5rem))] max-h-[calc(100vh-1.5rem)] w-[min(96vw,calc(100vw-1.5rem))] max-w-none rounded-lg border-border-default bg-surface',
+        bodyClassName: 'min-h-0 flex-1 overflow-hidden p-0',
+      };
+    case 'large':
+      return {
+        dialogClassName:
+          'h-[min(86vh,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] w-[min(78rem,calc(100vw-2rem))] max-w-none rounded-lg border-border-default bg-surface',
+        bodyClassName: 'min-h-0 flex-1 overflow-auto',
+      };
+    case 'default':
+    default:
+      return {
+        dialogClassName: 'max-h-[85vh] max-w-2xl rounded-lg border-border-default bg-surface',
+      };
+  }
 }
 
 interface ConfirmState {
@@ -166,7 +193,7 @@ export function ExtensionModalHost() {
   if (!modal || !Component) return confirmDialog;
 
   const pa = createNativeExtensionClient(modal.extensionId);
-  const fullscreen = modal.size === 'fullscreen';
+  const modalSizeClasses = resolveExtensionModalSizeClasses(modal.size);
 
   return (
     <>
@@ -177,11 +204,7 @@ export function ExtensionModalHost() {
         onKeyDown={(e) => {
           if (e.key === 'Escape') handleClose();
         }}
-        className={
-          fullscreen
-            ? 'h-[85vh] max-h-[85vh] w-[min(85vw,1600px)] max-w-none rounded-lg border-border-default bg-surface'
-            : 'max-h-[85vh] max-w-2xl rounded-lg border-border-default bg-surface'
-        }
+        className={modalSizeClasses.dialogClassName}
       >
         {modal.title ? (
           <DialogHeader
@@ -206,7 +229,7 @@ export function ExtensionModalHost() {
             }
           />
         ) : null}
-        <DialogBody className={fullscreen ? 'min-h-0 flex-1 overflow-hidden p-0' : undefined}>
+        <DialogBody className={modalSizeClasses.bodyClassName}>
           <Component pa={pa} props={modal.props} close={handleClose} />
         </DialogBody>
       </Dialog>

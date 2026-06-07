@@ -163,7 +163,7 @@ export interface NativeExtensionClient {
       title?: string;
       component: string;
       props?: Record<string, unknown>;
-      size?: 'default' | 'fullscreen';
+      size?: 'default' | 'large' | 'fullscreen';
     }): Promise<unknown>;
   };
   [capability: string]: unknown;
@@ -1113,7 +1113,7 @@ export interface NeonPilotClient {
       title?: string;
       component: string;
       props?: Record<string, unknown>;
-      size?: 'default' | 'fullscreen';
+      size?: 'default' | 'large' | 'fullscreen';
     }): Promise<unknown>;
   };
   commands: {

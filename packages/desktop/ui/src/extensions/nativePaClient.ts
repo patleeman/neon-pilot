@@ -132,7 +132,12 @@ export interface NativeExtensionClient {
     toast(message: string, type?: 'info' | 'warning' | 'error'): void;
     notify(options: { message: string; type?: 'info' | 'warning' | 'error'; details?: string; source?: string }): void;
     confirm(options: { title?: string; message: string }): Promise<boolean>;
-    openModal(options: { title?: string; component: string; props?: Record<string, unknown> }): Promise<unknown>;
+    openModal(options: {
+      title?: string;
+      component: string;
+      props?: Record<string, unknown>;
+      size?: 'default' | 'large' | 'fullscreen';
+    }): Promise<unknown>;
   };
 }
 
