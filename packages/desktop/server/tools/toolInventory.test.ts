@@ -134,6 +134,25 @@ describe('tool inventory', () => {
     );
   });
 
+  it('keeps explicit activation tools enabled but inactive by default', () => {
+    const plan = buildToolInjectionPlanFromRegistrations(
+      [
+        tool({ id: 'auto', name: 'auto_tool', priority: 2 }),
+        tool({ id: 'explicit', name: 'explicit_tool', activation: 'explicit', priority: 10 }),
+      ],
+      ctx,
+    );
+
+    expect(plan.activeToolNames).toEqual(['auto_tool']);
+    expect(plan.registrations).toEqual([expect.objectContaining({ id: 'auto' })]);
+    expect(plan.tools.find((candidate) => candidate.id === 'ext/explicit')).toMatchObject({
+      enabled: true,
+      active: false,
+      reason: 'explicit activation required',
+      activation: 'explicit',
+    });
+  });
+
   it('does not apply extension-specific secret policy in core tool inventory', () => {
     expect(
       buildToolInjectionPlanFromRegistrations(

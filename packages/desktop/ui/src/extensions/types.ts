@@ -147,6 +147,7 @@ interface ExtensionToolContribution {
   inputSchema?: Record<string, unknown>;
   promptSnippet?: string;
   promptGuidelines?: string[];
+  activation?: 'auto' | 'explicit';
   name?: string;
 }
 

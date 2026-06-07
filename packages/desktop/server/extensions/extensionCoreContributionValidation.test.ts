@@ -11,7 +11,13 @@ describe('extensionCoreContributionValidation', () => {
     expect(validateSkillContributions(['skills/example/SKILL.md', { id: 'skill', path: 'skill/SKILL.md' }])).toBeUndefined();
     expect(
       validateToolContributions([
-        { id: 'tool', description: 'Tool', when: { providers: ['openai'], models: ['gpt'] }, promptGuidelines: ['Use it'] },
+        {
+          id: 'tool',
+          description: 'Tool',
+          activation: 'explicit',
+          when: { providers: ['openai'], models: ['gpt'] },
+          promptGuidelines: ['Use it'],
+        },
       ]),
     ).toBeUndefined();
     expect(validateModelProfileContributions([{ id: 'profile', match: ['gpt-*'], priority: 1, activeTools: ['bash'] }])).toBeUndefined();
@@ -25,6 +31,9 @@ describe('extensionCoreContributionValidation', () => {
     );
     expect(() => validateToolContributions([{ id: 'tool', description: 'Tool', promptGuidelines: [1] }])).toThrow(
       'Extension manifest contributes.tools[0].promptGuidelines must be an array of non-empty strings.',
+    );
+    expect(() => validateToolContributions([{ id: 'tool', description: 'Tool', activation: 'page' }])).toThrow(
+      'Extension manifest contributes.tools[0].activation must be one of: auto, explicit.',
     );
     expect(() => validateModelProfileContributions([{ id: 'profile', match: ['gpt-*'], priority: 'high' }])).toThrow(
       'Extension manifest contributes.modelProfiles[0].priority must be a number.',

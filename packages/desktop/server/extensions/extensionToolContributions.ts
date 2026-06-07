@@ -14,6 +14,7 @@ export interface ExtensionToolRegistration {
   promptSnippet?: string;
   promptGuidelines?: string[];
   priority?: number;
+  activation?: 'auto' | 'explicit';
   when?: {
     providers?: string[];
     models?: string[];
@@ -52,6 +53,7 @@ export function buildExtensionToolRegistrations(input: {
         ...(tool.promptSnippet ? { promptSnippet: tool.promptSnippet } : {}),
         ...(tool.promptGuidelines ? { promptGuidelines: tool.promptGuidelines } : {}),
         ...(Number.isInteger(tool.priority) ? { priority: tool.priority } : {}),
+        ...(tool.activation === 'auto' || tool.activation === 'explicit' ? { activation: tool.activation } : {}),
         ...(tool.when ? { when: tool.when } : {}),
         ...(replaces ? { replaces } : {}),
         ...(tool.nativeRegistration ? { nativeRegistration: true } : {}),

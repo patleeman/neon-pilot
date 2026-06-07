@@ -17,6 +17,7 @@ export interface ToolDefinition {
   action?: string;
   replaces?: string;
   priority: number;
+  activation?: 'auto' | 'explicit';
   when?: { providers?: string[]; models?: string[] };
   promptSnippet?: string;
   promptGuidelines?: string[];
@@ -117,6 +118,7 @@ async function listToolDefinitionsWithDiagnosticsAsync(
                   promptSnippet: tool.promptSnippet,
                   promptGuidelines: tool.promptGuidelines,
                   priority: tool.priority,
+                  activation: tool.activation,
                   when: tool.when,
                   replaces: tool.replaces,
                 },
@@ -162,6 +164,7 @@ function buildToolInjectionPlanFromDefinitions(definitions: ToolDefinition[], ct
     const availability = toolAvailabilityMatches(tool);
     const replacementValid = !tool.replaces || OVERRIDABLE_TOOLS.has(tool.replaces);
     const enabled = diagnostics.every((diagnostic) => diagnostic.severity !== 'error') && condition && availability.ok && replacementValid;
+    const active = enabled && tool.activation !== 'explicit';
     return {
       ...tool,
       diagnostics: replacementValid
@@ -177,9 +180,11 @@ function buildToolInjectionPlanFromDefinitions(definitions: ToolDefinition[], ct
             },
           ],
       enabled,
-      active: enabled,
+      active,
       reason: enabled
-        ? 'enabled'
+        ? active
+          ? 'enabled'
+          : 'explicit activation required'
         : condition
           ? availability.ok
             ? 'disabled by diagnostics or replacement policy'
@@ -216,6 +221,7 @@ function extensionToolToDefinition(tool: ExtensionToolRegistration): ToolDefinit
     action: tool.action,
     replaces: tool.replaces,
     priority: tool.priority ?? 0,
+    activation: tool.activation,
     when: tool.when,
     promptSnippet: tool.promptSnippet,
     promptGuidelines: tool.promptGuidelines,

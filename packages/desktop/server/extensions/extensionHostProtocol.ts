@@ -209,6 +209,7 @@ export interface ExtensionHostToolRegistration {
   promptSnippet?: string;
   promptGuidelines?: string[];
   priority?: number;
+  activation?: 'auto' | 'explicit';
   when?: {
     providers?: string[];
     models?: string[];

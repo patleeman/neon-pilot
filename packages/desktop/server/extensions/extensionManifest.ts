@@ -573,6 +573,8 @@ export interface ExtensionToolCondition {
   models?: string[];
 }
 
+export type ExtensionToolActivation = 'auto' | 'explicit';
+
 export interface ExtensionToolContribution {
   id: string;
   title?: string;
@@ -585,6 +587,11 @@ export interface ExtensionToolContribution {
   promptGuidelines?: string[];
   /** Higher priority wins when multiple enabled tools provide the same explicit name. */
   priority?: number;
+  /**
+   * `auto` tools are enabled in default chat sessions. `explicit` tools are
+   * registered but only become active when a caller opts into them.
+   */
+  activation?: ExtensionToolActivation;
   /** Explicit agent tool name. Defaults to extension_{extensionId}_{toolId}. */
   name?: string;
   /**

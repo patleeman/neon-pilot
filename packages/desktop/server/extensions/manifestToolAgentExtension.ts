@@ -79,15 +79,17 @@ function normalizeUpdateContent(content: Array<{ type: string; text: string }> |
 export function createManifestToolAgentExtensions(options: ManifestToolFactoryOptions): Array<(pi: ExtensionAPI) => void> {
   const currentModelRef = options.getCurrentModelRef?.() ?? '';
   const registrations = listExtensionToolRegistrations();
-  const activeToolIds = new Set(
+  const registerableToolIds = new Set(
     buildToolInjectionPlanFromRegistrations(registrations, {
       profile: options.getRuntimeScope(),
       repoRoot: options.repoRoot,
       modelRef: currentModelRef,
-    }).registrations.map((tool) => `${tool.extensionId}/${tool.id}`),
+    })
+      .tools.filter((tool) => tool.enabled && tool.raw)
+      .map((tool) => `${tool.raw!.extensionId}/${tool.raw!.id}`),
   );
   return registrations
-    .filter((tool) => activeToolIds.has(`${tool.extensionId}/${tool.id}`))
+    .filter((tool) => registerableToolIds.has(`${tool.extensionId}/${tool.id}`))
     .filter((tool) => !tool.nativeRegistration)
     .filter((tool) => modelConditionMatches(tool, currentModelRef))
     .map((tool) => {

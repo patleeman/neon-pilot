@@ -353,6 +353,8 @@ export interface ExtensionToolCondition {
   models?: string[];
 }
 
+export type ExtensionToolActivation = 'auto' | 'explicit';
+
 export interface ExtensionToolContribution {
   id: string;
   title?: string;
@@ -363,6 +365,8 @@ export interface ExtensionToolContribution {
   inputSchema?: Record<string, unknown>;
   promptSnippet?: string;
   promptGuidelines?: string[];
+  /** Defaults to `auto`. Use `explicit` for page/session-scoped tools. */
+  activation?: ExtensionToolActivation;
   name?: string;
   /** Only register this tool when the active model/provider matches. */
   when?: ExtensionToolCondition;

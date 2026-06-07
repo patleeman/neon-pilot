@@ -46,7 +46,10 @@ function registerTools() {
 
 describe('manifestToolAgentExtension', () => {
   beforeEach(() => {
-    buildToolInjectionPlanFromRegistrations.mockReset().mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'tool' }] });
+    buildToolInjectionPlanFromRegistrations.mockReset().mockReturnValue({
+      registrations: [{ extensionId: 'ext', id: 'tool' }],
+      tools: [{ enabled: true, raw: { extensionId: 'ext', id: 'tool' } }],
+    });
     extensionHostClient.invokeAction.mockReset().mockResolvedValue({ ok: true, result: { text: 'done', details: { ok: true } } });
     listExtensionToolRegistrations.mockReset().mockReturnValue([tool()]);
   });
@@ -106,7 +109,15 @@ describe('manifestToolAgentExtension', () => {
   });
 
   it('filters inactive, native, and model-condition-mismatched tools', () => {
-    buildToolInjectionPlanFromRegistrations.mockReturnValue({ registrations: [{ extensionId: 'ext', id: 'active' }] });
+    buildToolInjectionPlanFromRegistrations.mockReturnValue({
+      registrations: [{ extensionId: 'ext', id: 'active' }],
+      tools: [
+        { enabled: true, raw: { extensionId: 'ext', id: 'active' } },
+        { enabled: false, raw: { extensionId: 'ext', id: 'inactive' } },
+        { enabled: true, raw: { extensionId: 'ext', id: 'native' } },
+        { enabled: true, raw: { extensionId: 'ext', id: 'wrong-model' } },
+      ],
+    });
     listExtensionToolRegistrations.mockReturnValue([
       tool({ id: 'active', when: { providers: ['openai'] } }),
       tool({ id: 'inactive' }),
@@ -129,6 +140,10 @@ describe('manifestToolAgentExtension', () => {
       registrations: [
         { extensionId: 'ext', id: 'tool' },
         { extensionId: 'ext', id: 'other' },
+      ],
+      tools: [
+        { enabled: true, raw: { extensionId: 'ext', id: 'tool' } },
+        { enabled: true, raw: { extensionId: 'ext', id: 'other' } },
       ],
     });
 
@@ -189,6 +204,16 @@ describe('manifestToolAgentExtension', () => {
     listExtensionToolRegistrations.mockReturnValue([tool({ id: 'tool', name: 'probe_image' })]);
 
     expect(registerTools()).toHaveLength(1);
+  });
+
+  it('registers explicit activation tools so scoped sessions can opt into them', () => {
+    listExtensionToolRegistrations.mockReturnValue([tool({ id: 'scoped', name: 'scoped_tool', activation: 'explicit' })]);
+    buildToolInjectionPlanFromRegistrations.mockReturnValue({
+      registrations: [],
+      tools: [{ enabled: true, raw: { extensionId: 'ext', id: 'scoped' } }],
+    });
+
+    expect(registerTools()).toContainEqual(expect.objectContaining({ name: 'scoped_tool' }));
   });
 
   it('exposes stable cache entries for product runtime factory caching', () => {

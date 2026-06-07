@@ -30,6 +30,10 @@ export function validateToolContributions(value: unknown): void {
     validateOptionalString(tool.action, `contributes.tools[${index}].action`);
     validateOptionalString(tool.handler, `contributes.tools[${index}].handler`);
     validateOptionalString(tool.name, `contributes.tools[${index}].name`);
+    validateOptionalString(tool.activation, `contributes.tools[${index}].activation`);
+    if (tool.activation !== undefined && tool.activation !== 'auto' && tool.activation !== 'explicit') {
+      throw new Error(`Extension manifest contributes.tools[${index}].activation must be one of: auto, explicit.`);
+    }
     if (tool.when !== undefined) {
       if (!isRecord(tool.when)) throw new Error(`Extension manifest contributes.tools[${index}].when must be an object.`);
       if (tool.when.providers !== undefined) requireStringArray(tool.when.providers, `contributes.tools[${index}].when.providers`);
