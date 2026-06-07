@@ -52,7 +52,10 @@ describe('ConversationQuestionShelf', () => {
     expect(html).toContain('First');
     expect(html).toContain('Beta');
     expect(html).toContain('◉');
-    expect(html).toContain('Type 1-9 to select');
+    expect(html).toContain('ui-choice-row-prefix');
+    expect(html).toContain('ui-choice-row-indicator');
+    expect(html).not.toContain('2. ◯');
+    expect(html).toContain('1-9 selects');
   });
 
   it('renders checkbox indicators and disabled options while submitting', () => {
@@ -72,6 +75,26 @@ describe('ConversationQuestionShelf', () => {
 
     expect(html).toContain('Pick many');
     expect(html).toContain('☑');
+    expect(html).toContain('ui-choice-row-checked');
     expect(html).toContain('disabled=""');
+  });
+
+  it('does not mark the active unselected option as checked', () => {
+    const html = renderToString(
+      <ConversationQuestionShelf
+        presentation={presentation}
+        activeQuestion={presentation.questions[0]!}
+        activeQuestionIndex={0}
+        activeOptionIndex={1}
+        answers={{}}
+        submitting={false}
+        answeredCount={0}
+        onActivateQuestion={vi.fn()}
+        onSelectOption={vi.fn()}
+      />,
+    );
+
+    expect(html).not.toContain('ui-choice-row-checked');
+    expect(html).toContain('bg-elevated/35');
   });
 });
