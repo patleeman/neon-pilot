@@ -101,6 +101,11 @@ vi.mock('../ui/settingsPersistence.js', () => ({
   DEFAULT_RUNTIME_SETTINGS_FILE: '/runtime/settings.json',
 }));
 
+vi.mock('../cliEnvironment.js', () => ({
+  ensureNeonPilotCliLauncher: vi.fn(() => '/state-root/bin/neon-pilot'),
+  prependNeonPilotCliBin: vi.fn((env: NodeJS.ProcessEnv) => ({ ...env, PATH: '/state-root/bin:/usr/bin' })),
+}));
+
 import { createRuntimeState } from './runtimeState.js';
 
 const resolvedShared = {

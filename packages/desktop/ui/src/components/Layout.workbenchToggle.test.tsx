@@ -133,7 +133,7 @@ describe('Layout workbench toggle', () => {
 
     renderLayout('/conversations/conv-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Chat Open a new chat tab.' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chat' }).at(-1)!);
 
     await waitFor(() => {
       expect(reserveConversation).toHaveBeenCalledWith(undefined);
@@ -178,7 +178,7 @@ describe('Layout workbench toggle', () => {
 
     renderLayout('/conversations/conv-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Chat Open a new chat tab.' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chat' }).at(-1)!);
 
     expect(await screen.findByRole('button', { name: 'Investigate onboarding crash' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Chat side-cha/ })).toBeNull();
@@ -189,7 +189,7 @@ describe('Layout workbench toggle', () => {
 
     renderLayout('/conversations/conv-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'File Explorer Browse workspace files.' }));
+    fireEvent.click(screen.getByRole('button', { name: /File Explorer/ }));
 
     const newTabButton = screen.getByRole('button', { name: 'New tab' });
     expect(newTabButton.className).toContain('shrink-0');

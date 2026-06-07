@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpus, tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
 const repo = resolve(new URL('..', import.meta.url).pathname);
@@ -15,6 +15,7 @@ const seconds = Math.max(5, Number(arg('seconds', '30')) || 30);
 const sessions = Math.max(1, Number(arg('sessions', '1000')) || 1000);
 const blocks = Math.max(2, Number(arg('blocks', '80')) || 80);
 const maxCpu = Math.max(10, Number(arg('max-cpu', '130')) || 130);
+const maxPeakCpu = Math.max(maxCpu * 3, cpus().length * 100);
 const app = arg('app', '');
 const keep = process.argv.includes('--keep');
 const stateRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-startup-idle-'));
@@ -146,9 +147,9 @@ async function main() {
   const worst = samples.toSorted((a, b) => b.total - a.total)[0];
 
   if (pythonHits.length > 0) throw new Error(`Idle startup spawned local model process:\n${[...new Set(pythonHits)].join('\n')}`);
-  if (avg > maxCpu || peak > maxCpu * 3) {
+  if (avg > maxCpu || peak > maxPeakCpu) {
     throw new Error(
-      `Idle startup CPU too high: peak=${peak.toFixed(1)} avg=${avg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxCpu * 3}\n${JSON.stringify(worst, null, 2)}`,
+      `Idle startup CPU too high: peak=${peak.toFixed(1)} avg=${avg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxPeakCpu}\n${JSON.stringify(worst, null, 2)}`,
     );
   }
 

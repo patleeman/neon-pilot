@@ -310,7 +310,7 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('Inspect image');
     expect(html).toContain('aria-label="Inspect image: Latest desktop build"');
-    expect(html).toContain('cursor-zoom-in');
+    expect(html).toContain('ui-media-preview-button');
   });
 
   it('renders user attachment images as inspectable buttons', () => {
@@ -335,7 +335,7 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('Inspect image');
     expect(html).toContain('aria-label="Inspect image: Before refactor"');
-    expect(html).toContain('cursor-zoom-in');
+    expect(html).toContain('ui-media-preview-button');
   });
 
   it('does not render background task cards for plain run id mentions', () => {

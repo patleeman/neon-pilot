@@ -13,13 +13,13 @@ describe('ContextUsageIndicator', () => {
     );
 
     expect(html).toContain('Context usage: 70.0% of 100k ctx');
-    expect(html).toContain('bg-warning');
+    expect(html).toContain('ui-ring-status-dot-warning');
   });
 
   it('uses danger tone near the context limit', () => {
     expect(
       renderToString(<ContextUsageIndicator pa={pa} statusBarContext={{ contextUsage: { total: 95_000, contextWindow: 100_000 } }} />),
-    ).toContain('bg-danger');
+    ).toContain('ui-ring-status-dot-danger');
   });
 
   it('does not render without context usage', () => {

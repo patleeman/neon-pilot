@@ -39,6 +39,7 @@ const extensionRegistry = vi.hoisted(() => ({
   listExtensionToolRegistrations: vi.fn(),
   listEnabledExtensionEntries: vi.fn(),
   listExtensionInstallSummaries: vi.fn(),
+  listExtensionCliCommandRegistrations: vi.fn(),
   listExtensionCommandRegistrations: vi.fn(),
   listExtensionKeybindingRegistrations: vi.fn(),
   listExtensionMentionRegistrations: vi.fn(),
@@ -315,6 +316,7 @@ describe('extension host client', () => {
   it('routes registry presentation reads through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.listExtensionInstallSummaries.mockReturnValueOnce([{ id: 'ext', name: 'Ext' }]);
+    extensionRegistry.listExtensionCliCommandRegistrations.mockReturnValueOnce([{ id: 'cli' }]);
     extensionRegistry.listExtensionCommandRegistrations.mockReturnValueOnce([{ id: 'command' }]);
     extensionRegistry.listExtensionKeybindingRegistrations.mockReturnValueOnce([{ id: 'keybinding' }]);
     extensionRegistry.listExtensionSlashCommandRegistrations.mockReturnValueOnce([{ name: 'run' }]);
@@ -333,6 +335,7 @@ describe('extension host client', () => {
       schema: { manifestVersion: 2 },
       installSummaries: [{ id: 'ext', name: 'Ext' }],
       commandRegistrations: [{ id: 'command' }],
+      cliCommandRegistrations: [{ id: 'cli' }],
       keybindingRegistrations: [{ id: 'keybinding' }],
       slashCommandRegistrations: [{ name: 'run' }],
       mentionRegistrations: [{ id: 'mention' }],
@@ -359,7 +362,7 @@ describe('extension host client', () => {
     extensionRegistry.listExtensionInstallSummaries
       .mockReturnValueOnce([{ id: 'ext', status: 'disabled' }])
       .mockReturnValueOnce([{ id: 'ext', status: 'disabled' }])
-      .mockReturnValueOnce([{ id: 'ext', status: 'enabled', enabled: true }]);
+      .mockReturnValue([{ id: 'ext', status: 'enabled', enabled: true }]);
     extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { enabled: true } });
     extensionSubscriptions.installSubscriptionsForExtension.mockResolvedValueOnce(undefined);
     extensionServices.startServicesForExtension.mockResolvedValueOnce([]);

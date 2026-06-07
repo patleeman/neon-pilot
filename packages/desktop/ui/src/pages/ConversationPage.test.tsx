@@ -808,7 +808,7 @@ describe('ConversationPage', () => {
     expect(html).not.toContain('Show right sidebar');
     expect(html).toContain('Saved workspace');
     expect(html).toContain('Choose workspace folder');
-    expect(html).toContain('max-w-[38rem] text-left');
+    expect(html).toContain('max-w-[38rem] items-stretch text-left');
     expect(html).not.toContain('max-w-[72rem] text-left');
     expect(html).not.toContain('Browse…');
     expect(html).not.toContain('Start typing to create a conversation.');

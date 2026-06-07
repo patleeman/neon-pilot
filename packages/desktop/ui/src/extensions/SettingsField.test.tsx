@@ -22,7 +22,8 @@ describe('SettingsField', () => {
     const onChange = vi.fn();
     const { getByText } = render(<SettingsField entry={emojiListEntry} value={undefined} onChange={onChange} />);
 
-    expect(getByText('Emoji Picker Items').closest('label')?.textContent).toBe('Emoji Picker Items Emoji reply starters.');
+    expect(getByText('Emoji Picker Items').textContent).toBe('Emoji Picker Items');
+    expect(getByText('Emoji reply starters.').textContent).toBe('Emoji reply starters.');
   });
 
   it('renders emoji label lists as separate emoji and label controls', () => {

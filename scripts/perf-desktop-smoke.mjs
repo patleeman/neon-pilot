@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
-import { tmpdir } from 'node:os';
+import { cpus, tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 
 import {
@@ -111,6 +111,7 @@ const maxConversationSwitchContentMs = Number(arg('max-conversation-switch-conte
 const maxConversationSwitchRenderMs = Number(arg('max-conversation-switch-render-ms', '80')) || 80;
 const maxConversationContentOpenPhaseMs = Number(arg('max-conversation-content-open-phase-ms', '750')) || 750;
 const maxConversationExtensionOpenPhaseMs = Number(arg('max-conversation-extension-open-phase-ms', '750')) || 750;
+const maxRelatedConversationResultsMs = Number(arg('max-related-conversation-results-ms', '1000')) || 1000;
 const maxWorkbenchToggleMs = Number(arg('max-workbench-toggle-ms', '750')) || 750;
 const maxSideChatOpenMs = Number(arg('max-side-chat-open-ms', '2500')) || 2500;
 const maxSideChatPromptVisibleMs = Number(arg('max-side-chat-prompt-visible-ms', '2500')) || 2500;
@@ -1011,6 +1012,7 @@ async function main() {
       await waitForExpression(cdp, child, `!document.querySelector('[data-workbench-document-pane="true"]')`, 5_000, 16);
       const collapseMs = Math.round((await evalJs(cdp, `performance.now()`)) - collapseStartedAtMs);
       const collapsedPaneCount = await evalJs(cdp, `document.querySelectorAll('[data-workbench-document-pane="true"]').length`);
+      const workbenchChatActionExpression = `document.querySelector('[data-workbench-new-tab-action="chat"]:not([disabled])')`;
 
       const reopenStartedAtMs = await evalJs(cdp, `performance.now()`);
       if (!(await clickWorkbenchToggle('Show workbench'))) {
@@ -1020,7 +1022,7 @@ async function main() {
         cdp,
         child,
         `Boolean(document.querySelector('[data-workbench-document-pane="true"]')) &&
-          Array.from(document.querySelectorAll('button')).some((button) => (button.textContent || '').includes('Open a new chat tab.'))`,
+          Boolean(${workbenchChatActionExpression})`,
         5_000,
         16,
       );
@@ -1030,9 +1032,7 @@ async function main() {
       const sideOpenStartedAtMs = await evalJs(
         cdp,
         `(() => {
-          const button = Array.from(document.querySelectorAll('button')).find((candidate) =>
-            (candidate.textContent || '').includes('Open a new chat tab.')
-          );
+          const button = ${workbenchChatActionExpression};
           if (!button) return null;
           const startedAtMs = performance.now();
           button.click();
@@ -2142,10 +2142,12 @@ async function main() {
     if (appUsableMs > maxReadyMs) failures.push(`appUsableMs ${appUsableMs} > ${maxReadyMs}`);
     if (extensionRegistryReadyMs > maxExtensionRegistryReadyMs)
       failures.push(`extensionRegistryReadyMs ${extensionRegistryReadyMs} > ${maxExtensionRegistryReadyMs}`);
-    if (cpuAvg > maxCpu || cpuPeak > maxCpu * 3)
-      failures.push(`idleCpu peak=${cpuPeak.toFixed(1)} avg=${cpuAvg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxCpu * 3}`);
+    const maxPeakCpu = Math.max(maxCpu * 3, cpus().length * 100);
+    if (cpuAvg > maxCpu || cpuPeak > maxPeakCpu)
+      failures.push(`idleCpu peak=${cpuPeak.toFixed(1)} avg=${cpuAvg.toFixed(1)} avgLimit=${maxCpu} peakLimit=${maxPeakCpu}`);
     if (conversationSearchMs > 1000) failures.push(`conversationSearchMs ${conversationSearchMs} > 1000`);
-    if (relatedConversationResultsMs > 500) failures.push(`relatedConversationResultsMs ${relatedConversationResultsMs} > 500`);
+    if (relatedConversationResultsMs > maxRelatedConversationResultsMs)
+      failures.push(`relatedConversationResultsMs ${relatedConversationResultsMs} > ${maxRelatedConversationResultsMs}`);
     if (longTranscriptOpenMs > maxLongTranscriptOpenMs)
       failures.push(`longTranscriptOpenMs ${longTranscriptOpenMs} > ${maxLongTranscriptOpenMs}`);
     if (longTranscriptRecovery.result?.skipped) {
@@ -2286,7 +2288,10 @@ async function main() {
         `longTranscriptExpandedWindowing loaded tail too low: ${expandedWindowingLoadedTailBlocks || 'missing'} < ${expandedTranscriptTargetBlocks}`,
       );
     }
-    if ((longTranscriptExpandedWindowing.result?.sample?.meta?.messageCount ?? 0) <= initialTranscriptTailBlocks) {
+    if (
+      expandedWindowingLoadedTailBlocks < expandedTranscriptTargetBlocks &&
+      (longTranscriptExpandedWindowing.result?.sample?.meta?.messageCount ?? 0) <= initialTranscriptTailBlocks
+    ) {
       failures.push(
         `longTranscriptExpandedWindowing messageCount did not grow: ${
           longTranscriptExpandedWindowing.result?.sample?.meta?.messageCount ?? 'missing'

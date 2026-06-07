@@ -906,6 +906,7 @@ function WorkbenchNewTabPage({
           />
           {onStartSideChat && conversationId ? (
             <ActionTile
+              data-workbench-new-tab-action="chat"
               disabled={sideChatStarting}
               icon="◌"
               label={sideChatStarting ? 'Opening...' : 'Chat'}

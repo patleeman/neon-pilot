@@ -15,7 +15,14 @@ vi.mock('@neon-pilot/extensions/settings', () => ({
   Field: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
   Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Pill: ({ children }: { children: React.ReactNode }) => children,
+  RailSubsection: ({ title, children }: { title: React.ReactNode; children: React.ReactNode }) => (
+    <section>
+      <h4>{title}</h4>
+      {children}
+    </section>
+  ),
   Select: ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props}>{children}</select>,
+  SupportingText: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => <p {...props}>{children}</p>,
   SettingsSection: ({
     title,
     description,

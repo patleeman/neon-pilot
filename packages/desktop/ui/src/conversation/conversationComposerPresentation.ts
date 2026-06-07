@@ -7,7 +7,7 @@ const COMPOSER_SHELF_TEXT_MAX_LINES = 8;
 const DEFAULT_CONVERSATION_COMPOSER_HINTS = ['/  commands', '⇧↵ newline'];
 
 interface ComposerMentionProviderSummary {
-  title: string;
+  title?: string;
 }
 
 export function resolveConversationAutocompleteCatalogDemand(input: string): {
@@ -25,7 +25,7 @@ export function resolveConversationAutocompleteCatalogDemand(input: string): {
 }
 
 function formatComposerMentionProviderHint(registrations: ComposerMentionProviderSummary[]): string | null {
-  const titles = registrations.map((registration) => registration.title.trim()).filter(Boolean);
+  const titles = registrations.map((registration) => registration.title?.trim()).filter(Boolean);
   const uniqueTitles = [...new Set(titles)];
   if (uniqueTitles.length === 0) {
     return null;

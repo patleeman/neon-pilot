@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.0-rc.0 — 2026-06-07
+
+### Highlights
+
+- Adds extension-owned composer controls and mention-aware placeholders so chat surfaces can stay product-integrated without bypassing host boundaries.
+- Improves workbench and conversation layout resilience across narrow panes, side chats, loading states, model menus, attachments, tabs, and workspace/knowledge pickers.
+- Surfaces extension startup issues through user-visible notifications so broken or quarantined extensions are easier to diagnose.
+- Tightens Extension Manager, catalog, and package lifecycle behavior for the external first-party extension distribution path.
+- Carries forward the 0.10.3 RC runtime fixes for packaged extension actions, settings resolution, and worker action contexts.
+
+### Notes
+
+- 293 commits since the previous release.
+
 ## 0.10.3-rc.3 — 2026-06-05
 
 ### Highlights
