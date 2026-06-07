@@ -3,6 +3,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { api } from '../client/api';
 import { ExtensionChatRail } from './ExtensionChatRail';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -12,19 +13,33 @@ const abortMock = vi.hoisted(() => vi.fn());
 const reconnectMock = vi.hoisted(() => vi.fn());
 const desktopConversationStateMock = vi.hoisted(() => vi.fn());
 const updateConversationModelPreferencesMock = vi.hoisted(() => vi.fn());
+const desktopHookState = vi.hoisted(() => ({
+  loading: false,
+  state: {
+    stream: {
+      blocks: [],
+      isStreaming: false,
+      isCompacting: false,
+      contextUsage: null,
+      tokens: null,
+    },
+    sessionDetail: { meta: { cwd: null } },
+  } as {
+    stream: {
+      blocks: never[];
+      isStreaming: boolean;
+      isCompacting: boolean;
+      contextUsage: null;
+      tokens: null;
+    };
+    sessionDetail: { meta: { cwd: null } };
+  } | null,
+}));
 
 vi.mock('../hooks/useDesktopConversationState', () => ({
   useDesktopConversationState: vi.fn(() => ({
-    state: {
-      stream: {
-        blocks: [],
-        isStreaming: false,
-        isCompacting: false,
-        contextUsage: null,
-        tokens: null,
-      },
-      sessionDetail: { meta: { cwd: null } },
-    },
+    state: desktopHookState.state,
+    loading: desktopHookState.loading,
     send: sendMock,
     abort: abortMock,
     reconnect: reconnectMock,
@@ -71,6 +86,17 @@ describe('ExtensionChatRail', () => {
     sendMock.mockReset();
     abortMock.mockReset();
     reconnectMock.mockReset();
+    desktopHookState.loading = false;
+    desktopHookState.state = {
+      stream: {
+        blocks: [],
+        isStreaming: false,
+        isCompacting: false,
+        contextUsage: null,
+        tokens: null,
+      },
+      sessionDetail: { meta: { cwd: null } },
+    };
     desktopConversationStateMock.mockReset();
     desktopConversationStateMock.mockResolvedValue({
       conversationId: 'conversation-1',
@@ -167,6 +193,22 @@ describe('ExtensionChatRail', () => {
       expect(updateConversationModelPreferencesMock).toHaveBeenCalledWith('conversation-1', { model: 'model-b' });
     });
     expect(onModelChange).toHaveBeenCalledWith('model-b');
+  });
+
+  it('centers loading while the host conversation is hydrating', () => {
+    desktopHookState.loading = true;
+    desktopHookState.state = null;
+    desktopConversationStateMock.mockReturnValue(new Promise(() => undefined));
+    vi.mocked(api.conversationModelPreferences).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(api.models).mockReturnValue(new Promise(() => undefined));
+
+    render(<ExtensionChatRail conversationId="conversation-1" emptyState={<p>No messages</p>} />);
+
+    const loading = screen.getByText('Loading messages…').closest('[role="status"]');
+    expect(loading).not.toBeNull();
+    expect(loading.closest('.ui-centered-state')).not.toBeNull();
+    expect(screen.queryByText('No messages')).toBeNull();
+    expect(screen.queryByTestId('chat-view')).toBeNull();
   });
 
   it('hydrates and renders authoritative host conversation blocks when the hook has no blocks yet', async () => {

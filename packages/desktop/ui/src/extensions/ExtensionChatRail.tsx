@@ -5,6 +5,7 @@ import { api } from '../client/api';
 import type { DesktopConversationState, MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
 import { useDesktopConversationState } from '../hooks/useDesktopConversationState';
 import { getModelSelectionValue } from '../model/modelPreferences';
+import { CenteredLoadingState } from '../components/ui';
 import { ChatRailComposer } from '../components/chat/ChatRailComposer';
 import { ChatView } from '../components/chat/ChatView';
 
@@ -249,7 +250,9 @@ export function ExtensionChatRail({
   return (
     <div className={className ?? 'flex h-full min-h-0 flex-col bg-base select-text'} data-extension-chat-rail="1">
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-        {messages.length === 0 && emptyState ? (
+        {desktopState.loading && !activeState ? (
+          <CenteredLoadingState label="Loading messages…" className="h-full" />
+        ) : messages.length === 0 && emptyState ? (
           emptyState
         ) : (
           <ChatView

@@ -24,6 +24,7 @@ import { ConversationGoalPanel } from '../components/conversation/ConversationGo
 import { addNotification } from '../components/notifications/notificationStore';
 import {
   AppPageEmptyState,
+  CenteredLoadingState,
   EmptyState,
   IconButton,
   LoadingState,
@@ -6009,9 +6010,9 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
             </div>
           </div>
           {showBlockingConversationLoadingState ? (
-            <LoadingState label="Loading messages…" className="justify-center h-full" />
+            <CenteredLoadingState label="Loading messages…" className="h-full flex-1" />
           ) : visibleTranscriptMessages ? (
-            <Suspense fallback={<LoadingState label="Loading messages…" className="justify-center h-full" />}>
+            <Suspense fallback={<CenteredLoadingState label="Loading messages…" className="h-full flex-1" />}>
               <ChatView
                 key={visibleTranscriptState?.conversationId ?? id ?? 'draft-conversation'}
                 conversationId={visibleTranscriptState?.conversationId ?? id ?? null}
