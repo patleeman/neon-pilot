@@ -9,6 +9,9 @@
  */
 
 import type { ExtensionBackendNotifyInput } from './extensionBackend.js';
+import type { ExtensionInstallSummary } from './extensionRegistry.js';
+import { listExtensionInstallSummaries } from './extensionRegistry.js';
+import { publishAppEvent } from '../shared/appEvents.js';
 
 // ── In-memory badge state ─────────────────────────────────────────────────────
 
@@ -143,4 +146,90 @@ export function sendNotifyAsSystemNotification(extensionId: string, input: Exten
     persistent: input.persistent,
     actionPayload: input.actionPayload,
   });
+}
+
+export interface ExtensionStartupStatusNotification {
+  severity: 'warning' | 'error';
+  message: string;
+  details?: string;
+}
+
+function uniqueDetails(details: string[]): string[] {
+  return [...new Set(details)].filter((detail) => detail.trim().length > 0);
+}
+
+function buildExtensionErrorDetails(summary: ExtensionInstallSummary): string[] {
+  const details: string[] = [];
+  for (const error of summary.errors ?? []) {
+    details.push(error);
+  }
+  if (summary.buildError) {
+    details.push(`Build error: ${summary.buildError}`);
+  }
+  if (summary.healthError) {
+    details.push(`Health error: ${summary.healthError}`);
+  }
+  return uniqueDetails(details);
+}
+
+function buildExtensionWarningDetails(summary: ExtensionInstallSummary): string[] {
+  const details: string[] = [];
+  for (const diagnostic of summary.diagnostics ?? []) {
+    details.push(diagnostic);
+  }
+  return uniqueDetails(details);
+}
+
+export function buildExtensionStartupStatusNotifications(
+  summaries: ExtensionInstallSummary[],
+): ExtensionStartupStatusNotification[] {
+  const invalidOrErrored = summaries
+    .map((summary) => ({ summary, details: buildExtensionErrorDetails(summary) }))
+    .filter(({ summary, details }) => summary.status === 'invalid' || details.length > 0);
+
+  const warnings = summaries
+    .filter((summary) => !invalidOrErrored.some((item) => item.summary.id === summary.id))
+    .map((summary) => ({ summary, details: buildExtensionWarningDetails(summary) }))
+    .filter(({ details }) => details.length > 0);
+
+  const notifications: ExtensionStartupStatusNotification[] = [];
+  if (invalidOrErrored.length > 0) {
+    notifications.push({
+      severity: 'error',
+      message:
+        invalidOrErrored.length === 1
+          ? `${invalidOrErrored[0]?.summary.name ?? invalidOrErrored[0]?.summary.id} needs attention.`
+          : `${invalidOrErrored.length} extensions need attention.`,
+      details: invalidOrErrored
+        .map(({ summary, details }) => `${summary.name} (${summary.id}): ${details.join('; ') || summary.status}`)
+        .join('\n'),
+    });
+  }
+
+  if (warnings.length > 0) {
+    notifications.push({
+      severity: 'warning',
+      message:
+        warnings.length === 1
+          ? `${warnings[0]?.summary.name ?? warnings[0]?.summary.id} has extension warnings.`
+          : `${warnings.length} extensions have warnings.`,
+      details: warnings.map(({ summary, details }) => `${summary.name} (${summary.id}): ${details.join('; ')}`).join('\n'),
+    });
+  }
+
+  return notifications;
+}
+
+export function notifyExtensionStartupStatus(summaries: ExtensionInstallSummary[] = listExtensionInstallSummaries()): number {
+  const notifications = buildExtensionStartupStatusNotifications(summaries);
+  for (const notification of notifications) {
+    publishAppEvent({
+      type: 'notification',
+      extensionId: 'core',
+      message: notification.message,
+      severity: notification.severity,
+      ...(notification.details ? { details: notification.details } : {}),
+    });
+  }
+  return notifications.length;
 }

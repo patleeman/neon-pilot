@@ -1,15 +1,50 @@
 import { describe, expect, it, vi } from 'vitest';
 
+const appEvents = vi.hoisted(() => ({ publishAppEvent: vi.fn() }));
+
+vi.mock('../shared/appEvents.js', () => appEvents);
+
 import {
+  buildExtensionStartupStatusNotifications,
   clearExtensionBadge,
   getAggregatedBadgeCount,
   isSystemNotificationAvailable,
+  notifyExtensionStartupStatus,
   onBadgeChanged,
   onSystemNotification,
   sendNotifyAsSystemNotification,
   sendSystemNotification,
   setExtensionBadge,
 } from './extensionNotifications.js';
+import type { ExtensionInstallSummary } from './extensionRegistry.js';
+
+function extensionSummary(overrides: Partial<ExtensionInstallSummary> & { id: string; name?: string }): ExtensionInstallSummary {
+  return {
+    id: overrides.id,
+    name: overrides.name ?? overrides.id,
+    packageType: 'user',
+    enabled: true,
+    status: 'enabled',
+    manifest: {
+      schemaVersion: 2,
+      id: overrides.id,
+      name: overrides.name ?? overrides.id,
+      packageType: 'user',
+    },
+    permissions: [],
+    surfaces: [],
+    backendActions: [],
+    services: [],
+    subscriptions: [],
+    dependsOn: [],
+    skills: [],
+    mentions: [],
+    tools: [],
+    modelProfiles: [],
+    routes: [],
+    ...overrides,
+  };
+}
 
 describe('extensionNotifications', () => {
   it('tracks extension badges and broadcasts aggregated count changes', () => {
@@ -91,5 +126,52 @@ describe('extensionNotifications', () => {
     });
 
     unsubscribe();
+  });
+
+  it('summarizes extension startup errors and warnings', () => {
+    const notifications = buildExtensionStartupStatusNotifications([
+      extensionSummary({ id: 'broken', name: 'Broken', status: 'invalid', errors: ['Bad manifest'] }),
+      extensionSummary({ id: 'warned', name: 'Warned', diagnostics: ['Missing optional skill file'] }),
+      extensionSummary({ id: 'healthy', name: 'Healthy' }),
+    ]);
+
+    expect(notifications).toEqual([
+      {
+        severity: 'error',
+        message: 'Broken needs attention.',
+        details: 'Broken (broken): Bad manifest',
+      },
+      {
+        severity: 'warning',
+        message: 'Warned has extension warnings.',
+        details: 'Warned (warned): Missing optional skill file',
+      },
+    ]);
+  });
+
+  it('publishes startup status notifications to the app notification stream', () => {
+    appEvents.publishAppEvent.mockReset();
+
+    expect(
+      notifyExtensionStartupStatus([
+        extensionSummary({ id: 'broken', name: 'Broken', buildError: 'tsc failed' }),
+        extensionSummary({ id: 'warned', name: 'Warned', diagnostics: ['Update available'] }),
+      ]),
+    ).toBe(2);
+
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({
+      type: 'notification',
+      extensionId: 'core',
+      message: 'Broken needs attention.',
+      severity: 'error',
+      details: 'Broken (broken): Build error: tsc failed',
+    });
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({
+      type: 'notification',
+      extensionId: 'core',
+      message: 'Warned has extension warnings.',
+      severity: 'warning',
+      details: 'Warned (warned): Update available',
+    });
   });
 });

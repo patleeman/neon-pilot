@@ -123,6 +123,7 @@ import {
 } from '../conversations/liveSessions.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
+import { notifyExtensionStartupStatus } from '../extensions/extensionNotifications.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
@@ -619,6 +620,12 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
       if (!extensionHostClient) return;
       void extensionHostClient
         .startStartupActions({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) })
+        .then(async () => {
+          await extensionHostClient?.checkBackendHealth();
+        })
+        .then(() => {
+          notifyExtensionStartupStatus();
+        })
         .then(() => extensionHostClient.completeStartupGuard())
         .catch((error) => {
           logError('extension startup dispatch failed', { message: (error as Error).message });
