@@ -75,6 +75,7 @@ import { timeAgoCompact } from '../shared/utils';
 import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPresence, useSessionsReady } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
+import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 import { TextPromptDialog } from './shared/TextPromptDialog';
 import { IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
@@ -663,9 +664,19 @@ function TopNavItem({
   const handleClick = useCallback(
     (event: ReactMouseEvent<HTMLButtonElement>) => {
       if (event.defaultPrevented || event.button !== 0) return;
+      const routerPath = `${location.pathname}${location.search}${location.hash}`;
+      const browserPath =
+        typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}${window.location.hash}` : routerPath;
+      if (browserPath === to && routerPath !== to) {
+        window.history.replaceState(window.history.state, '', routerPath);
+      }
+      if (shouldUseDocumentNavigationForSidebarRoute(location.pathname, to) && typeof window !== 'undefined') {
+        window.location.assign(to);
+        return;
+      }
       navigate(to);
     },
-    [navigate, to],
+    [location.hash, location.pathname, location.search, navigate, to],
   );
 
   return (
