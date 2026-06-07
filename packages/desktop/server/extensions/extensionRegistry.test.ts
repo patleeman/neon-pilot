@@ -597,6 +597,22 @@ describe('extension registry', () => {
     expect(isExtensionEnabled('runtime-chat', stateRoot)).toBe(false);
   });
 
+  it('clears stale startup safe-mode markers when re-enabling an extension', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'runtime-chat');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'runtime-chat', name: 'Runtime Chat' }));
+
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
+    markExtensionStartupActive('runtime-chat', stateRoot);
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: true, disabledIds: ['runtime-chat'] });
+    expect(isExtensionEnabled('runtime-chat', stateRoot)).toBe(false);
+
+    setExtensionEnabled('runtime-chat', true, stateRoot);
+
+    expect(beginExtensionStartupGuard(stateRoot)).toEqual({ safeMode: false, disabledIds: [] });
+  });
+
   it('keeps default-disabled extensions off until explicitly enabled', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const extensionRoot = join(stateRoot, 'extensions', 'slack-mcp-gateway');

@@ -719,6 +719,9 @@ export function setExtensionEnabled(extensionId: string, enabled: boolean, state
   assertCanSetExtensionEnabled({ extensionId, enabled, lockedExtensionIds: LOCKED_EXTENSION_IDS });
   const config = readExtensionRegistryConfig(stateRoot);
   writeExtensionRegistryConfig(buildExtensionEnabledConfigPatch(config, { extensionId, enabled }), stateRoot);
+  if (enabled) {
+    completeExtensionStartupGuard(stateRoot);
+  }
 }
 
 export function removeExtensionFromRegistry(extensionId: string, stateRoot: string = getStateRoot()): void {
