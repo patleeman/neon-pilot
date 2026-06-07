@@ -178,6 +178,99 @@ describe('extension host client', () => {
     );
   });
 
+  it('merges toolContext with toolContextSnapshot when both are present (the real tool invocation path)', async () => {
+    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { done: true } });
+
+    const onUpdate = () => {};
+    await expect(
+      handleInProcessExtensionHostRequest({
+        type: 'invokeAction',
+        extensionId: 'ext',
+        actionId: 'doThing',
+        input: { x: 1 },
+        // toolContext carries the streaming callback (no conversationId)
+        toolContext: { onUpdate },
+        // toolContextSnapshot carries the static context with conversationId
+        toolContextSnapshot: {
+          cwd: '/repo',
+          conversationId: 'conversation-1',
+          preferredVisionModel: 'openai/gpt-4o',
+          sessionFile: '/repo/session.jsonl',
+          sessionId: 'session-1',
+        },
+      }),
+    ).resolves.toEqual({ ok: true, result: { ok: true, result: { done: true } } });
+
+    // The handler must merge both: conversationId and cwd from snapshot,
+    // onUpdate from toolContext, all present in the final tool context.
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith(
+      'ext',
+      'doThing',
+      { x: 1 },
+      undefined,
+      {
+        cwd: '/repo',
+        conversationId: 'conversation-1',
+        preferredVisionModel: 'openai/gpt-4o',
+        sessionFile: '/repo/session.jsonl',
+        sessionId: 'session-1',
+        onUpdate,
+      },
+      undefined,
+    );
+  });
+
+  it('prefers toolContext fields over toolContextSnapshot when keys overlap', async () => {
+    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { done: true } });
+
+    await expect(
+      handleInProcessExtensionHostRequest({
+        type: 'invokeAction',
+        extensionId: 'ext',
+        actionId: 'doThing',
+        input: {},
+        toolContext: { conversationId: 'override-conv' },
+        toolContextSnapshot: { conversationId: 'snapshot-conv', cwd: '/repo', sessionId: 'session-1' },
+      }),
+    ).resolves.toEqual({ ok: true, result: { ok: true, result: { done: true } } });
+
+    // The explicit toolContext.conversationId must win over the snapshot value
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith(
+      'ext',
+      'doThing',
+      {},
+      undefined,
+      {
+        conversationId: 'override-conv',
+        cwd: '/repo',
+        sessionId: 'session-1',
+      },
+      undefined,
+    );
+  });
+
+  it('passes undefined toolContext when neither toolContext nor toolContextSnapshot are provided', async () => {
+    extensionBackend.invokeExtensionAction.mockResolvedValueOnce({ ok: true, result: { done: true } });
+
+    await expect(
+      handleInProcessExtensionHostRequest({
+        type: 'invokeAction',
+        extensionId: 'ext',
+        actionId: 'doThing',
+        input: {},
+      }),
+    ).resolves.toEqual({ ok: true, result: { ok: true, result: { done: true } } });
+
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith(
+      'ext',
+      'doThing',
+      {},
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
   it('converts request handler throws into protocol errors', async () => {
     clearExtensionHostAuditEvents();
     extensionBackend.invokeExtensionAction.mockRejectedValueOnce(new Error('boom'));
