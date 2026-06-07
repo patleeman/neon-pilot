@@ -354,6 +354,7 @@ export function shouldResetEmptyArtifactsRail(input: {
 }
 
 export function shouldAllowWorkbenchRailSurface(input: { activeToolSlot: WorkbenchRailMode | string; hasPairedDocument: boolean }): boolean {
+  if (input.activeToolSlot === 'files') return true;
   if (input.activeToolSlot === 'knowledge') return true;
   return input.hasPairedDocument;
 }

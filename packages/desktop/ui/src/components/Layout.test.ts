@@ -69,10 +69,11 @@ describe('Layout workbench rail state', () => {
     ).toBe(true);
   });
 
-  it('keeps the knowledge picker rail available before a file is selected', () => {
+  it('keeps picker rails available before a file is selected', () => {
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'knowledge', hasPairedDocument: false })).toBe(true);
-    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: false })).toBe(false);
+    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: false })).toBe(true);
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: true })).toBe(true);
+    expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'artifacts', hasPairedDocument: false })).toBe(false);
   });
 
   it('normalizes declared rail slots to stable built-in modes', () => {
