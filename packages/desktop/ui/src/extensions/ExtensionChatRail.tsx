@@ -262,6 +262,7 @@ export function ExtensionChatRail({
             isCompacting={isCompacting}
             scrollContainerRef={scrollRef}
             performanceMode="default"
+            layout="compact"
             onFocusComposerRequest={handleFocusComposerRequest}
           />
         )}
@@ -281,6 +282,7 @@ export function ExtensionChatRail({
           onSelectModel={handleModelSelect}
           onSelectThinkingLevel={handleThinkingLevelSelect}
           externalDraft={externalDraft}
+          layout="compact"
         />
       </div>
     </div>

@@ -112,6 +112,7 @@ export interface ChatRailComposerProps {
   composerMeta?: unknown;
   composerPlaceholder?: string;
   externalDraft?: { id: string; text: string } | null;
+  layout?: 'default' | 'compact';
 }
 
 export interface ExtensionChatContextMessage {

@@ -34,6 +34,7 @@ import { ChatBubbleIcon, FolderIcon } from '../conversation/ConversationComposer
 import { ConversationComposerInputControls } from '../conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../conversation/ConversationComposerMenus';
 import { addNotification } from '../notifications/notificationStore';
+import { cx } from '../ui';
 import { ComposerAttachmentShelf } from './ComposerAttachmentShelf';
 
 function readForkPromptDraft(conversationId: string): string | null {
@@ -76,6 +77,7 @@ export interface ChatRailComposerProps {
   composerMeta?: ReactNode;
   composerPlaceholder?: string;
   externalDraft?: { id: string; text: string } | null;
+  layout?: 'default' | 'compact';
 }
 
 export function ChatRailComposer({
@@ -94,6 +96,7 @@ export function ChatRailComposer({
   composerMeta,
   composerPlaceholder,
   externalDraft,
+  layout = 'default',
 }: ChatRailComposerProps) {
   const [input, setInput] = useState(() => (conversationId ? (readForkPromptDraft(conversationId) ?? '') : ''));
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
@@ -364,7 +367,11 @@ export function ChatRailComposer({
   return (
     <ConversationComposer
       layoutMode="main"
-      className={`bg-gradient-to-t from-base via-base to-transparent px-8 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors sm:px-10 ${dragOver ? 'bg-accent/5' : ''}`}
+      className={cx(
+        'bg-gradient-to-t from-base via-base to-transparent pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] transition-colors',
+        layout === 'compact' ? 'px-3 sm:px-4' : 'px-8 sm:px-10',
+        dragOver && 'bg-accent/5',
+      )}
       dragOver={dragOver}
       streamIsStreaming={isStreaming}
       onDragOver={(event) => {

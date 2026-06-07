@@ -56,8 +56,10 @@ vi.mock('../client/api', () => ({
 }));
 
 vi.mock('../components/chat/ChatView', () => ({
-  ChatView: ({ messages }: { messages: Array<{ id: string; text?: string }> }) => (
-    <div data-testid="chat-view">{messages.map((message) => message.text).join('\n')}</div>
+  ChatView: ({ messages, layout }: { messages: Array<{ id: string; text?: string }>; layout?: string }) => (
+    <div data-testid="chat-view" data-layout={layout}>
+      {messages.map((message) => message.text).join('\n')}
+    </div>
   ),
 }));
 
@@ -65,11 +67,13 @@ vi.mock('../components/chat/ChatRailComposer', () => ({
   ChatRailComposer: ({
     onSubmit,
     onSelectModel,
+    layout,
   }: {
     onSubmit: (text: string, behavior?: 'steer' | 'followUp') => Promise<void>;
     onSelectModel: (modelId: string) => Promise<void>;
+    layout?: string;
   }) => (
-    <div>
+    <div data-testid="chat-rail-composer" data-layout={layout}>
       <button type="button" onClick={() => onSubmit('Review this draft', 'steer')}>
         send
       </button>
@@ -230,5 +234,7 @@ describe('ExtensionChatRail', () => {
     await waitFor(() => {
       expect(screen.getByTestId('chat-view').textContent).toContain('Visible assistant response');
     });
+    expect(screen.getByTestId('chat-view').getAttribute('data-layout')).toBe('compact');
+    expect(screen.getByTestId('chat-rail-composer').getAttribute('data-layout')).toBe('compact');
   });
 });
