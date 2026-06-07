@@ -65,6 +65,7 @@ import { shouldShowConversationComposerMeta } from '../conversation/conversation
 import {
   appendMentionedConversationContextDocs,
   dedupeConversationContextDocs,
+  formatConversationComposerPlaceholder,
   removeConversationContextDocByPath,
   resolveConversationAutocompleteCatalogDemand,
   resolveConversationContextUsageTokens,
@@ -2240,6 +2241,10 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         extensionItems: extensionMentionItems,
       }),
     [tasks, extensionMentionItems],
+  );
+  const composerPlaceholder = useMemo(
+    () => formatConversationComposerPlaceholder(extensionMentionRegistrations),
+    [extensionMentionRegistrations],
   );
   const slashItems = useMemo(
     () => buildSlashMenuItems(input, memoryData?.skills ?? [], extensionSlashCommands),
@@ -6506,6 +6511,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
               composerQuestionSubmitting={composerQuestionSubmitting}
               composerSubmitLabel={composerSubmit.label}
               composerAltHeld={composerAltHeld}
+              composerPlaceholder={composerPlaceholder}
               onFilesSelected={(files) => {
                 void addComposerFiles(files);
               }}

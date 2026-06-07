@@ -4,6 +4,11 @@ import type { MentionItem } from './conversationMentions';
 
 const COMPOSER_SHELF_TEXT_MAX_CHARS = 640;
 const COMPOSER_SHELF_TEXT_MAX_LINES = 8;
+const DEFAULT_CONVERSATION_COMPOSER_HINTS = ['/  commands', '⇧↵ newline'];
+
+interface ComposerMentionProviderSummary {
+  title: string;
+}
 
 export function resolveConversationAutocompleteCatalogDemand(input: string): {
   needsMemoryData: boolean;
@@ -17,6 +22,30 @@ export function resolveConversationAutocompleteCatalogDemand(input: string): {
     needsMemoryData: hasMentionQuery || Boolean(slashInput && !showModelPicker),
     needsKnowledgeFiles: hasMentionQuery,
   };
+}
+
+function formatComposerMentionProviderHint(registrations: ComposerMentionProviderSummary[]): string | null {
+  const titles = registrations.map((registration) => registration.title.trim()).filter(Boolean);
+  const uniqueTitles = [...new Set(titles)];
+  if (uniqueTitles.length === 0) {
+    return null;
+  }
+
+  if (uniqueTitles.length === 1) {
+    return `@ ${uniqueTitles[0].toLowerCase()}`;
+  }
+
+  return '@ mentions';
+}
+
+export function formatConversationComposerPlaceholder(mentionRegistrations: ComposerMentionProviderSummary[] = []): string {
+  const hints = [...DEFAULT_CONVERSATION_COMPOSER_HINTS];
+  const mentionHint = formatComposerMentionProviderHint(mentionRegistrations);
+  if (mentionHint) {
+    hints.splice(1, 0, mentionHint);
+  }
+
+  return `Message Neon Pilot…   ${hints.join(' · ')}`;
 }
 
 export function isAttachableMentionItem(item: MentionItem): item is MentionItem & { path: string } {

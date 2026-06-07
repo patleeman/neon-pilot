@@ -4,6 +4,7 @@ import {
   appendMentionedConversationContextDocs,
   dedupeConversationContextDocs,
   formatComposerActionLabel,
+  formatConversationComposerPlaceholder,
   formatQueuedPromptImageSummary,
   formatQueuedPromptShelfText,
   isAttachableMentionItem,
@@ -35,6 +36,16 @@ describe('conversation composer presentation helpers', () => {
       needsMemoryData: true,
       needsKnowledgeFiles: false,
     });
+  });
+
+  it('formats composer placeholders from registered mention providers', () => {
+    expect(formatConversationComposerPlaceholder()).toBe('Message Neon Pilot…   /  commands · ⇧↵ newline');
+    expect(formatConversationComposerPlaceholder([{ title: 'Knowledge files' }])).toBe(
+      'Message Neon Pilot…   /  commands · @ knowledge files · ⇧↵ newline',
+    );
+    expect(formatConversationComposerPlaceholder([{ title: 'Knowledge files' }, { title: 'Projects' }])).toBe(
+      'Message Neon Pilot…   /  commands · @ mentions · ⇧↵ newline',
+    );
   });
 
   it('converts and dedupes mentioned docs by normalized path', () => {

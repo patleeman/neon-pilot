@@ -282,7 +282,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             placeholder={
               pendingAskUserQuestion
                 ? 'Answer 1-9, or type to skip…'
-                : (composerPlaceholder ?? 'Message Neon Pilot…   /  commands · @ notes · ⇧↵ newline')
+                : (composerPlaceholder ?? 'Message Neon Pilot…   /  commands · ⇧↵ newline')
             }
             title={
               pendingAskUserQuestion
