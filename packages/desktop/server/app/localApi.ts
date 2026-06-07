@@ -127,6 +127,7 @@ import { notifyExtensionStartupStatus } from '../extensions/extensionNotificatio
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
 import { listMemoryDocs, listSkillsForProfile } from '../knowledge/memoryDocs.js';
 import type { ProviderDesktopCapabilityContext } from '../models/providerDesktopCapability.js';
+import { invokeToolByName } from '../tools/toolGateway.js';
 
 // ── Model/provider modules ─────────────────────────────────────────────
 // Keep the provider SDK/model table stack behind a typed loader so the local
@@ -808,10 +809,7 @@ function createDesktopLocalApiJsonResponse(value: unknown): DesktopLocalApiDispa
   };
 }
 
-function createDesktopLocalApiErrorResponse(
-  statusCode: number,
-  message: string,
-): DesktopLocalApiDispatchResult {
+function createDesktopLocalApiErrorResponse(statusCode: number, message: string): DesktopLocalApiDispatchResult {
   return {
     statusCode,
     headers: { 'content-type': 'text/plain; charset=utf-8' },
@@ -824,10 +822,7 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
     return 500;
   }
 
-  if (
-    error.name === 'ConversationAssetCapabilityNotFoundError' ||
-    error.name === 'ConversationDeferredResumeCapabilityNotFoundError'
-  ) {
+  if (error.name === 'ConversationAssetCapabilityNotFoundError' || error.name === 'ConversationDeferredResumeCapabilityNotFoundError') {
     return 404;
   }
 
@@ -862,6 +857,9 @@ async function dispatchDesktopLocalProductApiRequest(input: {
 
   if (method === 'GET' && path === '/api/status') return createDesktopLocalApiJsonResponse(await readDesktopAppStatus());
   if (method === 'GET' && path === '/api/daemon') return createDesktopLocalApiJsonResponse(await readDesktopDaemonState());
+  if (method === 'POST' && path === '/api/tools/invoke') {
+    return createDesktopLocalApiJsonResponse(await invokeDesktopTool((input.body ?? {}) as Parameters<typeof invokeDesktopTool>[0]));
+  }
   if (method === 'GET' && path === '/api/sessions') {
     return createDesktopLocalApiJsonResponse(
       await readDesktopSessions({
@@ -947,8 +945,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
 
   if (method === 'GET' && path === '/api/models') return createDesktopLocalApiJsonResponse(await readDesktopModels());
-  if (method === 'GET' && path === '/api/model-preferences')
-    return createDesktopLocalApiJsonResponse(await readDesktopModelPreferences());
+  if (method === 'GET' && path === '/api/model-preferences') return createDesktopLocalApiJsonResponse(await readDesktopModelPreferences());
   if (method === 'GET' && path === '/api/extensions/slash-commands') {
     return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).slashCommandRegistrations);
   }
@@ -1760,7 +1757,11 @@ export async function deleteDesktopModelProviderModel(input: { provider: string;
 }
 
 export async function setDesktopProviderApiKey(input: { provider: string; apiKey: string }) {
-  const result = (await models()).setProviderApiKeyCapability(await getLocalProviderDesktopCapabilityContext(), input.provider, input.apiKey);
+  const result = (await models()).setProviderApiKeyCapability(
+    await getLocalProviderDesktopCapabilityContext(),
+    input.provider,
+    input.apiKey,
+  );
   (await models()).invalidateModelDefinitionsCache();
   invalidateAppTopics('models');
   return result;
@@ -2300,6 +2301,47 @@ export async function readDesktopLiveSession(conversationId: string) {
   }
 
   return buildDesktopLiveSessionResponse(entry);
+}
+
+function readOptionalToolString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+export async function invokeDesktopTool(input: {
+  name?: unknown;
+  input?: unknown;
+  directToolNames?: unknown;
+  toolContext?: unknown;
+}): Promise<unknown> {
+  const name = readOptionalToolString(input.name);
+  if (!name) throw new Error('Tool name is required.');
+  const context = await getLocalServerRouteContext();
+  const toolContextInput =
+    input.toolContext && typeof input.toolContext === 'object' && !Array.isArray(input.toolContext)
+      ? (input.toolContext as Record<string, unknown>)
+      : {};
+
+  return invokeToolByName(
+    {
+      name,
+      input: input.input,
+      runtime: {
+        runtimeScope: context.getRuntimeScope(),
+        repoRoot: context.getRepoRoot(),
+        ...(Array.isArray(input.directToolNames)
+          ? { directToolNames: input.directToolNames.filter((item): item is string => typeof item === 'string') }
+          : {}),
+      },
+      toolContext: {
+        ...(readOptionalToolString(toolContextInput.conversationId)
+          ? { conversationId: readOptionalToolString(toolContextInput.conversationId) }
+          : {}),
+        ...(readOptionalToolString(toolContextInput.sessionId) ? { sessionId: readOptionalToolString(toolContextInput.sessionId) } : {}),
+        cwd: readOptionalToolString(toolContextInput.cwd) ?? context.getRepoRoot(),
+      },
+    },
+    { getRuntimeScope: context.getRuntimeScope, getRepoRoot: context.getRepoRoot },
+  );
 }
 
 export async function prewarmDesktopLiveSessionOptions(): Promise<{ ok: true }> {

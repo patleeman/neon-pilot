@@ -1,9 +1,10 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { inspectCliBinary, readPackageSourceTargetState } from '@neon-pilot/core';
-import type { Express, Response } from 'express';
+import type { Express, Request, Response } from 'express';
 
 import { inspectAvailableTools } from '../conversations/liveSessions.js';
 import { logError } from '../middleware/index.js';
+import { invokeToolByName } from '../tools/toolGateway.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from './context.js';
 
 let getRuntimeScopeFn: () => string = () => {
@@ -87,8 +88,53 @@ async function handleToolsRequest(_req: unknown, res: Response): Promise<void> {
   }
 }
 
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+async function handleToolInvokeRequest(req: Request, res: Response): Promise<void> {
+  try {
+    const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
+    const name = readString(body.name);
+    if (!name) {
+      res.status(400).json({ error: 'Tool name is required.' });
+      return;
+    }
+
+    const toolContextInput = body.toolContext && typeof body.toolContext === 'object' ? (body.toolContext as Record<string, unknown>) : {};
+    const result = await invokeToolByName(
+      {
+        name,
+        input: body.input,
+        runtime: {
+          runtimeScope: getRuntimeScopeFn(),
+          repoRoot: getRepoRootFn(),
+          ...(Array.isArray(body.directToolNames)
+            ? { directToolNames: body.directToolNames.filter((item): item is string => typeof item === 'string') }
+            : {}),
+        },
+        toolContext: {
+          ...(readString(toolContextInput.conversationId) ? { conversationId: readString(toolContextInput.conversationId) } : {}),
+          ...(readString(toolContextInput.sessionId) ? { sessionId: readString(toolContextInput.sessionId) } : {}),
+          cwd: readString(toolContextInput.cwd) ?? getRepoRootFn(),
+        },
+      },
+      { getRuntimeScope: getRuntimeScopeFn, getRepoRoot: getRepoRootFn },
+    );
+    res.json({ ok: true, result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logError('tool invoke error', {
+      message,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    const status = /required|not available|unavailable/i.test(message) ? 400 : 500;
+    res.status(status).json({ error: message });
+  }
+}
+
 export function registerToolsRoutes(
-  app: Pick<Express, 'get'>,
+  app: Pick<Express, 'get' | 'post'>,
   context: Pick<
     ServerRouteContext,
     | 'getRuntimeScope'
@@ -100,4 +146,5 @@ export function registerToolsRoutes(
 ): void {
   initializeToolsRoutesContext(context);
   app.get('/api/tools', handleToolsRequest);
+  app.post('/api/tools/invoke', handleToolInvokeRequest);
 }

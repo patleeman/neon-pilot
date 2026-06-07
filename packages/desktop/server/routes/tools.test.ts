@@ -1,13 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { inspectAvailableToolsMock, inspectCliBinaryMock, listRuntimeScopesMock, logErrorMock, readPackageSourceTargetStateMock } =
-  vi.hoisted(() => ({
-    inspectAvailableToolsMock: vi.fn(),
-    inspectCliBinaryMock: vi.fn(),
-    listRuntimeScopesMock: vi.fn(),
-    logErrorMock: vi.fn(),
-    readPackageSourceTargetStateMock: vi.fn(),
-  }));
+const {
+  inspectAvailableToolsMock,
+  inspectCliBinaryMock,
+  invokeToolByNameMock,
+  listRuntimeScopesMock,
+  logErrorMock,
+  readPackageSourceTargetStateMock,
+} = vi.hoisted(() => ({
+  inspectAvailableToolsMock: vi.fn(),
+  inspectCliBinaryMock: vi.fn(),
+  invokeToolByNameMock: vi.fn(),
+  listRuntimeScopesMock: vi.fn(),
+  logErrorMock: vi.fn(),
+  readPackageSourceTargetStateMock: vi.fn(),
+}));
 
 vi.mock('@neon-pilot/core', () => ({
   inspectCliBinary: inspectCliBinaryMock,
@@ -23,6 +30,10 @@ vi.mock('../middleware/index.js', () => ({
   logError: logErrorMock,
 }));
 
+vi.mock('../tools/toolGateway.js', () => ({
+  invokeToolByName: invokeToolByNameMock,
+}));
+
 import { registerToolsRoutes } from './tools.js';
 
 type Handler = (req: unknown, res: ReturnType<typeof createResponse>) => Promise<void> | void;
@@ -36,9 +47,13 @@ function createResponse() {
 
 function createHarness(options?: { repoRoot?: string; runtimeConfigRoot?: string }) {
   const getHandlers = new Map<string, Handler>();
+  const postHandlers = new Map<string, Handler>();
   const app = {
     get: vi.fn((path: string, handler: Handler) => {
       getHandlers.set(path, handler);
+    }),
+    post: vi.fn((path: string, handler: Handler) => {
+      postHandlers.set(path, handler);
     }),
   };
 
@@ -56,6 +71,7 @@ function createHarness(options?: { repoRoot?: string; runtimeConfigRoot?: string
 
   return {
     getHandler: (path: string) => getHandlers.get(path)!,
+    postHandler: (path: string) => postHandlers.get(path)!,
   };
 }
 
@@ -68,6 +84,7 @@ describe('registerToolsRoutes', () => {
     };
     inspectAvailableToolsMock.mockReset();
     inspectCliBinaryMock.mockReset();
+    invokeToolByNameMock.mockReset();
     listRuntimeScopesMock.mockReset();
     logErrorMock.mockReset();
     readPackageSourceTargetStateMock.mockReset();
@@ -141,5 +158,46 @@ describe('registerToolsRoutes', () => {
     );
     expect(failureRes.status).toHaveBeenCalledWith(500);
     expect(failureRes.json).toHaveBeenCalledWith({ error: 'inspect failed' });
+  });
+
+  it('invokes a tool with runtime and tool context snapshots', async () => {
+    const { postHandler } = createHarness({ repoRoot: '/repo' });
+    const handler = postHandler('/api/tools/invoke');
+    const res = createResponse();
+    invokeToolByNameMock.mockResolvedValueOnce({ content: [{ type: 'text', text: 'Added todo' }] });
+
+    await handler(
+      {
+        body: {
+          name: 'todo',
+          input: { action: 'add', text: 'Smoke todo' },
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        },
+      },
+      res,
+    );
+
+    expect(invokeToolByNameMock).toHaveBeenCalledWith(
+      {
+        name: 'todo',
+        input: { action: 'add', text: 'Smoke todo' },
+        runtime: { runtimeScope: 'shared', repoRoot: '/repo' },
+        toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+      },
+      { getRuntimeScope: expect.any(Function), getRepoRoot: expect.any(Function) },
+    );
+    expect(res.json).toHaveBeenCalledWith({ ok: true, result: { content: [{ type: 'text', text: 'Added todo' }] } });
+  });
+
+  it('rejects tool invoke requests without a tool name', async () => {
+    const { postHandler } = createHarness();
+    const handler = postHandler('/api/tools/invoke');
+    const res = createResponse();
+
+    await handler({ body: {} }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Tool name is required.' });
+    expect(invokeToolByNameMock).not.toHaveBeenCalled();
   });
 });

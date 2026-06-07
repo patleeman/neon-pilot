@@ -36,7 +36,7 @@
     "composerControls": 2,
     "composerInputTools": 1,
     "composerButtons": 1,
-    "transcriptRenderers": 4,
+    "transcriptRenderers": 3,
     "settings": 1
   },
   "routes": [
@@ -138,6 +138,18 @@
         "actionId": "mcpTool",
         "input": { "action": "list" },
         "text": ["servers"]
+      }
+    ],
+    "contextInvocations": [
+      {
+        "name": "todo",
+        "input": { "action": "add", "text": "Release smoke context todo" },
+        "text": ["Added todo"]
+      },
+      {
+        "name": "todo",
+        "input": { "action": "list" },
+        "text": ["Release smoke context todo"]
       }
     ]
   },

@@ -69,6 +69,7 @@ export function validateMatrix(matrix, label = 'release extension golden matrix'
   }
   if (!Array.isArray(matrix.agentTools.expectedNames)) throw new Error(`${label} agentTools.expectedNames must be an array.`);
   if (!Array.isArray(matrix.agentTools.invocations)) throw new Error(`${label} agentTools.invocations must be an array.`);
+  if (!Array.isArray(matrix.agentTools.contextInvocations)) throw new Error(`${label} agentTools.contextInvocations must be an array.`);
   for (const route of matrix.appRoutes) {
     if (typeof route.path !== 'string' || !route.path.startsWith('/')) throw new Error(`${label} app route path must start with /.`);
     if (route.text !== undefined && !Array.isArray(route.text)) throw new Error(`${label} app route text must be an array.`);
@@ -98,6 +99,11 @@ export function validateMatrix(matrix, label = 'release extension golden matrix'
     if (typeof invocation.actionId !== 'string' || !invocation.actionId)
       throw new Error(`${label} agent tool invocation actionId is required.`);
     if (!Array.isArray(invocation.text)) throw new Error(`${label} agent tool invocation text must be an array.`);
+  }
+  for (const invocation of matrix.agentTools.contextInvocations) {
+    if (typeof invocation.name !== 'string' || !invocation.name)
+      throw new Error(`${label} context agent tool invocation name is required.`);
+    if (!Array.isArray(invocation.text)) throw new Error(`${label} context agent tool invocation text must be an array.`);
   }
   for (const entry of matrix.installablePackages) {
     if (typeof entry.zipPath !== 'string' || !entry.zipPath) throw new Error(`${label} installable package zipPath is required.`);
@@ -385,6 +391,33 @@ async function assertAgentTools(cdp, matrix) {
     const missingText = evaluateTextExpectations(body, invocation.text);
     if (missingText.length > 0) throw new Error(`${invocation.name} tool smoke missing expected text: ${missingText.join(', ')}`);
     console.log(`  agent tool ok: ${invocation.name}`);
+  }
+
+  if (matrix.agentTools.contextInvocations.length > 0) {
+    const created = await postJson(cdp, '/api/live-sessions', { cwd: repoRoot });
+    const conversationId = typeof created?.id === 'string' ? created.id : '';
+    if (!conversationId) throw new Error(`Could not create live conversation for context tool smoke: ${JSON.stringify(created)}`);
+
+    for (const invocation of matrix.agentTools.contextInvocations) {
+      const body = await postJson(cdp, '/api/tools/invoke', {
+        name: invocation.name,
+        input: invocation.input ?? {},
+        toolContext: {
+          conversationId,
+          sessionId: conversationId,
+          cwd: repoRoot,
+        },
+      });
+      const missingText = evaluateTextExpectations(body, invocation.text);
+      if (missingText.length > 0) throw new Error(`${invocation.name} context tool smoke missing expected text: ${missingText.join(', ')}`);
+      console.log(`  context agent tool ok: ${invocation.name}`);
+    }
+
+    await cdp.send('Page.navigate', { url: `neon-pilot://app/conversations/${encodeURIComponent(conversationId)}` });
+    const body = await waitForLoadedBody(cdp, { exitCode: null }, `context tool conversation ${conversationId}`);
+    const missingText = evaluateTextExpectations(body, ['Release smoke context todo']);
+    if (missingText.length > 0) throw new Error(`context tool conversation did not render expected text: ${missingText.join(', ')}`);
+    console.log(`  context agent tool conversation ok: ${conversationId}`);
   }
 }
 
