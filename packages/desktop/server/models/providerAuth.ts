@@ -38,6 +38,11 @@ export interface ProviderOAuthLoginState {
   status: ProviderOAuthLoginStatus;
   authUrl: string;
   authInstructions: string;
+  deviceCode: {
+    userCode: string;
+    verificationUri: string;
+    expiresInSeconds?: number;
+  } | null;
   prompt: ProviderOAuthPromptState | null;
   progress: string[];
   error: string;
@@ -353,6 +358,7 @@ function toPublicLoginState(run: ProviderOAuthLoginRun): ProviderOAuthLoginState
     status: run.status,
     authUrl: run.authUrl,
     authInstructions: run.authInstructions,
+    deviceCode: run.deviceCode ? { ...run.deviceCode } : null,
     prompt: run.prompt ? { ...run.prompt } : null,
     progress: [...run.progress],
     error: run.error,
@@ -434,6 +440,7 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
     status: 'running',
     authUrl: '',
     authInstructions: '',
+    deviceCode: null,
     prompt: null,
     progress: [],
     error: '',
@@ -461,12 +468,18 @@ export function startProviderOAuthLogin(authFile: string, providerInput: string)
       onAuth: (info) => {
         run.authUrl = info.url;
         run.authInstructions = typeof info.instructions === 'string' ? info.instructions : '';
+        run.deviceCode = null;
         run.updatedAt = nowIso();
         notifyOAuthLoginListeners(run);
       },
       onDeviceCode: (info) => {
         run.authUrl = info.verificationUri;
         run.authInstructions = formatDeviceCodeInstructions(info);
+        run.deviceCode = {
+          userCode: info.userCode,
+          verificationUri: info.verificationUri,
+          ...(typeof info.expiresInSeconds === 'number' ? { expiresInSeconds: info.expiresInSeconds } : {}),
+        };
         run.updatedAt = nowIso();
         notifyOAuthLoginListeners(run);
       },

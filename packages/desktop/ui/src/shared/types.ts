@@ -1269,6 +1269,11 @@ export interface ProviderOAuthLoginState {
   status: ProviderOAuthLoginStatus;
   authUrl: string;
   authInstructions: string;
+  deviceCode: {
+    userCode: string;
+    verificationUri: string;
+    expiresInSeconds?: number;
+  } | null;
   prompt: ProviderOAuthPromptState | null;
   progress: string[];
   error: string;

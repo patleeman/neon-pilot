@@ -486,6 +486,7 @@ describe('SettingsPage provider model editor', () => {
 
   it('opens OAuth login URLs through the desktop shell bridge', async () => {
     const openExternalUrl = vi.fn().mockResolvedValue({ url: 'https://auth.openai.com/oauth', opened: true });
+    const writeClipboardText = vi.fn().mockResolvedValue({ ok: true });
     Object.assign(window as { neonPilotDesktop?: unknown }, {
       neonPilotDesktop: {
         getEnvironment: vi.fn().mockImplementation(() => new Promise(() => {})),
@@ -522,6 +523,7 @@ describe('SettingsPage provider model editor', () => {
         subscribeProviderOAuthLogin: vi.fn().mockResolvedValue({ subscriptionId: 'oauth-sub-1' }),
         unsubscribeProviderOAuthLogin: vi.fn().mockResolvedValue(undefined),
         openExternalUrl,
+        writeClipboardText,
       },
     });
     startProviderOAuthLoginMock.mockResolvedValue({
@@ -531,6 +533,11 @@ describe('SettingsPage provider model editor', () => {
       status: 'running',
       authUrl: 'https://auth.openai.com/oauth',
       authInstructions: 'A browser window should open.',
+      deviceCode: {
+        verificationUri: 'https://auth.openai.com/oauth',
+        userCode: 'ABCD-1234',
+        expiresInSeconds: 600,
+      },
       prompt: null,
       progress: [],
       error: '',
@@ -557,6 +564,13 @@ describe('SettingsPage provider model editor', () => {
     const oauthUrlInput = container.querySelector('#settings-provider-oauth-url');
     expect(oauthUrlInput).toBeInstanceOf(HTMLInputElement);
     expect((oauthUrlInput as HTMLInputElement).value).toBe('https://auth.openai.com/oauth');
+    expect(container.textContent).toContain('ABCD-1234');
+
+    const copyCodeButton = queryButton(container, 'Copy code');
+    click(copyCodeButton);
+    await flushAsyncWork();
+
+    expect(writeClipboardText).toHaveBeenCalledWith('ABCD-1234');
   });
 
   it('removes a stored provider credential from the provider editor', async () => {

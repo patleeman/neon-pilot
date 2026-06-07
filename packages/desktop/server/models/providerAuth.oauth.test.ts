@@ -10,6 +10,7 @@ type MockOAuthProvider = {
 
 type MockLoginHandlers = {
   onAuth: (info: { url: string; instructions?: string }) => void;
+  onDeviceCode: (info: { verificationUri: string; userCode: string; expiresInSeconds?: number }) => void;
   onPrompt: (prompt: { message: string; placeholder?: unknown; allowEmpty?: boolean }) => Promise<string>;
   onProgress: (message: string) => void;
   onManualCodeInput: () => Promise<string>;
@@ -294,6 +295,36 @@ describe('providerAuth OAuth helpers', () => {
 
     unsubscribeLogin();
     unsubscribeGlobal();
+  });
+
+  it('surfaces oauth device codes as structured login state', async () => {
+    const { getProviderOAuthLoginState, startProviderOAuthLogin } = await loadProviderAuth();
+    const authFile = '/tmp/provider-auth.json';
+
+    setOAuthProviders(authFile, [{ id: 'openai-codex', name: 'OpenAI' }]);
+    setLoginImplementation(authFile, 'openai-codex', async (handlers) => {
+      handlers.onDeviceCode({
+        verificationUri: 'https://auth.openai.com/codex/device',
+        userCode: 'ABCD-1234',
+        expiresInSeconds: 600,
+      });
+      await new Promise(() => undefined);
+    });
+
+    const initialState = startProviderOAuthLogin(authFile, 'openai-codex');
+    await flushAsyncWork();
+
+    expect(getProviderOAuthLoginState(initialState.id)).toMatchObject({
+      status: 'running',
+      authUrl: 'https://auth.openai.com/codex/device',
+      authInstructions:
+        'Open the verification URL in your browser to continue OAuth login.\nEnter code: ABCD-1234\nCode expires in 600 seconds.',
+      deviceCode: {
+        verificationUri: 'https://auth.openai.com/codex/device',
+        userCode: 'ABCD-1234',
+        expiresInSeconds: 600,
+      },
+    });
   });
 
   it('cancels earlier running logins for the same provider and supports explicit cancellation', async () => {

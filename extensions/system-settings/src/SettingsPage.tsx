@@ -2787,9 +2787,20 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     }
 
     try {
-      await navigator.clipboard.writeText(normalizedUrl);
+      const desktopBridge = getDesktopBridge();
+      if (desktopBridge) {
+        const result = await desktopBridge.writeClipboardText(normalizedUrl);
+        if (!result.ok) {
+          throw new Error(result.error || 'Copy to clipboard failed.');
+        }
+      } else {
+        if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') {
+          throw new Error('Clipboard access is unavailable.');
+        }
+        await navigator.clipboard.writeText(normalizedUrl);
+      }
       setOauthError(null);
-      setProviderCredentialNotice('Copied OAuth login URL.');
+      setProviderCredentialNotice('Copied OAuth login details.');
     } catch (error) {
       setOauthError(error instanceof Error ? error.message : String(error));
     }
@@ -3968,6 +3979,49 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                     {selectedProviderLogin.progress.length > 0 && (
                                       <p className="text-[12px] text-secondary">Waiting for authorization…</p>
                                     )}
+                                    {selectedProviderLogin.deviceCode && (
+                                      <div className="space-y-2 border-t border-border-subtle pt-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <div>
+                                            <p className="ui-card-meta">Device code</p>
+                                            <p
+                                              id="settings-provider-oauth-device-code"
+                                              className="select-all font-mono text-[26px] font-semibold leading-tight text-primary"
+                                            >
+                                              {selectedProviderLogin.deviceCode.userCode}
+                                            </p>
+                                          </div>
+                                          <ToolbarButton
+                                            type="button"
+                                            onClick={() => {
+                                              void handleCopyProviderOAuthUrl(selectedProviderLogin.deviceCode?.userCode ?? '');
+                                            }}
+                                            disabled={oauthAction !== null}
+                                          >
+                                            Copy code
+                                          </ToolbarButton>
+                                        </div>
+                                        <p className="text-[12px] text-secondary">
+                                          Enter this code at{' '}
+                                          <a
+                                            href={selectedProviderLogin.deviceCode.verificationUri}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title={selectedProviderLogin.deviceCode.verificationUri}
+                                            className="underline text-interactive hover:text-interactive-hover"
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              void handleOpenProviderOAuthUrl(selectedProviderLogin.deviceCode?.verificationUri ?? '');
+                                            }}
+                                          >
+                                            {selectedProviderLogin.deviceCode.verificationUri}
+                                          </a>
+                                          {typeof selectedProviderLogin.deviceCode.expiresInSeconds === 'number'
+                                            ? ` before it expires in ${selectedProviderLogin.deviceCode.expiresInSeconds} seconds.`
+                                            : '.'}
+                                        </p>
+                                      </div>
+                                    )}
                                     {selectedProviderLogin.authUrl && (
                                       <div className="space-y-2 rounded-md border border-border-subtle bg-elevated/50 p-2.5">
                                         <label className="ui-card-meta" htmlFor="settings-provider-oauth-url">
@@ -3998,7 +4052,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                               onClick={() => {
                                                 void handleCopyProviderOAuthUrl(selectedProviderLogin.authUrl);
                                               }}
-                                              disabled={oauthAction !== null || !navigator.clipboard}
+                                              disabled={oauthAction !== null}
                                             >
                                               Copy
                                             </ToolbarButton>
