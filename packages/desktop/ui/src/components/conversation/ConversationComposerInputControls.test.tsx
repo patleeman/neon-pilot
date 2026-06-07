@@ -209,10 +209,70 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('border-t border-dashed border-border-subtle px-1 py-2 pb-0');
     expect(html).toContain('flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0');
     expect(html).toContain('flex min-w-0 flex-1 flex-wrap items-center gap-1.5');
+    expect(html).toContain('More composer settings');
+    expect(html).not.toContain('aria-label="Conversation model"');
+    expect(html).not.toContain('aria-label="Thinking level"');
     expect(html).not.toContain(
       'flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0 flex-nowrap',
     );
     expect(html).toContain('ml-auto shrink-0');
+  });
+
+  it('opens model and thinking controls from the narrow composer settings menu', () => {
+    const rendered = renderInteractive(
+      <ConversationComposerInputControls
+        fileInputRef={{ current: null }}
+        textareaRef={{ current: null }}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={320}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={vi.fn()}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    try {
+      const menuButton = rendered.container.querySelector<HTMLButtonElement>('button[aria-label="More composer settings"]');
+      expect(menuButton).toBeTruthy();
+
+      act(() => {
+        menuButton!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      });
+
+      const menu = rendered.container.querySelector('[aria-label="Composer settings"]');
+      expect(menu).toBeTruthy();
+      expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();
+      expect(menu?.querySelector('[aria-label="Thinking level"]')).toBeTruthy();
+      expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
+    } finally {
+      rendered.unmount();
+    }
   });
 
   it('keeps the composer action row inline when the measured composer is wide enough', () => {

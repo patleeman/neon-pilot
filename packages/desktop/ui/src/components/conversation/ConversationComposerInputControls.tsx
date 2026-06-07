@@ -67,6 +67,16 @@ function CoreComposerIcon({ path }: { path: string }) {
   );
 }
 
+function CoreComposerDotsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.7" />
+      <circle cx="12" cy="12" r="1.7" />
+      <circle cx="19" cy="12" r="1.7" />
+    </svg>
+  );
+}
+
 function CoreAttachControl({ disabled, onOpenFilePicker }: { disabled: boolean; onOpenFilePicker: () => void }) {
   return (
     <IconButton
@@ -197,6 +207,85 @@ function CoreModelPreferenceControls({
         ))}
       </select>
     </>
+  );
+}
+
+function CoreModelPreferenceOverflow({
+  disabled,
+  models,
+  currentModel,
+  currentThinkingLevel,
+  onSelectModel,
+  onSelectThinkingLevel,
+}: {
+  disabled: boolean;
+  models: ModelInfo[];
+  currentModel: string;
+  currentThinkingLevel: string;
+  onSelectModel: (modelId: string) => void;
+  onSelectThinkingLevel: (thinkingLevel: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node | null)) setOpen(false);
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={menuRef} className="relative shrink-0">
+      <IconButton
+        shape="circle"
+        type="button"
+        title="More composer settings"
+        aria-label="More composer settings"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        disabled={disabled && models.length === 0}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) setOpen((current) => !current);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setOpen((current) => !current);
+          }
+        }}
+      >
+        <CoreComposerDotsIcon />
+      </IconButton>
+      {open ? (
+        <div
+          className="ui-context-menu-shell absolute bottom-full z-50 mb-2 grid gap-2 p-2.5"
+          style={{ left: '50%', width: 'min(16rem, calc(100vw - 1rem))', transform: 'translateX(-50%)' }}
+          role="dialog"
+          aria-label="Composer settings"
+        >
+          <CoreModelPreferenceControls
+            disabled={disabled}
+            models={models}
+            currentModel={currentModel}
+            currentThinkingLevel={currentThinkingLevel}
+            compact={false}
+            onSelectModel={onSelectModel}
+            onSelectThinkingLevel={onSelectThinkingLevel}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -415,6 +504,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   const visibleLeadingControls = visibleComposerControls.filter((control) => control.slot === 'leading');
   const visiblePreferenceControls = visibleComposerControls.filter((control) => control.slot === 'preferences');
   const shouldKeepControlRowInline = composerShellWidth === null || composerShellWidth >= 420;
+  const shouldCollapseCorePreferences = !shouldKeepControlRowInline;
 
   return (
     <div className="px-3 pt-2.5 pb-2.5">
@@ -515,15 +605,26 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
                 }}
               />
             ))}
-            <CoreModelPreferenceControls
-              disabled={composerDisabled}
-              models={models}
-              currentModel={currentModel}
-              currentThinkingLevel={currentThinkingLevel}
-              compact={!shouldKeepControlRowInline}
-              onSelectModel={onSelectModel}
-              onSelectThinkingLevel={onSelectThinkingLevel}
-            />
+            {shouldCollapseCorePreferences ? (
+              <CoreModelPreferenceOverflow
+                disabled={composerDisabled}
+                models={models}
+                currentModel={currentModel}
+                currentThinkingLevel={currentThinkingLevel}
+                onSelectModel={onSelectModel}
+                onSelectThinkingLevel={onSelectThinkingLevel}
+              />
+            ) : (
+              <CoreModelPreferenceControls
+                disabled={composerDisabled}
+                models={models}
+                currentModel={currentModel}
+                currentThinkingLevel={currentThinkingLevel}
+                compact={false}
+                onSelectModel={onSelectModel}
+                onSelectThinkingLevel={onSelectThinkingLevel}
+              />
+            )}
             <ConversationPreferencesRow
               composerButtons={visiblePreferenceControls}
               composerButtonContext={composerControlContext}
