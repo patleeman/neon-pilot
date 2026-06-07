@@ -145,7 +145,7 @@ export function SidebarPrimaryNav({
   onNewConversation: () => void;
 }) {
   return (
-    <div className="space-y-px pt-3 pb-1">
+    <nav className="relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3" aria-label="Primary navigation">
       <div className="px-1">
         <SidebarNavButton
           onClick={onNewConversation}
@@ -161,13 +161,13 @@ export function SidebarPrimaryNav({
       {items.map((item) => (
         <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
       ))}
-    </div>
+    </nav>
   );
 }
 
 export function SidebarSettingsNav({ items, notice }: { items: SidebarNavItem[]; notice: string | null }) {
   return (
-    <div className="shrink-0">
+    <div className="relative z-20 shrink-0 bg-panel">
       {notice ? (
         <div aria-live="polite" className="px-4 pb-2 text-[11px] text-accent/80">
           {notice}
