@@ -51,6 +51,7 @@ const bundleOutputs = [
   resolve(outdir, 'daemon/index.js'),
   resolve(outdir, 'daemon/background-agent-runner.js'),
   resolve(outdir, 'core/index.js'),
+  resolve(outdir, 'protocolCli.js'),
 ];
 
 const backendApiLazyModuleEntries = [
@@ -147,6 +148,15 @@ await Promise.all([
     ...sharedEsbuildOptions,
     entryPoints: [resolve(packageRoot, '..', 'core/src/index.ts')],
     outfile: bundleOutputs[5],
+    banner: {
+      js: createRequireBanner,
+    },
+  }),
+  // Packaged CLI entry point used by the state-root neon-pilot launcher.
+  build({
+    ...sharedEsbuildOptions,
+    entryPoints: [resolve(packageRoot, 'server/protocolCli.ts')],
+    outfile: bundleOutputs[6],
     banner: {
       js: createRequireBanner,
     },

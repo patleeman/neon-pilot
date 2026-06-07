@@ -10,7 +10,7 @@ Use the packaged app and CLI control plane. Do not build from source unless the 
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/main/install.sh | bash -s -- --install-cli --bootstrap --json
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
 ```
 
 Use `--channel rc` only when the user wants the release-candidate channel.

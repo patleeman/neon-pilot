@@ -24,8 +24,9 @@ export function ensureNeonPilotCliLauncher(input: { repoRoot: string; stateRoot?
   mkdirSync(binDir, { recursive: true });
   const launcherPath = join(binDir, NEON_PILOT_CLI_COMMAND);
   const repoLauncher = resolve(input.repoRoot, 'scripts/neon-pilot-cli.mjs');
-  const distLauncher = resolve(input.repoRoot, 'packages/desktop/dist/server/protocolCli.js');
-  const target = existsSync(repoLauncher) ? repoLauncher : distLauncher;
+  const packagedLauncher = resolve(input.repoRoot, 'server/dist/protocolCli.js');
+  const legacyTscLauncher = resolve(input.repoRoot, 'packages/desktop/dist/server/protocolCli.js');
+  const target = [repoLauncher, packagedLauncher, legacyTscLauncher].find((candidate) => existsSync(candidate)) ?? packagedLauncher;
   const content = ['#!/bin/sh', `exec ${JSON.stringify(process.execPath)} ${JSON.stringify(target)} "$@"`, ''].join('\n');
   if (!existsSync(launcherPath) || readFileSync(launcherPath, 'utf-8') !== content) {
     writeFileSync(launcherPath, content, { mode: 0o755 });

@@ -7,7 +7,7 @@ Neon Pilot must be installable, configurable, and verifiable by an external agen
 Use the packaged macOS installer script. It installs the signed app from GitHub releases, launches it once, installs the CLI when available, and reports machine-readable status.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/main/install.sh | bash -s -- --install-cli --bootstrap --json
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
 ```
 
 Use `--channel rc` for release-candidate builds.

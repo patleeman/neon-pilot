@@ -39,6 +39,13 @@ function normalizeServerExtensionSpecifier(specifier: string): string {
 }
 
 describe('desktop server bundle lazy module entries', () => {
+  it('builds the packaged protocol CLI entry used by state-root launchers', () => {
+    const buildScript = readRepoFile('packages/desktop/scripts/build-server-bundle.mjs');
+
+    expect(buildScript).toContain("resolve(outdir, 'protocolCli.js')");
+    expect(buildScript).toContain("entryPoints: [resolve(packageRoot, 'server/protocolCli.ts')]");
+  });
+
   it('packages every relative backend API lazy module used by extension wrappers', () => {
     const backendApiFiles = ['automations.ts', 'gateways.ts', 'knowledge.ts'].map(
       (file) => `packages/desktop/server/extensions/backendApi/${file}`,

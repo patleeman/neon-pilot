@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const cliDistPath = resolve(repoRoot, 'packages/desktop/dist/server/protocolCli.js');
+const cliDistPath = resolve(repoRoot, 'packages/desktop/server/dist/protocolCli.js');
 const cliSourcePath = resolve(repoRoot, 'packages/desktop/server/protocolCli.ts');
 const tsxPath = resolve(repoRoot, 'node_modules/.bin/tsx');
 

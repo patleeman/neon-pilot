@@ -144,13 +144,20 @@ fi
 open -g "$TARGET_APP"
 
 CLI_READY=0
-for _ in {1..60}; do
-  if { command -v neon-pilot >/dev/null 2>&1 || [[ -x "$STATE_CLI" ]]; } && run_neon_pilot cli status --json >/dev/null 2>&1; then
+CLI_STATUS_ERROR=""
+for attempt in {1..60}; do
+  if { command -v neon-pilot >/dev/null 2>&1 || [[ -x "$STATE_CLI" ]]; } && CLI_STATUS_ERROR="$(run_neon_pilot cli status --json 2>&1 >/dev/null)"; then
     CLI_READY=1
     break
   fi
+  if [[ "$JSON" != "1" && $((attempt % 10)) -eq 0 ]]; then
+    echo "Waiting for Neon Pilot CLI launcher at $STATE_CLI..." >&2
+  fi
   sleep 1
 done
+if [[ "$CLI_READY" != "1" && -z "$CLI_STATUS_ERROR" ]]; then
+  CLI_STATUS_ERROR="Neon Pilot CLI launcher was not found at $STATE_CLI after 60 seconds."
+fi
 
 CLI_INSTALLED=0
 if [[ "$INSTALL_CLI" == "1" && "$CLI_READY" == "1" ]]; then
@@ -176,13 +183,17 @@ print(json.dumps({
   "cliReady": sys.argv[4] == "1",
   "cliInstalled": sys.argv[5] == "1",
   "bootstrapDoctorReady": sys.argv[6] == "1",
+  "cliError": None if sys.argv[7] == "" else sys.argv[7],
   "mcp": {"mcpServers": {"neon-pilot": {"command": "neon-pilot", "args": ["protocol", "neon-pilot-agent-mcp"]}}},
 }, indent=2))
-' "$TARGET_APP" "$STATE_ROOT" "$STATE_CLI" "$CLI_READY" "$CLI_INSTALLED" "$BOOTSTRAP_READY"
+' "$TARGET_APP" "$STATE_ROOT" "$STATE_CLI" "$CLI_READY" "$CLI_INSTALLED" "$BOOTSTRAP_READY" "$CLI_STATUS_ERROR"
 else
   echo "Installed $TARGET_APP"
   echo "State root: $STATE_ROOT"
   echo "CLI ready: $CLI_READY"
   echo "CLI installed: $CLI_INSTALLED"
   echo "Bootstrap doctor ready: $BOOTSTRAP_READY"
+  if [[ "$CLI_READY" != "1" ]]; then
+    echo "CLI error: $CLI_STATUS_ERROR" >&2
+  fi
 fi

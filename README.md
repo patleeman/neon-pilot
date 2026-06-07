@@ -49,7 +49,7 @@ Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patle
 For agent-driven install and bootstrap on macOS, use the packaged installer flow:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/main/install.sh | bash -s -- --install-cli --bootstrap --json
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
 ```
 
 Then configure and verify through the CLI:
