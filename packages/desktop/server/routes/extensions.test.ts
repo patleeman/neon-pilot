@@ -242,7 +242,10 @@ describe('registerExtensionRoutes', () => {
         id: 'agent-board',
         name: 'Agent Board',
         enabled: true,
-        backend: { entry: 'dist/backend.mjs', routes: [{ method: 'GET', path: '/events', handler: 'events', stream: 'sse', worker: { enabled: true } }] },
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'GET', path: '/events', handler: 'events', stream: 'sse', worker: { enabled: true } }],
+        },
       }),
     );
     writeFileSync(
@@ -882,7 +885,11 @@ describe('registerExtensionRoutes', () => {
     const harness = createHarness();
     const reloadAllRes = createResponse();
     await harness.postHandler('/api/extensions/reload')({}, reloadAllRes);
-    expect(reloadAllRes.json).toHaveBeenCalledWith({ ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' });
+    expect(reloadAllRes.json).toHaveBeenCalledWith({
+      ok: true,
+      reloaded: true,
+      message: 'Extension registry caches were invalidated; reopen contributed routes if needed.',
+    });
 
     const reloadOneRes = createResponse();
     await harness.postHandler('/api/extensions/:id/reload')({ params: { id: 'system-extension-manager' } }, reloadOneRes);

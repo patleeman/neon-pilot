@@ -71,6 +71,12 @@ export async function reloadExtensionBackend(extensionId: string) {
   return module.reloadExtensionBackend(extensionId);
 }
 
+export async function invalidateExtensionRegistryReadCaches() {
+  const module = await importExtensionRegistry();
+  module.invalidateExtensionRegistryReadCaches();
+  return { ok: true as const };
+}
+
 export async function validateExtensionPackage(options: ValidateExtensionPackageOptions) {
   const module = await importExtensionDoctor();
   return module.validateExtensionPackage(options);
@@ -330,8 +336,4 @@ function toManifestPath(packageRoot: string, path: string): string {
   return relative(packageRoot, path).split(sep).join('/');
 }
 
-export type {
-  ExtensionDoctorFinding,
-  ExtensionDoctorReport,
-  ExtensionDoctorSeverity,
-} from '@neon-pilot/extensions/backend/extensions';
+export type { ExtensionDoctorFinding, ExtensionDoctorReport, ExtensionDoctorSeverity } from '@neon-pilot/extensions/backend/extensions';

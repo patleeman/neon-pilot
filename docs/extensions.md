@@ -45,7 +45,7 @@ Before calling an extension done, an agent must be able to answer each item with
 
 - **Surface chosen**: the extension has one clear primary surface for the first version: main page, workbench rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
 - **Boundary clean**: extension runtime code imports from `@neon-pilot/extensions`, `@neon-pilot/extensions/ui`, or narrow `@neon-pilot/extensions/backend/*` SDK subpaths, not core, desktop, or package-internal app modules.
-- **Manifest wired**: every declared component/action/tool/skill/settings entry points to an existing source export or file, and every frontend `pa.actions.call(...)` action id is declared in `backend.actions`.
+- **Manifest wired**: every declared component/action/tool/skill/settings entry points to an existing source export or file, and every frontend `pa.extension.invoke(...)` action id is declared in `backend.actions`.
 - **Runtime built**: `dist/` files are current, because packaged desktop runtimes load built bundles and do not compile extension source at install time.
 - **Diagnostics clean**: `neon-pilot-extension doctor <extension-dir>` is clean when available; boundary work also runs `pnpm run check:extensions:static`.
 - **User path validated**: the route, rail, Settings section, command, composer control, or tool invocation was opened or invoked through the app/extension host.
@@ -127,7 +127,8 @@ The manifest declares what your extension contributes:
       {
         "id": "ping",
         "handler": "ping",
-        "title": "Ping"
+        "title": "Ping",
+        "worker": { "enabled": true }
       }
     ],
     "protocolEntrypoints": [
@@ -373,7 +374,7 @@ Use `searchProviders` for app-level search backed by extension backend actions. 
 ```json
 {
   "backend": {
-    "actions": [{ "id": "searchTickets", "handler": "searchTickets" }]
+    "actions": [{ "id": "searchTickets", "handler": "searchTickets", "worker": { "enabled": true } }]
   },
   "contributes": {
     "searchProviders": [
@@ -489,7 +490,7 @@ Add `/command` entries to the conversation composer. Slash commands are listed i
 {
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "createTask", "handler": "createTask" }]
+    "actions": [{ "id": "createTask", "handler": "createTask", "worker": { "enabled": true } }]
   },
   "contributes": {
     "slashCommands": [

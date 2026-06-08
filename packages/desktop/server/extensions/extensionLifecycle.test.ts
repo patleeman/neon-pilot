@@ -95,6 +95,7 @@ describe('extensionLifecycle', () => {
       name: 'My Extension',
       description: 'Desc',
       packageType: 'user',
+      backend: { actions: [{ id: 'ping', worker: { enabled: true } }] },
       contributes: { views: [{ location: 'main', route: '/ext/my-extension' }], nav: [{ label: 'My Extension' }] },
     });
     expect(readFileSync(join(runtimeRoot, 'my-extension', 'src', 'frontend.tsx'), 'utf-8')).toContain('ExtensionPage');
@@ -156,7 +157,8 @@ describe('extensionLifecycle', () => {
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(zipPath, 'zip');
     execFileSync.mockImplementation((command, args) => {
-      if (command === 'zipinfo') return 'bundle/extension.json\nbundle/dist/backend.mjs\nbundle/dist/build-manifest.json\n' as ReturnType<ExecFileSync>;
+      if (command === 'zipinfo')
+        return 'bundle/extension.json\nbundle/dist/backend.mjs\nbundle/dist/build-manifest.json\n' as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
         const extractRoot = String(args?.[3]);
         mkdirSync(join(extractRoot, 'bundle', 'dist'), { recursive: true });

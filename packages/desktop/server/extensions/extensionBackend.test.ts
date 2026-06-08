@@ -597,11 +597,17 @@ describe('extension backend action invocation', () => {
           ? { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } }
           : exportName === 'conversationInspect'
             ? { content: [{ type: 'text', text: 'Listed conversations.' }], details: { action: 'list', conversations: [] } }
-          : exportName === 'conversationCwd'
-            ? { content: [{ type: 'text', text: 'Queued working directory change to /next.' }], details: { action: 'queue', cwd: '/next' } }
-          : exportName === 'conversationTitle'
-            ? { content: [{ type: 'text', text: 'Conversation title set.' }], details: { conversationId: 'conv-1', title: 'New Title' } }
-            : { content: [{ type: 'text', text: 'scheduled' }], details: { text: 'scheduled', id: 'resume-1' } },
+            : exportName === 'conversationCwd'
+              ? {
+                  content: [{ type: 'text', text: 'Queued working directory change to /next.' }],
+                  details: { action: 'queue', cwd: '/next' },
+                }
+              : exportName === 'conversationTitle'
+                ? {
+                    content: [{ type: 'text', text: 'Conversation title set.' }],
+                    details: { conversationId: 'conv-1', title: 'New Title' },
+                  }
+                : { content: [{ type: 'text', text: 'scheduled' }], details: { text: 'scheduled', id: 'resume-1' } },
       ),
       run: vi.fn(),
     };
@@ -609,13 +615,10 @@ describe('extension backend action invocation', () => {
     setWorkerImportBackendRunnerForTests(workerRunner);
 
     await expect(
-      invokeExtensionAction(
-        'system-conversation-tools',
-        'askUser',
-        { question: 'Proceed?', options: ['Yes', 'No'] },
-        undefined,
-        { conversationId: 'conv-1', cwd: '/repo' },
-      ),
+      invokeExtensionAction('system-conversation-tools', 'askUser', { question: 'Proceed?', options: ['Yes', 'No'] }, undefined, {
+        conversationId: 'conv-1',
+        cwd: '/repo',
+      }),
     ).resolves.toEqual({
       ok: true,
       result: { content: [{ type: 'text', text: 'Asked the user a question.' }], details: { action: 'ask_user' } },
@@ -630,7 +633,9 @@ describe('extension backend action invocation', () => {
       result: { content: [{ type: 'text', text: 'Listed conversations.' }], details: { action: 'list', conversations: [] } },
     });
     await expect(
-      invokeExtensionAction('system-conversation-tools', 'conversationTitle', { title: 'New Title' }, undefined, { conversationId: 'conv-1' }),
+      invokeExtensionAction('system-conversation-tools', 'conversationTitle', { title: 'New Title' }, undefined, {
+        conversationId: 'conv-1',
+      }),
     ).resolves.toEqual({
       ok: true,
       result: { content: [{ type: 'text', text: 'Conversation title set.' }], details: { conversationId: 'conv-1', title: 'New Title' } },
@@ -642,16 +647,17 @@ describe('extension backend action invocation', () => {
       }),
     ).resolves.toEqual({
       ok: true,
-      result: { content: [{ type: 'text', text: 'Queued working directory change to /next.' }], details: { action: 'queue', cwd: '/next' } },
+      result: {
+        content: [{ type: 'text', text: 'Queued working directory change to /next.' }],
+        details: { action: 'queue', cwd: '/next' },
+      },
     });
     await expect(
-      invokeExtensionAction(
-        'system-conversation-tools',
-        'deferredResume',
-        { action: 'add', trigger: 'delay', delay: '10m' },
-        undefined,
-        { conversationId: 'conv-1', sessionFile: '/session.json', cwd: '/repo' },
-      ),
+      invokeExtensionAction('system-conversation-tools', 'deferredResume', { action: 'add', trigger: 'delay', delay: '10m' }, undefined, {
+        conversationId: 'conv-1',
+        sessionFile: '/session.json',
+        cwd: '/repo',
+      }),
     ).resolves.toEqual({
       ok: true,
       result: { content: [{ type: 'text', text: 'scheduled' }], details: { text: 'scheduled', id: 'resume-1' } },
@@ -1035,9 +1041,7 @@ describe('extension backend action invocation', () => {
         packageType: 'system',
         backend: {
           entry: 'dist/backend.mjs',
-          actions: [
-            { id: 'duckDuckGoSearch', handler: 'duckDuckGoSearch', title: 'Search with DuckDuckGo', worker: { enabled: true } },
-          ],
+          actions: [{ id: 'duckDuckGoSearch', handler: 'duckDuckGoSearch', title: 'Search with DuckDuckGo', worker: { enabled: true } }],
         },
       }),
     );
@@ -1856,23 +1860,23 @@ describe('extension backend action invocation', () => {
               ? { id: 'conv-2', conversationId: 'conv-2' }
               : action === 'inspect'
                 ? { action: 'list', conversations: [] }
-              : action === 'change_working_directory'
-                ? { action: 'queue', cwd: '/next', queued: true }
-              : action === 'ensure_live'
-                ? { id: 'conv-1', conversationId: 'conv-1' }
-                : action === 'send_message'
-                  ? { accepted: true }
-                  : action === 'abort' || action === 'compact'
-                    ? { ok: true }
-                    : action === 'fork'
-                      ? { id: 'conv-fork', conversationId: 'conv-fork' }
-                      : action === 'set_title'
+                : action === 'change_working_directory'
+                  ? { action: 'queue', cwd: '/next', queued: true }
+                  : action === 'ensure_live'
+                    ? { id: 'conv-1', conversationId: 'conv-1' }
+                    : action === 'send_message'
+                      ? { accepted: true }
+                      : action === 'abort' || action === 'compact'
                         ? { ok: true }
-              : action === 'workspace_get'
-                ? { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' }
-                : action === 'rollback'
-                  ? { rolledBackTo: 'entry-1' }
-                  : { blockId: 'block-1' },
+                        : action === 'fork'
+                          ? { id: 'conv-fork', conversationId: 'conv-fork' }
+                          : action === 'set_title'
+                            ? { ok: true }
+                            : action === 'workspace_get'
+                              ? { openConversationIds: ['conv-1'], activeConversationId: 'conv-1' }
+                              : action === 'rollback'
+                                ? { rolledBackTo: 'entry-1' }
+                                : { blockId: 'block-1' },
         };
       }),
       run: vi.fn(),
@@ -1896,13 +1900,10 @@ describe('extension backend action invocation', () => {
       },
     });
     await expect(
-      invokeExtensionAction(
-        'system-conversation-tools',
-        'conversationTool',
-        { action: 'inspect', inspectAction: 'list' },
-        undefined,
-        { conversationId: 'conv-1', cwd: '/repo' },
-      ),
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'inspect', inspectAction: 'list' }, undefined, {
+        conversationId: 'conv-1',
+        cwd: '/repo',
+      }),
     ).resolves.toEqual({
       ok: true,
       result: {
@@ -1910,9 +1911,7 @@ describe('extension backend action invocation', () => {
         details: { action: 'list', conversations: [] },
       },
     });
-    await expect(
-      invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'workspace_get' }),
-    ).resolves.toEqual({
+    await expect(invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'workspace_get' })).resolves.toEqual({
       ok: true,
       result: {
         content: [{ type: 'text', text: 'workspace_get complete.' }],
@@ -1935,7 +1934,11 @@ describe('extension backend action invocation', () => {
       },
     });
     await expect(
-      invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'ensure_live', conversationId: 'conv-1', cwd: '/repo' }),
+      invokeExtensionAction('system-conversation-tools', 'conversationTool', {
+        action: 'ensure_live',
+        conversationId: 'conv-1',
+        cwd: '/repo',
+      }),
     ).resolves.toEqual({
       ok: true,
       result: {
@@ -2141,7 +2144,7 @@ describe('extension backend action invocation', () => {
           ? { configPath: '/repo/.mcp.json', servers: [], searchedPaths: ['/repo/.mcp.json'] }
           : exportName === 'saveExplicitMcpConfig'
             ? { configPath: '/repo/.mcp.json', servers: [{ name: 'filesystem' }], searchedPaths: ['/repo/.mcp.json'] }
-          : { content: [{ type: 'text', text: 'MCP servers (/repo/.mcp.json):\\n' }], details: { action: 'list', serverCount: 0 } },
+            : { content: [{ type: 'text', text: 'MCP servers (/repo/.mcp.json):\\n' }], details: { action: 'list', serverCount: 0 } },
       ),
       run: vi.fn(),
     };
@@ -2460,11 +2463,15 @@ describe('extension backend action invocation', () => {
             ? { ok: true, id: 'managed-extension' }
             : action === 'reload'
               ? { ok: true, extensionId: 'system-todo', rebuilt: false }
-            : action === 'installMarketplacePackage'
-              ? { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'managed-imported-skill' }, installed: true }
-            : action === 'updateSearchPaths'
-              ? { ok: true, configuredPaths: ['/extensions/one'] }
-            : { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' };
+              : action === 'installMarketplacePackage'
+                ? { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'managed-imported-skill' }, installed: true }
+                : action === 'updateSearchPaths'
+                  ? { ok: true, configuredPaths: ['/extensions/one'] }
+                  : {
+                      ok: true,
+                      reloaded: true,
+                      message: 'Extension registry caches were invalidated; reopen contributed routes if needed.',
+                    };
         }
         return { ok: true, extensions: [{ id: 'system-todo' }] };
       }),
@@ -2479,7 +2486,7 @@ describe('extension backend action invocation', () => {
     });
     await expect(invokeExtensionAction('system-extension-manager', 'manageExtension', { action: 'reloadExtensions' })).resolves.toEqual({
       ok: true,
-      result: { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' },
+      result: { ok: true, reloaded: true, message: 'Extension registry caches were invalidated; reopen contributed routes if needed.' },
     });
     await expect(
       invokeExtensionAction('system-extension-manager', 'createExtension', {
@@ -2790,17 +2797,17 @@ describe('extension backend action invocation', () => {
                 ? { agentsMd: [], skills: [], memoryDocs: [] }
                 : exportName === 'knowledgeDeleteFile'
                   ? { ok: true }
-                : exportName === 'knowledgeReadFile'
-                  ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
-                  : exportName === 'knowledgeWriteFile' ||
-                      exportName === 'knowledgeCreateFolder' ||
-                      exportName === 'knowledgeRename' ||
-                      exportName === 'knowledgeMove' ||
-                      exportName === 'knowledgeUploadImage' ||
-                      exportName === 'knowledgeImportUrl' ||
-                      exportName === 'knowledgeImportSharedItem'
-                    ? { id: 'notes/a.md', kind: 'file' }
-                    : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
+                  : exportName === 'knowledgeReadFile'
+                    ? { id: 'notes/a.md', content: '# A', updatedAt: '2026-01-01T00:00:00.000Z' }
+                    : exportName === 'knowledgeWriteFile' ||
+                        exportName === 'knowledgeCreateFolder' ||
+                        exportName === 'knowledgeRename' ||
+                        exportName === 'knowledgeMove' ||
+                        exportName === 'knowledgeUploadImage' ||
+                        exportName === 'knowledgeImportUrl' ||
+                        exportName === 'knowledgeImportSharedItem'
+                      ? { id: 'notes/a.md', kind: 'file' }
+                      : { root: '/knowledge', files: [{ id: 'notes/a.md' }] },
       ),
       run: vi.fn(),
     };
@@ -2835,7 +2842,12 @@ describe('extension backend action invocation', () => {
       ['knowledgeDeleteFile', 'knowledgeDeleteFile', { id: 'notes/a.md' }, { ok: true }],
       ['knowledgeRename', 'knowledgeRename', { id: 'notes/a.md', newName: 'b.md' }, { id: 'notes/a.md', kind: 'file' }],
       ['knowledgeMove', 'knowledgeMove', { id: 'notes/a.md', targetDir: 'archive/' }, { id: 'notes/a.md', kind: 'file' }],
-      ['knowledgeUploadImage', 'knowledgeUploadImage', { filename: 'shot.png', dataUrl: 'data:image/png;base64,aW1n' }, { id: 'notes/a.md', kind: 'file' }],
+      [
+        'knowledgeUploadImage',
+        'knowledgeUploadImage',
+        { filename: 'shot.png', dataUrl: 'data:image/png;base64,aW1n' },
+        { id: 'notes/a.md', kind: 'file' },
+      ],
       ['knowledgeImportUrl', 'knowledgeImportUrl', { url: 'https://example.test', title: 'Example' }, { id: 'notes/a.md', kind: 'file' }],
       [
         'knowledgeImportSharedItem',
@@ -3262,7 +3274,7 @@ describe('extension backend action invocation', () => {
                 exportName === 'knowledgeUploadImageRoute' ||
                 exportName === 'knowledgeImportUrlRoute'
               ? { status: 200, body: { id: 'notes/a.md', kind: 'file' } }
-          : { status: 200, body: { results: [{ id: 'notes/a.md' }] } },
+              : { status: 200, body: { results: [{ id: 'notes/a.md' }] } },
       ),
       run: vi.fn(),
     };
@@ -3285,21 +3297,37 @@ describe('extension backend action invocation', () => {
         params: {},
       }),
     ).resolves.toEqual({ status: 200, body: { agentsMd: [], skills: [], memoryDocs: [] } });
-    const mutationRouteInputs: Array<[
-      'PUT' | 'POST' | 'DELETE',
-      string,
-      string,
-      Record<string, string | string[]>,
-      Record<string, unknown> | undefined,
-      unknown,
-    ]> = [
+    const mutationRouteInputs: Array<
+      ['PUT' | 'POST' | 'DELETE', string, string, Record<string, string | string[]>, Record<string, unknown> | undefined, unknown]
+    > = [
       ['PUT', '/knowledge/file', 'knowledgeWriteFileRoute', {}, { id: 'notes/a.md', content: '# B' }, { id: 'notes/a.md', kind: 'file' }],
       ['POST', '/knowledge/folder', 'knowledgeCreateFolderRoute', {}, { id: 'notes/new/' }, { id: 'notes/a.md', kind: 'file' }],
       ['DELETE', '/knowledge/file', 'knowledgeDeleteFileRoute', { id: 'notes/a.md' }, undefined, { ok: true }],
       ['POST', '/knowledge/rename', 'knowledgeRenameRoute', {}, { id: 'notes/a.md', newName: 'b.md' }, { id: 'notes/a.md', kind: 'file' }],
-      ['POST', '/knowledge/move', 'knowledgeMoveRoute', {}, { id: 'notes/a.md', targetDir: 'archive/' }, { id: 'notes/a.md', kind: 'file' }],
-      ['POST', '/knowledge/image', 'knowledgeUploadImageRoute', {}, { filename: 'shot.png', dataUrl: 'data:image/png;base64,aW1n' }, { id: 'notes/a.md', kind: 'file' }],
-      ['POST', '/knowledge/share-import', 'knowledgeImportUrlRoute', {}, { kind: 'text', text: 'hello', title: 'Shared text' }, { id: 'notes/a.md', kind: 'file' }],
+      [
+        'POST',
+        '/knowledge/move',
+        'knowledgeMoveRoute',
+        {},
+        { id: 'notes/a.md', targetDir: 'archive/' },
+        { id: 'notes/a.md', kind: 'file' },
+      ],
+      [
+        'POST',
+        '/knowledge/image',
+        'knowledgeUploadImageRoute',
+        {},
+        { filename: 'shot.png', dataUrl: 'data:image/png;base64,aW1n' },
+        { id: 'notes/a.md', kind: 'file' },
+      ],
+      [
+        'POST',
+        '/knowledge/share-import',
+        'knowledgeImportUrlRoute',
+        {},
+        { kind: 'text', text: 'hello', title: 'Shared text' },
+        { id: 'notes/a.md', kind: 'file' },
+      ],
     ];
     for (const [method, path, , query, body, result] of mutationRouteInputs) {
       await expect(

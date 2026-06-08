@@ -44,7 +44,7 @@ export function DataDashboardPage({ pa }: { pa: NativeExtensionClient }) {
 
   const load = useCallback(async () => {
     // Replace "templateDashboardLoad" with the action id from extension.json.
-    const result = (await pa.actions.call('templateDashboardLoad', {})) as { items: Item[] };
+    const result = (await pa.extension.invoke('templateDashboardLoad', {})) as { items: Item[] };
     setItems(result.items ?? []);
   }, [pa]);
 

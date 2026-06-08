@@ -42,8 +42,8 @@ export function MySettingsSection({ pa }: { pa: NativeExtensionClient }) {
 
   // Load saved settings on mount
   useEffect(() => {
-    pa.actions
-      .call('templateSettingsLoad', {})
+    pa.extension
+      .invoke('templateSettingsLoad', {})
       .then((result) => {
         setSettings(result as MySettings);
       })
@@ -59,7 +59,7 @@ export function MySettingsSection({ pa }: { pa: NativeExtensionClient }) {
       setSaving(true);
       setNotice(null);
       try {
-        await pa.actions.call('templateSettingsSave', settings);
+        await pa.extension.invoke('templateSettingsSave', settings);
         setNotice('Settings saved.');
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

@@ -14,7 +14,10 @@
       {
         "id": "templateDashboardLoad",
         "handler": "load",
-        "title": "Load dashboard data"
+        "title": "Load dashboard data",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },

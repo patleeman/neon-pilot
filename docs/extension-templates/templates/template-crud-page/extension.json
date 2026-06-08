@@ -11,10 +11,10 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "templateItemsList", "handler": "list", "title": "List items" },
-      { "id": "templateItemsGet", "handler": "get", "title": "Get item" },
-      { "id": "templateItemsSave", "handler": "save", "title": "Save item" },
-      { "id": "templateItemsDelete", "handler": "delete", "title": "Delete item" }
+      { "id": "templateItemsList", "handler": "list", "title": "List items", "worker": { "enabled": true } },
+      { "id": "templateItemsGet", "handler": "get", "title": "Get item", "worker": { "enabled": true } },
+      { "id": "templateItemsSave", "handler": "save", "title": "Save item", "worker": { "enabled": true } },
+      { "id": "templateItemsDelete", "handler": "delete", "title": "Delete item", "worker": { "enabled": true } }
     ]
   },
   "contributes": {

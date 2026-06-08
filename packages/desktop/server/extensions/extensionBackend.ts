@@ -21,10 +21,7 @@ import {
   extensionBackendOperation,
   getExtensionBackendRunner,
 } from './extensionBackendRunner.js';
-import {
-  registerExtensionToolUpdateHandle,
-  unregisterExtensionToolUpdateHandle,
-} from './extensionBackendLiveHandles.js';
+import { registerExtensionToolUpdateHandle, unregisterExtensionToolUpdateHandle } from './extensionBackendLiveHandles.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
@@ -39,6 +36,7 @@ import {
   clearExtensionHealthError,
   findExtensionCommandRegistration,
   findExtensionEntry,
+  invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
@@ -333,13 +331,7 @@ export function listExtensionActionTelemetry(extensionId?: string): ExtensionAct
 
 export class ExtensionLoadError extends Error {
   readonly extensionId: string;
-  readonly code:
-    | 'build_failure'
-    | 'load_failure'
-    | 'handler_not_found'
-    | 'module_not_found'
-    | 'extension_disabled'
-    | 'worker_required';
+  readonly code: 'build_failure' | 'load_failure' | 'handler_not_found' | 'module_not_found' | 'extension_disabled' | 'worker_required';
 
   constructor(opts: { extensionId: string; code: ExtensionLoadError['code']; message: string; cause?: unknown }) {
     super(opts.message);
@@ -425,7 +417,8 @@ export function createBackendContext(
     }
     return buildLiveSessionResourceOptionsForRuntime();
   };
-  const extensionBinDirs = () => liveSessionResourceOptions().additionalExtensionPaths.map((extensionPath) => resolve(extensionPath, 'bin'));
+  const extensionBinDirs = () =>
+    liveSessionResourceOptions().additionalExtensionPaths.map((extensionPath) => resolve(extensionPath, 'bin'));
   return {
     extensionId,
     runtimeScope,
@@ -733,10 +726,17 @@ function workerBackendToolContext(
 }
 
 function toolContextFromAgentToolContext(agentToolContext: unknown): ExtensionBackendContext['toolContext'] | undefined {
-  const record = agentToolContext && typeof agentToolContext === 'object' && !Array.isArray(agentToolContext) ? (agentToolContext as Record<string, unknown>) : undefined;
-  const source = record?.toolContext && typeof record.toolContext === 'object' && !Array.isArray(record.toolContext) ? (record.toolContext as Record<string, unknown>) : record;
+  const record =
+    agentToolContext && typeof agentToolContext === 'object' && !Array.isArray(agentToolContext)
+      ? (agentToolContext as Record<string, unknown>)
+      : undefined;
+  const source =
+    record?.toolContext && typeof record.toolContext === 'object' && !Array.isArray(record.toolContext)
+      ? (record.toolContext as Record<string, unknown>)
+      : record;
   if (!source) return undefined;
-  const conversationId = typeof source.conversationId === 'string' && source.conversationId.trim() ? source.conversationId.trim() : undefined;
+  const conversationId =
+    typeof source.conversationId === 'string' && source.conversationId.trim() ? source.conversationId.trim() : undefined;
   const sessionId = typeof source.sessionId === 'string' && source.sessionId.trim() ? source.sessionId.trim() : conversationId;
   const cwd = typeof source.cwd === 'string' && source.cwd.trim() ? source.cwd.trim() : undefined;
   const sessionFile = typeof source.sessionFile === 'string' && source.sessionFile.trim() ? source.sessionFile.trim() : undefined;
@@ -1152,12 +1152,7 @@ export async function invokeExtensionProtocolEntrypoint(
     entrypoint.handler,
     extensionBackendOperation('protocol', `protocol ${protocolId}`, { target: protocolId }),
     (handler) =>
-      Promise.resolve(
-        handler(
-          input,
-          createProtocolContext(extensionId, protocolId, options.stdio, options.signal, options.serverContext),
-        ),
-      ),
+      Promise.resolve(handler(input, createProtocolContext(extensionId, protocolId, options.stdio, options.signal, options.serverContext))),
     { missingExportMessage: `Extension "${extensionId}" protocol handler not found: ${entrypoint.handler}` },
   );
 }
@@ -1334,6 +1329,7 @@ export async function startExtensionStartupActions(
 }
 
 export async function reloadExtensionBackend(extensionId: string): Promise<{ ok: true; extensionId: string; rebuilt: boolean }> {
+  invalidateExtensionRegistryReadCaches();
   const entry = findExtensionEntry(extensionId);
   if (!entry) {
     throw new Error('Extension not found.');

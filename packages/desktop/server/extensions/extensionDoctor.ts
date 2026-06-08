@@ -147,6 +147,8 @@ function validateManifestReferences(packageRoot: string, manifest: ExtensionMani
     if (!existsSync(backendSource)) add(findings, 'warning', 'missing-backend-source', 'src/backend.ts is missing.', backendSource);
     if (existsSync(backendSource)) validateForbiddenSourceImports(backendSource, findings);
   }
+  validateFrontendActionClient(frontendSource, frontendEntry, findings);
+  validateBackendWorkerDeclarations(manifest, manifestPath(packageRoot), findings);
 
   const frontendContent = existsSync(frontendSource)
     ? readFileSync(frontendSource, 'utf8')
@@ -260,6 +262,66 @@ function validateManifestReferences(packageRoot: string, manifest: ExtensionMani
   }
 
   validateDistFreshness(packageRoot, manifest, findings);
+}
+
+function manifestPath(packageRoot: string): string {
+  return resolve(packageRoot, 'extension.json');
+}
+
+function validateFrontendActionClient(frontendSource: string, frontendEntry: string | undefined, findings: ExtensionDoctorFinding[]) {
+  const candidates = [frontendSource, frontendEntry].filter((path): path is string => typeof path === 'string' && existsSync(path));
+  for (const path of candidates) {
+    const source = readFileSync(path, 'utf8');
+    if (/\bpa\.actions\b/.test(source)) {
+      add(
+        findings,
+        'error',
+        'deprecated-frontend-action-client',
+        'Frontend code uses pa.actions, but the packaged runtime exposes backend calls through pa.extension.invoke(actionId, input).',
+        path,
+        'Replace pa.actions.call(actionId, input) with pa.extension.invoke(actionId, input).',
+      );
+    }
+  }
+}
+
+function validateBackendWorkerDeclarations(manifest: ExtensionManifest, manifestPath: string, findings: ExtensionDoctorFinding[]) {
+  for (const action of manifest.backend?.actions ?? []) {
+    if (action.worker?.enabled !== true) {
+      add(
+        findings,
+        'error',
+        'missing-worker-enabled',
+        `Backend action "${action.id}" must declare worker.enabled before it can run.`,
+        manifestPath,
+        `Add "worker": { "enabled": true } to backend.actions entry "${action.id}" when the handler only uses worker-safe context capabilities.`,
+      );
+    }
+  }
+  for (const route of manifest.backend?.routes ?? []) {
+    if (route.worker?.enabled !== true) {
+      add(
+        findings,
+        'error',
+        'missing-worker-enabled',
+        `Backend route "${route.method} ${route.path}" must declare worker.enabled before it can run.`,
+        manifestPath,
+        `Add "worker": { "enabled": true } to backend.routes entry "${route.method} ${route.path}" when the route is non-streaming and worker-safe.`,
+      );
+    }
+  }
+  for (const service of manifest.backend?.services ?? []) {
+    if (service.worker?.enabled !== true) {
+      add(
+        findings,
+        'error',
+        'missing-worker-enabled',
+        `Backend service "${service.id}" must declare worker.enabled before it can run.`,
+        manifestPath,
+        `Add "worker": { "enabled": true } to backend.services entry "${service.id}" when the service only uses worker-safe context capabilities.`,
+      );
+    }
+  }
 }
 
 function isSourceBackendEntry(entryPath: string): boolean {

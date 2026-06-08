@@ -11,8 +11,8 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "templateSettingsLoad", "handler": "loadSettings", "title": "Load settings" },
-      { "id": "templateSettingsSave", "handler": "saveSettings", "title": "Save settings" }
+      { "id": "templateSettingsLoad", "handler": "loadSettings", "title": "Load settings", "worker": { "enabled": true } },
+      { "id": "templateSettingsSave", "handler": "saveSettings", "title": "Save settings", "worker": { "enabled": true } }
     ]
   },
   "contributes": {

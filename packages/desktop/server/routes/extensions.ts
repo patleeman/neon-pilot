@@ -795,7 +795,7 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/reload', async (_req, res) => {
     try {
       await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
-      res.json({ ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' });
+      res.json({ ok: true, reloaded: true, message: 'Extension registry caches were invalidated; reopen contributed routes if needed.' });
     } catch (err) {
       sendRouteError(res, 'extension reload error', err);
     }
@@ -862,7 +862,7 @@ export function registerExtensionRoutes(
       }
       const manifest = (summary as { manifest?: unknown } | null)?.manifest as ExtensionManifest | undefined;
       if (!manifest?.backend?.entry) {
-        res.json({ ok: true, id: req.params.id, reloaded: false, message: 'Runtime manifests are read on demand.' });
+        res.json({ ok: true, id: req.params.id, reloaded: true, message: 'Extension registry caches were invalidated.' });
         return;
       }
       const result = await getExtensionHostClient().reloadBackend({ extensionId: req.params.id });
@@ -899,7 +899,9 @@ export function registerExtensionRoutes(
     try {
       const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
       const summaries = installSummaries
-        .filter((extension) => extension.status === 'enabled' && Array.isArray(extension.backendActions) && extension.backendActions.length > 0)
+        .filter(
+          (extension) => extension.status === 'enabled' && Array.isArray(extension.backendActions) && extension.backendActions.length > 0,
+        )
         .map((extension) => ({
           extensionId: typeof extension.id === 'string' ? extension.id : '',
           extensionName: typeof extension.name === 'string' ? extension.name : '',

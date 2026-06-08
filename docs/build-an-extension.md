@@ -173,7 +173,7 @@ Acceptance criteria for agent-built extensions:
 - `extension.json` uses schema v2, stable kebab-case ids, `/ext/{extension-id}` routes for main pages, and matching frontend/backend export names.
 - Runtime code imports only from `@neon-pilot/extensions`, `@neon-pilot/extensions/ui`, and narrow `@neon-pilot/extensions/backend/*` subpaths for host access.
 - Backend actions validate their inputs enough to return useful errors instead of crashing on malformed agent/tool calls.
-- UI calls backend actions through `pa.actions.call(...)` and shows loading, empty, error, and success states.
+- UI calls backend actions through `pa.extension.invoke(...)` and shows loading, empty, error, and success states.
 - Dist files are current, diagnostics are clean, and the extension has been reloaded in the app.
 - The contributed surface or tool was exercised through the app/extension host, not only by unit tests or direct module imports.
 

@@ -54,7 +54,10 @@ describe('backendApi/extensions', () => {
     const api = await import('./extensions.js');
     const backend = { reloadExtensionBackend: vi.fn().mockResolvedValue({ reloaded: true }) };
     const doctor = { validateExtensionPackage: vi.fn().mockResolvedValue({ valid: true }) };
-    const registry = { listExtensionInstallSummaries: vi.fn().mockResolvedValue([{ id: 'ext-1' }]) };
+    const registry = {
+      invalidateExtensionRegistryReadCaches: vi.fn(),
+      listExtensionInstallSummaries: vi.fn().mockResolvedValue([{ id: 'ext-1' }]),
+    };
     resolverMocks.importServerExtensionModule.mockImplementation(async (specifier: string) => {
       if (specifier === '../extensionBackend.js') return backend;
       if (specifier === '../extensionDoctor.js') return doctor;
@@ -63,10 +66,12 @@ describe('backendApi/extensions', () => {
     });
 
     await expect(api.reloadExtensionBackend('ext-1')).resolves.toEqual({ reloaded: true });
+    await expect(api.invalidateExtensionRegistryReadCaches()).resolves.toEqual({ ok: true });
     await expect(api.validateExtensionPackage({ packagePath: '/tmp/ext' } as never)).resolves.toEqual({ valid: true });
     await expect(api.listExtensionInstallSummaries()).resolves.toEqual([{ id: 'ext-1' }]);
 
     expect(backend.reloadExtensionBackend).toHaveBeenCalledWith('ext-1');
+    expect(registry.invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith();
     expect(doctor.validateExtensionPackage).toHaveBeenCalledWith({ packagePath: '/tmp/ext' });
     expect(registry.listExtensionInstallSummaries).toHaveBeenCalledWith();
   });

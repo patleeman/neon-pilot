@@ -32,7 +32,7 @@ After copying a template, replace every template-scoped identifier before the fi
 - `extension.json`: `id`, `name`, `description`, route, nav label, component export names, action ids, handler names, permissions, and settings component ids when present.
 - `package.json`: package name when a package name is present, plus any runtime dependencies the extension imports.
 - `src/backend.ts`: domain types, input validation, persistence, action return shapes, and notification/error text.
-- `src/frontend.tsx`: exported component name, `pa.actions.call(...)` ids, visible labels, empty/error/loading states, and any action source strings passed to `pa.ui.notify`.
+- `src/frontend.tsx`: exported component name, `pa.extension.invoke(...)` ids, visible labels, empty/error/loading states, and any action source strings passed to `pa.ui.notify`.
 - `README.md`: what the extension does, how to build it, how to validate it in the app, and which surface it contributes.
 
 Build and validate the copied extension, not the template directory:
@@ -68,7 +68,7 @@ than a full page; the host handles layout. Good for integration config and toggl
 - `pa.ui.notify` — toast notifications on error
 - `pa.ui.confirm` — confirmation dialogs before destructive actions
 - Backend actions declared in `extension.json` → exported functions in `src/backend.ts`
-- Frontend calls backend via `pa.actions.call('actionId', input)`
+- Frontend calls backend via `pa.extension.invoke('actionId', input)`
 
 ## Template validation expectations
 

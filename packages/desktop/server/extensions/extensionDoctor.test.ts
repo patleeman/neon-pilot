@@ -19,7 +19,7 @@ function createExtensionPackage() {
         name: 'Doctor Test',
         version: '0.1.0',
         frontend: { entry: 'dist/frontend.js' },
-        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping' }] },
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', worker: { enabled: true } }] },
         contributes: {
           views: [{ id: 'page', title: 'Doctor Test', location: 'main', route: '/ext/doctor-test', component: 'DoctorPage' }],
           tools: [
@@ -86,7 +86,7 @@ describe('extension doctor', () => {
           name: 'Doctor Test',
           packageType: 'system',
           frontend: { entry: 'dist/frontend.js' },
-          backend: { entry: 'src/backend.ts', actions: [{ id: 'ping', handler: 'ping', title: 'Ping' }] },
+          backend: { entry: 'src/backend.ts', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', worker: { enabled: true } }] },
           contributes: {
             views: [{ id: 'page', title: 'Doctor Test', location: 'main', route: '/ext/doctor-test', component: 'DoctorPage' }],
           },
@@ -117,7 +117,7 @@ describe('extension doctor', () => {
           name: 'Doctor Test',
           packageType: 'system',
           frontend: { entry: 'dist/frontend.js' },
-          backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping' }] },
+          backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', worker: { enabled: true } }] },
           contributes: {
             views: [{ id: 'page', title: 'Doctor Test', location: 'main', route: '/ext/doctor-test', component: 'DoctorPage' }],
           },
@@ -141,5 +141,69 @@ describe('extension doctor', () => {
     expect(report.ok).toBe(false);
     expect(codes).toContain('stale-frontend-dist');
     expect(codes).toContain('stale-backend-dist');
+  });
+
+  it('reports frontend use of the removed pa.actions client', async () => {
+    const root = createExtensionPackage();
+    writeFileSync(
+      join(root, 'src', 'frontend.tsx'),
+      `export function DoctorPage({ pa }) { void pa.actions.call('ping', {}); return null; }\n`,
+    );
+    writeFileSync(join(root, 'src', 'backend.ts'), `export async function ping() { return { ok: true }; }\n`);
+    writeFileSync(
+      join(root, 'dist', 'frontend.js'),
+      `export function DoctorPage({ pa }) { void pa.actions.call('ping', {}); return null; }\n`,
+    );
+    writeFileSync(join(root, 'dist', 'backend.mjs'), `export async function ping() { return { ok: true }; }\n`);
+    writeFileSync(join(root, 'dist', 'build-manifest.json'), '{}\n');
+
+    const report = await validateExtensionPackage({ packageRoot: root });
+
+    expect(report.ok).toBe(false);
+    expect(report.findings.map((finding) => finding.code)).toContain('deprecated-frontend-action-client');
+  });
+
+  it('reports backend entries that are missing worker enablement', async () => {
+    const root = createExtensionPackage();
+    writeFileSync(
+      join(root, 'extension.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'doctor-test',
+          name: 'Doctor Test',
+          version: '0.1.0',
+          frontend: { entry: 'dist/frontend.js' },
+          backend: {
+            entry: 'dist/backend.mjs',
+            actions: [{ id: 'ping', handler: 'ping', title: 'Ping' }],
+            routes: [{ method: 'GET', path: '/ping', handler: 'pingRoute' }],
+            services: [{ id: 'sync', handler: 'startSync' }],
+          },
+          contributes: {
+            views: [{ id: 'page', title: 'Doctor Test', location: 'main', route: '/ext/doctor-test', component: 'DoctorPage' }],
+          },
+          permissions: [],
+        },
+        null,
+        2,
+      ),
+    );
+    writeFileSync(join(root, 'src', 'frontend.tsx'), `export function DoctorPage() { return null; }\n`);
+    writeFileSync(
+      join(root, 'src', 'backend.ts'),
+      `export async function ping() { return { ok: true }; }\nexport async function pingRoute() { return { ok: true }; }\nexport async function startSync() { return { ok: true }; }\n`,
+    );
+    writeFileSync(join(root, 'dist', 'frontend.js'), `export function DoctorPage() { return null; }\n`);
+    writeFileSync(
+      join(root, 'dist', 'backend.mjs'),
+      `export async function ping() { return { ok: true }; }\nexport async function pingRoute() { return { ok: true }; }\nexport async function startSync() { return { ok: true }; }\n`,
+    );
+    writeFileSync(join(root, 'dist', 'build-manifest.json'), '{}\n');
+
+    const report = await validateExtensionPackage({ packageRoot: root });
+
+    expect(report.ok).toBe(false);
+    expect(report.findings.filter((finding) => finding.code === 'missing-worker-enabled')).toHaveLength(3);
   });
 });

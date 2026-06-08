@@ -77,7 +77,7 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
   // ── data loading ──────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const result = (await pa.actions.call('templateItemsList', {})) as { items: Item[] };
+    const result = (await pa.extension.invoke('templateItemsList', {})) as { items: Item[] };
     setItems(result.items ?? []);
   }, [pa]);
 
@@ -123,7 +123,7 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
       event.preventDefault();
       setBusy('save');
       try {
-        await pa.actions.call('templateItemsSave', {
+        await pa.extension.invoke('templateItemsSave', {
           id: editingId ?? undefined,
           name: form.name.trim(),
           description: form.description.trim(),
@@ -153,7 +153,7 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
 
       setBusy(`delete:${item.id}`);
       try {
-        await pa.actions.call('templateItemsDelete', { id: item.id });
+        await pa.extension.invoke('templateItemsDelete', { id: item.id });
         setNotice('Item deleted.');
         if (editingId === item.id) closeEditor();
         await load();

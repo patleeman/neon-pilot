@@ -149,7 +149,7 @@ Repo-distributed extensions should use `"packageType": "user"` in `extension.jso
   },
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "ping", "handler": "ping", "title": "Ping" }]
+    "actions": [{ "id": "ping", "handler": "ping", "title": "Ping", "worker": { "enabled": true } }]
   },
   "contributes": {
     "views": [{ "id": "page", "title": "My Extension", "location": "main", "route": "/ext/my-extension", "component": "ExtensionPage" }],
@@ -203,7 +203,7 @@ Rules:
 {
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "search", "handler": "search", "title": "Search" }]
+    "actions": [{ "id": "search", "handler": "search", "title": "Search", "worker": { "enabled": true } }]
   },
   "contributes": {
     "tools": [

@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
   createRuntimeExtension,
+  invalidateExtensionRegistryReadCaches,
   installCatalogExtension as installCatalogExtensionFromHost,
   installExtensionBundleFromUrl,
   installMarketplacePackageAsExtension,
@@ -147,7 +148,8 @@ export async function updateExtensionSources(input: unknown, ctx: ExtensionBacke
 }
 
 export async function reloadExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
-  return { ok: true, reloaded: false, message: 'Runtime manifests are read on demand.' };
+  await invalidateExtensionRegistryReadCaches();
+  return { ok: true, reloaded: true, message: 'Extension registry caches were invalidated; reopen contributed routes if needed.' };
 }
 
 export async function manageExtension(input: unknown, ctx: ExtensionBackendContext) {
@@ -185,7 +187,8 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
   const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
   if (command === 'extensions list') return { ...body, action: 'list' };
   if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0] };
-  if (command === 'extensions reload') return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };
+  if (command === 'extensions reload')
+    return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };
   if (command === 'extensions enable') return { ...body, action: 'enable', extensionId: args[0] };
   if (command === 'extensions disable') return { ...body, action: 'disable', extensionId: args[0] };
   if (command === 'extensions paths') return { ...body, action: 'readSearchPaths' };

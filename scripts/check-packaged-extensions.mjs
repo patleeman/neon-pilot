@@ -194,6 +194,35 @@ function collectForbiddenInternalExtensionFrontendFetches(extensionDir) {
   return failures;
 }
 
+function collectDeprecatedFrontendActionClientUses(extensionDir) {
+  const sourceRoot = join(extensionDir, 'src');
+  const failures = [];
+  for (const sourcePath of collectSourceFiles(sourceRoot)) {
+    if (!/\.(?:tsx|jsx)$/.test(sourcePath) || /\.test\.[cm]?[jt]sx?$/.test(sourcePath)) continue;
+    const source = readFileSync(sourcePath, 'utf8');
+    if (/\bpa\.actions\b/.test(source)) {
+      failures.push(
+        `${sourcePath.slice(extensionDir.length + 1)} uses pa.actions; extension UI must call backend actions with pa.extension.invoke(actionId, input)`,
+      );
+    }
+  }
+  return failures;
+}
+
+function collectMissingWorkerDeclarations(manifest) {
+  const missing = [];
+  for (const action of manifest.backend?.actions ?? []) {
+    if (action.worker?.enabled !== true) missing.push(`backend action "${action.id}"`);
+  }
+  for (const route of manifest.backend?.routes ?? []) {
+    if (route.worker?.enabled !== true) missing.push(`backend route "${route.method} ${route.path}"`);
+  }
+  for (const service of manifest.backend?.services ?? []) {
+    if (service.worker?.enabled !== true) missing.push(`backend service "${service.id}"`);
+  }
+  return missing;
+}
+
 function collectForbiddenBundledPaths(filePath) {
   const source = readFileSync(filePath, 'utf8');
   return FORBIDDEN_BUNDLED_PATH_FRAGMENTS.filter((fragment) => source.includes(fragment));
@@ -452,6 +481,14 @@ for (const extensionDir of listPackagedExtensionDirs()) {
   const forbiddenFrontendFetches = collectForbiddenInternalExtensionFrontendFetches(extensionDir);
   if (forbiddenFrontendFetches.length > 0) {
     failures.push(`${id}: frontend uses internal extension HTTP routes: ${forbiddenFrontendFetches.join(', ')}`);
+  }
+  const deprecatedFrontendActionClients = collectDeprecatedFrontendActionClientUses(extensionDir);
+  if (deprecatedFrontendActionClients.length > 0) {
+    failures.push(`${id}: frontend uses deprecated PA action client: ${deprecatedFrontendActionClients.join(', ')}`);
+  }
+  const missingWorkerDeclarations = collectMissingWorkerDeclarations(manifest);
+  if (missingWorkerDeclarations.length > 0) {
+    failures.push(`${id}: manifest entries must declare worker.enabled before they can run: ${missingWorkerDeclarations.join(', ')}`);
   }
 
   if (backendPath) {

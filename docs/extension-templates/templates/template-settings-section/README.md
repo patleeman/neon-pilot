@@ -18,7 +18,7 @@ Derived from: `system-settings` settings contribution pattern, `system-local-mod
 1. Change `"id"` in `extension.json`.
 2. Change `contributes.settingsComponent.id`, `sectionId`, `label`, and `description`.
 3. Change `"component"` to match your exported component name.
-4. Update backend action ids in `extension.json` and the matching `pa.actions.call(...)` ids in `src/frontend.tsx`.
+4. Update backend action ids in `extension.json` and the matching `pa.extension.invoke(...)` ids in `src/frontend.tsx`.
 5. Add/remove form fields in `src/frontend.tsx`.
 6. Replace the in-memory store in `src/backend.ts` with your persistence layer (e.g. `ctx.settings`).
 

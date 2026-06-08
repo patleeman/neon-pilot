@@ -239,7 +239,7 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
     packageType: 'user',
     ...(description ? { description } : {}),
     frontend: { entry: 'dist/frontend.js', styles: [] },
-    backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping' }] },
+    backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', worker: { enabled: true } }] },
     contributes:
       template === 'right-rail'
         ? {
@@ -435,7 +435,8 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   const id = normalizeExtensionId(extensionId);
   const entry = findExtensionEntry(id, stateRoot);
   if (!entry) {
-    const { clearExtensionFailureRecords, readInvalidRuntimeExtensionEntries, removeExtensionFromRegistry } = await import('./extensionRegistry.js');
+    const { clearExtensionFailureRecords, readInvalidRuntimeExtensionEntries, removeExtensionFromRegistry } =
+      await import('./extensionRegistry.js');
     const invalidEntry = readInvalidRuntimeExtensionEntries(stateRoot).find((candidate) => candidate.id === id);
     removeExtensionFromRegistry(id, stateRoot);
     clearExtensionFailureRecords(id, stateRoot);

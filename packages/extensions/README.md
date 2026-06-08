@@ -132,7 +132,7 @@ Minimal example:
   },
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "createTask", "handler": "createTask", "title": "Create task" }]
+    "actions": [{ "id": "createTask", "handler": "createTask", "title": "Create task", "worker": { "enabled": true } }]
   },
   "contributes": {
     "views": [
@@ -475,7 +475,7 @@ Use `contributes.slashCommands` when an extension needs custom code behind a `/c
 {
   "backend": {
     "entry": "dist/backend.mjs",
-    "actions": [{ "id": "createTask", "handler": "createTask" }]
+    "actions": [{ "id": "createTask", "handler": "createTask", "worker": { "enabled": true } }]
   },
   "contributes": {
     "slashCommands": [{ "name": "task", "description": "Create a task", "action": "createTask" }]
@@ -648,7 +648,7 @@ Use extension tools when the agent needs executable runtime behavior backed by e
 
 ```json
 {
-  "backend": { "entry": "dist/backend.mjs", "actions": [{ "id": "createTask", "handler": "createTask" }] },
+  "backend": { "entry": "dist/backend.mjs", "actions": [{ "id": "createTask", "handler": "createTask", "worker": { "enabled": true } }] },
   "contributes": {
     "tools": [
       {
