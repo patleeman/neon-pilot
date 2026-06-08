@@ -11,6 +11,7 @@ export function registerDesktopIpc(options: {
   windowController: DesktopWindowController;
   onHostStateChanged?: () => void;
   onCheckForUpdates?: () => Promise<unknown> | unknown;
+  onInstallReadyUpdate?: () => Promise<unknown> | unknown;
   readDesktopAppPreferences?: () => Promise<unknown> | unknown;
   updateDesktopAppPreferences?: (input: {
     autoInstallUpdates?: boolean;
@@ -117,6 +118,15 @@ export function registerDesktopIpc(options: {
     }
 
     return options.onCheckForUpdates();
+  });
+
+  ipcMain.handle(`${CHANNEL_PREFIX}:install-ready-update`, async () => {
+    if (!options.onInstallReadyUpdate) {
+      throw new Error('Desktop ready-update install is unavailable.');
+    }
+
+    await options.onInstallReadyUpdate();
+    return options.readDesktopAppPreferences?.();
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:pick-folder`, async (event, input?: { cwd?: string | null; prompt?: string | null }) => {

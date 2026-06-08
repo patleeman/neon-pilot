@@ -18,7 +18,7 @@ function createWorkerWorkbenchBrowserToolHost(
 ): WorkbenchBrowserToolHost {
   return {
     isActive: (conversationId: string) => bridge('browser', 'isActive', { conversationId }) as Promise<boolean>,
-    listTabs: () => bridge('browser', 'listTabs') as ReturnType<WorkbenchBrowserToolHost['listTabs']>,
+    listTabs: () => bridge('browser', 'listTabs', {}) as ReturnType<WorkbenchBrowserToolHost['listTabs']>,
     snapshot: (conversationId: string, tabId?: string) =>
       bridge('browser', 'snapshot', { conversationId, ...(tabId ? { tabId } : {}) }) as ReturnType<WorkbenchBrowserToolHost['snapshot']>,
     screenshot: (conversationId: string, tabId?: string) =>

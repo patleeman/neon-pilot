@@ -31,8 +31,17 @@ export function SelectionContextMenu({
   return (
     <MenuShell
       ref={menuRef}
-      className="fixed bottom-auto left-auto right-auto top-auto mb-0 min-w-[224px]"
-      style={{ left: menuState.x, top: menuState.y }}
+      className=""
+      style={{
+        position: 'fixed',
+        left: menuState.x,
+        top: menuState.y,
+        minWidth: 224,
+        right: 'auto',
+        bottom: 'auto',
+        marginBottom: 0,
+        overflow: 'visible',
+      }}
       aria-label="Selected transcript text actions"
       data-selection-context-menu="true"
     >

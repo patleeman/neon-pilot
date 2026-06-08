@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parentPort } from 'node:worker_threads';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getStateRoot } from '@neon-pilot/core';
 
 import { prependNeonPilotCliBin } from '../cliEnvironment.js';
 
@@ -131,10 +131,10 @@ function handleCapabilityEvent(event: ExtensionBackendWorkerCapabilityEvent): vo
 function createWorkerBackendContext(extensionId: string, options: ExtensionBackendWorkerBackendContextOptions = {}): Record<string, unknown> {
   const runtimeScope = options.runtimeScope ?? 'shared';
   const repoRoot = options.repoRoot ?? process.cwd();
-  const runtimeDir = options.runtimeDir ?? process.cwd();
-  const runtimeSettingsFilePath = options.runtimeSettingsFilePath ?? '';
-  const authFile = options.authFile ?? '';
   const stateRoot = options.stateRoot?.trim() || getStateRoot();
+  const runtimeDir = options.runtimeDir?.trim() || getPiAgentRuntimeDir(stateRoot);
+  const runtimeSettingsFilePath = options.runtimeSettingsFilePath?.trim() || path.join(runtimeDir, 'settings.json');
+  const authFile = options.authFile ?? '';
   const modelWriteContext = {
     runtimeScope,
     repoRoot,

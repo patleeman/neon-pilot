@@ -478,12 +478,22 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
     entry.traceRunFirstAssistantAtMs = null;
     entry.traceRunFirstToolAtMs = null;
     callbacks.clearContextUsageTimer(entry);
-    callbacks.broadcastContextUsage(entry, true);
+    try {
+      callbacks.broadcastContextUsage(entry, true);
+    } catch {
+      // Ignore — the terminal SSE event (agent_end) follows immediately below
+      // and must not be skipped due to a non-critical broadcast failure.
+    }
   }
 
   if (event.type === 'turn_end') {
     callbacks.clearContextUsageTimer(entry);
-    callbacks.broadcastContextUsage(entry, true);
+    try {
+      callbacks.broadcastContextUsage(entry, true);
+    } catch {
+      // Ignore — the terminal SSE event (turn_end) follows immediately below
+      // and must not be skipped due to a non-critical broadcast failure.
+    }
   }
 
   if (event.type === 'compaction_start') {
@@ -538,16 +548,27 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
 
         callbacks.broadcastSnapshot(entry);
         callbacks.clearContextUsageTimer(entry);
-        callbacks.broadcastContextUsage(entry, true);
+        try {
+          callbacks.broadcastContextUsage(entry, true);
+        } catch {
+          // Ignore — the compaction_end SSE event follows below.
+        }
         callbacks.publishSessionMetaChanged(entry.sessionId);
         callbacks.notifyLifecycleHandlers(entry, 'auto_compaction_end');
       }
     }
   }
 
-  const sse = toSse(event);
-  if (sse && !suppressLiveEvent) {
-    callbacks.broadcast(entry, sse);
+  try {
+    const sse = toSse(event);
+    if (sse && !suppressLiveEvent) {
+      callbacks.broadcast(entry, sse);
+    }
+  } catch {
+    // Safety net: never skip the terminal SSE event.  Individual listener
+    // send failures are already swallowed by broadcast(), but other
+    // processing steps (persistTraceContext, telemetry, etc.) could still
+    // throw.  If they do we still need agent_end / turn_end to reach clients.
   }
 
   const staleTurnStateCleared = clearStaleTurnStateAfterTerminalEvent(entry, event);

@@ -1249,7 +1249,9 @@ async function dispatchBrowserCapability(request: ExtensionBackendWorkerCapabili
   if (!host) {
     throw new Error('Workbench Browser tools are only available in the desktop app.');
   }
-  const input = normalizeRecordInput(request.input, 'Browser');
+  const input = request.input && typeof request.input === 'object' && !Array.isArray(request.input)
+    ? (request.input as Record<string, unknown>)
+    : {};
   if (request.operation === 'isActive') {
     return host.isActive(requireString(input.conversationId, 'Browser conversationId'));
   }

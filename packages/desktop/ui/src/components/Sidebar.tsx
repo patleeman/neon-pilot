@@ -600,8 +600,8 @@ function getSessionWorkspaceCwd(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd
   return cwd && !isNeutralChatCwdPath(cwd) ? cwd : null;
 }
 
-function getLocalSessionWorkspacePath(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'>): string {
-  return getSessionWorkspaceCwd(session) ?? '';
+function getLocalSessionWorkspacePath(session: Pick<SessionMeta, 'cwd' | 'workspaceCwd'> | null | undefined): string {
+  return session ? (getSessionWorkspaceCwd(session) ?? '') : '';
 }
 
 function matchesLetterHotkey(event: KeyboardEvent, code: string, letter: string): boolean {
@@ -2091,6 +2091,20 @@ export function Sidebar() {
     setSavedWorkspacePaths(normalized);
     return normalized;
   }, []);
+  const rememberWorkspacePath = useCallback(
+    (cwd: string | null | undefined) => {
+      const [normalizedCwd] = normalizeWorkspacePaths([cwd]);
+      if (!normalizedCwd || savedWorkspacePaths.includes(normalizedCwd)) {
+        return;
+      }
+
+      const nextWorkspacePaths = persistSavedWorkspacePathsState([...savedWorkspacePaths, normalizedCwd]);
+      void api.setSavedWorkspacePaths(nextWorkspacePaths).catch(() => {
+        // Ignore best-effort sync failures.
+      });
+    },
+    [persistSavedWorkspacePathsState, savedWorkspacePaths],
+  );
   const persistManualConversationGroupOrder = useCallback((groupKeys: string[]) => {
     const normalized = normalizeStoredStringList(groupKeys);
     writeManualConversationGroupOrder(normalized);
@@ -3534,6 +3548,8 @@ export function Sidebar() {
 
   function handleArchiveConversation(sessionId: string) {
     const archivingActiveConversation = activeConversationId === sessionId;
+    const session = workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ?? sessions?.find((candidate) => candidate.id === sessionId);
+    rememberWorkspacePath(getLocalSessionWorkspacePath(session));
 
     if (draggingSessionId === sessionId) {
       clearDragState();
@@ -3552,6 +3568,8 @@ export function Sidebar() {
   function handleCloseConversation(sessionId: string) {
     const closingActiveConversation = activeConversationId === sessionId;
     const conversationIsOpen = tabs.some((session) => session.id === sessionId);
+    const session = workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ?? sessions?.find((candidate) => candidate.id === sessionId);
+    rememberWorkspacePath(getLocalSessionWorkspacePath(session));
 
     if (draggingSessionId === sessionId) {
       clearDragState();
@@ -3577,6 +3595,8 @@ export function Sidebar() {
 
   function handleClosePinnedConversation(sessionId: string) {
     const closingActiveConversation = activeConversationId === sessionId;
+    const session = workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ?? sessions?.find((candidate) => candidate.id === sessionId);
+    rememberWorkspacePath(getLocalSessionWorkspacePath(session));
 
     if (draggingSessionId === sessionId) {
       clearDragState();

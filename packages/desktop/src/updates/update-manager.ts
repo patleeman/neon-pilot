@@ -138,6 +138,19 @@ export class DesktopUpdateManager {
     void this.maybeAutoInstallDownloadedUpdate();
   }
 
+  /**
+   * Install the already-downloaded update immediately without showing a dialog.
+   * This is used when the user clicks the update-ready button in the top bar.
+   */
+  async installReadyUpdate(): Promise<void> {
+    if (!this.downloadedUpdate) {
+      logUpdateMessage('installReadyUpdate called but no downloaded update is available');
+      return;
+    }
+
+    await this.installDownloadedUpdate(this.downloadedUpdate);
+  }
+
   async checkForUpdates(options: { userInitiated?: boolean } = {}): Promise<void> {
     if (!areDesktopUpdatesSupported() || !this.updater) {
       if (options.userInitiated) {

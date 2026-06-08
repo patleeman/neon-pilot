@@ -3,6 +3,7 @@ import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 import {
   getImageProbeAttachments,
   getImageProbeAttachmentsById,
+  getImageProbeAttachmentsByIdFromAnySession,
   type StoredImageProbeAttachment,
 } from '@neon-pilot/extensions/backend/images';
 
@@ -103,10 +104,20 @@ export async function probeImage(input: ProbeImageInput, ctx: ExtensionBackendCo
 
   const imageIds = readImageIds(input.imageIds);
   const question = readQuestion(input.question);
-  const [availableAttachments, attachments] = await Promise.all([
+  const [availableAttachments, sessionAttachments] = await Promise.all([
     getImageProbeAttachments(sessionId) as Promise<StoredImageProbeAttachment[]>,
     getImageProbeAttachmentsById(sessionId, imageIds) as Promise<StoredImageProbeAttachment[]>,
   ]);
+  let attachments = sessionAttachments;
+  // If the session ID changed (e.g. after archive/re-live), fall back to scanning
+  // all sessions for matching image IDs.
+  if (attachments.length !== imageIds.length) {
+    const allSessionAttachments =
+      (await getImageProbeAttachmentsByIdFromAnySession(imageIds)) as StoredImageProbeAttachment[];
+    if (allSessionAttachments.length > 0) {
+      attachments = allSessionAttachments;
+    }
+  }
   if (attachments.length === 0) throw new Error('None of the requested image IDs are available to probe for this conversation.');
   if (attachments.length !== imageIds.length) {
     const foundIds = new Set(attachments.map((attachment) => attachment.id));

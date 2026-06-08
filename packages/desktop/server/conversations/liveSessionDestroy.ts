@@ -34,7 +34,11 @@ export function destroyLiveSession<TEntry extends LiveSessionDestroyHost>(
     // don't get stuck with isStreaming = true on the client.
     const terminalEvent: SseEvent = { type: 'agent_end' };
     for (const listener of entry.listeners) {
-      listener.send(terminalEvent);
+      try {
+        listener.send(terminalEvent);
+      } catch {
+        // Silently drop — the listener's SSE connection may have closed.
+      }
     }
   }
 

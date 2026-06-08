@@ -7,66 +7,14 @@
   "themeLight": "cobalt2-light",
   "themeMode": "system",
   "ui": {
-    "workspacePaths": [
-      "/Users/patrick/workingdir/neon-pilot/packages/desktop"
-    ],
     "openConversationIds": [
-      "019ea34a-1b01-7e61-b442-69f4f1a764c1",
-      "019ea34b-0dc2-700e-89e1-915fea15cf36"
+      "019ea4e9-a534-75da-b5a0-aaeedd2dff64",
+      "019ea523-4ad9-7ad8-a8e5-431e0dba670a",
+      "019ea52c-91a4-7a3c-a1c1-bf801b86d501"
     ],
-    "archivedConversationIds": [
-      "019ea26a-efd3-7131-9107-36ef063a021b",
-      "019ea266-f7a1-7343-911c-6e291cab52ec",
-      "2f8eb1c3-caf2-413f-873b-32222a133a23",
-      "019ea25b-bf9e-7bcf-9892-393ffa8ccb0c",
-      "019ea257-1381-7dea-bd1d-465812c27bdb",
-      "019ea21e-c53f-76c0-a7f8-136af24dc87c",
-      "019e9fa1-87ec-7e26-a679-91d1f467c065",
-      "019e9f8b-c7a6-7f84-828c-94f3f8fb94fd",
-      "019e9f72-d1de-7575-a73c-807f6c5cc92f",
-      "019e9f71-9d43-7b8b-8b6f-81d698a3b38d",
-      "019e9f6b-b4d1-704b-a2ff-4c0237793588",
-      "019e9f27-293c-7e58-aef2-f37cf6b139ee",
-      "019e9f25-1319-7aaf-a797-a5b694753e7a",
-      "019e9e28-6fe1-7e91-a270-7ecd55b0803a",
-      "019e9e00-0a5c-7f26-a24d-c738c168638d",
-      "019e9db4-52ea-76da-aac2-3af4a6923957",
-      "019e9db2-64ab-7cfe-bdda-31e4da840d35",
-      "019e9db1-c1e0-7a84-b922-41f0f81c8693",
-      "019e9da5-f779-7f11-8bd1-1111a3fbb146",
-      "019e9d3a-c666-7fe2-84ad-56dffc0ba440",
-      "019e9d1c-cc9c-73dd-9417-fd0635f46f45",
-      "019e9cde-9940-7d62-a37d-6dd9feecf538",
-      "019e9ccd-481c-738e-be7d-c052655886a2",
-      "019e9cc9-dc76-77ec-b1d8-1fbfc7896099",
-      "019e9cc8-33d1-7dc4-943c-0bf2d094795e",
-      "019e9cc7-a64a-7da8-8047-56af03a6b8bd",
-      "019e9cb8-640a-7a2b-9e70-79e169ac9b5b",
-      "019e9b23-3b55-7cca-8ce1-e347ca0ef5fb",
-      "019e99fd-3bb6-708c-bd5a-b79fa504380e",
-      "019e99bd-ac74-7e94-b241-b389ac48713b",
-      "019e99bd-a974-7831-9c3d-ec2d2d76d1f8",
-      "019e99bd-5409-7e78-9f06-30aab91d0fae",
-      "019e99bb-c2bf-7d74-a1b2-db7258c2d648",
-      "019e99bb-5295-7559-955a-7ea650fa0c67",
-      "019e9984-7e14-71bd-803d-3a16ca694df3",
-      "019e9975-d8e5-7dc2-bf23-7a564a445260",
-      "019e992b-0b80-7a45-acef-b0fa74989019",
-      "019e992a-69fe-79f4-959f-fc6a2379d3e7",
-      "019e9928-99f1-70db-90db-3662e4ee6f55",
-      "019e9916-8836-7e71-908d-c22c48c63a65",
-      "019e9851-0607-72af-8b6d-8ade314366e6",
-      "019e9850-b9d2-7bcd-bf84-26c3c2acf2b2",
-      "019e9848-dc1f-7c0b-9b23-d7e7a6b3dcea",
-      "019e9598-bc05-7960-898e-0b20e5704449",
-      "019e9565-ff54-730a-b1a1-05ab9e7983e2",
-      "019e9561-33a9-7906-b188-e7422a3ae1bf",
-      "019e952d-e1e4-7db7-aa83-b342d633a58c",
-      "019e9459-fa77-78b6-ae1b-2ba884caa9ac",
-      "019ea336-7795-73aa-a65e-518cc02ae864",
-      "019e9f51-2925-7c17-b690-e4dbedf05366"
-    ],
-    "activeConversationId": "019ea34a-1b01-7e61-b442-69f4f1a764c1"
+    "workspacePaths": [
+      "/Users/patrick/workingdir/neon-pilot"
+    ]
   },
   "dictation": {
     "enabled": false,

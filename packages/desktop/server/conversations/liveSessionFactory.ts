@@ -240,8 +240,37 @@ export async function createPreparedLiveAgentSession(input: {
   const settingsAtMs = performance.now();
   const availableModels = modelRegistry.getAvailable();
   const savedModelRef = readSavedModelRef(input.settingsFile, availableModels);
-  const effectiveModelRef = options.initialModel ?? savedModelRef;
-  const initialModel = resolveInitialModel(effectiveModelRef, availableModels);
+
+  // When resuming an existing session, prefer the model from the transcript
+  // over the settings default. This ensures the model (and its capabilities,
+  // like vision support) persist across app restarts.
+  let effectiveInitialModel = resolveInitialModel(savedModelRef, availableModels);
+  let effectiveModelRef = savedModelRef;
+  try {
+    const existingContext =
+      typeof (input.sessionManager as { buildSessionContext?: () => unknown })?.buildSessionContext === 'function'
+        ? (input.sessionManager as { buildSessionContext: () => { messages: unknown[]; model?: { provider: string; modelId: string } | null } }).buildSessionContext()
+        : null;
+    const hasExistingMessages = existingContext ? existingContext.messages.length > 0 : false;
+    const transcriptModel =
+      hasExistingMessages && existingContext?.model
+        ? resolveInitialModel(
+            `${existingContext.model.provider}/${existingContext.model.modelId}`,
+            modelRegistry.getAll(),
+          )
+        : null;
+    if (transcriptModel) {
+      effectiveInitialModel = transcriptModel;
+      effectiveModelRef = `${transcriptModel.provider}/${transcriptModel.id}`;
+    }
+  } catch {
+    // Guards against test environments without a real session manager.
+  }
+
+  if (options.initialModel) {
+    effectiveModelRef = options.initialModel;
+    effectiveInitialModel = resolveInitialModel(effectiveModelRef, availableModels) ?? effectiveInitialModel;
+  }
   const modelProfilePolicy = await resolveModelProfileSessionPolicy(effectiveModelRef);
   const ds4CliBinDir = modelProfilePolicy.ds4Profile ? resolveDs4CliBinDir(options) : null;
   publishDs4CliToHostPath(ds4CliBinDir);
@@ -268,7 +297,7 @@ export async function createPreparedLiveAgentSession(input: {
     resourceLoader,
     sessionManager: input.sessionManager,
     settingsManager,
-    ...(initialModel ? { model: initialModel } : {}),
+    ...(effectiveInitialModel ? { model: effectiveInitialModel } : {}),
     ...(initialToolNames ? { tools: initialToolNames } : {}),
   });
   const agentSessionAtMs = performance.now();
@@ -280,7 +309,7 @@ export async function createPreparedLiveAgentSession(input: {
   }
   const persistenceAtMs = performance.now();
 
-  await repairSessionModelProvider(session, availableModels);
+  await repairSessionModelProvider(session, availableModels, modelRegistry);
   const modelRepairAtMs = performance.now();
 
   if (

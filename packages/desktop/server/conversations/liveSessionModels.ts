@@ -135,6 +135,7 @@ export function applyLiveSessionServiceTier(session: AgentSession, serviceTier: 
 export async function repairSessionModelProvider(
   session: Pick<AgentSession, 'setModel' | 'sessionManager' | 'model'>,
   models: ReturnType<ModelRegistry['getAvailable']>,
+  modelRegistry?: ModelRegistry,
 ): Promise<void> {
   const currentId = session.model?.id ?? '';
   const currentProvider = (session.model as { provider?: string } | undefined)?.provider ?? '';
@@ -149,6 +150,25 @@ export async function repairSessionModelProvider(
 
   const idMatches = models.filter((candidate) => candidate.id === currentId);
   if (idMatches.length !== 1) {
+    // Model isn't available (auth may not be ready yet, e.g. OAuth needs refresh).
+    // Try to restore the full model capabilities (input, reasoning, etc.) from
+    // the full registry so the session doesn't lose vision support on restart.
+    if (modelRegistry) {
+      const fullModel = modelRegistry.find(currentProvider, currentId);
+      if (fullModel && !('input' in (session.model ?? {}))) {
+        // The current model is a partial {provider, modelId} restored from
+        // transcript. Replace it with the full registry model to restore
+        // capabilities without triggering auth checks.
+        try {
+          await session.setModel(fullModel);
+          session.sessionManager.appendModelChange(fullModel.provider, fullModel.id);
+          return;
+        } catch {
+          // Auth isn't ready yet — setModel would fail. Fall through to leave
+          // the partial model in place; the first API call will re-auth.
+        }
+      }
+    }
     return;
   }
 

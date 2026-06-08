@@ -691,6 +691,15 @@ export class LocalBackendProcesses {
       process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = this.extensionHostToken;
       this.writeCliControlPlaneRecord();
     }
+
+    // Install a permanent message handler for the extension host child,
+    // supporting native-workbench-browser-request IPC messages (e.g. from the
+    // native process bridge in the extension host main thread).
+    child.on('message', (message) => {
+      if (this.isNativeWorkbenchBrowserRequest(message)) {
+        void this.handleNativeWorkbenchBrowserRequest(child, message);
+      }
+    });
     child.once('exit', () => {
       if (this.extensionHostChild === child) {
         this.extensionHostChild = undefined;

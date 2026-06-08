@@ -142,6 +142,52 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('falls back to state-rooted runtime paths when worker context omits settings paths', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    const stateRoot = join(root, 'state');
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  return {
+    runtimeDir: ctx.runtimeDir,
+    runtimeSettingsFilePath: ctx.runtimeSettingsFilePath,
+    profileSettingsFilePath: ctx.profileSettingsFilePath,
+  };
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 121,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-runtime-fallback' },
+      exportName: 'doThing',
+      args: [{}],
+      context: {
+        type: 'backend',
+        stateRoot,
+        runtimeDir: '   ',
+        runtimeSettingsFilePath: '   ',
+      },
+    });
+
+    const runtimeDir = join(stateRoot, 'neon-pilot-runtime');
+    await waitForPostMessage({
+      id: 121,
+      ok: true,
+      result: {
+        runtimeDir,
+        runtimeSettingsFilePath: join(runtimeDir, 'settings.json'),
+        profileSettingsFilePath: join(runtimeDir, 'settings.json'),
+      },
+    });
+  });
+
   it('runs backend exports with host-mediated runtime refresh capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });
@@ -500,7 +546,7 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'getWorkspace',
-      input: { runtimeScope: 'shared', runtimeSettingsFilePath: '' },
+      input: { runtimeScope: 'shared', runtimeSettingsFilePath: expect.stringMatching(/neon-pilot-runtime\/settings\.json$/) },
     });
     workerThreads.messageHandler?.({
       id: 7,
@@ -515,7 +561,11 @@ export async function doThing(_input, ctx) {
       extensionId: 'worker-ext',
       capability: 'conversations',
       operation: 'updateWorkspace',
-      input: { openConversationIds: ['conv-1', 'conv-2'], runtimeScope: 'shared', runtimeSettingsFilePath: '' },
+      input: {
+        openConversationIds: ['conv-1', 'conv-2'],
+        runtimeScope: 'shared',
+        runtimeSettingsFilePath: expect.stringMatching(/neon-pilot-runtime\/settings\.json$/),
+      },
     });
     workerThreads.messageHandler?.({
       id: 8,

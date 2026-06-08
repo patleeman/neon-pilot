@@ -401,7 +401,7 @@ export class WorkbenchBrowserViewController {
   }
 
   async snapshot(owner: WebContents, sessionKey?: string | null): Promise<WorkbenchBrowserSnapshot> {
-    const view = this.requireView(owner, sessionKey);
+    const view = await this.requireReadyView(owner, sessionKey);
     let raw: unknown;
     try {
       raw = await cdpEvaluate(
@@ -487,16 +487,29 @@ export class WorkbenchBrowserViewController {
   }
 
   async screenshot(owner: WebContents, sessionKey?: string | null): Promise<WorkbenchBrowserScreenshot> {
-    const view = this.requireView(owner, sessionKey);
+    const view = await this.requireReadyView(owner, sessionKey);
     assertBrowserCommandTargetReady(view.webContents);
-    const image = await withTimeout('Electron capturePage', view.webContents.capturePage(), 8000);
+
+    // Temporarily size the view to a reasonable viewport for the capture.
+    // Hidden/agent views start as 1x1 offscreen, which produces an empty image.
+    const previousBounds = view.getBounds();
+    const captureWidth = 1280;
+    const captureHeight = 720;
+    view.setBounds({ x: previousBounds.x, y: previousBounds.y, width: captureWidth, height: captureHeight });
+
+    let image: Electron.NativeImage;
+    try {
+      image = await withTimeout('Electron capturePage', view.webContents.capturePage(), 8000);
+    } finally {
+      view.setBounds(previousBounds);
+    }
+
     const capture = { data: image.toPNG().toString('base64') };
-    const bounds = view.getBounds();
     return {
       ...getState(view.webContents, this.views.get(this.viewKey(owner.id, sessionKey))),
       mimeType: 'image/png',
       dataBase64: capture.data ?? '',
-      viewport: { width: bounds.width, height: bounds.height },
+      viewport: { width: captureWidth, height: captureHeight },
       capturedAt: new Date().toISOString(),
     };
   }
@@ -505,7 +518,7 @@ export class WorkbenchBrowserViewController {
     owner: WebContents,
     input: { command?: unknown; continueOnError?: unknown; sessionKey?: string | null },
   ): Promise<WorkbenchBrowserCdpResult> {
-    const view = this.requireView(owner, input.sessionKey);
+    const view = await this.requireReadyView(owner, input.sessionKey);
     const commands = normalizeWorkbenchBrowserCdpCommands(input.command);
     const continueOnError = input.continueOnError === true;
     const results: unknown[] = [];
@@ -585,6 +598,43 @@ export class WorkbenchBrowserViewController {
       throw new Error('Workbench browser owner window is unavailable.');
     }
     return ownerWindow;
+  }
+
+  private async requireReadyView(owner: WebContents, sessionKey?: string | null): Promise<WebContentsView> {
+    const ownerWindow = this.requireOwnerWindow(owner);
+    const view = this.ensureView(ownerWindow, owner.id, sessionKey);
+
+    // Yield once to let any pending async navigation (set up by ensureView's
+    // fire-and-forget loadURL) settle into the loading state before checking.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    // If the webview is at about:blank, navigate explicitly and wait.
+    // This handles the lazy-view case where the hidden webview was just created.
+    if (!view.webContents.isDestroyed() && view.webContents.getURL() === 'about:blank') {
+      // If currently loading, wait for it to finish before re-checking.
+      if (view.webContents.isLoadingMainFrame()) {
+        await new Promise<void>((resolve) => {
+          const onFinish = () => {
+            view.webContents.removeListener('did-finish-load', onFinish);
+            view.webContents.removeListener('did-fail-load', onFail);
+            resolve();
+          };
+          const onFail = () => {
+            view.webContents.removeListener('did-finish-load', onFinish);
+            view.webContents.removeListener('did-fail-load', onFail);
+            resolve();
+          };
+          view.webContents.on('did-finish-load', onFinish);
+          view.webContents.on('did-fail-load', onFail);
+        });
+      }
+      // If still at about:blank after waiting, navigate explicitly and await.
+      if (view.webContents.getURL() === 'about:blank') {
+        const targetUrl = readStoredWorkbenchBrowserUrl(sessionKey) ?? DEFAULT_BROWSER_URL;
+        await view.webContents.loadURL(targetUrl);
+      }
+    }
+    return view;
   }
 
   private requireView(owner: WebContents, sessionKey?: string | null): WebContentsView {

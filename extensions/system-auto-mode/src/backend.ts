@@ -307,78 +307,6 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
       },
     });
 
-    // ── Register /goal slash command ────────────────────────────────────
-    pi.registerCommand('goal', {
-      description:
-        'Set, view, pause, resume, or clear the current goal. Usage: /goal <objective>, /goal, /goal pause, /goal resume, or /goal clear',
-      async handler(args, ctx) {
-        const trimmed = args.trim();
-
-        if (trimmed.toLowerCase() === 'clear' || trimmed.toLowerCase() === 'c') {
-          const state = readGoalState(ctx.sessionManager);
-          if (!state.objective) {
-            pi.sendUserMessage('No goal to clear.');
-            return;
-          }
-          const cleared = createCompleteGoalState('cleared');
-          writeGoalState(pi, cleared);
-          clearPendingContinuation();
-          pi.sendUserMessage(`Goal cleared. Previous objective: ${state.objective}`);
-          return;
-        }
-
-        if (trimmed.toLowerCase() === 'pause' || trimmed.toLowerCase() === 'p') {
-          const state = readGoalState(ctx.sessionManager);
-          if (state.status === 'complete' || !state.objective) {
-            pi.sendUserMessage('No active goal to pause.');
-            return;
-          }
-          if (state.status === 'paused') {
-            pi.sendUserMessage('Goal already paused.');
-            return;
-          }
-          const paused = createPausedGoalState(state);
-          writeGoalState(pi, paused);
-          clearPendingContinuation();
-          pi.sendUserMessage(`Goal paused: ${paused.objective}`);
-          return;
-        }
-
-        if (trimmed.toLowerCase() === 'resume' || trimmed.toLowerCase() === 'r') {
-          const state = readGoalState(ctx.sessionManager);
-          if (state.status === 'complete' || !state.objective) {
-            pi.sendUserMessage('No paused goal to resume.');
-            return;
-          }
-          if (state.status === 'active') {
-            pi.sendUserMessage(`Goal already active: ${state.objective}`);
-            return;
-          }
-          const resumed = createResumedGoalState(state);
-          writeGoalState(pi, resumed);
-          clearPendingContinuation();
-          pi.sendUserMessage(`Goal resumed: ${resumed.objective}`);
-          return;
-        }
-
-        if (!trimmed) {
-          const state = readGoalState(ctx.sessionManager);
-          if (!state.objective) {
-            pi.sendUserMessage('No goal is set. Use /goal <objective> to set one.');
-            return;
-          }
-          pi.sendUserMessage(`Current goal: ${state.objective} (${state.status})`);
-          return;
-        }
-
-        // Set a new goal
-        const newState = createActiveGoalState(trimmed);
-        writeGoalState(pi, newState);
-        clearPendingContinuation();
-        pi.sendUserMessage(`Goal set: ${trimmed}`);
-      },
-    });
-
     // ── Turn end: update progress state only ──────────────────────────
     pi.on('turn_end', async (event, ctx) => {
       const state = readGoalState(ctx.sessionManager);
@@ -460,4 +388,47 @@ export function createConversationAutoModeAgentExtension(): (pi: ExtensionAPI) =
       scheduleContinuationIfActive(ctx);
     });
   };
+}
+
+// ── Desktop slash command handler ───────────────────────────────────────────
+
+interface SlashGoalInput {
+  commandName: string;
+  argument: string;
+  text: string;
+  conversationId: string | null;
+  cwd: string | null;
+  draft: boolean;
+}
+
+interface SlashGoalResult {
+  text?: string;
+  prompt?: string;
+  replaceComposerText?: string;
+  appendComposerText?: string;
+  notice?: { tone: 'accent' | 'danger'; text: string };
+}
+
+export async function handleSlashGoal(input: SlashGoalInput): Promise<SlashGoalResult> {
+  const arg = input.argument.trim();
+
+  if (!arg) {
+    return {
+      text: 'Set a goal with /goal <objective>.\nPause with /goal pause, resume with /goal resume, clear with /goal clear.',
+    };
+  }
+
+  const lower = arg.toLowerCase();
+  if (lower === 'pause' || lower === 'p') {
+    return { prompt: 'Pause the current goal.' };
+  }
+  if (lower === 'resume' || lower === 'r') {
+    return { prompt: 'Resume the current goal.' };
+  }
+  if (lower === 'clear' || lower === 'c') {
+    return { prompt: 'Clear the current goal.' };
+  }
+
+  // Set a new goal
+  return { prompt: `Set a goal: ${arg}` };
 }

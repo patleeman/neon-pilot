@@ -39,6 +39,7 @@ const desktopBridge = {
     keyboardShortcuts?: Record<string, string>;
   }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:update-desktop-app-preferences`, input),
   checkForUpdates: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:check-for-updates`),
+  installReadyUpdate: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:install-ready-update`),
   pickFolder: (input?: { cwd?: string | null; prompt?: string | null }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:pick-folder`, input),
   captureScreenshot: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:capture-screenshot`),
   goBack: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-back`),

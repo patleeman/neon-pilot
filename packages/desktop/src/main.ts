@@ -381,6 +381,14 @@ async function checkForDesktopUpdates() {
   }
 }
 
+async function handleInstallReadyUpdate() {
+  try {
+    await updateManager?.installReadyUpdate();
+  } catch (error) {
+    reportDesktopError(error);
+  }
+}
+
 function installWorkbenchBrowserToolHost(): void {
   if (!hostManager || !windowController) {
     return;
@@ -554,6 +562,7 @@ async function bootstrapDesktopApp(): Promise<void> {
       trayController?.refresh();
     },
     onCheckForUpdates: () => checkForDesktopUpdates(),
+    onInstallReadyUpdate: () => handleInstallReadyUpdate(),
     readDesktopAppPreferences: () => buildDesktopAppPreferencesState(),
     updateDesktopAppPreferences: async (input) => {
       const state = await updateDesktopAppPreferencesState(input ?? {});

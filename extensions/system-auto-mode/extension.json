@@ -7,10 +7,25 @@
   "version": "0.2.0",
   "backend": {
     "entry": "src/backend.ts",
-    "agentExtension": "createConversationAutoModeAgentExtension"
+    "agentExtension": "createConversationAutoModeAgentExtension",
+    "actions": [
+      {
+        "id": "handleSlashGoal",
+        "handler": "handleSlashGoal",
+        "title": "Handle /goal slash command",
+        "worker": { "enabled": true }
+      }
+    ]
   },
   "permissions": ["conversations:readwrite"],
   "contributes": {
+    "slashCommands": [
+      {
+        "name": "goal",
+        "description": "Set, view, pause, resume, or clear the current goal. Usage: /goal <objective>, /goal, /goal pause, /goal resume, or /goal clear",
+        "action": "handleSlashGoal"
+      }
+    ],
     "tools": [
       {
         "id": "goal",

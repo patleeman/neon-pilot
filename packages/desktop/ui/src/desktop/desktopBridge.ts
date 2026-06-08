@@ -70,6 +70,7 @@ export interface NeonPilotDesktopBridge {
     keyboardShortcuts?: Record<string, string>;
   }): Promise<DesktopAppPreferencesState>;
   checkForUpdates(): Promise<DesktopAppPreferencesState>;
+  installReadyUpdate(): Promise<DesktopAppPreferencesState>;
   pickFolder(input?: { cwd?: string | null; prompt?: string | null }): Promise<FolderPickerResult>;
   // Native OS screenshot picker. Kept on IPC because Electron owns the UI;
   // main process rejects oversized image payloads before base64 transfer.

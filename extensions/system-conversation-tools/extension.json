@@ -59,6 +59,88 @@
               "enum": ["list", "search", "query", "diff", "outline", "read_window"],
               "description": "Inspect operation when action is inspect."
             },
+            "scope": {
+              "type": "string",
+              "description": "List scope. Valid values: all, live, running, archived."
+            },
+            "query": {
+              "type": "string",
+              "description": "Query string for list/search actions. List matches metadata; search matches visible transcript text."
+            },
+            "includeCurrent": {
+              "type": "boolean",
+              "description": "Whether list should include the current conversation. Defaults to false."
+            },
+            "types": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "description": "Optional structural transcript block types to include. Valid values: user, text, context, summary, tool_use, image, error."
+            },
+            "roles": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "description": "Optional conversational roles to include. Valid values: user, assistant, tool, context, summary, image, error."
+            },
+            "tools": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "description": "Optional tool names to match for tool_use/error blocks."
+            },
+            "searchMode": {
+              "type": "string",
+              "description": "How query/text matching works. Valid values: phrase, allTerms, anyTerm. Default phrase."
+            },
+            "afterBlockId": {
+              "type": "string",
+              "description": "Only include transcript blocks after this block id."
+            },
+            "beforeBlockId": {
+              "type": "string",
+              "description": "Only include transcript blocks before this block id."
+            },
+            "aroundBlockId": {
+              "type": "string",
+              "description": "Restrict query results to a context window around this block id."
+            },
+            "knownSignature": {
+              "type": "string",
+              "description": "Last seen conversation signature for diff checks."
+            },
+            "order": {
+              "type": "string",
+              "description": "Block order for query results. Valid values: asc, desc."
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Maximum items to return."
+            },
+            "window": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Context window size for aroundBlockId queries."
+            },
+            "includeAroundMatches": {
+              "type": "boolean",
+              "description": "Include surrounding context blocks around each match using window."
+            },
+            "maxCharactersPerBlock": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 20000,
+              "description": "Character cap per returned block."
+            },
+            "maxSnippetCharacters": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 2000,
+              "description": "Character cap per returned search snippet."
+            },
             "question": {
               "type": "string"
             },

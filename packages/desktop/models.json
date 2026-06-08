@@ -247,7 +247,8 @@
             "cacheWrite": 3.125
           }
         }
-      ]
+      ],
+      "apiKey": "!security find-generic-password -a 'provider:opencode-go:apiKey' -w"
     }
   }
 }

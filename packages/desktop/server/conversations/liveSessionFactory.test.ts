@@ -153,7 +153,11 @@ describe('live session factory', () => {
     expect(s._refreshToolRegistry).toHaveBeenCalledWith({ activeToolNames: ['bash'], includeAllExtensionTools: true });
     expect(persistence.patchSessionManagerPersistence).toHaveBeenCalledWith(s.sessionManager);
     expect(persistence.ensureSessionFileExists).toHaveBeenCalledWith(s.sessionManager);
-    expect(liveModels.repairSessionModelProvider).toHaveBeenCalledWith(s, [{ id: 'model-1', provider: 'provider' }]);
+    expect(liveModels.repairSessionModelProvider).toHaveBeenCalledWith(
+      s,
+      [{ id: 'model-1', provider: 'provider' }],
+      expect.any(Object),
+    );
     expect(prefs.applyConversationModelPreferencesToLiveSession).toHaveBeenCalledWith(
       s,
       { model: 'model-2', thinkingLevel: 'high', serviceTier: 'auto' },
@@ -185,7 +189,11 @@ describe('live session factory', () => {
 
     expect(extensionRegistry.resolveModelProfile).toHaveBeenCalledWith({ provider: 'opencode-go', model: 'deepseek-v4-flash' });
     expect(agent.createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ model: opencodeModel }));
-    expect(liveModels.repairSessionModelProvider).toHaveBeenCalledWith(s, [ds4Model, opencodeModel]);
+    expect(liveModels.repairSessionModelProvider).toHaveBeenCalledWith(
+      s,
+      [ds4Model, opencodeModel],
+      expect.any(Object),
+    );
     expect(prefs.applyConversationModelPreferencesToLiveSession).toHaveBeenCalledWith(
       s,
       { model: 'opencode-go/deepseek-v4-flash' },

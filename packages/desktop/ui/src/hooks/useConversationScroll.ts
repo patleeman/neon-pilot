@@ -6,6 +6,7 @@ import {
   getConversationPrependRestoreScrollTop,
   isConversationScrolledToBottom,
   isConversationScrollOverflowing,
+  isConversationTailVisibleAtBottom,
 } from '../conversation/conversationScroll';
 import type { MessageBlock } from '../shared/types';
 
@@ -31,6 +32,15 @@ interface UseConversationScrollResult {
 
 function readAtBottom(el: HTMLDivElement): boolean {
   if (!isConversationScrollOverflowing({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight })) {
+    return true;
+  }
+
+  // When the last message element is visible at the container bottom, treat
+  // the view as pinned even if CSS padding-bottom extends the scroll area.
+  // This prevents a false "not at bottom" when bottom padding (e.g. 96px
+  // padding to keep messages above the input area) creates extra scroll space
+  // that has no actual content.
+  if (isConversationTailVisibleAtBottom(el)) {
     return true;
   }
 

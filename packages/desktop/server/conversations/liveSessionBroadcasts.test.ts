@@ -67,6 +67,18 @@ describe('live session broadcasts', () => {
     expect(e.listeners[1].send).not.toHaveBeenCalled();
   });
 
+  it('delivers events to remaining listeners when one listener.send throws', () => {
+    const e = entry() as { listeners: Array<{ send: ReturnType<typeof vi.fn> }> };
+    e.listeners[0].send = vi.fn(() => { throw new Error('SSE connection closed'); });
+
+    broadcast(e as never, { type: 'agent_end' } as never);
+
+    // The throwing listener's error was silently caught.
+    expect(e.listeners[0].send).toHaveBeenCalledWith({ type: 'agent_end' });
+    // The second listener still received the event.
+    expect(e.listeners[1].send).toHaveBeenCalledWith({ type: 'agent_end' });
+  });
+
   it('broadcasts snapshots with stale state ensured, per-listener tail blocks, and goal state', () => {
     const e = entry() as { listeners: Array<{ send: ReturnType<typeof vi.fn>; tailBlocks: number }> };
     const callbacks = { ensureStaleTurnState: vi.fn(), buildLiveSessionSnapshot: vi.fn((_entry, tailBlocks) => ({ tailBlocks })) };

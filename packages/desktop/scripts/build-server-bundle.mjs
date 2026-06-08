@@ -88,6 +88,7 @@ const backendApiLazyModuleEntries = [
   ['extensions/extensionCatalog.js', 'server/extensions/extensionCatalog.ts'],
   ['extensions/extensionConversationMetadata.js', 'server/extensions/extensionConversationMetadata.ts'],
   ['extensions/extensionDoctor.js', 'server/extensions/extensionDoctor.ts'],
+  ['extensions/imageProbeAttachmentStore.js', 'server/extensions/imageProbeAttachmentStore.ts'],
   ['extensions/extensionLifecycle.js', 'server/extensions/extensionLifecycle.ts'],
   ['extensions/extensionPermissions.js', 'server/extensions/extensionPermissions.ts'],
   ['extensions/extensionRegistry.js', 'server/extensions/extensionRegistry.ts'],

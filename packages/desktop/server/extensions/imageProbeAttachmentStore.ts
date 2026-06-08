@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -208,6 +208,48 @@ export function getImageProbeAttachmentsById(sessionId: string, imageIds: string
   return imageIds
     .map((id) => sessionAttachments.get(id))
     .filter((attachment): attachment is StoredImageProbeAttachment => Boolean(attachment));
+}
+
+export function getImageProbeAttachmentsByIdFromAnySession(imageIds: string[]): StoredImageProbeAttachment[] {
+  // Search all known sessions (both cached and on disk) for matching image IDs.
+  // This handles session ID changes after conversation archive/re-live.
+  const found = new Map<string, StoredImageProbeAttachment>();
+  const remaining = new Set(imageIds);
+
+  // 1. Check already-cached sessions
+  for (const [, sessionAttachments] of attachmentsBySession) {
+    for (const [id, attachment] of sessionAttachments) {
+      if (remaining.has(id)) {
+        found.set(id, attachment);
+        remaining.delete(id);
+      }
+    }
+  }
+
+  if (remaining.size === 0) {
+    return imageIds.map((id) => found.get(id)!).filter(Boolean);
+  }
+
+  // 2. Scan on-disk sessions
+  const probesDir = join(getPiAgentRuntimeDir(), 'image-probes');
+  if (existsSync(probesDir)) {
+    for (const entry of readdirSync(probesDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const sessionAttachments = readPersistedImageProbeAttachments(entry.name);
+      if (sessionAttachments.size === 0) continue;
+      // Cache it
+      attachmentsBySession.set(entry.name, sessionAttachments);
+      for (const [id, attachment] of sessionAttachments) {
+        if (remaining.has(id)) {
+          found.set(id, attachment);
+          remaining.delete(id);
+        }
+      }
+      if (remaining.size === 0) break;
+    }
+  }
+
+  return imageIds.map((id) => found.get(id)!).filter(Boolean);
 }
 
 export function clearImageProbeAttachmentCacheForTests(): void {

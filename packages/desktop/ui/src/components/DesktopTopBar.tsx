@@ -223,8 +223,8 @@ export function DesktopTopBar({
   }
 
   async function handleUpdateClick() {
-    if (!bridge?.checkForUpdates) return;
-    const state = await bridge.checkForUpdates();
+    if (!bridge?.installReadyUpdate) return;
+    const state = await bridge.installReadyUpdate();
     setAppPreferences(state);
   }
 

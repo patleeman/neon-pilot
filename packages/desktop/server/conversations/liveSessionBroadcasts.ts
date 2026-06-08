@@ -17,13 +17,25 @@ import {
 import { type LiveEntry, type LiveListener } from './liveSessionTypes.js';
 import { readGoalFromEntries } from './sessionGoalState.js';
 
-/** Send an SSE event to every listener subscribed to this live session. */
+/** Send an SSE event to every listener subscribed to this live session.
+ *
+ * Individual listener send failures are caught and silently dropped so that
+ * a single disconnected client does not prevent the event from reaching other
+ * connected listeners. This is critical for terminal events like `agent_end`
+ * and `turn_end` — if one stale SSE connection throws during broadcastContextUsage
+ * (called before the terminal event broadcast in handleLiveSessionEvent), the
+ * remaining clients would never transition out of the streaming state.
+ */
 export function broadcast(entry: LiveEntry, event: SseEvent, options?: { exclude?: LiveListener }): void {
   for (const listener of entry.listeners) {
     if (listener === options?.exclude) {
       continue;
     }
-    listener.send(event);
+    try {
+      listener.send(event);
+    } catch {
+      // Silently drop — the listener's SSE connection may have closed.
+    }
   }
 }
 
@@ -44,11 +56,15 @@ export function broadcastSnapshot(
       snapshot = callbacks.buildLiveSessionSnapshot(entry, listener.tailBlocks);
       snapshotsByTailBlocks.set(snapshotKey, snapshot);
     }
-    listener.send({
-      type: 'snapshot',
-      goalState,
-      ...snapshot,
-    } as SseEvent);
+    try {
+      listener.send({
+        type: 'snapshot',
+        goalState,
+        ...snapshot,
+      } as SseEvent);
+    } catch {
+      // Silently drop — the listener's SSE connection may have closed.
+    }
   }
 }
 

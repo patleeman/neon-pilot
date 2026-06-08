@@ -4,7 +4,7 @@ import { callServerModuleExport } from './serverModuleResolver.js';
 
 export type { StoredImageProbeAttachment };
 
-const IMAGE_PROBE_STORE = '../imageProbeAttachmentStore.js';
+const IMAGE_PROBE_STORE = '../../extensions/imageProbeAttachmentStore.js';
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 
 type ExtensionBackendGlobal = typeof globalThis & {
@@ -37,6 +37,14 @@ export async function getImageProbeAttachments(...args: unknown[]) {
 
 export async function getImageProbeAttachmentsById(...args: unknown[]) {
   return callServerModuleExport<StoredImageProbeAttachment[]>(IMAGE_PROBE_STORE, 'getImageProbeAttachmentsById', ...args);
+}
+
+export async function getImageProbeAttachmentsByIdFromAnySession(...args: unknown[]) {
+  return callServerModuleExport<StoredImageProbeAttachment[]>(
+    IMAGE_PROBE_STORE,
+    'getImageProbeAttachmentsByIdFromAnySession',
+    ...args,
+  );
 }
 
 export async function rememberImageProbeAttachments(...args: unknown[]) {
