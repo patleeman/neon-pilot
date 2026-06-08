@@ -97,9 +97,11 @@ describe('extension backend action invocation', () => {
     const context = createBackendContext('settings-aware-ext', {
       getRuntimeScope: () => 'shared',
       getRepoRoot: () => '/repo',
+      getStateRoot: () => '/state-root',
       getSettingsFile: () => '/runtime/from-route/settings.json',
     });
 
+    expect(context.runtimeDir).toBe('/state-root/neon-pilot-runtime');
     expect(context.runtimeSettingsFilePath).toBe('/runtime/from-route/settings.json');
     expect(context.profileSettingsFilePath).toBe('/runtime/from-route/settings.json');
   });
@@ -124,6 +126,7 @@ describe('extension backend action invocation', () => {
         {
           getRuntimeScope: () => 'shared',
           getRepoRoot: () => '/repo',
+          getStateRoot: () => '/state-root',
           getSettingsFile: () => '/runtime/from-route/settings.json',
         },
         {
@@ -141,7 +144,54 @@ describe('extension backend action invocation', () => {
       [{ command: 'echo bash works' }],
       expect.objectContaining({
         context: expect.objectContaining({
+          runtimeDir: '/state-root/neon-pilot-runtime',
           runtimeSettingsFilePath: '/runtime/from-route/settings.json',
+          stateRoot: '/state-root',
+        }),
+      }),
+    );
+  });
+
+  it('derives worker runtime settings from the server route state root', async () => {
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true })),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'system-runs',
+        'bash',
+        { command: 'echo bash works' },
+        {
+          getRuntimeScope: () => 'shared',
+          getRepoRoot: () => '/repo',
+          getStateRoot: () => '/state-root',
+        },
+        {
+          conversationId: 'conv-1',
+          cwd: '/repo',
+        },
+      ),
+    ).resolves.toEqual({ ok: true, result: { ok: true } });
+
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-runs',
+      expect.any(Object),
+      'bash',
+      expect.any(Object),
+      [{ command: 'echo bash works' }],
+      expect.objectContaining({
+        context: expect.objectContaining({
+          runtimeDir: '/state-root/neon-pilot-runtime',
+          runtimeSettingsFilePath: '/state-root/neon-pilot-runtime/settings.json',
+          stateRoot: '/state-root',
         }),
       }),
     );

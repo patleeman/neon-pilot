@@ -962,10 +962,11 @@ async function dispatchDesktopLocalProductApiRequest(input: {
     );
   }
   if (method === 'GET' && path === '/api/extensions/registry') {
+    const context = await getLocalServerRouteContext();
     const [extensions, registryPresentation, settings] = await Promise.all([
       readExtensionInstallSummariesWithRuntimeStateForLocalApi(),
       getExtensionHostClient().readRegistryPresentation(),
-      Promise.resolve(createSettingsStore().read()),
+      Promise.resolve(createSettingsStore(context.getStateRoot()).read()),
     ]);
     const snapshot = registryPresentation.snapshot;
     return createDesktopLocalApiJsonResponse({

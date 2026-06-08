@@ -226,7 +226,7 @@ async function readExtensionFile(req: Request, res: Response): Promise<void> {
 
 export function registerExtensionRoutes(
   router: Pick<Express, 'delete' | 'get' | 'patch' | 'post' | 'put'>,
-  context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getStateRoot'>>,
 ): void {
   router.get('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
   router.post('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
@@ -272,7 +272,7 @@ export function registerExtensionRoutes(
       const [extensions, registryPresentation, settings] = await Promise.all([
         readExtensionInstallSummariesWithRuntimeState(),
         getExtensionHostClient().readRegistryPresentation(),
-        Promise.resolve(createSettingsStore().read()),
+        Promise.resolve(createSettingsStore(context?.getStateRoot?.()).read()),
       ]);
       const snapshot = registryPresentation.snapshot;
       res.json({

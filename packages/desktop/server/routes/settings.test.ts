@@ -5,9 +5,10 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const mockRead = vi.hoisted(() => vi.fn());
 const mockReadSchema = vi.hoisted(() => vi.fn());
 const mockUpdate = vi.hoisted(() => vi.fn());
+const mockCreateSettingsStore = vi.hoisted(() => vi.fn());
 
 vi.mock('../settings/settingsStore.js', () => ({
-  createSettingsStore: vi.fn(() => ({
+  createSettingsStore: mockCreateSettingsStore.mockImplementation(() => ({
     read: mockRead,
     readSchema: mockReadSchema,
     readOverrides: vi.fn(),
@@ -35,10 +36,11 @@ describe('registerSettingsRoutes', () => {
 
   beforeAll(() => {
     const router = { get: createMockRouter('get'), patch: createMockRouter('patch') };
-    registerSettingsRoutes(router as never);
+    registerSettingsRoutes(router as never, { getStateRoot: () => '/active-state-root' });
   });
 
   beforeEach(() => {
+    mockCreateSettingsStore.mockClear();
     mockRead.mockReset();
     mockReadSchema.mockReset();
     mockUpdate.mockReset();
@@ -55,6 +57,7 @@ describe('registerSettingsRoutes', () => {
       const handler = routes.get('get:/api/settings')!;
       const res = mockRes();
       handler({} as never, res as never);
+      expect(mockCreateSettingsStore).toHaveBeenCalledWith('/active-state-root');
       expect(mockRead).toHaveBeenCalledOnce();
       expect(res.json).toHaveBeenCalledWith({ 'app.timeout': 60, 'app.featureX': true });
     });
@@ -77,6 +80,7 @@ describe('registerSettingsRoutes', () => {
       const handler = routes.get('get:/api/settings/schema')!;
       const res = mockRes();
       handler({} as never, res as never);
+      expect(mockCreateSettingsStore).toHaveBeenCalledWith('/active-state-root');
       expect(res.json).toHaveBeenCalledWith([{ key: 'test', type: 'boolean' }]);
     });
 
@@ -97,6 +101,7 @@ describe('registerSettingsRoutes', () => {
       const handler = routes.get('patch:/api/settings')!;
       const res = mockRes();
       handler({ body: { 'app.timeout': 120 } } as never, res as never);
+      expect(mockCreateSettingsStore).toHaveBeenCalledWith('/active-state-root');
       expect(mockUpdate).toHaveBeenCalledWith({ 'app.timeout': 120 });
       expect(res.json).toHaveBeenCalledWith({ 'app.timeout': 120 });
     });

@@ -20,12 +20,14 @@ function publishHostEvent(source: string, payload: unknown): void {
 
 export function registerSettingsRoutes(
   router: Pick<Express, 'get' | 'patch'>,
-  _context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
+  context?: Pick<ServerRouteContext, 'getStateRoot'>,
 ): void {
+  const createRouteSettingsStore = () => createSettingsStore(context?.getStateRoot?.());
+
   // GET /api/settings — returns all current values (merged with defaults)
   router.get('/api/settings', (_req, res) => {
     try {
-      const store = createSettingsStore();
+      const store = createRouteSettingsStore();
       res.json(store.read());
     } catch (err) {
       logError('settings read error', { message: err instanceof Error ? err.message : String(err) });
@@ -36,7 +38,7 @@ export function registerSettingsRoutes(
   // GET /api/settings/schema — returns the unified schema from all extensions
   router.get('/api/settings/schema', (_req, res) => {
     try {
-      const store = createSettingsStore();
+      const store = createRouteSettingsStore();
       res.json(store.readSchema());
     } catch (err) {
       logError('settings schema error', { message: err instanceof Error ? err.message : String(err) });
@@ -52,7 +54,7 @@ export function registerSettingsRoutes(
         res.status(400).json({ error: 'Request body must be an object of key-value pairs.' });
         return;
       }
-      const store = createSettingsStore();
+      const store = createRouteSettingsStore();
       const result = store.update(body);
       publishHostEvent('settings', { keys: Object.keys(body), values: result });
       res.json(result);

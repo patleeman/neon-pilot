@@ -415,7 +415,8 @@ export function createBackendContext(
   agentToolContext?: unknown,
 ): ExtensionBackendContext {
   registerFileSystemAuthorityHostEvents();
-  const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir();
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir(stateRoot);
   const runtimeScope = serverContext?.getRuntimeScope() ?? 'shared';
   const runtimeSettingsFilePath = resolveRuntimeSettingsFilePath(resolvedPiAgentRuntimeDir, serverContext);
   const liveSessionResourceOptions = () => {
@@ -769,14 +770,16 @@ function workerBackendContextOptions(
   agentToolContext?: unknown,
   updateHandleId?: string,
 ) {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const runtimeDir = getPiAgentRuntimeDir(stateRoot);
   return {
     type: 'backend' as const,
     runtimeScope: serverContext?.getRuntimeScope() ?? 'shared',
     repoRoot: serverContext?.getRepoRoot?.() ?? process.cwd(),
-    runtimeDir: getPiAgentRuntimeDir(),
-    runtimeSettingsFilePath: resolveRuntimeSettingsFilePath(getPiAgentRuntimeDir(), serverContext),
+    runtimeDir,
+    runtimeSettingsFilePath: resolveRuntimeSettingsFilePath(runtimeDir, serverContext),
     authFile: serverContext?.getAuthFile?.(),
-    stateRoot: serverContext?.getStateRoot?.() ?? getStateRoot(),
+    stateRoot,
     liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
     toolContext: workerBackendToolContext(toolContext, updateHandleId),
     ...(agentToolContext ? { agentToolContext } : {}),
