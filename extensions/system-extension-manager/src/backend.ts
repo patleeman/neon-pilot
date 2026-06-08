@@ -195,11 +195,18 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
 function normalizeManagerInput(input: unknown): Record<string, unknown> {
   const body = asRecord(input);
   const cli = asRecord(body.cli);
+  const flags = asRecord(cli.flags);
+  const packageRoot =
+    typeof flags.packageRoot === 'string'
+      ? flags.packageRoot
+      : typeof flags['package-root'] === 'string'
+        ? flags['package-root']
+        : undefined;
   if (!cli.command) return body;
   const command = typeof cli.command === 'string' ? cli.command : '';
   const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
   if (command === 'extensions list') return { ...body, action: 'list' };
-  if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0] };
+  if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0], packageRoot };
   if (command === 'extensions reload')
     return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };
   if (command === 'extensions smoke') return { ...body, action: 'smoke', extensionId: args[0] };

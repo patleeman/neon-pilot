@@ -338,7 +338,7 @@ Never import app internals like `packages/desktop/server/*`, `packages/desktop/u
 Built app path:
 
 1. Build outside the app with `neon-pilot-extension build /path/to/extension` or repo tooling.
-2. Validate with Extension Manager **Validate**. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, and backend module import crashes.
+2. Validate with Extension Manager **Validate**, or run `neon-pilot extensions validate --package-root /path/to/extension` for a local folder. The doctor checks manifest references, dist files, stale output, frontend component exports, backend action exports, tool schemas, skill files, forbidden process imports, non-portable absolute imports, deprecated frontend action clients, missing worker declarations, and backend module import crashes.
 3. Reload with Extension Manager **Reload**.
 4. Run `neon-pilot extensions smoke <extension-id>` when the app is running.
 5. Inspect diagnostics in Extension Manager.
