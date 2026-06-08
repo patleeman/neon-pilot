@@ -339,41 +339,11 @@ export const ChatView = memo(function ChatView({
     !!streamingStatusLabel &&
     lastBlock?.type !== 'error' &&
     (isCompacting || Boolean(pendingStatusLabel) || !lastBlock || lastBlock.type === 'user');
-  const shouldUseContentVisibility = renderItems.length >= renderingProfile.contentVisibilityThreshold;
-  const [contentVisibilityReady, setContentVisibilityReady] = useState(false);
-
-  useEffect(() => {
-    if (!shouldUseContentVisibility) {
-      setContentVisibilityReady(false);
-      return;
-    }
-
-    // Let the transcript fully lay out once before enabling content-visibility.
-    // Initial scroll-to-bottom logic depends on an accurate scrollHeight.
-    const animationFrame = window.requestAnimationFrame(() => {
-      setContentVisibilityReady(true);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, [shouldUseContentVisibility]);
-
-  const contentVisibilityStyle = useMemo<React.CSSProperties | undefined>(
-    () =>
-      shouldUseContentVisibility && contentVisibilityReady
-        ? {
-            contentVisibility: 'auto',
-            // Without an intrinsic-size fallback, Chromium treats skipped
-            // offscreen transcript blocks as effectively zero-height until they
-            // scroll into view. That makes the scrollbar jump exactly when
-            // lazy content hydrates or images finish loading. `auto` lets the
-            // browser remember measured sizes, with a sane first-pass fallback.
-            containIntrinsicSize: 'auto 96px',
-          }
-        : undefined,
-    [contentVisibilityReady, shouldUseContentVisibility],
-  );
+  // Avoid CSS content-visibility for transcript blocks. In Electron/Chromium it
+  // can decide a visible trace cluster is skippable, leaving only the reserved
+  // intrinsic height and producing a blank gap where the cluster header should be.
+  // React windowing below is the transcript virtualization boundary.
+  const contentVisibilityStyle: React.CSSProperties | undefined = undefined;
 
   const { shouldWindowTranscript, renderChunks, visibleChunkRange, updateChunkHeight, renderItemSpanCount } = useChatWindowing({
     scrollContainerRef,
