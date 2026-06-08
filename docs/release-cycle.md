@@ -81,6 +81,7 @@ Each release command performs these steps in order:
 11. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
 12. **Git push** — pushes the version commit and tag to the remote
 13. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
+14. **First-party extension release** — publish the matching `patleeman/neon-pilot-extensions` release tag and assets for the same app version. The release must include `neon-extension-catalog.json` plus every stable `.neon-extension.zip` package that should appear in Settings → Extensions → Install.
 
 Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full signed desktop app with Electron Builder `--publish never`, packages installable extensions, validates packaged extensions, then runs the extension golden smoke, automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
 
@@ -129,6 +130,39 @@ Agent tools should be tested in layers:
 For optional first-party extensions distributed from `patleeman/neon-pilot-extensions`, add their release zips to `installablePackages` or their catalog ids to `catalogInstalls` before promoting an RC to stable. The gate then proves the candidate app can install/load those artifacts instead of only proving the source tree builds.
 
 Optional first-party extensions are distributed separately from the app bundle from [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions). Build their release bundles with the extension builder/packer, publish `.neon-extension.zip` artifacts to GitHub releases, and keep their `extension.json` compatibility ranges aligned with supported Neon Pilot versions.
+
+### First-party extension release
+
+Every stable Neon Pilot release should have a matching release in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions). The desktop app looks for `neon-extension-catalog.json` at the app tag first; if it is missing, the Extension Manager can only fall back to the baked catalog and must mark stale artifacts unavailable.
+
+After the app release tag exists, publish the extension repo release with the same tag:
+
+```bash
+cd ../neon-pilot-extensions
+git status --short
+pnpm run release:prepare -- --tag vX.Y.Z
+gh release create vX.Y.Z \
+  release-artifacts/vX.Y.Z/*.neon-extension.zip \
+  release-artifacts/vX.Y.Z/neon-extension-catalog.json \
+  --repo patleeman/neon-pilot-extensions
+```
+
+If the GitHub release already exists, upload replacement assets explicitly:
+
+```bash
+gh release upload vX.Y.Z \
+  release-artifacts/vX.Y.Z/*.neon-extension.zip \
+  release-artifacts/vX.Y.Z/neon-extension-catalog.json \
+  --repo patleeman/neon-pilot-extensions \
+  --clobber
+```
+
+Before publishing, verify each released package manifest has a `compatibility.neonPilot` range that includes the app version being released. After publishing, verify these URLs return `200`:
+
+```bash
+https://github.com/patleeman/neon-pilot-extensions/releases/download/vX.Y.Z/neon-extension-catalog.json
+https://github.com/patleeman/neon-pilot-extensions/releases/download/vX.Y.Z/system-writing-studio.neon-extension.zip
+```
 
 `pnpm run build` also verifies the current daemon output under `packages/desktop/dist/server/daemon/` and rebuilds system extension backends with the same backend API alias used by the runtime loader. If a tool extension fails with missing `@neon-pilot/extensions/backend` exports, rerun the full build before cutting the release.
 
