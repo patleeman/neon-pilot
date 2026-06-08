@@ -125,17 +125,31 @@ describe('useChatWindowing helpers', () => {
     expect(range?.chunks.map((chunk) => chunk.key)).toEqual(['chunk-0']);
   });
 
-  it('anchors to the tail while pinned even when the last viewport measurement is stale', () => {
+  it('anchors to the tail viewport while pinned even when the last viewport measurement is stale', () => {
     const layouts = buildChatRenderChunkLayouts(chunks, {}, 100);
     const range = resolveVisibleChunkRange({
       chunkLayouts: layouts,
       focusMessageIndex: null,
       anchorToTail: true,
       overscanChunks: 0,
-      viewport: { scrollTop: 0, clientHeight: 40 },
+      viewport: { scrollTop: 0, clientHeight: 250 },
     });
 
-    expect(range?.chunks.map((chunk) => chunk.key)).toEqual(['chunk-5']);
+    expect(range?.chunks.map((chunk) => chunk.key)).toEqual(['chunk-2', 'chunk-5']);
+    expect(range?.bottomSpacerHeight).toBe(0);
+  });
+
+  it('clamps viewport offsets that overshoot the transcript content height', () => {
+    const layouts = buildChatRenderChunkLayouts(chunks, {}, 100);
+    const range = resolveVisibleChunkRange({
+      chunkLayouts: layouts,
+      focusMessageIndex: null,
+      overscanChunks: 0,
+      viewport: { scrollTop: 900, clientHeight: 250 },
+    });
+
+    expect(range?.chunks.map((chunk) => chunk.key)).toEqual(['chunk-2', 'chunk-5']);
+    expect(range?.topSpacerHeight).toBe(200);
     expect(range?.bottomSpacerHeight).toBe(0);
   });
 });

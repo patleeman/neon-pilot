@@ -109,13 +109,18 @@ export function resolveVisibleChunkRange({
   let startChunkIndex: number;
   let endChunkIndex: number;
 
-  if (viewport === null || (anchorToTail && focusChunkIndex < 0)) {
+  if (viewport === null) {
     const anchorChunkIndex = focusChunkIndex >= 0 ? focusChunkIndex : chunkLayouts.length - 1;
     startChunkIndex = Math.max(0, anchorChunkIndex - normalizedOverscanChunks);
     endChunkIndex = Math.min(chunkLayouts.length - 1, anchorChunkIndex + normalizedOverscanChunks);
   } else {
-    const viewportTop = Math.max(0, viewport.scrollTop);
-    const viewportBottom = viewportTop + Math.max(1, viewport.clientHeight);
+    const viewportHeight = Math.max(1, viewport.clientHeight);
+    const maxViewportTop = Math.max(0, totalHeight - viewportHeight);
+    const viewportTop =
+      anchorToTail && focusChunkIndex < 0
+        ? maxViewportTop
+        : Math.min(maxViewportTop, Math.max(0, viewport.scrollTop));
+    const viewportBottom = Math.min(totalHeight, viewportTop + viewportHeight);
     const firstVisibleChunkIndex = resolveChunkIndexForOffset(viewportTop, tops, heights);
     const lastVisibleChunkIndex = resolveChunkIndexForOffset(viewportBottom, tops, heights);
     startChunkIndex = Math.max(0, firstVisibleChunkIndex - normalizedOverscanChunks);
