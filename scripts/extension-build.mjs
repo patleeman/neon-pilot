@@ -329,6 +329,9 @@ function createFrontendExtensionSdkPlugin() {
   return {
     name: 'neon-pilot-frontend-extension-sdk',
     setup(buildContext) {
+      buildContext.onResolve({ filter: /^@neon-pilot\/ui$/ }, () => ({
+        path: join(repoRoot, 'packages/ui/src/index.ts'),
+      }));
       buildContext.onResolve({ filter: /^\.\/systemExtensionModules$/ }, (args) => {
         if (!args.importer.includes('/packages/desktop/ui/src/extensions/')) return;
         return { path: 'neon-pilot-empty-system-extension-modules', namespace: 'neon-pilot-extension-sdk' };
