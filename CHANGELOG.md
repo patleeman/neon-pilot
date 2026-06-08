@@ -4,7 +4,10 @@
 
 ### Highlights
 
-- TODO: Replace this with 3-6 human-written bullets summarizing the release by user-visible outcome, not raw commit messages.
+- Keeps long transcripts filled at the bottom of the conversation instead of collapsing the visible window to only the latest assistant message.
+- Clamps transcript scroll offsets that overshoot the rendered message height, including the small upward scroll from the pinned tail position.
+- Adds focused regression coverage for tail-anchored chat windowing and overscrolled transcript viewports.
+- Updates Pi runtime packages to `^0.79.0` as part of the patch release train.
 
 ### Notes
 

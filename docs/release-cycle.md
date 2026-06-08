@@ -4,16 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.6** — patch release.
+**v0.11.7** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.6
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.7
 
 Highlights in this train:
 
-- Fixes packaged extension settings writes so extension manager actions no longer fall through to `/settings.json` on read-only app volumes.
-- Carries the active desktop state root, runtime directory, and settings file through local API, extension host, backend worker, protocol CLI, and background-agent paths.
-- Replaces import-time runtime settings constants with explicit settings path resolution so packaged child processes do not recompute a different root from ambient process state.
-- Adds regression coverage for root-level runtime directory refusal, explicit settings path resolution, and extension worker/action settings propagation.
+- Keeps long transcripts filled at the bottom of the conversation instead of collapsing the visible window to only the latest assistant message.
+- Clamps transcript scroll offsets that overshoot the rendered message height, including the small upward scroll from the pinned tail position.
+- Adds focused regression coverage for tail-anchored chat windowing and overscrolled transcript viewports.
+- Updates Pi runtime packages to `^0.79.0` as part of the patch release train.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
