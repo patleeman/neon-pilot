@@ -9,12 +9,14 @@ Extensions are how Neon Pilot grows new product features. You usually should not
 ```text
 Build a Neon Pilot extension that [does what].
 
+Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.
 ```
 
 Add concrete product details after the first sentence: what data it should show, what actions it should support, and what “done” looks like.

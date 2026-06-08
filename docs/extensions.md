@@ -29,12 +29,14 @@ Users should usually describe the feature they want and let their agent create t
 ```text
 Build a Neon Pilot extension that [does what].
 
+Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.
 ```
 
 The agent should create editable `src/` files, declare contributions in `extension.json`, build, validate, reload, inspect the UI when present, and checkpoint only touched files. Manual manifest/API details below are reference material.
@@ -44,6 +46,7 @@ The agent should create editable `src/` files, declare contributions in `extensi
 Before calling an extension done, an agent must be able to answer each item with evidence from the repo or app:
 
 - **Surface chosen**: the extension has one clear primary surface for the first version: main page, workbench rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
+- **Product choices clarified**: ambiguous workflow, data/action, persistence, and visual design decisions were resolved with the user before building.
 - **Boundary clean**: extension runtime code imports from `@neon-pilot/extensions`, `@neon-pilot/extensions/ui`, or narrow `@neon-pilot/extensions/backend/*` SDK subpaths, not core, desktop, or package-internal app modules.
 - **Manifest wired**: every declared component/action/tool/skill/settings entry points to an existing source export or file, and every frontend `pa.extension.invoke(...)` action id is declared in `backend.actions`.
 - **Runtime built**: `dist/` files are current, because packaged desktop runtimes load built bundles and do not compile extension source at install time.

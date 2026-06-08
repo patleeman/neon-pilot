@@ -20,27 +20,30 @@ Build native extensions: a folder with `extension.json`, optional `src/frontend.
 
 ## First moves
 
-1. Inspect installed extensions through Extension Manager.
-2. If editing an existing user extension, snapshot it first from Extension Manager.
-3. If creating a new extension, use Extension Manager **Create**.
-4. Edit `src/` files and `extension.json`, then build outside the app with `neon-pilot-extension build <extension-dir>` or repo tooling.
-5. Validate from Extension Manager and fix every error.
-6. Reload from Extension Manager.
-7. Open the declared route/surface and visually inspect UI changes.
-8. If the extension is being published through a GitHub extension repo, prepare `.neon-extension.zip` release assets; source folders plus `neon.extensions.json` are not enough for normal install.
-9. Check Extension Manager diagnostics before reporting done.
+1. Before building, work out the product particulars with the user when the request is ambiguous. Ask concise questions until you know the primary user, core workflow, required data/actions, target surface, persistence needs, error/empty states, and visual tone well enough to one-shot a useful, polished extension. Do not ask about implementation trivia the agent can decide from the repo; do ask about product choices that would change the feature or design.
+2. Inspect installed extensions through Extension Manager.
+3. If editing an existing user extension, snapshot it first from Extension Manager.
+4. If creating a new extension, use Extension Manager **Create**.
+5. Edit `src/` files and `extension.json`, then build outside the app with `neon-pilot-extension build <extension-dir>` or repo tooling.
+6. Validate from Extension Manager and fix every error.
+7. Reload from Extension Manager.
+8. Open the declared route/surface and visually inspect UI changes.
+9. If the extension is being published through a GitHub extension repo, prepare `.neon-extension.zip` release assets; source folders plus `neon.extensions.json` are not enough for normal install.
+10. Check Extension Manager diagnostics before reporting done.
 
 Copy-paste user prompt:
 
 ```text
 Build a Neon Pilot extension that [does what].
 
+Before implementation, ask me focused product/design questions for anything ambiguous so you can build the right first version in one pass.
+
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
 - tab-local right rail for a conversation-specific side panel inside the workbench
 - workbench detail for split-pane workflows
 
-Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes. Ask me only if a product decision blocks you.
+Implement it with editable source files, build it, reload it, visually test it, and checkpoint the changes.
 ```
 
 Starter create payload:
@@ -379,6 +382,7 @@ Before reporting done:
 
 A full-fledged extension should have more than a passing build. Check these before calling it done:
 
+- **Disambiguated product shape**: ambiguous requests were clarified with the user before building, and the first shipped version reflects explicit choices about workflow, surface, data/actions, and visual tone.
 - **Clear product boundary**: README says what the extension owns, where its data lives, and how a user starts using it.
 - **Native UI**: uses shared UI primitives and app theme tokens; no iframe/webview fallback, no isolated website styling.
 - **Recoverable failures**: backend actions return useful errors, log with `ctx.log`, and avoid throwing from module scope.
