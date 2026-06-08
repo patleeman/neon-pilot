@@ -9,10 +9,12 @@
     "paths": {
       "@neon-pilot/core": ["../core/src"],
       "@neon-pilot/daemon": ["./server/daemon"],
+      "@neon-pilot/extensions": ["../extensions/src"],
+      "@neon-pilot/extensions/backend/*": ["../extensions/src/backend/*"],
       "@neon-pilot/extensions/host-view-components": ["../extensions/dist/host-view-components.d.ts"]
     }
   },
   "include": ["src/**/*.ts", "server/**/*.ts", "server/**/*.tsx"],
   "exclude": ["dist", "node_modules", "**/*.test.ts", "**/*.test.tsx", "**/*.d.ts", "**/*.smoke.test.ts", "**/*.integration.test.ts"],
-  "references": [{ "path": "../core" }, { "path": "../ui" }]
+  "references": [{ "path": "../core" }, { "path": "../extensions" }, { "path": "../ui" }]
 }
