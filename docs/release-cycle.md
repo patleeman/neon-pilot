@@ -4,17 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.5** — patch release.
+**v0.11.6** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.5
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.6
 
 Highlights in this train:
 
-- Blocks stale optional extension artifacts from being installed or enabled on incompatible app versions.
-- Keeps incompatible installed user extensions disabled with visible diagnostics instead of broken extension routes.
-- Routes worker extension settings access through the active host state root.
-- Refreshes model metadata after provider OAuth login.
-- Adds the first-party extension repository release as an explicit stable release step.
+- Fixes packaged extension settings writes so extension manager actions no longer fall through to `/settings.json` on read-only app volumes.
+- Carries the active desktop state root, runtime directory, and settings file through local API, extension host, backend worker, protocol CLI, and background-agent paths.
+- Replaces import-time runtime settings constants with explicit settings path resolution so packaged child processes do not recompute a different root from ambient process state.
+- Adds regression coverage for root-level runtime directory refusal, explicit settings path resolution, and extension worker/action settings propagation.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

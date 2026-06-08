@@ -3,10 +3,12 @@ import { join } from 'node:path';
 
 import { getConfigRoot, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
-const DEFAULT_LOCAL_RUNTIME_CONFIG_DIR = join(getConfigRoot(), 'local');
-
 export function getRuntimeSettingsFilePath(stateRoot?: string): string {
   return join(getPiAgentRuntimeDir(stateRoot), 'settings.json');
+}
+
+function getDefaultLocalRuntimeConfigDir(): string {
+  return join(getConfigRoot(), 'local');
 }
 
 function readLocalProfileDir(explicitLocalProfileDir?: string): string {
@@ -16,7 +18,7 @@ function readLocalProfileDir(explicitLocalProfileDir?: string): string {
     return value.trim();
   }
 
-  return DEFAULT_LOCAL_RUNTIME_CONFIG_DIR;
+  return getDefaultLocalRuntimeConfigDir();
 }
 
 export function resolveLocalProfileSettingsFilePath(explicitLocalProfileDir?: string): string {

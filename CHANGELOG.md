@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.6 — 2026-06-08
+
+### Highlights
+
+- Fixes packaged extension settings writes so extension manager actions no longer fall through to `/settings.json` on read-only app volumes.
+- Carries the active desktop state root, runtime directory, and settings file through local API, extension host, backend worker, protocol CLI, and background-agent paths.
+- Replaces import-time runtime settings constants with explicit settings path resolution so packaged child processes do not recompute a different root from ambient process state.
+- Adds regression coverage for root-level runtime directory refusal, explicit settings path resolution, and extension worker/action settings propagation.
+
+### Notes
+
+- 2 commits since the previous release.
+
 ## 0.11.5 — 2026-06-08
 
 ### Highlights

@@ -61,6 +61,8 @@ describe('protocol CLI', () => {
     expect(runtime.createRuntimeState).toHaveBeenCalledWith({
       repoRoot: process.cwd(),
       agentDir: '/agent',
+      settingsFile: '/agent/settings.json',
+      stateRoot: '/tmp/neon-pilot-protocol-cli-test',
       logger: { warn: expect.any(Function) },
     });
     expect(extensionHostClient.invokeProtocolEntrypoint).toHaveBeenCalledWith(
@@ -71,6 +73,8 @@ describe('protocol CLI', () => {
           runtimeScope: 'shared',
           repoRoot: process.cwd(),
           agentDir: '/agent',
+          settingsFile: '/agent/settings.json',
+          stateRoot: '/tmp/neon-pilot-protocol-cli-test',
         }),
         stdio: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr },
         signal: controller.signal,
