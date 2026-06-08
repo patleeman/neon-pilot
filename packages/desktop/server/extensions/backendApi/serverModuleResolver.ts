@@ -79,9 +79,7 @@ export function resolveServerModuleSpecifierFrom({
   // need to resolve against the repo root.  Walk up from the bundle's
   // location until we find packages/desktop/dist/server or hit the fs root.
   const importMetaCandidate =
-    !process.env.NEON_PILOT_REPO_ROOT && isFileUrl(importMetaUrl)
-      ? resolveRepoRootFromImportMeta(importMetaUrl, normalized)
-      : undefined;
+    !process.env.NEON_PILOT_REPO_ROOT && isFileUrl(importMetaUrl) ? resolveRepoRootFromImportMeta(importMetaUrl, normalized) : undefined;
 
   const candidates = [
     ...(process.env.NEON_PILOT_REPO_ROOT
@@ -90,11 +88,11 @@ export function resolveServerModuleSpecifierFrom({
           resolve(process.env.NEON_PILOT_REPO_ROOT, 'packages/desktop/dist/server', normalized),
         ]
       : []),
-    ...(importMetaCandidate ? [importMetaCandidate] : []),
     resolve(process.cwd(), 'packages/desktop/server/dist', normalized),
     resolve(process.cwd(), 'server/dist', normalized),
     resolve(process.cwd(), 'packages/desktop/dist/server', normalized),
     resolve(process.cwd(), 'dist/server', normalized),
+    ...(importMetaCandidate ? [importMetaCandidate] : []),
     ...(typeof resourcesPath === 'string'
       ? [
           resolve(resourcesPath, 'app.asar.unpacked/packages/desktop/server/dist', normalized),

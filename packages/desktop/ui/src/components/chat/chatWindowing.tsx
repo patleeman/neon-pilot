@@ -15,7 +15,7 @@ export const CHAT_VIEW_RENDERING_PROFILE: Record<ChatViewPerformanceMode, ChatWi
     contentVisibilityThreshold: 160,
     windowingThreshold: 48,
     windowingChunkSize: 24,
-    windowingOverscanChunks: 1,
+    windowingOverscanChunks: 0,
   },
   aggressive: {
     contentVisibilityThreshold: 96,

@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createConversationAutoModeAgentExtension } from './backend.js';
+import { createConversationAutoModeAgentExtension, handleSlashGoal } from './backend.js';
 
 type RegisteredTool = { name: string; execute: (...args: unknown[]) => Promise<{ content?: Array<{ text?: string }>; details?: unknown }> };
 type AgentEventHandler = (event: unknown, ctx: TestContext) => void | Promise<void>;
@@ -531,35 +531,25 @@ describe('system-goal-mode extension', () => {
     );
   });
 
-  it('slash command clear disables goal mode through the same canonical state', async () => {
-    const { appendEntry, sendUserMessage, registeredCommands, ctx } = createHarness([activeGoal('ship it')]);
-
-    await registeredCommands.get('goal')?.handler('clear', ctx);
-
-    expect(appendEntry).toHaveBeenCalledWith(
-      'conversation-goal',
-      expect.objectContaining({ objective: '', status: 'complete', stopReason: 'cleared', noProgressTurns: 0 }),
-    );
-    expect(sendUserMessage).toHaveBeenCalledWith('Goal cleared. Previous objective: ship it');
-  });
-
-  it('slash command pause and resume update the same canonical state', async () => {
-    const { appendEntry, sendUserMessage, registeredCommands, ctx } = createHarness([activeGoal('wait cleanly')]);
-
-    await registeredCommands.get('goal')?.handler('pause', ctx);
-    await registeredCommands.get('goal')?.handler('resume', ctx);
-
-    expect(appendEntry).toHaveBeenNthCalledWith(
-      1,
-      'conversation-goal',
-      expect.objectContaining({ objective: 'wait cleanly', status: 'paused', stopReason: 'paused' }),
-    );
-    expect(appendEntry).toHaveBeenNthCalledWith(
-      2,
-      'conversation-goal',
-      expect.objectContaining({ objective: 'wait cleanly', status: 'active', stopReason: null }),
-    );
-    expect(sendUserMessage).toHaveBeenCalledWith('Goal paused: wait cleanly');
-    expect(sendUserMessage).toHaveBeenCalledWith('Goal resumed: wait cleanly');
+  it('slash command action returns prompts that route through the goal tool', async () => {
+    await expect(
+      handleSlashGoal({ commandName: 'goal', argument: 'clear', text: '/goal clear', conversationId: 'c1', cwd: '/tmp', draft: false }),
+    ).resolves.toEqual({ prompt: 'Clear the current goal.' });
+    await expect(
+      handleSlashGoal({ commandName: 'goal', argument: 'pause', text: '/goal pause', conversationId: 'c1', cwd: '/tmp', draft: false }),
+    ).resolves.toEqual({ prompt: 'Pause the current goal.' });
+    await expect(
+      handleSlashGoal({ commandName: 'goal', argument: 'resume', text: '/goal resume', conversationId: 'c1', cwd: '/tmp', draft: false }),
+    ).resolves.toEqual({ prompt: 'Resume the current goal.' });
+    await expect(
+      handleSlashGoal({
+        commandName: 'goal',
+        argument: 'wait cleanly',
+        text: '/goal wait cleanly',
+        conversationId: 'c1',
+        cwd: '/tmp',
+        draft: false,
+      }),
+    ).resolves.toEqual({ prompt: 'Set a goal: wait cleanly' });
   });
 });

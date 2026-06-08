@@ -156,11 +156,7 @@ export function useChatWindowing({
     () => getChatRenderItemsSpanCount(renderItems, messageIndexOffset),
     [messageIndexOffset, renderItems],
   );
-  // Disable transcript windowing for now. The scroll-driven chunk/spacer model
-  // can hide visible transcript content in Electron: scrolling a few pixels can
-  // mount/unmount the affected chunk, making the top half appear/disappear.
-  // Prefer a correct full transcript over a flaky virtualization layer.
-  const shouldWindowTranscript = false;
+  const shouldWindowTranscript = Boolean(scrollContainerRef) && renderItemSpanCount >= renderingProfile.windowingThreshold;
   const renderChunks = useMemo(
     () => (shouldWindowTranscript ? buildChatRenderChunks(renderItems, messageIndexOffset, renderingProfile.windowingChunkSize) : []),
     [messageIndexOffset, renderItems, renderingProfile.windowingChunkSize, shouldWindowTranscript],

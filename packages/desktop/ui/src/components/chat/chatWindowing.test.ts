@@ -84,6 +84,9 @@ describe('chatWindowing', () => {
     expect(
       CHAT_VIEW_RENDERING_PROFILE.aggressive.windowingChunkSize * (CHAT_VIEW_RENDERING_PROFILE.aggressive.windowingOverscanChunks + 2),
     ).toBeLessThanOrEqual(48);
+    expect(
+      CHAT_VIEW_RENDERING_PROFILE.default.windowingChunkSize * (CHAT_VIEW_RENDERING_PROFILE.default.windowingOverscanChunks + 2),
+    ).toBeLessThanOrEqual(48);
     expect(CHAT_VIEW_RENDERING_PROFILE.aggressive.contentVisibilityThreshold).toBeLessThan(
       CHAT_VIEW_RENDERING_PROFILE.default.contentVisibilityThreshold,
     );

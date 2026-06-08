@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.4-rc.0 — 2026-06-08
+
+### Highlights
+
+- Adds host capability bridges for extension-backed browser, image, and workbench workflows without letting extension runtimes import desktop internals directly.
+- Expands the conversation tools and auto-mode system extensions so agent workflows can inspect conversations, drive browser actions, and invoke backend actions through the extension host.
+- Persists image probe attachments across live sessions and exposes typed backend access for replaying or resolving stored image context.
+- Improves live conversation session lifecycle handling, event broadcasts, and model metadata updates with focused regression coverage.
+- Tightens desktop app shell wiring for native browser state, update checks, transcript scroll behavior, sidebar/topbar rendering, and packaged lazy backend modules.
+- Carries forward checkpoint renderer and extension chat block typing fixes for more reliable agent-visible code checkpoints.
+
+### Notes
+
+- 6 commits since the previous release.
+
 ## 0.11.3 — 2026-06-07
 
 ### Highlights

@@ -1,15 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { runAgentTaskMock, getImageProbeAttachmentsMock, getImageProbeAttachmentsByIdMock } = vi.hoisted(() => ({
-  runAgentTaskMock: vi.fn(),
-  getImageProbeAttachmentsMock: vi.fn(),
-  getImageProbeAttachmentsByIdMock: vi.fn(),
-}));
+const { runAgentTaskMock, getImageProbeAttachmentsMock, getImageProbeAttachmentsByIdMock, getImageProbeAttachmentsByIdFromAnySessionMock } =
+  vi.hoisted(() => ({
+    runAgentTaskMock: vi.fn(),
+    getImageProbeAttachmentsMock: vi.fn(),
+    getImageProbeAttachmentsByIdMock: vi.fn(),
+    getImageProbeAttachmentsByIdFromAnySessionMock: vi.fn(),
+  }));
 
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
 vi.mock('@neon-pilot/extensions/backend/images', () => ({
   getImageProbeAttachments: getImageProbeAttachmentsMock,
   getImageProbeAttachmentsById: getImageProbeAttachmentsByIdMock,
+  getImageProbeAttachmentsByIdFromAnySession: getImageProbeAttachmentsByIdFromAnySessionMock,
 }));
 
 import { probeImage } from './backend.js';
@@ -83,6 +86,7 @@ describe('system-image-probe backend', () => {
   it('throws for unknown image ids', async () => {
     getImageProbeAttachmentsMock.mockReturnValue([attachment]);
     getImageProbeAttachmentsByIdMock.mockReturnValue([]);
+    getImageProbeAttachmentsByIdFromAnySessionMock.mockReturnValue([]);
 
     await expect(probeImage({ imageIds: ['img_a1b2c3d4e5f6'], question: '?' }, createCtx())).rejects.toThrow(
       'None of the requested image IDs are available',

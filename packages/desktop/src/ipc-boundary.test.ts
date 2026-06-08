@@ -25,6 +25,7 @@ describe('desktop IPC protocol boundary', () => {
       'read-desktop-app-preferences',
       'update-desktop-app-preferences',
       'check-for-updates',
+      'install-ready-update',
       'pick-folder',
       'capture-screenshot',
       'go-back',

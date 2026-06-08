@@ -121,7 +121,11 @@ async function runModelProfileStartupAction(model: Model<Api>): Promise<void> {
   const actionId = typeof profile.startupAction === 'string' ? profile.startupAction : '';
   if (!extensionId || !actionId) return;
 
-  const result = await getExtensionHostClient().invokeAction({ extensionId, actionId, input: { provider: model.provider, model: model.id } });
+  const result = await getExtensionHostClient().invokeAction({
+    extensionId,
+    actionId,
+    input: { provider: model.provider, model: model.id },
+  });
   if (!result.ok) {
     throw new Error(result.error || `Model runtime startup action failed: ${extensionId}/${actionId}`);
   }
@@ -153,7 +157,7 @@ export async function repairSessionModelProvider(
     // Model isn't available (auth may not be ready yet, e.g. OAuth needs refresh).
     // Try to restore the full model capabilities (input, reasoning, etc.) from
     // the full registry so the session doesn't lose vision support on restart.
-    if (modelRegistry) {
+    if (modelRegistry && typeof modelRegistry.find === 'function') {
       const fullModel = modelRegistry.find(currentProvider, currentId);
       if (fullModel && !('input' in (session.model ?? {}))) {
         // The current model is a partial {provider, modelId} restored from
