@@ -71,6 +71,11 @@ export async function reloadExtensionBackend(extensionId: string) {
   return module.reloadExtensionBackend(extensionId);
 }
 
+export async function runExtensionSelfTest(extensionId: string) {
+  const module = await importExtensionBackend();
+  return module.runExtensionSelfTest(extensionId);
+}
+
 export async function invalidateExtensionRegistryReadCaches() {
   const module = await importExtensionRegistry();
   module.invalidateExtensionRegistryReadCaches();

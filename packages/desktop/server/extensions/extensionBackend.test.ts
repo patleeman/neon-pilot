@@ -2450,6 +2450,7 @@ describe('extension backend action invocation', () => {
         if (exportName === 'createExtension') return { ok: true, id: 'new-extension' };
         if (exportName === 'snapshotExtension') return { ok: true, extensionId: 'system-todo', files: [] };
         if (exportName === 'reloadExtension') return { ok: true, extensionId: 'system-todo', rebuilt: false };
+        if (exportName === 'smokeExtension') return { ok: true, extensionId: 'system-todo', checks: [] };
         if (exportName === 'validateExtension') return { ok: true, valid: true, findings: [] };
         if (exportName === 'installCatalogExtension') return { ok: true, id: 'system-browser', installed: true };
         if (exportName === 'installExtensionFromUrl') return { ok: true, id: 'remote-extension', installed: true };
@@ -2463,15 +2464,17 @@ describe('extension backend action invocation', () => {
             ? { ok: true, id: 'managed-extension' }
             : action === 'reload'
               ? { ok: true, extensionId: 'system-todo', rebuilt: false }
-              : action === 'installMarketplacePackage'
-                ? { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'managed-imported-skill' }, installed: true }
-                : action === 'updateSearchPaths'
-                  ? { ok: true, configuredPaths: ['/extensions/one'] }
-                  : {
-                      ok: true,
-                      reloaded: true,
-                      message: 'Extension registry caches were invalidated; reopen contributed routes if needed.',
-                    };
+              : action === 'smoke'
+                ? { ok: true, extensionId: 'system-todo', checks: [] }
+                : action === 'installMarketplacePackage'
+                  ? { ok: true, packageType: 'skill', ecosystem: 'codex', extension: { id: 'managed-imported-skill' }, installed: true }
+                  : action === 'updateSearchPaths'
+                    ? { ok: true, configuredPaths: ['/extensions/one'] }
+                    : {
+                        ok: true,
+                        reloaded: true,
+                        message: 'Extension registry caches were invalidated; reopen contributed routes if needed.',
+                      };
         }
         return { ok: true, extensions: [{ id: 'system-todo' }] };
       }),
@@ -2504,6 +2507,10 @@ describe('extension backend action invocation', () => {
     await expect(invokeExtensionAction('system-extension-manager', 'reloadExtension', { id: 'system-todo' })).resolves.toEqual({
       ok: true,
       result: { ok: true, extensionId: 'system-todo', rebuilt: false },
+    });
+    await expect(invokeExtensionAction('system-extension-manager', 'smokeExtension', { id: 'system-todo' })).resolves.toEqual({
+      ok: true,
+      result: { ok: true, extensionId: 'system-todo', checks: [] },
     });
     await expect(invokeExtensionAction('system-extension-manager', 'validateExtension', { id: 'system-todo' })).resolves.toEqual({
       ok: true,
@@ -2548,6 +2555,15 @@ describe('extension backend action invocation', () => {
     ).resolves.toEqual({
       ok: true,
       result: { ok: true, extensionId: 'system-todo', rebuilt: false },
+    });
+    await expect(
+      invokeExtensionAction('system-extension-manager', 'manageExtension', {
+        action: 'smoke',
+        id: 'system-todo',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: { ok: true, extensionId: 'system-todo', checks: [] },
     });
     await expect(
       invokeExtensionAction('system-extension-manager', 'manageExtension', {

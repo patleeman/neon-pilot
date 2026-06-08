@@ -99,6 +99,12 @@ export async function reloadExtensionBackend(_extensionId: string): Promise<Runt
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
+export async function runExtensionSelfTest(
+  _extensionId: string,
+): Promise<{ ok: boolean; extensionId: string; checks: Array<{ name: string; ok: boolean; error?: string }> }> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
 export async function invalidateExtensionRegistryReadCaches(): Promise<{ ok: true }> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }

@@ -29,9 +29,9 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
 4. Start from [`docs/extension-templates/`](extension-templates/README.md) when the feature matches a template; otherwise copy the closest first-party extension shape.
 5. Create editable source files in `src/`, declare every contribution in `extension.json`, and keep generated bundles in `dist/`.
 6. Build with `pnpm run extension:build -- <extension-dir>`.
-7. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; for repo extension or boundary work, also run `pnpm run check:extensions:static`.
+7. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; in a packaged app, run `neon-pilot extensions validate <extension-id>` after install. For repo extension or boundary work, also run `pnpm run check:extensions:static`.
 8. Reload extensions from Settings -> Extensions, or restart the desktop app when reload is unavailable.
-9. Validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
+9. Run `neon-pilot extensions smoke <extension-id>` when the app is running, then validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
 10. Exercise empty, loading, error, and success states when the surface has UI; for backend tools/actions, run one representative invocation and inspect the transcript or visible result.
 11. Update the extension `README.md` with install/build/use notes and any non-obvious behavior.
 12. If the extension is meant for other users, prepare `.neon-extension.zip` release artifacts and document the GitHub release tag users should install from.

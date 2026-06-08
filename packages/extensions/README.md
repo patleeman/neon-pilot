@@ -78,6 +78,7 @@ The builder compiles frontend React to `dist/frontend.js`, backend Node code to 
 Packaged desktop releases only load prebuilt `dist/` files. They do not run esbuild for extensions at runtime, so imported/user extensions must already include their built frontend/backend bundles.
 
 After building, reload extensions from the Extension Manager or the app reload path. If you changed UI, open the declared route, workbench tab, or tab-local rail surface and visually inspect it.
+When the app is running, `neon-pilot extensions smoke <extension-id>` invokes host-level backend smoke checks through the same extension host path used by the packaged app.
 
 ## Packaging extensions
 

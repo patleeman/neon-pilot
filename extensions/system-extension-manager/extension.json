@@ -45,6 +45,14 @@
         }
       },
       {
+        "id": "smokeExtension",
+        "handler": "smokeExtension",
+        "title": "Smoke test extension",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "validateExtension",
         "handler": "validateExtension",
         "title": "Validate extension",
@@ -151,6 +159,7 @@
             "create",
             "snapshot",
             "reload",
+            "smoke",
             "validate",
             "hostViewComponents",
             "listInstallable",
@@ -210,6 +219,12 @@
         "id": "extensions-reload",
         "command": "extensions reload",
         "description": "Reload an extension backend by id, or refresh registry state.",
+        "action": "manageExtension"
+      },
+      {
+        "id": "extensions-smoke",
+        "command": "extensions smoke",
+        "description": "Run backend smoke checks for an installed extension.",
         "action": "manageExtension"
       },
       {

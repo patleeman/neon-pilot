@@ -12,6 +12,7 @@ import {
   listInstallableExtensionCatalog as listInstallableExtensionCatalogFromHost,
   readExtensionCatalogSources,
   reloadExtensionBackend,
+  runExtensionSelfTest,
   snapshotRuntimeExtension,
   updateCatalogExtension as updateCatalogExtensionFromHost,
   validateExtensionPackage,
@@ -109,6 +110,17 @@ export async function reloadExtension(input: ExtensionIdInput, _ctx: ExtensionBa
   return { ok: true, ...result };
 }
 
+export async function smokeExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
+  const extensionId = requireExtensionId(input);
+  const selfTest = await runExtensionSelfTest(extensionId);
+  return {
+    ok: selfTest.ok,
+    extensionId,
+    checks: selfTest.checks,
+    text: selfTest.ok ? `Extension ${extensionId} smoke checks passed.` : `Extension ${extensionId} smoke checks failed.`,
+  };
+}
+
 export async function validateExtension(input: unknown, _ctx: ExtensionBackendContext) {
   const body = asRecord(input);
   const extensionId = typeof body.id === 'string' ? body.id : typeof body.extensionId === 'string' ? body.extensionId : undefined;
@@ -159,6 +171,7 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'create') return createExtension(body, ctx);
   if (action === 'snapshot') return snapshotExtension(body as ExtensionIdInput, ctx);
   if (action === 'reload') return reloadExtension(body as ExtensionIdInput, ctx);
+  if (action === 'smoke') return smokeExtension(body as ExtensionIdInput, ctx);
   if (action === 'validate') return validateExtension(body, ctx);
   if (action === 'hostViewComponents') return listHostViewComponents(body, ctx);
   if (action === 'listInstallable') return listInstallableExtensions(body, ctx);
@@ -189,6 +202,7 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
   if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0] };
   if (command === 'extensions reload')
     return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };
+  if (command === 'extensions smoke') return { ...body, action: 'smoke', extensionId: args[0] };
   if (command === 'extensions enable') return { ...body, action: 'enable', extensionId: args[0] };
   if (command === 'extensions disable') return { ...body, action: 'disable', extensionId: args[0] };
   if (command === 'extensions paths') return { ...body, action: 'readSearchPaths' };

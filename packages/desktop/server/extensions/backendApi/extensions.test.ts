@@ -52,7 +52,10 @@ describe('backendApi/extensions', () => {
 
   it('routes backend reloads, package validation, and install summaries to owning modules', async () => {
     const api = await import('./extensions.js');
-    const backend = { reloadExtensionBackend: vi.fn().mockResolvedValue({ reloaded: true }) };
+    const backend = {
+      reloadExtensionBackend: vi.fn().mockResolvedValue({ reloaded: true }),
+      runExtensionSelfTest: vi.fn().mockResolvedValue({ ok: true, extensionId: 'ext-1', checks: [] }),
+    };
     const doctor = { validateExtensionPackage: vi.fn().mockResolvedValue({ valid: true }) };
     const registry = {
       invalidateExtensionRegistryReadCaches: vi.fn(),
@@ -66,11 +69,13 @@ describe('backendApi/extensions', () => {
     });
 
     await expect(api.reloadExtensionBackend('ext-1')).resolves.toEqual({ reloaded: true });
+    await expect(api.runExtensionSelfTest('ext-1')).resolves.toEqual({ ok: true, extensionId: 'ext-1', checks: [] });
     await expect(api.invalidateExtensionRegistryReadCaches()).resolves.toEqual({ ok: true });
     await expect(api.validateExtensionPackage({ packagePath: '/tmp/ext' } as never)).resolves.toEqual({ valid: true });
     await expect(api.listExtensionInstallSummaries()).resolves.toEqual([{ id: 'ext-1' }]);
 
     expect(backend.reloadExtensionBackend).toHaveBeenCalledWith('ext-1');
+    expect(backend.runExtensionSelfTest).toHaveBeenCalledWith('ext-1');
     expect(registry.invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith();
     expect(doctor.validateExtensionPackage).toHaveBeenCalledWith({ packagePath: '/tmp/ext' });
     expect(registry.listExtensionInstallSummaries).toHaveBeenCalledWith();

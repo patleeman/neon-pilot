@@ -88,6 +88,7 @@ From the repo root:
 ```bash
 pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/agent-board
 neon-pilot-extension doctor ~/.local/state/neon-pilot/extensions/agent-board
+neon-pilot extensions smoke agent-board
 neon-pilot-extension pack ~/.local/state/neon-pilot/extensions/agent-board --out /tmp/agent-board.neon-extension.zip
 ```
 

@@ -23,15 +23,24 @@ export function ensureNeonPilotCliLauncher(input: { repoRoot: string; stateRoot?
   const binDir = getNeonPilotCliBinDir(stateRoot);
   mkdirSync(binDir, { recursive: true });
   const launcherPath = join(binDir, NEON_PILOT_CLI_COMMAND);
-  const repoLauncher = resolve(input.repoRoot, 'scripts/neon-pilot-cli.mjs');
-  const packagedLauncher = resolve(input.repoRoot, 'server/dist/protocolCli.js');
-  const legacyTscLauncher = resolve(input.repoRoot, 'packages/desktop/dist/server/protocolCli.js');
-  const target = [repoLauncher, packagedLauncher, legacyTscLauncher].find((candidate) => existsSync(candidate)) ?? packagedLauncher;
+  const target = resolveNeonPilotCliTarget(input.repoRoot);
   const content = ['#!/bin/sh', `exec ${JSON.stringify(process.execPath)} ${JSON.stringify(target)} "$@"`, ''].join('\n');
   if (!existsSync(launcherPath) || readFileSync(launcherPath, 'utf-8') !== content) {
     writeFileSync(launcherPath, content, { mode: 0o755 });
   }
   return launcherPath;
+}
+
+function resolveNeonPilotCliTarget(repoRoot: string): string {
+  const candidates = [
+    resolve(repoRoot, 'scripts/neon-pilot-cli.mjs'),
+    resolve(repoRoot, 'packages/desktop/server/dist/protocolCli.js'),
+    resolve(repoRoot, 'server/dist/protocolCli.js'),
+    resolve(repoRoot, 'app.asar/server/dist/protocolCli.js'),
+    resolve(repoRoot, 'app.asar.unpacked/server/dist/protocolCli.js'),
+    resolve(repoRoot, 'packages/desktop/dist/server/protocolCli.js'),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? resolve(repoRoot, 'app.asar/server/dist/protocolCli.js');
 }
 
 export function getDefaultUserCliInstallPath(command = NEON_PILOT_CLI_COMMAND): string {
@@ -77,7 +86,9 @@ export function installNeonPilotUserCli(input: { repoRoot: string; stateRoot?: s
   return { ...status, globallyInstalled: true };
 }
 
-export function uninstallNeonPilotUserCli(input: { repoRoot: string; stateRoot?: string } | string): NeonPilotCliInstallStatus & { removed: boolean } {
+export function uninstallNeonPilotUserCli(
+  input: { repoRoot: string; stateRoot?: string } | string,
+): NeonPilotCliInstallStatus & { removed: boolean } {
   const status = readNeonPilotCliInstallStatus(input);
   if (status.globallyInstalled) unlinkSync(status.linkPath);
   return { ...status, globallyInstalled: false, removed: status.globallyInstalled };

@@ -38,4 +38,21 @@ describe('cliEnvironment', () => {
       rmSync(appRoot, { recursive: true, force: true });
     }
   });
+
+  it('targets protocol CLI inside packaged app.asar resources', () => {
+    const root = mkdtempSync(join(tmpdir(), 'neon-pilot-cli-env-'));
+    const resourcesRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-resources-root-'));
+    try {
+      const protocolCli = join(resourcesRoot, 'app.asar', 'server', 'dist', 'protocolCli.js');
+      mkdirSync(join(resourcesRoot, 'app.asar', 'server', 'dist'), { recursive: true });
+      writeFileSync(protocolCli, 'export {};\n');
+
+      const launcher = ensureNeonPilotCliLauncher({ repoRoot: resourcesRoot, stateRoot: root });
+
+      expect(readFileSync(launcher, 'utf-8')).toContain(protocolCli);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(resourcesRoot, { recursive: true, force: true });
+    }
+  });
 });
