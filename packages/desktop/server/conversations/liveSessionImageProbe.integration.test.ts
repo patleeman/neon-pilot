@@ -17,7 +17,7 @@ vi.mock('../models/modelPreferences.js', () => ({
 }));
 
 vi.mock('../ui/settingsPersistence.js', () => ({
-  DEFAULT_RUNTIME_SETTINGS_FILE: '/runtime/settings.json',
+  getRuntimeSettingsFilePath: () => '/runtime/settings.json',
 }));
 
 import { probeImage } from '../../../../extensions/system-image-probe/src/backend.js';

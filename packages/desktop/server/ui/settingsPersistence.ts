@@ -5,7 +5,9 @@ import { getConfigRoot, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 const DEFAULT_LOCAL_RUNTIME_CONFIG_DIR = join(getConfigRoot(), 'local');
 
-export const DEFAULT_RUNTIME_SETTINGS_FILE = join(getPiAgentRuntimeDir(), 'settings.json');
+export function getRuntimeSettingsFilePath(stateRoot?: string): string {
+  return join(getPiAgentRuntimeDir(stateRoot), 'settings.json');
+}
 
 function readLocalProfileDir(explicitLocalProfileDir?: string): string {
   const value = explicitLocalProfileDir ?? process.env.NEON_PILOT_LOCAL_PROFILE_DIR;
@@ -40,7 +42,7 @@ export interface PersistSettingsWriteOptions {
 
 export function persistSettingsWrite<T>(writeSettingsFile: (settingsFile: string) => T, options: PersistSettingsWriteOptions = {}): T {
   const localSettingsFile = options.localSettingsFile ?? resolveLocalProfileSettingsFilePath(options.localProfileDir);
-  const runtimeSettingsFile = options.runtimeSettingsFile ?? DEFAULT_RUNTIME_SETTINGS_FILE;
+  const runtimeSettingsFile = options.runtimeSettingsFile ?? getRuntimeSettingsFilePath();
 
   writeSettingsFile(localSettingsFile);
   return writeSettingsFile(runtimeSettingsFile);

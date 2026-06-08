@@ -4,7 +4,7 @@ import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot, resolveRuntim
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
-import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import { createManifestAgentExtensions } from './extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from './manifestToolAgentExtension.js';
 
@@ -21,12 +21,14 @@ export function setRuntimeAgentHookBuilders(builders: {
 
 function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
   const runtimeScope = 'shared';
+  const stateRoot = getStateRoot();
+  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const resolved = resolveRuntimeResources(runtimeScope, {
     ...(process.env.NEON_PILOT_REPO_ROOT ? { repoRoot: process.env.NEON_PILOT_REPO_ROOT } : {}),
   });
 
   const repoRoot = process.env.NEON_PILOT_REPO_ROOT || process.cwd();
-  const assembly = buildPromptAssemblyPlan({ runtimeScope, repoRoot, modelRef: readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE) });
+  const assembly = buildPromptAssemblyPlan({ runtimeScope, repoRoot, modelRef: readSavedModelRef(settingsFile) });
 
   return {
     additionalExtensionPaths: resolved.extensionEntries,
@@ -41,7 +43,9 @@ export function buildLiveSessionResourceOptionsForRuntime(): LiveSessionResource
 }
 
 function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
-  const agentDir = getPiAgentRuntimeDir();
+  const stateRoot = getStateRoot();
+  const agentDir = getPiAgentRuntimeDir(stateRoot);
+  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const agentExtensions = createManifestAgentExtensions({
     onError: (message, fields) => console.warn(`[runtime-agent] ${message}`, fields ?? ''),
   });
@@ -49,8 +53,8 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
   return [
     ...createManifestToolAgentExtensions({
       getRuntimeScope: () => 'shared',
-      getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
-      getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
+      getPreferredVisionModel: () => readSavedModelPreferences(settingsFile).currentVisionModel,
+      getCurrentModelRef: () => readSavedModelRef(settingsFile),
       hasOpenAiImageProvider: () => {
         try {
           const auth = AuthStorage.create(`${agentDir}/auth.json`);
@@ -61,8 +65,8 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
       },
       repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
       runtimeConfigRoot: getRuntimeConfigRoot(),
-      stateRoot: getStateRoot(),
-      serverContext: { getRuntimeScope: () => 'shared', getSettingsFile: () => DEFAULT_RUNTIME_SETTINGS_FILE },
+      stateRoot,
+      serverContext: { getRuntimeScope: () => 'shared', getSettingsFile: () => settingsFile, getStateRoot: () => stateRoot },
     }),
     ...agentExtensions.factories,
   ];

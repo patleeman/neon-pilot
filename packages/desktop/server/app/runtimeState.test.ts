@@ -98,7 +98,7 @@ vi.mock('../prompts/promptTemplateInventory.js', () => ({
 }));
 
 vi.mock('../ui/settingsPersistence.js', () => ({
-  DEFAULT_RUNTIME_SETTINGS_FILE: '/runtime/settings.json',
+  getRuntimeSettingsFilePath: () => '/runtime/settings.json',
 }));
 
 vi.mock('../cliEnvironment.js', () => ({
@@ -119,6 +119,16 @@ function createLogger() {
   return {
     warn: vi.fn(),
   };
+}
+
+function createTestRuntimeState(input: { logger?: ReturnType<typeof createLogger> } = {}) {
+  return createRuntimeState({
+    repoRoot: '/repo-root',
+    agentDir: '/agent-dir',
+    settingsFile: '/runtime/settings.json',
+    stateRoot: '/state-root',
+    logger: input.logger ?? createLogger(),
+  });
 }
 
 describe('createRuntimeState', () => {
@@ -159,11 +169,7 @@ describe('createRuntimeState', () => {
   it('builds live session helpers and materializes the shared runtime on demand', async () => {
     process.env.MCP_CONFIG_PATH = '/agent-dir/mcp_servers.json';
     const logger = createLogger();
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger,
-    });
+    const state = createTestRuntimeState({ logger });
 
     expect(materializeRuntimeResourcesToAgentDirMock).not.toHaveBeenCalledWith(resolvedShared, '/agent-dir');
     state.materializeRuntimeResources();
@@ -228,11 +234,7 @@ describe('createRuntimeState', () => {
       errors: [],
     });
     const logger = createLogger();
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger,
-    });
+    const state = createTestRuntimeState({ logger });
 
     const [factory] = state.buildLiveSessionExtensionFactories();
     let activeTools = ['read', 'write', 'edit'];
@@ -280,11 +282,7 @@ describe('createRuntimeState', () => {
       { path: '/repo-root/extensions/system-artifacts/skills/artifacts/SKILL.md' },
     ]);
 
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger: createLogger(),
-    });
+    const state = createTestRuntimeState();
 
     expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual(expect.any(Array));
   });
@@ -292,11 +290,7 @@ describe('createRuntimeState', () => {
   it('caches live session extension factories until registrations change', () => {
     listManifestAgentExtensionCacheEntriesMock.mockReturnValue([{ extensionId: 'agent-ext', exportName: 'create' }]);
     listExtensionToolRegistrationsMock.mockReturnValue([{ extensionId: 'tool-ext', id: 'tool', name: 'tool', action: 'run' }]);
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger: createLogger(),
-    });
+    const state = createTestRuntimeState();
 
     const first = state.buildLiveSessionExtensionFactories();
     const second = state.buildLiveSessionExtensionFactories();
@@ -313,11 +307,7 @@ describe('createRuntimeState', () => {
   });
 
   it('caches async live session resource options for repeated session creation', async () => {
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger: createLogger(),
-    });
+    const state = createTestRuntimeState();
 
     await expect(
       Promise.all([state.buildLiveSessionResourceOptionsAsync(), state.buildLiveSessionResourceOptionsAsync()]),
@@ -347,11 +337,7 @@ describe('createRuntimeState', () => {
   });
 
   it('seeds live session resource options while materializing runtime resources', async () => {
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger: createLogger(),
-    });
+    const state = createTestRuntimeState();
 
     state.materializeRuntimeResources();
 
@@ -371,11 +357,7 @@ describe('createRuntimeState', () => {
     });
 
     const logger = createLogger();
-    const state = createRuntimeState({
-      repoRoot: '/repo-root',
-      agentDir: '/agent-dir',
-      logger,
-    });
+    const state = createTestRuntimeState({ logger });
 
     expect(() => state.materializeRuntimeResources()).toThrow('initial materialize failed');
     expect(logger.warn).not.toHaveBeenCalledWith('failed to materialize runtime resources', expect.anything());

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { persistSettingsWrite, resolveLocalProfileSettingsFilePath } from './settingsPersistence.js';
+import { getRuntimeSettingsFilePath, persistSettingsWrite, resolveLocalProfileSettingsFilePath } from './settingsPersistence.js';
 
 const tempDirs: string[] = [];
 
@@ -39,6 +39,12 @@ describe('resolveLocalProfileSettingsFilePath', () => {
     writeFileSync(file, '{}\n');
 
     expect(() => resolveLocalProfileSettingsFilePath(file)).toThrow(`Local runtime config path is not a directory: ${file}`);
+  });
+});
+
+describe('getRuntimeSettingsFilePath', () => {
+  it('resolves settings from the explicit state root', () => {
+    expect(getRuntimeSettingsFilePath('/state-root')).toBe(join('/state-root', 'neon-pilot-runtime', 'settings.json'));
   });
 });
 

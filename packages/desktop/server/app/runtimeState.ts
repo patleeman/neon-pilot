@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 import { AuthStorage, type ExtensionAPI, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getRuntimeConfigRoot, getStateRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
+import { getRuntimeConfigRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
 import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
@@ -22,7 +22,6 @@ import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPre
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
 import { LIVE_SESSION_RESOURCE_OPTIONS_PERF, type LiveSessionResourceOptions } from '../routes/context.js';
 import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
-import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
 import { ensureNeonPilotCliLauncher, prependNeonPilotCliBin } from '../cliEnvironment.js';
 import { registerProcessWrapper } from '../shared/processLauncher.js';
 
@@ -33,6 +32,8 @@ export interface RuntimeStateLogger {
 export interface CreateRuntimeStateOptions {
   repoRoot: string;
   agentDir: string;
+  settingsFile: string;
+  stateRoot: string;
   logger: RuntimeStateLogger;
 }
 
@@ -48,7 +49,7 @@ export interface RuntimeState {
 const DEFAULT_RUNTIME_SCOPE = 'shared';
 
 export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeState {
-  const { repoRoot, agentDir, logger } = options;
+  const { repoRoot, agentDir, settingsFile, stateRoot, logger } = options;
   const runtimeScope = DEFAULT_RUNTIME_SCOPE;
   const mcpConfigWatchers: FSWatcher[] = [];
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
@@ -66,7 +67,6 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   }
 
   function applyRuntimeEnvironment(mcpConfigPath?: string | null): void {
-    const stateRoot = getStateRoot();
     ensureNeonPilotCliLauncher({ repoRoot, stateRoot });
     process.env.PATH = prependNeonPilotCliBin(process.env, stateRoot).PATH;
     registerProcessWrapper(
@@ -146,7 +146,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       repoRoot,
       extensionEntries,
     });
-    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const modelRef = readSavedModelRef(settingsFile);
     const skills = buildSkillInjectionPlan({
       runtimeScope,
       repoRoot,
@@ -192,7 +192,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   }
 
   function getPreferredVisionModel(): string {
-    return readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel;
+    return readSavedModelPreferences(settingsFile).currentVisionModel;
   }
 
   /**
@@ -292,12 +292,12 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
   function buildLiveSessionExtensionFactories(): ExtensionFactory[] {
     clearBashProcessWrappers();
     const extensionEntries = listRuntimeExtensionBackendEntries();
-    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const modelRef = readSavedModelRef(settingsFile);
     const cacheKey = JSON.stringify({
       runtimeScope,
       repoRoot,
       runtimeConfigRoot: getRuntimeConfigRoot(),
-      stateRoot: getStateRoot(),
+      stateRoot,
       modelRef,
       extensionEntries,
       agentRegistrations: listManifestAgentExtensionCacheEntries(),
@@ -321,12 +321,12 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       ...createManifestToolAgentExtensions({
         getRuntimeScope: getRuntimeScope,
         getPreferredVisionModel,
-        getCurrentModelRef: () => readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
+        getCurrentModelRef: () => readSavedModelRef(settingsFile),
         hasOpenAiImageProvider,
         repoRoot,
         runtimeConfigRoot: getRuntimeConfigRoot(),
-        stateRoot: getStateRoot(),
-        serverContext: { getRuntimeScope: getRuntimeScope, getSettingsFile: () => DEFAULT_RUNTIME_SETTINGS_FILE },
+        stateRoot,
+        serverContext: { getRuntimeScope: getRuntimeScope, getSettingsFile: () => settingsFile, getStateRoot: () => stateRoot },
       }),
 
       ...agentExtensions.factories,
@@ -339,7 +339,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const startedAtMs = performance.now();
     const extensionEntries = listRuntimeExtensionBackendEntries();
     const extensionEntriesAtMs = performance.now();
-    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const modelRef = readSavedModelRef(settingsFile);
     const modelRefAtMs = performance.now();
     const cacheKey = JSON.stringify({ runtimeScope, modelRef, extensionEntries });
     const cacheKeyAtMs = performance.now();
@@ -399,7 +399,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const startedAtMs = performance.now();
     const extensionEntries = listRuntimeExtensionBackendEntries();
     const extensionEntriesAtMs = performance.now();
-    const modelRef = readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE);
+    const modelRef = readSavedModelRef(settingsFile);
     const modelRefAtMs = performance.now();
     const cacheKey = JSON.stringify({ runtimeScope, modelRef, extensionEntries });
     const cacheKeyAtMs = performance.now();

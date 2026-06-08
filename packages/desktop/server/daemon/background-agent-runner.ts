@@ -15,7 +15,7 @@ import { createManifestAgentExtensions } from '../extensions/extensionAgentExten
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { buildLiveSessionResourceOptionsForRuntime } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
-import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 
 interface RunnerArgs {
   prompt: string;
@@ -158,7 +158,9 @@ export function configureExtensionHostClientFromEnv(env: NodeJS.ProcessEnv = pro
 export async function main(): Promise<void> {
   configureExtensionHostClientFromEnv();
   const args = parseArgs(process.argv.slice(2));
-  const agentDir = getPiAgentRuntimeDir();
+  const stateRoot = getStateRoot();
+  const agentDir = getPiAgentRuntimeDir(stateRoot);
+  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const resourceOptions = buildLiveSessionResourceOptionsForRuntime();
   const agentExtensions = createManifestAgentExtensions({
     onError: (message, fields) => console.warn(`[background-agent] ${message}`, fields ?? ''),
@@ -166,8 +168,8 @@ export async function main(): Promise<void> {
   const extensionFactories = [
     ...createManifestToolAgentExtensions({
       getRuntimeScope: () => 'shared',
-      getPreferredVisionModel: () => readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel,
-      getCurrentModelRef: () => args.model ?? readSavedModelRef(DEFAULT_RUNTIME_SETTINGS_FILE),
+      getPreferredVisionModel: () => readSavedModelPreferences(settingsFile).currentVisionModel,
+      getCurrentModelRef: () => args.model ?? readSavedModelRef(settingsFile),
       hasOpenAiImageProvider: () => {
         try {
           const auth = AuthStorage.create(`${agentDir}/auth.json`);
@@ -178,8 +180,8 @@ export async function main(): Promise<void> {
       },
       repoRoot: process.env.NEON_PILOT_REPO_ROOT || process.cwd(),
       runtimeConfigRoot: getRuntimeConfigRoot(),
-      stateRoot: getStateRoot(),
-      serverContext: { getRuntimeScope: () => 'shared', getSettingsFile: () => DEFAULT_RUNTIME_SETTINGS_FILE },
+      stateRoot,
+      serverContext: { getRuntimeScope: () => 'shared', getSettingsFile: () => settingsFile, getStateRoot: () => stateRoot },
     }),
     ...agentExtensions.factories,
   ];
@@ -198,7 +200,7 @@ export async function main(): Promise<void> {
   const { session } = await createPreparedLiveAgentSession({
     cwd: args.cwd,
     agentDir,
-    settingsFile: DEFAULT_RUNTIME_SETTINGS_FILE,
+    settingsFile,
     sessionManager,
     options: {
       ...resourceOptions,

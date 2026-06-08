@@ -1,8 +1,7 @@
 import { readModelState } from '../models/modelState.js';
 import { invalidateModelDefinitionsCache } from '../models/modelState.js';
+import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
-
-const DEFAULT_RUNTIME_SETTINGS_FILE = process.env.NEON_PILOT_SETTINGS_FILE || '';
 
 type ProviderDesktopCapabilityModule = typeof import('../models/providerDesktopCapability.js');
 
@@ -45,13 +44,7 @@ export function createExtensionModelsCapability(serverContext?: ExtensionBackend
      */
     async list(): Promise<unknown[]> {
       try {
-        const settingsFile =
-          DEFAULT_RUNTIME_SETTINGS_FILE ||
-          (await (async () => {
-            // Lazy default — look for the settings file in the agent dir
-            const { getPiAgentRuntimeDir } = await import('@neon-pilot/core');
-            return `${getPiAgentRuntimeDir()}/settings.json`;
-          })().catch(() => ''));
+        const settingsFile = serverContext?.getSettingsFile?.() ?? getRuntimeSettingsFilePath(serverContext?.getStateRoot?.());
         if (!settingsFile) return [];
 
         const state = await readModelState(settingsFile);

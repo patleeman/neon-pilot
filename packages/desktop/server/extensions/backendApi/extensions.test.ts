@@ -178,7 +178,7 @@ describe('backendApi/extensions', () => {
   it('writes additional extension search paths to profile and state-root settings files', async () => {
     const { writeAdditionalExtensionSearchPaths } = await import('./extensions.js');
     const stateRoot = mkdtempSync(join(tmpdir(), 'np-ext-search-paths-'));
-    const runtimeDir = join(stateRoot, 'profiles', 'shared');
+    const runtimeDir = join(stateRoot, 'neon-pilot-runtime');
     const runtimeSettingsFilePath = join(runtimeDir, 'settings.json');
 
     await expect(
@@ -195,7 +195,7 @@ describe('backendApi/extensions', () => {
     expect(JSON.parse(readFileSync(join(runtimeDir, 'settings.json'), 'utf-8'))).toEqual({
       'extensions.additionalPaths': '/extensions/one\n/extensions/two',
     });
-    expect(JSON.parse(readFileSync(join(stateRoot, 'profiles', 'settings.json'), 'utf-8'))).toEqual({
+    expect(JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8'))).toEqual({
       'extensions.additionalPaths': '/extensions/one\n/extensions/two',
     });
   });
@@ -203,7 +203,7 @@ describe('backendApi/extensions', () => {
   it('writes extension catalog sources to profile and state-root settings files', async () => {
     const { writeExtensionCatalogSources } = await import('./extensions.js');
     const stateRoot = mkdtempSync(join(tmpdir(), 'np-ext-sources-'));
-    const runtimeDir = join(stateRoot, 'profiles', 'shared');
+    const runtimeDir = join(stateRoot, 'neon-pilot-runtime');
     const runtimeSettingsFilePath = join(runtimeDir, 'settings.json');
     const sources = [{ id: 'example', type: 'github', owner: 'example', repo: 'extensions', enabled: true }];
 
@@ -217,6 +217,18 @@ describe('backendApi/extensions', () => {
 
     expect(JSON.parse(readFileSync(runtimeSettingsFilePath, 'utf-8'))).toMatchObject({ 'extensions.sources': sources });
     expect(JSON.parse(readFileSync(join(runtimeDir, 'settings.json'), 'utf-8'))).toMatchObject({ 'extensions.sources': sources });
-    expect(JSON.parse(readFileSync(join(stateRoot, 'profiles', 'settings.json'), 'utf-8'))).toMatchObject({ 'extensions.sources': sources });
+    expect(JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8'))).toMatchObject({ 'extensions.sources': sources });
+  });
+
+  it('refuses to derive extension settings from a root-level runtime directory', async () => {
+    const { writeAdditionalExtensionSearchPaths } = await import('./extensions.js');
+
+    await expect(
+      writeAdditionalExtensionSearchPaths({
+        runtimeDir: '/neon-pilot-runtime',
+        runtimeSettingsFilePath: '/neon-pilot-runtime/settings.json',
+        paths: ['/extensions/one'],
+      }),
+    ).rejects.toThrow('Refusing to resolve extension settings from root runtime directory');
   });
 });

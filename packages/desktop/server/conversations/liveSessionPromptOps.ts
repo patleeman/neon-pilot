@@ -2,7 +2,7 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
 import { rememberImageProbeAttachments, type StoredImageProbeAttachment } from '../extensions/imageProbeAttachmentStore.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
-import { DEFAULT_RUNTIME_SETTINGS_FILE } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import type { PromptImageAttachment } from './liveSessionQueue.js';
 
 export interface LiveSessionPromptHost {
@@ -48,7 +48,7 @@ function liveSessionModelAcceptsImages(model: unknown): boolean {
 }
 
 function getPreferredVisionModel(): string {
-  return readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE).currentVisionModel;
+  return readSavedModelPreferences(getRuntimeSettingsFilePath()).currentVisionModel;
 }
 
 function appendImageProbeNotice(text: string, images: StoredImageProbeAttachment[], preferredVisionModel: string): string {

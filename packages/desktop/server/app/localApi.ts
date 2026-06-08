@@ -155,7 +155,7 @@ import { invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../sha
 import { logError, logWarn } from '../shared/logging.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
-import { DEFAULT_RUNTIME_SETTINGS_FILE, persistSettingsWrite } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath, persistSettingsWrite } from '../ui/settingsPersistence.js';
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
@@ -442,15 +442,18 @@ function createRouteCollector(
 async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf: Record<string, number> }> {
   const startedAtMs = performance.now();
   const repoRoot = resolveRepoRoot();
-  const agentDir = getPiAgentRuntimeDir();
+  const stateRoot = getStateRoot();
+  const agentDir = getPiAgentRuntimeDir(stateRoot);
   const authFile = join(agentDir, 'auth.json');
-  const settingsFile = DEFAULT_RUNTIME_SETTINGS_FILE;
+  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const pathsAtMs = performance.now();
   process.stderr.write(`[perf] buildLocalContexts: paths ${Math.round(pathsAtMs - startedAtMs)}ms\n`);
 
   const runtimeState = createRuntimeState({
     repoRoot,
     agentDir,
+    settingsFile,
+    stateRoot,
     logger: {
       warn: () => {
         // Ignore local desktop route-context warnings here.
@@ -463,7 +466,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   const flushAttentionEvents = createAttentionEventFlusher({
     getRuntimeScope: runtimeState.getRuntimeScope,
     getRepoRoot: () => repoRoot,
-    getStateRoot,
+    getStateRoot: () => stateRoot,
     resolveDaemonRoot,
     publishConversationSessionMetaChanged,
   });
@@ -487,7 +490,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     authFile,
     getRuntimeScope: runtimeState.getRuntimeScope,
     materializeWebRuntimeConfig: () => runtimeState.materializeRuntimeResources(),
-    getStateRoot,
+    getStateRoot: () => stateRoot,
     serverPort: 0,
     getDefaultWebCwd: () => process.cwd(),
     resolveRequestedCwd,
@@ -590,6 +593,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   setConversationServiceContext({
     getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
+    getSettingsFile: context.getSettingsFile,
     getSavedUiPreferences: context.getSavedUiPreferences,
   });
   const capabilityContextAtMs = performance.now();
@@ -1593,13 +1597,15 @@ export async function readDesktopSessionSearchIndex(sessionIds: string[]) {
 }
 
 export async function readDesktopModels() {
+  const context = await getLocalServerRouteContext();
   const m = await models();
-  return await m.readModelState(DEFAULT_RUNTIME_SETTINGS_FILE);
+  return await m.readModelState(context.getSettingsFile());
 }
 
 export async function readDesktopModelPreferences() {
+  const context = await getLocalServerRouteContext();
   const m = await models();
-  return m.readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE);
+  return m.readSavedModelPreferences(context.getSettingsFile());
 }
 
 export async function updateDesktopModelPreferences(input: {
@@ -1610,28 +1616,31 @@ export async function updateDesktopModelPreferences(input: {
 }) {
   validateDesktopModelPreferenceUpdate(input);
 
+  const context = await getLocalServerRouteContext();
   const m = await models();
-  const modelData = (await m.readModelState(DEFAULT_RUNTIME_SETTINGS_FILE)).models;
+  const modelData = (await m.readModelState(context.getSettingsFile())).models;
   persistSettingsWrite(
     (settingsFile) => {
       m.writeSavedModelPreferences(buildSavedModelPreferencePatch(input), settingsFile, modelData);
     },
     {
-      runtimeSettingsFile: DEFAULT_RUNTIME_SETTINGS_FILE,
+      runtimeSettingsFile: context.getSettingsFile(),
     },
   );
   return buildDesktopMutationOkResponse();
 }
 
 export async function readDesktopDefaultCwd() {
-  return readSavedDefaultCwdPreferences(DEFAULT_RUNTIME_SETTINGS_FILE, process.cwd());
+  const context = await getLocalServerRouteContext();
+  return readSavedDefaultCwdPreferences(context.getSettingsFile(), process.cwd());
 }
 
 export async function updateDesktopDefaultCwd(cwd: string | null) {
+  const context = await getLocalServerRouteContext();
   const state = persistSettingsWrite(
     (settingsFile) => writeSavedDefaultCwdPreference({ cwd }, settingsFile, { baseDir: process.cwd(), validate: true }),
     {
-      runtimeSettingsFile: DEFAULT_RUNTIME_SETTINGS_FILE,
+      runtimeSettingsFile: context.getSettingsFile(),
     },
   );
   return state;
@@ -1646,7 +1655,8 @@ export async function pickDesktopFolder(input: { cwd?: string | null; prompt?: s
 }
 
 export async function readDesktopConversationPlansWorkspace() {
-  return readConversationPlansWorkspace(DEFAULT_RUNTIME_SETTINGS_FILE);
+  const context = await getLocalServerRouteContext();
+  return readConversationPlansWorkspace(context.getSettingsFile());
 }
 
 export async function readDesktopOpenConversationTabs() {
@@ -2277,11 +2287,12 @@ export async function updateDesktopConversationModelPreferences(input: {
   }
 
   const availableModels = await getAvailableModelObjects();
+  const settingsFile = (await getLocalServerRouteContext()).getSettingsFile();
   const sessionManager = SessionManager.open(sessionFile);
   const state = applyConversationModelPreferencesToSessionManager(
     sessionManager,
     nextInput,
-    (await models()).readSavedModelPreferences(DEFAULT_RUNTIME_SETTINGS_FILE, availableModels),
+    (await models()).readSavedModelPreferences(settingsFile, availableModels),
     availableModels,
   );
 

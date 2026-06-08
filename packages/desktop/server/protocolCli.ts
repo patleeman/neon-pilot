@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getStateRoot } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
 import {
@@ -12,6 +12,7 @@ import { readNeonPilotCliControlPlaneRecord } from './cliControlPlane.js';
 import { getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
+import { getRuntimeSettingsFilePath } from './ui/settingsPersistence.js';
 
 export const PROTOCOL_CLI_EXIT_CODES = {
   usage: 1,
@@ -34,10 +35,14 @@ interface CliCommandRegistration {
 
 function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
   const repoRoot = process.cwd();
-  const agentDir = getPiAgentRuntimeDir();
+  const stateRoot = getStateRoot();
+  const agentDir = getPiAgentRuntimeDir(stateRoot);
+  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const runtimeState = createRuntimeState({
     repoRoot,
     agentDir,
+    settingsFile,
+    stateRoot,
     logger: {
       warn: (message, fields) => {
         const suffix = fields ? ` ${JSON.stringify(fields)}` : '';
@@ -50,6 +55,8 @@ function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
     runtimeScope: runtimeState.getRuntimeScope(),
     repoRoot,
     agentDir,
+    settingsFile,
+    stateRoot,
   };
 }
 

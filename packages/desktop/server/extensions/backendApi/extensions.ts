@@ -148,11 +148,9 @@ export async function writeAdditionalExtensionSearchPaths(options: ExtensionSear
   if (!runtimeDir || !runtimeSettingsFilePath) throw new Error('runtimeDir and runtimeSettingsFilePath are required.');
   const paths = Array.isArray(options.paths) ? options.paths.filter((path): path is string => typeof path === 'string') : [];
   const pathsJoined = paths.join('\n');
-  writeSettingsValue(runtimeSettingsFilePath, ADDITIONAL_EXTENSION_PATHS_SETTING, pathsJoined);
-  writeSettingsValue(join(runtimeDir, 'settings.json'), ADDITIONAL_EXTENSION_PATHS_SETTING, pathsJoined);
-  // Keep the canonical state-root settings file in sync with the profile file
-  // because the extension loader reads configured search paths from state root.
-  writeSettingsValue(join(resolve(runtimeDir, '..'), 'settings.json'), ADDITIONAL_EXTENSION_PATHS_SETTING, pathsJoined);
+  for (const settingsFile of resolveExtensionSettingsWriteTargets(runtimeDir, runtimeSettingsFilePath)) {
+    writeSettingsValue(settingsFile, ADDITIONAL_EXTENSION_PATHS_SETTING, pathsJoined);
+  }
   return { ok: true };
 }
 
@@ -167,10 +165,34 @@ export async function writeExtensionCatalogSources(options: ExtensionSourceWrite
     typeof options.runtimeSettingsFilePath === 'string' && options.runtimeSettingsFilePath ? options.runtimeSettingsFilePath : undefined;
   if (!runtimeDir || !runtimeSettingsFilePath) throw new Error('runtimeDir and runtimeSettingsFilePath are required.');
   const sources = Array.isArray(options.sources) ? options.sources : [];
-  writeSettingsValue(runtimeSettingsFilePath, EXTENSION_SOURCES_SETTING, sources);
-  writeSettingsValue(join(runtimeDir, 'settings.json'), EXTENSION_SOURCES_SETTING, sources);
-  writeSettingsValue(join(resolve(runtimeDir, '..'), 'settings.json'), EXTENSION_SOURCES_SETTING, sources);
+  for (const settingsFile of resolveExtensionSettingsWriteTargets(runtimeDir, runtimeSettingsFilePath)) {
+    writeSettingsValue(settingsFile, EXTENSION_SOURCES_SETTING, sources);
+  }
   return { ok: true, sources };
+}
+
+function resolveNonRootStateSettingsFileFromRuntimeDir(runtimeDir: string): string | undefined {
+  const resolvedRuntimeDir = resolve(runtimeDir);
+  if (basename(resolvedRuntimeDir) !== 'neon-pilot-runtime') {
+    return undefined;
+  }
+
+  const stateRoot = dirname(resolvedRuntimeDir);
+  if (dirname(stateRoot) === stateRoot) {
+    throw new Error(`Refusing to resolve extension settings from root runtime directory: ${resolvedRuntimeDir}`);
+  }
+
+  return join(stateRoot, 'settings.json');
+}
+
+function resolveExtensionSettingsWriteTargets(runtimeDir: string, runtimeSettingsFilePath: string): string[] {
+  const targets = [
+    resolve(runtimeSettingsFilePath),
+    resolve(runtimeDir, 'settings.json'),
+    resolveNonRootStateSettingsFileFromRuntimeDir(runtimeDir),
+  ].filter((path): path is string => typeof path === 'string' && path.trim().length > 0);
+
+  return [...new Set(targets)];
 }
 
 function readSettingsFile(path: string): Record<string, unknown> {

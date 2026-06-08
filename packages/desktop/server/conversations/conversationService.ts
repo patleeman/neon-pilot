@@ -17,7 +17,7 @@ import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 import { type DeferredResumeSummary } from '../automation/deferredResumes.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { publishAppEvent } from '../shared/appEvents.js';
-import { DEFAULT_RUNTIME_SETTINGS_FILE as SETTINGS_FILE } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import { type SavedUiPreferences } from '../ui/uiPreferences.js';
 import {
   hasConversationCatalogRows,
@@ -60,6 +60,7 @@ let getRuntimeScopeFn: () => string = () => {
 };
 
 let getRepoRootFn: () => string = () => process.cwd();
+let getSettingsFileFn: () => string = () => getRuntimeSettingsFilePath();
 let readModelBackfillStarted = false;
 let readModelBackfillTimer: ReturnType<typeof setTimeout> | null = null;
 const DEFAULT_READ_MODEL_BACKFILL_DELAY_MS = 5 * 60_000;
@@ -71,10 +72,12 @@ export function getRuntimeScope(): string {
 export function setConversationServiceContext(input: {
   getRuntimeScope: () => string;
   getRepoRoot: () => string;
+  getSettingsFile?: () => string;
   getSavedUiPreferences: () => SavedUiPreferences;
 }): void {
   getRuntimeScopeFn = input.getRuntimeScope;
   getRepoRootFn = input.getRepoRoot;
+  getSettingsFileFn = input.getSettingsFile ?? (() => getRuntimeSettingsFilePath());
 }
 
 function resolveDaemonRoot(): string {
@@ -799,7 +802,7 @@ export async function readConversationModelPreferenceStateById(
   const availableModels = await getAvailableModelObjects();
   return resolveConversationModelPreferenceState(
     readConversationModelPreferenceSnapshot(sessionManager),
-    readSavedModelPreferences(SETTINGS_FILE, availableModels),
+    readSavedModelPreferences(getSettingsFileFn(), availableModels),
     availableModels,
   );
 }

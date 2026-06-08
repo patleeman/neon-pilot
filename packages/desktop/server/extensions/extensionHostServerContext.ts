@@ -1,6 +1,7 @@
 import { dirname } from 'node:path';
 
 import { createRuntimeState, type RuntimeState } from '../app/runtimeState.js';
+import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import type { ExtensionHostBackendServerContext } from './extensionHostProtocol.js';
 
 export interface ExtensionHostServerContextSnapshot {
@@ -32,9 +33,14 @@ export function createExtensionBackendServerContextFromSnapshot(
   if (!snapshot) return undefined;
   let runtimeState: RuntimeState | undefined;
   const getRuntimeState = () => {
+    const settingsFile = snapshot.settingsFile ?? getRuntimeSettingsFilePath(snapshot.stateRoot);
+    const agentDir = snapshot.agentDir ?? dirname(settingsFile);
+    const stateRoot = snapshot.stateRoot ?? dirname(agentDir);
     runtimeState ??= createRuntimeState({
       repoRoot: snapshot.repoRoot ?? process.cwd(),
-      agentDir: snapshot.agentDir ?? process.cwd(),
+      agentDir,
+      settingsFile,
+      stateRoot,
       logger: { warn: () => undefined },
     });
     return runtimeState;

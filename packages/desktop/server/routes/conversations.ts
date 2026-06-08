@@ -27,12 +27,13 @@ let getRuntimeScopeFn: () => string = () => {
 };
 
 function initializeConversationRoutesContext(
-  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSavedUiPreferences'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSettingsFile' | 'getSavedUiPreferences'>,
 ): void {
   getRuntimeScopeFn = context.getRuntimeScope;
   setConversationServiceContext({
     getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
+    getSettingsFile: context.getSettingsFile,
     getSavedUiPreferences: context.getSavedUiPreferences,
   });
 }
@@ -145,7 +146,7 @@ function registerConversationReadRoutes(router: Pick<Express, 'get'>): void {
 
 export function registerConversationRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
-  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSavedUiPreferences'>,
+  context: Pick<ServerRouteContext, 'getRuntimeScope' | 'getRepoRoot' | 'getSettingsFile' | 'getSavedUiPreferences'>,
 ): void {
   initializeConversationRoutesContext(context);
   startConversationCatalogBackfillFromSource();

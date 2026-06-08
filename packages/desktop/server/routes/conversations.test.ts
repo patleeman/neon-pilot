@@ -132,7 +132,7 @@ vi.mock('./liveSessions.js', () => ({
 }));
 
 vi.mock('../ui/settingsPersistence.js', () => ({
-  DEFAULT_RUNTIME_SETTINGS_FILE: '/runtime/settings.json',
+  getRuntimeSettingsFilePath: () => '/runtime/settings.json',
 }));
 
 vi.mock('../conversations/conversationModelPreferences.js', () => ({
