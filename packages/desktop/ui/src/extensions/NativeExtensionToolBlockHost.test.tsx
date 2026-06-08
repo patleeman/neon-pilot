@@ -27,7 +27,7 @@ describe('NativeExtensionToolBlockHost', () => {
     expect(html).toContain('Extension renderer unavailable.');
   });
 
-  it('keeps checkpoint transcript output readable when registry data is stale', () => {
+  it('uses the bundled checkpoint renderer when registry data is stale', () => {
     const html = renderToStaticMarkup(
       createElement(NativeExtensionToolBlockHost, {
         extension: undefined,
@@ -44,8 +44,7 @@ describe('NativeExtensionToolBlockHost', () => {
       }),
     );
 
-    expect(html).toContain('checkpoint');
-    expect(html).toContain('Extension renderer unavailable.');
-    expect(html).toContain('fix checkpoint renderer');
+    expect(html).not.toContain('Extension renderer unavailable.');
+    expect(html).toContain('Loading tool');
   });
 });

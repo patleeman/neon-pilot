@@ -33,6 +33,36 @@ type ExtensionToolBlockComponent = ComponentType<{
   context: ExtensionToolBlockContext;
 }>;
 
+const BUILTIN_CHECKPOINT_RENDERER: {
+  extension: ExtensionInstallSummary;
+  renderer: ExtensionTranscriptRendererContribution;
+} = {
+  extension: {
+    id: 'system-diffs',
+    name: 'Diffs',
+    packageType: 'system',
+    enabled: true,
+    status: 'enabled',
+    manifest: {
+      schemaVersion: 2,
+      id: 'system-diffs',
+      name: 'Diffs',
+      packageType: 'system',
+      frontend: { entry: 'dist/frontend.js' },
+      contributes: {},
+    },
+    permissions: [],
+    surfaces: [],
+    routes: [],
+  },
+  renderer: {
+    id: 'checkpoint-tool-block',
+    tool: 'checkpoint',
+    component: 'CheckpointTranscriptRenderer',
+    standalone: true,
+  },
+};
+
 function loadExtensionModule(extension: ExtensionInstallSummary, revision: number): Promise<Record<string, unknown>> {
   ensureExtensionFrontendReactGlobals();
   const systemLoader = systemExtensionModules.get(extension.id);
@@ -97,6 +127,17 @@ export function NativeExtensionToolBlockHost({
   block: ToolBlock;
   context: ExtensionToolBlockContext;
 }) {
+  if ((!extension || !renderer) && block.tool === 'checkpoint') {
+    return (
+      <NativeExtensionToolBlockHostInner
+        extension={BUILTIN_CHECKPOINT_RENDERER.extension}
+        renderer={BUILTIN_CHECKPOINT_RENDERER.renderer}
+        block={block}
+        context={context}
+      />
+    );
+  }
+
   if (!extension || !renderer) {
     return <MissingExtensionRendererFallback block={block} />;
   }
