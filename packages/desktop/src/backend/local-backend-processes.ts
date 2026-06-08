@@ -1,8 +1,10 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { getStateRoot } from '@neon-pilot/core';
 
 import type { DesktopApiStreamEvent } from '../hosts/types.js';
 import {
@@ -81,6 +83,19 @@ function resolveExtensionHostChildEntry(): string {
 
 function renderBackendChildExit(code: number | null, signal: NodeJS.Signals | null): Error {
   return new Error(`Local backend exited before it was ready (code=${String(code)} signal=${String(signal)})`);
+}
+
+async function readOpenConversationTabsFastPath(): Promise<unknown> {
+  const { readSavedUiPreferences } = await import('../../server/ui/uiPreferences.js');
+  const saved = readSavedUiPreferences(join(getStateRoot(), 'settings.json'));
+  return {
+    sessionIds: saved.openConversationIds,
+    pinnedSessionIds: saved.pinnedConversationIds,
+    archivedSessionIds: saved.archivedConversationIds,
+    activeConversationId: saved.activeConversationId ?? null,
+    workspacePaths: saved.workspacePaths,
+    remoteControlledConversationIds: saved.remoteControlledConversationIds,
+  };
 }
 
 export class LocalBackendProcesses {
@@ -401,17 +416,7 @@ export class LocalBackendProcesses {
     if (input.method === 'GET' && path === '/api/ui/open-conversations') {
       this.warmBackendChild();
       this.warmCriticalExtensionRegistryModule();
-      return this.makeJsonResponse(
-        {
-          sessionIds: [],
-          pinnedSessionIds: [],
-          archivedSessionIds: [],
-          activeConversationId: null,
-          workspacePaths: [],
-          remoteControlledConversationIds: [],
-        },
-        'main-process',
-      );
+      return this.makeJsonResponse(await readOpenConversationTabsFastPath(), 'main-process');
     }
     if (input.method === 'GET' && path === '/api/extensions/registry/critical') {
       const registry = await this.warmCriticalExtensionRegistryModule();
