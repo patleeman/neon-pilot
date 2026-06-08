@@ -16,6 +16,7 @@ import {
   removeProviderCredential,
   setProviderApiKey,
   startProviderOAuthLogin,
+  subscribeProviderOAuthLogin,
   submitProviderOAuthLoginInput,
 } from './providerAuth.js';
 
@@ -195,7 +196,7 @@ function seedProviderDefaults(
   return next;
 }
 
-function autoSeedProviderModelsForApiKey(scope: string, provider: string, authFile: string): boolean {
+function autoSeedProviderModelsForCredential(scope: string, provider: string, authFile: string): boolean {
   const providersState = readModelProvidersState(scope);
   const providerState = providersState.providers.find((candidate) => candidate.id === provider);
 
@@ -211,6 +212,41 @@ function autoSeedProviderModelsForApiKey(scope: string, provider: string, authFi
   const stateWithProvider = providerState ? providersState : upsertModelProvider(scope, provider, {});
   const nextState = seedProviderDefaults(scope, provider, authFile, stateWithProvider);
   return nextState.providers.find((candidate) => candidate.id === provider)?.models.length !== 0;
+}
+
+function publishModelRuntimeInvalidation(): void {
+  void Promise.all([import('./modelState.js'), import('../shared/appEvents.js')])
+    .then(([modelState, appEvents]) => {
+      modelState.invalidateModelDefinitionsCache();
+      appEvents.invalidateAppTopics('models');
+    })
+    .catch(() => {
+      // Best-effort UI invalidation should not fail credential persistence.
+    });
+}
+
+function refreshProviderRuntimeAfterCredential(context: ProviderDesktopCapabilityContext, provider: string): void {
+  autoSeedProviderModelsForCredential(runtimeScope(context), provider, context.getAuthFile());
+  materialize(context);
+  reloadAllLiveSessionAuth();
+  refreshAllLiveSessionModelRegistries();
+  publishModelRuntimeInvalidation();
+}
+
+function refreshProviderRuntimeAfterOAuthLogin(context: ProviderDesktopCapabilityContext, loginId: string): void {
+  const unsubscribe = subscribeProviderOAuthLogin(loginId, (state) => {
+    if (state.status !== 'completed' && state.status !== 'failed' && state.status !== 'cancelled') {
+      return;
+    }
+
+    unsubscribe();
+
+    if (state.status !== 'completed') {
+      return;
+    }
+
+    refreshProviderRuntimeAfterCredential(context, state.provider);
+  });
 }
 
 export function readModelProvidersCapability(context: ProviderDesktopCapabilityContext): ModelProviderState {
@@ -358,7 +394,7 @@ export function setProviderApiKeyCapability(
   }
 
   const state = setProviderApiKey(context.getAuthFile(), provider, apiKey, context.getStateRoot?.());
-  const didSeedDefaults = autoSeedProviderModelsForApiKey(runtimeScope(context), provider, context.getAuthFile());
+  const didSeedDefaults = autoSeedProviderModelsForCredential(runtimeScope(context), provider, context.getAuthFile());
 
   if (didSeedDefaults) {
     materialize(context);
@@ -384,7 +420,9 @@ export function startProviderOAuthLoginCapability(
   context: ProviderDesktopCapabilityContext,
   providerInput: string,
 ): ProviderOAuthLoginState {
-  return startProviderOAuthLogin(context.getAuthFile(), providerInput);
+  const login = startProviderOAuthLogin(context.getAuthFile(), providerInput);
+  refreshProviderRuntimeAfterOAuthLogin(context, login.id);
+  return login;
 }
 
 export function readProviderOAuthLoginCapability(loginId: string): ProviderOAuthLoginState | null {

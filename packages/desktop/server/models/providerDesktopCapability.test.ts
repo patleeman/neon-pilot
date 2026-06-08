@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./modelProviders.js', () => ({
   readModelProvidersState: vi.fn(),
@@ -13,9 +13,14 @@ vi.mock('./providerAuth.js', () => ({
   setProviderApiKey: vi.fn(),
   removeProviderCredential: vi.fn(),
   startProviderOAuthLogin: vi.fn(),
+  subscribeProviderOAuthLogin: vi.fn(),
   getProviderOAuthLoginState: vi.fn(),
   submitProviderOAuthLoginInput: vi.fn(),
   cancelProviderOAuthLogin: vi.fn(),
+}));
+
+vi.mock('./modelState.js', () => ({
+  invalidateModelDefinitionsCache: vi.fn(),
 }));
 
 vi.mock('./modelRegistry.js', () => ({
@@ -27,7 +32,13 @@ vi.mock('../middleware/index.js', () => ({
   reloadAllLiveSessionAuth: vi.fn(),
 }));
 
+vi.mock('../shared/appEvents.js', () => ({
+  invalidateAppTopics: vi.fn(),
+}));
+
+import * as appEvents from '../shared/appEvents.js';
 import * as middleware from '../middleware/index.js';
+import * as modelState from './modelState.js';
 import * as modelProviders from './modelProviders.js';
 import * as providerAuth from './providerAuth.js';
 import * as modelRegistry from './modelRegistry.js';
@@ -57,6 +68,10 @@ function createContext(overrides?: Partial<ProviderDesktopCapabilityContext>): P
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('readModelProvidersCapability', () => {
   it('returns provider state for the current profile', () => {
@@ -267,12 +282,64 @@ describe('removeProviderCredentialCapability', () => {
 });
 
 describe('OAuth login capabilities', () => {
-  it('startProviderOAuthLoginCapability delegates', () => {
-    vi.mocked(providerAuth.startProviderOAuthLogin).mockReturnValue({ loginId: 'abc' } as never);
+  it('startProviderOAuthLoginCapability delegates and watches completion', () => {
+    vi.mocked(providerAuth.startProviderOAuthLogin).mockReturnValue({ id: 'abc' } as never);
+    vi.mocked(providerAuth.subscribeProviderOAuthLogin).mockReturnValue(vi.fn());
     const context = createContext();
     const result = startProviderOAuthLoginCapability(context, 'github');
     expect(providerAuth.startProviderOAuthLogin).toHaveBeenCalledWith('/tmp/test-auth.json', 'github');
-    expect(result).toEqual({ loginId: 'abc' });
+    expect(providerAuth.subscribeProviderOAuthLogin).toHaveBeenCalledWith('abc', expect.any(Function));
+    expect(result).toEqual({ id: 'abc' });
+  });
+
+  it('refreshes runtime models after OAuth login completion', async () => {
+    let listener: ((state: import('./providerAuth.js').ProviderOAuthLoginState) => void) | null = null;
+    const unsubscribe = vi.fn();
+    vi.mocked(providerAuth.startProviderOAuthLogin).mockReturnValue({ id: 'login-1', provider: 'openai-codex', status: 'running' } as never);
+    vi.mocked(providerAuth.subscribeProviderOAuthLogin).mockImplementation((_loginId, callback) => {
+      listener = callback as typeof listener;
+      return unsubscribe;
+    });
+    vi.mocked(modelProviders.readModelProvidersState).mockReturnValue({ providers: [] } as never);
+    vi.mocked(modelRegistry.createModelRegistryForAuthFile).mockReturnValue({
+      getAll: () => [
+        {
+          provider: 'openai-codex',
+          id: 'gpt-5.4',
+          name: 'GPT-5.4',
+          reasoning: true,
+        },
+      ],
+    } as never);
+    vi.mocked(modelProviders.upsertModelProvider).mockReturnValue({
+      filePath: '/tmp/providers.json',
+      providers: [{ id: 'openai-codex', authHeader: false, models: [] }],
+    } as never);
+    vi.mocked(modelProviders.upsertModelProviderModel).mockReturnValue({
+      filePath: '/tmp/providers.json',
+      providers: [{ id: 'openai-codex', authHeader: false, models: [{ id: 'gpt-5.4' }] }],
+    } as never);
+
+    const context = createContext();
+    startProviderOAuthLoginCapability(context, 'openai-codex');
+    listener?.({ status: 'completed', provider: 'openai-codex' } as never);
+
+    expect(unsubscribe).toHaveBeenCalled();
+    expect(modelProviders.upsertModelProvider).toHaveBeenCalledWith('test-profile', 'openai-codex', {});
+    expect(modelProviders.upsertModelProviderModel).toHaveBeenCalledWith(
+      'test-profile',
+      'openai-codex',
+      'gpt-5.4',
+      expect.objectContaining({
+        name: 'GPT-5.4',
+        reasoning: true,
+      }),
+    );
+    expect(context.materializeWebRuntimeConfig as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('test-profile');
+    expect(middleware.reloadAllLiveSessionAuth).toHaveBeenCalled();
+    expect(middleware.refreshAllLiveSessionModelRegistries).toHaveBeenCalled();
+    await vi.waitFor(() => expect(modelState.invalidateModelDefinitionsCache).toHaveBeenCalled());
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('models');
   });
 
   it('readProviderOAuthLoginCapability delegates', () => {
