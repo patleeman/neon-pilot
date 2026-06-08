@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { getRunConnections, isRunActive, type RunPresentationLookups } from '../../automation/runPresentation';
 import { NativeExtensionToolBlockHost } from '../../extensions/NativeExtensionToolBlockHost';
+import type { ExtensionInstallSummary, ExtensionTranscriptRendererContribution } from '../../extensions/types';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import type { DurableRunRecord, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
@@ -31,6 +32,36 @@ import {
 } from './toolPresentation.js';
 
 const MAX_VISIBLE_LINKED_RUNS = 5;
+
+const BUILTIN_CHECKPOINT_RENDERER: {
+  extension: ExtensionInstallSummary;
+  renderer: ExtensionTranscriptRendererContribution;
+} = {
+  extension: {
+    id: 'system-diffs',
+    name: 'Diffs',
+    packageType: 'system',
+    enabled: true,
+    status: 'enabled',
+    manifest: {
+      schemaVersion: 2,
+      id: 'system-diffs',
+      name: 'Diffs',
+      packageType: 'system',
+      frontend: { entry: 'dist/frontend.js' },
+      contributes: {},
+    },
+    permissions: [],
+    surfaces: [],
+    routes: [],
+  },
+  renderer: {
+    id: 'checkpoint-tool-block',
+    tool: 'checkpoint',
+    component: 'CheckpointTranscriptRenderer',
+    standalone: true,
+  },
+};
 
 function BackgroundBashInlineOutput({
   runId,
@@ -184,6 +215,7 @@ export function ToolBlock({
       const renderer = extension.manifest?.contributes?.transcriptRenderers?.find((candidate) => candidate.tool === block.tool);
       if (renderer && extension.enabled) return { extension, renderer };
     }
+    if (block.tool === 'checkpoint') return BUILTIN_CHECKPOINT_RENDERER;
     return null;
   }, [block.tool, extensionRegistry.extensions]);
   const agentBashTool = block.tool === 'bash' && !backgroundShellStart;
