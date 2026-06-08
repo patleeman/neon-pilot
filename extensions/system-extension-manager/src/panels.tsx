@@ -79,6 +79,7 @@ interface InstallableExtensionCatalogItem {
   installedVersion?: string;
   enabled?: boolean;
   availableVersion?: string;
+  unavailableReason?: string;
   updateAvailable?: boolean;
 }
 
@@ -1064,7 +1065,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     (extension: ExtensionInstallSummary) => {
       setNotice(null);
       if (extension.status === 'invalid') {
-        setError(extension.errors?.[0] ?? 'Extension manifest is invalid.');
+        showActionError('Extension manifest is invalid.', extension.errors?.[0]);
         return;
       }
       setBusyId(extension.id);
@@ -1094,11 +1095,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         })
         .catch((err: Error) => {
           setExtensions((items) => items.map((item) => (item.id === extension.id ? extension : item)));
-          setError(err.message);
+          showActionError(`Failed to ${nextEnabled ? 'enable' : 'disable'} ${extension.name}`, err.message);
         })
         .finally(() => setBusyId(null));
     },
-    [load, location.pathname, navigate],
+    [location.pathname, navigate, showActionError],
   );
 
   const deleteExtension = useCallback(
@@ -1846,12 +1847,18 @@ function InstallExtensionModal({
             <ResourceList>
               {visibleCatalogItems.map((item) => {
                 const itemBusy = catalogBusyId === item.id;
-                const unavailablePackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
+                const plannedPackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
+                const unavailablePackage = plannedPackage || Boolean(item.unavailableReason);
                 return (
                   <ResourceListRow
                     key={item.id}
                     title={item.name}
-                    detail={item.description || packageKindLabel(item)}
+                    detail={
+                      <>
+                        {item.description || packageKindLabel(item)}
+                        {item.unavailableReason ? <span className="block text-warning">{item.unavailableReason}</span> : null}
+                      </>
+                    }
                     titleClassName="text-[13px]"
                     detailClassName="text-[12px] font-sans text-secondary"
                     actions={
@@ -1861,7 +1868,15 @@ function InstallExtensionModal({
                         disabled={item.installed || itemBusy || unavailablePackage}
                         onClick={() => onInstallCatalog(item)}
                       >
-                        {itemBusy ? 'Installing...' : item.installed ? 'Installed' : unavailablePackage ? 'Planned' : 'Install'}
+                        {itemBusy
+                          ? 'Installing...'
+                          : item.installed
+                            ? 'Installed'
+                            : item.unavailableReason
+                              ? 'Unavailable'
+                              : plannedPackage
+                                ? 'Planned'
+                                : 'Install'}
                       </Button>
                     }
                   />

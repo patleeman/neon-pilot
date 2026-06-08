@@ -476,6 +476,53 @@ describe('extension host client', () => {
     expect(extensionServices.startExtensionServices).not.toHaveBeenCalled();
   });
 
+  it('rejects enablement for incompatible extensions', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.setExtensionEnabled.mockClear();
+    extensionRegistry.findExtensionEntry.mockReturnValueOnce({
+      manifest: {
+        id: 'old-extension',
+        name: 'Old Extension',
+        compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+      },
+    });
+    extensionRegistry.listExtensionInstallSummaries.mockReturnValue([{ id: 'old-extension', status: 'disabled' }]);
+
+    await expect(getExtensionHostClient().setEnabled({ extensionId: 'old-extension', enabled: true })).resolves.toEqual({
+      ok: false,
+      status: 400,
+      error: expect.stringContaining('requires Neon Pilot >=0.10.0 <0.11.0'),
+    });
+    expect(extensionRegistry.setExtensionEnabled).not.toHaveBeenCalledWith('old-extension', true);
+  });
+
+  it('does not reject enablement for system extensions with stale compatibility metadata', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.setExtensionEnabled.mockClear();
+    extensionSubscriptions.installSubscriptionsForExtension.mockClear();
+    extensionServices.startServicesForExtension.mockClear();
+    extensionRegistry.findExtensionEntry.mockReturnValueOnce({
+      manifest: {
+        id: 'system-onboarding',
+        name: 'Onboarding',
+        packageType: 'system',
+        compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+      },
+    });
+    extensionRegistry.listExtensionInstallSummaries
+      .mockReturnValueOnce([{ id: 'system-onboarding', status: 'disabled' }])
+      .mockReturnValueOnce([{ id: 'system-onboarding', status: 'disabled' }])
+      .mockReturnValueOnce([{ id: 'system-onboarding', status: 'enabled', enabled: true }]);
+    extensionSubscriptions.installSubscriptionsForExtension.mockResolvedValueOnce(undefined);
+    extensionServices.startServicesForExtension.mockResolvedValueOnce([]);
+
+    await expect(getExtensionHostClient().setEnabled({ extensionId: 'system-onboarding', enabled: true })).resolves.toEqual({
+      ok: true,
+      extension: { id: 'system-onboarding', status: 'enabled', enabled: true },
+    });
+    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('system-onboarding', true);
+  });
+
   it('routes keybinding updates through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
 

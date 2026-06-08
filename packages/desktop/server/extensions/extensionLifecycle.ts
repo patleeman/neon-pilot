@@ -5,6 +5,7 @@ import { basename, join, resolve, sep } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
+import { getExtensionCompatibilityError } from './extensionCompatibility.js';
 import {
   findExtensionEntry,
   getRuntimeExtensionsRoot,
@@ -411,6 +412,8 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
     const packageRoot = findExtractedManifestRoot(extractRoot);
     assertInside(extractRoot, packageRoot);
     const manifest = parseExtensionManifest(JSON.parse(readFileSync(join(packageRoot, 'extension.json'), 'utf-8')));
+    const compatibilityError = getExtensionCompatibilityError(manifest);
+    if (compatibilityError) throw new Error(compatibilityError);
     assertImportableRuntimeArtifacts(packageRoot, manifest);
     const id = normalizeExtensionId(manifest.id);
     const destination = join(getRuntimeExtensionsRoot(stateRoot), id);

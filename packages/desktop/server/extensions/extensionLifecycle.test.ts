@@ -151,6 +151,35 @@ describe('extensionLifecycle', () => {
     expect(existsSync(join(runtimeRoot, 'imported-ext', 'extension.json'))).toBe(true);
   });
 
+  it('rejects extension bundles that are incompatible with the running app', () => {
+    const zipPath = join(stateRoot, 'incompatible.neon-extension.zip');
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(zipPath, 'zip');
+    execFileSync.mockImplementation((command, args) => {
+      if (command === 'zipinfo') return 'bundle/extension.json\nbundle/dist/backend.mjs\nbundle/dist/build-manifest.json\n' as ReturnType<ExecFileSync>;
+      if (command === 'unzip') {
+        const extractRoot = String(args?.[3]);
+        mkdirSync(join(extractRoot, 'bundle', 'dist'), { recursive: true });
+        writeFileSync(
+          join(extractRoot, 'bundle', 'extension.json'),
+          JSON.stringify({
+            id: 'old-extension',
+            name: 'Old Extension',
+            compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+            backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping' }] },
+          }),
+        );
+        writeFileSync(join(extractRoot, 'bundle', 'dist', 'backend.mjs'), 'export async function ping() {}');
+        writeFileSync(join(extractRoot, 'bundle', 'dist', 'build-manifest.json'), '{}');
+        return Buffer.from('');
+      }
+      return Buffer.from('');
+    });
+
+    expect(() => importRuntimeExtensionBundle({ zipPath }, stateRoot)).toThrow('requires Neon Pilot >=0.10.0 <0.11.0');
+    expect(existsSync(join(runtimeRoot, 'old-extension'))).toBe(false);
+  });
+
   it('rejects bundles that declare a backend without a built backend artifact', () => {
     const zipPath = join(stateRoot, 'source-only.neon-extension.zip');
     mkdirSync(stateRoot, { recursive: true });

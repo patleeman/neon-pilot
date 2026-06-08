@@ -634,6 +634,60 @@ describe('extension registry', () => {
     expect(isExtensionEnabled('slack-mcp-gateway', stateRoot)).toBe(true);
   });
 
+  it('keeps incompatible runtime extensions disabled with diagnostics even when explicitly enabled', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'old-extension');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'old-extension',
+        name: 'Old Extension',
+        compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+        contributes: { views: [{ id: 'page', title: 'Old', location: 'main', route: '/ext/old', component: 'OldPage' }] },
+      }),
+    );
+
+    setExtensionEnabled('old-extension', true, stateRoot);
+
+    expect(isExtensionEnabled('old-extension', stateRoot)).toBe(false);
+    expect(readExtensionRegistrySnapshot().routes).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ extensionId: 'old-extension' })]),
+    );
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'old-extension')).toMatchObject({
+      enabled: false,
+      status: 'disabled',
+      diagnostics: [expect.stringContaining('requires Neon Pilot >=0.10.0 <0.11.0')],
+    });
+  });
+
+  it('does not disable built-in system extensions with stale compatibility metadata', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'system-onboarding');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-onboarding',
+        name: 'Onboarding',
+        packageType: 'system',
+        compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+      }),
+    );
+
+    setExtensionEnabled('system-onboarding', true, stateRoot);
+
+    expect(isExtensionEnabled('system-onboarding', stateRoot)).toBe(true);
+    const summary = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'system-onboarding');
+    expect(summary).toMatchObject({
+      enabled: true,
+      status: 'enabled',
+    });
+    expect(summary?.diagnostics ?? []).toEqual([]);
+  });
+
   it('keeps locked system extensions enabled even when stale config disables them', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const extensionRoot = join(stateRoot, 'extensions', 'system-terminal');

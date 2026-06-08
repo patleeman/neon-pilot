@@ -446,6 +446,19 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         };
       }
       if (request.enabled) {
+        const { getExtensionCompatibilityError } = await import('./extensionCompatibility.js');
+        const compatibilityError =
+          entry.manifest.packageType === 'system' ? null : getExtensionCompatibilityError(entry.manifest);
+        if (compatibilityError) {
+          return {
+            ok: true,
+            enabledResult: {
+              ok: false,
+              status: 400,
+              error: compatibilityError,
+            },
+          };
+        }
         const installed = new Set(listExtensionInstallSummaries().map((extension) => extension.id));
         const missingDependencies = (entry.manifest.dependsOn ?? [])
           .map(normalizeDependencyId)

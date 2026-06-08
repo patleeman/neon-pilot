@@ -18,6 +18,11 @@ export function validateExtensionManifestBasics(value: Record<string, unknown>):
   }
   validateOptionalString(value.description, 'description');
   validateOptionalString(value.version, 'version');
+  if (value.compatibility !== undefined) {
+    if (!isRecord(value.compatibility)) throw new Error('Extension manifest compatibility must be an object.');
+    validateOptionalString(value.compatibility.neonPilot, 'compatibility.neonPilot');
+    validateOptionalString(value.compatibility.extensionApi, 'compatibility.extensionApi');
+  }
 }
 
 export function validateExtensionManifestDependencies(value: unknown): void {

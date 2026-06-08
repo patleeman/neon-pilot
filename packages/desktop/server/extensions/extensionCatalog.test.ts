@@ -148,7 +148,14 @@ describe('extension catalog', () => {
     const catalog = await listInstallableExtensionCatalog();
 
     expect(catalog.sourceErrors).toEqual([]);
-    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-browser' })]));
+    expect(catalog.extensions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'system-browser',
+          unavailableReason: expect.stringContaining('release artifact is published'),
+        }),
+      ]),
+    );
   });
 
   it('reports non-404 first-party release catalog fetch failures while using the baked catalog', async () => {
@@ -170,6 +177,19 @@ describe('extension catalog', () => {
       }),
     ]);
     expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-browser' })]));
+  });
+
+  it('refuses to install stale baked first-party catalog entries', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 404,
+      })),
+    );
+
+    const { installCatalogExtension } = await import('./extensionCatalog.js');
+    await expect(installCatalogExtension({ id: 'system-browser' })).rejects.toThrow('is not installable');
   });
 
   it('merges enabled GitHub extension sources from settings into the catalog', async () => {
@@ -305,11 +325,20 @@ describe('extension catalog', () => {
     importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-browser', enabled: false }, packageRoot: '/tmp/ext' });
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        headers: new Headers({ 'content-length': '4' }),
-        arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
-      })),
+      vi.fn(async (url: string | URL) =>
+        String(url).endsWith('/neon-extension-catalog.json')
+          ? {
+              ok: true,
+              json: async () => ({
+                packages: [{ id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }],
+              }),
+            }
+          : {
+              ok: true,
+              headers: new Headers({ 'content-length': '4' }),
+              arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
+            },
+      ),
     );
 
     const { updateCatalogExtension } = await import('./extensionCatalog.js');

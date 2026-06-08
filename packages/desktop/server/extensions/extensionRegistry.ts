@@ -30,6 +30,7 @@ import {
 import { buildExtensionAutoCommandRegistrations } from './extensionCommandAutoRegistrations.js';
 import { buildExtensionContributedCommandRegistrations } from './extensionCommandContributedRegistrations.js';
 import { findExtensionCommandRegistration as findExtensionCommandRegistrationValue } from './extensionCommandLookup.js';
+import { getExtensionCompatibilityError } from './extensionCompatibility.js';
 import {
   validateActivityTreeItemActionContributions,
   validateComposerAttachmentProviderContributions,
@@ -707,6 +708,7 @@ export function isExtensionEnabled(extensionId: string, stateRoot: string = getS
 
 function isExtensionEntryEnabled(entry: ExtensionRegistryEntry | undefined, config: ExtensionRegistryConfig): boolean {
   if (!entry) return true;
+  if (entry.manifest.packageType !== 'system' && getExtensionCompatibilityError(entry.manifest)) return false;
   if (LOCKED_EXTENSION_IDS.includes(entry.manifest.id)) return true;
   if ((config.disabledIds ?? []).includes(entry.manifest.id)) return false;
   if (entry.manifest.defaultEnabled === false) {
@@ -1190,6 +1192,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const diagnostics = listExtensionContributionDiagnostics(entry, availableExtensionIds);
     const buildError = buildErrors.get(manifest.id);
     const healthError = healthErrors.get(manifest.id);
+    const compatibilityDiagnostic = manifest.packageType === 'system' ? null : getExtensionCompatibilityError(manifest);
     const quarantine = config.quarantined?.[manifest.id];
     const quarantineDiagnostic = buildExtensionQuarantineDiagnostic(quarantine);
     return {
@@ -1199,7 +1202,11 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       enabled,
       status: enabled ? ('enabled' as const) : ('disabled' as const),
       ...(buildError ? { buildError } : {}),
-      ...mergeExtensionInstallDiagnostics({ diagnostics, quarantineDiagnostic, healthError }),
+      ...mergeExtensionInstallDiagnostics({
+        diagnostics: compatibilityDiagnostic ? [...diagnostics, compatibilityDiagnostic] : diagnostics,
+        quarantineDiagnostic,
+        healthError,
+      }),
       ...(manifest.description ? { description: manifest.description } : {}),
       ...(manifest.version ? { version: manifest.version } : {}),
       ...(entry.packageRoot ? { packageRoot: entry.packageRoot } : {}),

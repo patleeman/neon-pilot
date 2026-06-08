@@ -80,12 +80,18 @@ export interface ExtensionManifest {
   defaultEnabled?: boolean;
   description?: string;
   version?: string;
+  compatibility?: ExtensionCompatibility;
   frontend?: ExtensionFrontend;
   contributes?: ExtensionContributions;
   surfaces?: ExtensionSurface[];
   backend?: ExtensionBackend;
   permissions?: ExtensionPermission[];
   dependsOn?: Array<string | ExtensionDependencyContribution>;
+}
+
+export interface ExtensionCompatibility {
+  neonPilot?: string;
+  extensionApi?: string;
 }
 
 export interface ExtensionDependencyContribution {

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   notifyExtensionRegistryChanged: vi.fn(),
   openPath: vi.fn(),
   reloadExtension: vi.fn(),
+  updateExtension: vi.fn(),
   validateExtension: vi.fn(),
   extensionKeybindings: vi.fn(),
 }));
@@ -23,6 +24,7 @@ vi.mock('@neon-pilot/extensions/data', () => ({
     exportExtension: mocks.exportExtension,
     extensionInstallations: mocks.extensionInstallations,
     reloadExtension: mocks.reloadExtension,
+    updateExtension: mocks.updateExtension,
     validateExtension: mocks.validateExtension,
     extensionKeybindings: mocks.extensionKeybindings,
   },
@@ -140,6 +142,7 @@ describe('ExtensionManagerPage', () => {
     mocks.extensionKeybindings.mockResolvedValue([]);
     mocks.deleteExtension.mockResolvedValue({ ok: true, extensionId: 'menu-test', deleted: true });
     mocks.reloadExtension.mockResolvedValue({ ok: true, id: 'menu-test', reloaded: true, message: 'Extension backend reloaded.' });
+    mocks.updateExtension.mockResolvedValue({ extension: createExtension(), actionResult: { ok: true } });
     mocks.validateExtension.mockResolvedValue({
       ok: true,
       extensionId: 'menu-test',
@@ -241,6 +244,29 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
+  });
+
+  it('keeps the extensions table visible when enabling an extension fails', async () => {
+    const notify = vi.fn();
+    mocks.extensionInstallations.mockResolvedValue([{ ...createExtension(), enabled: false, status: 'disabled' }]);
+    mocks.updateExtension.mockRejectedValue(new Error('Extension "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.'));
+
+    renderPage({ notify });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByLabelText('Enable Menu Test'));
+
+    expect(await screen.findByText('Failed to enable Menu Test')).toBeTruthy();
+    expect(screen.getByText('Extension "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.')).toBeTruthy();
+    expect(screen.getAllByText('Extensions').length).toBeGreaterThan(0);
+    expect(screen.getByText('1 installed · 0 enabled')).toBeTruthy();
+    expect(screen.getByLabelText('Enable Menu Test')).toBeTruthy();
+    expect(notify).toHaveBeenCalledWith({
+      message: 'Failed to enable Menu Test',
+      details: 'Extension "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.',
+      type: 'error',
+      source: 'system-extension-manager',
+    });
   });
 
   it('combines installed add-ons and built-ins in the all extensions count', async () => {

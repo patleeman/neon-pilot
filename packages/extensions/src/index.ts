@@ -838,11 +838,17 @@ export interface ExtensionManifest {
   name: string;
   description?: string;
   version?: string;
+  compatibility?: ExtensionCompatibility;
   frontend?: ExtensionFrontend;
   contributes?: ExtensionContributions;
   backend?: ExtensionBackend;
   permissions?: ExtensionPermission[];
   dependsOn?: Array<string | ExtensionDependencyContribution>;
+}
+
+export interface ExtensionCompatibility {
+  neonPilot?: string;
+  extensionApi?: string;
 }
 
 export interface ExtensionBackend {

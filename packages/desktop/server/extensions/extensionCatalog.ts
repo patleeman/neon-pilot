@@ -4,6 +4,7 @@ import { basename, join, resolve } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
+import { getExtensionCompatibilityError, resolveInstalledAppVersion } from './extensionCompatibility.js';
 import { deleteRuntimeExtension, importRuntimeExtensionBundle } from './extensionLifecycle.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { INSTALLABLE_EXTENSION_CATALOG } from './installableExtensionCatalog.generated.js';
@@ -13,6 +14,8 @@ const FIRST_PARTY_SOURCE_ID = 'neon-pilot';
 const FIRST_PARTY_REPO = { owner: 'patleeman', repo: 'neon-pilot-extensions' };
 const MAX_EXTENSION_BUNDLE_BYTES = 80 * 1024 * 1024;
 
+export { resolveInstalledAppVersion } from './extensionCompatibility.js';
+
 export interface CatalogSeed {
   id: string;
   name: string;
@@ -21,6 +24,10 @@ export interface CatalogSeed {
   tag?: string;
   artifact?: string;
   path?: string;
+  compatibility?: {
+    neonPilot?: string;
+    extensionApi?: string;
+  };
   packageType?: MarketplacePackageType;
   ecosystem?: MarketplaceEcosystem;
   marketplaceSourceId?: string;
@@ -109,6 +116,7 @@ export interface InstallableExtensionCatalogItem extends CatalogSeed {
   installedVersion?: string;
   enabled?: boolean;
   availableVersion?: string;
+  unavailableReason?: string;
   updateAvailable: boolean;
 }
 
@@ -120,20 +128,6 @@ function readJson(path: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
-}
-
-export function resolveInstalledAppVersion(): string {
-  const candidates = [
-    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'package.json') : null,
-    resolve(process.cwd(), 'package.json'),
-    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'app.asar', 'package.json') : null,
-    typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'package.json') : null,
-  ].filter((value): value is string => Boolean(value));
-  for (const candidate of candidates) {
-    const version = readJson(candidate)?.version;
-    if (typeof version === 'string' && version.trim()) return version.trim();
-  }
-  return '0.0.0';
 }
 
 function bundleUrlForRepo(repo: GithubExtensionSourceRepo, id: string, tag: string, artifact?: string): string {
@@ -170,7 +164,9 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
   const configured = readConfiguredExtensionCatalogSources(stateRoot);
   const enabledConfigured = configured.filter((source) => source.enabled);
   const sourceErrors: Array<{ sourceId: string; message: string }> = [];
+  let usingBakedFirstPartyFallback = false;
   const firstPartySeeds = await fetchFirstPartyReleaseCatalog(tag).catch((error) => {
+    usingBakedFirstPartyFallback = true;
     if (!(error instanceof FirstPartyReleaseCatalogFetchError && error.status === 404)) {
       sourceErrors.push({ sourceId: FIRST_PARTY_SOURCE_ID, message: error instanceof Error ? error.message : String(error) });
     }
@@ -197,6 +193,14 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
     const itemTag = item.tag ?? (explicitVersion ? `v${explicitVersion}` : tag);
     const sourceRepo = item.sourceRepo ?? FIRST_PARTY_REPO;
     const updateAvailable = Boolean(explicitVersion && installed?.version && installed.version !== explicitVersion);
+    const staleFallbackReason =
+      usingBakedFirstPartyFallback && isFirstPartyRepo(sourceRepo) && itemTag !== tag
+        ? `No ${tag} release artifact is published for this extension. The latest catalog points to ${itemTag}.`
+        : undefined;
+    const compatibilityReason = getExtensionCompatibilityError(
+      { id: item.id, name: item.name, compatibility: item.compatibility },
+      version,
+    );
     return {
       ...item,
       version: itemVersion,
@@ -212,6 +216,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
       ...(installed?.version ? { installedVersion: installed.version } : {}),
       ...(installed ? { enabled: installed.enabled } : {}),
       ...(explicitVersion ? { availableVersion: explicitVersion } : {}),
+      ...(compatibilityReason || staleFallbackReason ? { unavailableReason: compatibilityReason ?? staleFallbackReason } : {}),
       updateAvailable,
     };
   });
@@ -328,6 +333,7 @@ async function fetchGithubSourceCatalog(source: ExtensionCatalogSource): Promise
         ...(typeof record.version === 'string' && record.version.trim() ? { version: record.version.trim() } : {}),
         ...(typeof record.tag === 'string' && record.tag.trim() ? { tag: record.tag.trim() } : {}),
         ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : {}),
+        ...normalizeCatalogCompatibility(record.compatibility),
         packageType: 'extension',
         ecosystem: 'neon-pilot',
         marketplaceSourceId: source.id,
@@ -380,6 +386,7 @@ async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]
         ...(typeof record.tag === 'string' && record.tag.trim() ? { tag: record.tag.trim() } : { tag }),
         ...(typeof record.artifact === 'string' && record.artifact.trim() ? { artifact: record.artifact.trim() } : {}),
         ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : baked?.path ? { path: baked.path } : {}),
+        ...normalizeCatalogCompatibility(record.compatibility ?? baked?.compatibility),
         packageType: 'extension' as const,
         ecosystem: 'neon-pilot' as const,
         marketplaceSourceId: 'neon-pilot-release',
@@ -387,6 +394,15 @@ async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]
       },
     ];
   });
+}
+
+function normalizeCatalogCompatibility(value: unknown): { compatibility?: CatalogSeed['compatibility'] } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const record = value as Record<string, unknown>;
+  const compatibility: CatalogSeed['compatibility'] = {};
+  if (typeof record.neonPilot === 'string' && record.neonPilot.trim()) compatibility.neonPilot = record.neonPilot.trim();
+  if (typeof record.extensionApi === 'string' && record.extensionApi.trim()) compatibility.extensionApi = record.extensionApi.trim();
+  return Object.keys(compatibility).length ? { compatibility } : {};
 }
 
 function titleFromExtensionId(id: string): string {
@@ -468,6 +484,7 @@ export async function installCatalogExtension(input: { id?: unknown }, stateRoot
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
   if (findExtensionEntry(id, stateRoot)) throw new Error(`Extension ${id} is already installed.`);
+  if (item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
   const localBundlePath = localBundlePathFor(id);
   if (localBundlePath) return installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot);
   return installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
@@ -479,6 +496,7 @@ export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?
   const catalog = await listInstallableExtensionCatalog(stateRoot);
   const item = catalog.extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
+  if (item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
   const installed = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
   if (!installed) throw new Error(`Extension ${id} is not installed.`);
