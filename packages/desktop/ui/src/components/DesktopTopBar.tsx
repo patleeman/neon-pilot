@@ -356,7 +356,7 @@ export function DesktopTopBar({
         ))}
         {readyUpdateVersion ? (
           <ToolbarButton
-            className="ui-desktop-top-bar__icon-button"
+            className="ui-desktop-top-bar__update-button"
             onClick={() => {
               void handleUpdateClick();
             }}
@@ -364,6 +364,7 @@ export function DesktopTopBar({
             title={`Restart to update to Neon Pilot ${readyUpdateVersion}`}
           >
             <UpdateReadyIcon />
+            <span>Update</span>
           </ToolbarButton>
         ) : null}
         {trailingExtra}
