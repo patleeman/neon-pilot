@@ -20,6 +20,7 @@ describe('local API critical extension registry presentation', () => {
             conversationLifecycle: [{ id: 'blocked', component: 'BlockedBanner', events: ['blocked'], slot: 'banner' }],
             statusBarItems: [{ id: 'git', label: 'Git', component: 'GitStatus' }],
             activityTreeItemActions: [{ id: 'pin', title: 'Pin', action: 'thread.pin' }],
+            transcriptRenderers: [{ id: 'checkpoint-card', tool: 'checkpoint', component: 'CheckpointCard' }],
             tools: [{ id: 'slow-tool', name: 'slow_tool', action: 'tools.slow', description: 'Slow tool', inputSchema: {} }],
           },
           backend: {
@@ -42,6 +43,7 @@ describe('local API critical extension registry presentation', () => {
         conversationLifecycle: [expect.objectContaining({ id: 'blocked' })],
         statusBarItems: [expect.objectContaining({ id: 'git' })],
         activityTreeItemActions: [expect.objectContaining({ id: 'pin' })],
+        transcriptRenderers: [expect.objectContaining({ id: 'checkpoint-card' })],
       }),
     );
     expect(response.extensions[0]?.manifest.contributes).not.toHaveProperty('tools');
@@ -49,7 +51,7 @@ describe('local API critical extension registry presentation', () => {
     expect(response.extensions[0]?.permissions).toEqual([]);
   });
 
-  it('omits extensions that do not contribute startup UI', () => {
+  it('keeps transcript renderer extensions in the critical registry', () => {
     const response = buildCriticalExtensionRegistryResponse({
       extensions: [
         {
@@ -63,33 +65,25 @@ describe('local API critical extension registry presentation', () => {
         },
         {
           schemaVersion: 2,
-          id: 'route-owner',
-          name: 'Route Owner',
+          id: 'checkpoint-renderer',
+          name: 'Checkpoint Renderer',
           packageType: 'system',
           frontend: { entry: 'frontend.js' },
           contributes: {
-            views: [{ id: 'page', title: 'Page', location: 'main', route: '/page', component: 'Page' }],
+            transcriptRenderers: [{ id: 'checkpoint-card', tool: 'checkpoint', component: 'CheckpointCard' }],
           },
         },
       ],
-      routes: [{ route: '/page', extensionId: 'route-owner', surfaceId: 'page', packageType: 'system' }],
+      routes: [],
       surfaces: [],
-      views: [
-        {
-          id: 'page',
-          title: 'Page',
-          location: 'main',
-          route: '/page',
-          component: 'Page',
-          extensionId: 'route-owner',
-          packageType: 'system',
-          frontend: { entry: 'frontend.js' },
-        },
-      ],
+      views: [],
     } as never);
 
-    expect(response.extensions.map((extension) => extension.id)).toEqual(['route-owner']);
-    expect(response.routes).toHaveLength(1);
-    expect(response.surfaces).toHaveLength(1);
+    expect(response.extensions.map((extension) => extension.id)).toEqual(['checkpoint-renderer']);
+    expect(response.extensions[0]?.manifest.contributes?.transcriptRenderers).toEqual([
+      expect.objectContaining({ id: 'checkpoint-card' }),
+    ]);
+    expect(response.routes).toHaveLength(0);
+    expect(response.surfaces).toHaveLength(0);
   });
 });

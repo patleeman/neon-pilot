@@ -62,6 +62,7 @@ type CriticalExtensionContributionKey = keyof Pick<
   | 'composerAttachmentResolvers'
   | 'activityTreeItemActions'
   | 'settingsComponent'
+  | 'transcriptRenderers'
 >;
 
 const CRITICAL_EXTENSION_CONTRIBUTION_KEYS: CriticalExtensionContributionKey[] = [
@@ -90,6 +91,7 @@ const CRITICAL_EXTENSION_CONTRIBUTION_KEYS: CriticalExtensionContributionKey[] =
   'composerAttachmentResolvers',
   'activityTreeItemActions',
   'settingsComponent',
+  'transcriptRenderers',
 ];
 
 function buildCriticalExtensionContributions(contributes: ExtensionContributions | undefined): ExtensionContributions | undefined {
