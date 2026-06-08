@@ -188,6 +188,52 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('passes the active state root to worker settings capability requests', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    const stateRoot = join(root, 'state');
+    mkdirSync(root, { recursive: true });
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing() {
+  const bridge = globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')];
+  return bridge('settings', 'read');
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 122,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-settings-state-root' },
+      exportName: 'doThing',
+      args: [{}],
+      context: {
+        type: 'backend',
+        stateRoot,
+      },
+    });
+
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'settings',
+      operation: 'read',
+      context: expect.objectContaining({ stateRoot }),
+    });
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { 'caffeinate.autoStart': true } });
+
+    await waitForPostMessage({
+      id: 122,
+      ok: true,
+      result: { 'caffeinate.autoStart': true },
+    });
+  });
+
   it('runs backend exports with host-mediated runtime refresh capabilities', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     mkdirSync(root, { recursive: true });

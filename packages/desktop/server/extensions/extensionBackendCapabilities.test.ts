@@ -900,6 +900,57 @@ describe('extension backend capability dispatcher', () => {
     ).rejects.toThrow('Notify type must be info, warning, or error when provided.');
   });
 
+  it('dispatches extension settings through the active state root', async () => {
+    const settings = {
+      read: vi.fn(() => ({ 'caffeinate.autoStart': true })),
+      readSchema: vi.fn(() => [{ key: 'caffeinate.autoStart', type: 'boolean' }]),
+      update: vi.fn(() => ({ 'caffeinate.autoStart': false })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ settings });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-caffeinate',
+          capability: 'settings',
+          operation: 'read',
+          context: { stateRoot: '/state-root' },
+        }),
+      ),
+    ).resolves.toEqual({ 'caffeinate.autoStart': true });
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'system-caffeinate',
+          capability: 'settings',
+          operation: 'readSchema',
+          context: { stateRoot: '/state-root' },
+        }),
+      ),
+    ).resolves.toEqual([{ key: 'caffeinate.autoStart', type: 'boolean' }]);
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 3,
+          kind: 'capabilityRequest',
+          extensionId: 'system-caffeinate',
+          capability: 'settings',
+          operation: 'update',
+          input: { overrides: { 'caffeinate.autoStart': false } },
+          context: { stateRoot: '/state-root' },
+        }),
+      ),
+    ).resolves.toEqual({ 'caffeinate.autoStart': false });
+
+    expect(settings.read).toHaveBeenCalledWith('/state-root');
+    expect(settings.readSchema).toHaveBeenCalledWith('/state-root');
+    expect(settings.update).toHaveBeenCalledWith({ 'caffeinate.autoStart': false }, '/state-root');
+  });
+
   it('rejects unsupported capabilities and malformed log inputs', async () => {
     const dispatch = createExtensionBackendCapabilityDispatcher({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
 

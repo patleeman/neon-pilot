@@ -4,10 +4,13 @@ const resolver = vi.hoisted(() => ({ callServerModuleExport: vi.fn() }));
 
 vi.mock('./serverModuleResolver.js', () => resolver);
 
+const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
+
 describe('backendApi/settings', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    delete (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE];
   });
 
   it('reads and updates extension settings through the host settings store', async () => {
@@ -29,5 +32,23 @@ describe('backendApi/settings', () => {
     expect(store.read).toHaveBeenCalledOnce();
     expect(store.readSchema).toHaveBeenCalledOnce();
     expect(store.update).toHaveBeenCalledWith({ 'caffeinate.autoStart': false });
+  });
+
+  it('uses the worker host capability bridge when available', async () => {
+    const bridge = vi.fn(async (_capability: string, operation: string, input?: unknown) => ({ operation, input }));
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+    const settings = await import('./settings.js');
+
+    await expect(settings.readExtensionSettings()).resolves.toEqual({ operation: 'read', input: undefined });
+    await expect(settings.readExtensionSettingsSchema()).resolves.toEqual({ operation: 'readSchema', input: undefined });
+    await expect(settings.updateExtensionSettings({ 'caffeinate.autoStart': false })).resolves.toEqual({
+      operation: 'update',
+      input: { overrides: { 'caffeinate.autoStart': false } },
+    });
+
+    expect(bridge).toHaveBeenNthCalledWith(1, 'settings', 'read');
+    expect(bridge).toHaveBeenNthCalledWith(2, 'settings', 'readSchema');
+    expect(bridge).toHaveBeenNthCalledWith(3, 'settings', 'update', { overrides: { 'caffeinate.autoStart': false } });
+    expect(resolver.callServerModuleExport).not.toHaveBeenCalled();
   });
 });

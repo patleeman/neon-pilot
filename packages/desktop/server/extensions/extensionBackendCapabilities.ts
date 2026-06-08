@@ -7,6 +7,7 @@ import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
 import { resolveSecret } from '../secrets/secretStore.js';
+import { createSettingsStore } from '../settings/settingsStore.js';
 import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
@@ -68,6 +69,12 @@ interface ExtensionBackendCapabilityGit {
 
 interface ExtensionBackendCapabilityRuntime {
   refreshSkillMcpConfig(input: ExtensionRuntimeRefreshSkillMcpConfigInput): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilitySettings {
+  read(stateRoot?: string): Promise<unknown> | unknown;
+  readSchema(stateRoot?: string): Promise<unknown> | unknown;
+  update(overrides: Record<string, unknown>, stateRoot?: string): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityEvents {
@@ -295,6 +302,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   notify?: ExtensionBackendCapabilityNotify;
   runtime?: ExtensionBackendCapabilityRuntime;
   secrets?: ExtensionBackendCapabilitySecrets;
+  settings?: ExtensionBackendCapabilitySettings;
   shell?: ExtensionBackendCapabilityShell;
   storage?: ExtensionBackendCapabilityStorage;
   telemetry?: ExtensionBackendCapabilityTelemetry;
@@ -952,6 +960,25 @@ function dispatchSecretsCapability(secrets: ExtensionBackendCapabilitySecrets, r
   return secrets.get(request.extensionId, requireString(input.secretId, 'Secret id'));
 }
 
+function dispatchSettingsCapability(settings: ExtensionBackendCapabilitySettings, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  const stateRoot = request.context?.stateRoot?.trim() || undefined;
+
+  if (request.operation === 'read') {
+    return settings.read(stateRoot);
+  }
+  if (request.operation === 'readSchema') {
+    return settings.readSchema(stateRoot);
+  }
+  if (request.operation === 'update') {
+    const input = normalizeRecordInput(request.input, 'Settings');
+    const overrides = optionalRecord(input.overrides, 'Settings overrides');
+    if (!overrides) throw new Error('Settings overrides must be an object.');
+    return settings.update(overrides, stateRoot);
+  }
+
+  throw new Error(`Unsupported settings capability operation: ${request.operation}`);
+}
+
 function optionalStringArray(value: unknown, label: string): string[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
@@ -1602,6 +1629,11 @@ export function createExtensionBackendCapabilityDispatcher(
     refreshSkillMcpConfig: refreshHostSkillMcpConfig,
   };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
+  const settings = options.settings ?? {
+    read: (stateRoot?: string) => createSettingsStore(stateRoot).read(),
+    readSchema: (stateRoot?: string) => createSettingsStore(stateRoot).readSchema(),
+    update: (overrides: Record<string, unknown>, stateRoot?: string) => createSettingsStore(stateRoot).update(overrides),
+  };
   const shell = options.shell ?? createExtensionShellCapability({ pathDirs: listEnabledExtensionBinDirs() });
   const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnHandle>();
   const telemetry = options.telemetry ?? {
@@ -1685,6 +1717,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'secrets') {
       return dispatchSecretsCapability(secrets, request);
+    }
+    if (request.capability === 'settings') {
+      return dispatchSettingsCapability(settings, request);
     }
     if (request.capability === 'storage') {
       return dispatchStorageCapability(storage, request);
