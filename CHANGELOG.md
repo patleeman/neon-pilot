@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.5 — 2026-06-08
+
+### Highlights
+
+- Prevents stale optional extension artifacts from installing or enabling on incompatible Neon Pilot versions, with clear diagnostics in Extension Manager instead of broken routes.
+- Keeps already-installed incompatible user extensions disabled and rejects failed enable attempts inline so the Extensions page remains usable.
+- Routes worker extension settings access through the active host state root, preserving settings behavior when actions run through the extension host worker path.
+- Refreshes model metadata after provider OAuth login so newly authorized providers show their available models without manual recovery.
+- Adds the first-party extension repository release as an explicit stable release step so app tags and optional extension artifacts stay aligned.
+
+### Notes
+
+- 4 commits since the previous release.
+
 ## 0.11.4 — 2026-06-08
 
 ### Highlights

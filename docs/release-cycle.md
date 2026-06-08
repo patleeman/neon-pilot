@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.4** — patch release.
+**v0.11.5** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.4
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.5
 
 Highlights in this train:
 
-- Adds host capability bridges for extension-backed browser, image, and workbench workflows.
-- Expands conversation tools and auto-mode system extension actions for richer agent workflows.
-- Persists image probe attachments across live sessions with typed backend access.
-- Improves live conversation lifecycle handling, event broadcasts, and model metadata updates.
-- Tightens desktop app shell wiring, packaged lazy backend modules, and long-transcript windowing.
+- Blocks stale optional extension artifacts from being installed or enabled on incompatible app versions.
+- Keeps incompatible installed user extensions disabled with visible diagnostics instead of broken extension routes.
+- Routes worker extension settings access through the active host state root.
+- Refreshes model metadata after provider OAuth login.
+- Adds the first-party extension repository release as an explicit stable release step.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
