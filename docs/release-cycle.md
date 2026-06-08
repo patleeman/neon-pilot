@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.2** — patch release.
+**v0.11.4** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.2
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.4
 
 Highlights in this train:
 
-- Adds release-blocking golden coverage for the packaged extension experience.
-- Verifies representative action-backed tools in the running packaged app before publishing.
-- Adds live-conversation smoke coverage for context-dependent agent tools.
-- Runs packaged release smoke from fresh-machine roots to catch stale local-state blind spots.
-- Tightens invalid runtime extension cleanup and backend self-test behavior.
+- Adds host capability bridges for extension-backed browser, image, and workbench workflows.
+- Expands conversation tools and auto-mode system extension actions for richer agent workflows.
+- Persists image probe attachments across live sessions with typed backend access.
+- Improves live conversation lifecycle handling, event broadcasts, and model metadata updates.
+- Tightens desktop app shell wiring, packaged lazy backend modules, and long-transcript windowing.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
