@@ -14,6 +14,8 @@ The File Explorer is a file tree browser in a workbench tab-local rail. It provi
 
 Open a File Explorer workbench tab to browse the project directory tree. The file tree lives in that tab's rail, and selected files open in the same tab's detail area.
 
+File Explorer requires a conversation with a working directory (workspace). If the current conversation has no workspace, the rail shows an empty state explaining that a workspace is needed before files can appear.
+
 ## Navigation
 
 - **Expand** — click a folder to expand its contents

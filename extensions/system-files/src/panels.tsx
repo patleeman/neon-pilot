@@ -30,7 +30,11 @@ export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
   );
   if (!context.cwd) {
     return (
-      <CenteredMessage eyebrow="Workbench" title="Open a local conversation" body="Open a local conversation to browse its workspace." />
+      <CenteredMessage
+        eyebrow="File Explorer"
+        title="Add a workspace to browse files"
+        body="File Explorer needs a working directory. Start or open a local conversation with a workspace to show the file tree."
+      />
     );
   }
 
@@ -55,7 +59,11 @@ export function WorkspaceFileDetailPanel({ context }: ExtensionSurfaceProps) {
 
   if (!context.cwd) {
     return (
-      <CenteredMessage eyebrow="Workbench" title="Open a local conversation" body="Open a local conversation to browse its workspace." />
+      <CenteredMessage
+        eyebrow="File Explorer"
+        title="Add a workspace to open files"
+        body="File previews need a working directory. Start or open a local conversation with a workspace, then pick a file from the tree."
+      />
     );
   }
 
