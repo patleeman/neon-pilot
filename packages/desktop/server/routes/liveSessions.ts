@@ -259,27 +259,43 @@ export function registerLiveSessionRoutes(
     const rawSurfaceType = Array.isArray(req.query.surfaceType) ? req.query.surfaceType[0] : req.query.surfaceType;
     const surfaceType = rawSurfaceType === 'mobile_web' ? 'mobile_web' : 'desktop_web';
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
-
-    const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 15_000);
+    const bufferedEvents: unknown[] = [];
+    let streamReady = false;
     const unsubscribe = subscribeLiveSession(
       id,
       (event) => {
-        res.write(`data: ${JSON.stringify(event)}\n\n`);
+        if (streamReady) {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        } else {
+          bufferedEvents.push(event);
+        }
       },
       {
         ...(tailBlocks ? { tailBlocks } : {}),
         ...(surfaceId ? { surface: { surfaceId, surfaceType } } : {}),
       },
     );
+    if (!unsubscribe) {
+      res.status(404).json({ error: 'Not a live session' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+    streamReady = true;
+    for (const event of bufferedEvents) {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    }
+    bufferedEvents.length = 0;
+
+    const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 15_000);
 
     req.on('close', () => {
       clearInterval(heartbeat);
-      unsubscribe?.();
+      unsubscribe();
     });
   });
 

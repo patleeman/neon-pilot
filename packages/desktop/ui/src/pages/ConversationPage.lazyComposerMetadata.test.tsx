@@ -19,6 +19,7 @@ const apiMock = vi.hoisted(() => ({
   runs: vi.fn(),
   settings: vi.fn(),
   liveSession: vi.fn(),
+  conversationAttachments: vi.fn(),
   conversationModelPreferences: vi.fn(),
 }));
 
@@ -210,6 +211,16 @@ function renderConversationPage() {
 beforeEach(() => {
   vi.useFakeTimers();
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  desktopConversationState.mode = 'disabled';
+  desktopConversationState.active = false;
+  desktopConversationState.loading = false;
+  desktopConversationState.error = null;
+  desktopConversationState.surfaceId = '';
+  desktopConversationState.reconnect.mockReset();
+  desktopConversationState.send.mockReset();
+  desktopConversationState.abort.mockReset();
+  desktopConversationState.takeover.mockReset();
+  desktopConversationState.state = null;
   apiMock.extensionSlashCommands.mockResolvedValue([
     {
       extensionId: 'test-extension',
@@ -249,6 +260,7 @@ beforeEach(() => {
   apiMock.runs.mockResolvedValue({ runs: [] });
   apiMock.settings.mockResolvedValue({});
   apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
+  apiMock.conversationAttachments.mockResolvedValue({ conversationId: 'conv-regression', attachments: [] });
   sessionTabsMock.fetchRemoteConversationLayout.mockResolvedValue({
     localConversationIds: [],
     remoteControlledConversationIds: [],
@@ -340,5 +352,89 @@ describe('ConversationPage lazy composer metadata', () => {
       requestAnimationFrameSpy.mockRestore();
       cancelAnimationFrameSpy.mockRestore();
     }
+  });
+
+  it('ignores a second submit while the first composer submit is still in flight', async () => {
+    let resolveSend: () => void = () => {};
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = {
+      conversationId: 'conv-regression',
+      sessionDetail: regressionBootstrapData.sessionDetail,
+      liveSession: {
+        live: true,
+        id: 'conv-regression',
+        cwd: '/tmp/project',
+        sessionFile: '/tmp/conv-regression.jsonl',
+        isStreaming: false,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: regressionBootstrapData.sessionDetail.blocks,
+        blockOffset: 0,
+        totalBlocks: 2,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        title: null,
+        tokens: null,
+        cost: null,
+        contextUsage: null,
+        pendingQueue: { steering: [], followUp: [] },
+        presence: {
+          surfaces: [],
+          controllerSurfaceId: null,
+          controllerSurfaceType: null,
+          controllerAcquiredAt: null,
+        },
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        cwdChange: null,
+      },
+    };
+    desktopConversationState.send.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSend = () =>
+          resolve({
+            ok: true,
+            accepted: true,
+            delivery: 'started',
+            referencedTaskIds: [],
+            referencedMemoryDocIds: [],
+            referencedKnowledgeFileIds: [],
+            referencedAttachmentIds: [],
+          });
+      }),
+    );
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Run the checks' } });
+      await Promise.resolve();
+    });
+    const sendButton = screen.getByRole('button', { name: 'Send' });
+
+    await act(async () => {
+      fireEvent.click(sendButton);
+      fireEvent.click(sendButton);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(desktopConversationState.send).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveSend();
+      await Promise.resolve();
+    });
   });
 });

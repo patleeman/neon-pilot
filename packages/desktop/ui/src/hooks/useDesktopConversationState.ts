@@ -578,10 +578,16 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     const params = new URLSearchParams();
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    const requestOptions = {
+      ...(tailBlocks !== undefined ? { tailBlocks } : {}),
+      ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+    } satisfies DesktopConversationStateOptions;
+    const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
     if (tailBlocks !== undefined) params.set('tailBlocks', String(tailBlocks));
     params.set('surfaceId', surfaceId);
     params.set('surfaceType', surfaceType);
     const source = createDesktopAwareEventSource(`/api/live-sessions/${encodeURIComponent(conversationId)}/events?${params.toString()}`);
+    let closed = false;
 
     const clearPendingStreamFlushTimer = () => {
       if (pendingStreamFlushTimerRef.current === null) {
@@ -713,26 +719,33 @@ export function useDesktopConversationState(conversationId: string | null, optio
       }, 2000);
     };
 
+    const refreshAuthoritativeState = () => {
+      void api
+        .desktopConversationState(conversationId, requestOptions)
+        .then((nextState) => {
+          if (closed) return;
+          setState((previous) => {
+            const mergedState = mergeDesktopConversationState(previous, nextState);
+            rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);
+            return mergedState;
+          });
+          setError(null);
+        })
+        .catch((nextError) => {
+          if (!closed) {
+            setError(nextError instanceof Error ? nextError.message : String(nextError));
+          }
+        });
+    };
+
     source.onerror = () => {
       flushPendingStreamEvents();
-      setError('Conversation realtime stream failed.');
-      setState((previous) => {
-        if (previous?.conversationId !== conversationId || !previous.stream.isStreaming) {
-          return previous;
-        }
-        const stream = { ...previous.stream, isStreaming: false };
-        return {
-          ...previous,
-          stream,
-          liveSession: previous.liveSession?.live
-            ? { ...previous.liveSession, isStreaming: false }
-            : (previous.liveSession ?? { live: false }),
-        };
-      });
+      refreshAuthoritativeState();
       scheduleReconnectRetry();
     };
 
     return () => {
+      closed = true;
       if (reconnectRetryRef.current !== null) {
         window.clearTimeout(reconnectRetryRef.current);
         reconnectRetryRef.current = null;
@@ -741,7 +754,17 @@ export function useDesktopConversationState(conversationId: string | null, optio
       clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
     };
-  }, [bridge, conversationId, matchedState?.liveSession?.live, mode, options?.tailBlocks, subscriptionVersion, surfaceId, surfaceType]);
+  }, [
+    bridge,
+    conversationId,
+    matchedState?.liveSession?.live,
+    mode,
+    options?.includeToolBlocks,
+    options?.tailBlocks,
+    subscriptionVersion,
+    surfaceId,
+    surfaceType,
+  ]);
 
   const reconnect = useCallback(() => {
     if (mode === 'local') {

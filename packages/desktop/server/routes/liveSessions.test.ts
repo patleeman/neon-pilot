@@ -138,4 +138,37 @@ describe('live session routes', () => {
     expect(response.write).toHaveBeenCalledWith('data: {"type":"entry"}\n\n');
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
+
+  it('returns not-found instead of opening a blank event stream when subscription disappears', () => {
+    const router = { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() };
+    registerLiveSessionRoutes(router as never, {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getDefaultWebCwd: () => '/repo',
+      buildLiveSessionResourceOptions: () => ({ additionalSkillPaths: [] }),
+      buildLiveSessionExtensionFactories: () => [],
+      flushLiveDeferredResumes: vi.fn(),
+      listTasksForRuntimeScope: () => [],
+      listMemoryDocs: () => [],
+    });
+    const handler = router.get.mock.calls.find(([path]) => path === '/api/live-sessions/:id/events')?.[1];
+    expect(handler).toBeTypeOf('function');
+
+    liveSessions.isLive.mockReturnValueOnce(true);
+    liveSessions.subscribe.mockReturnValueOnce(null);
+    const req = {
+      params: { id: 'live-1' },
+      query: {},
+      on: vi.fn(),
+    };
+    const response = { setHeader: vi.fn(), flushHeaders: vi.fn(), write: vi.fn(), status: vi.fn().mockReturnThis(), json: vi.fn() };
+
+    handler(req, response);
+
+    expect(response.status).toHaveBeenCalledWith(404);
+    expect(response.json).toHaveBeenCalledWith({ error: 'Not a live session' });
+    expect(response.flushHeaders).not.toHaveBeenCalled();
+    expect(response.write).not.toHaveBeenCalled();
+    expect(req.on).not.toHaveBeenCalled();
+  });
 });

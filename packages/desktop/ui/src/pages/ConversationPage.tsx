@@ -2009,6 +2009,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [pendingAssistantStatusLabel, setPendingAssistantStatusLabel] = useState<string | null>(null);
   const [wholeLineBashRunning, setWholeLineBashRunning] = useState(false);
   const wholeLineBashRunningRef = useRef(false);
+  const composerSubmitRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
   const { executions: activeConversationBackgroundExecutions, refresh: refreshActiveConversationBackgroundExecutions } =
     useConversationActiveExecutions(draft ? null : id);
@@ -4799,6 +4800,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     if (preparingRelatedThreadContext) {
       return;
     }
+    if (composerSubmitRunningRef.current) {
+      return;
+    }
+    composerSubmitRunningRef.current = true;
 
     const submitStartedAtMs = performance.now();
     const recordSubmitPhase = (phase: string, startedAtMs: number, meta?: Record<string, unknown>) => {
@@ -4809,77 +4814,77 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       });
     };
 
-    const inputSnapshot = textareaRef.current?.value ?? input;
-    const text = inputSnapshot.trim();
-    const pendingImageAttachments = attachments;
-    const pendingDrawingAttachments = drawingAttachments;
-    const pendingAttachedContextDocs = attachedContextDocs;
-    const pendingBrowserCommentsSnapshot = pendingBrowserComments;
-    const browserCommentContextMessages = buildBrowserCommentContextMessages(pendingBrowserCommentsSnapshot);
-    if (
-      !text &&
-      pendingImageAttachments.length === 0 &&
-      pendingDrawingAttachments.length === 0 &&
-      pendingBrowserCommentsSnapshot.length === 0
-    ) {
-      return;
-    }
-
-    let slashTextToSend: string | null = null;
-    if (pendingImageAttachments.length === 0 && pendingDrawingAttachments.length === 0 && pendingBrowserCommentsSnapshot.length === 0) {
-      const wholeLineBash = parseWholeLineBashCommand(text);
-      if (wholeLineBash) {
-        await runWholeLineBashCommand(inputSnapshot, wholeLineBash);
+    try {
+      const inputSnapshot = textareaRef.current?.value ?? input;
+      const text = inputSnapshot.trim();
+      const pendingImageAttachments = attachments;
+      const pendingDrawingAttachments = drawingAttachments;
+      const pendingAttachedContextDocs = attachedContextDocs;
+      const pendingBrowserCommentsSnapshot = pendingBrowserComments;
+      const browserCommentContextMessages = buildBrowserCommentContextMessages(pendingBrowserCommentsSnapshot);
+      if (
+        !text &&
+        pendingImageAttachments.length === 0 &&
+        pendingDrawingAttachments.length === 0 &&
+        pendingBrowserCommentsSnapshot.length === 0
+      ) {
         return;
       }
 
-      const deferredResumeSlash = parseDeferredResumeSlashCommand(text);
-      if (deferredResumeSlash) {
-        if (deferredResumeSlash.kind === 'invalid') {
-          showNotice('danger', deferredResumeSlash.message, 4000);
-        } else {
-          rememberComposerInput(inputSnapshot);
-          await scheduleDeferredResume(
-            deferredResumeSlash.command.delay,
-            deferredResumeSlash.command.prompt,
-            deferredResumeSlash.command.behavior,
-          );
-        }
-        return;
-      }
-
-      const conversationSlash = parseConversationSlashCommand(text);
-      if (conversationSlash) {
-        if (conversationSlash.kind === 'invalid') {
-          showNotice('danger', conversationSlash.message, 4000);
+      let slashTextToSend: string | null = null;
+      if (pendingImageAttachments.length === 0 && pendingDrawingAttachments.length === 0 && pendingBrowserCommentsSnapshot.length === 0) {
+        const wholeLineBash = parseWholeLineBashCommand(text);
+        if (wholeLineBash) {
+          await runWholeLineBashCommand(inputSnapshot, wholeLineBash);
           return;
         }
 
-        if (!['run', 'search', 'summarize', 'think'].includes(conversationSlash.command.action)) {
-          rememberComposerInput(inputSnapshot);
-        }
-
-        const slashResult = await executeConversationSlashCommand(conversationSlash.command);
-        if (slashResult.kind === 'handled') {
+        const deferredResumeSlash = parseDeferredResumeSlashCommand(text);
+        if (deferredResumeSlash) {
+          if (deferredResumeSlash.kind === 'invalid') {
+            showNotice('danger', deferredResumeSlash.message, 4000);
+          } else {
+            rememberComposerInput(inputSnapshot);
+            await scheduleDeferredResume(
+              deferredResumeSlash.command.delay,
+              deferredResumeSlash.command.prompt,
+              deferredResumeSlash.command.behavior,
+            );
+          }
           return;
         }
 
-        slashTextToSend = slashResult.text;
-      } else {
-        const extensionSlash = findExtensionSlashCommand(text);
-        if (extensionSlash) {
-          rememberComposerInput(inputSnapshot);
-          const slashResult = await executeExtensionSlashCommand(extensionSlash.command, inputSnapshot, extensionSlash.argument);
+        const conversationSlash = parseConversationSlashCommand(text);
+        if (conversationSlash) {
+          if (conversationSlash.kind === 'invalid') {
+            showNotice('danger', conversationSlash.message, 4000);
+            return;
+          }
+
+          if (!['run', 'search', 'summarize', 'think'].includes(conversationSlash.command.action)) {
+            rememberComposerInput(inputSnapshot);
+          }
+
+          const slashResult = await executeConversationSlashCommand(conversationSlash.command);
           if (slashResult.kind === 'handled') {
             return;
           }
 
           slashTextToSend = slashResult.text;
+        } else {
+          const extensionSlash = findExtensionSlashCommand(text);
+          if (extensionSlash) {
+            rememberComposerInput(inputSnapshot);
+            const slashResult = await executeExtensionSlashCommand(extensionSlash.command, inputSnapshot, extensionSlash.argument);
+            if (slashResult.kind === 'handled') {
+              return;
+            }
+
+            slashTextToSend = slashResult.text;
+          }
         }
       }
-    }
 
-    try {
       const filePromptImages = buildPromptImages(pendingImageAttachments);
       const drawingPromptImages = pendingDrawingAttachments.map((drawing) => drawingAttachmentToPromptImage(drawing));
       const promptImages = [...filePromptImages, ...drawingPromptImages];
@@ -5330,6 +5335,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         details: error instanceof Error ? error.message : String(error),
         source: 'core',
       });
+    } finally {
+      composerSubmitRunningRef.current = false;
     }
   }
 

@@ -949,7 +949,7 @@ describe('useDesktopConversationState', () => {
     expect(desktopConversationState).toHaveBeenCalledTimes(initialFetchCount + 1);
   });
 
-  it('preserves stream events and schedules reconnection when the SSE connection errors during active streaming', async () => {
+  it('preserves active streaming state and schedules reconnection when the SSE connection errors', async () => {
     vi.useFakeTimers();
     const frameCallbacks: FrameRequestCallback[] = [];
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
@@ -1009,14 +1009,17 @@ describe('useDesktopConversationState', () => {
       eventSources[0]?.send({ type: 'text_delta', delta: 'Building...' });
     });
 
-    // Simulate the SSE error — flushPendingStreamEvents + setState
+    // Simulate the SSE error. The transport failed, but the agent run may
+    // still be active; only authoritative stream events should mark it idle.
     const blockIdsBeforeError = latestState?.state?.stream.blocks.map((b: { id: string }) => b.id);
     const previousEventSourceCount = eventSources.length;
     act(() => {
       eventSources[0]?.onerror?.(new Event('error'));
     });
 
-    expect(latestState?.state?.stream.isStreaming).toBe(false);
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ isStreaming: true }));
+    expect(latestState?.error).toBeNull();
     // The blocks from the last flush should still be in the state
     expect(latestState?.state?.stream.blocks.slice(0, blockIdsBeforeError?.length).map((b: { id: string }) => b.id)).toEqual(
       blockIdsBeforeError,
@@ -1031,6 +1034,98 @@ describe('useDesktopConversationState', () => {
 
     // A new EventSource was created
     expect(eventSources.length).toBeGreaterThan(previousEventSourceCount);
+    expect(latestState?.error).toBeNull();
+
+    vi.useRealTimers();
+  });
+
+  it('clears active streaming state when an SSE error refresh shows the live session is gone', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    vi.spyOn(api, 'desktopConversationState')
+      .mockResolvedValueOnce({
+        conversationId: 'conv-1',
+        sessionDetail: null,
+        bootstrap: null,
+        liveSession: { live: true, title: null, isStreaming: true, hasStaleTurnState: false },
+        stream: {
+          blocks: [{ type: 'text', id: 'text-1', text: 'Initial', ts: '2026-05-24T00:00:00.000Z' }],
+          blockOffset: 0,
+          totalBlocks: 1,
+          hasSnapshot: true,
+          isStreaming: true,
+          isCompacting: false,
+          error: null,
+          goalState: null,
+          systemPrompt: null,
+          toolDefinitions: [],
+          pendingQueue: { steering: [], followUp: [] },
+          presence: null,
+          contextUsage: null,
+          tokens: null,
+          cost: null,
+          cwdChange: null,
+          title: null,
+        },
+      })
+      .mockResolvedValueOnce({
+        conversationId: 'conv-1',
+        sessionDetail: null,
+        bootstrap: null,
+        liveSession: { live: false, title: null, isStreaming: false, hasStaleTurnState: false },
+        stream: {
+          blocks: [{ type: 'text', id: 'text-1', text: 'Initial', ts: '2026-05-24T00:00:00.000Z' }],
+          blockOffset: 0,
+          totalBlocks: 1,
+          hasSnapshot: true,
+          isStreaming: false,
+          isCompacting: false,
+          error: null,
+          goalState: null,
+          systemPrompt: null,
+          toolDefinitions: [],
+          pendingQueue: { steering: [], followUp: [] },
+          presence: null,
+          contextUsage: null,
+          tokens: null,
+          cost: null,
+          cwdChange: null,
+          title: null,
+        },
+      });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(eventSources).toHaveLength(1);
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
+
+    await act(async () => {
+      eventSources[0]?.onerror?.(new Event('error'));
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(api.desktopConversationState).toHaveBeenCalledTimes(2);
+    expect(latestState?.state?.stream.isStreaming).toBe(false);
+    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ live: false, isStreaming: false }));
     expect(latestState?.error).toBeNull();
 
     vi.useRealTimers();
