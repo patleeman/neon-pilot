@@ -46,10 +46,14 @@ const {
   resolveScheduledTaskThreadBindingMock: vi.fn(),
 }));
 
-vi.mock('node:fs', () => ({
-  existsSync: existsSyncMock,
-  readFileSync: readFileSyncMock,
-}));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    existsSync: existsSyncMock,
+    readFileSync: readFileSyncMock,
+  };
+});
 
 vi.mock('@neon-pilot/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@neon-pilot/core')>();

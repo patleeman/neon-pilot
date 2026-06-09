@@ -24,6 +24,12 @@ const require = createRequire(import.meta.url);
 
 type NodePtyModule = Pick<typeof import('node-pty'), 'spawn'>;
 
+let nodePtyOverrideForTest: NodePtyModule | null = null;
+
+export function __setNodePtyForTest(nodePty: NodePtyModule | null): void {
+  nodePtyOverrideForTest = nodePty;
+}
+
 function createNativeModulesRequire(): NodeJS.Require | null {
   const nativeModulesDir = process.env.NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR?.trim();
   if (!nativeModulesDir) return null;
@@ -31,6 +37,8 @@ function createNativeModulesRequire(): NodeJS.Require | null {
 }
 
 function loadNodePty(): { nodePty: NodePtyModule; nodePtyRequire: NodeJS.Require } {
+  if (nodePtyOverrideForTest) return { nodePty: nodePtyOverrideForTest, nodePtyRequire: require };
+
   const nativeRequire = createNativeModulesRequire();
   if (nativeRequire) {
     try {

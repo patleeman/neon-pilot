@@ -4,16 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.7** — patch release.
+**v0.11.8** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.7
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.8
 
 Highlights in this train:
 
-- Keeps long transcripts filled at the bottom of the conversation instead of collapsing the visible window to only the latest assistant message.
-- Clamps transcript scroll offsets that overshoot the rendered message height, including the small upward scroll from the pinned tail position.
-- Adds focused regression coverage for tail-anchored chat windowing and overscrolled transcript viewports.
-- Updates Pi runtime packages to `^0.79.0` as part of the patch release train.
+- Adds a unified `neon-pilot admin` CLI surface for conversations, archives, retention pruning, extension management, and runtime doctor checks.
+- Fixes stuck running conversation overrides so recovered sessions do not remain blocked by stale run state.
+- Persists saved workspaces through the startup fast path so workspace state survives fast app launches.
+- Makes update controls more prominent in Settings for easier release-path management.
+- Relaxes first-party extension compatibility to the 0.11 release train and adds regressions for extension reinstall/replace behavior.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

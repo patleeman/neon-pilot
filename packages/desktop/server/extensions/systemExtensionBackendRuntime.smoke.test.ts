@@ -147,6 +147,8 @@ const storage = new Map();
 const smokeDatabases = new Map();
 const invalidatedTopics = [];
 const conversations = [];
+const appCommands = [{ id: 'smoke.command', title: 'Smoke command' }];
+const executedCommands = [];
 const registeredTools = [];
 const registeredCommands = [];
 const registeredEvents = [];
@@ -297,9 +299,27 @@ const ctx = {
   extensions: {
     setEnabled() {},
   },
+  commands: {
+    async list() {
+      return appCommands;
+    },
+    async execute(commandId, args) {
+      executedCommands.push({ commandId, args });
+      return true;
+    },
+  },
   conversations: {
+    async list() {
+      return conversations;
+    },
     async get() {
       return { running: false, toolNames: activeTools };
+    },
+    async getWorkspace() {
+      return { openConversationIds: [], pinnedConversationIds: [], archivedConversationIds: [], workspacePaths: [] };
+    },
+    async prune() {
+      return { ok: true, dryRun: true, deleted: [] };
     },
     async create(input) {
       const conversation = { id: 'smoke-created-' + (conversations.length + 1), ...input };
@@ -522,6 +542,14 @@ const smokes = {
   async 'system-mcp'() {
     const result = await module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
+  },
+  async 'system-neon-pilot-admin-cli'() {
+    const list = await module.manageAppCommands({ action: 'list' }, ctx);
+    assert(list.ok === true && list.commands.length === 1, 'app command list failed');
+    const run = await module.manageAppCommands({ action: 'run', commandId: 'smoke.command', args: { ok: true } }, ctx);
+    assert(run.ok === true && executedCommands.length === 1, 'app command run failed');
+    const doctor = await module.controlPlaneDoctor({}, ctx);
+    assert(doctor.ok === true && doctor.checks.length >= 1, 'control plane doctor failed');
   },
   async 'system-neon-pilot-agent'() {
     module.__setNeonPilotAgentApisForTest({

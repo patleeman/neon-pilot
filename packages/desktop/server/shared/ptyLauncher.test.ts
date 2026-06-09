@@ -1,10 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
-
-const spawn = vi.fn();
-vi.mock('node-pty', () => ({ spawn }));
-
-const { resolveProcessLaunch } = await import('./processLauncher.js');
-const { createPtyProcess } = await import('./ptyLauncher.js');
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./processLauncher.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./processLauncher.js')>();
@@ -13,6 +7,10 @@ vi.mock('./processLauncher.js', async (importOriginal) => {
     resolveProcessLaunch: vi.fn(actual.resolveProcessLaunch),
   };
 });
+
+const { resolveProcessLaunch } = await import('./processLauncher.js');
+const { __setNodePtyForTest, createPtyProcess } = await import('./ptyLauncher.js');
+const spawn = vi.fn();
 
 interface MockPty {
   pid: number;
@@ -39,6 +37,7 @@ describe('createPtyProcess', () => {
   beforeEach(() => {
     spawn.mockReset();
     vi.mocked(resolveProcessLaunch).mockClear();
+    __setNodePtyForTest({ spawn });
   });
 
   it('spawns the shell via node-pty with default dimensions', () => {
@@ -124,10 +123,12 @@ describe('createPtyProcess', () => {
     const mockPty = createMockPty();
     spawn.mockReturnValue(mockPty);
 
-    createPtyProcess({ command: '/bin/zsh' });
-
-    expect(spawn).toHaveBeenCalledWith('/bin/zsh', [], expect.any(Object));
-    process.env.SHELL = originalShell;
+    try {
+      createPtyProcess({ command: '/bin/zsh' });
+      expect(spawn).toHaveBeenCalledWith('/bin/zsh', [], expect.any(Object));
+    } finally {
+      process.env.SHELL = originalShell;
+    }
   });
 
   it('returns IPty-compatible handle with write, resize, kill, onData, onExit', () => {
@@ -136,7 +137,6 @@ describe('createPtyProcess', () => {
 
     const { pty } = createPtyProcess({ command: '/bin/bash' });
 
-    // Should expose the full IPty interface
     expect(typeof pty.write).toBe('function');
     expect(typeof pty.resize).toBe('function');
     expect(typeof pty.kill).toBe('function');

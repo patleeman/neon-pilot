@@ -9,10 +9,18 @@ export interface ExtensionPackagePath {
   source: 'bundled' | 'external';
 }
 
+function resolveExplicitRepoRoot(): string | null {
+  const repoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
+  if (!repoRoot) return null;
+  const resolved = resolve(repoRoot);
+  return existsSync(resolve(resolved, 'packages')) ? resolved : null;
+}
+
 function candidateBundledExtensionRoots(): string[] {
   const currentDir = dirname(fileURLToPath(import.meta.url));
+  const explicitRepoRoot = resolveExplicitRepoRoot();
   return [
-    process.env.NEON_PILOT_REPO_ROOT ? resolve(process.env.NEON_PILOT_REPO_ROOT, 'extensions') : null,
+    explicitRepoRoot ? resolve(explicitRepoRoot, 'extensions') : null,
     resolve(process.cwd(), 'extensions'),
     typeof process.resourcesPath === 'string' ? resolve(process.resourcesPath, 'extensions') : null,
     resolve(currentDir, '../../../../extensions'),
@@ -55,17 +63,18 @@ export function listExtensionPackagePaths(options: { runtimeRoot?: string } = {}
     typeof process.resourcesPath === 'string' && existsSync(resolve(process.resourcesPath))
       ? realpathSync(resolve(process.resourcesPath))
       : null;
-  const explicitRepoRoot = process.env.NEON_PILOT_REPO_ROOT ? realpathSync(resolve(process.env.NEON_PILOT_REPO_ROOT)) : null;
+  const explicitRepoRoot = resolveExplicitRepoRoot();
+  const explicitRepoRootReal = explicitRepoRoot ? realpathSync(explicitRepoRoot) : null;
   return inputs
     .flatMap(({ path, source }) => expandExtensionPath(path, source))
     .sort((left, right) => {
       const leftRealPackageRoot = realpathSync(left.packageRoot);
       const rightRealPackageRoot = realpathSync(right.packageRoot);
-      const leftInExplicitRepo = explicitRepoRoot
-        ? leftRealPackageRoot === explicitRepoRoot || leftRealPackageRoot.startsWith(`${explicitRepoRoot}/`)
+      const leftInExplicitRepo = explicitRepoRootReal
+        ? leftRealPackageRoot === explicitRepoRootReal || leftRealPackageRoot.startsWith(`${explicitRepoRootReal}/`)
         : false;
-      const rightInExplicitRepo = explicitRepoRoot
-        ? rightRealPackageRoot === explicitRepoRoot || rightRealPackageRoot.startsWith(`${explicitRepoRoot}/`)
+      const rightInExplicitRepo = explicitRepoRootReal
+        ? rightRealPackageRoot === explicitRepoRootReal || rightRealPackageRoot.startsWith(`${explicitRepoRootReal}/`)
         : false;
       if (leftInExplicitRepo !== rightInExplicitRepo) return leftInExplicitRepo ? -1 : 1;
 

@@ -451,6 +451,7 @@ export async function runGoldenSmoke({ appPath, matrixPath = defaultMatrixPath, 
   const child = spawn(executablePath, [`--remote-debugging-port=${debugPort}`, '--no-quit-confirmation'], {
     env: {
       ...process.env,
+      ELECTRON_RUN_AS_NODE: undefined,
       HOME: homeRoot,
       XDG_CACHE_HOME: join(tempRoot, 'xdg-cache'),
       XDG_CONFIG_HOME: join(tempRoot, 'xdg-config'),

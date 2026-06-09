@@ -9,6 +9,7 @@ import { listExtensionPackagePaths } from './extensionPackagePaths.js';
 
 const originalResourcesPath = process.resourcesPath;
 const originalCwd = process.cwd();
+const originalRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
 
 function writeExtension(root: string, id: string) {
   const packageRoot = join(root, id);
@@ -24,6 +25,11 @@ describe('extension package paths', () => {
       value: originalResourcesPath,
       configurable: true,
     });
+    if (originalRepoRoot === undefined) {
+      delete process.env.NEON_PILOT_REPO_ROOT;
+    } else {
+      process.env.NEON_PILOT_REPO_ROOT = originalRepoRoot;
+    }
   });
 
   it('does not auto-discover repo installable extensions from Electron resources', () => {
@@ -71,6 +77,7 @@ describe('extension package paths', () => {
       value: resourcesRoot,
       configurable: true,
     });
+    delete process.env.NEON_PILOT_REPO_ROOT;
 
     try {
       mkdirSync(asarAppRoot, { recursive: true });

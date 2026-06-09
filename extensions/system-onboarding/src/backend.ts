@@ -1,6 +1,7 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions/backend';
 
 const ONBOARDING_STATE_KEY = 'onboarding:v1';
+export const ONBOARDING_BACKEND_BUILD_MARKER = '2026-06-09';
 
 interface OnboardingState {
   completed: boolean;

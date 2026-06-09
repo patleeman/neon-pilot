@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.8 — 2026-06-09
+
+### Highlights
+
+- Adds a unified `neon-pilot admin` CLI surface for conversations, archives, retention pruning, extension management, and runtime doctor checks.
+- Fixes stuck running conversation overrides so recovered sessions do not remain blocked by stale run state.
+- Persists saved workspaces through the startup fast path so workspace state survives fast app launches.
+- Makes update controls more prominent in Settings for easier release-path management.
+- Relaxes first-party extension compatibility to the 0.11 release train and adds regressions for extension reinstall/replace behavior.
+
+### Notes
+
+- 15 commits since the previous release.
+
 ## 0.11.7 — 2026-06-08
 
 ### Highlights
