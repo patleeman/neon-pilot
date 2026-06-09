@@ -362,7 +362,8 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
     const match = bestMatches[0]!;
     const rawArgs = argv.slice(match.length);
     const json = wantsJson(rawArgs) || match.registration.jsonDefault === true;
-    const parsed = parseFlags(stripJsonFlag(rawArgs));
+    const cleanArgs = stripJsonFlag(rawArgs);
+    const parsed = parseFlags(cleanArgs);
     const stdinText = await readCliStdinIfRequested(parsed.flags);
     const extensionHostClient = await getCliExtensionHostClient();
     const inputAction = match.registration.inputAction ?? actionFromCliCommand(match.registration.command);
@@ -373,7 +374,7 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
         ...(inputAction ? { action: inputAction } : {}),
         cli: {
           command: match.registration.command,
-          rawArgv: argv,
+          rawArgv: cleanArgs,
           args: parsed.positional,
           flags: parsed.flags,
           json,

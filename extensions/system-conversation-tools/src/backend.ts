@@ -205,7 +205,11 @@ function cliCommand(input: Record<string, unknown>): string {
 
 function cliArgs(input: Record<string, unknown>): string[] {
   const cli = input.cli && typeof input.cli === 'object' && !Array.isArray(input.cli) ? (input.cli as Record<string, unknown>) : {};
-  return Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+  // cli.rawArgv has the full argument list including flags; cli.args has only positionals.
+  // Prefer rawArgv so flag extraction in normalizeConversationCliInput works correctly.
+  if (Array.isArray(cli.rawArgv)) return cli.rawArgv.filter((arg): arg is string => typeof arg === 'string');
+  if (Array.isArray(cli.args)) return cli.args.filter((arg): arg is string => typeof arg === 'string');
+  return [];
 }
 
 type ParsedCliArgs = { positionals: string[]; flags: Record<string, string | boolean | string[]> };

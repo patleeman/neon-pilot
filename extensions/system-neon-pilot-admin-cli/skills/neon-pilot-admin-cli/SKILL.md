@@ -13,6 +13,7 @@ Use the `neon-pilot` CLI as the primary Neon Pilot self-administration surface w
 
    ```sh
    neon-pilot commands --json
+   neon-pilot control-plane doctor --json
    neon-pilot help conversations
    ```
 
@@ -25,6 +26,7 @@ Use the `neon-pilot` CLI as the primary Neon Pilot self-administration surface w
    neon-pilot conversations open list --json      # ergonomic open/sidebar view
    neon-pilot conversations list --json           # persisted conversation history page, not open/active threads
    neon-pilot cli status --json
+   neon-pilot control-plane doctor --json
    ```
 
 3. Inspect before mutating shared state. For conversation/sidebar state, read the workspace first:
@@ -178,6 +180,7 @@ neon-pilot conversations transcript update <id> <block-id> --type text --data '{
 
 - Core owns the `neon-pilot` CLI shell and built-in commands such as `commands`, `help`, `protocol`, and `cli status/install/uninstall`.
 - Extensions contribute product-specific CLI commands through `contributes.cliCommands`.
+- `control-plane doctor` runs non-destructive smoke checks for command discovery, conversation APIs, retention dry-run, runtime repo root, and extension storage.
 - `app-commands run` triggers extension/app commands by ID and is a broad escape hatch; prefer narrower lifecycle/settings/conversation/runs CLI commands for predictable JSON behavior.
 - Built-in system extensions contribute the primary self-administration surfaces: `extensions ...`, `settings ...`, and `conversations ...`.
 - The agent shell receives Neon Pilot's channel-local CLI bin directory automatically. User shell installation is opt-in through `neon-pilot cli install`.

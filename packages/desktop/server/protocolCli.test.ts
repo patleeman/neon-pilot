@@ -152,7 +152,7 @@ describe('protocol CLI', () => {
           action: 'validate',
           cli: {
             command: 'extensions validate',
-            rawArgv: ['extensions', 'validate', 'system-knowledge', '--json'],
+            rawArgv: ['system-knowledge'],
             args: ['system-knowledge'],
             flags: {},
             json: true,

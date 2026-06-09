@@ -23,6 +23,14 @@
         "action": "manageAppCommands",
         "jsonDefault": true,
         "inputAction": "run"
+      },
+      {
+        "id": "control-plane-doctor",
+        "command": "control-plane doctor",
+        "description": "Run control-plane smoke checks for commands, conversations, retention dry-run, runtime, and extension storage.",
+        "action": "controlPlaneDoctor",
+        "jsonDefault": true,
+        "inputAction": "doctor"
       }
     ],
     "skills": [
@@ -44,6 +52,15 @@
         "worker": {
           "enabled": true,
           "inputActions": ["list", "run"]
+        }
+      },
+      {
+        "id": "controlPlaneDoctor",
+        "handler": "controlPlaneDoctor",
+        "title": "Control Plane Doctor",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["doctor"]
         }
       }
     ]
