@@ -54,6 +54,8 @@
         "promptSnippet": "Use workflow for large tasks that benefit from parallel subagents, verification, or long-running orchestration. The script field is an async function body; call workflow.agent(...) and return workflow.finish({ summary, findings, counts }) with a compact final result.",
         "promptGuidelines": [
           "Pass JavaScript statements for the body of an async function. Do not wrap the script in (async () => ...)(), module.exports, or export default.",
+          "Do not call workflow with only args/agentDefaults/cwd; args is data for the script, not the workflow body.",
+          "Omit waitForCompletion for normal tool use so long-running workflows return a workflow id and continue in the background; set it true only for short smoke checks.",
           "Call workflow.phase, workflow.agent, workflow.map, workflow.log, and workflow.finish through the workflow global; do not use a bare agent() function.",
           "Call return workflow.finish(result) or return a value from the script body so the tool result is not empty.",
           "Use workflow.agent({ prompt, model?, allowedTools? }) for real work; the workflow script itself does not have filesystem or shell access.",
@@ -73,6 +75,10 @@
             "args": {},
             "cwd": { "type": "string" },
             "model": { "type": "string" },
+            "waitForCompletion": {
+              "type": "boolean",
+              "description": "Normally omit this so tool-invoked workflows start durably and return immediately. Set true only for short workflows that should block until complete."
+            },
             "agentDefaults": {
               "type": "object",
               "properties": {

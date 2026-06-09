@@ -45,6 +45,8 @@ The script itself is orchestration-only. It does not receive direct shell, files
 
 Keep the final result compact. Subagent prompts, run ids, statuses, summaries, errors, and logs are persisted as workflow nodes and events and can be inspected in the Workflows page. Do not return every raw subagent result to chat. Return a small object with `summary`, `counts`, and only the key findings the parent agent needs.
 
+Tool-invoked workflows normally start durably and return immediately with a workflow id while the coordinator continues in the background. Inspect progress in the transcript block or Workflows page. Set `waitForCompletion: true` only for short smoke workflows that should block until complete.
+
 ## Desktop Runtime Requirement
 
 `workflow.agent()` starts daemon-backed background agent runs through the desktop/product runtime. It requires the daemon and extension-host RPC to be available to the process running the workflow.
@@ -69,9 +71,12 @@ Use the `workflow` tool with:
     "model": "opencode-go/deepseek-v4-flash",
     "allowedTools": ["read", "bash"]
   },
+  "waitForCompletion": false,
   "script": "await workflow.phase('plan'); workflow.log('starting'); return workflow.finish('done');"
 }
 ```
+
+Do not call the tool with only `args`/`agentDefaults`/`cwd`. `args` is only data available to the JavaScript body; `script` defines the actual workflow.
 
 ## Subagent Input
 
@@ -137,6 +142,32 @@ return workflow.finish({
   summary: `${findings.length} review branches reported findings out of ${results.length}.`,
   counts: { reviewed: results.length, findings: findings.length },
   findings,
+});
+```
+
+Full codebase area scan:
+
+```js
+await workflow.phase('fanout-scan');
+workflow.log('Starting area scan', { areas: args.areas.map((area) => area.name) });
+
+const results = await workflow.map(args.areas, async (area) => {
+  return workflow.agent({
+    role: 'codebase-auditor',
+    taskSlug: `scan-${area.name}`,
+    timeoutMinutes: 45,
+    allowedTools: ['read', 'bash'],
+    prompt: `Read AGENTS.md first. Scope: ${area.paths}\nFocus: ${area.focus}\n\nScan for likely bugs, duplicate code, dead code, race conditions, API mismatches, missing validation, security footguns, docs drift, and maintainability issues. Do not edit files. Return top findings with file:line evidence, suggested fixes, duplicate-code opportunities, checks run, and confidence.`,
+  });
+});
+
+await workflow.phase('synthesis');
+const completed = results.filter((item) => item.status === 'completed');
+const failed = results.filter((item) => item.status !== 'completed');
+return workflow.finish({
+  summary: `Completed ${completed.length}/${results.length} scan branches.`,
+  counts: { branches: results.length, completed: completed.length, failed: failed.length },
+  findings: completed.map((item, index) => ({ area: args.areas[index]?.name, nodeId: item.nodeId, runId: item.runId, summary: item.summary })),
 });
 ```
 

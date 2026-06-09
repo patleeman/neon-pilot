@@ -27,6 +27,7 @@ interface WorkflowInput {
   cwd?: unknown;
   model?: unknown;
   agentDefaults?: unknown;
+  waitForCompletion?: unknown;
 }
 
 interface SavedWorkflowInput {
@@ -261,8 +262,17 @@ function readOptionalString(value: unknown): string | undefined {
 
 function readRequiredString(value: unknown, label: string): string {
   const normalized = readOptionalString(value);
+  if (!normalized && label === 'script') {
+    throw new Error(
+      'script is required. Pass JavaScript statements for the body of an async function, for example: await workflow.phase("review"); const results = await workflow.map(args.items, async (item) => workflow.agent({ prompt: `Review ${item}` })); return workflow.finish({ summary: `${results.length} branches completed.` });',
+    );
+  }
   if (!normalized) throw new Error(`${label} is required.`);
   return normalized;
+}
+
+function readOptionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 function normalizeInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -870,6 +880,7 @@ function normalizeWorkflowInput(input: unknown, ctx: ExtensionBackendContext, se
       model: readOptionalString(agentDefaults.model),
       allowedTools: normalizeAllowedTools(agentDefaults.allowedTools, settings.defaultAgentAllowedTools),
     },
+    waitForCompletion: readOptionalBoolean(record.waitForCompletion) ?? !ctx.agentToolContext,
   };
 }
 
@@ -1096,7 +1107,7 @@ export async function workflow(input: unknown, ctx: ExtensionBackendContext) {
   appendEvent(store, workflowId, 'workflow.start', normalized.name, { model: normalized.model });
   await updateTranscriptBlock(ctx, store, workflowId);
 
-  try {
+  const completeWorkflow = async () => {
     const result = await runWorkflowScript({
       ctx,
       store,
@@ -1114,6 +1125,30 @@ export async function workflow(input: unknown, ctx: ExtensionBackendContext) {
     updateRun(store, workflowId, { status: 'completed', resultText, completedAt: new Date().toISOString() });
     appendEvent(store, workflowId, 'workflow.completed', resultText);
     await updateTranscriptBlock(ctx, store, workflowId);
+    return { resultText, chatResultText };
+  };
+
+  try {
+    if (!normalized.waitForCompletion) {
+      void completeWorkflow().catch(async (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        const status: WorkflowStatus = ctx.agentToolContext?.signal?.aborted ? 'cancelled' : 'failed';
+        updateRun(store, workflowId, { status, error: message, completedAt: new Date().toISOString() });
+        appendEvent(store, workflowId, `workflow.${status}`, message);
+        await updateTranscriptBlock(ctx, store, workflowId).catch(() => undefined);
+      });
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `Workflow ${normalized.name} started. It will continue in the background. Inspect progress in the transcript block or Workflows page.\n\nWorkflow ID: ${workflowId}`,
+          },
+        ],
+        details: { workflowId, status: 'running', result: undefined },
+      };
+    }
+
+    const { resultText, chatResultText } = await completeWorkflow();
     return {
       content: [{ type: 'text' as const, text: `Workflow ${normalized.name} completed.\n\n${chatResultText}` }],
       details: { workflowId, status: 'completed', result: chatResultText, fullResultStored: resultText !== chatResultText },

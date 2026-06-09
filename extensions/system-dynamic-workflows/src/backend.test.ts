@@ -208,6 +208,40 @@ describe('dynamic workflows backend', () => {
     expect(db.dump().nodes[0]).toMatchObject({ model: 'opencode-go/deepseek-v4-flash', status: 'completed' });
   });
 
+  it('starts tool-invoked workflows asynchronously to avoid backend worker timeouts', async () => {
+    const { ctx, db } = createCtx();
+    const toolCtx = {
+      ...(ctx as Record<string, unknown>),
+      agentToolContext: { model: { id: 'conversation/model' } },
+    } as never;
+
+    const result = await workflow(
+      {
+        name: 'Async fanout',
+        script: `const result = await workflow.agent({ role: "audit", prompt: "inspect auth" }); return workflow.finish(result.summary);`,
+      },
+      toolCtx,
+    );
+
+    expect(result).toMatchObject({ details: { status: 'running' } });
+    expect(result.content[0].text).toContain('started');
+    expect(result.content[0].text).toContain('Workflows page');
+    await vi.waitFor(() => expect(runs.startBackgroundRun).toHaveBeenCalled());
+    await vi.waitFor(() => expect(db.dump().runs[0]).toMatchObject({ status: 'completed', result_text: 'agent done' }));
+  });
+
+  it('allows explicit waitForCompletion for synchronous workflow callers', async () => {
+    const { ctx } = createCtx();
+    const toolCtx = {
+      ...(ctx as Record<string, unknown>),
+      agentToolContext: { model: { id: 'conversation/model' } },
+    } as never;
+
+    const result = await workflow({ name: 'Sync tool', waitForCompletion: true, script: `return workflow.finish("done");` }, toolCtx);
+
+    expect(result).toMatchObject({ details: { status: 'completed', result: 'done' } });
+  });
+
   it('lets per-agent model override workflow defaults', async () => {
     settingsApi.readExtensionSettings.mockResolvedValue({ 'dynamicWorkflows.defaultAgentModel': 'settings/model' });
     const { ctx } = createCtx();
@@ -378,6 +412,8 @@ describe('dynamic workflows backend', () => {
 
   it('rejects missing script input', async () => {
     const { ctx } = createCtx();
-    await expect(workflow({ name: 'Nope' }, ctx)).rejects.toThrow('script is required');
+    await expect(workflow({ name: 'Nope', args: { items: ['src/a.ts'] }, agentDefaults: { allowedTools: ['read'] } }, ctx)).rejects.toThrow(
+      'script is required. Pass JavaScript statements',
+    );
   });
 });
