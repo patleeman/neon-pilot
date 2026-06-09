@@ -8,7 +8,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 import type { DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import type { EntityStore } from './createEntityStore';
-import { executionStore, presenceStore, type RunningState, runStore, sessionStore, taskStore, titleStore } from './stores';
+import { executionStore, presenceStore, type RunningState, runStore, sessionStore, taskStore } from './stores';
 
 // ── Internal helper ──────────────────────────────────────────────────────────
 
@@ -54,30 +54,6 @@ export function useSessionPresence(id: string | null | undefined): RunningState 
   }, [id]);
 
   return useDerivedValue(subscribe, getSnapshot);
-}
-
-export function useSessionTitle(id: string | null | undefined): string | undefined {
-  const subscribe = useCallback(
-    (onStoreChange: () => void) => {
-      if (!id) return () => {};
-      return titleStore.subscribe(id, onStoreChange);
-    },
-    [id],
-  );
-
-  const getSnapshot = useCallback(() => {
-    if (!id) return undefined;
-    return titleStore.get(id);
-  }, [id]);
-
-  return useDerivedValue(subscribe, getSnapshot);
-}
-
-// ── Composer convenience ─────────────────────────────────────────────────────
-
-export function useCanSend(id: string | null | undefined): boolean {
-  const presence = useSessionPresence(id);
-  return presence !== 'streaming' && presence !== 'stale';
 }
 
 // ── Legacy compatibility ─────────────────────────────────────────────────────

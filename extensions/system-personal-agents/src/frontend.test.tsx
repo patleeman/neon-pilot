@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { parseAgentId, PersonalAgentsShell } from './frontend';
+import { parseAgentId, PersonalAgentsDetails, PersonalAgentsShell, PersonalAgentsSidebar } from './frontend';
 
 const profile = {
   id: 'agent-1',
@@ -19,11 +19,14 @@ const profile = {
   updatedAt: '2026-06-09T00:00:00.000Z',
 };
 
-function renderShell(options?: { profiles?: unknown[]; pathname?: string; ensuredProfile?: typeof profile }) {
+function renderShell(options?: { profiles?: unknown[]; pathname?: string; ensuredProfile?: typeof profile; listProfilesError?: Error }) {
   const profiles = options?.profiles ?? [profile];
   const ensuredProfile = options?.ensuredProfile ?? profile;
   const invoke = vi.fn(async (action: string, input?: unknown) => {
-    if (action === 'listProfiles') return { profiles };
+    if (action === 'listProfiles') {
+      if (options?.listProfilesError) throw options.listProfilesError;
+      return { profiles };
+    }
     if (action === 'ensureDefaultConversation') return { profile: ensuredProfile, conversationId: 'conv-1' };
     if (action === 'createProfile') return { profile: { ...profile, id: 'agent-2', name: 'New Agent', defaultConversationId: 'conv-2' } };
     if (action === 'updateProfile') return { profile: { ...profile, ...(input as Record<string, unknown>) } };
@@ -55,6 +58,46 @@ function renderShell(options?: { profiles?: unknown[]; pathname?: string; ensure
   return { invoke, execute, notify, confirm, HostComponent };
 }
 
+function renderExperience(options?: { profiles?: unknown[]; pathname?: string; ensuredProfile?: typeof profile }) {
+  const profiles = options?.profiles ?? [profile];
+  const ensuredProfile = options?.ensuredProfile ?? profile;
+  const invoke = vi.fn(async (action: string, input?: unknown) => {
+    if (action === 'listProfiles') return { profiles };
+    if (action === 'ensureDefaultConversation') return { profile: ensuredProfile, conversationId: 'conv-1' };
+    if (action === 'createProfile') return { profile: { ...profile, id: 'agent-2', name: 'New Agent', defaultConversationId: 'conv-2' } };
+    if (action === 'updateProfile') return { profile: { ...profile, ...(input as Record<string, unknown>) } };
+    if (action === 'deleteProfile') return { ok: true, deleted: true };
+    throw new Error(`Unexpected action ${action}`);
+  });
+  const execute = vi.fn(async () => true);
+  const notify = vi.fn();
+  const confirm = vi.fn(async () => true);
+  const HostComponent = vi.fn(({ hostProps }: { hostProps?: Record<string, unknown> }) => (
+    <div data-testid="host-conversation">{String(hostProps?.conversationId ?? '')}</div>
+  ));
+  const props = {
+    pa: { extension: { invoke }, commands: { execute }, ui: { notify, confirm } } as never,
+    context: {
+      extensionId: 'system-personal-agents',
+      surfaceId: 'agents',
+      pathname: options?.pathname ?? '/agents/agent-1',
+      search: '',
+      hash: '',
+    },
+    surface: {} as never,
+    params: {},
+  };
+
+  render(
+    <>
+      <PersonalAgentsSidebar {...props} />
+      <PersonalAgentsShell HostComponent={HostComponent as never} {...props} />
+      <PersonalAgentsDetails {...props} />
+    </>,
+  );
+  return { invoke, execute, notify, confirm, HostComponent };
+}
+
 describe('PersonalAgentsShell', () => {
   it('safely reads agent ids from agent routes', () => {
     expect(parseAgentId('/agents/agent%201')).toBe('agent 1');
@@ -63,22 +106,19 @@ describe('PersonalAgentsShell', () => {
   });
 
   it('renders an agent list, details panel, and the standard conversation host', async () => {
-    const { invoke, HostComponent } = renderShell();
+    const { invoke, HostComponent } = renderExperience();
 
     await waitFor(() => {
       expect(screen.getAllByText('Archivist').length).toBeGreaterThan(0);
     });
     expect(screen.getByText('Archive with care.')).toBeTruthy();
-    expect(screen.getByTestId('host-conversation').textContent).toBe('conv-1');
+    expect((await screen.findByTestId('host-conversation')).textContent).toBe('conv-1');
     expect(HostComponent).toHaveBeenCalled();
     expect(invoke).toHaveBeenCalledWith('ensureDefaultConversation', { id: 'agent-1' });
   });
 
   it('shows the ensured default conversation in the details panel', async () => {
-    renderShell({
-      profiles: [{ ...profile, defaultConversationId: undefined }],
-      ensuredProfile: { ...profile, defaultConversationId: 'conv-1' },
-    });
+    renderExperience();
 
     await screen.findByTestId('host-conversation');
     expect(screen.getAllByText('conv-1')).toHaveLength(2);
@@ -104,8 +144,19 @@ describe('PersonalAgentsShell', () => {
     expect(invoke).not.toHaveBeenCalledWith('ensureDefaultConversation', { id: 'missing-agent' });
   });
 
+  it('preserves a selected route when profile loading fails', async () => {
+    const { execute, invoke } = renderShell({
+      pathname: '/agents/agent-1',
+      listProfilesError: new Error('Profile store unavailable'),
+    });
+
+    await screen.findByText('Profile store unavailable');
+    expect(execute).not.toHaveBeenCalledWith('app.navigate', { to: '/agents' });
+    expect(invoke).not.toHaveBeenCalledWith('ensureDefaultConversation', { id: 'agent-1' });
+  });
+
   it('saves edited soul document changes', async () => {
-    const { invoke } = renderShell();
+    const { invoke } = renderExperience();
 
     const soul = (await screen.findByDisplayValue('Archive with care.')) as HTMLTextAreaElement;
     fireEvent.change(soul, { target: { value: 'Archive with taste.' } });

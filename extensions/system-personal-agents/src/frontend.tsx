@@ -111,6 +111,12 @@ export function PersonalAgentsShell({ HostComponent, ...props }: HostWrapperProp
   paRef.current = pa;
 
   useEffect(() => {
+    if (!loading && !error && routeAgentId && !selectedProfile) {
+      void paRef.current.commands.execute('app.navigate', { to: '/agents' });
+    }
+  }, [error, loading, routeAgentId, selectedProfile?.id]);
+
+  useEffect(() => {
     let cancelled = false;
     setConversationId(null);
     if (!selectedProfile) return;
