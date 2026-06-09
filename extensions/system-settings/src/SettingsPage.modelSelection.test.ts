@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatSettingsModelOptionValue, resolveSettingsModelOption } from './SettingsPage';
+import { formatSettingsModelOptionValue, readSettingsSectionIdFromHash, resolveSettingsModelOption } from './SettingsPage';
 
 const MODELS = [
   {
@@ -40,5 +40,16 @@ describe('settings model selection', () => {
     expect(resolveSettingsModelOption(MODELS, 'opencode-go/deepseek-v4-flash')?.provider).toBe('opencode-go');
     expect(resolveSettingsModelOption(MODELS, 'ds4/deepseek-v4-flash')?.provider).toBe('ds4');
     expect(resolveSettingsModelOption(MODELS, 'deepseek-v4-flash')).toBeNull();
+  });
+});
+
+describe('settings hash section parsing', () => {
+  it('ignores malformed percent-encoded hashes', () => {
+    expect(readSettingsSectionIdFromHash('#%E0%A4%A')).toBe('');
+  });
+
+  it('decodes valid section hashes', () => {
+    expect(readSettingsSectionIdFromHash('#settings-providers')).toBe('settings-providers');
+    expect(readSettingsSectionIdFromHash('#extension%3Asystem-settings')).toBe('extension:system-settings');
   });
 });

@@ -206,6 +206,16 @@ const DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS: DesktopAppPreferencesState['keyboardSh
 
 const DESKTOP_KEYBOARD_SHORTCUT_IDS = Object.keys(DESKTOP_KEYBOARD_SHORTCUT_LABELS) as DesktopKeyboardShortcutId[];
 
+export function readSettingsSectionIdFromHash(hash: string): string {
+  const rawSectionId = hash.replace(/^#/, '');
+  if (!rawSectionId) return '';
+  try {
+    return decodeURIComponent(rawSectionId);
+  } catch {
+    return '';
+  }
+}
+
 type ShortcutListItem = {
   id: string;
   owner: string;
@@ -1806,7 +1816,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }, [desktopEnvironment?.isElectron, visibleSectionIds]);
 
   useEffect(() => {
-    const rawSectionId = decodeURIComponent(location.hash.replace(/^#/, ''));
+    const rawSectionId = readSettingsSectionIdFromHash(location.hash);
     const extensionComponentIds = new Set(extensionRegistry.settingsComponents.map((component) => component.sectionId));
     const sectionId = extensionComponentIds.has(rawSectionId) ? 'settings-extensions' : rawSectionId;
     if (!sectionId || !visibleQuickLinks.some((item) => item.id === sectionId)) return;
