@@ -30,34 +30,6 @@ function normalizeDrainResult(value: unknown): { ok: boolean; output: string; ex
   };
 }
 
-function terminalKeyData(event: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'key' | 'metaKey'>, options: { usingPty: boolean }): string | null {
-  if (event.metaKey) return null;
-  if (event.ctrlKey && event.key.length === 1) {
-    const code = event.key.toUpperCase().charCodeAt(0);
-    if (code >= 64 && code <= 95) return String.fromCharCode(code - 64);
-  }
-  switch (event.key) {
-    case 'Enter':
-      return options.usingPty ? '\r' : '\n';
-    case 'Backspace':
-      return '\x7f';
-    case 'Tab':
-      return '\t';
-    case 'Escape':
-      return '\x1b';
-    case 'ArrowUp':
-      return '\x1b[A';
-    case 'ArrowDown':
-      return '\x1b[B';
-    case 'ArrowRight':
-      return '\x1b[C';
-    case 'ArrowLeft':
-      return '\x1b[D';
-    default:
-      return event.key.length === 1 && !event.altKey ? event.key : null;
-  }
-}
-
 export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef<TerminalState>({ id: null, xterm: null, fitAddon: null, usingPty: false });
@@ -223,14 +195,6 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
 
     // Ensure keyboard focus is explicitly captured, even when child handlers stop propagation.
     const handleFocusTerminal = () => focusTerminal(xterm);
-    const handleTerminalKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.defaultPrevented || event.isComposing) return;
-      const data = terminalKeyData(event, { usingPty });
-      if (!data) return;
-      event.preventDefault();
-      event.stopPropagation();
-      writeTerminalData(data);
-    };
 
     // Handle resize
     const resizeObserver = new ResizeObserver(() => {
@@ -259,7 +223,6 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     container.addEventListener('click', handleFocusTerminal, true);
     container.addEventListener('focusin', handleFocusTerminal, true);
     container.addEventListener('pointerdown', handleFocusTerminal, true);
-    container.addEventListener('keydown', handleTerminalKeyDown, true);
 
     // Give terminal focus
     requestAnimationFrame(() => requestAnimationFrame(() => focusTerminal(xterm)));
@@ -276,7 +239,6 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       container.removeEventListener('click', handleFocusTerminal, true);
       container.removeEventListener('focusin', handleFocusTerminal, true);
       container.removeEventListener('pointerdown', handleFocusTerminal, true);
-      container.removeEventListener('keydown', handleTerminalKeyDown, true);
 
       if (terminalId) {
         pa.extension.invoke('terminalClose', { id: terminalId }).catch(() => {});
