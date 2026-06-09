@@ -662,10 +662,16 @@ async function main() {
   const longId = writeLongTranscript();
   installTodoExtensionFixture();
   const port = await allocatePort();
+  const isPackagedApp = Boolean(app);
   const env = {
     ...process.env,
-    NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
-    NEON_PILOT_REPO_ROOT: repo,
+    ELECTRON_RUN_AS_NODE: undefined,
+    ...(isPackagedApp
+      ? {}
+      : {
+          NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
+          NEON_PILOT_REPO_ROOT: repo,
+        }),
     NEON_PILOT_RUNTIME_CHANNEL: 'test',
     NEON_PILOT_STATE_ROOT: stateRoot,
     NEON_PILOT_CONFIG_ROOT: join(stateRoot, 'config'),
@@ -674,14 +680,13 @@ async function main() {
     NEON_PILOT_COMPANION_PORT: '0',
   };
   const start = performance.now();
-  const child = spawn(
-    join(app, 'Contents', 'MacOS', basename(app, '.app')),
-    [`--remote-debugging-port=${port}`, desktopMainFile, '--no-quit-confirmation', ...(entry ? [entry] : [])],
-    {
-      env,
-      stdio: 'ignore',
-    },
-  );
+  const launchArgs = isPackagedApp
+    ? [`--remote-debugging-port=${port}`, '--no-quit-confirmation', ...(entry ? [entry] : [])]
+    : [`--remote-debugging-port=${port}`, desktopMainFile, '--no-quit-confirmation', ...(entry ? [entry] : [])];
+  const child = spawn(join(app, 'Contents', 'MacOS', basename(app, '.app')), launchArgs, {
+    env,
+    stdio: 'ignore',
+  });
   let cdp;
   try {
     const page = await waitForPage(port, child);
