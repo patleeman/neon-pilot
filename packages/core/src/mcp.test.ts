@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   callMcpTool,
+  callMcpToolDirect,
+  grepMcpTools,
   inspectMcpServer,
   inspectMcpTool,
   listMcpCatalog,
@@ -47,6 +49,7 @@ describe('mcp config helpers', () => {
               args: ['server.mjs'],
               cwd: '/tmp/mcp',
               env: { TOKEN: 'secret', NUMBER: 1 },
+              ignoreTools: ['dangerous_write', 42, 'delete_all'],
             },
           },
         },
@@ -72,6 +75,7 @@ describe('mcp config helpers', () => {
       args: ['server.mjs'],
       cwd: '/tmp/mcp',
       env: { TOKEN: 'secret' },
+      ignoreTools: ['dangerous_write', 'delete_all'],
     });
     expect(result.servers[2]).toMatchObject({
       name: 'slack',
@@ -198,31 +202,34 @@ describe('mcp config helpers', () => {
   });
 });
 
-describe('native MCP client', () => {
-  it('inspects and calls a stdio server', async () => {
-    const cwd = makeTempDir('pa-mcp-server');
-    const sdkRoot = pathToFileURL(
-      join(
-        repoRoot,
-        'node_modules',
-        '.pnpm',
-        '@modelcontextprotocol+sdk@1.27.1_zod@4.3.6',
-        'node_modules',
-        '@modelcontextprotocol',
-        'sdk',
-        'dist',
-        'esm',
-      ),
-    ).href;
-    const zodUrl = pathToFileURL(join(repoRoot, 'node_modules', '.pnpm', 'zod@4.3.6', 'node_modules', 'zod', 'v4', 'index.js')).href;
-    const serverPath = join(cwd, 'server.mjs');
+function sdkEsmRoot(): string {
+  return pathToFileURL(
+    join(
+      repoRoot,
+      'node_modules',
+      '.pnpm',
+      '@modelcontextprotocol+sdk@1.27.1_zod@4.3.6',
+      'node_modules',
+      '@modelcontextprotocol',
+      'sdk',
+      'dist',
+      'esm',
+    ),
+  ).href;
+}
 
-    writeFileSync(
-      serverPath,
-      `
-import { McpServer } from '${sdkRoot}/server/mcp.js';
-import { StdioServerTransport } from '${sdkRoot}/server/stdio.js';
-import * as z from '${zodUrl}';
+function zodUrl(): string {
+  return pathToFileURL(join(repoRoot, 'node_modules', '.pnpm', 'zod@4.3.6', 'node_modules', 'zod', 'v4', 'index.js')).href;
+}
+
+function writeFixtureMcpServer(cwd: string): string {
+  const serverPath = join(cwd, 'server.mjs');
+  writeFileSync(
+    serverPath,
+    `
+import { McpServer } from '${sdkEsmRoot()}/server/mcp.js';
+import { StdioServerTransport } from '${sdkEsmRoot()}/server/stdio.js';
+import * as z from '${zodUrl()}';
 
 const server = new McpServer({ name: 'fixture-server', version: '1.0.0' });
 server.registerTool('echo', {
@@ -231,35 +238,74 @@ server.registerTool('echo', {
 }, async ({ text }) => ({
   content: [{ type: 'text', text: String(text) }],
 }));
+server.registerTool('multi_content', {
+  description: 'Return text, image, and resource content blocks.',
+  inputSchema: {},
+}, async () => ({
+  content: [
+    { type: 'text', text: 'hello text' },
+    { type: 'image', data: Buffer.from('fake-image').toString('base64'), mimeType: 'image/png' },
+    { type: 'resource', resource: { uri: 'fixture://note', mimeType: 'text/plain', text: 'resource text' } },
+  ],
+}));
+server.registerTool('structured', {
+  description: 'Return structured content.',
+  inputSchema: { value: z.number().optional() },
+}, async ({ value = 1 }) => ({
+  content: [{ type: 'text', text: 'structured result' }],
+  structuredContent: { doubled: value * 2 },
+}));
+server.registerTool('tool_error', {
+  description: 'Return a tool-level error result.',
+  inputSchema: {},
+}, async () => ({
+  isError: true,
+  content: [{ type: 'text', text: 'fixture tool error' }],
+}));
 
 await server.connect(new StdioServerTransport());
 `,
-      'utf-8',
-    );
+    'utf-8',
+  );
+  return serverPath;
+}
 
-    writeFileSync(
-      join(cwd, 'mcp_servers.json'),
-      JSON.stringify(
-        {
-          mcpServers: {
-            fixture: {
-              command: process.execPath,
-              args: [serverPath],
-            },
+function writeFixtureMcpConfig(cwd: string, serverPath: string, extraServerConfig: Record<string, unknown> = {}): void {
+  writeFileSync(
+    join(cwd, 'mcp_servers.json'),
+    JSON.stringify(
+      {
+        mcpServers: {
+          fixture: {
+            command: process.execPath,
+            args: [serverPath],
+            ...extraServerConfig,
           },
         },
-        null,
-        2,
-      ),
-    );
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+describe('native MCP client', () => {
+  it('inspects and calls a stdio server', async () => {
+    const cwd = makeTempDir('pa-mcp-server');
+    const serverPath = writeFixtureMcpServer(cwd);
+    writeFixtureMcpConfig(cwd, serverPath);
 
     const serverInfo = await inspectMcpServer('fixture', { cwd, withDescriptions: true });
     expect(serverInfo.exitCode).toBe(0);
-    expect(serverInfo.data?.toolCount).toBe(1);
-    expect(serverInfo.data?.tools[0]).toMatchObject({
-      name: 'echo',
-      description: 'Echo text back to the caller.',
-    });
+    expect(serverInfo.data?.toolCount).toBe(4);
+    expect(serverInfo.data?.tools).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'echo', description: 'Echo text back to the caller.' }),
+        expect.objectContaining({ name: 'multi_content', description: 'Return text, image, and resource content blocks.' }),
+        expect.objectContaining({ name: 'structured', description: 'Return structured content.' }),
+        expect.objectContaining({ name: 'tool_error', description: 'Return a tool-level error result.' }),
+      ]),
+    );
 
     const toolInfo = await inspectMcpTool('fixture', 'echo', { cwd });
     expect(toolInfo.exitCode).toBe(0);
@@ -273,5 +319,101 @@ await server.connect(new StdioServerTransport());
     expect(toolResult.data?.parsed).toMatchObject({
       content: [{ type: 'text', text: 'hello' }],
     });
+  });
+
+  it('preserves MCP call result content block and structured content shapes', async () => {
+    const cwd = makeTempDir('pa-mcp-content-types');
+    const serverPath = writeFixtureMcpServer(cwd);
+    writeFixtureMcpConfig(cwd, serverPath);
+
+    const multi = await callMcpTool('fixture', 'multi_content', {}, { cwd });
+    expect(multi.exitCode).toBe(0);
+    expect(multi.data?.parsed).toMatchObject({
+      content: [
+        { type: 'text', text: 'hello text' },
+        { type: 'image', mimeType: 'image/png' },
+        { type: 'resource', resource: { uri: 'fixture://note', mimeType: 'text/plain', text: 'resource text' } },
+      ],
+    });
+
+    const structured = await callMcpTool('fixture', 'structured', { value: 21 }, { cwd });
+    expect(structured.exitCode).toBe(0);
+    expect(structured.data?.parsed).toMatchObject({
+      content: [{ type: 'text', text: 'structured result' }],
+      structuredContent: { doubled: 42 },
+    });
+  });
+
+  it('preserves MCP tool-level error results without converting them to protocol errors', async () => {
+    const cwd = makeTempDir('pa-mcp-tool-error');
+    const serverPath = writeFixtureMcpServer(cwd);
+    writeFixtureMcpConfig(cwd, serverPath);
+
+    const result = await callMcpTool('fixture', 'tool_error', {}, { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.error).toBeUndefined();
+    expect(result.data?.parsed).toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: 'fixture tool error' }],
+    });
+  });
+
+  it('sanitizes non-object tool call inputs to an empty argument object', async () => {
+    const cwd = makeTempDir('pa-mcp-non-object-input');
+    const serverPath = writeFixtureMcpServer(cwd);
+    writeFixtureMcpConfig(cwd, serverPath);
+
+    const result = await callMcpTool('fixture', 'structured', 'not-an-object', { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.data?.parsed).toMatchObject({ structuredContent: { doubled: 2 } });
+  });
+
+  it('supports direct server calls without config lookup', async () => {
+    const cwd = makeTempDir('pa-mcp-direct');
+    const serverPath = writeFixtureMcpServer(cwd);
+
+    const result = await callMcpToolDirect(
+      { name: 'fixture', transport: 'stdio', command: process.execPath, args: [serverPath], raw: {} },
+      'echo',
+      { text: 'direct hello' },
+      { cwd },
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.data?.parsed).toMatchObject({ content: [{ type: 'text', text: 'direct hello' }] });
+  });
+
+  it('lists and greps probed MCP tools including server-qualified patterns', async () => {
+    const cwd = makeTempDir('pa-mcp-catalog-grep');
+    const serverPath = writeFixtureMcpServer(cwd);
+    writeFixtureMcpConfig(cwd, serverPath);
+
+    const listed = await listMcpCatalog({ cwd, probe: false });
+    expect(listed.probed).toBe(false);
+    expect(listed.servers).toEqual([{ name: 'fixture' }]);
+
+    const probed = await listMcpCatalog({ cwd, probe: true, withDescriptions: true });
+    expect(probed.probed).toBe(true);
+    expect(probed.servers[0].info?.toolCount).toBe(4);
+
+    const matches = await grepMcpTools('fixture/structured', { cwd });
+    expect(matches.matches).toEqual([{ server: 'fixture', tool: { name: 'structured', description: 'Return structured content.' } }]);
+    expect(matches.errors).toEqual([]);
+  });
+
+  it('honors server ignoreTools filters for inspect, info, and grep', async () => {
+    const cwd = makeTempDir('pa-mcp-ignore-tools');
+    const serverPath = writeFixtureMcpServer(cwd);
+    writeFixtureMcpConfig(cwd, serverPath, { ignoreTools: ['structured', 'tool_error'] });
+
+    const serverInfo = await inspectMcpServer('fixture', { cwd });
+    expect(serverInfo.data?.tools.map((tool) => tool.name)).toEqual(['echo', 'multi_content']);
+
+    const hiddenTool = await inspectMcpTool('fixture', 'structured', { cwd });
+    expect(hiddenTool.exitCode).not.toBe(0);
+    expect(hiddenTool.error).toContain('Tool not found: fixture/structured');
+
+    const grep = await grepMcpTools('*', { cwd });
+    expect(grep.matches.map((match) => match.tool.name)).toEqual(['echo', 'multi_content']);
   });
 });

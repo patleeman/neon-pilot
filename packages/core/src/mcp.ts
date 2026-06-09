@@ -408,6 +408,9 @@ function parseServerConfig(name: string, value: unknown, baseDir: string): McpSe
   const args = Array.isArray(value.args) ? value.args.filter((entry): entry is string => typeof entry === 'string') : [];
   const cwd = typeof value.cwd === 'string' ? value.cwd : undefined;
   const env = normalizeEnvMap(value.env) ?? normalizeEnvMap(value.environment);
+  const ignoreTools = Array.isArray(value.ignoreTools)
+    ? value.ignoreTools.filter((entry): entry is string => typeof entry === 'string')
+    : undefined;
   const remoteConfig = parseMcpRemoteArgs(command, args, baseDir);
 
   if (remoteConfig) {
@@ -430,6 +433,7 @@ function parseServerConfig(name: string, value: unknown, baseDir: string): McpSe
     cwd,
     env,
     url: typeof value.url === 'string' ? value.url : undefined,
+    ignoreTools,
     raw: value,
   };
 }
