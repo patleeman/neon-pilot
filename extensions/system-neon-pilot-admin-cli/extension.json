@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "id": "system-neon-pilot-admin-cli",
+  "name": "Neon Pilot Admin CLI",
+  "packageType": "system",
+  "description": "Unified Neon Pilot administration guidance for the first-class CLI control plane.",
+  "version": "0.1.0",
+  "defaultEnabled": true,
+  "contributes": {
+    "skills": [
+      {
+        "id": "neon-pilot-admin-cli",
+        "title": "Neon Pilot Admin CLI",
+        "description": "Use the Neon Pilot Admin CLI for self-administration of conversations, workspace/sidebar state, runs, automations, extensions, settings, and extension-contributed surfaces.",
+        "path": "skills/neon-pilot-admin-cli/SKILL.md"
+      }
+    ]
+  }
+}

@@ -21,6 +21,21 @@ Use them when something should happen:
 - as either a background job or a conversation-thread wakeup
 - without an active conversation open
 
+## CLI
+
+For Neon Pilot administration from shell, prefer the CLI:
+
+```sh
+neon-pilot tasks list --json
+neon-pilot tasks get <task-id> --json
+neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summarize status" --json
+neon-pilot tasks validate --title "One shot" --at "2026-06-10T09:00:00Z" --prompt "Follow up" --json
+neon-pilot tasks run <task-id> --json
+neon-pilot tasks delete <task-id> --json
+```
+
+Use the `scheduled_task` tool from inside a model turn when direct tool execution is more appropriate than shell administration.
+
 ## When to use scheduled tasks
 
 Good fits:

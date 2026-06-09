@@ -143,6 +143,56 @@
         "activation": "on-route"
       }
     ],
+    "cliCommands": [
+      {
+        "id": "tasks-list",
+        "command": "tasks list",
+        "description": "List scheduled tasks.",
+        "action": "scheduledTask",
+        "inputAction": "list",
+        "jsonDefault": true
+      },
+      {
+        "id": "tasks-get",
+        "command": "tasks get",
+        "description": "Inspect a scheduled task: tasks get <task-id>.",
+        "action": "scheduledTask",
+        "inputAction": "get",
+        "jsonDefault": true
+      },
+      {
+        "id": "tasks-save",
+        "command": "tasks save",
+        "description": "Create or update a scheduled task: tasks save [task-id] --title <title> --prompt <prompt> [--cron <expr>|--at <iso>]",
+        "action": "scheduledTask",
+        "inputAction": "save",
+        "jsonDefault": true
+      },
+      {
+        "id": "tasks-delete",
+        "command": "tasks delete",
+        "description": "Delete a scheduled task: tasks delete <task-id>.",
+        "action": "scheduledTask",
+        "inputAction": "delete",
+        "jsonDefault": true
+      },
+      {
+        "id": "tasks-validate",
+        "command": "tasks validate",
+        "description": "Validate a scheduled task payload: tasks validate [task-id] ...",
+        "action": "scheduledTask",
+        "inputAction": "validate",
+        "jsonDefault": true
+      },
+      {
+        "id": "tasks-run",
+        "command": "tasks run",
+        "description": "Run a scheduled task immediately: tasks run <task-id>.",
+        "action": "scheduledTask",
+        "inputAction": "run",
+        "jsonDefault": true
+      }
+    ],
     "skills": [
       {
         "id": "async-attention",

@@ -31,6 +31,18 @@ Use intent-shaped tools. For waiting/resuming this conversation later, use `conv
 
 Completion delivery is the normal “wake me when this finishes” path. If a background command/subagent uses `deliverResultToConversation: true`, do **not** also schedule a `conversation` action `deferred_resume` merely to check whether it finished. Only schedule a separate wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
 
+For Neon Pilot administration from shell, prefer the CLI equivalents:
+
+```sh
+neon-pilot background-commands list --json
+neon-pilot background-commands start --command "pnpm test" --cwd /repo --json
+neon-pilot background-commands logs <run-id> --tail 200 --json
+neon-pilot background-commands cancel <run-id> --json
+neon-pilot subagents list --json
+neon-pilot subagents start --prompt "Review the diff" --cwd /repo --json
+neon-pilot subagents follow-up <run-id> --prompt "Continue" --json
+```
+
 Start a detached command with bash:
 
 ```json

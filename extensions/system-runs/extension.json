@@ -184,6 +184,112 @@
         "placement": "bottom"
       }
     ],
+    "cliCommands": [
+      {
+        "id": "background-commands-list",
+        "command": "background-commands list",
+        "description": "List durable background commands.",
+        "action": "background_bash",
+        "inputAction": "list",
+        "jsonDefault": true
+      },
+      {
+        "id": "background-commands-get",
+        "command": "background-commands get",
+        "description": "Inspect a background command: background-commands get <run-id>.",
+        "action": "background_bash",
+        "inputAction": "get",
+        "jsonDefault": true
+      },
+      {
+        "id": "background-commands-logs",
+        "command": "background-commands logs",
+        "description": "Read background command logs: background-commands logs <run-id> [--tail <n>]",
+        "action": "background_bash",
+        "inputAction": "logs",
+        "jsonDefault": true
+      },
+      {
+        "id": "background-commands-start",
+        "command": "background-commands start",
+        "description": "Start a durable background command: background-commands start --command <shell> [--cwd <path>]",
+        "action": "background_bash",
+        "inputAction": "start",
+        "jsonDefault": true
+      },
+      {
+        "id": "background-commands-rerun",
+        "command": "background-commands rerun",
+        "description": "Rerun a background command: background-commands rerun <run-id>.",
+        "action": "background_bash",
+        "inputAction": "rerun",
+        "jsonDefault": true
+      },
+      {
+        "id": "background-commands-cancel",
+        "command": "background-commands cancel",
+        "description": "Cancel a background command: background-commands cancel <run-id>.",
+        "action": "background_bash",
+        "inputAction": "cancel",
+        "jsonDefault": true
+      },
+      {
+        "id": "subagents-list",
+        "command": "subagents list",
+        "description": "List durable subagent runs.",
+        "action": "subagent",
+        "inputAction": "list",
+        "jsonDefault": true
+      },
+      {
+        "id": "subagents-get",
+        "command": "subagents get",
+        "description": "Inspect a subagent run: subagents get <run-id>.",
+        "action": "subagent",
+        "inputAction": "get",
+        "jsonDefault": true
+      },
+      {
+        "id": "subagents-logs",
+        "command": "subagents logs",
+        "description": "Read subagent logs: subagents logs <run-id> [--tail <n>]",
+        "action": "subagent",
+        "inputAction": "logs",
+        "jsonDefault": true
+      },
+      {
+        "id": "subagents-start",
+        "command": "subagents start",
+        "description": "Start a durable subagent: subagents start --prompt <prompt> [--cwd <path>]",
+        "action": "subagent",
+        "inputAction": "start",
+        "jsonDefault": true
+      },
+      {
+        "id": "subagents-rerun",
+        "command": "subagents rerun",
+        "description": "Rerun a subagent: subagents rerun <run-id>.",
+        "action": "subagent",
+        "inputAction": "rerun",
+        "jsonDefault": true
+      },
+      {
+        "id": "subagents-follow-up",
+        "command": "subagents follow-up",
+        "description": "Continue a subagent: subagents follow-up <run-id> --prompt <prompt>.",
+        "action": "subagent",
+        "inputAction": "follow_up",
+        "jsonDefault": true
+      },
+      {
+        "id": "subagents-cancel",
+        "command": "subagents cancel",
+        "description": "Cancel a subagent: subagents cancel <run-id>.",
+        "action": "subagent",
+        "inputAction": "cancel",
+        "jsonDefault": true
+      }
+    ],
     "skills": [
       {
         "id": "runs",

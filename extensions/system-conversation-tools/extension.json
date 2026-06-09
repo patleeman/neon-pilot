@@ -56,7 +56,14 @@
             },
             "inspectAction": {
               "type": "string",
-              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
+              "enum": [
+                "list",
+                "search",
+                "query",
+                "diff",
+                "outline",
+                "read_window"
+              ],
               "description": "Inspect operation when action is inspect."
             },
             "scope": {
@@ -73,19 +80,28 @@
             },
             "types": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "minItems": 1,
               "description": "Optional structural transcript block types to include. Valid values: user, text, context, summary, tool_use, image, error."
             },
             "roles": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "minItems": 1,
               "description": "Optional conversational roles to include. Valid values: user, assistant, tool, context, summary, image, error."
             },
             "tools": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "minItems": 1,
               "description": "Optional tool names to match for tool_use/error blocks."
             },
@@ -178,11 +194,19 @@
             },
             "deferredAction": {
               "type": "string",
-              "enum": ["add", "list", "cancel"]
+              "enum": [
+                "add",
+                "list",
+                "cancel"
+              ]
             },
             "trigger": {
               "type": "string",
-              "enum": ["after_turn", "delay", "at"]
+              "enum": [
+                "after_turn",
+                "delay",
+                "at"
+              ]
             },
             "delay": {
               "type": "string"
@@ -192,7 +216,10 @@
             },
             "deliverAs": {
               "type": "string",
-              "enum": ["steer", "followUp"]
+              "enum": [
+                "steer",
+                "followUp"
+              ]
             },
             "reason": {
               "type": "string"
@@ -206,7 +233,9 @@
             },
             "toolNames": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "live": {
               "type": "boolean"
@@ -228,7 +257,9 @@
             },
             "allowedToolNames": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "targetCwd": {
               "type": "string"
@@ -242,29 +273,41 @@
             "data": {},
             "openConversationIds": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "pinnedConversationIds": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "archivedConversationIds": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "activeConversationId": {
               "type": "string"
             },
             "workspacePaths": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "remoteControlledConversationIds": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       },
@@ -275,7 +318,9 @@
         "description": "Ask the user one or more focused questions in the desktop UI.",
         "action": "askUser",
         "promptSnippet": "Ask the user structured questions with buttons, radio choices, or checkboxes.",
-        "promptGuidelines": ["Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."],
+        "promptGuidelines": [
+          "Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."
+        ],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -322,7 +367,11 @@
                   },
                   "style": {
                     "type": "string",
-                    "enum": ["radio", "check", "checkbox"],
+                    "enum": [
+                      "radio",
+                      "check",
+                      "checkbox"
+                    ],
                     "description": "radio for one choice, check/checkbox for multi-select."
                   },
                   "options": {
@@ -353,13 +402,17 @@
                               "description": "Optional supporting text shown under the option."
                             }
                           },
-                          "required": ["value"]
+                          "required": [
+                            "value"
+                          ]
                         }
                       ]
                     }
                   }
                 },
-                "required": ["options"]
+                "required": [
+                  "options"
+                ]
               }
             }
           },
@@ -381,7 +434,14 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
+              "enum": [
+                "list",
+                "search",
+                "query",
+                "diff",
+                "outline",
+                "read_window"
+              ],
               "description": "Inspect operation to perform."
             },
             "conversationId": {
@@ -488,7 +548,9 @@
               "description": "Character cap per returned search snippet."
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       },
@@ -499,7 +561,9 @@
         "description": "Set the current conversation title.",
         "action": "conversationTitle",
         "promptSnippet": "Set a short, specific conversation title once the user intent is clear.",
-        "promptGuidelines": ["Set one short, concrete 3-7 word title early when intent is clear; do not mention the title update in chat."],
+        "promptGuidelines": [
+          "Set one short, concrete 3-7 word title early when intent is clear; do not mention the title update in chat."
+        ],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -508,7 +572,9 @@
               "description": "Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters."
             }
           },
-          "required": ["title"],
+          "required": [
+            "title"
+          ],
           "additionalProperties": false
         }
       },
@@ -534,7 +600,9 @@
               "description": "Optional prompt to continue automatically in the new working directory after the switch completes."
             }
           },
-          "required": ["cwd"],
+          "required": [
+            "cwd"
+          ],
           "additionalProperties": false
         }
       },
@@ -553,7 +621,11 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["add", "list", "cancel"],
+              "enum": [
+                "add",
+                "list",
+                "cancel"
+              ],
               "description": "Deferred resume operation to perform."
             },
             "id": {
@@ -564,7 +636,11 @@
             },
             "trigger": {
               "type": "string",
-              "enum": ["after_turn", "delay", "at"]
+              "enum": [
+                "after_turn",
+                "delay",
+                "at"
+              ]
             },
             "delay": {
               "type": "string"
@@ -574,7 +650,10 @@
             },
             "deliverAs": {
               "type": "string",
-              "enum": ["steer", "followUp"]
+              "enum": [
+                "steer",
+                "followUp"
+              ]
             },
             "title": {
               "type": "string",
@@ -585,7 +664,9 @@
               "description": "Required when scheduling a wakeup that references a running background run which already delivers completion, explaining the distinct time-based action."
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       }
@@ -645,7 +726,9 @@
       {
         "id": "open-thread-palette",
         "title": "Open thread palette",
-        "keys": ["mod+p"],
+        "keys": [
+          "mod+p"
+        ],
         "command": "palette.open",
         "args": {
           "scope": "threads"
@@ -654,7 +737,9 @@
       {
         "id": "open-command-palette",
         "title": "Open command palette",
-        "keys": ["mod+shift+p"],
+        "keys": [
+          "mod+shift+p"
+        ],
         "command": "palette.open",
         "args": {
           "scope": "commands"
@@ -667,122 +752,188 @@
         "command": "conversations list",
         "description": "List conversations, optionally filtered by query.",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "inspect"
       },
       {
         "id": "conversations-search",
         "command": "conversations search",
         "description": "Search visible conversation transcript text.",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "inspect"
       },
       {
         "id": "conversations-inspect",
         "command": "conversations inspect",
         "description": "Inspect a conversation by id; optional second arg is outline, query, diff, or read_window.",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "inspect"
       },
       {
         "id": "conversations-create",
         "command": "conversations create",
         "description": "Create a conversation with an optional title.",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "create"
       },
       {
         "id": "conversations-title",
         "command": "conversations title",
         "description": "Set a conversation title: conversations title <id> <title>.",
-        "action": "conversationTool"
+        "action": "conversationTool",
+        "inputAction": "set_title"
       },
       {
         "id": "conversations-cwd",
         "command": "conversations cwd",
         "description": "Change a conversation working directory: conversations cwd <id> <path>.",
-        "action": "conversationTool"
+        "action": "conversationTool",
+        "inputAction": "change_working_directory"
       },
       {
         "id": "conversations-ensure-live",
         "command": "conversations ensure-live",
         "description": "Ensure a conversation has a live runtime: conversations ensure-live <id> [--cwd <path>]",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "ensure_live"
       },
       {
         "id": "conversations-send",
         "command": "conversations send",
         "description": "Send a message to a conversation: conversations send <id> --text <message> [--steer]",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "send_message"
       },
       {
         "id": "conversations-run-turn",
         "command": "conversations run-turn",
         "description": "Run a conversation turn and wait for completion: conversations run-turn <id> --text <message> [--timeout-ms <ms>]",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "run_turn"
       },
       {
         "id": "conversations-abort",
         "command": "conversations abort",
         "description": "Abort a live conversation turn.",
-        "action": "conversationTool"
+        "action": "conversationTool",
+        "inputAction": "abort"
       },
       {
         "id": "conversations-compact",
         "command": "conversations compact",
         "description": "Compact a conversation transcript.",
-        "action": "conversationTool"
+        "action": "conversationTool",
+        "inputAction": "compact"
       },
       {
         "id": "conversations-fork",
         "command": "conversations fork",
         "description": "Fork a conversation: conversations fork <id> [--title <title>] [--target-cwd <path>]",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "fork"
       },
       {
         "id": "conversations-tools",
         "command": "conversations tools",
         "description": "Set active tools for a conversation: conversations tools <id> <tool...>",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "set_active_tools"
       },
       {
         "id": "conversations-rollback",
         "command": "conversations rollback",
         "description": "Rollback recent conversation transcript blocks: conversations rollback <id> [count]",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "rollback"
       },
       {
         "id": "conversations-workspace",
         "command": "conversations workspace",
         "description": "Read conversation workspace state.",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "workspace_get"
       },
       {
         "id": "conversations-workspace-update",
         "command": "conversations workspace update",
         "description": "Update open/sidebar workspace state with --open, --pinned, --archived, --active, --workspace-path, or --remote-controlled.",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "workspace_update"
+      },
+      {
+        "id": "conversations-open-list",
+        "command": "conversations open list",
+        "description": "List conversations currently open in the sidebar.",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_get"
+      },
+      {
+        "id": "conversations-open-add",
+        "command": "conversations open add",
+        "description": "Add conversations to the open/sidebar list: conversations open add <id...>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_open_update"
+      },
+      {
+        "id": "conversations-open-remove",
+        "command": "conversations open remove",
+        "description": "Remove conversations from open/sidebar state: conversations open remove <id...>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_open_update"
+      },
+      {
+        "id": "conversations-open-pin",
+        "command": "conversations open pin",
+        "description": "Pin conversations in the sidebar: conversations open pin <id...>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_open_update"
+      },
+      {
+        "id": "conversations-open-unpin",
+        "command": "conversations open unpin",
+        "description": "Unpin conversations in the sidebar: conversations open unpin <id...>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_open_update"
+      },
+      {
+        "id": "conversations-open-active",
+        "command": "conversations open active",
+        "description": "Set or clear the active sidebar conversation: conversations open active [id]",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_open_update"
       },
       {
         "id": "conversations-transcript-append",
         "command": "conversations transcript append",
         "description": "Append a transcript block: conversations transcript append <id> --type <type> --data <json>",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "append_transcript_block"
       },
       {
         "id": "conversations-transcript-update",
         "command": "conversations transcript update",
         "description": "Update a transcript block: conversations transcript update <id> <block-id> --type <type> --data <json>",
         "action": "conversationTool",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "inputAction": "update_transcript_block"
       }
     ]
   },
@@ -810,6 +961,7 @@
             "set_active_tools",
             "workspace_get",
             "workspace_update",
+            "workspace_open_update",
             "append_transcript_block",
             "update_transcript_block",
             "rollback"
@@ -890,5 +1042,9 @@
       }
     ]
   },
-  "permissions": ["conversations:readwrite", "storage:readwrite", "ui:notify"]
+  "permissions": [
+    "conversations:readwrite",
+    "storage:readwrite",
+    "ui:notify"
+  ]
 }

@@ -27,6 +27,7 @@ interface CliCommandRegistration {
   surfaceId: string;
   command: string;
   action: string;
+  inputAction?: string;
   title?: string;
   description?: string;
   aliases?: string[];
@@ -270,6 +271,7 @@ async function readCliCommandRegistrations(): Promise<CliCommandRegistration[]> 
         surfaceId: entry.surfaceId,
         command: entry.command,
         action: entry.action,
+        ...(typeof entry.inputAction === 'string' ? { inputAction: entry.inputAction } : {}),
         ...(typeof entry.title === 'string' ? { title: entry.title } : {}),
         ...(typeof entry.description === 'string' ? { description: entry.description } : {}),
         aliases: Array.isArray(entry.aliases) ? entry.aliases.filter((alias): alias is string => typeof alias === 'string') : [],
@@ -363,7 +365,7 @@ async function invokeContributedCliCommand(argv: string[], options?: { signal?: 
     const parsed = parseFlags(stripJsonFlag(rawArgs));
     const stdinText = await readCliStdinIfRequested(parsed.flags);
     const extensionHostClient = await getCliExtensionHostClient();
-    const inputAction = actionFromCliCommand(match.registration.command);
+    const inputAction = match.registration.inputAction ?? actionFromCliCommand(match.registration.command);
     const invokeResult = await extensionHostClient.invokeAction({
       extensionId: match.registration.extensionId,
       actionId: match.registration.action,

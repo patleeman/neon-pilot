@@ -1354,6 +1354,7 @@ export function listExtensionCliCommandRegistrations(): ExtensionCliCommandRegis
       packageType: extension.packageType,
       command: command.command.trim().replace(/\s+/g, ' '),
       action: command.action,
+      ...(command.inputAction ? { inputAction: command.inputAction } : {}),
       ...(command.title ? { title: command.title } : {}),
       ...(command.description ? { description: command.description } : {}),
       aliases: (command.aliases ?? []).map((alias) => alias.trim().replace(/\s+/g, ' ')).filter(Boolean),

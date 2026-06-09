@@ -1,9 +1,9 @@
 ---
-name: neon-pilot-administration
-description: Use the Neon Pilot CLI for self-administration of extensions, conversations, settings, workspace/sidebar state, and extension-contributed administration surfaces.
+name: neon-pilot-admin-cli
+description: Use the Neon Pilot Admin CLI for self-administration of conversations, workspace/sidebar state, runs, automations, extensions, settings, and extension-contributed administration surfaces.
 ---
 
-# Neon Pilot Administration
+# Neon Pilot Admin CLI
 
 Use the `neon-pilot` CLI as the primary Neon Pilot self-administration surface when it is available in the agent shell. Prefer CLI + JSON over direct runtime-file edits or lower-level tools.
 
@@ -71,6 +71,10 @@ neon-pilot conversations workspace update \
   --active conv-b \
   --workspace-path /repo \
   --json
+neon-pilot conversations open list --json
+neon-pilot conversations open add conv-a conv-b --json
+neon-pilot conversations open pin conv-a --json
+neon-pilot conversations open active conv-b --json
 ```
 
 Vocabulary:
@@ -79,6 +83,27 @@ Vocabulary:
 - **live/executing** — conversations with a live runtime or active turn.
 - **archived** — hidden from the normal sidebar list.
 - **running** — avoid this term unless a command explicitly defines it; it does not mean open/sidebar.
+
+## Background work and automations
+
+Use first-class CLI commands for durable work and scheduled automation:
+
+```sh
+neon-pilot background-commands list --json
+neon-pilot background-commands start --command "pnpm test" --cwd /repo --json
+neon-pilot background-commands logs <run-id> --tail 200 --json
+neon-pilot background-commands cancel <run-id> --json
+
+neon-pilot subagents list --json
+neon-pilot subagents start --prompt "Review the diff" --cwd /repo --json
+neon-pilot subagents follow-up <run-id> --prompt "Continue" --json
+neon-pilot subagents logs <run-id> --tail 200 --json
+
+neon-pilot tasks list --json
+neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summarize status" --json
+neon-pilot tasks run <task-id> --json
+neon-pilot tasks delete <task-id> --json
+```
 
 ## Sharp transcript operations
 

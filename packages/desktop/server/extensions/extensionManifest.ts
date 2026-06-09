@@ -529,6 +529,7 @@ export interface ExtensionCliCommandContribution {
   title?: string;
   description?: string;
   action: string;
+  inputAction?: string;
   aliases?: string[];
   jsonDefault?: boolean;
 }

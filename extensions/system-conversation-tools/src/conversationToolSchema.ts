@@ -82,6 +82,8 @@ const AdminConversationParams = {
     activeConversationId: { type: 'string' },
     workspacePaths: { type: 'array', items: { type: 'string' } },
     remoteControlledConversationIds: { type: 'array', items: { type: 'string' } },
+    operation: { type: 'string', enum: ['add', 'remove', 'pin', 'unpin', 'active'] },
+    conversationIds: { type: 'array', items: { type: 'string' } },
   },
 } as const;
 
@@ -106,6 +108,7 @@ export const ConversationToolParams = {
         'set_active_tools',
         'workspace_get',
         'workspace_update',
+        'workspace_open_update',
         'append_transcript_block',
         'update_transcript_block',
         'rollback',

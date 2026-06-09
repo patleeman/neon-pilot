@@ -323,6 +323,7 @@ Before targeting an unclear conversation, use `action: "inspect"` with `inspectA
 | `set_active_tools`        | `conversationId`, `toolNames`           | Replaces active tools for a live conversation. |
 | `workspace_get`           | none                                    | Reads open, pinned, archived, active, workspace path, and remote-controlled conversation state. |
 | `workspace_update`        | any workspace field                     | Updates only provided workspace fields: open, pinned, archived, active, paths, or remote-controlled ids. |
+| `workspace_open_update`   | `operation`                             | Ergonomic CLI-only open/sidebar mutation for add, remove, pin, unpin, and active. |
 | `append_transcript_block` | `conversationId`, `blockType`, `data`   | Appends an extension-owned visible transcript block. Optional `title`, `blockId`. |
 | `update_transcript_block` | `conversationId`, `blockType`, `blockId`, `data` | Updates an extension-owned visible transcript block. |
 | `rollback`                | `conversationId`                        | Rolls back a live conversation by `count` turns. Defaults to `1`. |
@@ -370,5 +371,9 @@ neon-pilot conversations send <id> --text "message" --json
 neon-pilot conversations run-turn <id> --text "prompt" --timeout-ms 120000 --json
 neon-pilot conversations workspace --json
 neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json
+neon-pilot conversations open list --json
+neon-pilot conversations open add conv-a conv-b --json
+neon-pilot conversations open pin conv-a --json
+neon-pilot conversations open active conv-b --json
 neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}' --json
 ```

@@ -36,6 +36,7 @@ export function validateCliCommandContributions(value: unknown): void {
     requireString(command.id, `contributes.cliCommands[${index}].id`);
     requireString(command.command, `contributes.cliCommands[${index}].command`);
     requireString(command.action, `contributes.cliCommands[${index}].action`);
+    validateOptionalString(command.inputAction, `contributes.cliCommands[${index}].inputAction`);
     validateOptionalString(command.title, `contributes.cliCommands[${index}].title`);
     validateOptionalString(command.description, `contributes.cliCommands[${index}].description`);
     if (command.aliases !== undefined) requireStringArray(command.aliases, `contributes.cliCommands[${index}].aliases`);

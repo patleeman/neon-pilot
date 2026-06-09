@@ -148,6 +148,44 @@ function workspaceUpdateInput(params: Record<string, unknown>) {
   };
 }
 
+function uniqueIds(ids: string[]): string[] {
+  return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+}
+
+async function workspaceOpenUpdate(ctx: ExtensionBackendContext, params: Record<string, unknown>) {
+  const operation = requiredString(params, 'operation');
+  const ids = uniqueIds(optionalStringArray(params.conversationIds) ?? []);
+  const workspace = (await ctx.conversations.getWorkspace()) as {
+    openConversationIds?: string[];
+    pinnedConversationIds?: string[];
+    activeConversationId?: string | null;
+  };
+  const open = uniqueIds(workspace.openConversationIds ?? []);
+  const pinned = uniqueIds(workspace.pinnedConversationIds ?? []);
+  const idSet = new Set(ids);
+  if (operation !== 'active' && ids.length === 0) throw new Error('At least one conversation id is required.');
+
+  if (operation === 'add') {
+    for (const id of ids) if (!open.includes(id) && !pinned.includes(id)) open.push(id);
+  } else if (operation === 'remove') {
+    const nextOpen = open.filter((id) => !idSet.has(id));
+    const nextPinned = pinned.filter((id) => !idSet.has(id));
+    return ctx.conversations.updateWorkspace({ openConversationIds: nextOpen, pinnedConversationIds: nextPinned });
+  } else if (operation === 'pin') {
+    for (const id of ids) if (!pinned.includes(id)) pinned.push(id);
+    return ctx.conversations.updateWorkspace({ openConversationIds: open.filter((id) => !idSet.has(id)), pinnedConversationIds: pinned });
+  } else if (operation === 'unpin') {
+    for (const id of ids) if (!open.includes(id)) open.push(id);
+    return ctx.conversations.updateWorkspace({ openConversationIds: open, pinnedConversationIds: pinned.filter((id) => !idSet.has(id)) });
+  } else if (operation === 'active') {
+    const activeConversationId = ids[0] ?? null;
+    return ctx.conversations.updateWorkspace({ activeConversationId });
+  } else {
+    throw new Error(`Unsupported open conversation operation: ${operation}`);
+  }
+  return ctx.conversations.updateWorkspace({ openConversationIds: open, pinnedConversationIds: pinned });
+}
+
 function cliCommand(input: Record<string, unknown>): string {
   const cli = input.cli && typeof input.cli === 'object' && !Array.isArray(input.cli) ? (input.cli as Record<string, unknown>) : {};
   return typeof cli.command === 'string' ? cli.command : '';
@@ -253,6 +291,12 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
   if (command === 'conversations rollback') return { ...body, action: 'rollback', conversationId: positionals[0], count: flagNumber(flags, 'count') ?? (positionals[1] ? Number(positionals[1]) : undefined) };
   if (command === 'conversations workspace') return { ...body, action: 'workspace_get' };
   if (command === 'conversations workspace update') return { ...body, action: 'workspace_update', openConversationIds: flagStringArray(flags, 'open'), pinnedConversationIds: flagStringArray(flags, 'pinned'), archivedConversationIds: flagStringArray(flags, 'archived'), activeConversationId: flagString(flags, 'active'), workspacePaths: flagStringArray(flags, 'workspace-path'), remoteControlledConversationIds: flagStringArray(flags, 'remote-controlled') };
+  if (command === 'conversations open list') return { ...body, action: 'workspace_get' };
+  if (command === 'conversations open add') return { ...body, action: 'workspace_open_update', operation: 'add', conversationIds: flagStringArray(flags, 'id') ?? positionals };
+  if (command === 'conversations open remove') return { ...body, action: 'workspace_open_update', operation: 'remove', conversationIds: flagStringArray(flags, 'id') ?? positionals };
+  if (command === 'conversations open pin') return { ...body, action: 'workspace_open_update', operation: 'pin', conversationIds: flagStringArray(flags, 'id') ?? positionals };
+  if (command === 'conversations open unpin') return { ...body, action: 'workspace_open_update', operation: 'unpin', conversationIds: flagStringArray(flags, 'id') ?? positionals };
+  if (command === 'conversations open active') return { ...body, action: 'workspace_open_update', operation: 'active', conversationIds: positionals[0] ? [positionals[0]] : undefined };
   if (command === 'conversations transcript append') return { ...body, action: 'append_transcript_block', conversationId: positionals[0], blockType: flagString(flags, 'type') ?? positionals[1], blockId: flagString(flags, 'block-id'), title: flagString(flags, 'title'), data: flagString(flags, 'data') ? JSON.parse(flagString(flags, 'data') as string) : undefined };
   if (command === 'conversations transcript update') return { ...body, action: 'update_transcript_block', conversationId: positionals[0], blockId: positionals[1] ?? flagString(flags, 'block-id'), blockType: flagString(flags, 'type') ?? positionals[2], title: flagString(flags, 'title'), data: flagString(flags, 'data') ? JSON.parse(flagString(flags, 'data') as string) : undefined };
   return body;
@@ -378,6 +422,9 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
 
     case 'workspace_update':
       return toolResult(action, await ctx.conversations.updateWorkspace(workspaceUpdateInput(payload)));
+
+    case 'workspace_open_update':
+      return toolResult(action, await workspaceOpenUpdate(ctx, payload));
 
     case 'append_transcript_block':
       return toolResult(

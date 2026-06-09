@@ -85,6 +85,55 @@ function readAbortSignal(value: unknown): AbortSignal | undefined {
   return value as AbortSignal;
 }
 
+function cliArgs(input: Record<string, unknown>): string[] {
+  const cli = isRecord(input.cli) ? input.cli : {};
+  return Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
+}
+
+function cliFlags(input: Record<string, unknown>): Record<string, string | boolean> {
+  const cli = isRecord(input.cli) ? input.cli : {};
+  return isRecord(cli.flags) ? (cli.flags as Record<string, string | boolean>) : {};
+}
+
+function cliFlagString(flags: Record<string, string | boolean>, key: string): string | undefined {
+  const value = flags[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function cliFlagNumber(flags: Record<string, string | boolean>, key: string): number | undefined {
+  const value = cliFlagString(flags, key);
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function cliFlagBoolean(flags: Record<string, string | boolean>, key: string): boolean | undefined {
+  const value = flags[key];
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'string') return undefined;
+  if (['1', 'true', 'yes'].includes(value.toLowerCase())) return true;
+  if (['0', 'false', 'no'].includes(value.toLowerCase())) return false;
+  return undefined;
+}
+
+function normalizeRunCliInput(input: unknown): Record<string, unknown> {
+  const params = isRecord(input) ? { ...input } : {};
+  if (!isRecord(params.cli)) return params;
+  const args = cliArgs(params);
+  const flags = cliFlags(params);
+  return {
+    ...params,
+    ...(args[0] ? { runId: args[0] } : {}),
+    ...(cliFlagString(flags, 'task-slug') ? { taskSlug: cliFlagString(flags, 'task-slug') } : {}),
+    ...(cliFlagString(flags, 'command') ? { command: cliFlagString(flags, 'command') } : {}),
+    ...(cliFlagString(flags, 'prompt') ?? cliFlagString(flags, 'text') ? { prompt: cliFlagString(flags, 'prompt') ?? cliFlagString(flags, 'text') } : {}),
+    ...(cliFlagString(flags, 'cwd') ? { cwd: cliFlagString(flags, 'cwd') } : {}),
+    ...(cliFlagString(flags, 'model') ? { model: cliFlagString(flags, 'model') } : {}),
+    ...(cliFlagNumber(flags, 'tail') ? { tail: cliFlagNumber(flags, 'tail') } : {}),
+    ...(cliFlagBoolean(flags, 'deliver-result-to-conversation') !== undefined ? { deliverResultToConversation: cliFlagBoolean(flags, 'deliver-result-to-conversation') } : {}),
+  };
+}
+
 async function runForegroundBash(
   command: string,
   cwd: string | undefined,
@@ -420,7 +469,7 @@ export async function bash(input: unknown, ctx: NativeBackendContext) {
 }
 
 export async function background_bash(input: unknown, ctx: NativeBackendContext) {
-  const params = isRecord(input) ? input : {};
+  const params = normalizeRunCliInput(input);
   const action = readRequiredString(params.action, 'action');
   if (action === 'start') {
     return startBackgroundCommand(params, ctx);
@@ -475,7 +524,7 @@ export async function background_bash(input: unknown, ctx: NativeBackendContext)
 }
 
 export async function subagent(input: unknown, ctx: NativeBackendContext) {
-  const params = typeof input === 'object' && input !== null && !Array.isArray(input) ? { ...(input as Record<string, unknown>) } : {};
+  const params = normalizeRunCliInput(input);
   if (params.action === 'start') {
     params.action = 'start_agent';
     return executeRunInput(params, ctx, 'subagent');

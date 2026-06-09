@@ -55,11 +55,20 @@ export function listExtensionPackagePaths(options: { runtimeRoot?: string } = {}
     typeof process.resourcesPath === 'string' && existsSync(resolve(process.resourcesPath))
       ? realpathSync(resolve(process.resourcesPath))
       : null;
+  const explicitRepoRoot = process.env.NEON_PILOT_REPO_ROOT ? realpathSync(resolve(process.env.NEON_PILOT_REPO_ROOT)) : null;
   return inputs
     .flatMap(({ path, source }) => expandExtensionPath(path, source))
     .sort((left, right) => {
       const leftRealPackageRoot = realpathSync(left.packageRoot);
       const rightRealPackageRoot = realpathSync(right.packageRoot);
+      const leftInExplicitRepo = explicitRepoRoot
+        ? leftRealPackageRoot === explicitRepoRoot || leftRealPackageRoot.startsWith(`${explicitRepoRoot}/`)
+        : false;
+      const rightInExplicitRepo = explicitRepoRoot
+        ? rightRealPackageRoot === explicitRepoRoot || rightRealPackageRoot.startsWith(`${explicitRepoRoot}/`)
+        : false;
+      if (leftInExplicitRepo !== rightInExplicitRepo) return leftInExplicitRepo ? -1 : 1;
+
       const leftInResources = resourcesRoot
         ? leftRealPackageRoot === resourcesRoot || leftRealPackageRoot.startsWith(`${resourcesRoot}/`)
         : false;

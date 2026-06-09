@@ -37,7 +37,7 @@ const args = canUseBuiltCli()
 const child = spawn(command, args, {
   stdio: 'inherit',
   cwd: repoRoot,
-  env: process.env,
+  env: { ...process.env, NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT || repoRoot },
 });
 
 const forwardSignal = (signal) => {

@@ -256,12 +256,6 @@
     ],
     "skills": [
       {
-        "id": "neon-pilot-administration",
-        "title": "Neon Pilot Administration",
-        "description": "Use the Neon Pilot CLI for self-administration of extensions, conversations, settings, workspace/sidebar state, and extension-contributed surfaces.",
-        "path": "skills/neon-pilot-administration/SKILL.md"
-      },
-      {
         "id": "skills-and-capabilities",
         "title": "Skills and Extension Capabilities",
         "description": "Guidance for distinguishing reusable workflow skills from extension features and imported plugin packages.",
