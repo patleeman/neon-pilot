@@ -201,7 +201,19 @@ export function App() {
 
   const applySessionRunningOverride = useCallback((session: SessionMeta): SessionMeta => {
     const running = sessionRunningOverridesRef.current.get(session.id);
-    return running === undefined || session.isRunning === running ? session : { ...session, isRunning: running };
+    if (running === undefined) return session;
+
+    // Running overrides are optimistic event-stream state, not durable truth.
+    // Keep them only while the follow-up session-meta refresh is pending so a
+    // stale snapshot cannot immediately undo a transition. Once there is no
+    // pending refresh, trust the canonical snapshot/meta response; otherwise a
+    // missed terminal running:false event can leave conversations stuck busy.
+    if (!refreshSessionMetaTimersRef.current.has(session.id)) {
+      sessionRunningOverridesRef.current.delete(session.id);
+      return session;
+    }
+
+    return session.isRunning === running ? session : { ...session, isRunning: running };
   }, []);
 
   const setSessions = useCallback((items: SessionMeta[]) => {
@@ -244,7 +256,8 @@ export function App() {
             if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {
               return;
             }
-            applySessionMetaUpdate(sessionId, session && running !== undefined ? { ...session, isRunning: running } : session);
+            sessionRunningOverridesRef.current.delete(sessionId);
+            applySessionMetaUpdate(sessionId, session);
           })
           .catch((error) => {
             if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {

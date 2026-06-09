@@ -275,10 +275,10 @@ describe('App execution state integration', () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain('conversation running');
+    expect(container.textContent).toContain('conversation idle');
   });
 
-  it('keeps an active running event from being overwritten by a stale sessions snapshot', async () => {
+  it('keeps an active running event from being overwritten by a stale sessions snapshot while meta refresh is pending', async () => {
     ({ container, root } = await renderApp());
 
     await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
@@ -290,6 +290,33 @@ describe('App execution state integration', () => {
     });
 
     expect(container.textContent).toContain('conversation running');
+  });
+
+  it('trusts a later canonical sessions snapshot after the optimistic running refresh window closes', async () => {
+    apiSessionMetaMock.mockResolvedValue({
+      id: 'conv-1',
+      title: 'Conversation',
+      cwd: '/repo',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      isRunning: true,
+    });
+    ({ container, root } = await renderApp());
+
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });
+    expect(container.textContent).toContain('conversation running');
+
+    await act(async () => {
+      vi.advanceTimersByTime(750);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await emitDesktopEvent({
+      type: 'sessions_snapshot',
+      sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: false }],
+    });
+
+    expect(container.textContent).toContain('conversation idle');
   });
 
   it('coalesces repeated session meta change refreshes for the same conversation', async () => {
