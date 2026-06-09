@@ -149,7 +149,19 @@ describe('extensionLifecycle', () => {
     const imported = importRuntimeExtensionBundle({ zipPath }, stateRoot);
 
     expect(imported).toEqual({ ok: true, extension: { id: 'imported-ext' }, packageRoot: join(runtimeRoot, 'imported-ext') });
+    expect(findExtensionEntry).toHaveBeenCalledWith('imported-ext', stateRoot);
     expect(existsSync(join(runtimeRoot, 'imported-ext', 'extension.json'))).toBe(true);
+  });
+
+  it('rejects imported bundles whose id already exists in the target state root', () => {
+    const zipPath = join(stateRoot, 'duplicate.neon-extension.zip');
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(zipPath, 'zip');
+    findExtensionEntry.mockImplementation((id, root) => (id === 'imported-ext' && root === stateRoot ? { manifest: { id } } : null));
+
+    expect(() => importRuntimeExtensionBundle({ zipPath }, stateRoot)).toThrow('Extension id already exists.');
+    expect(findExtensionEntry).toHaveBeenCalledWith('imported-ext', stateRoot);
+    expect(existsSync(join(runtimeRoot, 'imported-ext'))).toBe(false);
   });
 
   it('rejects extension bundles that are incompatible with the running app', () => {

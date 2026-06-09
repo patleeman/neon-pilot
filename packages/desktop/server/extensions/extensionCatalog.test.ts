@@ -315,6 +315,63 @@ describe('extension catalog', () => {
     rmSync(repoRoot, { recursive: true, force: true });
   });
 
+  it('refuses to update a missing installed extension before deleting anything', async () => {
+    summaries.mockReturnValue([]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ packages: [{ id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }] }),
+      })),
+    );
+
+    const { updateCatalogExtension } = await import('./extensionCatalog.js');
+    await expect(updateCatalogExtension({ id: 'system-browser' })).rejects.toThrow('is not installed');
+    expect(deleteRuntimeExtension).not.toHaveBeenCalled();
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
+  });
+
+  it('refuses to update packaged system extensions before deleting anything', async () => {
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'system' }]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ packages: [{ id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }] }),
+      })),
+    );
+
+    const { updateCatalogExtension } = await import('./extensionCatalog.js');
+    await expect(updateCatalogExtension({ id: 'system-browser' })).rejects.toThrow('Packaged system extensions cannot be updated');
+    expect(deleteRuntimeExtension).not.toHaveBeenCalled();
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
+  });
+
+  it('refuses to update incompatible catalog entries before deleting the installed copy', async () => {
+    summaries.mockReturnValue([{ id: 'system-writing-studio', name: 'Writing Studio', enabled: true, version: '0.1.1', packageType: 'user' }]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          packages: [
+            {
+              id: 'system-writing-studio',
+              tag: 'v0.10.2',
+              artifact: 'system-writing-studio.neon-extension.zip',
+              compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+            },
+          ],
+        }),
+      })),
+    );
+
+    const { updateCatalogExtension } = await import('./extensionCatalog.js');
+    await expect(updateCatalogExtension({ id: 'system-writing-studio' })).rejects.toThrow('is not installable');
+    expect(deleteRuntimeExtension).not.toHaveBeenCalled();
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
+  });
+
   it('updates catalog extensions and preserves the enabled state', async () => {
     summaries
       .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'user' }])
