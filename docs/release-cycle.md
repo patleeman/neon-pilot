@@ -4,17 +4,15 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.8** — patch release.
+**v0.11.9** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.8
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.9
 
 Highlights in this train:
 
-- Adds a unified `neon-pilot admin` CLI surface for conversations, archives, retention pruning, extension management, and runtime doctor checks.
-- Fixes stuck running conversation overrides so recovered sessions do not remain blocked by stale run state.
-- Persists saved workspaces through the startup fast path so workspace state survives fast app launches.
-- Makes update controls more prominent in Settings for easier release-path management.
-- Relaxes first-party extension compatibility to the 0.11 release train and adds regressions for extension reinstall/replace behavior.
+- Publishes a follow-up patch on the current 0.11 release train after the `v0.11.8` desktop artifacts were verified.
+- Carries the latest release-smoke hardening for packaged desktop launches, OAuth provider settings coverage, terminal input regressions, MCP tool gating, and sidebar pending-run scoping.
+- Keeps package versions, release notes, and current-release documentation aligned for the next stable update.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

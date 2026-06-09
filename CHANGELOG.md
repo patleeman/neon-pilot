@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.9 — 2026-06-09
+
+### Highlights
+
+- Publishes a follow-up patch on the current 0.11 release train after the `v0.11.8` desktop artifacts were verified.
+- Carries the latest release-smoke hardening for packaged desktop launches, OAuth provider settings coverage, terminal input regressions, MCP tool gating, and sidebar pending-run scoping.
+- Keeps package versions, release notes, and current-release documentation aligned for the next stable update.
+
+### Notes
+
+- 1 commit since the previous release.
+
 ## 0.11.8 — 2026-06-09
 
 ### Highlights
