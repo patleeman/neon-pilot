@@ -35,8 +35,10 @@ function computeRunningState(sessionId: string): RunningState {
   const hasAutomation = taskStore.getAll().some((t) => t.running && t.threadConversationId === sessionId);
   if (hasAutomation) return 'automation';
 
-  // Pending executions (background commands, subagents, etc.)
-  const hasPendingRuns = executionStore.getAll().some((e) => e.status === 'pending' || e.status === 'running');
+  // Pending executions (background commands, subagents, etc.) for this thread only.
+  const hasPendingRuns = executionStore
+    .getAll()
+    .some((e) => e.conversationId === sessionId && (e.status === 'pending' || e.status === 'running'));
   if (hasPendingRuns) return 'hasRuns';
 
   return 'idle';
