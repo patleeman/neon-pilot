@@ -17,6 +17,7 @@ const apiMock = vi.hoisted(() => ({
   modelPreferences: vi.fn(),
   models: vi.fn(),
   runs: vi.fn(),
+  settings: vi.fn(),
   liveSession: vi.fn(),
   conversationModelPreferences: vi.fn(),
 }));
@@ -246,6 +247,7 @@ beforeEach(() => {
   });
   apiMock.memory.mockResolvedValue({ memoryDocs: [], skills: [] });
   apiMock.runs.mockResolvedValue({ runs: [] });
+  apiMock.settings.mockResolvedValue({});
   apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
   sessionTabsMock.fetchRemoteConversationLayout.mockResolvedValue({
     localConversationIds: [],

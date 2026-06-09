@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.10 — 2026-06-09
+
+### Highlights
+
+- Adds transcript file path links with validation so generated paths can open safely without accepting malformed targets.
+- Fixes first-message live session startup so initial prompts submit reliably into newly created conversations.
+- Hides stale extension navigation and deduplicates extension open commands so unavailable routes do not linger in the app shell.
+- Hardens conversation and agent route handling, including malformed settings hashes and sidebar pending-run scoping.
+- Adds the embedded Personal Agents extension foundation, documentation, and tests for the dedicated agent profile workflow.
+
+### Notes
+
+- 10 commits since the previous release.
+
 ## 0.11.9 — 2026-06-09
 
 ### Highlights

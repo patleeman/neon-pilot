@@ -206,7 +206,13 @@ const ctx = {
       storage.set(key, value);
     },
     async delete(key) {
-      storage.delete(key);
+      const deleted = storage.delete(key);
+      return { ok: true, deleted };
+    },
+    async list(prefix = '') {
+      return Array.from(storage.entries())
+        .filter(([key]) => key.startsWith(prefix))
+        .map(([key, value]) => ({ key, value }));
     },
   },
   database: {
@@ -322,7 +328,8 @@ const ctx = {
       return { ok: true, dryRun: true, deleted: [] };
     },
     async create(input) {
-      const conversation = { id: 'smoke-created-' + (conversations.length + 1), ...input };
+      const conversationId = 'smoke-created-' + (conversations.length + 1);
+      const conversation = { id: conversationId, conversationId, ...input };
       conversations.push(conversation);
       return conversation;
     },
@@ -588,6 +595,16 @@ const smokes = {
   async 'system-onboarding'() {
     const result = await module.ensure({}, ctx);
     assert(result.created === true && conversations.length === 1, 'onboarding ensure failed');
+  },
+  async 'system-personal-agents'() {
+    const created = await module.createProfile({ name: 'Smoke Agent', soul: 'Keep smoke tests small.' }, ctx);
+    assert(created.profile?.name === 'Smoke Agent', 'personal agent profile create failed');
+    const listed = await module.listProfiles({}, ctx);
+    assert(listed.profiles.length === 1 && listed.profiles[0].id === created.profile.id, 'personal agent profile list failed');
+    const ensured = await module.ensureDefaultConversation({ id: created.profile.id }, ctx);
+    assert(ensured.conversationId === 'smoke-created-1', 'personal agent default conversation ensure failed');
+    const context = await module.provideAgentTurnContext({ conversationId: ensured.conversationId }, ctx);
+    assert(context.blocks?.[0]?.content?.includes('Keep smoke tests small.'), 'personal agent turn context missing soul');
   },
   async 'system-prompt-assembly'() {
     const result = await module.inspectPromptAssembly({}, ctx);

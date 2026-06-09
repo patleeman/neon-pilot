@@ -4,15 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.9** — patch release.
+**v0.11.10** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.9
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.10
 
 Highlights in this train:
 
-- Publishes a follow-up patch on the current 0.11 release train after the `v0.11.8` desktop artifacts were verified.
-- Carries the latest release-smoke hardening for packaged desktop launches, OAuth provider settings coverage, terminal input regressions, MCP tool gating, and sidebar pending-run scoping.
-- Keeps package versions, release notes, and current-release documentation aligned for the next stable update.
+- Adds transcript file path links with validation so generated paths can open safely without accepting malformed targets.
+- Fixes first-message live session startup so initial prompts submit reliably into newly created conversations.
+- Hides stale extension navigation and deduplicates extension open commands so unavailable routes do not linger in the app shell.
+- Hardens conversation and agent route handling, including malformed settings hashes and sidebar pending-run scoping.
+- Adds the embedded Personal Agents extension foundation, documentation, and tests for the dedicated agent profile workflow.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
