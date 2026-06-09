@@ -196,6 +196,7 @@ function PinnedToolBlocks({
   activeCheckpointId,
   onOpenBrowser,
   onOpenFilePath,
+  validatedFilePathTargets,
   showPinnedToolCalls,
   diffDisclosureMode,
 }: {
@@ -206,6 +207,7 @@ function PinnedToolBlocks({
   activeCheckpointId?: string | null;
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   showPinnedToolCalls: boolean;
   diffDisclosureMode: ConversationDiffDisclosureMode;
 }) {
@@ -226,6 +228,7 @@ function PinnedToolBlocks({
           activeCheckpointId={activeCheckpointId}
           onOpenBrowser={onOpenBrowser}
           onOpenFilePath={onOpenFilePath}
+          validatedFilePathTargets={validatedFilePathTargets}
           diffDisclosureMode={diffDisclosureMode}
         />
       ))}
@@ -275,6 +278,7 @@ export function TraceClusterBlock({
   activeCheckpointId,
   onOpenBrowser,
   onOpenFilePath,
+  validatedFilePathTargets,
   onHydrateMessage,
   hydratingMessageBlockIds,
   onResume,
@@ -296,6 +300,7 @@ export function TraceClusterBlock({
   activeCheckpointId?: string | null;
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onHydrateMessage?: (blockId: string) => Promise<void> | void;
   hydratingMessageBlockIds?: ReadonlySet<string>;
   onResume?: () => Promise<void> | void;
@@ -417,6 +422,7 @@ export function TraceClusterBlock({
           activeCheckpointId={activeCheckpointId}
           onOpenBrowser={onOpenBrowser}
           onOpenFilePath={onOpenFilePath}
+          validatedFilePathTargets={validatedFilePathTargets}
           showPinnedToolCalls={showPinnedToolCalls}
           diffDisclosureMode={diffDisclosureMode}
         />
@@ -456,6 +462,7 @@ export function TraceClusterBlock({
                     activeCheckpointId={activeCheckpointId}
                     onOpenBrowser={onOpenBrowser}
                     onOpenFilePath={onOpenFilePath}
+                    validatedFilePathTargets={validatedFilePathTargets}
                     onHydrateMessage={onHydrateMessage}
                     hydratingMessageBlockIds={hydratingMessageBlockIds}
                     diffDisclosureMode={diffDisclosureMode}
@@ -464,7 +471,14 @@ export function TraceClusterBlock({
               case 'subagent':
                 return <SubagentBlock key={`subagent-${blockIndex}`} block={block} />;
               case 'error':
-                return <ErrorBlock key={`error-${blockIndex}`} block={block} onOpenFilePath={onOpenFilePath} />;
+                return (
+                  <ErrorBlock
+                    key={`error-${blockIndex}`}
+                    block={block}
+                    onOpenFilePath={onOpenFilePath}
+                    validatedFilePathTargets={validatedFilePathTargets}
+                  />
+                );
               case 'context':
               case 'summary':
                 return (
@@ -474,6 +488,7 @@ export function TraceClusterBlock({
                     messageIndexOffset={blockIndex}
                     onOpenFilePath={onOpenFilePath}
                     onOpenCheckpoint={onOpenCheckpoint}
+                    validatedFilePathTargets={validatedFilePathTargets}
                   />
                 );
               default:
@@ -534,6 +549,7 @@ export const ErrorBlock = memo(function ErrorBlock({
   resumeTitle,
   resumeLabel,
   onOpenFilePath: _onOpenFilePath,
+  validatedFilePathTargets: _validatedFilePathTargets,
   onSelectionGesture,
 }: {
   block: Extract<MessageBlock, { type: 'error' }>;
@@ -543,6 +559,7 @@ export const ErrorBlock = memo(function ErrorBlock({
   resumeTitle?: string | null;
   resumeLabel?: string;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onSelectionGesture?: ReplySelectionGestureHandler;
 }) {
   const blockId = typeof block.id === 'string' ? block.id.trim() || undefined : undefined;

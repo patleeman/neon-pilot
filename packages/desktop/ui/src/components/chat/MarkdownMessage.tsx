@@ -6,6 +6,12 @@ import remarkGfm from 'remark-gfm';
 import { type ParsedSkillBlock, parseSkillBlock } from '../../markdown/markdownExtensions';
 import { extractMarkdownTextContent, InlineMarkdownCode } from '../MarkdownInlineCode';
 import { cx, InlineCode, InlineCodeButton } from '../ui';
+import {
+  looksLikeTranscriptPath,
+  normalizeTranscriptPathTarget,
+  readKnowledgeBaseFileIdFromPath,
+  trimTranscriptPathToken,
+} from './transcriptPathLinks.js';
 
 // ── Markdown renderer ─────────────────────────────────────────────────────────
 
@@ -19,10 +25,8 @@ type EnhancedTextFragment = {
   text: string;
   kind: 'text' | 'mention' | 'commit' | 'knowledge-file' | 'file-path';
   fileId?: string;
+  targetPath?: string;
 };
-
-const FILE_PATH_TRAILING_PUNCTUATION = /[),.;:!?\]}>]+$/;
-const FILE_PATH_WITH_LINE_SUFFIX = /^(.+?)(?::\d+(?::\d+)?)?$/;
 
 function looksLikeCommitHash(value: string): boolean {
   const normalized = value.trim();
@@ -43,18 +47,6 @@ function CommitHashButton({ hash, onOpenCheckpoint }: { hash: string; onOpenChec
       {hash}
     </InlineCodeButton>
   );
-}
-
-function readKnowledgeBaseFileIdFromPath(value: string): string | null {
-  const normalized = value.trim().replace(FILE_PATH_TRAILING_PUNCTUATION, '');
-  const marker = '/knowledge-base/repo/';
-  const markerIndex = normalized.indexOf(marker);
-  if (markerIndex < 0 || normalized.endsWith('/')) {
-    return null;
-  }
-
-  const fileId = normalized.slice(markerIndex + marker.length);
-  return fileId && !fileId.endsWith('/') ? fileId : null;
 }
 
 function KnowledgeFileLink({ path, fileId, onOpenFilePath }: { path: string; fileId: string; onOpenFilePath?: (path: string) => void }) {
@@ -83,38 +75,10 @@ function KnowledgeFileLink({ path, fileId, onOpenFilePath }: { path: string; fil
   );
 }
 
-function trimPathToken(value: string): string {
-  return value.trim().replace(FILE_PATH_TRAILING_PUNCTUATION, '');
-}
-
-function normalizePathTarget(value: string): string {
-  const trimmed = trimPathToken(value);
-  return trimmed.match(FILE_PATH_WITH_LINE_SUFFIX)?.[1] ?? trimmed;
-}
-
-function looksLikeFilePath(value: string): boolean {
-  const normalized = normalizePathTarget(value);
-  if (!normalized || normalized.endsWith('/')) {
-    return false;
-  }
-
-  if (/^(?:https?|file):\/\//i.test(normalized)) {
-    return false;
-  }
-
-  if (/^(?:\/|~\/|\.{1,2}\/)/.test(normalized)) {
-    return normalized.includes('/');
-  }
-
-  return /^[A-Za-z0-9_.+-]+(?:\/[A-Za-z0-9_.+-]+)+$/.test(normalized) && /\/[^/\s]+\.[A-Za-z0-9][A-Za-z0-9_-]*$/.test(normalized);
-}
-
-function FilePathLink({ path, onOpenFilePath }: { path: string; onOpenFilePath?: (path: string) => void }) {
+function FilePathLink({ path, targetPath, onOpenFilePath }: { path: string; targetPath: string; onOpenFilePath?: (path: string) => void }) {
   if (!onOpenFilePath) {
     return <React.Fragment>{path}</React.Fragment>;
   }
-
-  const targetPath = normalizePathTarget(path);
 
   return (
     <a
@@ -149,7 +113,7 @@ function splitEnhancedTextFragments(text: string): EnhancedTextFragment[] {
 
     const knowledgeFileId = rawToken.startsWith('/') ? readKnowledgeBaseFileIdFromPath(rawToken) : null;
     if (knowledgeFileId) {
-      const path = trimPathToken(rawToken);
+      const path = trimTranscriptPathToken(rawToken);
       if (start > cursor) {
         fragments.push({ text: text.slice(cursor, start), kind: 'text' });
       }
@@ -159,19 +123,20 @@ function splitEnhancedTextFragments(text: string): EnhancedTextFragment[] {
       continue;
     }
 
-    if (looksLikeFilePath(rawToken)) {
-      const path = trimPathToken(rawToken);
+    if (looksLikeTranscriptPath(rawToken)) {
+      const path = trimTranscriptPathToken(rawToken);
+      const targetPath = normalizeTranscriptPathTarget(path);
       if (start > cursor) {
         fragments.push({ text: text.slice(cursor, start), kind: 'text' });
       }
 
-      fragments.push({ text: path, kind: 'file-path' });
+      fragments.push({ text: path, kind: 'file-path', targetPath });
       cursor = start + path.length;
       continue;
     }
 
     if (rawToken.startsWith('@')) {
-      const mention = trimPathToken(rawToken);
+      const mention = trimTranscriptPathToken(rawToken);
       const end = start + mention.length;
       const shouldSkip = start > 0 && /[\w./+-]/.test(previous);
 
@@ -217,6 +182,7 @@ function renderEnhancedTextFragments(
   options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
+    validatedFilePathTargets?: ReadonlySet<string>;
   },
 ): ReactNode[] {
   return splitEnhancedTextFragments(text).map((fragment, index) => {
@@ -239,8 +205,15 @@ function renderEnhancedTextFragments(
       );
     }
 
-    if (fragment.kind === 'file-path') {
-      return <FilePathLink key={`${fragment.text}-${index}`} path={fragment.text} onOpenFilePath={options?.onOpenFilePath} />;
+    if (fragment.kind === 'file-path' && fragment.targetPath && options?.validatedFilePathTargets?.has(fragment.targetPath)) {
+      return (
+        <FilePathLink
+          key={`${fragment.text}-${index}`}
+          path={fragment.text}
+          targetPath={fragment.targetPath}
+          onOpenFilePath={options?.onOpenFilePath}
+        />
+      );
     }
 
     return <React.Fragment key={`${index}-${fragment.text}`}>{fragment.text}</React.Fragment>;
@@ -306,6 +279,7 @@ function renderChildrenWithEnhancements(
   options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
+    validatedFilePathTargets?: ReadonlySet<string>;
   },
 ): ReactNode {
   return Children.map(children, (child, index) => {
@@ -356,11 +330,13 @@ function MarkdownInlineCodeWithCommitHash({
   children,
   onOpenCheckpoint,
   onOpenFilePath,
+  validatedFilePathTargets,
 }: {
   className?: string;
   children?: ReactNode;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
 }) {
   const content = extractMarkdownTextContent(children).replace(/\n$/, '');
   const isBlock = content.includes('\n') || Boolean(className?.includes('language-'));
@@ -374,8 +350,11 @@ function MarkdownInlineCodeWithCommitHash({
     return <KnowledgeFileLink path={content} fileId={knowledgeFileId} onOpenFilePath={onOpenFilePath} />;
   }
 
-  if (!isBlock && onOpenFilePath && looksLikeFilePath(content)) {
-    return <FilePathLink path={content} onOpenFilePath={onOpenFilePath} />;
+  if (!isBlock && onOpenFilePath && looksLikeTranscriptPath(content)) {
+    const targetPath = normalizeTranscriptPathTarget(content);
+    if (validatedFilePathTargets?.has(targetPath)) {
+      return <FilePathLink path={content} targetPath={targetPath} onOpenFilePath={onOpenFilePath} />;
+    }
   }
 
   return <InlineMarkdownCode className={className}>{children}</InlineMarkdownCode>;
@@ -385,10 +364,12 @@ const MarkdownText = memo(function MarkdownText({
   text,
   onOpenFilePath,
   onOpenCheckpoint,
+  validatedFilePathTargets,
 }: {
   text: string;
   onOpenFilePath?: (path: string) => void;
   onOpenCheckpoint?: (checkpointId: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
 }) {
   const footnoteId = useId();
   const footnotePrefix = `chat-${footnoteId.replace(/[^a-zA-Z0-9_-]+/g, '-')}-`;
@@ -400,34 +381,34 @@ const MarkdownText = memo(function MarkdownText({
         remarkRehypeOptions={{ clobberPrefix: footnotePrefix }}
         components={{
           h1: ({ children, node: _node, ...props }) => (
-            <h1 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</h1>
+            <h1 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</h1>
           ),
           h2: ({ children, node: _node, ...props }) => (
-            <h2 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</h2>
+            <h2 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</h2>
           ),
           h3: ({ children, node: _node, ...props }) => (
-            <h3 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</h3>
+            <h3 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</h3>
           ),
           h4: ({ children, node: _node, ...props }) => (
-            <h4 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</h4>
+            <h4 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</h4>
           ),
           h5: ({ children, node: _node, ...props }) => (
-            <h5 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</h5>
+            <h5 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</h5>
           ),
           h6: ({ children, node: _node, ...props }) => (
-            <h6 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</h6>
+            <h6 {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</h6>
           ),
           p: ({ children, node: _node, ...props }) => (
-            <p {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</p>
+            <p {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</p>
           ),
           li: ({ children, node: _node, ...props }) => (
-            <li {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</li>
+            <li {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</li>
           ),
           th: ({ children, node: _node, ...props }) => (
-            <th {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</th>
+            <th {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</th>
           ),
           td: ({ children, node: _node, ...props }) => (
-            <td {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint })}</td>
+            <td {...props}>{renderChildrenWithEnhancements(children, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}</td>
           ),
           a: ({ href, children, title }) => {
             if (typeof href !== 'string' || href.trim().length === 0) {
@@ -460,7 +441,12 @@ const MarkdownText = memo(function MarkdownText({
           ),
           pre: ({ children }) => <MarkdownCodeBlock>{children}</MarkdownCodeBlock>,
           code: ({ className, children }) => (
-            <MarkdownInlineCodeWithCommitHash className={className} onOpenFilePath={onOpenFilePath} onOpenCheckpoint={onOpenCheckpoint}>
+            <MarkdownInlineCodeWithCommitHash
+              className={className}
+              onOpenFilePath={onOpenFilePath}
+              onOpenCheckpoint={onOpenCheckpoint}
+              validatedFilePathTargets={validatedFilePathTargets}
+            >
               {children}
             </MarkdownInlineCodeWithCommitHash>
           ),
@@ -494,9 +480,17 @@ export function renderMarkdownText(
   options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
+    validatedFilePathTargets?: ReadonlySet<string>;
   },
 ) {
-  return <MarkdownText text={text} onOpenFilePath={options?.onOpenFilePath} onOpenCheckpoint={options?.onOpenCheckpoint} />;
+  return (
+    <MarkdownText
+      text={text}
+      onOpenFilePath={options?.onOpenFilePath}
+      onOpenCheckpoint={options?.onOpenCheckpoint}
+      validatedFilePathTargets={options?.validatedFilePathTargets}
+    />
+  );
 }
 
 function renderPlainText(text: string) {
@@ -508,6 +502,7 @@ export function renderStreamingMarkdownText(
   _options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
+    validatedFilePathTargets?: ReadonlySet<string>;
   },
 ) {
   return renderPlainText(text);
@@ -529,10 +524,12 @@ export function SkillInvocationCard({
   skillBlock,
   className,
   onOpenFilePath,
+  validatedFilePathTargets,
 }: {
   skillBlock: ParsedSkillBlock;
   className?: string;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
 }) {
   const { relativeTo, body } = parseSkillContentSections(skillBlock.content);
 
@@ -544,7 +541,7 @@ export function SkillInvocationCard({
       </summary>
       <div className="ui-skill-invocation-body">
         {relativeTo && <p className="ui-skill-invocation-meta">References resolve relative to {relativeTo}</p>}
-        {renderMarkdownText(`**${skillBlock.name}**\n\n${body}`, { onOpenFilePath })}
+        {renderMarkdownText(`**${skillBlock.name}**\n\n${body}`, { onOpenFilePath, validatedFilePathTargets })}
       </div>
     </details>
   );
@@ -555,6 +552,7 @@ function renderSkillAwareText(
   options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
+    validatedFilePathTargets?: ReadonlySet<string>;
   },
 ) {
   const skillBlock = parseSkillBlock(text);
@@ -564,7 +562,11 @@ function renderSkillAwareText(
 
   return (
     <div className="space-y-3">
-      <SkillInvocationCard skillBlock={skillBlock} onOpenFilePath={options?.onOpenFilePath} />
+      <SkillInvocationCard
+        skillBlock={skillBlock}
+        onOpenFilePath={options?.onOpenFilePath}
+        validatedFilePathTargets={options?.validatedFilePathTargets}
+      />
       {skillBlock.userMessage && renderMarkdownText(skillBlock.userMessage, options)}
     </div>
   );
@@ -575,6 +577,7 @@ export function renderText(
   options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
+    validatedFilePathTargets?: ReadonlySet<string>;
   },
 ) {
   return renderSkillAwareText(text, options);

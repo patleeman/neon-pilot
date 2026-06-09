@@ -260,6 +260,7 @@ export const ContextShelf = memo(function ContextShelf({
   remoteControlled = false,
   remoteControlStatus,
   onOpenFilePath,
+  validatedFilePathTargets,
   onOpenCheckpoint,
   onSelectionGesture,
 }: {
@@ -271,6 +272,7 @@ export const ContextShelf = memo(function ContextShelf({
   remoteControlled?: boolean;
   remoteControlStatus?: string | null;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
 }) {
@@ -312,11 +314,11 @@ export const ContextShelf = memo(function ContextShelf({
           }
         >
           <div className={contextShelfSystemPromptBodyClassName}>
-            {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt)}</div> : null}
+            {normalizedSystemPrompt ? <div>{renderText(normalizedSystemPrompt, { validatedFilePathTargets })}</div> : null}
             {toolDefinitionsText ? (
               <div className={normalizedSystemPrompt ? 'mt-4' : undefined}>
                 <div className="mb-2 font-medium text-primary">Available tool definitions</div>
-                {renderText(toolDefinitionsText)}
+                {renderText(toolDefinitionsText, { validatedFilePathTargets })}
               </div>
             ) : null}
           </div>
@@ -384,7 +386,7 @@ export const ContextShelf = memo(function ContextShelf({
                   {resolveCompactionSummaryDetail(block.title, block.detail)}
                 </p>
               ) : null}
-              {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
+              {renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
             </div>
           </LazyDetails>
         );
@@ -404,6 +406,7 @@ export const UserMessage = memo(function UserMessage({
   onHydrateMessage,
   hydratingMessageBlockIds,
   onOpenFilePath,
+  validatedFilePathTargets,
   onOpenCheckpoint,
   onInspectImage,
   isInlineRunExpanded,
@@ -418,6 +421,7 @@ export const UserMessage = memo(function UserMessage({
   onHydrateMessage?: (blockId: string) => Promise<void> | void;
   hydratingMessageBlockIds?: ReadonlySet<string>;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onInspectImage?: (image: InspectableImage) => void;
   isInlineRunExpanded?: (inlineRunKey: string) => boolean;
@@ -546,11 +550,19 @@ export const UserMessage = memo(function UserMessage({
             </div>
           ) : skillBlock ? (
             <div className="space-y-2 px-1.5 pb-0.5">
-              <SkillInvocationCard skillBlock={skillBlock} className="ui-skill-invocation-user" onOpenFilePath={onOpenFilePath} />
-              {skillBlock.userMessage && renderMarkdownText(skillBlock.userMessage, { onOpenFilePath, onOpenCheckpoint })}
+              <SkillInvocationCard
+                skillBlock={skillBlock}
+                className="ui-skill-invocation-user"
+                onOpenFilePath={onOpenFilePath}
+                validatedFilePathTargets={validatedFilePathTargets}
+              />
+              {skillBlock.userMessage &&
+                renderMarkdownText(skillBlock.userMessage, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
             </div>
           ) : hasText ? (
-            <div className="px-1.5 pb-0.5">{renderMarkdownText(block.text, { onOpenFilePath, onOpenCheckpoint })}</div>
+            <div className="px-1.5 pb-0.5">
+              {renderMarkdownText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
+            </div>
           ) : hasImages ? (
             <div className="px-1.5 pb-0.5 text-sm text-secondary">
               {imageCount === 1 ? 'Image attachment' : `${imageCount} image attachments`}
@@ -583,6 +595,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   onForkMessage,
   onRewindMessage,
   onOpenFilePath,
+  validatedFilePathTargets,
   onOpenCheckpoint,
   onSelectionGesture,
   isInlineRunExpanded,
@@ -595,6 +608,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   onForkMessage?: (messageIndex: number) => Promise<void> | void;
   onRewindMessage?: (messageIndex: number) => Promise<void> | void;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
   isInlineRunExpanded?: (inlineRunKey: string) => boolean;
@@ -641,9 +655,9 @@ export const AssistantMessage = memo(function AssistantMessage({
               onToggleInlineRun={onToggleInlineRun}
             />
           ) : renderStreamingPlainText ? (
-            renderStreamingMarkdownText(block.text, { onOpenFilePath, onOpenCheckpoint })
+            renderStreamingMarkdownText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })
           ) : (
-            renderText(block.text, { onOpenFilePath, onOpenCheckpoint })
+            renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })
           )}
           {shouldShowCursor && (
             <span
@@ -806,6 +820,7 @@ export const SystemEventMessage = memo(function SystemEventMessage({
   block,
   messageIndex,
   onOpenFilePath,
+  validatedFilePathTargets,
   onOpenCheckpoint,
   onSelectionGesture,
   isInlineRunExpanded,
@@ -814,6 +829,7 @@ export const SystemEventMessage = memo(function SystemEventMessage({
   block: Extract<MessageBlock, { type: 'context' }>;
   messageIndex?: number;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
   isInlineRunExpanded?: (inlineRunKey: string) => boolean;
@@ -843,7 +859,7 @@ export const SystemEventMessage = memo(function SystemEventMessage({
             onToggleInlineRun={onToggleInlineRun}
           />
         ) : (
-          renderText(block.text, { onOpenFilePath, onOpenCheckpoint })
+          renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })
         )}
       </div>
     </SystemEventFrame>
@@ -958,12 +974,14 @@ export const SummaryMessage = memo(function SummaryMessage({
   block,
   messageIndex,
   onOpenFilePath,
+  validatedFilePathTargets,
   onOpenCheckpoint,
   onSelectionGesture,
 }: {
   block: Extract<MessageBlock, { type: 'summary' }>;
   messageIndex?: number;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onOpenCheckpoint?: (checkpointId: string) => void;
   onSelectionGesture?: ReplySelectionGestureHandler;
 }) {
@@ -1012,7 +1030,7 @@ export const SummaryMessage = memo(function SummaryMessage({
       >
         <div {...replySelectionScopeProps} className="mx-auto mt-3 w-[78%] space-y-3 text-[13px] leading-relaxed text-primary/90">
           <p className="text-[12px] leading-relaxed text-secondary">{summaryPresentation.detail}</p>
-          {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
+          {renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
         </div>
       </LazyDetails>
     );
@@ -1027,7 +1045,7 @@ export const SummaryMessage = memo(function SummaryMessage({
     >
       <div {...replySelectionScopeProps} className="space-y-3 pt-2 pl-5 text-[13px] leading-relaxed text-primary/90">
         {block.kind === 'compaction' ? <p className="text-[12px] leading-relaxed text-secondary">{summaryPresentation.detail}</p> : null}
-        {renderText(block.text, { onOpenFilePath, onOpenCheckpoint })}
+        {renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })}
       </div>
     </SystemEventFrame>
   );

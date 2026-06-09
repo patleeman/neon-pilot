@@ -39,6 +39,7 @@ export function ChatRenderItemView({
   activeCheckpointId,
   onOpenBrowser,
   onOpenFilePath,
+  validatedFilePathTargets,
   onSubmitAskUserQuestion,
   askUserQuestionDisplayMode,
   onResumeConversation,
@@ -74,6 +75,7 @@ export function ChatRenderItemView({
   activeCheckpointId?: string | null;
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onSubmitAskUserQuestion?: (presentation: AskUserQuestionPresentation, answers: AskUserQuestionAnswers) => Promise<void> | void;
   askUserQuestionDisplayMode: 'inline' | 'composer';
   onResumeConversation?: () => Promise<void> | void;
@@ -119,6 +121,7 @@ export function ChatRenderItemView({
           activeCheckpointId={activeCheckpointId}
           onOpenBrowser={onOpenBrowser}
           onOpenFilePath={onOpenFilePath}
+          validatedFilePathTargets={validatedFilePathTargets}
           onHydrateMessage={onHydrateMessage}
           hydratingMessageBlockIds={hydratingMessageBlockIds}
           onResume={isTailItem ? onResumeConversation : undefined}
@@ -151,6 +154,7 @@ export function ChatRenderItemView({
           messageIndexOffset={messageIndexOffset + item.startIndex}
           currentConversationId={conversationId}
           onOpenFilePath={onOpenFilePath}
+          validatedFilePathTargets={validatedFilePathTargets}
           onOpenCheckpoint={onOpenCheckpoint}
           onSelectionGesture={onReplyToSelection ? onSelectionGesture : undefined}
         />
@@ -176,6 +180,7 @@ export function ChatRenderItemView({
             onHydrateMessage={onHydrateMessage}
             hydratingMessageBlockIds={hydratingMessageBlockIds}
             onOpenFilePath={onOpenFilePath}
+            validatedFilePathTargets={validatedFilePathTargets}
             onOpenCheckpoint={onOpenCheckpoint}
             onInspectImage={onInspectImage}
             isInlineRunExpanded={isInlineRunExpanded}
@@ -192,6 +197,7 @@ export function ChatRenderItemView({
             onRewindMessage={onRewindMessage}
             onForkMessage={onForkMessage}
             onOpenFilePath={onOpenFilePath}
+            validatedFilePathTargets={validatedFilePathTargets}
             onOpenCheckpoint={onOpenCheckpoint}
             onSelectionGesture={onReplyToSelection ? onSelectionGesture : undefined}
             isInlineRunExpanded={isInlineRunExpanded}
@@ -208,6 +214,7 @@ export function ChatRenderItemView({
             block={block}
             messageIndex={absoluteIndex}
             onOpenFilePath={onOpenFilePath}
+            validatedFilePathTargets={validatedFilePathTargets}
             onOpenCheckpoint={onOpenCheckpoint}
             onSelectionGesture={onReplyToSelection ? onSelectionGesture : undefined}
             isInlineRunExpanded={isInlineRunExpanded}
@@ -220,6 +227,7 @@ export function ChatRenderItemView({
             block={block}
             messageIndex={absoluteIndex}
             onOpenFilePath={onOpenFilePath}
+            validatedFilePathTargets={validatedFilePathTargets}
             onOpenCheckpoint={onOpenCheckpoint}
             onSelectionGesture={onReplyToSelection ? onSelectionGesture : undefined}
           />
@@ -237,6 +245,7 @@ export function ChatRenderItemView({
             activeCheckpointId={activeCheckpointId}
             onOpenBrowser={onOpenBrowser}
             onOpenFilePath={onOpenFilePath}
+            validatedFilePathTargets={validatedFilePathTargets}
             onHydrateMessage={onHydrateMessage}
             hydratingMessageBlockIds={hydratingMessageBlockIds}
             messages={messages}

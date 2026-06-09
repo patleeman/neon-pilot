@@ -32,7 +32,9 @@ Type `@` in the composer to open a fuzzy-search overlay. Start typing a filename
 
 ### Transcript path links
 
-Plain file paths in conversation messages render as links. Workspace-relative paths open the File Explorer in Workbench with that file selected. Absolute paths inside the conversation workspace are converted to workspace-relative paths before opening; absolute paths outside the workspace fall back to the desktop shell path opener.
+Existing plain file paths in conversation messages render as links after the workspace validates them. Workspace-relative paths open the File Explorer in Workbench with that file selected by default. Absolute paths inside the conversation workspace are converted to workspace-relative paths before opening; existing absolute paths outside the workspace fall back to the desktop shell path opener.
+
+Set `systemFiles.transcriptPathLinkTarget` to `desktop` to open validated transcript path links with the desktop shell opener instead of the Workbench File Explorer.
 
 ### Drag and drop
 

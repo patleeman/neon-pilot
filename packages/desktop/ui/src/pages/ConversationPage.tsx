@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAppEvents, useLiveTitles } from '../app/contexts';
-import { api } from '../client/api';
+import { api, type WorkspaceResolvedPathLink } from '../client/api';
 import {
   completeConversationOpenPhase,
   ensureConversationOpenStart,
@@ -16,6 +16,7 @@ import { ConversationComposer } from '../components/conversation/ConversationCom
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../components/conversation/ConversationComposerMenus';
 import { ConversationComposerMeta } from '../components/conversation/ConversationComposerMeta';
+import { detectTranscriptPathCandidates, normalizeTranscriptPathTarget } from '../components/chat/transcriptPathLinks';
 import {
   ConversationDraftEmptyAction,
   DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS,
@@ -425,39 +426,64 @@ const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 700;
 const HISTORICAL_PREFETCH_COOLDOWN_MS = 800;
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
+const TRANSCRIPT_PATH_LINK_TARGET_SETTING_KEY = 'systemFiles.transcriptPathLinkTarget';
+const MAX_TRANSCRIPT_PATH_LINK_TARGETS = 400;
 
-function stripTranscriptPathLineSuffix(path: string): string {
-  return path.trim().replace(/:\d+(?::\d+)?$/, '');
+type TranscriptPathLinkTarget = 'fileExplorer' | 'desktop';
+
+function normalizeTranscriptPathLinkTargetSetting(value: unknown): TranscriptPathLinkTarget {
+  return value === 'desktop' ? 'desktop' : 'fileExplorer';
 }
 
-function resolveTranscriptWorkspaceFilePath(path: string, cwd: string | null): string | null {
-  const normalizedPath = stripTranscriptPathLineSuffix(path);
-  if (!normalizedPath) {
-    return null;
+function collectTranscriptPathCandidateTargetsFromValue(value: unknown, targets: Set<string>, depth = 0): void {
+  if (targets.size >= MAX_TRANSCRIPT_PATH_LINK_TARGETS || depth > 5 || value == null) {
+    return;
   }
 
-  if (normalizedPath.startsWith('./')) {
-    return normalizedPath.slice(2);
+  if (typeof value === 'string') {
+    for (const candidate of detectTranscriptPathCandidates(value)) {
+      targets.add(candidate.targetPath);
+      if (targets.size >= MAX_TRANSCRIPT_PATH_LINK_TARGETS) {
+        break;
+      }
+    }
+    return;
   }
 
-  if (!normalizedPath.startsWith('/') && !normalizedPath.startsWith('~/') && !normalizedPath.startsWith('../')) {
-    return normalizedPath;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectTranscriptPathCandidateTargetsFromValue(item, targets, depth + 1);
+      if (targets.size >= MAX_TRANSCRIPT_PATH_LINK_TARGETS) {
+        break;
+      }
+    }
+    return;
   }
 
-  if (!cwd) {
-    return null;
+  if (typeof value === 'object') {
+    for (const item of Object.values(value as Record<string, unknown>)) {
+      collectTranscriptPathCandidateTargetsFromValue(item, targets, depth + 1);
+      if (targets.size >= MAX_TRANSCRIPT_PATH_LINK_TARGETS) {
+        break;
+      }
+    }
+  }
+}
+
+function collectTranscriptPathCandidateTargets(messages: MessageBlock[] | undefined): string[] {
+  if (!messages?.length) {
+    return [];
   }
 
-  const normalizedCwd = cwd.replace(/\/+$/, '');
-  if (normalizedPath === normalizedCwd) {
-    return null;
+  const targets = new Set<string>();
+  for (const message of messages) {
+    collectTranscriptPathCandidateTargetsFromValue(message, targets);
+    if (targets.size >= MAX_TRANSCRIPT_PATH_LINK_TARGETS) {
+      break;
+    }
   }
 
-  if (normalizedPath.startsWith(`${normalizedCwd}/`)) {
-    return normalizedPath.slice(normalizedCwd.length + 1);
-  }
-
-  return null;
+  return Array.from(targets).sort();
 }
 const EMPTY_PENDING_BROWSER_COMMENTS: PendingBrowserComment[] = [];
 
@@ -2315,35 +2341,27 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       }),
     [draft, draftCwdValue, liveSessionContext?.cwd, currentSessionMeta?.cwd],
   );
-  const openTranscriptFilePath = useCallback(
-    (path: string) => {
-      const normalizedPath = stripTranscriptPathLineSuffix(path);
-      if (!normalizedPath) {
-        return;
-      }
+  const [transcriptPathLinkTarget, setTranscriptPathLinkTarget] = useState<TranscriptPathLinkTarget>('fileExplorer');
+  useEffect(() => {
+    let cancelled = false;
 
-      const knowledgeMarker = '/knowledge-base/repo/';
-      const knowledgeMarkerIndex = normalizedPath.indexOf(knowledgeMarker);
-      if (knowledgeMarkerIndex >= 0) {
-        openKnowledgeFilePath(normalizedPath.slice(knowledgeMarkerIndex + knowledgeMarker.length));
-        return;
-      }
+    api
+      .settings()
+      .then((settings) => {
+        if (!cancelled) {
+          setTranscriptPathLinkTarget(normalizeTranscriptPathLinkTargetSetting(settings[TRANSCRIPT_PATH_LINK_TARGET_SETTING_KEY]));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTranscriptPathLinkTarget('fileExplorer');
+        }
+      });
 
-      const workspaceFilePath = resolveTranscriptWorkspaceFilePath(normalizedPath, currentCwd);
-      if (workspaceFilePath) {
-        setAppLayoutMode('workbench');
-        writeAppLayoutMode('workbench');
-        window.dispatchEvent(new CustomEvent(WORKBENCH_OPEN_WORKSPACE_FILE_EVENT, { detail: { path: workspaceFilePath } }));
-        return;
-      }
-
-      const desktopBridge = getDesktopBridge();
-      if (desktopBridge?.openPath && (normalizedPath.startsWith('/') || normalizedPath.startsWith('~/'))) {
-        void desktopBridge.openPath(normalizedPath);
-      }
-    },
-    [currentCwd, openKnowledgeFilePath],
-  );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const currentCwdLabel = useMemo(() => formatConversationCwdLabel(currentCwd), [currentCwd]);
   const hasDraftCwd = hasDraftConversationCwd(draftCwdValue);
   const setupWorkspaceCwd = draft ? draftCwdValue || null : currentCwdLabel === 'Chat' ? null : currentCwd;
@@ -5867,6 +5885,71 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const previousTranscriptPercent = Math.min(HISTORICAL_TAIL_BLOCKS_STEP_PERCENT, Math.max(1, visibleTranscriptStartPercent));
   const previousTranscriptBlockStep = Math.max(1, Math.ceil((visibleTranscriptTotalBlocks * previousTranscriptPercent) / 100));
   const renderingStaleTranscript = Boolean(visibleTranscriptState?.conversationId && id && visibleTranscriptState.conversationId !== id);
+  const transcriptPathLinkTargets = useMemo(
+    () => collectTranscriptPathCandidateTargets(visibleTranscriptMessages),
+    [visibleTranscriptMessages],
+  );
+  const [resolvedTranscriptPathLinks, setResolvedTranscriptPathLinks] = useState<WorkspaceResolvedPathLink[]>([]);
+  useEffect(() => {
+    if (!currentCwd || transcriptPathLinkTargets.length === 0) {
+      setResolvedTranscriptPathLinks([]);
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .resolveWorkspacePathLinks(currentCwd, transcriptPathLinkTargets)
+      .then((result) => {
+        if (!cancelled) {
+          setResolvedTranscriptPathLinks(result.links);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResolvedTranscriptPathLinks([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCwd, transcriptPathLinkTargets]);
+  const resolvedTranscriptPathLinksByTarget = useMemo(() => {
+    const linksByTarget = new Map<string, WorkspaceResolvedPathLink>();
+    for (const link of resolvedTranscriptPathLinks) {
+      linksByTarget.set(link.targetPath, link);
+    }
+    return linksByTarget;
+  }, [resolvedTranscriptPathLinks]);
+  const validatedTranscriptPathTargets = useMemo(
+    () => new Set(resolvedTranscriptPathLinksByTarget.keys()),
+    [resolvedTranscriptPathLinksByTarget],
+  );
+  const openTranscriptFilePath = useCallback(
+    (path: string) => {
+      const knowledgeMarker = '/knowledge-base/repo/';
+      const knowledgeMarkerIndex = path.indexOf(knowledgeMarker);
+      if (knowledgeMarkerIndex >= 0) {
+        openKnowledgeFilePath(path.slice(knowledgeMarkerIndex + knowledgeMarker.length));
+        return;
+      }
+
+      const link = resolvedTranscriptPathLinksByTarget.get(normalizeTranscriptPathTarget(path));
+      if (!link) {
+        return;
+      }
+
+      if (transcriptPathLinkTarget === 'desktop' || !link.workspacePath) {
+        void getDesktopBridge()?.openPath?.(link.openPath);
+        return;
+      }
+
+      setAppLayoutMode('workbench');
+      writeAppLayoutMode('workbench');
+      window.dispatchEvent(new CustomEvent(WORKBENCH_OPEN_WORKSPACE_FILE_EVENT, { detail: { path: link.workspacePath } }));
+    },
+    [openKnowledgeFilePath, resolvedTranscriptPathLinksByTarget, transcriptPathLinkTarget],
+  );
   const showInlineConversationLoadingState = shouldShowConversationInlineLoadingState({
     showConversationLoadingState,
     hasVisibleTranscript: Boolean(visibleTranscriptMessages?.length),
@@ -6121,6 +6204,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 activeCheckpointId={renderingStaleTranscript ? null : selectedCheckpointId}
                 onOpenBrowser={renderingStaleTranscript ? undefined : openWorkbenchBrowser}
                 onOpenFilePath={renderingStaleTranscript ? undefined : openTranscriptFilePath}
+                validatedFilePathTargets={renderingStaleTranscript ? undefined : validatedTranscriptPathTargets}
                 onSubmitAskUserQuestion={renderingStaleTranscript ? undefined : submitAskUserQuestion}
                 askUserQuestionDisplayMode="composer"
                 onResumeConversation={renderingStaleTranscript || !conversationResumeState.canResume ? undefined : resumeConversation}
@@ -6240,6 +6324,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       loadOlderMessages,
       openArtifact,
       openCheckpoint,
+      openTranscriptFilePath,
       displayedPendingAssistantStatusLabel,
       realMessages,
       renderingStaleTranscript,
@@ -6285,6 +6370,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
       titleDraft,
       titleSaving,
       transcriptBottomPaddingPx,
+      validatedTranscriptPathTargets,
       visibleTranscriptHasOlderBlocks,
       visibleTranscriptMessageIndexOffset,
       visibleTranscriptMessages,

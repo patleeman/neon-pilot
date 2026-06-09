@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('node:fs', () => ({ watch: vi.fn() }));
 
@@ -7,6 +7,7 @@ vi.mock('../shared/logging.js', () => ({ logError: vi.fn() }));
 vi.mock('../workspace/workspaceExplorer.js', () => ({
   listWorkspaceDirectory: vi.fn(),
   readWorkspaceFile: vi.fn(),
+  resolveWorkspacePathLinks: vi.fn(),
   writeWorkspaceFile: vi.fn(),
   deleteWorkspacePath: vi.fn(),
   createWorkspaceFolder: vi.fn(),
@@ -51,6 +52,10 @@ function getHandler(router: ReturnType<typeof mockRouter>, method: 'get' | 'post
 }
 
 describe('registerWorkspaceExplorerRoutes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('registers all expected routes', () => {
     const router = mockRouter();
     registerWorkspaceExplorerRoutes(router as unknown, mockContext());
@@ -59,6 +64,7 @@ describe('registerWorkspaceExplorerRoutes', () => {
       .sort();
     expect(paths).toContain('get /api/workspace/tree');
     expect(paths).toContain('get /api/workspace/file');
+    expect(paths).toContain('post /api/workspace/path-links/resolve');
     expect(paths).toContain('get /api/workspace/diff');
     expect(paths).toContain('get /api/workspace/uncommitted-diff');
     expect(paths).toContain('get /api/workspace/events');
@@ -111,6 +117,29 @@ describe('registerWorkspaceExplorerRoutes', () => {
       await h({ query: { cwd: '/repo' } }, res);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'path required' });
+    });
+  });
+
+  describe('POST /api/workspace/path-links/resolve', () => {
+    it('returns resolved path links', async () => {
+      vi.mocked(workspace.resolveWorkspacePathLinks).mockResolvedValue([{ targetPath: 'src/index.ts' }] as unknown);
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'post', '/api/workspace/path-links/resolve');
+      const res = mockRes();
+      await h({ body: { cwd: '/repo', targets: ['src/index.ts', 1] } }, res);
+      expect(workspace.resolveWorkspacePathLinks).toHaveBeenCalledWith('/repo', ['src/index.ts']);
+      expect(res.json).toHaveBeenCalledWith({ links: [{ targetPath: 'src/index.ts' }] });
+    });
+
+    it('returns an empty result when no targets are provided', async () => {
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'post', '/api/workspace/path-links/resolve');
+      const res = mockRes();
+      await h({ body: { cwd: '/repo', targets: [] } }, res);
+      expect(workspace.resolveWorkspacePathLinks).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({ links: [] });
     });
   });
 

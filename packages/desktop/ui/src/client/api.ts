@@ -84,6 +84,15 @@ export interface ExtensionHostAuditEvent {
   error?: string;
 }
 
+export interface WorkspaceResolvedPathLink {
+  input: string;
+  targetPath: string;
+  openPath: string;
+  kind: 'workspace' | 'absolute';
+  workspacePath: string | null;
+  entryKind: 'file' | 'directory' | 'symlink' | 'other';
+}
+
 // ── Retry helpers for transient failures ────────────────────────────────────
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000];
@@ -726,6 +735,8 @@ export const api = {
     if (options?.force) params.set('force', '1');
     return get<WorkspaceFileContent>(`/workspace/file?${params.toString()}`);
   },
+  resolveWorkspacePathLinks: async (cwd: string, targets: string[]) =>
+    post<{ links: WorkspaceResolvedPathLink[] }>('/workspace/path-links/resolve', { cwd, targets }),
   workspaceDiff: async (cwd: string, path: string) => {
     const params = new URLSearchParams({ cwd, path });
     return get<WorkspaceDiffOverlay>(`/workspace/diff?${params.toString()}`);

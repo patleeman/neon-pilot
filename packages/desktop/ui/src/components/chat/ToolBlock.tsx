@@ -168,6 +168,7 @@ export function ToolBlock({
   activeCheckpointId,
   onOpenBrowser,
   onOpenFilePath: _onOpenFilePath,
+  validatedFilePathTargets: _validatedFilePathTargets,
   onHydrateMessage,
   hydratingMessageBlockIds,
   messages,
@@ -184,6 +185,7 @@ export function ToolBlock({
   activeCheckpointId?: string | null;
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onHydrateMessage?: (blockId: string) => Promise<void> | void;
   hydratingMessageBlockIds?: ReadonlySet<string>;
   messages?: MessageBlock[];

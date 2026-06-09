@@ -17,6 +17,7 @@ function renderAssistantText(
   options?: {
     onOpenFilePath?: (path: string) => void;
     onOpenCheckpoint?: (checkpointId: string) => void;
+    validatedFilePathTargets?: ReadonlySet<string>;
   },
 ) {
   return renderToStaticMarkup(
@@ -30,6 +31,7 @@ function renderAssistantText(
       ],
       onOpenFilePath: options?.onOpenFilePath,
       onOpenCheckpoint: options?.onOpenCheckpoint,
+      validatedFilePathTargets: options?.validatedFilePathTargets,
     }),
   );
 }
@@ -233,7 +235,10 @@ describe('chat view streaming disclosure', () => {
         '',
         '[relative file](packages/desktop/ui/src/content/latexArtifacts.ts)',
       ].join('\n'),
-      { onOpenFilePath: () => undefined },
+      {
+        onOpenFilePath: () => undefined,
+        validatedFilePathTargets: new Set(['packages/desktop/ui/src/app/App.tsx', 'packages/desktop/ui/src/app/main.tsx']),
+      },
     );
 
     expect(html).toContain('packages/desktop/ui/src/app/App.tsx');
@@ -243,6 +248,16 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('title="Open packages/desktop/ui/src/app/App.tsx in File Explorer"');
     expect(html).toContain('title="Open packages/desktop/ui/src/app/main.tsx in File Explorer"');
     expect(html).not.toContain('href="packages/desktop/ui/src/content/latexArtifacts.ts"');
+  });
+
+  it('does not auto-link unvalidated plain file paths', () => {
+    const html = renderAssistantText('Touch packages/desktop/ui/src/app/App.tsx next.', {
+      onOpenFilePath: () => undefined,
+      validatedFilePathTargets: new Set(),
+    });
+
+    expect(html).toContain('packages/desktop/ui/src/app/App.tsx');
+    expect(html).not.toContain('title="Open packages/desktop/ui/src/app/App.tsx in File Explorer"');
   });
 
   it('renders commit hashes as clickable transcript controls when a checkpoint opener is available', () => {

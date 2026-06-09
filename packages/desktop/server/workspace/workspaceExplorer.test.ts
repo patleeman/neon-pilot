@@ -13,6 +13,7 @@ import {
   listWorkspaceDirectory,
   moveWorkspacePath,
   readUncommittedDiffAsync,
+  resolveWorkspacePathLinks,
   readWorkspaceDiffOverlay,
   readWorkspaceFile,
   renameWorkspacePath,
@@ -64,6 +65,24 @@ describe('workspace explorer', () => {
     expect(big.tooLarge).toBe(true);
     expect(big.content).toBeNull();
     expect(forced.content?.length).toBe(600 * 1024);
+  });
+
+  it('resolves only existing transcript path link targets', async () => {
+    const repo = createRepo();
+
+    const links = await resolveWorkspacePathLinks(repo, [
+      'src/app.ts:12',
+      './tracked.txt',
+      'src/missing.ts',
+      '../outside.txt',
+      join(repo, 'src', 'app.ts'),
+    ]);
+
+    expect(links.map((link) => ({ targetPath: link.targetPath, kind: link.kind, workspacePath: link.workspacePath }))).toEqual([
+      { targetPath: 'src/app.ts', kind: 'workspace', workspacePath: 'src/app.ts' },
+      { targetPath: './tracked.txt', kind: 'workspace', workspacePath: 'tracked.txt' },
+      { targetPath: join(repo, 'src', 'app.ts'), kind: 'workspace', workspacePath: 'src/app.ts' },
+    ]);
   });
 
   it('builds overlay decorations for additions and virtual deleted blocks', () => {

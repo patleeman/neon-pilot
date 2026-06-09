@@ -10,6 +10,16 @@
     "styles": []
   },
   "contributes": {
+    "settings": {
+      "systemFiles.transcriptPathLinkTarget": {
+        "type": "select",
+        "default": "fileExplorer",
+        "enum": ["fileExplorer", "desktop"],
+        "description": "Where validated transcript file path links open.",
+        "group": "File Explorer",
+        "order": 20
+      }
+    },
     "views": [
       {
         "id": "workspace-files",

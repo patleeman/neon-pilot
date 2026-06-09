@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { homedir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { type LocalCheckpointCommitFile, parseCheckpointDiffSections } from '../conversations/conversationCheckpointCommit.js';
@@ -56,6 +57,15 @@ export interface WorkspaceFileContent extends WorkspaceRootSnapshot {
   gitStatus: GitStatusChangeKind | null;
 }
 
+export interface WorkspaceResolvedPathLink {
+  input: string;
+  targetPath: string;
+  openPath: string;
+  kind: 'workspace' | 'absolute';
+  workspacePath: string | null;
+  entryKind: WorkspaceEntryKind;
+}
+
 export interface WorkspaceDiffOverlay extends WorkspaceRootSnapshot {
   path: string;
   gitStatus: GitStatusChangeKind | null;
@@ -98,10 +108,48 @@ function toWorkspaceRelative(root: string, absolutePath: string): string | null 
   if (!rel || rel === '.') {
     return '';
   }
-  if (rel.startsWith('..')) {
+  if (rel === '..' || rel.startsWith('../')) {
     return null;
   }
   return rel;
+}
+
+function normalizeTranscriptPathLinkTarget(input: string): string {
+  return input
+    .trim()
+    .replace(/:\d+(?::\d+)?$/, '')
+    .replace(/\\/g, '/');
+}
+
+function expandHomePath(input: string): string {
+  if (input === '~') {
+    return homedir();
+  }
+  if (input.startsWith('~/')) {
+    return resolve(homedir(), input.slice(2));
+  }
+  return input;
+}
+
+function resolveExistingAbsolutePath(input: string): string {
+  try {
+    const parent = dirname(input);
+    const name = basename(input);
+    const realParent = execFileSync('pwd', ['-P'], { cwd: parent || '/', encoding: 'utf-8' }).trim();
+    return name ? join(realParent, name) : realParent;
+  } catch {
+    return input;
+  }
+}
+
+function workspaceEntryKindFromStatType(type: string): WorkspaceEntryKind {
+  return type === 'directory' || type === 'file' || type === 'symlink' ? type : 'other';
+}
+
+function absolutePathRootParts(path: string): { root: string; relativePath: string } {
+  const root = dirname(path);
+  const relativePath = basename(path);
+  return relativePath ? { root, relativePath } : { root: path, relativePath: '' };
 }
 
 export function readWorkspaceRootSnapshot(cwd: string): WorkspaceRootSnapshot {
@@ -220,6 +268,77 @@ export async function readWorkspaceFile(cwd: string, relativePath: string, force
     content,
     gitStatus: statusForPath(snapshot, path),
   };
+}
+
+export async function resolveWorkspacePathLinks(cwd: string, targets: string[]): Promise<WorkspaceResolvedPathLink[]> {
+  const snapshot = readWorkspaceRootSnapshot(cwd);
+  const workspaceRoot = await createCoreWorkspaceRoot(snapshot.root, 'resolve workspace path links', ['metadata']);
+  const results: WorkspaceResolvedPathLink[] = [];
+  const seenTargets = new Set<string>();
+
+  for (const rawTarget of targets) {
+    const targetPath = normalizeTranscriptPathLinkTarget(rawTarget);
+    if (!targetPath || seenTargets.has(targetPath)) {
+      continue;
+    }
+    seenTargets.add(targetPath);
+
+    if (targetPath.startsWith('/') || targetPath.startsWith('~/')) {
+      const absolutePath = expandHomePath(targetPath);
+      const comparableAbsolutePath = resolveExistingAbsolutePath(absolutePath);
+      const workspacePath = toWorkspaceRelative(snapshot.root, comparableAbsolutePath);
+      if (workspacePath !== null) {
+        const path = normalizeRelativePath(workspacePath);
+        if (await workspaceRoot.exists(path)) {
+          const stats = await workspaceRoot.stat(path);
+          results.push({
+            input: rawTarget,
+            targetPath,
+            openPath: absolutePath,
+            kind: 'workspace',
+            workspacePath: path,
+            entryKind: workspaceEntryKindFromStatType(stats.type),
+          });
+        }
+        continue;
+      }
+
+      const absoluteRootParts = absolutePathRootParts(absolutePath);
+      const absoluteRoot = await createCoreWorkspaceRoot(absoluteRootParts.root, 'resolve absolute workspace path link', ['metadata']);
+      if (await absoluteRoot.exists(absoluteRootParts.relativePath)) {
+        const stats = await absoluteRoot.stat(absoluteRootParts.relativePath);
+        results.push({
+          input: rawTarget,
+          targetPath,
+          openPath: absolutePath,
+          kind: 'absolute',
+          workspacePath: null,
+          entryKind: workspaceEntryKindFromStatType(stats.type),
+        });
+      }
+      continue;
+    }
+
+    if (targetPath.startsWith('../')) {
+      continue;
+    }
+
+    const path = normalizeRelativePath(targetPath.replace(/^\.\/+/, ''));
+    if (!path || !(await workspaceRoot.exists(path))) {
+      continue;
+    }
+    const stats = await workspaceRoot.stat(path);
+    results.push({
+      input: rawTarget,
+      targetPath,
+      openPath: join(snapshot.root, path),
+      kind: 'workspace',
+      workspacePath: path,
+      entryKind: workspaceEntryKindFromStatType(stats.type),
+    });
+  }
+
+  return results;
 }
 
 export async function writeWorkspaceFile(cwd: string, relativePath: string, content: string): Promise<WorkspaceFileContent> {

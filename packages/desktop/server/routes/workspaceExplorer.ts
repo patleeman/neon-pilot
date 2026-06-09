@@ -10,6 +10,7 @@ import {
   listWorkspaceDirectory,
   moveWorkspacePath,
   readUncommittedDiffAsync,
+  resolveWorkspacePathLinks,
   readWorkspaceDiffOverlay,
   readWorkspaceFile,
   readWorkspaceRootSnapshot,
@@ -72,6 +73,23 @@ export function registerWorkspaceExplorerRoutes(
       res.json(await readWorkspaceFile(cwd, path, req.query.force === '1'));
     } catch (error) {
       logError('workspace file request failed', { message: error instanceof Error ? error.message : String(error) });
+      writeWorkspaceError(res, error);
+    }
+  });
+
+  router.post('/api/workspace/path-links/resolve', async (req, res) => {
+    try {
+      const cwd = resolveRequestCwd(context, req.body?.cwd);
+      const targets = Array.isArray(req.body?.targets)
+        ? req.body.targets.filter((target: unknown): target is string => typeof target === 'string')
+        : [];
+      if (targets.length === 0) {
+        res.json({ links: [] });
+        return;
+      }
+      res.json({ links: await resolveWorkspacePathLinks(cwd, targets) });
+    } catch (error) {
+      logError('workspace path link resolve failed', { message: error instanceof Error ? error.message : String(error) });
       writeWorkspaceError(res, error);
     }
   });

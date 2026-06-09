@@ -61,6 +61,7 @@ export interface ChatViewProps {
   activeCheckpointId?: string | null;
   onOpenBrowser?: () => void;
   onOpenFilePath?: (path: string) => void;
+  validatedFilePathTargets?: ReadonlySet<string>;
   onSubmitAskUserQuestion?: (presentation: AskUserQuestionPresentation, answers: AskUserQuestionAnswers) => Promise<void> | void;
   askUserQuestionDisplayMode?: 'inline' | 'composer';
   onResumeConversation?: () => Promise<void> | void;
@@ -143,7 +144,8 @@ function areChatViewPropsEqual(previous: ChatViewProps, next: ChatViewProps): bo
     previous.toolDefinitions === next.toolDefinitions &&
     (previous.remoteControlled ?? false) === (next.remoteControlled ?? false) &&
     (previous.remoteControlStatus ?? null) === (next.remoteControlStatus ?? null) &&
-    previous.precomputedRenderItems === next.precomputedRenderItems
+    previous.precomputedRenderItems === next.precomputedRenderItems &&
+    previous.validatedFilePathTargets === next.validatedFilePathTargets
   );
 }
 
@@ -171,6 +173,7 @@ export const ChatView = memo(function ChatView({
   activeCheckpointId,
   onOpenBrowser,
   onOpenFilePath,
+  validatedFilePathTargets,
   onSubmitAskUserQuestion,
   askUserQuestionDisplayMode = 'inline',
   onResumeConversation,
@@ -418,6 +421,7 @@ export const ChatView = memo(function ChatView({
       activeCheckpointId={activeCheckpointId}
       onOpenBrowser={onOpenBrowser}
       onOpenFilePath={onOpenFilePath}
+      validatedFilePathTargets={validatedFilePathTargets}
       onSubmitAskUserQuestion={onSubmitAskUserQuestion}
       askUserQuestionDisplayMode={askUserQuestionDisplayMode}
       onResumeConversation={onResumeConversation}
@@ -550,6 +554,7 @@ export const ChatView = memo(function ChatView({
               remoteControlled={remoteControlled}
               remoteControlStatus={remoteControlStatus}
               onOpenFilePath={onOpenFilePath}
+              validatedFilePathTargets={validatedFilePathTargets}
               onOpenCheckpoint={onOpenCheckpoint}
               onSelectionGesture={onReplyToSelection ? scheduleReplySelectionSync : undefined}
             />
