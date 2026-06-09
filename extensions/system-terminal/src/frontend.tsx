@@ -106,6 +106,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     let drainTimer: ReturnType<typeof window.setInterval> | null = null;
     let closed = false;
     let usingPty = false;
+    let degradedInputColumns = 0;
     let reportedDrainError = false;
     let requestedWorkbenchClose = false;
 
@@ -116,17 +117,27 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     };
 
     const echoInput = (data: string) => {
-      if (usingPty) return;
+      // A real PTY owns echoing and line editing. Only emulate minimal echo after
+      // the backend explicitly falls back to non-PTY mode, and never backspace
+      // past input we echoed ourselves; otherwise the shell prompt can be erased.
+      if (!terminalId || usingPty) return;
       switch (data) {
         case '\n':
         case '\r':
+          degradedInputColumns = 0;
           xterm.write('\r\n');
           break;
         case '\x7f':
-          xterm.write('\b \b');
+          if (degradedInputColumns > 0) {
+            degradedInputColumns -= 1;
+            xterm.write('\b \b');
+          }
           break;
         default:
-          if (data >= ' ') xterm.write(data);
+          if (data >= ' ') {
+            degradedInputColumns += data.length;
+            xterm.write(data);
+          }
       }
     };
 
