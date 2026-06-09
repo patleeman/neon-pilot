@@ -7,12 +7,44 @@
   "version": "0.1.0",
   "defaultEnabled": true,
   "contributes": {
+    "cliCommands": [
+      {
+        "id": "app-commands-list",
+        "command": "app-commands list",
+        "description": "List command-palette/app commands available to extensions.",
+        "action": "manageAppCommands",
+        "jsonDefault": true,
+        "inputAction": "list"
+      },
+      {
+        "id": "app-commands-run",
+        "command": "app-commands run",
+        "description": "Run a command-palette/app command by id: app-commands run <command-id> [--args <json>]",
+        "action": "manageAppCommands",
+        "jsonDefault": true,
+        "inputAction": "run"
+      }
+    ],
     "skills": [
       {
         "id": "neon-pilot-admin-cli",
         "title": "Neon Pilot Admin CLI",
         "description": "Use the Neon Pilot Admin CLI for self-administration of conversations, workspace/sidebar state, runs, automations, extensions, settings, and extension-contributed surfaces.",
         "path": "skills/neon-pilot-admin-cli/SKILL.md"
+      }
+    ]
+  },
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "manageAppCommands",
+        "handler": "manageAppCommands",
+        "title": "App Commands",
+        "worker": {
+          "enabled": true,
+          "inputActions": ["list", "run"]
+        }
       }
     ]
   }

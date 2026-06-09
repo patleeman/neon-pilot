@@ -15,6 +15,7 @@ export interface SettingsStore {
   readOverrides(): Record<string, unknown>;
   /** Updates one or more keys. */
   update(overrides: Record<string, unknown>): Record<string, unknown>;
+  reset(keys: string[]): Record<string, unknown>;
   /** Returns the active schema: all registered extension settings merged. */
   readSchema(): ExtensionSettingsRegistration[];
 }
@@ -110,6 +111,15 @@ export function createSettingsStore(stateRoot: string = getStateRoot()): Setting
 
       writeOverrides(overrides, stateRoot);
       return mergeDefaults(overrides, schema);
+    },
+
+    reset(keys: string[]): Record<string, unknown> {
+      const overrides = readRawOverrides(stateRoot);
+      for (const key of keys.map((entry) => entry.trim()).filter(Boolean)) {
+        delete overrides[key];
+      }
+      writeOverrides(overrides, stateRoot);
+      return mergeDefaults(overrides, listExtensionSettingsRegistrations(stateRoot));
     },
 
     readSchema(): ExtensionSettingsRegistration[] {

@@ -158,6 +158,7 @@
             "list",
             "create",
             "snapshot",
+            "delete",
             "reload",
             "smoke",
             "validate",
@@ -210,34 +211,104 @@
         "jsonDefault": true
       },
       {
+        "id": "extensions-create",
+        "command": "extensions create",
+        "description": "Create a runtime extension: extensions create <id> --name <name> [--template <template>]",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "create"
+      },
+      {
+        "id": "extensions-snapshot",
+        "command": "extensions snapshot",
+        "description": "Snapshot a runtime extension by id.",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "snapshot"
+      },
+      {
+        "id": "extensions-delete",
+        "command": "extensions delete",
+        "description": "Delete/uninstall a runtime extension by id. System extensions cannot be deleted.",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "delete",
+        "aliases": ["extensions uninstall"]
+      },
+      {
+        "id": "extensions-catalog",
+        "command": "extensions catalog",
+        "description": "List installable extension catalog entries.",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "listInstallable"
+      },
+      {
+        "id": "extensions-install",
+        "command": "extensions install",
+        "description": "Install an extension from the catalog: extensions install <id>",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "installCatalog"
+      },
+      {
+        "id": "extensions-update",
+        "command": "extensions update",
+        "description": "Update a catalog-installed extension: extensions update <id>",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "updateCatalog"
+      },
+      {
+        "id": "extensions-install-url",
+        "command": "extensions install-url",
+        "description": "Install an extension bundle from URL: extensions install-url <url> [--expected-id <id>]",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "installFromUrl"
+      },
+      {
+        "id": "extensions-install-marketplace",
+        "command": "extensions install-marketplace",
+        "description": "Install a marketplace behavior package as an extension: extensions install-marketplace <source> --type skill|instruction-pack|agent|template",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "installMarketplacePackage"
+      },
+      {
         "id": "extensions-validate",
         "command": "extensions validate",
         "description": "Validate an installed extension by id.",
-        "action": "manageExtension"
+        "action": "manageExtension",
+        "inputAction": "validate"
       },
       {
         "id": "extensions-reload",
         "command": "extensions reload",
         "description": "Reload an extension backend by id, or refresh registry state.",
-        "action": "manageExtension"
+        "action": "manageExtension",
+        "inputAction": "reload"
       },
       {
         "id": "extensions-smoke",
         "command": "extensions smoke",
         "description": "Run backend smoke checks for an installed extension.",
-        "action": "manageExtension"
+        "action": "manageExtension",
+        "inputAction": "smoke"
       },
       {
         "id": "extensions-enable",
         "command": "extensions enable",
         "description": "Enable an installed extension.",
-        "action": "manageExtension"
+        "action": "manageExtension",
+        "inputAction": "enable"
       },
       {
         "id": "extensions-disable",
         "command": "extensions disable",
         "description": "Disable an installed extension.",
-        "action": "manageExtension"
+        "action": "manageExtension",
+        "inputAction": "disable"
       },
       {
         "id": "extensions-paths",

@@ -34,11 +34,15 @@ Use the `neon-pilot` CLI as the primary Neon Pilot self-administration surface w
    neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json
    ```
 
-4. For extension work, validate and reload after edits:
+4. For extension work, use the lifecycle CLI and validate/reload after edits:
 
    ```sh
+   neon-pilot extensions list --json
+   neon-pilot extensions catalog --json
+   neon-pilot extensions install system-example --json
    neon-pilot extensions validate system-example
    neon-pilot extensions reload system-example
+   neon-pilot extensions delete system-example --json
    ```
 
 5. Use normal shell commands for repository work such as `pnpm`, `git`, `rg`, and file validation.
@@ -95,6 +99,41 @@ Vocabulary:
 - **archived** — hidden from the normal sidebar list.
 - **running** — avoid this term unless a command explicitly defines it; it does not mean open/sidebar.
 
+## Extension, settings, and app command control
+
+Use extension lifecycle commands before falling back to lower-level tools:
+
+```sh
+neon-pilot extensions list --json
+neon-pilot extensions catalog --json
+neon-pilot extensions create system-example --name "Example" --json
+neon-pilot extensions install <catalog-id> --json
+neon-pilot extensions update <catalog-id> --json
+neon-pilot extensions install-url <bundle-url> --expected-id <id> --json
+neon-pilot extensions install-marketplace <source> --type skill --json
+neon-pilot extensions enable <id> --json
+neon-pilot extensions disable <id> --json
+neon-pilot extensions snapshot <id> --json
+neon-pilot extensions delete <id> --json
+```
+
+Settings are schema-backed. Read schema before writes; use JSON values for `set`:
+
+```sh
+neon-pilot settings schema --json
+neon-pilot settings get <key> --json
+neon-pilot settings set <key> 'true' --json
+neon-pilot settings set <key> '"string value"' --json
+neon-pilot settings reset <key> --json
+```
+
+App/command-palette commands are available as an escape hatch. Prefer specific CLI commands when they exist; inspect before running command IDs with side effects:
+
+```sh
+neon-pilot app-commands list --json
+neon-pilot app-commands run <command-id> --args '{"some":"json"}' --json
+```
+
 ## Background work and automations
 
 Use first-class CLI commands for durable work and scheduled automation:
@@ -129,6 +168,7 @@ neon-pilot conversations transcript update <id> <block-id> --type text --data '{
 
 - Core owns the `neon-pilot` CLI shell and built-in commands such as `commands`, `help`, `protocol`, and `cli status/install/uninstall`.
 - Extensions contribute product-specific CLI commands through `contributes.cliCommands`.
+- `app-commands run` triggers extension/app commands by ID and is a broad escape hatch; prefer narrower lifecycle/settings/conversation/runs CLI commands for predictable JSON behavior.
 - Built-in system extensions contribute the primary self-administration surfaces: `extensions ...`, `settings ...`, and `conversations ...`.
 - The agent shell receives Neon Pilot's channel-local CLI bin directory automatically. User shell installation is opt-in through `neon-pilot cli install`.
 - Do not edit internal runtime files directly when an extension-contributed CLI command exists for the same operation.

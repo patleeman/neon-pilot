@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
   createRuntimeExtension,
+  deleteRuntimeExtension,
   invalidateExtensionRegistryReadCaches,
   installCatalogExtension as installCatalogExtensionFromHost,
   installExtensionBundleFromUrl,
@@ -104,6 +105,11 @@ export async function snapshotExtension(input: ExtensionIdInput, _ctx: Extension
   return { ok: true, ...((await snapshotRuntimeExtension(extensionId)) as object) };
 }
 
+export async function deleteExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
+  const extensionId = requireExtensionId(input);
+  return deleteRuntimeExtension(extensionId);
+}
+
 export async function reloadExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
   const extensionId = requireExtensionId(input);
   const result = await reloadExtensionBackend(extensionId);
@@ -170,6 +176,7 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'list') return listExtensions(body, ctx);
   if (action === 'create') return createExtension(body, ctx);
   if (action === 'snapshot') return snapshotExtension(body as ExtensionIdInput, ctx);
+  if (action === 'delete') return deleteExtension(body as ExtensionIdInput, ctx);
   if (action === 'reload') return reloadExtension(body as ExtensionIdInput, ctx);
   if (action === 'smoke') return smokeExtension(body as ExtensionIdInput, ctx);
   if (action === 'validate') return validateExtension(body, ctx);
@@ -206,6 +213,14 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
   const command = typeof cli.command === 'string' ? cli.command : '';
   const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
   if (command === 'extensions list') return { ...body, action: 'list' };
+  if (command === 'extensions create') return { ...body, action: 'create', id: flags.id ?? args[0], name: flags.name, description: flags.description, template: flags.template };
+  if (command === 'extensions snapshot') return { ...body, action: 'snapshot', extensionId: args[0] };
+  if (command === 'extensions delete' || command === 'extensions uninstall') return { ...body, action: 'delete', extensionId: args[0] };
+  if (command === 'extensions catalog') return { ...body, action: 'listInstallable' };
+  if (command === 'extensions install') return { ...body, action: 'installCatalog', id: args[0] };
+  if (command === 'extensions update') return { ...body, action: 'updateCatalog', id: args[0] };
+  if (command === 'extensions install-url') return { ...body, action: 'installFromUrl', url: args[0] ?? flags.url, expectedId: flags['expected-id'] ?? flags.expectedId };
+  if (command === 'extensions install-marketplace') return { ...body, action: 'installMarketplacePackage', packageType: flags.type ?? flags['package-type'], source: args[0] ?? flags.source, ecosystem: flags.ecosystem, target: flags.target, sourceBaseDir: flags['source-base-dir'] };
   if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0], packageRoot };
   if (command === 'extensions reload')
     return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };

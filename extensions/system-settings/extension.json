@@ -87,7 +87,16 @@
         "id": "settings-set",
         "command": "settings set",
         "description": "Update a manifest-declared non-secret setting by key and JSON value.",
-        "action": "manageSettings"
+        "action": "manageSettings",
+        "inputAction": "set"
+      },
+      {
+        "id": "settings-reset",
+        "command": "settings reset",
+        "description": "Reset one or more settings to manifest defaults: settings reset <key...>",
+        "action": "manageSettings",
+        "jsonDefault": true,
+        "inputAction": "reset"
       }
     ],
     "views": [
@@ -132,7 +141,7 @@
         "title": "Manage settings",
         "worker": {
           "enabled": true,
-          "inputActions": ["list", "schema", "get", "set"]
+          "inputActions": ["list", "schema", "get", "set", "reset"]
         }
       },
       {

@@ -7,6 +7,7 @@ import {
 import {
   readExtensionSettings,
   readExtensionSettingsSchema,
+  resetExtensionSettings,
   updateExtensionSettings,
   type ExtensionSettingRegistration,
 } from '@neon-pilot/extensions/backend/settings';
@@ -91,6 +92,16 @@ export async function manageSettings(input: unknown, _ctx: ExtensionBackendConte
     if (!schemaByKey(schema).has(key)) throw new Error(`Unknown setting: ${key}`);
     const settings = await updateExtensionSettings({ [key]: parseCliValue(rawValue) });
     return { key, value: settings[key], settings, text: `Set ${key}=${JSON.stringify(settings[key])}` };
+  }
+
+  if (action === 'reset') {
+    const keys = args.map((key) => key.trim()).filter(Boolean);
+    if (keys.length === 0) throw new Error('at least one setting key is required.');
+    const schema = await readExtensionSettingsSchema();
+    const known = schemaByKey(schema);
+    for (const key of keys) if (!known.has(key)) throw new Error(`Unknown setting: ${key}`);
+    const settings = await resetExtensionSettings(keys);
+    return { keys, settings, text: `Reset ${keys.join(', ')}.` };
   }
 
   throw new Error(`Unsupported settings action: ${action}`);

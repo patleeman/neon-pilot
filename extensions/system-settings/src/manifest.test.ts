@@ -43,13 +43,14 @@ describe('system-settings manifest', () => {
         expect.objectContaining({ command: 'settings schema', action: 'manageSettings' }),
         expect.objectContaining({ command: 'settings get', action: 'manageSettings' }),
         expect.objectContaining({ command: 'settings set', action: 'manageSettings' }),
+        expect.objectContaining({ command: 'settings reset', action: 'manageSettings' }),
       ]),
     );
     expect(manifest.backend.actions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: 'manageSettings',
-          worker: expect.objectContaining({ enabled: true, inputActions: ['list', 'schema', 'get', 'set'] }),
+          worker: expect.objectContaining({ enabled: true, inputActions: ['list', 'schema', 'get', 'set', 'reset'] }),
         }),
         expect.objectContaining({
           id: 'manageCli',

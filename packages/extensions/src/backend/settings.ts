@@ -20,3 +20,7 @@ export async function readExtensionSettingsSchema(): Promise<ExtensionSettingReg
 export async function updateExtensionSettings(_overrides: Record<string, unknown>): Promise<Record<string, unknown>> {
   throw new Error('@neon-pilot/extensions/backend/settings must be resolved by the Neon Pilot host runtime.');
 }
+
+export async function resetExtensionSettings(_keys: string[]): Promise<Record<string, unknown>> {
+  throw new Error('@neon-pilot/extensions/backend/settings must be resolved by the Neon Pilot host runtime.');
+}

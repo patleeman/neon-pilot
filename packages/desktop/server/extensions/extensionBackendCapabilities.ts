@@ -75,6 +75,7 @@ interface ExtensionBackendCapabilitySettings {
   read(stateRoot?: string): Promise<unknown> | unknown;
   readSchema(stateRoot?: string): Promise<unknown> | unknown;
   update(overrides: Record<string, unknown>, stateRoot?: string): Promise<unknown> | unknown;
+  reset(keys: string[], stateRoot?: string): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityEvents {
@@ -975,6 +976,12 @@ function dispatchSettingsCapability(settings: ExtensionBackendCapabilitySettings
     if (!overrides) throw new Error('Settings overrides must be an object.');
     return settings.update(overrides, stateRoot);
   }
+  if (request.operation === 'reset') {
+    const input = normalizeRecordInput(request.input, 'Settings');
+    const keys = optionalStringArray(input.keys, 'Settings reset keys');
+    if (!keys) throw new Error('Settings reset keys must be an array of strings.');
+    return settings.reset(keys, stateRoot);
+  }
 
   throw new Error(`Unsupported settings capability operation: ${request.operation}`);
 }
@@ -1633,6 +1640,7 @@ export function createExtensionBackendCapabilityDispatcher(
     read: (stateRoot?: string) => createSettingsStore(stateRoot).read(),
     readSchema: (stateRoot?: string) => createSettingsStore(stateRoot).readSchema(),
     update: (overrides: Record<string, unknown>, stateRoot?: string) => createSettingsStore(stateRoot).update(overrides),
+    reset: (keys: string[], stateRoot?: string) => createSettingsStore(stateRoot).reset(keys),
   };
   const shell = options.shell ?? createExtensionShellCapability({ pathDirs: listEnabledExtensionBinDirs() });
   const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnHandle>();

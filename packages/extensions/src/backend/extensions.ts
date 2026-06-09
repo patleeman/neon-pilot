@@ -113,6 +113,10 @@ export async function snapshotRuntimeExtension(_extensionId: string): Promise<Ru
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
+export async function deleteRuntimeExtension(_extensionId: string): Promise<RuntimeExtensionResult> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
 export async function validateExtensionPackage(_options: { extensionId?: string; packageRoot?: string }): Promise<ExtensionDoctorReport> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }

@@ -12,6 +12,7 @@ type SettingsStore = {
   read(): Record<string, unknown>;
   readSchema(): unknown[];
   update(overrides: Record<string, unknown>): Record<string, unknown>;
+  reset(keys: string[]): Record<string, unknown>;
 };
 
 async function createHostSettingsStore(): Promise<SettingsStore> {
@@ -47,4 +48,13 @@ export async function updateExtensionSettings(overrides: Record<string, unknown>
   }
   const store = await createHostSettingsStore();
   return store.update(overrides);
+}
+
+export async function resetExtensionSettings(keys: string[]): Promise<Record<string, unknown>> {
+  const bridge = getWorkerCapabilityBridge();
+  if (bridge) {
+    return bridge('settings', 'reset', { keys }) as Promise<Record<string, unknown>>;
+  }
+  const store = await createHostSettingsStore();
+  return store.reset(keys);
 }

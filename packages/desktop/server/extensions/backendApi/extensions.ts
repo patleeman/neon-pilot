@@ -66,6 +66,11 @@ export async function snapshotRuntimeExtension(extensionId: string) {
   return module.snapshotRuntimeExtension(extensionId);
 }
 
+export async function deleteRuntimeExtension(extensionId: string) {
+  const module = await importExtensionLifecycle();
+  return module.deleteRuntimeExtension(extensionId);
+}
+
 export async function reloadExtensionBackend(extensionId: string) {
   const module = await importExtensionBackend();
   return module.reloadExtensionBackend(extensionId);
