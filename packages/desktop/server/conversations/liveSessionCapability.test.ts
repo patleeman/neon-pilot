@@ -162,7 +162,7 @@ describe('createLiveSessionCapability', () => {
       sessionId: 'test-session',
       cwd: '/repo',
       title: '',
-      session: { isStreaming: false },
+      session: { isStreaming: false, sessionFile: '/sessions/test-session.jsonl' },
       listeners: new Set(),
       lastContextUsage: undefined,
       lastContextUsageJson: null,
@@ -235,6 +235,21 @@ describe('createLiveSessionCapability', () => {
     const result = await createLiveSessionCapability({}, createContext());
 
     expect(result.bootstrap?.sessionDetail?.meta?.workspaceCwd).toBeNull();
+  });
+
+  it('submits the initial prompt when creating a live session with prompt text', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+
+    await createLiveSessionCapability({ prompt: 'Help me create an automation.' }, createContext());
+
+    expect(submitLocalPromptSessionMock).toHaveBeenCalledTimes(1);
+    expect(submitLocalPromptSessionMock).toHaveBeenCalledWith(
+      'test-session',
+      'Help me create an automation.',
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 
   it('calls appendConversationWorkspaceMetadata in the reserved flow', async () => {

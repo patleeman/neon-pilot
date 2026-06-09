@@ -88,6 +88,12 @@ export interface CreateLiveSessionCapabilityInput {
   model?: string | null;
   thinkingLevel?: string | null;
   serviceTier?: string | null;
+  prompt?: string;
+  behavior?: 'steer' | 'followUp';
+  images?: Array<{ data: string; mimeType: string; name?: string }>;
+  attachmentRefs?: unknown;
+  contextMessages?: unknown;
+  relatedConversationIds?: unknown;
   allowedToolNames?: string[];
   reservedSessionFile?: string;
 }
@@ -208,6 +214,33 @@ export interface ForkLiveSessionCapabilityInput {
 }
 
 export class LiveSessionCapabilityInputError extends Error {}
+
+function hasInitialPromptPayload(input: CreateLiveSessionCapabilityInput): boolean {
+  const text = typeof input.prompt === 'string' ? input.prompt.trim() : '';
+  return text.length > 0 || (Array.isArray(input.images) && input.images.length > 0) || input.attachmentRefs !== undefined;
+}
+
+async function submitInitialPromptForCreatedSession(
+  conversationId: string,
+  input: CreateLiveSessionCapabilityInput,
+  context: LiveSessionCapabilityContext,
+): Promise<void> {
+  if (!hasInitialPromptPayload(input)) {
+    return;
+  }
+  await submitLiveSessionPromptCapability(
+    {
+      conversationId,
+      text: input.prompt,
+      behavior: input.behavior,
+      images: input.images,
+      attachmentRefs: input.attachmentRefs,
+      contextMessages: input.contextMessages,
+      relatedConversationIds: input.relatedConversationIds,
+    },
+    context,
+  );
+}
 
 async function buildLiveSessionOptionsAsync(
   context: LiveSessionCapabilityContext,
@@ -581,6 +614,8 @@ export async function createLiveSessionCapability(
       });
     }
     const preferencesAtMs = performance.now();
+    await submitInitialPromptForCreatedSession(resumed.id, input, context);
+    const initialPromptAtMs = performance.now();
     return {
       id: resumed.id,
       sessionFile: reservedSessionFile,
@@ -592,7 +627,8 @@ export async function createLiveSessionCapability(
         capabilityResumeReservedSessionMs: Math.round(resumedAtMs - resumeStartedAtMs),
         capabilityWorkspaceMetadataMs: Math.round(workspaceMetadataAtMs - resumedAtMs),
         capabilityReservedPreferencesMs: Math.round(preferencesAtMs - workspaceMetadataAtMs),
-        capabilityTotalMs: Math.round(preferencesAtMs - optionsStartedAtMs),
+        capabilityInitialPromptMs: Math.round(initialPromptAtMs - preferencesAtMs),
+        capabilityTotalMs: Math.round(initialPromptAtMs - optionsStartedAtMs),
       },
     };
   }
@@ -608,6 +644,8 @@ export async function createLiveSessionCapability(
   const workspaceMetadataAtMs = performance.now();
   const bootstrap = buildCreatedLiveSessionBootstrap(created.id, created.sessionFile, resolvedWorkspaceCwd);
   const bootstrapAtMs = performance.now();
+  await submitInitialPromptForCreatedSession(created.id, input, context);
+  const initialPromptAtMs = performance.now();
 
   return {
     ...created,
@@ -618,6 +656,7 @@ export async function createLiveSessionCapability(
       capabilityCreateLocalSessionMs: Math.round(createdAtMs - createStartedAtMs),
       capabilityWorkspaceMetadataMs: Math.round(workspaceMetadataAtMs - createdAtMs),
       capabilityBootstrapMs: Math.round(bootstrapAtMs - workspaceMetadataAtMs),
+      capabilityInitialPromptMs: Math.round(initialPromptAtMs - bootstrapAtMs),
     },
     ...(bootstrap ? { bootstrap } : {}),
   };
