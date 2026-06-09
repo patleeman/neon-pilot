@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { inspectMcpSettings, mcpTool, saveExplicitMcpConfig } from './backend.js';
@@ -21,9 +25,27 @@ vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
 
 const core = await import('@neon-pilot/extensions/backend/mcp');
 
+function readManifest(): {
+  backend: { actions: Array<{ id: string; worker?: { enabled?: boolean; inputActions?: string[] } }> };
+  contributes: { tools: Array<{ id: string; inputSchema?: { properties?: { action?: { enum?: string[] } } } }> };
+} {
+  return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'extension.json'), 'utf-8')) as ReturnType<typeof readManifest>;
+}
+
 function buildHandler() {
   return (params: unknown) => mcpTool(params);
 }
+
+describe('extension manifest', () => {
+  it('allows worker execution for every advertised MCP tool action', () => {
+    const manifest = readManifest();
+    const advertisedActions = manifest.contributes.tools.find((tool) => tool.id === 'mcp')?.inputSchema?.properties?.action?.enum;
+    const workerActions = manifest.backend.actions.find((action) => action.id === 'mcpTool')?.worker?.inputActions;
+
+    expect(advertisedActions).toEqual(['list', 'info', 'grep', 'call', 'auth', 'logout']);
+    expect(workerActions).toEqual(advertisedActions);
+  });
+});
 
 describe('inspectMcpSettings', () => {
   function mockSettingsState() {
