@@ -178,6 +178,18 @@ describe('desktop conversation state fallback', () => {
     ).toEqual({ allowQueuedPrompts: true, defaultComposerBehavior: 'followUp', streamControlsActive: false });
   });
 
+  it('treats idle session metadata as authoritative over stale streaming snapshots', () => {
+    expect(
+      resolveConversationComposerRunState({
+        streamIsStreaming: true,
+        sessionIsRunning: false,
+        bootstrapLiveSessionIsStreaming: true,
+        desktopLiveSessionIsStreaming: true,
+        hasStaleTurnState: false,
+      }),
+    ).toEqual({ allowQueuedPrompts: false, defaultComposerBehavior: undefined, streamControlsActive: false });
+  });
+
   it('syncs active conversation meta back into the session list', () => {
     const sessions = [
       {
