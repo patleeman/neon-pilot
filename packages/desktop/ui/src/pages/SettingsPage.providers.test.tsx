@@ -561,9 +561,8 @@ describe('SettingsPage provider model editor', () => {
 
     expect(startProviderOAuthLoginMock).toHaveBeenCalledWith('openai-codex');
     expect(openExternalUrl).toHaveBeenCalledWith('https://auth.openai.com/oauth');
-    const oauthUrlInput = container.querySelector('#settings-provider-oauth-url');
-    expect(oauthUrlInput).toBeInstanceOf(HTMLInputElement);
-    expect((oauthUrlInput as HTMLInputElement).value).toBe('https://auth.openai.com/oauth');
+    const verificationLink = container.querySelector('a[href="https://auth.openai.com/oauth"]');
+    expect(verificationLink).toBeInstanceOf(HTMLAnchorElement);
     expect(container.textContent).toContain('ABCD-1234');
 
     const copyCodeButton = queryButton(container, 'Copy code');
