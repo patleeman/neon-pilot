@@ -3952,8 +3952,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                 {selectedProviderLogin?.status === 'running' && (
                                   <div className="space-y-2 border-t border-border-subtle pt-3">
                                     <p className="text-[12px] text-secondary">
-                                      OAuth login started.
-                                      {selectedProviderLogin.authUrl ? (
+                                      {selectedProviderLogin.deviceCode
+                                        ? 'OAuth login started. Copy the device code below, then open the verification page and paste it there.'
+                                        : 'OAuth login started.'}
+                                      {!selectedProviderLogin.deviceCode && selectedProviderLogin.authUrl ? (
                                         <>
                                           {' '}
                                           <a
@@ -3979,49 +3981,62 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                       <p className="text-[12px] text-secondary">Waiting for authorization…</p>
                                     )}
                                     {selectedProviderLogin.deviceCode && (
-                                      <div className="space-y-2 border-t border-border-subtle pt-3">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                          <div>
-                                            <p className="ui-card-meta">Device code</p>
+                                      <div className="space-y-3 border-t border-border-subtle pt-3">
+                                        <div className="space-y-1.5">
+                                          <p className="text-[12px] font-medium text-primary">1. Copy this device code</p>
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
                                             <p
                                               id="settings-provider-oauth-device-code"
-                                              className="select-all font-mono text-[26px] font-semibold leading-tight text-primary"
+                                              className="select-all font-mono text-[30px] font-semibold leading-tight tracking-wide text-primary"
                                             >
                                               {selectedProviderLogin.deviceCode.userCode}
                                             </p>
+                                            <ToolbarButton
+                                              type="button"
+                                              onClick={() => {
+                                                void handleCopyProviderOAuthUrl(selectedProviderLogin.deviceCode?.userCode ?? '');
+                                              }}
+                                              disabled={oauthAction !== null}
+                                            >
+                                              Copy code
+                                            </ToolbarButton>
                                           </div>
-                                          <ToolbarButton
-                                            type="button"
-                                            onClick={() => {
-                                              void handleCopyProviderOAuthUrl(selectedProviderLogin.deviceCode?.userCode ?? '');
-                                            }}
-                                            disabled={oauthAction !== null}
-                                          >
-                                            Copy code
-                                          </ToolbarButton>
                                         </div>
-                                        <p className="text-[12px] text-secondary">
-                                          Enter this code at{' '}
-                                          <a
-                                            href={selectedProviderLogin.deviceCode.verificationUri}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            title={selectedProviderLogin.deviceCode.verificationUri}
-                                            className="underline text-interactive hover:text-interactive-hover"
-                                            onClick={(e) => {
-                                              e.preventDefault();
-                                              void handleOpenProviderOAuthUrl(selectedProviderLogin.deviceCode?.verificationUri ?? '');
-                                            }}
-                                          >
-                                            {selectedProviderLogin.deviceCode.verificationUri}
-                                          </a>
-                                          {typeof selectedProviderLogin.deviceCode.expiresInSeconds === 'number'
-                                            ? ` before it expires in ${selectedProviderLogin.deviceCode.expiresInSeconds} seconds.`
-                                            : '.'}
-                                        </p>
+                                        <div className="space-y-1.5">
+                                          <p className="text-[12px] font-medium text-primary">2. Open the verification page and paste the code</p>
+                                          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                                            <a
+                                              href={selectedProviderLogin.deviceCode.verificationUri}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              title={selectedProviderLogin.deviceCode.verificationUri}
+                                              className="min-w-0 truncate text-[12px] text-interactive underline hover:text-interactive-hover"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                void handleOpenProviderOAuthUrl(selectedProviderLogin.deviceCode?.verificationUri ?? '');
+                                              }}
+                                            >
+                                              {selectedProviderLogin.deviceCode.verificationUri}
+                                            </a>
+                                            <ToolbarButton
+                                              type="button"
+                                              onClick={() => {
+                                                void handleOpenProviderOAuthUrl(selectedProviderLogin.deviceCode?.verificationUri ?? '');
+                                              }}
+                                              disabled={oauthAction !== null}
+                                            >
+                                              Open page
+                                            </ToolbarButton>
+                                          </div>
+                                          {typeof selectedProviderLogin.deviceCode.expiresInSeconds === 'number' && (
+                                            <p className="text-[12px] text-secondary">
+                                              Code expires in {selectedProviderLogin.deviceCode.expiresInSeconds} seconds.
+                                            </p>
+                                          )}
+                                        </div>
                                       </div>
                                     )}
-                                    {selectedProviderLogin.authUrl && (
+                                    {!selectedProviderLogin.deviceCode && selectedProviderLogin.authUrl && (
                                       <div className="space-y-2 rounded-md border border-border-subtle bg-elevated/50 p-2.5">
                                         <label className="ui-card-meta" htmlFor="settings-provider-oauth-url">
                                           OAuth login URL
