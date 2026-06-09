@@ -23,6 +23,7 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Conversation context](conversation-context.md) — attach files, folders, and generated context
 - [Conversations](conversations.md) — live threads, branching, async follow-through
 - [Projects](projects.md) — project records and workspace metadata
+- [Embedded Personal Agents](embedded-personal-agents.md) — OpenClaw/Hermes-inspired personal agents, soul documents, gateways, automations, and sidebar shape
 - [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy

@@ -93,6 +93,24 @@ The AI actor executing a user request. An agent can call tools, read context, pr
 
 Use **agent** for the executing AI worker. Use **assistant message** for text the agent writes into a conversation.
 
+### Personal agent
+
+A user-created long-lived agent identity with its own name, persona, instruction files, skills, memory scope, enabled gateways, automations, model/runtime defaults, and conversations.
+
+Use **personal agent** for the user-facing entity that can be selected, configured, contacted, and resumed across sessions. Do not use **subagent** for this durable entity.
+
+### Agent profile
+
+The persisted configuration record for a personal agent: identity, persona, default model/runtime, permissions, connected gateways, schedule bindings, memory paths, and prompt assembly inputs.
+
+Use **agent profile** for storage/API details. Use **personal agent** in product copy.
+
+### Soul document
+
+A primary instruction file that defines a personal agent's durable personality, boundaries, preferences, and collaboration style.
+
+Use **soul document** only for the first-class persona file attached to a personal agent. It is an instruction file, not knowledge base content.
+
 ### Prompt assembly
 
 The process that builds the agent’s effective prompt from system files, instruction files, AGENTS.md/CLAUDE.md files, available skills, selected context, tools, and runtime metadata.
