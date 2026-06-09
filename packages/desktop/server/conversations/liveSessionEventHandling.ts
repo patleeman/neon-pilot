@@ -373,7 +373,7 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
 
   if (event.type === 'message_update') {
     const assistantEvent = event.assistantMessageEvent;
-    if (assistantEvent.type === 'text_delta') {
+    if (assistantEvent.type === 'text_delta' && assistantEvent.delta) {
       entry.currentAssistantMessageText = `${entry.currentAssistantMessageText ?? ''}${assistantEvent.delta}`;
       entry.currentAssistantMessageHadDelta = true;
     }

@@ -236,6 +236,51 @@ describe('applyDesktopConversationStreamEvent', () => {
     expect(idleToolEnd).toBe(stream);
   });
 
+  it('ignores empty streamed transcript deltas', () => {
+    const stream = {
+      blocks: [
+        {
+          type: 'tool_use' as const,
+          id: 'tool-1',
+          toolCallId: 'tool-1',
+          tool: 'bash',
+          input: {},
+          output: 'existing',
+          status: 'running' as const,
+          running: true,
+          ts: '2026-05-24T00:00:00.000Z',
+        },
+      ],
+      blockOffset: 0,
+      totalBlocks: 1,
+      hasSnapshot: true,
+      isStreaming: true,
+      isCompacting: false,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    expect(applyDesktopConversationStreamEvent(stream, { type: 'text_delta', delta: '' })).toBe(stream);
+    expect(applyDesktopConversationStreamEvent(stream, { type: 'thinking_delta', delta: '' })).toBe(stream);
+    expect(applyDesktopConversationStreamEvent(stream, { type: 'tool_update', toolCallId: 'tool-1', partialResult: '' })).toBe(stream);
+    expect(
+      applyDesktopConversationStreamEvent(stream, {
+        type: 'tool_update',
+        toolCallId: 'tool-1',
+        partialResult: { content: [{ text: '' }] },
+      }),
+    ).toBe(stream);
+  });
+
   it('appends an error block for failed compaction events', () => {
     const stream = {
       blocks: [{ type: 'text' as const, id: 'text-1', text: 'Existing text', ts: '2026-05-24T00:00:00.000Z' }],
@@ -891,6 +936,59 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(latestState?.state).toBe(previousState);
+  });
+
+  it('keeps live state healthy when a malformed SSE frame arrives', async () => {
+    vi.spyOn(api, 'desktopConversationState').mockResolvedValue({
+      conversationId: 'conv-1',
+      sessionDetail: null,
+      bootstrap: null,
+      liveSession: { live: true, title: null, isStreaming: true, hasStaleTurnState: false },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'Loaded transcript', ts: '2026-05-24T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    const previousState = latestState?.state;
+    act(() => {
+      eventSources[0]?.onmessage?.(new MessageEvent('message', { data: '{' }));
+    });
+
+    expect(latestState?.error).toBeNull();
+    expect(latestState?.state).toBe(previousState);
+    expect(latestState?.state?.stream.isStreaming).toBe(true);
   });
 
   it('refetches conversation state when reconnect is requested after a same-conversation cwd change', async () => {

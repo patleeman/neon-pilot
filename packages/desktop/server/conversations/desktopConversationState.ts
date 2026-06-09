@@ -451,6 +451,9 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
       return { ...prev, presence: event.state };
 
     case 'text_delta': {
+      if (!event.delta) {
+        return prev;
+      }
       const blocks = [...prev.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'text') {
@@ -466,6 +469,9 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'thinking_delta': {
+      if (!event.delta) {
+        return prev;
+      }
       const blocks = [...prev.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'thinking') {
@@ -503,12 +509,15 @@ export function applyDesktopConversationStreamEvent(prev: DesktopConversationStr
     }
 
     case 'tool_update': {
+      const partialResult = event.partialResult as { content?: Array<{ text?: string }> } | string | undefined;
+      const partialText = typeof partialResult === 'string' ? partialResult : (partialResult?.content?.[0]?.text ?? '');
+      if (!partialText) {
+        return prev;
+      }
       const index = findLastToolUseIndex(prev.blocks, event.toolCallId);
       if (index >= 0) {
         const blocks = [...prev.blocks];
         const block = blocks[index];
-        const partialResult = event.partialResult as { content?: Array<{ text?: string }> } | string | undefined;
-        const partialText = typeof partialResult === 'string' ? partialResult : (partialResult?.content?.[0]?.text ?? '');
         blocks[index] = {
           ...block,
           output: `${block.output ?? ''}${partialText}`,

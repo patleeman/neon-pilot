@@ -87,6 +87,20 @@ function buildUserMessageBlock(message: {
   return block?.type === 'user' ? block : null;
 }
 
+function readToolPartialText(partialResult: unknown): string {
+  if (typeof partialResult === 'string') return partialResult;
+  if (partialResult && typeof partialResult === 'object' && 'content' in partialResult) {
+    const content = (partialResult as { content?: unknown }).content;
+    if (Array.isArray(content)) {
+      const first = content[0];
+      if (first && typeof first === 'object' && typeof (first as { text?: unknown }).text === 'string') {
+        return (first as { text: string }).text;
+      }
+    }
+  }
+  return '';
+}
+
 export function toSse(event: AgentSessionEvent): SseEvent | null {
   switch (event.type) {
     case 'agent_start':
@@ -117,10 +131,10 @@ export function toSse(event: AgentSessionEvent): SseEvent | null {
     case 'message_update': {
       const assistantEvent = event.assistantMessageEvent;
       if (assistantEvent.type === 'text_delta') {
-        return { type: 'text_delta', delta: assistantEvent.delta };
+        return assistantEvent.delta ? { type: 'text_delta', delta: assistantEvent.delta } : null;
       }
       if (assistantEvent.type === 'thinking_delta') {
-        return { type: 'thinking_delta', delta: assistantEvent.delta };
+        return assistantEvent.delta ? { type: 'thinking_delta', delta: assistantEvent.delta } : null;
       }
       return null;
     }
@@ -136,6 +150,9 @@ export function toSse(event: AgentSessionEvent): SseEvent | null {
     }
 
     case 'tool_execution_update':
+      if (!readToolPartialText(event.partialResult)) {
+        return null;
+      }
       return {
         type: 'tool_update',
         toolCallId: event.toolCallId,

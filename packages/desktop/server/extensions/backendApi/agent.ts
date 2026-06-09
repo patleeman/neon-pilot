@@ -267,18 +267,28 @@ function readNestedTextDelta(event: unknown): string | null {
   return assistantEvent.type === 'text_delta' && typeof assistantEvent.delta === 'string' ? assistantEvent.delta : null;
 }
 
+function readPartialToolText(partialResult: unknown): string {
+  if (typeof partialResult === 'string') return partialResult;
+  if (isRecord(partialResult) && Array.isArray(partialResult.content)) {
+    const first = partialResult.content[0];
+    if (isRecord(first) && typeof first.text === 'string') return first.text;
+  }
+  return '';
+}
+
 function normalizeSessionEvent(event: unknown): ExtensionAgentConversationStreamEvent | null {
   if (!isRecord(event)) return null;
   const textDelta = readNestedTextDelta(event);
-  if (textDelta !== null) return { type: 'text_delta', delta: textDelta };
+  if (textDelta !== null) return textDelta ? { type: 'text_delta', delta: textDelta } : null;
   if (event.type === 'agent_start') return { type: 'agent_start' };
   if (event.type === 'agent_end') return { type: 'agent_end' };
   if (event.type === 'turn_end') return { type: 'turn_end' };
-  if (event.type === 'thinking_delta' && typeof event.delta === 'string') return { type: 'thinking_delta', delta: event.delta };
+  if (event.type === 'thinking_delta' && typeof event.delta === 'string')
+    return event.delta ? { type: 'thinking_delta', delta: event.delta } : null;
   if (event.type === 'message_update' && isRecord(event.assistantMessageEvent)) {
     const assistantEvent = event.assistantMessageEvent;
     if (assistantEvent.type === 'thinking_delta' && typeof assistantEvent.delta === 'string')
-      return { type: 'thinking_delta', delta: assistantEvent.delta };
+      return assistantEvent.delta ? { type: 'thinking_delta', delta: assistantEvent.delta } : null;
   }
   if (event.type === 'tool_start' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {
     return {
@@ -289,6 +299,7 @@ function normalizeSessionEvent(event: unknown): ExtensionAgentConversationStream
     };
   }
   if (event.type === 'tool_update' && typeof event.toolCallId === 'string') {
+    if (!readPartialToolText(event.partialResult)) return null;
     return { type: 'tool_update', toolCallId: event.toolCallId, partialResult: event.partialResult };
   }
   if (event.type === 'tool_end' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {
@@ -307,8 +318,10 @@ function normalizeSessionEvent(event: unknown): ExtensionAgentConversationStream
 
 function normalizeLiveSessionEvent(event: unknown): ExtensionAgentConversationStreamEvent | null {
   if (!isRecord(event)) return null;
-  if (event.type === 'text_delta' && typeof event.delta === 'string') return { type: 'text_delta', delta: event.delta };
-  if (event.type === 'thinking_delta' && typeof event.delta === 'string') return { type: 'thinking_delta', delta: event.delta };
+  if (event.type === 'text_delta' && typeof event.delta === 'string')
+    return event.delta ? { type: 'text_delta', delta: event.delta } : null;
+  if (event.type === 'thinking_delta' && typeof event.delta === 'string')
+    return event.delta ? { type: 'thinking_delta', delta: event.delta } : null;
   if (event.type === 'agent_end') return { type: 'agent_end' };
   if (event.type === 'turn_end') return { type: 'turn_end' };
   if (event.type === 'error' && typeof event.message === 'string') return { type: 'error', message: event.message };
@@ -321,6 +334,7 @@ function normalizeLiveSessionEvent(event: unknown): ExtensionAgentConversationSt
     };
   }
   if (event.type === 'tool_update' && typeof event.toolCallId === 'string') {
+    if (!readPartialToolText(event.partialResult)) return null;
     return { type: 'tool_update', toolCallId: event.toolCallId, partialResult: event.partialResult };
   }
   if (event.type === 'tool_end' && typeof event.toolCallId === 'string' && typeof event.toolName === 'string') {

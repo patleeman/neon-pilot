@@ -3,6 +3,37 @@ import { describe, expect, it } from 'vitest';
 import { toSse } from './liveSessionEvents.js';
 
 describe('toSse tool execution events', () => {
+  it('drops empty streamed deltas before broadcasting', () => {
+    expect(
+      toSse({
+        type: 'message_update',
+        message: {},
+        assistantMessageEvent: { type: 'text_delta', delta: '' },
+      } as never),
+    ).toBeNull();
+    expect(
+      toSse({
+        type: 'message_update',
+        message: {},
+        assistantMessageEvent: { type: 'thinking_delta', delta: '' },
+      } as never),
+    ).toBeNull();
+    expect(
+      toSse({
+        type: 'tool_execution_update',
+        toolCallId: 'tool-1',
+        partialResult: '',
+      } as never),
+    ).toBeNull();
+    expect(
+      toSse({
+        type: 'tool_execution_update',
+        toolCallId: 'tool-1',
+        partialResult: { content: [{ text: '' }] },
+      } as never),
+    ).toBeNull();
+  });
+
   it('keeps ordinary bash tool calls in the generic tool pipeline', () => {
     const start = toSse({
       type: 'tool_execution_start',

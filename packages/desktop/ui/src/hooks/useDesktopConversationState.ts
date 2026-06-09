@@ -212,6 +212,9 @@ export function applyDesktopConversationStreamEvent(
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
     }
     case 'text_delta': {
+      if (!event.delta) {
+        return stream;
+      }
       const blocks = [...stream.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'text') blocks[blocks.length - 1] = { ...last, text: `${last.text ?? ''}${event.delta}` };
@@ -219,6 +222,9 @@ export function applyDesktopConversationStreamEvent(
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
     }
     case 'thinking_delta': {
+      if (!event.delta) {
+        return stream;
+      }
       const blocks = [...stream.blocks];
       const last = blocks.at(-1);
       if (last?.type === 'thinking') blocks[blocks.length - 1] = { ...last, text: `${last.text ?? ''}${event.delta}` };
@@ -241,11 +247,15 @@ export function applyDesktopConversationStreamEvent(
       return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
     }
     case 'tool_update': {
+      const partialText = readPartialToolText(event.partialResult);
+      if (!partialText) {
+        return stream;
+      }
       const index = findLastToolUseIndex(stream.blocks, event.toolCallId);
       if (index >= 0 && stream.blocks[index]?.type === 'tool_use') {
         const blocks = [...stream.blocks];
         const block = blocks[index];
-        blocks[index] = { ...block, output: `${block.output ?? ''}${readPartialToolText(event.partialResult)}` };
+        blocks[index] = { ...block, output: `${block.output ?? ''}${partialText}` };
         return { ...stream, blocks, totalBlocks: Math.max(stream.totalBlocks, stream.blockOffset + blocks.length) };
       }
       return stream;
@@ -706,7 +716,13 @@ export function useDesktopConversationState(conversationId: string | null, optio
           schedulePendingStreamEventsTimerFlush(STREAM_CONTROL_FLUSH_INTERVAL_MS);
         }
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : String(nextError));
+        recordRendererTelemetry({
+          category: 'renderer_error',
+          name: 'conversation_stream_event_parse_failed',
+          route: `${window.location.pathname}${window.location.search}`,
+          sessionId: conversationId,
+          metadata: { message: nextError instanceof Error ? nextError.message : String(nextError) },
+        });
       }
     };
     const scheduleReconnectRetry = () => {

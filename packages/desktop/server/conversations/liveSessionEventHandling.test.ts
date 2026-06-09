@@ -199,6 +199,29 @@ describe('streaming lifecycle callbacks', () => {
     expect(textDeltas).toEqual([{ type: 'text_delta', delta: 'Tools ' }]);
   });
 
+  it('broadcasts final assistant text after only empty deltas streamed', () => {
+    const entry = makeEntry();
+    const cbs = makeCallbacks();
+
+    handleLiveSessionEvent(entry, { type: 'message_start', message: { role: 'assistant', content: [] } } as unknown, cbs);
+    handleLiveSessionEvent(
+      entry,
+      { type: 'message_update', message: {}, assistantMessageEvent: { type: 'text_delta', delta: '' } } as unknown,
+      cbs,
+    );
+    handleLiveSessionEvent(
+      entry,
+      {
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'stop', content: [{ type: 'text', text: 'Final answer.' }] },
+      } as unknown,
+      cbs,
+    );
+
+    const textDeltas = cbs.broadcast.mock.calls.map((call: unknown[]) => call[1]).filter((event) => event?.type === 'text_delta');
+    expect(textDeltas).toEqual([{ type: 'text_delta', delta: 'Final answer.' }]);
+  });
+
   it('schedules context usage update on agent_start, message_update, and tool events', () => {
     const entry = makeEntry();
     const cbs = makeCallbacks();

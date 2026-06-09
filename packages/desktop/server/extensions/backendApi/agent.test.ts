@@ -321,6 +321,44 @@ describe('extension agent backend API', () => {
     expect(serverModuleMocks.liveSubmitted).toEqual([{ sessionId: 'live-1', text: 'stream this', images: undefined }]);
   });
 
+  it('streams final direct-session text after only empty deltas arrive', async () => {
+    serverModuleMocks.disableLiveSessionCreate = true;
+    const subscribers: Array<(event: unknown) => void> = [];
+    const session = {
+      messages: [],
+      subscribe: vi.fn((handler: (event: unknown) => void) => {
+        subscribers.push(handler);
+        return () => undefined;
+      }),
+      prompt: vi.fn(async () => {
+        const message = { role: 'assistant', content: [{ type: 'text', text: 'final direct text' }] };
+        subscribers.forEach((handler) =>
+          handler({ type: 'message_update', message: {}, assistantMessageEvent: { type: 'text_delta', delta: '' } }),
+        );
+        subscribers.forEach((handler) => handler({ type: 'message_end', message }));
+      }),
+      abort: vi.fn(),
+      dispose: vi.fn(),
+    };
+    installImporter({ session: session as ReturnType<typeof createSession> });
+    const ctx = createCtx();
+    const created = await createAgentConversation({ title: 'Direct streaming', tools: 'none' }, ctx);
+
+    const result = await streamAgentMessage({ conversationId: created.id, text: 'stream direct' }, ctx);
+    const events: unknown[] = [];
+    for await (const event of result.events) {
+      events.push(event.data);
+    }
+
+    expect(events).toEqual([
+      { type: 'user_message', text: 'stream direct', ts: expect.any(String) },
+      { type: 'agent_start' },
+      { type: 'text_delta', delta: 'final direct text' },
+      { type: 'agent_end', text: 'final direct text' },
+      { type: 'turn_end' },
+    ]);
+  });
+
   it('aborts hidden live-session agent conversations', async () => {
     const { session } = installImporter();
     const ctx = createCtx();

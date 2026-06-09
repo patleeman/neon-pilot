@@ -404,6 +404,33 @@ describe('desktopConversationState reducer', () => {
     expect(repeatedAgentStart).toBe(state);
     expect(idleToolEnd).toBe(state);
   });
+
+  it('ignores empty streamed transcript deltas during state replay', async () => {
+    const { applyDesktopConversationStreamEvent, createEmptyDesktopConversationStreamState } =
+      await import('./desktopConversationState.js');
+
+    let state = createEmptyDesktopConversationStreamState();
+    state = applyDesktopConversationStreamEvent(state, {
+      type: 'tool_start',
+      toolName: 'bash',
+      args: {},
+      toolCallId: 'tool-1',
+    } as never);
+
+    const withTool = state;
+    expect(applyDesktopConversationStreamEvent(withTool, { type: 'text_delta', delta: '' } as never)).toBe(withTool);
+    expect(applyDesktopConversationStreamEvent(withTool, { type: 'thinking_delta', delta: '' } as never)).toBe(withTool);
+    expect(applyDesktopConversationStreamEvent(withTool, { type: 'tool_update', toolCallId: 'tool-1', partialResult: '' } as never)).toBe(
+      withTool,
+    );
+    expect(
+      applyDesktopConversationStreamEvent(withTool, {
+        type: 'tool_update',
+        toolCallId: 'tool-1',
+        partialResult: { content: [{ text: '' }] },
+      } as never),
+    ).toBe(withTool);
+  });
 });
 
 describe('desktopConversationState reducer — streaming lifecycle', () => {
