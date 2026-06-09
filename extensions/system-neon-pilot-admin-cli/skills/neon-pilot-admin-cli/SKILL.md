@@ -72,6 +72,8 @@ neon-pilot conversations compact <id>
 neon-pilot conversations fork <id> --title "Fork" --json
 neon-pilot conversations tools <id> bash read edit
 neon-pilot conversations rollback <id> 1 --json
+neon-pilot conversations archive <id...> --json
+neon-pilot conversations unarchive <id...> --json
 ```
 
 For sidebar/open-thread state, use workspace/open commands, not `conversations list --scope all` and not `scope=running`:
@@ -88,6 +90,8 @@ neon-pilot conversations open list --json
 neon-pilot conversations open add conv-a conv-b --json
 neon-pilot conversations open pin conv-a --json
 neon-pilot conversations open active conv-b --json
+neon-pilot conversations archive conv-old --json
+neon-pilot conversations unarchive conv-old --json
 ```
 
 Vocabulary:
@@ -96,7 +100,8 @@ Vocabulary:
 - **active** — the currently selected sidebar conversation (`activeConversationId`), not every open conversation.
 - **history/persisted** — all saved conversations. Use `conversations list`/`search`; `--scope all` means all historical persisted conversations.
 - **live/executing** — conversations with a live runtime or active turn.
-- **archived** — hidden from the normal sidebar list.
+- **archived** — hidden from the normal sidebar/history views. Use `conversations archive` / `conversations unarchive`.
+- **delete** — no general first-class conversation delete command exists yet; do not delete session files directly unless a dedicated CLI/API is added.
 - **running** — avoid this term unless a command explicitly defines it; it does not mean open/sidebar.
 
 ## Extension, settings, and app command control

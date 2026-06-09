@@ -920,6 +920,22 @@
         "inputAction": "workspace_open_update"
       },
       {
+        "id": "conversations-archive",
+        "command": "conversations archive",
+        "description": "Archive conversations by hiding them from normal sidebar/history views: conversations archive <id...>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_open_update"
+      },
+      {
+        "id": "conversations-unarchive",
+        "command": "conversations unarchive",
+        "description": "Unarchive conversations: conversations unarchive <id...>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "workspace_open_update"
+      },
+      {
         "id": "conversations-transcript-append",
         "command": "conversations transcript append",
         "description": "Append a transcript block: conversations transcript append <id> --type <type> --data <json>",

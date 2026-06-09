@@ -82,7 +82,7 @@ const AdminConversationParams = {
     activeConversationId: { type: 'string' },
     workspacePaths: { type: 'array', items: { type: 'string' } },
     remoteControlledConversationIds: { type: 'array', items: { type: 'string' } },
-    operation: { type: 'string', enum: ['add', 'remove', 'pin', 'unpin', 'active'] },
+    operation: { type: 'string', enum: ['add', 'remove', 'pin', 'unpin', 'active', 'archive', 'unarchive'] },
     conversationIds: { type: 'array', items: { type: 'string' } },
   },
 } as const;
