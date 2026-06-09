@@ -37,7 +37,7 @@
     "conversations:readwrite"
   ],
   "compatibility": {
-    "neonPilot": ">=0.10.0 <0.12.0",
+    "neonPilot": ">=0.10.0",
     "extensionApi": "^2"
   }
 }
