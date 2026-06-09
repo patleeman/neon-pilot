@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -479,6 +479,61 @@ describe('ExtensionManagerPage', () => {
     expect(await screen.findByText('Updated Browser to 0.1.0.')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('Updated Browser to 0.1.0.');
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
+    expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
+  });
+
+  it('reinstalls catalog-installed extensions through the replace action', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.10.2',
+          tag: 'v0.10.2',
+          extensions: [
+            {
+              id: 'system-browser',
+              name: 'Browser',
+              description: 'Browse web pages beside a conversation.',
+              version: '0.1.0',
+              availableVersion: '0.1.0',
+              installedVersion: '0.1.0',
+              tag: 'v0.10.2',
+              installed: true,
+              enabled: true,
+              updateAvailable: false,
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      if (action === 'updateCatalogExtension') return { ok: true, updated: true };
+      return { ok: true };
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        description: 'Browse web pages beside a conversation.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.1.0',
+      } as never,
+    ]);
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn().mockResolvedValue(true) },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Browser')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Reinstall'));
+
+    await waitFor(() => {
+      expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
+    });
+    expect(mocks.deleteExtension).not.toHaveBeenCalled();
     expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
   });
 

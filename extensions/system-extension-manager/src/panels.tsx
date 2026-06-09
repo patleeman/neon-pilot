@@ -1151,8 +1151,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       setBusyId(extension.id);
       setNotice(null);
       try {
-        await api.deleteExtension(extension.id);
-        await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: extension.id });
+        await pa.extensions.callAction('system-extension-manager', 'updateCatalogExtension', { id: extension.id });
         await load();
         await loadCatalog();
         notifyExtensionRegistryChanged();

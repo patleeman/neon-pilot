@@ -417,7 +417,7 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
     assertImportableRuntimeArtifacts(packageRoot, manifest);
     const id = normalizeExtensionId(manifest.id);
     const destination = join(getRuntimeExtensionsRoot(stateRoot), id);
-    if (existsSync(destination) || findExtensionEntry(id)) {
+    if (existsSync(destination) || findExtensionEntry(id, stateRoot)) {
       throw new Error('Extension id already exists.');
     }
 
