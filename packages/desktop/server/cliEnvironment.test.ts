@@ -13,7 +13,9 @@ describe('cliEnvironment', () => {
       const launcher = ensureNeonPilotCliLauncher({ repoRoot: process.cwd(), stateRoot: root });
       expect(launcher).toBe(join(root, 'bin', 'neon-pilot'));
       expect(existsSync(launcher)).toBe(true);
-      expect(readFileSync(launcher, 'utf-8')).toContain('neon-pilot-cli.mjs');
+      const launcherContent = readFileSync(launcher, 'utf-8');
+      expect(launcherContent).toContain('export ELECTRON_RUN_AS_NODE=1');
+      expect(launcherContent).toContain('neon-pilot-cli.mjs');
 
       const env = prependNeonPilotCliBin({ PATH: '/usr/bin' }, root);
       expect(env.PATH).toBe(`${getNeonPilotCliBinDir(root)}${delimiter}/usr/bin`);

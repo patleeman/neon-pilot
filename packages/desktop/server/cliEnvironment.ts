@@ -24,7 +24,12 @@ export function ensureNeonPilotCliLauncher(input: { repoRoot: string; stateRoot?
   mkdirSync(binDir, { recursive: true });
   const launcherPath = join(binDir, NEON_PILOT_CLI_COMMAND);
   const target = resolveNeonPilotCliTarget(input.repoRoot);
-  const content = ['#!/bin/sh', `exec ${JSON.stringify(process.execPath)} ${JSON.stringify(target)} "$@"`, ''].join('\n');
+  const content = [
+    '#!/bin/sh',
+    'export ELECTRON_RUN_AS_NODE=1',
+    `exec ${JSON.stringify(process.execPath)} ${JSON.stringify(target)} "$@"`,
+    '',
+  ].join('\n');
   if (!existsSync(launcherPath) || readFileSync(launcherPath, 'utf-8') !== content) {
     writeFileSync(launcherPath, content, { mode: 0o755 });
   }
