@@ -368,12 +368,26 @@ describe('useExtensionRegistry', () => {
           },
         },
       ],
+      routes: [{ route: '/disabled', extensionId: 'disabled-extension', surfaceId: 'disabled-page', packageType: 'system' }],
+      surfaces: [
+        {
+          extensionId: 'disabled-extension',
+          packageType: 'system',
+          id: 'disabled-nav',
+          placement: 'left',
+          kind: 'navItem',
+          route: '/disabled',
+          label: 'Disabled',
+        },
+      ],
     });
 
     const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.extensions.map((entry) => entry.id)).toEqual(['disabled-extension']);
+    expect(result.current.routes).toEqual([]);
+    expect(result.current.surfaces).toEqual([]);
     expect(result.current.composerButtons).toEqual([]);
     expect(result.current.statusBarItems).toEqual([]);
   });

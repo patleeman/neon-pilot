@@ -267,6 +267,16 @@ type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
   attentionSeverity?: 'warning' | 'error';
 };
 
+function isRegisteredExtensionNavItem(
+  item: { extensionId?: string; route: string; sidebarView?: string },
+  registeredRoutes: ReadonlySet<string>,
+  registeredSidebarSurfaces: ReadonlySet<string>,
+): boolean {
+  if (registeredRoutes.has(item.route)) return true;
+  if (!item.extensionId || !item.sidebarView) return false;
+  return registeredSidebarSurfaces.has(`${item.extensionId}:${item.sidebarView}`);
+}
+
 function isSidebarVisibleConversation(session: SessionMeta): boolean {
   return session.offshootKind !== 'subagent' && !session.sourceRunId;
 }
@@ -3816,6 +3826,12 @@ export function Sidebar() {
   }
 
   const extensionNavItems = useMemo<SidebarExtensionNavItem[]>(() => {
+    const registeredRoutes = new Set(extensionRegistry.routes.map((route) => route.route));
+    const registeredSidebarSurfaces = new Set(
+      extensionRegistry.surfaces
+        .filter(isNativeExtensionSidebarSurface)
+        .map((surface) => `${surface.extensionId}:${surface.id}`),
+    );
     const legacy = extensionRegistry.surfaces
       .filter(isExtensionLeftNavItemSurface)
       .map((item) => ({ ...item, section: 'primary' as const }));
@@ -3830,18 +3846,20 @@ export function Sidebar() {
             : warningCount > 0
               ? ({ attentionCount: warningCount, attentionSeverity: 'warning' as const })
               : {};
-        return (extension.contributes?.nav ?? []).map(
-          (item) =>
-            ({
+        return (extension.contributes?.nav ?? []).flatMap((item) => {
+          const navItem = {
               ...item,
               ...attention,
               extensionId: extension.id,
               packageType: extension.packageType ?? 'user',
-            }) as ExtensionSurfaceSummary & typeof item,
-        );
+            } as ExtensionSurfaceSummary & typeof item;
+          return isRegisteredExtensionNavItem(navItem, registeredRoutes, registeredSidebarSurfaces)
+            ? [navItem as SidebarExtensionNavItem]
+            : [];
+        });
       });
     return [...legacy, ...native];
-  }, [extensionRegistry.extensions, extensionRegistry.surfaces]);
+  }, [extensionRegistry.extensions, extensionRegistry.routes, extensionRegistry.surfaces]);
   const primaryNavItems = useMemo(() => extensionNavItems.filter((item) => (item.section ?? 'primary') === 'primary'), [extensionNavItems]);
   const settingsNavItems = useMemo(() => extensionNavItems.filter((item) => item.section === 'settings'), [extensionNavItems]);
   const activeSidebarSurface = useMemo(() => {

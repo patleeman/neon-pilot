@@ -968,6 +968,33 @@ describe('Sidebar', () => {
     expect(html).not.toContain('aria-label="Find threads and archived conversations"');
   });
 
+  it('hides enabled extension nav entries that do not have a registered route or sidebar surface', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'hermes-remote-agent',
+        enabled: true,
+        packageType: 'user',
+        contributes: {
+          nav: [
+            {
+              id: 'nav',
+              label: 'Hermes',
+              route: '/hermes',
+              icon: 'sparkle',
+            },
+          ],
+        },
+      },
+    ];
+    extensionRegistryMock.state.routes = [];
+    extensionRegistryMock.state.surfaces = [];
+
+    const html = renderSidebar('/conversations/new');
+
+    expect(html).not.toContain('Hermes');
+    expect(html).not.toContain('data-route="/hermes"');
+  });
+
   it('keeps Chat neutral on conversation routes while the selected thread owns the active chrome', () => {
     const html = renderSidebar('/conversations/conv-123');
 

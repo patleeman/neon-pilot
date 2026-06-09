@@ -802,14 +802,15 @@ function normalizeExtensionRegistryState(
 ): ExtensionRegistryState {
   const registryExtensions = normalizeRegistryExtensions(extensions);
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
+  const enabledExtensionIds = new Set(enabledRegistryExtensions.map((extension) => extension.id));
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
   const composerButtons = normalizeComposerButtons(enabledRegistryExtensions);
   const composerControls = [...normalizeComposerControls(enabledRegistryExtensions), ...composerButtons].sort(compareComposerControls);
 
   return {
     extensions: registryExtensions,
-    routes,
-    surfaces,
+    routes: routes.filter((route) => enabledExtensionIds.has(route.extensionId)),
+    surfaces: surfaces.filter((surface) => enabledExtensionIds.has(surface.extensionId)),
     topBarElements: normalizeTopBarElements(enabledRegistryExtensions),
     messageActions: normalizeMessageActions(enabledRegistryExtensions),
     composerShelves: normalizeComposerShelves(enabledRegistryExtensions),
