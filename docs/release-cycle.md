@@ -131,7 +131,7 @@ Optional first-party extensions are distributed separately from the app bundle f
 
 ### First-party extension release
 
-Every stable Neon Pilot release should have a matching release in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions). The desktop app looks for `neon-extension-catalog.json` at the app tag first; if it is missing, the Extension Manager can only fall back to the baked catalog and must mark stale artifacts unavailable.
+Every stable Neon Pilot release must have a matching release in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions). Publish **all indexed first-party extension packages every time**, not only extensions that changed. The desktop app looks for `neon-extension-catalog.json` at the app tag first; if it is missing, the Extension Manager can only fall back to the baked catalog and must mark stale artifacts unavailable.
 
 After the app release tag exists, publish the extension repo release with the same tag:
 
@@ -155,7 +155,7 @@ gh release upload vX.Y.Z \
   --clobber
 ```
 
-Before publishing, verify each released package manifest has a `compatibility.neonPilot` range that includes the app version being released. After publishing, verify these URLs return `200`:
+Before publishing, verify each released package manifest has a `compatibility.neonPilot` range that includes the app version being released. After publishing, verify the GitHub release has `neon-extension-catalog.json` plus one `.neon-extension.zip` asset for every indexed package, and verify these URLs return `200`:
 
 ```bash
 https://github.com/patleeman/neon-pilot-extensions/releases/download/vX.Y.Z/neon-extension-catalog.json
