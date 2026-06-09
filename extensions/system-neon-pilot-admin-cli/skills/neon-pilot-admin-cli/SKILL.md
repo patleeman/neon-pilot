@@ -16,13 +16,14 @@ Use the `neon-pilot` CLI as the primary Neon Pilot self-administration surface w
    neon-pilot help conversations
    ```
 
-2. Prefer JSON for inspection and automation:
+2. Prefer JSON for inspection and automation. Pick the conversation surface by intent:
 
    ```sh
    neon-pilot extensions list --json
    neon-pilot settings list --json
-   neon-pilot conversations list --json
-   neon-pilot conversations workspace --json
+   neon-pilot conversations workspace --json      # open/sidebar state, usually what "active threads" means
+   neon-pilot conversations open list --json      # ergonomic open/sidebar view
+   neon-pilot conversations list --json           # persisted conversation history page, not open/active threads
    neon-pilot cli status --json
    ```
 
@@ -44,9 +45,17 @@ Use the `neon-pilot` CLI as the primary Neon Pilot self-administration surface w
 
 ## Conversation administration
 
-Use `conversations ...` commands for agent-side conversation management:
+Use `conversations ...` commands for agent-side conversation management.
+
+Important distinction:
+
+- `conversations workspace` / `conversations open ...` = current workspace/sidebar state.
+- `conversations list` = persisted conversation history, paginated; `--scope all` can return hundreds of historical conversations and does **not** mean active/open.
+- `conversations search` = historical transcript/metadata search.
 
 ```sh
+neon-pilot conversations workspace --json
+neon-pilot conversations open list --json
 neon-pilot conversations list --scope all --json
 neon-pilot conversations search "query" --json
 neon-pilot conversations inspect <id> outline --json
@@ -61,7 +70,7 @@ neon-pilot conversations tools <id> bash read edit
 neon-pilot conversations rollback <id> 1 --json
 ```
 
-For sidebar/open-thread state, use workspace commands, not `scope=running`:
+For sidebar/open-thread state, use workspace/open commands, not `conversations list --scope all` and not `scope=running`:
 
 ```sh
 neon-pilot conversations workspace --json
@@ -79,7 +88,9 @@ neon-pilot conversations open active conv-b --json
 
 Vocabulary:
 
-- **open/sidebar** — conversations visible in the Threads sidebar / workspace state.
+- **open/sidebar** — conversations visible in the Threads sidebar / workspace state. Use `conversations workspace` or `conversations open list`.
+- **active** — the currently selected sidebar conversation (`activeConversationId`), not every open conversation.
+- **history/persisted** — all saved conversations. Use `conversations list`/`search`; `--scope all` means all historical persisted conversations.
 - **live/executing** — conversations with a live runtime or active turn.
 - **archived** — hidden from the normal sidebar list.
 - **running** — avoid this term unless a command explicitly defines it; it does not mean open/sidebar.
