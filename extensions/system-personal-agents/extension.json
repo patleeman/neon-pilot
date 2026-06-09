@@ -13,28 +13,69 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "listProfiles", "handler": "listProfiles", "title": "List personal agents", "worker": { "enabled": true } },
-      { "id": "getProfile", "handler": "getProfile", "title": "Get personal agent", "worker": { "enabled": true } },
-      { "id": "createProfile", "handler": "createProfile", "title": "Create personal agent", "worker": { "enabled": true } },
-      { "id": "updateProfile", "handler": "updateProfile", "title": "Update personal agent", "worker": { "enabled": true } },
-      { "id": "deleteProfile", "handler": "deleteProfile", "title": "Delete personal agent", "worker": { "enabled": true } },
+      {
+        "id": "listProfiles",
+        "handler": "listProfiles",
+        "title": "List personal agents",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "getProfile",
+        "handler": "getProfile",
+        "title": "Get personal agent",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "createProfile",
+        "handler": "createProfile",
+        "title": "Create personal agent",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "updateProfile",
+        "handler": "updateProfile",
+        "title": "Update personal agent",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "deleteProfile",
+        "handler": "deleteProfile",
+        "title": "Delete personal agent",
+        "worker": {
+          "enabled": true
+        }
+      },
       {
         "id": "ensureDefaultConversation",
         "handler": "ensureDefaultConversation",
         "title": "Ensure personal agent conversation",
-        "worker": { "enabled": true }
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "routeGatewayMessage",
         "handler": "routeGatewayMessage",
         "title": "Route gateway message to a personal agent",
-        "worker": { "enabled": true }
+        "worker": {
+          "enabled": true
+        }
       },
       {
         "id": "provideAgentTurnContext",
         "handler": "provideAgentTurnContext",
         "title": "Personal agent turn context",
-        "worker": { "enabled": true }
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
@@ -44,13 +85,14 @@
         "id": "personal-agents",
         "label": "Agents",
         "route": "/agents",
-        "icon": "sparkle"
+        "icon": "sparkle",
+        "sidebarView": "agents-sidebar"
       }
     ],
     "views": [
       {
         "id": "agents",
-        "title": "Agents",
+        "title": "Agent Chat",
         "location": "main",
         "route": "/agents",
         "component": {
@@ -59,6 +101,23 @@
             "wrapper": "PersonalAgentsShell"
           }
         },
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "agents-sidebar",
+        "title": "Agents",
+        "location": "sidebar",
+        "component": "PersonalAgentsSidebar",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "agent-details",
+        "title": "Agent Details",
+        "location": "rightRail",
+        "component": "PersonalAgentsDetails",
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"

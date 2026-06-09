@@ -10,8 +10,8 @@ import {
   SectionLabel,
   Select,
   StatusDot,
-  TextButton,
   Textarea,
+  TextButton,
   TextInput,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -65,57 +65,20 @@ function cloneBindings(bindings: PersonalAgentGatewayBinding[]): PersonalAgentGa
   return bindings.map((binding) => ({ ...binding }));
 }
 
-export function PersonalAgentsShell({ HostComponent, ...props }: HostWrapperProps) {
-  const { pa, context } = props;
-  const routeAgentId = parseAgentId(context.pathname);
+function usePersonalAgentsList(pa: ExtensionSurfaceProps['pa'], pathname: string) {
+  const routeAgentId = parseAgentId(pathname);
   const [profiles, setProfiles] = useState<PersonalAgentProfile[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(routeAgentId);
-  const [selected, setSelected] = useState<PersonalAgentProfile | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const paRef = useRef(pa);
   paRef.current = pa;
-
-  const selectedProfile = useMemo(
-    () => selected ?? profiles.find((profile) => profile.id === selectedId) ?? null,
-    [profiles, selected, selectedId],
-  );
-
-  const navigateAgent = useCallback(
-    (agentId: string) => {
-      setSelectedId(agentId);
-      void pa.commands.execute('app.navigate', { to: `/agents/${encodeURIComponent(agentId)}` });
-    },
-    [pa.commands],
-  );
 
   const refresh = useCallback(async () => {
     setError(null);
     const result = await paRef.current.extension.invoke<ProfileListResult>('listProfiles', {});
     setProfiles(result.profiles);
-    const routeProfile = routeAgentId ? result.profiles.find((profile) => profile.id === routeAgentId) : null;
-    const selectedProfile = selectedId ? result.profiles.find((profile) => profile.id === selectedId) : null;
-    const nextId = routeProfile?.id ?? selectedProfile?.id ?? result.profiles[0]?.id ?? null;
-    if (!nextId) {
-      setSelected(null);
-      setSelectedId(null);
-      setConversationId(null);
-      if (routeAgentId) {
-        void paRef.current.commands.execute('app.navigate', { to: '/agents' });
-      }
-      return;
-    }
-    setSelectedId(nextId);
-    const ensured = await paRef.current.extension.invoke<EnsureConversationResult>('ensureDefaultConversation', { id: nextId });
-    setSelected(ensured.profile);
-    setProfiles((current) => current.map((profile) => (profile.id === ensured.profile.id ? ensured.profile : profile)));
-    setConversationId(ensured.conversationId);
-    if (!routeProfile) {
-      void paRef.current.commands.execute('app.navigate', { to: `/agents/${encodeURIComponent(nextId)}` });
-    }
-  }, [routeAgentId, selectedId]);
+    return result.profiles;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,75 +95,118 @@ export function PersonalAgentsShell({ HostComponent, ...props }: HostWrapperProp
     };
   }, [refresh]);
 
-  async function run<T>(label: string, action: () => Promise<T>): Promise<T | null> {
-    if (busy) return null;
-    setBusy(label);
-    setError(null);
+  const selectedProfile = useMemo(
+    () => (routeAgentId ? (profiles.find((profile) => profile.id === routeAgentId) ?? null) : (profiles[0] ?? null)),
+    [profiles, routeAgentId],
+  );
+
+  return { profiles, setProfiles, selectedProfile, routeAgentId, loading, error, setError, refresh };
+}
+
+export function PersonalAgentsShell({ HostComponent, ...props }: HostWrapperProps) {
+  const { pa, context } = props;
+  const { selectedProfile, routeAgentId, loading, error, setError } = usePersonalAgentsList(pa, context.pathname);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const paRef = useRef(pa);
+  paRef.current = pa;
+
+  useEffect(() => {
+    let cancelled = false;
+    setConversationId(null);
+    if (!selectedProfile) return;
+    paRef.current.extension
+      .invoke<EnsureConversationResult>('ensureDefaultConversation', { id: selectedProfile.id })
+      .then((ensured) => {
+        if (cancelled) return;
+        setConversationId(ensured.conversationId);
+        if (!routeAgentId) {
+          void paRef.current.commands.execute('app.navigate', { to: `/agents/${encodeURIComponent(ensured.profile.id)}` });
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [routeAgentId, selectedProfile?.id, setError]);
+
+  async function createAgent() {
     try {
-      return await action();
+      const result = await paRef.current.extension.invoke<{ profile: PersonalAgentProfile }>('createProfile', { name: 'New Agent' });
+      void paRef.current.commands.execute('app.navigate', { to: `/agents/${encodeURIComponent(result.profile.id)}` });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
-      paRef.current.ui.notify({ type: 'error', source: 'Personal Agents', message: 'Personal agent update failed', details: message });
-      return null;
-    } finally {
-      setBusy(null);
+      paRef.current.ui.notify({ type: 'error', source: 'Personal Agents', message: 'Personal agent creation failed', details: message });
     }
   }
+
+  return (
+    <div className="h-full min-h-0 bg-base">
+      {loading ? (
+        <LoadingState label="Loading agents..." className="h-full justify-center" />
+      ) : error && !selectedProfile ? (
+        <ErrorState message={error} className="m-6" />
+      ) : selectedProfile && conversationId ? (
+        <HostComponent {...props} hostProps={{ ...(props.hostProps ?? {}), conversationId }} />
+      ) : (
+        <EmptyState
+          title="Create your first personal agent"
+          description="Agents get their own chat transcript, soul document, gateways, and automations."
+          action={<Button onClick={() => void createAgent()}>Create agent</Button>}
+        />
+      )}
+    </div>
+  );
+}
+
+export function PersonalAgentsSidebar(props: ExtensionSurfaceProps) {
+  const { pa, context } = props;
+  const { profiles, setProfiles, selectedProfile, loading, error, setError } = usePersonalAgentsList(pa, context.pathname);
+  const [busy, setBusy] = useState(false);
+
+  const navigateAgent = useCallback(
+    (agentId: string) => {
+      void pa.commands.execute('app.navigate', { to: `/agents/${encodeURIComponent(agentId)}` });
+    },
+    [pa.commands],
+  );
 
   async function createAgent() {
-    const result = await run('create', () =>
-      paRef.current.extension.invoke<{ profile: PersonalAgentProfile }>('createProfile', { name: 'New Agent' }),
-    );
-    if (!result) return;
-    setProfiles((current) => [...current, result.profile].sort((a, b) => a.name.localeCompare(b.name)));
-    navigateAgent(result.profile.id);
-  }
-
-  async function saveProfile(patch: Partial<PersonalAgentProfile>) {
-    if (!selectedProfile) return;
-    const result = await run('save', () =>
-      paRef.current.extension.invoke<{ profile: PersonalAgentProfile }>('updateProfile', { id: selectedProfile.id, ...patch }),
-    );
-    if (!result) return;
-    setSelected(result.profile);
-    setProfiles((current) => current.map((profile) => (profile.id === result.profile.id ? result.profile : profile)));
-  }
-
-  async function deleteSelected() {
-    if (!selectedProfile) return;
-    const ok = await pa.ui.confirm({
-      title: 'Delete personal agent?',
-      message: `Delete ${selectedProfile.name}? Its conversation is kept.`,
-    });
-    if (!ok) return;
-    const deleted = await run('delete', () => paRef.current.extension.invoke('deleteProfile', { id: selectedProfile.id }));
-    if (!deleted) return;
-    const remaining = profiles.filter((profile) => profile.id !== selectedProfile.id);
-    setProfiles(remaining);
-    const next = remaining[0] ?? null;
-    if (next) navigateAgent(next.id);
-    else {
-      setSelected(null);
-      setSelectedId(null);
-      setConversationId(null);
-      void pa.commands.execute('app.navigate', { to: '/agents' });
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await pa.extension.invoke<{ profile: PersonalAgentProfile }>('createProfile', { name: 'New Agent' });
+      setProfiles((current) => [...current, result.profile].sort((a, b) => a.name.localeCompare(b.name)));
+      navigateAgent(result.profile.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+      pa.ui.notify({ type: 'error', source: 'Personal Agents', message: 'Personal agent creation failed', details: message });
+    } finally {
+      setBusy(false);
     }
   }
 
-  const sidebar = (
-    <aside className="flex min-h-0 w-[248px] flex-col border-r border-border-subtle bg-surface/60">
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-panel">
       <div className="flex h-12 items-center gap-2 border-b border-border-subtle px-3">
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-semibold text-primary">Agents</div>
           <div className="text-[11px] text-dim">{profiles.length} configured</div>
         </div>
-        <IconButton compact aria-label="Create agent" title="Create agent" disabled={Boolean(busy)} onClick={() => void createAgent()}>
+        <IconButton compact aria-label="Create agent" title="Create agent" disabled={busy} onClick={() => void createAgent()}>
           +
         </IconButton>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-2">
-        {profiles.length === 0 ? (
+        {loading ? (
+          <LoadingState label="Loading agents..." />
+        ) : error ? (
+          <Notice tone="danger">{error}</Notice>
+        ) : profiles.length === 0 ? (
           <div className="px-2 py-4 text-[12px] leading-5 text-secondary">Create an agent to start a dedicated chat.</div>
         ) : (
           profiles.map((profile) => {
@@ -227,38 +233,70 @@ export function PersonalAgentsShell({ HostComponent, ...props }: HostWrapperProp
           })
         )}
       </div>
-    </aside>
-  );
-
-  return (
-    <div className="grid h-full min-h-0 grid-cols-[248px_minmax(0,1fr)_320px] bg-base">
-      {sidebar}
-      <main className="min-h-0 min-w-0 border-r border-border-subtle">
-        {loading ? (
-          <LoadingState label="Loading agents..." className="h-full justify-center" />
-        ) : error && !selectedProfile ? (
-          <ErrorState message={error} className="m-6" />
-        ) : selectedProfile && conversationId ? (
-          <HostComponent {...props} hostProps={{ ...(props.hostProps ?? {}), conversationId }} />
-        ) : (
-          <EmptyState
-            title="Create your first personal agent"
-            description="Agents get their own chat transcript, soul document, gateways, and automations."
-            action={<Button onClick={() => void createAgent()}>Create agent</Button>}
-          />
-        )}
-      </main>
-      <AgentDetailsPanel
-        profile={selectedProfile}
-        busy={busy}
-        error={error}
-        onSave={(patch) => void saveProfile(patch)}
-        onDelete={() => void deleteSelected()}
-      />
     </div>
   );
 }
 
+export function PersonalAgentsDetails(props: ExtensionSurfaceProps) {
+  const { pa, context } = props;
+  const { profiles, selectedProfile, loading, error, setError, refresh } = usePersonalAgentsList(pa, context.pathname);
+  const [selected, setSelected] = useState<PersonalAgentProfile | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const profile = selected ?? selectedProfile;
+
+  useEffect(() => {
+    setSelected(null);
+  }, [selectedProfile?.id]);
+
+  async function run<T>(label: string, action: () => Promise<T>): Promise<T | null> {
+    if (busy) return null;
+    setBusy(label);
+    setError(null);
+    try {
+      return await action();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+      pa.ui.notify({ type: 'error', source: 'Personal Agents', message: 'Personal agent update failed', details: message });
+      return null;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveProfile(patch: Partial<PersonalAgentProfile>) {
+    if (!profile) return;
+    const result = await run('save', () =>
+      pa.extension.invoke<{ profile: PersonalAgentProfile }>('updateProfile', { id: profile.id, ...patch }),
+    );
+    if (!result) return;
+    setSelected(result.profile);
+    await refresh();
+  }
+
+  async function deleteSelected() {
+    if (!profile) return;
+    const ok = await pa.ui.confirm({ title: 'Delete personal agent?', message: `Delete ${profile.name}? Its conversation is kept.` });
+    if (!ok) return;
+    const deleted = await run('delete', () => pa.extension.invoke('deleteProfile', { id: profile.id }));
+    if (!deleted) return;
+    const remaining = profiles.filter((item) => item.id !== profile.id);
+    const next = remaining[0] ?? null;
+    void pa.commands.execute('app.navigate', { to: next ? `/agents/${encodeURIComponent(next.id)}` : '/agents' });
+  }
+
+  if (loading) return <LoadingState label="Loading agent details..." className="h-full justify-center" />;
+
+  return (
+    <AgentDetailsPanel
+      profile={profile}
+      busy={busy}
+      error={error}
+      onSave={(patch) => void saveProfile(patch)}
+      onDelete={() => void deleteSelected()}
+    />
+  );
+}
 function AgentDetailsPanel({
   profile,
   busy,
