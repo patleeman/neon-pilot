@@ -262,6 +262,8 @@ type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
   icon?: string;
   sidebarView?: string;
   section?: 'primary' | 'settings';
+  attentionCount?: number;
+  attentionSeverity?: 'warning' | 'error';
 };
 
 function isSidebarVisibleConversation(session: SessionMeta): boolean {
@@ -3825,12 +3827,25 @@ export function Sidebar() {
       .map((item) => ({ ...item, section: 'primary' as const }));
     const native = extensionRegistry.extensions
       .filter((extension) => extension.enabled)
-      .flatMap((extension) =>
-        (extension.contributes?.nav ?? []).map(
+      .flatMap((extension) => {
+        const errorCount = (extension.errors?.length ?? 0) + (extension.buildError ? 1 : 0) + (extension.healthError ? 1 : 0);
+        const warningCount = extension.diagnostics?.length ?? 0;
+        const attention =
+          errorCount > 0
+            ? ({ attentionCount: errorCount, attentionSeverity: 'error' as const })
+            : warningCount > 0
+              ? ({ attentionCount: warningCount, attentionSeverity: 'warning' as const })
+              : {};
+        return (extension.contributes?.nav ?? []).map(
           (item) =>
-            ({ ...item, extensionId: extension.id, packageType: extension.packageType ?? 'user' }) as ExtensionSurfaceSummary & typeof item,
-        ),
-      );
+            ({
+              ...item,
+              ...attention,
+              extensionId: extension.id,
+              packageType: extension.packageType ?? 'user',
+            }) as ExtensionSurfaceSummary & typeof item,
+        );
+      });
     return [...legacy, ...native];
   }, [extensionRegistry.extensions, extensionRegistry.surfaces]);
   const primaryNavItems = useMemo(() => extensionNavItems.filter((item) => (item.section ?? 'primary') === 'primary'), [extensionNavItems]);

@@ -34,6 +34,8 @@ export type SidebarNavItem = {
   label: string;
   icon?: string;
   section?: 'primary' | 'settings';
+  attentionCount?: number;
+  attentionSeverity?: 'warning' | 'error';
 };
 
 export function SidebarIcon({ d, size = 16 }: { d: SidebarIconPath | string; size?: number }) {
@@ -87,12 +89,14 @@ function TopNavItem({
   icon,
   label,
   badge,
+  attentionSeverity,
   forceActive = false,
 }: {
   to: string;
   icon: SidebarIconPath;
   label: string;
   badge?: number | null;
+  attentionSeverity?: 'warning' | 'error';
   forceActive?: boolean;
 }) {
   const navigate = useNavigate();
@@ -137,7 +141,15 @@ function TopNavItem({
         <path d={icon} />
       </svg>
       <span className="flex-1">{label}</span>
-      {badge != null && badge > 0 && <span className="ui-sidebar-nav-badge">{badge > 99 ? '99+' : badge}</span>}
+      {attentionSeverity ? (
+        <span
+          className={`h-2 w-2 rounded-full ${attentionSeverity === 'error' ? 'bg-danger' : 'bg-warning'}`}
+          aria-label={`${label} needs attention`}
+          title={`${label} needs attention`}
+        />
+      ) : badge != null && badge > 0 ? (
+        <span className="ui-sidebar-nav-badge">{badge > 99 ? '99+' : badge}</span>
+      ) : null}
     </SidebarNavButton>
   );
 }
@@ -170,7 +182,14 @@ export function SidebarPrimaryNav({
         </SidebarNavButton>
       </div>
       {items.map((item) => (
-        <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
+        <TopNavItem
+          key={`${item.extensionId}:${item.id}`}
+          to={item.route}
+          icon={getExtensionNavIcon(item.icon)}
+          label={item.label}
+          badge={item.attentionCount}
+          attentionSeverity={item.attentionSeverity}
+        />
       ))}
     </nav>
   );
@@ -186,7 +205,14 @@ export function SidebarSettingsNav({ items, notice }: { items: SidebarNavItem[];
       ) : null}
       <div className="border-t border-border-subtle px-0 py-2 space-y-0.5">
         {items.map((item) => (
-          <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
+          <TopNavItem
+            key={`${item.extensionId}:${item.id}`}
+            to={item.route}
+            icon={getExtensionNavIcon(item.icon)}
+            label={item.label}
+            badge={item.attentionCount}
+            attentionSeverity={item.attentionSeverity}
+          />
         ))}
       </div>
     </div>

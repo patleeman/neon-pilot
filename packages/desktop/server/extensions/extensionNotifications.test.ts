@@ -149,8 +149,10 @@ describe('extensionNotifications', () => {
     ]);
   });
 
-  it('publishes startup status notifications to the app notification stream', () => {
+  it('publishes startup status notifications to app and system notification streams', () => {
     appEvents.publishAppEvent.mockReset();
+    const systemListener = vi.fn();
+    const unsubscribe = onSystemNotification(systemListener);
 
     expect(
       notifyExtensionStartupStatus([
@@ -173,5 +175,21 @@ describe('extensionNotifications', () => {
       severity: 'warning',
       details: 'Warned (warned): Update available',
     });
+    expect(systemListener).toHaveBeenCalledWith({
+      extensionId: 'core',
+      title: 'Extension error',
+      body: 'Broken needs attention.',
+      subtitle: 'Broken (broken): Build error: tsc failed',
+      persistent: true,
+    });
+    expect(systemListener).toHaveBeenCalledWith({
+      extensionId: 'core',
+      title: 'Extension warning',
+      body: 'Warned has extension warnings.',
+      subtitle: 'Warned (warned): Update available',
+      persistent: false,
+    });
+
+    unsubscribe();
   });
 });

@@ -230,6 +230,12 @@ export function notifyExtensionStartupStatus(summaries: ExtensionInstallSummary[
       severity: notification.severity,
       ...(notification.details ? { details: notification.details } : {}),
     });
+    sendSystemNotification('core', {
+      title: notification.severity === 'error' ? 'Extension error' : 'Extension warning',
+      body: notification.message,
+      ...(notification.details ? { subtitle: notification.details } : {}),
+      persistent: notification.severity === 'error',
+    });
   }
   return notifications.length;
 }
