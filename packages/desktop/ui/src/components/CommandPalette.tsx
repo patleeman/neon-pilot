@@ -25,6 +25,7 @@ import {
   normalizeQuickOpenItem,
   type ScopedSessionMeta,
 } from '../commands/commandPaletteItems';
+import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
 import { createHostCommands, evaluateCommandEnablement, listHostCommands } from '../extensions/commands';
 import { systemExtensionModules } from '../extensions/systemExtensionModules';
 import type {
@@ -111,9 +112,7 @@ export function CommandPalette() {
       openCommandPalette: () => undefined,
       openRightRail: () => false,
       setLayout: () => undefined,
-      activeConversationId: location.pathname.startsWith('/conversations/')
-        ? decodeURIComponent(location.pathname.split('/')[2] ?? '')
-        : null,
+      activeConversationId: readConversationIdFromPathname(location.pathname),
     });
     const context = { route: location.pathname };
     const hostItems = listHostCommands().map((command, index) => {

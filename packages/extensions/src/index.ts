@@ -996,6 +996,58 @@ export interface ExtensionBrowserState {
   [key: string]: unknown;
 }
 
+export type PersonalAgentConversationPolicy = 'default' | 'dedicated' | 'new-per-message';
+
+export interface PersonalAgentGatewayBinding {
+  id: string;
+  gatewayId: string;
+  accountId?: string;
+  channelId?: string;
+  senderId?: string;
+  displayName?: string;
+  enabled: boolean;
+  conversationPolicy: PersonalAgentConversationPolicy;
+  trustLevel: 'local' | 'paired' | 'allowlisted' | 'untrusted';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PersonalAgentProfile {
+  id: string;
+  name: string;
+  description?: string;
+  avatar?: string;
+  soul: string;
+  defaultConversationId?: string;
+  defaultModelRef?: string;
+  defaultRuntimeRef?: string;
+  defaultCwd?: string;
+  memoryScopes: string[];
+  skillRefs: string[];
+  toolPolicy: 'default' | 'restricted' | 'custom';
+  gatewayBindings: PersonalAgentGatewayBinding[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PersonalAgentGatewayMessage {
+  gatewayId: string;
+  accountId?: string;
+  senderId: string;
+  channelId?: string;
+  text: string;
+  attachments?: Array<{ id?: string; name?: string; mimeType?: string; data?: string; url?: string }>;
+  receivedAt: string;
+  trustLevel: 'local' | 'paired' | 'allowlisted' | 'untrusted';
+  metadata?: Record<string, unknown>;
+}
+
+export interface PersonalAgentGatewayRouteTarget {
+  agentProfileId: string;
+  conversationMode: PersonalAgentConversationPolicy;
+  deliveryMode: 'conversation' | 'automation' | 'background';
+}
+
 export interface ExtensionSelectionState {
   kind: ExtensionSelectionKind;
   text?: string;

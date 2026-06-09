@@ -83,6 +83,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [MCP](../extensions/system-mcp/README.md)
 - [Model Picker](../extensions/system-model-picker/README.md)
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
+- [Personal Agents](../extensions/system-personal-agents/README.md) — default-off bundled profiles, soul documents, gateways, and dedicated agent chats
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md)
 - [Runs](../extensions/system-runs/README.md)

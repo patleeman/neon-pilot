@@ -32,6 +32,20 @@ function buildConversationPath(id: string): string {
   return `/conversations/${encodeURIComponent(id)}`;
 }
 
+export function readConversationIdFromPathname(pathname: string): string | null {
+  const match = pathname.match(/^\/conversations\/([^/]+)$/);
+  const encodedId = match?.[1];
+  if (!encodedId || encodedId === 'new') {
+    return null;
+  }
+
+  try {
+    return normalizeConversationSurfaceId(decodeURIComponent(encodedId));
+  } catch {
+    return null;
+  }
+}
+
 export function buildConversationSurfacePath(id: string): string {
   return id === DRAFT_CONVERSATION_ID ? DRAFT_CONVERSATION_ROUTE : buildConversationPath(id);
 }

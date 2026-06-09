@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
 import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { isPendingConversationShellId } from '../conversation/pendingConversationShell';
 import { normalizeWorkspacePaths } from '../local/savedWorkspacePaths';
@@ -28,12 +29,7 @@ export function useSidebarConversationScope({
   tabs,
 }: UseSidebarConversationScopeInput) {
   const activeConversationId = useMemo(() => {
-    const match = locationPathname.match(/^\/conversations\/([^/]+)$/);
-    if (!match || match[1] === 'new') {
-      return null;
-    }
-
-    const conversationId = decodeURIComponent(match[1]);
+    const conversationId = readConversationIdFromPathname(locationPathname);
     return isPendingConversationShellId(conversationId) ? null : conversationId;
   }, [locationPathname]);
 

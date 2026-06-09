@@ -6,6 +6,7 @@ import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { COMPANION_CHAT_CLOSE_EVENT, COMPANION_CHAT_OPEN_EVENT, type CompanionChatOpenDetail } from '../companion/companionEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
+import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
 import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { startNewConversation } from '../conversation/newConversationNavigation';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
@@ -562,8 +563,7 @@ function useViewportWidth() {
 }
 
 function getActiveConversationId(pathname: string): string | null {
-  const parts = pathname.split('/').filter(Boolean);
-  return parts[0] === 'conversations' && parts[1] && parts[1] !== 'new' ? parts[1] : null;
+  return readConversationIdFromPathname(pathname);
 }
 
 function WorkbenchDocumentPane({

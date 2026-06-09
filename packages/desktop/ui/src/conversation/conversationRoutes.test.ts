@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildConversationDeeplink,
+  readConversationIdFromPathname,
   resolveConversationAdjacentPath,
   resolveConversationCloseRedirect,
   resolveConversationIndexRedirect,
@@ -18,6 +19,18 @@ describe('buildConversationDeeplink', () => {
     expect(buildConversationDeeplink('conversation-1', 'neon-pilot://app/automations')).toBe(
       'neon-pilot://app/conversations/conversation-1',
     );
+  });
+});
+
+describe('readConversationIdFromPathname', () => {
+  it('decodes conversation ids from conversation routes', () => {
+    expect(readConversationIdFromPathname('/conversations/conv%201')).toBe('conv 1');
+  });
+
+  it('returns null for draft, non-conversation, and malformed routes', () => {
+    expect(readConversationIdFromPathname('/conversations/new')).toBeNull();
+    expect(readConversationIdFromPathname('/settings')).toBeNull();
+    expect(readConversationIdFromPathname('/conversations/%E0%A4%A')).toBeNull();
   });
 });
 

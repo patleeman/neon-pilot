@@ -34,6 +34,7 @@ import {
 } from '../conversation/conversationExecutionActivity';
 import {
   buildConversationDeeplink,
+  readConversationIdFromPathname,
   buildConversationSurfacePath,
   resolveConversationAdjacentPath,
   resolveConversationCloseRedirect,
@@ -2037,14 +2038,7 @@ export function Sidebar() {
     [],
   );
 
-  const activeConversationId = useMemo(() => {
-    const match = location.pathname.match(/^\/conversations\/([^/]+)$/);
-    if (!match || match[1] === 'new') {
-      return null;
-    }
-
-    return decodeURIComponent(match[1]);
-  }, [location.pathname]);
+  const activeConversationId = useMemo(() => readConversationIdFromPathname(location.pathname), [location.pathname]);
   const activeSession = useMemo(() => {
     if (!activeConversationId) return null;
     const session = (sessions ?? []).find((candidate) => candidate.id === activeConversationId);

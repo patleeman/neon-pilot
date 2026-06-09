@@ -183,6 +183,7 @@ import { type ConversationSlashCommand, parseConversationSlashCommand } from '..
 import { buildSuggestedContextShelfState } from '../conversation/conversationSuggestedContextShelf';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import { INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS } from '../conversation/conversationTranscriptPaging';
+import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
 import { buildAvailableDraftWorkspacePaths, resolveConversationCurrentCwd } from '../conversation/conversationWorkspaceState';
 import {
@@ -502,11 +503,13 @@ export function shouldMountComposerShelvesImmediately(input: {
   return input.composerChromeReady && !input.showConversationLoadingState;
 }
 
-export function ConversationPage({ draft = false }: { draft?: boolean }) {
+export function ConversationPage({ draft = false, conversationId }: { draft?: boolean; conversationId?: string | null }) {
   const { id: routeId } = useParams<{ id?: string }>();
-  const id = draft ? undefined : routeId;
   const location = useLocation();
   const navigate = useNavigate();
+  const routeConversationId = useMemo(() => readConversationIdFromPathname(location.pathname), [location.pathname]);
+  const invalidConversationRoute = !draft && !conversationId && Boolean(routeId) && routeConversationId === null;
+  const id = draft ? undefined : (conversationId ?? routeConversationId ?? undefined);
   const selectedArtifactId = getConversationArtifactIdFromSearch(location.search);
   const selectedCheckpointId = getConversationCheckpointIdFromSearch(location.search);
   const selectedRunId = getConversationRunIdFromSearch(location.search);
@@ -520,6 +523,11 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
   const sessionsReady = useSessionsReady();
   const [remoteControlledConversationIds, setRemoteControlledConversationIds] = useState<string[]>([]);
   const conversationEventVersion = useConversationEventVersion(id);
+  useEffect(() => {
+    if (invalidConversationRoute) {
+      navigate('/conversations/new', { replace: true });
+    }
+  }, [invalidConversationRoute, navigate]);
   useEffect(() => {
     const preload = () => void loadChatView();
     const timeoutId = window.setTimeout(preload, 0);

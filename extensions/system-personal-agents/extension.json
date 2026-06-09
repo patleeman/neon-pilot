@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "id": "system-personal-agents",
+  "name": "Personal Agents",
+  "packageType": "system",
+  "defaultEnabled": false,
+  "description": "Create durable personal agent profiles with chat-first UI, soul documents, gateway bindings, and profile-scoped context.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "listProfiles", "handler": "listProfiles", "title": "List personal agents", "worker": { "enabled": true } },
+      { "id": "getProfile", "handler": "getProfile", "title": "Get personal agent", "worker": { "enabled": true } },
+      { "id": "createProfile", "handler": "createProfile", "title": "Create personal agent", "worker": { "enabled": true } },
+      { "id": "updateProfile", "handler": "updateProfile", "title": "Update personal agent", "worker": { "enabled": true } },
+      { "id": "deleteProfile", "handler": "deleteProfile", "title": "Delete personal agent", "worker": { "enabled": true } },
+      {
+        "id": "ensureDefaultConversation",
+        "handler": "ensureDefaultConversation",
+        "title": "Ensure personal agent conversation",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "routeGatewayMessage",
+        "handler": "routeGatewayMessage",
+        "title": "Route gateway message to a personal agent",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "provideAgentTurnContext",
+        "handler": "provideAgentTurnContext",
+        "title": "Personal agent turn context",
+        "worker": { "enabled": true }
+      }
+    ]
+  },
+  "contributes": {
+    "nav": [
+      {
+        "id": "personal-agents",
+        "label": "Agents",
+        "route": "/agents",
+        "icon": "sparkle"
+      }
+    ],
+    "views": [
+      {
+        "id": "agents",
+        "title": "Agents",
+        "location": "main",
+        "route": "/agents",
+        "component": {
+          "host": "conversation.page",
+          "overrides": {
+            "wrapper": "PersonalAgentsShell"
+          }
+        },
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ],
+    "turnContextProviders": [
+      {
+        "id": "personal-agent-context",
+        "handler": "provideAgentTurnContext",
+        "title": "Personal agent context",
+        "priority": 35,
+        "scope": ["conversation"]
+      }
+    ]
+  },
+  "permissions": ["storage:readwrite", "conversations:readwrite"]
+}

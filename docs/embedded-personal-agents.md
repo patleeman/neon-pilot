@@ -45,17 +45,18 @@ Keep the first version extension-owned, but add small general-purpose API surfac
 
 Do not hardcode Hermes/OpenClaw behavior in desktop core. Core should expose durable profiles, routing, prompt inputs, and policy hooks; the product workflow belongs in the extension.
 
-## First Version
+## Implemented Small Core
 
-The smallest useful version:
+The bundled `system-personal-agents` extension ships default-off and implements the first small core:
 
-1. Create/read/update/delete personal agents in extension storage.
-2. Create and edit the agent's soul document as a managed instruction file.
-3. Start or resume a visible saved conversation for a selected personal agent.
-4. Inject the soul document and selected memory/context paths through prompt assembly for that agent's conversations.
-5. Show the personal agents nav item plus extension-owned sidebar list.
-6. Bind one automation to a personal agent and deliver into its default conversation.
-7. Provide a Telegram-ready routing model, even if Telegram setup remains in a separate gateway extension.
+- Create/read/update/delete personal agents in extension storage.
+- Create and edit the agent's soul document in the agent details panel.
+- Start or resume a visible saved conversation for a selected personal agent.
+- Inject the soul document, selected memory scopes, skill references, and tool policy through a turn-context provider for that agent's conversations.
+- Show an `Agents` nav item when enabled, with an extension-owned agent sidebar and an agents-only details panel.
+- Provide a gateway-ready routing action that sends allowed sender/channel/account messages into the agent's default conversation.
+
+The first version deliberately keeps gateway setup and automations pluggable. Telegram, scheduled work, voice, and external channel adapters should remain separate extensions that call the Personal Agents routing actions.
 
 ## Later Versions
 

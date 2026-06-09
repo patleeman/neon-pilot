@@ -15,7 +15,31 @@ export interface HostViewComponentDefinition {
   examples: Array<Record<string, unknown>>;
 }
 
-export const HOST_VIEW_COMPONENT_DEFINITIONS: readonly HostViewComponentDefinition[] = [];
+export const HOST_VIEW_COMPONENT_DEFINITIONS: readonly HostViewComponentDefinition[] = [
+  {
+    id: 'conversation.page',
+    title: 'Conversation page',
+    description: 'Renders the standard Neon Pilot conversation transcript and composer for a supplied conversation id.',
+    locations: ['main'],
+    propsSchema: {
+      type: 'object',
+      properties: {
+        conversationId: {
+          type: 'string',
+          description: 'Conversation id to render. Extensions may also pass this dynamically through hostProps.',
+        },
+      },
+      additionalProperties: false,
+    },
+    overrideSlots: {
+      wrapper: {
+        description: 'Wraps the standard conversation page and may provide dynamic hostProps such as conversationId.',
+        propsSchema: { type: 'object', additionalProperties: true },
+      },
+    },
+    examples: [{ conversationId: 'conv_123' }],
+  },
+];
 
 export type HostViewComponentId = (typeof HOST_VIEW_COMPONENT_DEFINITIONS)[number]['id'];
 

@@ -168,7 +168,9 @@ If there is no customization, remove `frontend` entirely when no other contribut
 
 The canonical catalog lives in `@neon-pilot/extensions/host-view-components` and is used by runtime validation, UI loading, docs, and extension-manager tooling.
 
-There are currently no reusable host-view component ids published in the public catalog. System workbench views render their own extension frontend components directly.
+| ID | Location | Props | Override Slots | Use |
+| --- | --- | --- | --- | --- |
+| `conversation.page` | `main` | `conversationId?: string` | `wrapper` | Render the standard conversation transcript and composer inside an extension-owned route. Wrappers can pass a dynamic `conversationId` through `hostProps`. |
 
 Agents can inspect the catalog through the Extension Manager UI once the extension registry has been regenerated/reloaded in the running app.
 
