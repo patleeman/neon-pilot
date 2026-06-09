@@ -936,6 +936,22 @@
         "inputAction": "workspace_open_update"
       },
       {
+        "id": "conversations-delete",
+        "command": "conversations delete",
+        "description": "Permanently delete persisted conversations and remove workspace/sidebar references: conversations delete <id...>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "delete"
+      },
+      {
+        "id": "conversations-retention-prune",
+        "command": "conversations retention prune",
+        "description": "Prune old persisted conversations: conversations retention prune --older-than 90d --archived-only --dry-run",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "retention_prune"
+      },
+      {
         "id": "conversations-transcript-append",
         "command": "conversations transcript append",
         "description": "Append a transcript block: conversations transcript append <id> --type <type> --data <json>",
@@ -978,6 +994,8 @@
             "workspace_get",
             "workspace_update",
             "workspace_open_update",
+            "delete",
+            "retention_prune",
             "append_transcript_block",
             "update_transcript_block",
             "rollback"

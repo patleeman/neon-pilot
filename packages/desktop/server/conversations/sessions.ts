@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, closeSync, type Dirent, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync } from 'node:fs';
+import { appendFileSync, closeSync, type Dirent, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
@@ -2228,6 +2228,54 @@ export function listSessions(): SessionMeta[] {
 
 export function readSessionMeta(sessionId: string): SessionMeta | null {
   return resolveSessionMeta(sessionId);
+}
+
+export interface DeleteSessionsResult {
+  deleted: Array<{ id: string; file: string }>;
+  missing: string[];
+}
+
+export function deleteSessions(sessionIds: string[]): DeleteSessionsResult {
+  const deleted: Array<{ id: string; file: string }> = [];
+  const missing: string[] = [];
+  for (const sessionId of [...new Set(sessionIds.map((id) => id.trim()).filter(Boolean))]) {
+    const meta = resolveSessionMeta(sessionId);
+    if (!meta?.file || !existsSync(meta.file)) {
+      missing.push(sessionId);
+      continue;
+    }
+    rmSync(meta.file, { force: true });
+    sessionMetaCache.delete(meta.file);
+    sessionSearchTextCache.clear();
+    sessionDetailCache.delete(meta.file);
+    sessionFileById.delete(sessionId);
+    sessionCacheDirty = true;
+    deleted.push({ id: sessionId, file: meta.file });
+  }
+  persistSessionIndex();
+  return { deleted, missing };
+}
+
+export function pruneSessionsByRetention(input: {
+  olderThanMs: number;
+  now?: Date;
+  archivedConversationIds?: string[];
+  archivedOnly?: boolean;
+  dryRun?: boolean;
+}): { ok: true; dryRun: boolean; cutoff: string; candidates: Array<{ id: string; file: string; timestamp: string }>; deleted: Array<{ id: string; file: string }>; skipped: number } {
+  const nowMs = input.now?.getTime() ?? Date.now();
+  const cutoffMs = nowMs - input.olderThanMs;
+  const archivedIds = new Set((input.archivedConversationIds ?? []).map((id) => id.trim()).filter(Boolean));
+  const allSessions = listSessions();
+  const candidates = allSessions
+    .filter((meta) => {
+      if (input.archivedOnly && !archivedIds.has(meta.id)) return false;
+      const timestampMs = Date.parse(meta.lastActivityAt ?? meta.timestamp);
+      return Number.isFinite(timestampMs) && timestampMs < cutoffMs;
+    })
+    .map((meta) => ({ id: meta.id, file: meta.file, timestamp: meta.lastActivityAt ?? meta.timestamp }));
+  const deleted = input.dryRun ? [] : deleteSessions(candidates.map((candidate) => candidate.id)).deleted;
+  return { ok: true, dryRun: Boolean(input.dryRun), cutoff: new Date(cutoffMs).toISOString(), candidates, deleted, skipped: allSessions.length - candidates.length };
 }
 
 function readSessionIdFromSessionRecord(filePath: string): string | null {

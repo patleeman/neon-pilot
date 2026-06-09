@@ -1325,6 +1325,8 @@ export interface ExtensionBackendContext {
     getBlocks(conversationId: string, options?: { tailBlocks?: number }): Promise<unknown>;
     searchIndex(sessionIds: string[]): Promise<unknown>;
     getWorkspace(): Promise<unknown>;
+    delete(input: { conversationIds: string[] }): Promise<unknown>;
+    prune(input: { olderThanMs: number; archivedOnly?: boolean | null; dryRun?: boolean | null }): Promise<unknown>;
     updateWorkspace(input: {
       openConversationIds?: string[] | null;
       pinnedConversationIds?: string[] | null;

@@ -377,5 +377,7 @@ neon-pilot conversations open pin conv-a --json
 neon-pilot conversations open active conv-b --json
 neon-pilot conversations archive conv-old --json
 neon-pilot conversations unarchive conv-old --json
+neon-pilot conversations delete conv-old --json
+neon-pilot conversations retention prune --older-than 180d --archived-only --dry-run --json
 neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}' --json
 ```

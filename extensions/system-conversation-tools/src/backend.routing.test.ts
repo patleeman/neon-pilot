@@ -62,6 +62,8 @@ function ctx(overrides: Record<string, unknown> = {}) {
     setActiveTools: vi.fn().mockResolvedValue({ conversationId: 'conv-2', toolNames: ['bash'] }),
     getWorkspace: vi.fn().mockResolvedValue({ openConversationIds: ['conv-1'] }),
     updateWorkspace: vi.fn().mockResolvedValue({ openConversationIds: ['conv-2'] }),
+    delete: vi.fn().mockResolvedValue({ ok: true, deleted: [{ id: 'conv-old' }] }),
+    prune: vi.fn().mockResolvedValue({ ok: true, dryRun: true, candidates: [] }),
     appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'block-1' }),
     updateTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'block-1' }),
     rollback: vi.fn().mockResolvedValue({ rolledBackTo: 'entry-1' }),
@@ -158,6 +160,12 @@ describe('system-conversation-tools backend routing', () => {
 
     await conversationTool({ cli: { command: 'conversations workspace update', args: ['--open', 'conv-1,conv-2', '--active', 'conv-2'] } }, context);
     expect(conversations.updateWorkspace).toHaveBeenLastCalledWith({ openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' });
+
+    await conversationTool({ cli: { command: 'conversations delete', args: ['conv-old'] } }, context);
+    expect(conversations.delete).toHaveBeenLastCalledWith({ conversationIds: ['conv-old'] });
+
+    await conversationTool({ cli: { command: 'conversations retention prune', args: ['--older-than', '90d', '--archived-only', '--dry-run'] } }, context);
+    expect(conversations.prune).toHaveBeenLastCalledWith({ olderThanMs: 7_776_000_000, archivedOnly: true, dryRun: true });
   });
 
   it('sets the title on an explicit target conversation when conversationId is provided', async () => {

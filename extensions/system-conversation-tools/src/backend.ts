@@ -271,6 +271,17 @@ function flagBoolean(flags: ParsedCliArgs['flags'], key: string): boolean | unde
   return undefined;
 }
 
+function parseDurationMs(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const match = /^(\d+(?:\.\d+)?)(ms|s|m|h|d|w|y)?$/i.exec(value.trim());
+  if (!match) return undefined;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return undefined;
+  const unit = (match[2] ?? 'ms').toLowerCase();
+  const multipliers: Record<string, number> = { ms: 1, s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000, y: 31_536_000_000 };
+  return amount * multipliers[unit];
+}
+
 function normalizeConversationCliInput(input: unknown): Record<string, unknown> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return input as Record<string, unknown>;
   const body = input as Record<string, unknown>;
@@ -311,6 +322,8 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
   if (command === 'conversations open active') return { ...body, action: 'workspace_open_update', operation: 'active', conversationIds: positionals[0] ? [positionals[0]] : undefined };
   if (command === 'conversations archive') return { ...body, action: 'workspace_open_update', operation: 'archive', conversationIds: flagStringArray(flags, 'id') ?? positionals };
   if (command === 'conversations unarchive') return { ...body, action: 'workspace_open_update', operation: 'unarchive', conversationIds: flagStringArray(flags, 'id') ?? positionals };
+  if (command === 'conversations delete') return { ...body, action: 'delete', conversationIds: flagStringArray(flags, 'id') ?? positionals };
+  if (command === 'conversations retention prune') return { ...body, action: 'retention_prune', olderThanMs: parseDurationMs(flagString(flags, 'older-than') ?? positionals[0]), archivedOnly: flagBoolean(flags, 'archived-only'), dryRun: flagBoolean(flags, 'dry-run') };
   if (command === 'conversations transcript append') return { ...body, action: 'append_transcript_block', conversationId: positionals[0], blockType: flagString(flags, 'type') ?? positionals[1], blockId: flagString(flags, 'block-id'), title: flagString(flags, 'title'), data: flagString(flags, 'data') ? JSON.parse(flagString(flags, 'data') as string) : undefined };
   if (command === 'conversations transcript update') return { ...body, action: 'update_transcript_block', conversationId: positionals[0], blockId: positionals[1] ?? flagString(flags, 'block-id'), blockType: flagString(flags, 'type') ?? positionals[2], title: flagString(flags, 'title'), data: flagString(flags, 'data') ? JSON.parse(flagString(flags, 'data') as string) : undefined };
   return body;
@@ -439,6 +452,15 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
 
     case 'workspace_open_update':
       return toolResult(action, await workspaceOpenUpdate(ctx, payload));
+
+    case 'delete':
+      return toolResult(action, await ctx.conversations.delete({ conversationIds: optionalStringArray(payload.conversationIds) ?? [] }));
+
+    case 'retention_prune': {
+      const olderThanMs = optionalPositiveNumber(payload.olderThanMs);
+      if (!olderThanMs) throw new Error('olderThanMs is required.');
+      return toolResult(action, await ctx.conversations.prune({ olderThanMs, archivedOnly: payload.archivedOnly === true, dryRun: payload.dryRun === true }));
+    }
 
     case 'append_transcript_block':
       return toolResult(

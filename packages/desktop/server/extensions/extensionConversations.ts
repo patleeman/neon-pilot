@@ -88,6 +88,28 @@ export function createExtensionConversationsCapability(
     return entry;
   };
 
+  const removeDeletedConversationWorkspaceReferences = async (conversationIds: string[]) => {
+    if (!serverContext?.getSettingsFile || conversationIds.length === 0) return;
+    const deletedIds = new Set(conversationIds);
+    const { readSavedUiPreferences, writeSavedUiPreferences } = await import('../ui/uiPreferences.js');
+    const { persistSettingsWrite } = await import('../ui/settingsPersistence.js');
+    const before = readSavedUiPreferences(serverContext.getSettingsFile());
+    persistSettingsWrite(
+      (settingsFile) =>
+        writeSavedUiPreferences(
+          {
+            openConversationIds: before.openConversationIds.filter((id) => !deletedIds.has(id)),
+            pinnedConversationIds: before.pinnedConversationIds.filter((id) => !deletedIds.has(id)),
+            archivedConversationIds: before.archivedConversationIds.filter((id) => !deletedIds.has(id)),
+            activeConversationId: before.activeConversationId && deletedIds.has(before.activeConversationId) ? null : before.activeConversationId,
+            remoteControlledConversationIds: before.remoteControlledConversationIds.filter((id) => !deletedIds.has(id)),
+          },
+          settingsFile,
+        ),
+      { runtimeSettingsFile: serverContext.getSettingsFile() },
+    );
+  };
+
   return {
     // ── Read operations ──────────────────────────────────────────────────
 
@@ -228,6 +250,35 @@ export function createExtensionConversationsCapability(
     },
 
     // ── Write operations ─────────────────────────────────────────────────
+
+    async delete(input: { conversationIds: string[] }): Promise<unknown> {
+      const conversationIds = [...new Set((input.conversationIds ?? []).map((id) => id.trim()).filter(Boolean))];
+      if (conversationIds.length === 0) throw new Error('At least one conversation id is required.');
+      const { deleteSessions } = await import('../conversations/sessions.js');
+      const result = deleteSessions(conversationIds);
+      await removeDeletedConversationWorkspaceReferences(result.deleted.map((entry) => entry.id));
+      invalidateAppTopics('sessions');
+      await publishExtensionHostEvent('conversationSessions', { type: 'session.deleted', conversationIds: result.deleted.map((entry) => entry.id) });
+      return { ok: true, ...result };
+    },
+
+    async prune(input: { olderThanMs: number; archivedOnly?: boolean | null; dryRun?: boolean | null }): Promise<unknown> {
+      const olderThanMs = Number(input.olderThanMs);
+      if (!Number.isFinite(olderThanMs) || olderThanMs <= 0) throw new Error('olderThanMs must be a positive number.');
+      const { pruneSessionsByRetention } = await import('../conversations/sessions.js');
+      let archivedConversationIds: string[] = [];
+      if (serverContext?.getSettingsFile) {
+        const { readSavedUiPreferences } = await import('../ui/uiPreferences.js');
+        archivedConversationIds = readSavedUiPreferences(serverContext.getSettingsFile()).archivedConversationIds;
+      }
+      const result = pruneSessionsByRetention({ olderThanMs, archivedOnly: Boolean(input.archivedOnly), dryRun: Boolean(input.dryRun), archivedConversationIds });
+      if (!result.dryRun) {
+        await removeDeletedConversationWorkspaceReferences(result.deleted.map((entry) => entry.id));
+        invalidateAppTopics('sessions');
+        await publishExtensionHostEvent('conversationSessions', { type: 'session.deleted', conversationIds: result.deleted.map((entry) => entry.id) });
+      }
+      return result;
+    },
 
     async updateWorkspace(input: {
       openConversationIds?: string[] | null;
