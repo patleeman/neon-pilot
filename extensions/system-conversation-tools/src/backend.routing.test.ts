@@ -152,6 +152,12 @@ describe('system-conversation-tools backend routing', () => {
 
     await conversationTool({ cli: { command: 'conversations abort', args: ['conv-2'] } }, context);
     expect(conversations.abort).toHaveBeenLastCalledWith('conv-2');
+
+    await conversationTool({ cli: { command: 'conversations run-turn', args: ['conv-2', '--text', 'Finish', '--timeout-ms', '123'] } }, context);
+    expect(conversations.runTurn).toHaveBeenLastCalledWith('conv-2', 'Finish', { timeoutMs: 123 });
+
+    await conversationTool({ cli: { command: 'conversations workspace update', args: ['--open', 'conv-1,conv-2', '--active', 'conv-2'] } }, context);
+    expect(conversations.updateWorkspace).toHaveBeenLastCalledWith({ openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' });
   });
 
   it('sets the title on an explicit target conversation when conversationId is provided', async () => {

@@ -258,7 +258,7 @@
       {
         "id": "neon-pilot-administration",
         "title": "Neon Pilot Administration",
-        "description": "Use the Neon Pilot CLI for self-administration of extensions, conversations, settings, and other extension-contributed surfaces.",
+        "description": "Use the Neon Pilot CLI for self-administration of extensions, conversations, settings, workspace/sidebar state, and extension-contributed surfaces.",
         "path": "skills/neon-pilot-administration/SKILL.md"
       },
       {

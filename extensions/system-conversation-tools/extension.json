@@ -703,6 +703,27 @@
         "action": "conversationTool"
       },
       {
+        "id": "conversations-ensure-live",
+        "command": "conversations ensure-live",
+        "description": "Ensure a conversation has a live runtime: conversations ensure-live <id> [--cwd <path>]",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-send",
+        "command": "conversations send",
+        "description": "Send a message to a conversation: conversations send <id> --text <message> [--steer]",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-run-turn",
+        "command": "conversations run-turn",
+        "description": "Run a conversation turn and wait for completion: conversations run-turn <id> --text <message> [--timeout-ms <ms>]",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
         "id": "conversations-abort",
         "command": "conversations abort",
         "description": "Abort a live conversation turn.",
@@ -715,9 +736,51 @@
         "action": "conversationTool"
       },
       {
+        "id": "conversations-fork",
+        "command": "conversations fork",
+        "description": "Fork a conversation: conversations fork <id> [--title <title>] [--target-cwd <path>]",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-tools",
+        "command": "conversations tools",
+        "description": "Set active tools for a conversation: conversations tools <id> <tool...>",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-rollback",
+        "command": "conversations rollback",
+        "description": "Rollback recent conversation transcript blocks: conversations rollback <id> [count]",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
         "id": "conversations-workspace",
         "command": "conversations workspace",
         "description": "Read conversation workspace state.",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-workspace-update",
+        "command": "conversations workspace update",
+        "description": "Update open/sidebar workspace state with --open, --pinned, --archived, --active, --workspace-path, or --remote-controlled.",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-transcript-append",
+        "command": "conversations transcript append",
+        "description": "Append a transcript block: conversations transcript append <id> --type <type> --data <json>",
+        "action": "conversationTool",
+        "jsonDefault": true
+      },
+      {
+        "id": "conversations-transcript-update",
+        "command": "conversations transcript update",
+        "description": "Update a transcript block: conversations transcript update <id> <block-id> --type <type> --data <json>",
         "action": "conversationTool",
         "jsonDefault": true
       }
@@ -737,8 +800,10 @@
             "create",
             "set_title",
             "change_working_directory",
+            "deferred_resume",
             "ensure_live",
             "send_message",
+            "run_turn",
             "abort",
             "compact",
             "fork",

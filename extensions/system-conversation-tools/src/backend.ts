@@ -64,6 +64,9 @@ function payloadWithoutAction(params: Record<string, unknown>): Record<string, u
   const payload = { ...params };
   delete payload.action;
   delete payload.cli;
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined) delete payload[key];
+  }
   return payload;
 }
 
@@ -155,21 +158,103 @@ function cliArgs(input: Record<string, unknown>): string[] {
   return Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
 }
 
+type ParsedCliArgs = { positionals: string[]; flags: Record<string, string | boolean | string[]> };
+
+function parseCliArgs(args: readonly string[]): ParsedCliArgs {
+  const positionals: string[] = [];
+  const flags: Record<string, string | boolean | string[]> = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? '';
+    if (!arg.startsWith('--') || arg === '--') {
+      positionals.push(arg);
+      continue;
+    }
+
+    const [rawKey, inlineValue] = arg.slice(2).split(/=(.*)/s, 2);
+    const key = rawKey?.trim();
+    if (!key) continue;
+    const next = args[index + 1];
+    const value = inlineValue ?? (next && !next.startsWith('--') ? next : true);
+    if (value === next) index += 1;
+
+    const previous = flags[key];
+    if (previous === undefined) {
+      flags[key] = value;
+    } else if (Array.isArray(previous)) {
+      previous.push(String(value));
+    } else {
+      flags[key] = [String(previous), String(value)];
+    }
+  }
+
+  return { positionals, flags };
+}
+
+function flagString(flags: ParsedCliArgs['flags'], key: string): string | undefined {
+  const value = flags[key];
+  if (Array.isArray(value)) return value.at(-1);
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function flagStringArray(flags: ParsedCliArgs['flags'], key: string): string[] | undefined {
+  const value = flags[key];
+  if (Array.isArray(value)) return value.map((entry) => entry.trim()).filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return value.split(',').map((entry) => entry.trim()).filter(Boolean);
+  return undefined;
+}
+
+function flagNumber(flags: ParsedCliArgs['flags'], key: string): number | undefined {
+  const value = flagString(flags, key);
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function flagBoolean(flags: ParsedCliArgs['flags'], key: string): boolean | undefined {
+  const value = flags[key];
+  if (value === undefined) return undefined;
+  if (value === true) return true;
+  if (typeof value !== 'string') return undefined;
+  if (['1', 'true', 'yes'].includes(value.toLowerCase())) return true;
+  if (['0', 'false', 'no'].includes(value.toLowerCase())) return false;
+  return undefined;
+}
+
 function normalizeConversationCliInput(input: unknown): Record<string, unknown> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return input as Record<string, unknown>;
   const body = input as Record<string, unknown>;
   const command = cliCommand(body);
-  const args = cliArgs(body);
+  const { positionals, flags } = parseCliArgs(cliArgs(body));
   if (!command) return body;
-  if (command === 'conversations list') return { ...body, action: 'inspect', inspectAction: 'list', query: args[0] };
-  if (command === 'conversations search') return { ...body, action: 'inspect', inspectAction: 'search', query: args.join(' ') };
-  if (command === 'conversations inspect') return { ...body, action: 'inspect', inspectAction: args[1] ?? 'outline', conversationId: args[0] };
-  if (command === 'conversations create') return { ...body, action: 'create', title: args.join(' ') || undefined };
-  if (command === 'conversations title') return { ...body, action: 'set_title', conversationId: args[0], title: args.slice(1).join(' ') };
-  if (command === 'conversations cwd') return { ...body, action: 'change_working_directory', conversationId: args[0], cwd: args[1] };
-  if (command === 'conversations abort') return { ...body, action: 'abort', conversationId: args[0] };
-  if (command === 'conversations compact') return { ...body, action: 'compact', conversationId: args[0] };
+  const text = flagString(flags, 'text') ?? flagString(flags, 'prompt') ?? positionals.slice(1).join(' ');
+  const baseInspect = {
+    ...body,
+    action: 'inspect',
+    query: flagString(flags, 'query'),
+    scope: flagString(flags, 'scope'),
+    limit: flagNumber(flags, 'limit'),
+    order: flagString(flags, 'order'),
+    includeCurrent: flagBoolean(flags, 'include-current'),
+  };
+  if (command === 'conversations list') return { ...baseInspect, inspectAction: 'list', query: flagString(flags, 'query') ?? (positionals.join(' ') || undefined) };
+  if (command === 'conversations search') return { ...baseInspect, inspectAction: 'search', query: flagString(flags, 'query') ?? positionals.join(' ') };
+  if (command === 'conversations inspect') return { ...baseInspect, inspectAction: positionals[1] ?? flagString(flags, 'action') ?? 'outline', conversationId: positionals[0] };
+  if (command === 'conversations create') return { ...body, action: 'create', title: flagString(flags, 'title') ?? (positionals.join(' ') || undefined), cwd: flagString(flags, 'cwd'), live: flagBoolean(flags, 'live'), initialPrompt: flagString(flags, 'initial-prompt') ?? flagString(flags, 'prompt'), model: flagString(flags, 'model'), thinkingLevel: flagString(flags, 'thinking-level'), serviceTier: flagString(flags, 'service-tier'), allowedToolNames: flagStringArray(flags, 'tool') ?? flagStringArray(flags, 'tools') };
+  if (command === 'conversations title') return { ...body, action: 'set_title', conversationId: positionals[0], title: flagString(flags, 'title') ?? positionals.slice(1).join(' ') };
+  if (command === 'conversations cwd') return { ...body, action: 'change_working_directory', conversationId: positionals[0], cwd: flagString(flags, 'cwd') ?? positionals[1], continuePrompt: flagString(flags, 'continue-prompt') };
+  if (command === 'conversations ensure-live') return { ...body, action: 'ensure_live', conversationId: positionals[0], cwd: flagString(flags, 'cwd') };
+  if (command === 'conversations send') return { ...body, action: 'send_message', conversationId: positionals[0], text, steer: flagBoolean(flags, 'steer') };
+  if (command === 'conversations run-turn') return { ...body, action: 'run_turn', conversationId: positionals[0], text, steer: flagBoolean(flags, 'steer'), cwd: flagString(flags, 'cwd'), timeoutMs: flagNumber(flags, 'timeout-ms') ?? flagNumber(flags, 'timeout') };
+  if (command === 'conversations abort') return { ...body, action: 'abort', conversationId: positionals[0] };
+  if (command === 'conversations compact') return { ...body, action: 'compact', conversationId: positionals[0], customInstructions: flagString(flags, 'instructions') };
+  if (command === 'conversations fork') return { ...body, action: 'fork', conversationId: positionals[0], title: flagString(flags, 'title'), cwd: flagString(flags, 'cwd'), targetCwd: flagString(flags, 'target-cwd') };
+  if (command === 'conversations tools') return { ...body, action: 'set_active_tools', conversationId: positionals[0], toolNames: flagStringArray(flags, 'tool') ?? positionals.slice(1) };
+  if (command === 'conversations rollback') return { ...body, action: 'rollback', conversationId: positionals[0], count: flagNumber(flags, 'count') ?? (positionals[1] ? Number(positionals[1]) : undefined) };
   if (command === 'conversations workspace') return { ...body, action: 'workspace_get' };
+  if (command === 'conversations workspace update') return { ...body, action: 'workspace_update', openConversationIds: flagStringArray(flags, 'open'), pinnedConversationIds: flagStringArray(flags, 'pinned'), archivedConversationIds: flagStringArray(flags, 'archived'), activeConversationId: flagString(flags, 'active'), workspacePaths: flagStringArray(flags, 'workspace-path'), remoteControlledConversationIds: flagStringArray(flags, 'remote-controlled') };
+  if (command === 'conversations transcript append') return { ...body, action: 'append_transcript_block', conversationId: positionals[0], blockType: flagString(flags, 'type') ?? positionals[1], blockId: flagString(flags, 'block-id'), title: flagString(flags, 'title'), data: flagString(flags, 'data') ? JSON.parse(flagString(flags, 'data') as string) : undefined };
+  if (command === 'conversations transcript update') return { ...body, action: 'update_transcript_block', conversationId: positionals[0], blockId: positionals[1] ?? flagString(flags, 'block-id'), blockType: flagString(flags, 'type') ?? positionals[2], title: flagString(flags, 'title'), data: flagString(flags, 'data') ? JSON.parse(flagString(flags, 'data') as string) : undefined };
   return body;
 }
 

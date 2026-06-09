@@ -331,8 +331,10 @@ Use `run_turn` when the caller needs to wait for the remote conversation to fini
 
 ## Examples
 
+Use `workspace_get` for open/sidebar thread state. Do not use `scope: "running"` as a synonym for open threads; running/live scopes describe runtime execution state, not sidebar membership.
+
 ```json
-{ "action": "inspect", "inspectAction": "list", "scope": "running" }
+{ "action": "workspace_get" }
 ```
 
 ```json
@@ -354,4 +356,19 @@ Use `run_turn` when the caller needs to wait for the remote conversation to fini
   "openConversationIds": ["conv-123"],
   "remoteControlledConversationIds": ["conv-123"]
 }
+```
+
+## CLI
+
+The `neon-pilot conversations ...` CLI maps onto the same admin action backend. Prefer the CLI for Neon Pilot self-administration from shell or agent workflows:
+
+```sh
+neon-pilot conversations list --scope all --json
+neon-pilot conversations inspect <id> outline --json
+neon-pilot conversations ensure-live <id> --json
+neon-pilot conversations send <id> --text "message" --json
+neon-pilot conversations run-turn <id> --text "prompt" --timeout-ms 120000 --json
+neon-pilot conversations workspace --json
+neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json
+neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}' --json
 ```
