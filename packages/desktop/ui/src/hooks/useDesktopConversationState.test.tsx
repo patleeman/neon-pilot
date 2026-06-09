@@ -613,8 +613,19 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(resumeSession).toHaveBeenCalledWith('/repo/saved.jsonl', '/repo');
-    expect(promptSession).toHaveBeenCalledWith('conv-saved', 'continue', 'followUp', undefined, undefined, expect.any(String), undefined, undefined);
-    expect(latestState?.state?.liveSession).toEqual(expect.objectContaining({ live: true, id: 'conv-saved', sessionFile: '/repo/saved.jsonl' }));
+    expect(promptSession).toHaveBeenCalledWith(
+      'conv-saved',
+      'continue',
+      'followUp',
+      undefined,
+      undefined,
+      expect.any(String),
+      undefined,
+      undefined,
+    );
+    expect(latestState?.state?.liveSession).toEqual(
+      expect.objectContaining({ live: true, id: 'conv-saved', sessionFile: '/repo/saved.jsonl' }),
+    );
     expect(eventSources).toHaveLength(1);
   });
 
@@ -696,7 +707,16 @@ describe('useDesktopConversationState', () => {
     });
 
     expect(resumeSession).toHaveBeenCalledWith('/repo/fast.jsonl', '/repo');
-    expect(promptSession).toHaveBeenCalledWith('conv-fast', 'send immediately', undefined, undefined, undefined, expect.any(String), undefined, undefined);
+    expect(promptSession).toHaveBeenCalledWith(
+      'conv-fast',
+      'send immediately',
+      undefined,
+      undefined,
+      undefined,
+      expect.any(String),
+      undefined,
+      undefined,
+    );
   });
 
   it('uses a primed reserved conversation as live state while refreshing desktop state and subscribing', async () => {

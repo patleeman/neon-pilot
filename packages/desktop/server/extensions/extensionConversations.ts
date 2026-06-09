@@ -1,5 +1,11 @@
 import type { SessionEntry } from '@earendil-works/pi-coding-agent';
 
+import { reserveConversationSession } from '../conversations/conversationReservation.js';
+import {
+  appendStoredVisibleCustomMessage,
+  renameStoredConversation,
+  resolveConversationSessionFile,
+} from '../conversations/conversationService.js';
 import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { broadcastTitle } from '../conversations/liveSessionBroadcasts.js';
 import {
@@ -13,8 +19,6 @@ import {
   updateVisibleCustomMessage as updateVisibleLiveSessionCustomMessage,
 } from '../conversations/liveSessions.js';
 import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js';
-import { reserveConversationSession } from '../conversations/conversationReservation.js';
-import { appendStoredVisibleCustomMessage, renameStoredConversation, resolveConversationSessionFile } from '../conversations/conversationService.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
@@ -101,7 +105,8 @@ export function createExtensionConversationsCapability(
             openConversationIds: before.openConversationIds.filter((id) => !deletedIds.has(id)),
             pinnedConversationIds: before.pinnedConversationIds.filter((id) => !deletedIds.has(id)),
             archivedConversationIds: before.archivedConversationIds.filter((id) => !deletedIds.has(id)),
-            activeConversationId: before.activeConversationId && deletedIds.has(before.activeConversationId) ? null : before.activeConversationId,
+            activeConversationId:
+              before.activeConversationId && deletedIds.has(before.activeConversationId) ? null : before.activeConversationId,
             remoteControlledConversationIds: before.remoteControlledConversationIds.filter((id) => !deletedIds.has(id)),
           },
           settingsFile,
@@ -258,7 +263,10 @@ export function createExtensionConversationsCapability(
       const result = deleteSessions(conversationIds);
       await removeDeletedConversationWorkspaceReferences(result.deleted.map((entry) => entry.id));
       invalidateAppTopics('sessions');
-      await publishExtensionHostEvent('conversationSessions', { type: 'session.deleted', conversationIds: result.deleted.map((entry) => entry.id) });
+      await publishExtensionHostEvent('conversationSessions', {
+        type: 'session.deleted',
+        conversationIds: result.deleted.map((entry) => entry.id),
+      });
       return { ok: true, ...result };
     },
 
@@ -271,11 +279,19 @@ export function createExtensionConversationsCapability(
         const { readSavedUiPreferences } = await import('../ui/uiPreferences.js');
         archivedConversationIds = readSavedUiPreferences(serverContext.getSettingsFile()).archivedConversationIds;
       }
-      const result = pruneSessionsByRetention({ olderThanMs, archivedOnly: Boolean(input.archivedOnly), dryRun: Boolean(input.dryRun), archivedConversationIds });
+      const result = pruneSessionsByRetention({
+        olderThanMs,
+        archivedOnly: Boolean(input.archivedOnly),
+        dryRun: Boolean(input.dryRun),
+        archivedConversationIds,
+      });
       if (!result.dryRun) {
         await removeDeletedConversationWorkspaceReferences(result.deleted.map((entry) => entry.id));
         invalidateAppTopics('sessions');
-        await publishExtensionHostEvent('conversationSessions', { type: 'session.deleted', conversationIds: result.deleted.map((entry) => entry.id) });
+        await publishExtensionHostEvent('conversationSessions', {
+          type: 'session.deleted',
+          conversationIds: result.deleted.map((entry) => entry.id),
+        });
       }
       return result;
     },

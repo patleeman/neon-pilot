@@ -8,9 +8,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   createInProcessExtensionHostClient,
+  type ExtensionHostClient,
   getExtensionHostClient,
   setExtensionHostClient,
-  type ExtensionHostClient,
 } from '../extensions/extensionHostClient.js';
 import { registerServerRoutes, type ServerRouteContext } from './index.js';
 

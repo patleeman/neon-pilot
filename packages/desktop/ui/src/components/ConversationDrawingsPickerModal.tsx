@@ -114,7 +114,9 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
                   </CardMeta>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ToolbarButton onClick={() => onAttach({ attachment, revision: attachment.currentRevision })}>Attach latest</ToolbarButton>
+                  <ToolbarButton onClick={() => onAttach({ attachment, revision: attachment.currentRevision })}>
+                    Attach latest
+                  </ToolbarButton>
                   <ToolbarButton
                     onClick={() => {
                       void toggleHistory(attachment);

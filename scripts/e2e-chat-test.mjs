@@ -43,8 +43,12 @@ function ab(args, options = {}) {
     let stdout = '';
     let stderr = '';
     if (options.silent) {
-      child.stdout.on('data', (d) => { stdout += d; });
-      child.stderr.on('data', (d) => { stderr += d; });
+      child.stdout.on('data', (d) => {
+        stdout += d;
+      });
+      child.stderr.on('data', (d) => {
+        stderr += d;
+      });
     }
     child.on('error', reject);
     child.on('exit', (code) => {
@@ -103,9 +107,10 @@ async function main() {
 
   // ── Step 4: Create a new conversation via sidebar ─────────────────────────
   console.log('\n4. Creating new conversation...');
-  const newBtnRef = await extractRef(s2, /button "New conversation in neon-pilot" \[ref=e(\d+)\]/)
-    || await extractRef(s2, /button "New conversation in Chats" \[ref=e(\d+)\]/);
-  
+  const newBtnRef =
+    (await extractRef(s2, /button "New conversation in neon-pilot" \[ref=e(\d+)\]/)) ||
+    (await extractRef(s2, /button "New conversation in Chats" \[ref=e(\d+)\]/));
+
   if (newBtnRef) {
     await ab(['click', `@e${newBtnRef}`]);
     await sleep(2000);
@@ -140,10 +145,7 @@ async function main() {
     await ab(['click', `@e${sendRef}`]);
     // Wait for the user message to appear in the transcript (optimistic update,
     // should be instant — not waiting for the LLM response).
-    const result = await retrySnapshot(
-      (s) => s.includes('Hello from E2E test') ? { value: true } : null,
-      10, 1000
-    );
+    const result = await retrySnapshot((s) => (s.includes('Hello from E2E test') ? { value: true } : null), 10, 1000);
     assert('User message appeared in transcript', Boolean(result.value), 'User message should appear immediately after send');
   } else {
     assert('Send button clickable', false);
@@ -155,7 +157,7 @@ async function main() {
   const hideWorkbench = await extractRef(s8, /button "Hide workbench" \[ref=e(\d+)\]/);
   const showWorkbench = await extractRef(s8, /button "Show workbench" \[ref=e(\d+)\]/);
   const toggleRef = hideWorkbench || showWorkbench;
-  
+
   if (toggleRef) {
     await ab(['click', `@e${toggleRef}`]);
     await sleep(2000);
@@ -170,14 +172,11 @@ async function main() {
   console.log('\n9. Opening side chat...');
   const s9 = await snapshot();
   const chatBtnRef = await extractRef(s9, /button "Chat Open a new chat tab\." \[ref=e(\d+)\]/);
-  
+
   if (chatBtnRef) {
     await ab(['click', `@e${chatBtnRef}`]);
     // Wait for side chat tab to appear (may take time on cold module load)
-    const result = await retrySnapshot(
-      (s) => s.includes('Close Chat') ? { value: true } : null,
-      20, 1500
-    );
+    const result = await retrySnapshot((s) => (s.includes('Close Chat') ? { value: true } : null), 20, 1500);
     assert('Side chat tab opened', Boolean(result.value), 'Side chat tab may not have appeared within 30s');
 
     // ── Step 10: Type in side chat ──────────────────────────────────────────

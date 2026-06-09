@@ -2,10 +2,10 @@ import type { FileTreeContextMenuOpenContext } from '@pierre/trees';
 import type { CSSProperties, DragEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { PanelMessage } from '../components/ui';
 import type { ActivityTreeItem } from './activityTree';
 import { buildActivityTreePathModel } from './activityTreePaths';
 import { ActivityTreeRow } from './ActivityTreeRow';
-import { PanelMessage } from '../components/ui';
 
 export type ActivityTreeDropPosition = 'before' | 'after';
 

@@ -31,6 +31,19 @@ function workerBridge(): ExtensionBackendApiGlobal[typeof EXTENSION_HOST_CAPABIL
   return (globalThis as ExtensionBackendApiGlobal)[EXTENSION_HOST_CAPABILITY_BRIDGE];
 }
 
+async function* streamWorkerTerminalEvents(
+  workerBridgeFn: NonNullable<ExtensionBackendApiGlobal[typeof EXTENSION_HOST_CAPABILITY_BRIDGE]>,
+  id: string,
+) {
+  for (;;) {
+    const drained = (await workerBridgeFn('terminal', 'drain', { id })) as DrainTerminalResult;
+    if (!drained.ok) return;
+    if (drained.output) yield { data: { type: 'output', data: drained.output } };
+    if (drained.exited) return;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+}
+
 export async function createTerminalSession(...args: unknown[]) {
   const bridge = workerBridge();
   if (bridge) return bridge('terminal', 'create', args[0]) as Promise<CreateTerminalResult>;
@@ -69,16 +82,7 @@ export async function streamTerminalSession(...args: unknown[]) {
     const idParam = request.query?.id;
     const id = Array.isArray(idParam) ? idParam[0] : idParam;
     if (typeof id !== 'string' || !id) return { status: 404, body: { error: 'Terminal not found or already closed.' } };
-    async function* events() {
-      for (;;) {
-        const drained = (await workerBridgeFn('terminal', 'drain', { id })) as DrainTerminalResult;
-        if (!drained.ok) return;
-        if (drained.output) yield { data: { type: 'output', data: drained.output } };
-        if (drained.exited) return;
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-    }
-    return { stream: 'sse', events: events() } satisfies TerminalStreamRouteResponse;
+    return { stream: 'sse', events: streamWorkerTerminalEvents(workerBridgeFn, id) } satisfies TerminalStreamRouteResponse;
   }
   return callServerModuleExport(TERMINAL_SESSIONS, 'streamTerminalSession', ...args);
 }

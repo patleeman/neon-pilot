@@ -211,15 +211,16 @@ export const TextButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
   },
 );
 
-export const TitleButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
-  function TitleButton({ className, children, type = 'button', ...props }, ref) {
-    return (
-      <button ref={ref} type={type} className={cx('ui-title-button', className)} {...props}>
-        {children}
-      </button>
-    );
-  },
-);
+export const TitleButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function TitleButton(
+  { className, children, type = 'button', ...props },
+  ref,
+) {
+  return (
+    <button ref={ref} type={type} className={cx('ui-title-button', className)} {...props}>
+      {children}
+    </button>
+  );
+});
 
 export const SidebarNavButton = forwardRef<
   HTMLButtonElement,
@@ -272,15 +273,16 @@ export const MessageActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttri
   },
 );
 
-export const MediaPreviewButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
-  function MediaPreviewButton({ className, children, type = 'button', ...props }, ref) {
-    return (
-      <button ref={ref} type={type} className={cx('ui-media-preview-button', className)} {...props}>
-        {children}
-      </button>
-    );
-  },
-);
+export const MediaPreviewButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function MediaPreviewButton(
+  { className, children, type = 'button', ...props },
+  ref,
+) {
+  return (
+    <button ref={ref} type={type} className={cx('ui-media-preview-button', className)} {...props}>
+      {children}
+    </button>
+  );
+});
 
 export type ComposerActionButtonTone = 'accent' | 'warning' | 'danger' | 'neutral' | 'disabled';
 export type ComposerActionButtonSize = 'icon' | 'label' | 'compactLabel';
@@ -1451,16 +1453,15 @@ export const WorkbenchTabButton = forwardRef<
   );
 });
 
-export const WorkbenchTabCloseButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(function WorkbenchTabCloseButton(
-  { className, children = '×', type = 'button', ...props },
-  ref,
-) {
-  return (
-    <button ref={ref} type={type} className={cx('ui-workbench-tab-close-button', className)} {...props}>
-      {children}
-    </button>
-  );
-});
+export const WorkbenchTabCloseButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
+  function WorkbenchTabCloseButton({ className, children = '×', type = 'button', ...props }, ref) {
+    return (
+      <button ref={ref} type={type} className={cx('ui-workbench-tab-close-button', className)} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
 
 export const SwatchOption = forwardRef<
   HTMLButtonElement,

@@ -343,7 +343,10 @@ async function bootstrapProviderSave(input: JsonRecord, ctx: ExtensionBackendCon
 async function bootstrapProviderModel(input: JsonRecord, ctx: ExtensionBackendContext) {
   const args = readCliArgs(input);
   const provider = requiredString(input.provider ?? readCliFlag(input, 'provider') ?? args[0], 'provider');
-  const modelId = requiredString(input.modelId ?? input.model ?? readCliFlag(input, 'model-id') ?? readCliFlag(input, 'model') ?? args[1], 'modelId');
+  const modelId = requiredString(
+    input.modelId ?? input.model ?? readCliFlag(input, 'model-id') ?? readCliFlag(input, 'model') ?? args[1],
+    'modelId',
+  );
   const contextWindow = readNumber(input.contextWindow ?? readCliFlag(input, 'context-window'));
   await ctx.models.saveProviderModel({
     provider,
@@ -487,7 +490,10 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
     }
 
     case 'conversation_get': {
-      const result = await agentApi().getAgentConversation({ conversationId: requiredString(params.conversationId, 'conversationId') }, ctx);
+      const result = await agentApi().getAgentConversation(
+        { conversationId: requiredString(params.conversationId, 'conversationId') },
+        ctx,
+      );
       return textResult(JSON.stringify(result, null, 2), { action, conversation: result });
     }
 
@@ -497,12 +503,18 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
     }
 
     case 'conversation_abort': {
-      const result = await agentApi().abortAgentConversation({ conversationId: requiredString(params.conversationId, 'conversationId') }, ctx);
+      const result = await agentApi().abortAgentConversation(
+        { conversationId: requiredString(params.conversationId, 'conversationId') },
+        ctx,
+      );
       return textResult(`Aborted conversation ${result.id}.`, { action, conversation: result });
     }
 
     case 'conversation_close': {
-      const result = await agentApi().disposeAgentConversation({ conversationId: requiredString(params.conversationId, 'conversationId') }, ctx);
+      const result = await agentApi().disposeAgentConversation(
+        { conversationId: requiredString(params.conversationId, 'conversationId') },
+        ctx,
+      );
       return textResult(`Closed conversation ${result.conversationId}.`, { action, ...result });
     }
 
@@ -516,7 +528,9 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
         cwd,
         agent: {
           prompt,
-          ...(readString(params.modelRef) ?? readString(params.model) ? { model: readString(params.modelRef) ?? readString(params.model) } : {}),
+          ...((readString(params.modelRef) ?? readString(params.model))
+            ? { model: readString(params.modelRef) ?? readString(params.model) }
+            : {}),
           ...(readAllowedTools(params.allowedTools) ? { allowedTools: readAllowedTools(params.allowedTools) } : {}),
         },
         source: {
@@ -528,7 +542,8 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
           ...(readBoolean(params.deliverResultToConversation) ? { resumeParentOnExit: true } : {}),
         },
       });
-      if (!isRecord(result) || result.accepted === false) throw new Error(readString(result?.reason) ?? `Could not start subagent ${taskSlug}.`);
+      if (!isRecord(result) || result.accepted === false)
+        throw new Error(readString(result?.reason) ?? `Could not start subagent ${taskSlug}.`);
       ctx.ui?.invalidate?.(['executions', 'runs', 'tasks']);
       return textResult(`Started subagent ${readString(result.runId) ?? 'unknown'} for ${taskSlug}.`, {
         action,
@@ -541,7 +556,10 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
 
     case 'runs_list': {
       const result = await runsApi().listDurableRuns();
-      const runs = filterRuns(Array.isArray((result as { runs?: unknown[] }).runs) ? (result as { runs: unknown[] }).runs : [], readString(params.kind));
+      const runs = filterRuns(
+        Array.isArray((result as { runs?: unknown[] }).runs) ? (result as { runs: unknown[] }).runs : [],
+        readString(params.kind),
+      );
       return textResult(JSON.stringify(runs, null, 2), { action, runs, runCount: runs.length });
     }
 
@@ -576,7 +594,11 @@ export async function neonPilotAgent(input: unknown, ctx: ExtensionBackendContex
       const result = await runsApi().rerunDurableRun(runId);
       if (!isRecord(result) || result.accepted === false) throw new Error(readString(result?.reason) ?? `Could not rerun ${runId}.`);
       ctx.ui?.invalidate?.(['executions', 'runs', 'tasks']);
-      return textResult(`Started rerun ${readString(result.runId) ?? 'unknown'} from ${runId}.`, { action, runId: result.runId, sourceRunId: runId });
+      return textResult(`Started rerun ${readString(result.runId) ?? 'unknown'} from ${runId}.`, {
+        action,
+        runId: result.runId,
+        sourceRunId: runId,
+      });
     }
 
     case 'subagent_follow_up': {
@@ -743,7 +765,8 @@ function inputFromCli(args: string[]): { input: JsonRecord; json: boolean } {
     if (subcommand === 'get') return { input: { ...common, action: 'conversation_get', conversationId: idOrAction }, json };
     if (subcommand === 'list') return { input: { ...common, action: 'conversation_list' }, json };
     if (subcommand === 'abort') return { input: { ...common, action: 'conversation_abort', conversationId: idOrAction }, json };
-    if (subcommand === 'close' || subcommand === 'dispose') return { input: { ...common, action: 'conversation_close', conversationId: idOrAction }, json };
+    if (subcommand === 'close' || subcommand === 'dispose')
+      return { input: { ...common, action: 'conversation_close', conversationId: idOrAction }, json };
   }
   if (command === 'agent' && subcommand === 'dispose') {
     return { input: { ...common, action: 'conversation_close', conversationId: idOrAction ?? maybeAction }, json };
@@ -780,7 +803,11 @@ const MCP_TOOLS = [
   { name: 'neon_pilot_get_run_logs', action: 'runs_logs', description: 'Read durable run logs.' },
   { name: 'neon_pilot_cancel_run', action: 'runs_cancel', description: 'Cancel a durable run.' },
   { name: 'neon_pilot_rerun', action: 'runs_rerun', description: 'Rerun a durable run.' },
-  { name: 'neon_pilot_create_conversation', action: 'conversation_create', description: 'Create an extension-owned Neon Pilot conversation.' },
+  {
+    name: 'neon_pilot_create_conversation',
+    action: 'conversation_create',
+    description: 'Create an extension-owned Neon Pilot conversation.',
+  },
   { name: 'neon_pilot_send_message', action: 'conversation_send', description: 'Send a message to an extension-owned conversation.' },
   { name: 'neon_pilot_close_conversation', action: 'conversation_close', description: 'Close an ephemeral extension-owned conversation.' },
 ] as const;
@@ -867,11 +894,15 @@ async function handleMcpMessage(message: JsonRecord, ctx: ExtensionProtocolConte
     const uri = readString(isRecord(message.params) ? message.params.uri : undefined);
     if (uri === 'neon-pilot://capabilities') {
       const result = await neonPilotAgent({ action: 'capabilities' }, ctx);
-      return mcpResponse(id, { contents: [{ uri, mimeType: 'application/json', text: String((result as { text?: unknown }).text ?? '') }] });
+      return mcpResponse(id, {
+        contents: [{ uri, mimeType: 'application/json', text: String((result as { text?: unknown }).text ?? '') }],
+      });
     }
     if (uri === 'neon-pilot://runs') {
       const result = await neonPilotAgent({ action: 'runs_list' }, ctx);
-      return mcpResponse(id, { contents: [{ uri, mimeType: 'application/json', text: String((result as { text?: unknown }).text ?? '') }] });
+      return mcpResponse(id, {
+        contents: [{ uri, mimeType: 'application/json', text: String((result as { text?: unknown }).text ?? '') }],
+      });
     }
     return mcpError(id, `Unknown resource: ${uri}`, -32602);
   }

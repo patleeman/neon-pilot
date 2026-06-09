@@ -1,9 +1,7 @@
 const toolUpdateHandles = new Map<string, (update: never) => void>();
 let nextToolUpdateHandleId = 0;
 
-export function registerExtensionToolUpdateHandle(
-  onUpdate: ((update: never) => void) | undefined,
-): string | undefined {
+export function registerExtensionToolUpdateHandle(onUpdate: ((update: never) => void) | undefined): string | undefined {
   if (!onUpdate) return undefined;
   const handleId = `tool-update-${++nextToolUpdateHandleId}`;
   toolUpdateHandles.set(handleId, onUpdate);

@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  createBackendContext,
   checkEnabledExtensionBackendHealth,
+  createBackendContext,
   invokeExtensionAction,
   invokeExtensionRoute,
   loadExtensionAgentFactory,
@@ -2159,7 +2159,7 @@ describe('extension backend action invocation', () => {
       ok: true,
       result: { content: [{ type: 'text', text: 'MCP servers (/repo/.mcp.json):\\n' }], details: { action: 'list', serverCount: 0 } },
     });
-    await expect(invokeExtensionAction('system-mcp', 'saveExplicitConfig', { json: '{\"mcpServers\":{}}' })).resolves.toEqual({
+    await expect(invokeExtensionAction('system-mcp', 'saveExplicitConfig', { json: '{"mcpServers":{}}' })).resolves.toEqual({
       ok: true,
       result: { configPath: '/repo/.mcp.json', servers: [{ name: 'filesystem' }], searchedPaths: ['/repo/.mcp.json'] },
     });

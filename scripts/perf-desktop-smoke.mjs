@@ -1004,7 +1004,10 @@ async function main() {
         );
 
       const openStartedAtMs = await evalJs(cdp, `performance.now()`);
-      if (!(await clickWorkbenchToggle('Show workbench')) && !(await evalJs(cdp, `Boolean(document.querySelector('[data-workbench-document-pane="true"]'))`))) {
+      if (
+        !(await clickWorkbenchToggle('Show workbench')) &&
+        !(await evalJs(cdp, `Boolean(document.querySelector('[data-workbench-document-pane="true"]'))`))
+      ) {
         return { skipped: true, reason: 'show workbench button missing' };
       }
       await waitForExpression(cdp, child, `Boolean(document.querySelector('[data-workbench-document-pane="true"]'))`, 5_000, 16);
@@ -1047,13 +1050,7 @@ async function main() {
       if (typeof sideOpenStartedAtMs !== 'number') {
         return { skipped: true, reason: 'side chat button missing' };
       }
-      await waitForExpression(
-        cdp,
-        child,
-        `Boolean(document.querySelector('[data-chat-rail="1"] textarea:not([disabled])'))`,
-        5_000,
-        16,
-      );
+      await waitForExpression(cdp, child, `Boolean(document.querySelector('[data-chat-rail="1"] textarea:not([disabled])'))`, 5_000, 16);
       const sideChatOpenMs = Math.round((await evalJs(cdp, `performance.now()`)) - sideOpenStartedAtMs);
       const sideConversationId = await evalJs(
         cdp,
@@ -2226,13 +2223,8 @@ async function main() {
       if (typeof workbenchResult.sideChatOpenMs === 'number' && workbenchResult.sideChatOpenMs > maxSideChatOpenMs) {
         failures.push(`workbenchSideChat sideChatOpenMs ${workbenchResult.sideChatOpenMs} > ${maxSideChatOpenMs}`);
       }
-      if (
-        typeof workbenchResult.sideChatPromptStartMs === 'number' &&
-        workbenchResult.sideChatPromptStartMs > maxSideChatPromptVisibleMs
-      ) {
-        failures.push(
-          `workbenchSideChat sideChatPromptStartMs ${workbenchResult.sideChatPromptStartMs} > ${maxSideChatPromptVisibleMs}`,
-        );
+      if (typeof workbenchResult.sideChatPromptStartMs === 'number' && workbenchResult.sideChatPromptStartMs > maxSideChatPromptVisibleMs) {
+        failures.push(`workbenchSideChat sideChatPromptStartMs ${workbenchResult.sideChatPromptStartMs} > ${maxSideChatPromptVisibleMs}`);
       }
     }
     const draftClickStartMs = postDraftPerfStore?.smokeDraftClickStartMs;

@@ -5,8 +5,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
-import { APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
 import { sessionStore } from '../store';
+import { APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
 import { Layout } from './Layout';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -63,9 +63,7 @@ describe('Layout workbench toggle', () => {
     vi.spyOn(api, 'extensionKeybindings').mockImplementation(
       () => new Promise<Awaited<ReturnType<typeof api.extensionKeybindings>>>(() => {}),
     );
-    vi.spyOn(api, 'extensionCommands').mockImplementation(
-      () => new Promise<Awaited<ReturnType<typeof api.extensionCommands>>>(() => {}),
-    );
+    vi.spyOn(api, 'extensionCommands').mockImplementation(() => new Promise<Awaited<ReturnType<typeof api.extensionCommands>>>(() => {}));
     vi.spyOn(api, 'models').mockResolvedValue({ models: [], perf: {} });
     vi.spyOn(api, 'conversationModelPreferences').mockResolvedValue({
       currentModel: null,
@@ -122,9 +120,9 @@ describe('Layout workbench toggle', () => {
       cwd: '/repo',
       perf: {},
     });
-    const createLiveSession = vi.spyOn(api, 'createLiveSession').mockImplementation(
-      () => new Promise<Awaited<ReturnType<typeof api.createLiveSession>>>(() => {}),
-    );
+    const createLiveSession = vi
+      .spyOn(api, 'createLiveSession')
+      .mockImplementation(() => new Promise<Awaited<ReturnType<typeof api.createLiveSession>>>(() => {}));
     vi.mocked(api.conversationModelPreferences).mockResolvedValue({
       currentModel: 'deepseek-v4-flash',
       currentThinkingLevel: 'high',
@@ -172,9 +170,7 @@ describe('Layout workbench toggle', () => {
       cwd: '/repo',
       perf: {},
     });
-    vi.spyOn(api, 'createLiveSession').mockImplementation(
-      () => new Promise<Awaited<ReturnType<typeof api.createLiveSession>>>(() => {}),
-    );
+    vi.spyOn(api, 'createLiveSession').mockImplementation(() => new Promise<Awaited<ReturnType<typeof api.createLiveSession>>>(() => {}));
 
     renderLayout('/conversations/conv-1');
 

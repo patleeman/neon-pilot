@@ -73,7 +73,9 @@ for (const file of listExtensionFiles()) {
   }
 
   if (!allowedBackendRunnerFiles.has(file)) {
-    const directBackendRunner = /import\s+\{[^}]*\bgetExtensionBackendRunner\b[^}]*\}\s+from\s+['"]\.\/extensionBackendRunner\.js['"]/.exec(text);
+    const directBackendRunner = /import\s+\{[^}]*\bgetExtensionBackendRunner\b[^}]*\}\s+from\s+['"]\.\/extensionBackendRunner\.js['"]/.exec(
+      text,
+    );
     if (directBackendRunner) {
       const line = text.slice(0, directBackendRunner.index).split('\n').length;
       failures.push(`${relative(repoRoot, absolute)}:${line}: extension backend execution must go through extensionBackend.ts helpers`);

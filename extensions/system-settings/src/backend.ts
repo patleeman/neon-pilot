@@ -1,9 +1,5 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import {
-  installNeonPilotUserCli,
-  readNeonPilotCliInstallStatus,
-  uninstallNeonPilotUserCli,
-} from '@neon-pilot/extensions/backend/cli';
+import { installNeonPilotUserCli, readNeonPilotCliInstallStatus, uninstallNeonPilotUserCli } from '@neon-pilot/extensions/backend/cli';
 import {
   readExtensionSettings,
   readExtensionSettingsSchema,

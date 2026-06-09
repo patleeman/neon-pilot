@@ -108,7 +108,9 @@ function normalizeProfile(value: unknown): PersonalAgentProfile | null {
   return {
     id,
     name,
-    ...(cleanString(value.description, MAX_DESCRIPTION_LENGTH) ? { description: cleanString(value.description, MAX_DESCRIPTION_LENGTH) } : {}),
+    ...(cleanString(value.description, MAX_DESCRIPTION_LENGTH)
+      ? { description: cleanString(value.description, MAX_DESCRIPTION_LENGTH) }
+      : {}),
     ...(cleanString(value.avatar, 20) ? { avatar: cleanString(value.avatar, 20) } : {}),
     soul: cleanString(value.soul, MAX_SOUL_LENGTH) ?? defaultSoul(name),
     ...(cleanString(value.defaultConversationId, 160) ? { defaultConversationId: cleanString(value.defaultConversationId, 160) } : {}),
@@ -179,7 +181,9 @@ export async function createProfile(input: ProfileCreateInput, ctx: ExtensionBac
   const profile: PersonalAgentProfile = {
     id: makeId('agent'),
     name,
-    ...(cleanString(input?.description, MAX_DESCRIPTION_LENGTH) ? { description: cleanString(input?.description, MAX_DESCRIPTION_LENGTH) } : {}),
+    ...(cleanString(input?.description, MAX_DESCRIPTION_LENGTH)
+      ? { description: cleanString(input?.description, MAX_DESCRIPTION_LENGTH) }
+      : {}),
     soul: cleanString(input?.soul, MAX_SOUL_LENGTH) ?? defaultSoul(name),
     ...(cleanString(input?.defaultCwd, 2_000) ? { defaultCwd: cleanString(input?.defaultCwd, 2_000) } : {}),
     ...(cleanString(input?.defaultModelRef, 160) ? { defaultModelRef: cleanString(input?.defaultModelRef, 160) } : {}),
@@ -325,18 +329,14 @@ export async function provideAgentTurnContext(
   ctx: ExtensionBackendContext,
 ): Promise<{ blocks: Array<{ title: string; content: string }> }> {
   const toolContext = (ctx as ExtensionBackendContext & { toolContext?: { conversationId?: unknown; sessionId?: unknown } }).toolContext;
-  const conversationId = cleanString(input?.conversationId, 160) ?? cleanString(toolContext?.conversationId, 160) ?? cleanString(toolContext?.sessionId, 160);
+  const conversationId =
+    cleanString(input?.conversationId, 160) ?? cleanString(toolContext?.conversationId, 160) ?? cleanString(toolContext?.sessionId, 160);
   if (!conversationId) return { blocks: [] };
   const metadata = await ctx.conversations.metadata.get({ conversationId, namespace: METADATA_NAMESPACE });
   const agentProfileId = cleanString(metadata.agentProfileId, 120);
   if (!agentProfileId) return { blocks: [] };
   const profile = await readProfile(agentProfileId, ctx);
-  const lines = [
-    `You are currently speaking as the personal agent "${profile.name}".`,
-    '',
-    '## Soul Document',
-    profile.soul,
-  ];
+  const lines = [`You are currently speaking as the personal agent "${profile.name}".`, '', '## Soul Document', profile.soul];
   if (profile.memoryScopes.length > 0) {
     lines.push('', '## Selected Memory Scopes', ...profile.memoryScopes.map((scope) => `- ${scope}`));
   }

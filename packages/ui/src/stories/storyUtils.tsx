@@ -1,12 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-export function StoryStack({
-  children,
-  width = 760,
-}: {
-  children: ReactNode;
-  width?: CSSProperties['width'];
-}) {
+export function StoryStack({ children, width = 760 }: { children: ReactNode; width?: CSSProperties['width'] }) {
   return <div style={{ display: 'grid', gap: 24, width }}>{children}</div>;
 }
 

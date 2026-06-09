@@ -51,9 +51,7 @@ vi.mock('../../extensions/ComposerButtonHost', () => ({
       const thinkingLabel = buttonContext.currentThinkingLevel === 'xhigh' ? 'Extra high' : buttonContext.currentThinkingLevel || 'Unset';
       return (
         <span>
-          {modelLabel}
-          {' '}
-          {thinkingLabel}
+          {modelLabel} {thinkingLabel}
         </span>
       );
     }

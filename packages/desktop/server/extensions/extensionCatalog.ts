@@ -224,16 +224,18 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
     ...MARKETPLACE_SOURCES,
     ...enabledConfigured
       .filter((source) => source.id !== FIRST_PARTY_SOURCE_ID)
-      .map((source): MarketplaceSource => ({
-        id: source.id,
-        name: source.name ?? `${source.owner}/${source.repo}`,
-        ecosystem: 'neon-pilot',
-        description: `Extensions from ${source.owner}/${source.repo}.`,
-        supportedPackageTypes: ['extension'],
-        installStatus: 'supported',
-        owner: source.owner,
-        repo: source.repo,
-      })),
+      .map(
+        (source): MarketplaceSource => ({
+          id: source.id,
+          name: source.name ?? `${source.owner}/${source.repo}`,
+          ecosystem: 'neon-pilot',
+          description: `Extensions from ${source.owner}/${source.repo}.`,
+          supportedPackageTypes: ['extension'],
+          installStatus: 'supported',
+          owner: source.owner,
+          repo: source.repo,
+        }),
+      ),
   ];
   return {
     ok: true,
@@ -329,7 +331,10 @@ async function fetchGithubSourceCatalog(source: ExtensionCatalogSource): Promise
       {
         id,
         name: typeof record.name === 'string' && record.name.trim() ? record.name.trim() : id,
-        description: typeof record.description === 'string' && record.description.trim() ? record.description.trim() : `Extension from ${source.owner}/${source.repo}.`,
+        description:
+          typeof record.description === 'string' && record.description.trim()
+            ? record.description.trim()
+            : `Extension from ${source.owner}/${source.repo}.`,
         ...(typeof record.version === 'string' && record.version.trim() ? { version: record.version.trim() } : {}),
         ...(typeof record.tag === 'string' && record.tag.trim() ? { tag: record.tag.trim() } : {}),
         ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : {}),
@@ -362,7 +367,10 @@ async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]
   const url = `https://github.com/${encodeURIComponent(FIRST_PARTY_REPO.owner)}/${encodeURIComponent(FIRST_PARTY_REPO.repo)}/releases/download/${encodeURIComponent(tag)}/neon-extension-catalog.json`;
   const response = await fetch(url);
   if (!response.ok) {
-    throw new FirstPartyReleaseCatalogFetchError(`Failed to fetch first-party extension release catalog: HTTP ${response.status}`, response.status);
+    throw new FirstPartyReleaseCatalogFetchError(
+      `Failed to fetch first-party extension release catalog: HTTP ${response.status}`,
+      response.status,
+    );
   }
   const parsed = (await response.json()) as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {

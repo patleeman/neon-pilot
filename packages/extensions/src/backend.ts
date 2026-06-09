@@ -1,5 +1,5 @@
-export { recordTelemetryEvent } from './backend/telemetry';
 export * from './backend/cli';
+export { recordTelemetryEvent } from './backend/telemetry';
 export type { ExtensionBackendContext } from './index';
 
 /**

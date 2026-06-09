@@ -91,13 +91,7 @@ describe('extensionServices', () => {
       },
     );
     runExtensionBackendExportInWorker.mockImplementation(
-      async (
-        extensionId: string,
-        exportName: string,
-        operation: unknown,
-        args: unknown[],
-        serverContext?: unknown,
-      ) => {
+      async (extensionId: string, exportName: string, operation: unknown, args: unknown[], serverContext?: unknown) => {
         const backend = await loadExtensionBackend(extensionId);
         const handler = backend[exportName];
         if (typeof handler !== 'function') throw new Error(`Missing service handler export "${exportName}".`);
@@ -182,7 +176,9 @@ describe('extensionServices', () => {
 
   it('is idempotent for already-running services', async () => {
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
-    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } } });
+    findExtensionEntry.mockReturnValue({
+      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } },
+    });
     loadExtensionBackend.mockResolvedValue({ startSync: vi.fn() });
 
     await startExtensionServices();
@@ -217,7 +213,9 @@ describe('extensionServices', () => {
 
   it('records startup failures and publishes app notifications', async () => {
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
-    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'missing', worker: { enabled: true } }] } } });
+    findExtensionEntry.mockReturnValue({
+      manifest: { backend: { services: [{ id: 'sync', handler: 'missing', worker: { enabled: true } }] } },
+    });
     loadExtensionBackend.mockResolvedValue({});
 
     await expect(startExtensionServices()).resolves.toEqual([
@@ -239,7 +237,9 @@ describe('extensionServices', () => {
 
   it('retries transient service startup failures before recording a failure', async () => {
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
-    findExtensionEntry.mockReturnValue({ manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } } });
+    findExtensionEntry.mockReturnValue({
+      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } },
+    });
     runExtensionBackendExportInWorker.mockRejectedValueOnce(new Error('worker not ready')).mockResolvedValueOnce({ ok: true });
 
     await expect(startExtensionServices()).resolves.toEqual([{ extensionId: 'ext', serviceId: 'sync', ok: true }]);
@@ -258,7 +258,14 @@ describe('extensionServices', () => {
       manifest: {
         backend: {
           services: [
-            { id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', restart: 'on-failure', worker: { enabled: true } },
+            {
+              id: 'sync',
+              handler: 'startSync',
+              stopHandler: 'stopSync',
+              healthCheck: 'checkSync',
+              restart: 'on-failure',
+              worker: { enabled: true },
+            },
           ],
         },
       },
@@ -287,7 +294,14 @@ describe('extensionServices', () => {
       manifest: {
         backend: {
           services: [
-            { id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', restart: 'on-failure', worker: { enabled: true } },
+            {
+              id: 'sync',
+              handler: 'startSync',
+              stopHandler: 'stopSync',
+              healthCheck: 'checkSync',
+              restart: 'on-failure',
+              worker: { enabled: true },
+            },
           ],
         },
       },
@@ -311,7 +325,11 @@ describe('extensionServices', () => {
     const stop = vi.fn();
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
     findExtensionEntry.mockReturnValue({
-      manifest: { backend: { services: [{ id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', worker: { enabled: true } }] } },
+      manifest: {
+        backend: {
+          services: [{ id: 'sync', handler: 'startSync', stopHandler: 'stopSync', healthCheck: 'checkSync', worker: { enabled: true } }],
+        },
+      },
     });
     loadExtensionBackend.mockResolvedValue({
       startSync: vi.fn().mockResolvedValue({ ok: true }),
@@ -321,7 +339,11 @@ describe('extensionServices', () => {
     runnerRun
       .mockImplementationOnce(async (_extensionId: string, _operation: unknown, handler: () => unknown) => handler())
       .mockRejectedValueOnce(
-        new ExtensionProcessTerminationBlockedError('ext', 'service sync health check', 'Extension attempted to terminate the application.'),
+        new ExtensionProcessTerminationBlockedError(
+          'ext',
+          'service sync health check',
+          'Extension attempted to terminate the application.',
+        ),
       );
 
     await startExtensionServices();

@@ -1,5 +1,15 @@
 import { timeAgo } from '@neon-pilot/extensions/data';
-import { CardMeta, CardTitle, CheckpointInlineDiff, cx, InlineMeta, Pill, RowButton, Spinner, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  CardMeta,
+  CardTitle,
+  CheckpointInlineDiff,
+  cx,
+  InlineMeta,
+  Pill,
+  RowButton,
+  Spinner,
+  SurfacePanel,
+} from '@neon-pilot/extensions/ui';
 import type { readCheckpointPresentation } from '@neon-pilot/extensions/workbench-diffs';
 import React, { memo, useState } from 'react';
 

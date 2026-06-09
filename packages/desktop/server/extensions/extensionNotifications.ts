@@ -8,10 +8,10 @@
  * Both require the desktop main process IPC bridge.
  */
 
+import { publishAppEvent } from '../shared/appEvents.js';
 import type { ExtensionBackendNotifyInput } from './extensionBackend.js';
 import type { ExtensionInstallSummary } from './extensionRegistry.js';
 import { listExtensionInstallSummaries } from './extensionRegistry.js';
-import { publishAppEvent } from '../shared/appEvents.js';
 
 // ── In-memory badge state ─────────────────────────────────────────────────────
 
@@ -180,9 +180,7 @@ function buildExtensionWarningDetails(summary: ExtensionInstallSummary): string[
   return uniqueDetails(details);
 }
 
-export function buildExtensionStartupStatusNotifications(
-  summaries: ExtensionInstallSummary[],
-): ExtensionStartupStatusNotification[] {
+export function buildExtensionStartupStatusNotifications(summaries: ExtensionInstallSummary[]): ExtensionStartupStatusNotification[] {
   const invalidOrErrored = summaries
     .map((summary) => ({ summary, details: buildExtensionErrorDetails(summary) }))
     .filter(({ summary, details }) => summary.status === 'invalid' || details.length > 0);

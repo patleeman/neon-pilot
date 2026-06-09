@@ -41,7 +41,8 @@ export function buildExtensionAutoCommandRegistrations(extension: {
       })),
   ];
   return autoCommands.filter(
-    (command) => !explicitCommandIds.has(command.surfaceId) && !explicitCommandSignatures.has(commandSignature(command.action, command.args)),
+    (command) =>
+      !explicitCommandIds.has(command.surfaceId) && !explicitCommandSignatures.has(commandSignature(command.action, command.args)),
   );
 }
 

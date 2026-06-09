@@ -36,11 +36,7 @@ export function createNativeProcessWorkbenchBrowserBridge(proc: {
   let nextRequestId = 0;
 
   proc.on?.('message', (message: unknown) => {
-    if (
-      message &&
-      typeof message === 'object' &&
-      (message as Record<string, unknown>).type === 'native-workbench-browser-response'
-    ) {
+    if (message && typeof message === 'object' && (message as Record<string, unknown>).type === 'native-workbench-browser-response') {
       const response = message as NativeWorkbenchBrowserResponse;
       const pending = pendingRequests.get(response.id);
       if (!pending) return;
@@ -89,12 +85,9 @@ export function createNativeProcessWorkbenchBrowserBridge(proc: {
 
   return {
     isActive: (conversationId: string) => sendRequest('isActive', [conversationId]) as Promise<boolean>,
-    listTabs: () =>
-      sendRequest('listTabs', []) as Promise<Array<{ sessionKey: string; url: string; title: string }>>,
-    snapshot: (conversationId: string, tabId?: string) =>
-      sendRequest('snapshot', [conversationId, tabId]) as Promise<unknown>,
-    screenshot: (conversationId: string, tabId?: string) =>
-      sendRequest('screenshot', [conversationId, tabId]) as Promise<unknown>,
+    listTabs: () => sendRequest('listTabs', []) as Promise<Array<{ sessionKey: string; url: string; title: string }>>,
+    snapshot: (conversationId: string, tabId?: string) => sendRequest('snapshot', [conversationId, tabId]) as Promise<unknown>,
+    screenshot: (conversationId: string, tabId?: string) => sendRequest('screenshot', [conversationId, tabId]) as Promise<unknown>,
     cdp: (input: { conversationId: string; command: unknown; continueOnError?: boolean; tabId?: string }) =>
       sendRequest('cdp', [input]) as Promise<unknown>,
   };

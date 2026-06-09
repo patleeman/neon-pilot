@@ -33,19 +33,12 @@ const sharedEsbuildOptions = {
   minify: true,
   legalComments: 'none',
   logLevel: 'info',
-  external: [
-    '@xenova/transformers',
-    'better-sqlite3',
-    'electron',
-    'esbuild',
-    'fsevents',
-    'node-pty',
-  ],
+  external: ['@xenova/transformers', 'better-sqlite3', 'electron', 'esbuild', 'fsevents', 'node-pty'],
   plugins: [extensionApiAliasPlugin],
 };
 
 const bundleOutputs = [
-  resolve(outdir, 'app/localApi.js'),      // Full API handler module
+  resolve(outdir, 'app/localApi.js'), // Full API handler module
   resolve(outdir, 'conversations/conversationInspectWorker.js'),
   resolve(outdir, 'traces/traceWorker.js'),
   resolve(outdir, 'daemon/index.js'),

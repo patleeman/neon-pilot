@@ -21,7 +21,9 @@ type CriticalExtensionRegistrySnapshot = {
   extensions: CriticalExtensionManifest[];
   routes: Array<{ route: string; extensionId: string; surfaceId: string; packageType: ExtensionPackageType }>;
   surfaces: Array<ExtensionSurface & { extensionId: string; packageType: ExtensionPackageType }>;
-  views: Array<ExtensionViewContribution & { extensionId: string; packageType: ExtensionPackageType; frontend?: ExtensionManifest['frontend'] }>;
+  views: Array<
+    ExtensionViewContribution & { extensionId: string; packageType: ExtensionPackageType; frontend?: ExtensionManifest['frontend'] }
+  >;
 };
 type CriticalExtensionInstallSummary = {
   id: string;
@@ -113,9 +115,7 @@ function extensionHasCriticalRegistrySurface(snapshot: CriticalExtensionRegistry
   );
 }
 
-export function buildCriticalExtensionInstallSummaries(
-  snapshot: CriticalExtensionRegistrySnapshot,
-): CriticalExtensionInstallSummary[] {
+export function buildCriticalExtensionInstallSummaries(snapshot: CriticalExtensionRegistrySnapshot): CriticalExtensionInstallSummary[] {
   return snapshot.extensions.flatMap((manifest) => {
     const criticalContributes = buildCriticalExtensionContributions(manifest.contributes);
     if (!criticalContributes && !manifest.surfaces?.length && !extensionHasCriticalRegistrySurface(snapshot, manifest.id)) {

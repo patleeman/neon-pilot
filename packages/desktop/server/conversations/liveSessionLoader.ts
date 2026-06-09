@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import { DefaultResourceLoader, loadProjectContextFiles, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
+import { DefaultResourceLoader, type ExtensionFactory, loadProjectContextFiles } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import { logWarn } from '../shared/logging.js';
@@ -58,12 +58,7 @@ function renderAgentsPointerContent(filePath: string, agentDir: string): string 
 function renderAgentsPointers(cwd: string, agentDir: string): string {
   const files = loadProjectContextFiles({ cwd, agentDir });
   if (files.length === 0) return '';
-  return [
-    '',
-    '',
-    'Instruction files:',
-    ...files.map((file) => `- ${renderAgentsPointerContent(file.path, agentDir)}`),
-  ].join('\n');
+  return ['', '', 'Instruction files:', ...files.map((file) => `- ${renderAgentsPointerContent(file.path, agentDir)}`)].join('\n');
 }
 
 function renderAgentsFiles(cwd: string, agentDir: string): string {

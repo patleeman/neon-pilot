@@ -22,7 +22,10 @@ describe('extensionBackendRunner', () => {
     const runner = createInProcessExtensionBackendRunner();
 
     await expect(
-      runner.run('ext-audit', extensionBackendOperation('action', 'action doThing', { target: 'doThing' }), () => ({ ok: true, secret: 'input' })),
+      runner.run('ext-audit', extensionBackendOperation('action', 'action doThing', { target: 'doThing' }), () => ({
+        ok: true,
+        secret: 'input',
+      })),
     ).resolves.toEqual({ ok: true, secret: 'input' });
 
     expect(listExtensionHostAuditEvents()).toEqual([
@@ -190,10 +193,7 @@ describe('extensionBackendRunner', () => {
     const dist = join(packageRoot, 'dist');
     mkdirSync(dist);
     const backendPath = join(dist, 'backend.mjs');
-    writeFileSync(
-      backendPath,
-      'export function create() { return function agentFactory(pi) { pi.registered = true; }; }\n',
-    );
+    writeFileSync(backendPath, 'export function create() { return function agentFactory(pi) { pi.registered = true; }; }\n');
 
     const factory = await runner.loadAgentFactory('ext-agent-factory', { path: backendPath, hash: 'test-1' }, 'create');
     const pi = {};

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SessionMeta } from '../shared/types';
-import type { WorkbenchTabInstance } from './Layout';
 import {
   clearWorkbenchOnlySearchParamsForCompact,
   readStoredPanelWidth,

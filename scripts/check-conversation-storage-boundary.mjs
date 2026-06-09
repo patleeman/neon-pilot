@@ -37,10 +37,7 @@ function listCandidateFiles() {
       .split('\n')
       .filter(Boolean);
   } catch {
-    return [
-      ...walkTrackedFallback('packages/desktop/server'),
-      ...walkTrackedFallback('extensions'),
-    ];
+    return [...walkTrackedFallback('packages/desktop/server'), ...walkTrackedFallback('extensions')];
   }
 }
 

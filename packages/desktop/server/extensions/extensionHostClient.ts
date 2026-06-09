@@ -422,11 +422,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, selfTest: await runExtensionSelfTest(request.extensionId) };
     }
     if (request.type === 'setEnabled') {
-      const {
-        findExtensionEntry,
-        listExtensionInstallSummaries,
-        setExtensionEnabled,
-      } = await import('./extensionRegistry.js');
+      const { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } = await import('./extensionRegistry.js');
       const entry = findExtensionEntry(request.extensionId);
       const summary = listExtensionInstallSummaries().find((extension) => extension.id === request.extensionId);
       if (!entry && summary?.status === 'invalid') {
@@ -447,8 +443,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       }
       if (request.enabled) {
         const { getExtensionCompatibilityError } = await import('./extensionCompatibility.js');
-        const compatibilityError =
-          entry.manifest.packageType === 'system' ? null : getExtensionCompatibilityError(entry.manifest);
+        const compatibilityError = entry.manifest.packageType === 'system' ? null : getExtensionCompatibilityError(entry.manifest);
         if (compatibilityError) {
           return {
             ok: true,
@@ -524,7 +519,10 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         ok: true,
         enabledResult: {
           ok: true,
-          extension: listExtensionInstallSummaries().find((extension) => extension.id === entry.manifest.id) as unknown as Record<string, unknown>,
+          extension: listExtensionInstallSummaries().find((extension) => extension.id === entry.manifest.id) as unknown as Record<
+            string,
+            unknown
+          >,
           ...(actionResult ? { actionResult } : {}),
         },
       };
@@ -564,7 +562,15 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     }
     if (request.type === 'listServices') {
       const { listRunningExtensionServices } = await import('./extensionServices.js');
-      return { ok: true, services: listRunningExtensionServices().map(({ extensionId, serviceId, startedAt, lastError }) => ({ extensionId, serviceId, startedAt, lastError })) };
+      return {
+        ok: true,
+        services: listRunningExtensionServices().map(({ extensionId, serviceId, startedAt, lastError }) => ({
+          extensionId,
+          serviceId,
+          startedAt,
+          lastError,
+        })),
+      };
     }
     if (request.type === 'startServices') {
       const { startExtensionServices } = await import('./extensionServices.js');
@@ -594,7 +600,8 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       };
     }
     if (request.type === 'listStaticContributions') {
-      const { listEnabledExtensionEntries, listExtensionSkillRegistrations, listExtensionToolRegistrations } = await import('./extensionRegistry.js');
+      const { listEnabledExtensionEntries, listExtensionSkillRegistrations, listExtensionToolRegistrations } =
+        await import('./extensionRegistry.js');
       return {
         ok: true,
         staticContributions: {
@@ -683,7 +690,10 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       const { resolveExtensionModelProfile } = await import('./extensionRegistry.js');
       return {
         ok: true,
-        modelProfile: resolveExtensionModelProfile({ provider: request.provider, model: request.model }) as ExtensionHostModelProfileResolution,
+        modelProfile: resolveExtensionModelProfile({
+          provider: request.provider,
+          model: request.model,
+        }) as ExtensionHostModelProfileResolution,
       };
     }
     if (request.type === 'resolveFilePath') {

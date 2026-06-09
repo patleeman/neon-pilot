@@ -13,8 +13,8 @@ import {
 } from './extensionActivityContributionValidation.js';
 import { validateExtensionBackendContribution } from './extensionBackendValidation.js';
 import {
-  validateCommandContributions,
   validateCliCommandContributions,
+  validateCommandContributions,
   validateKeybindingContributions,
   validateMentionContributions,
   validateNavigationContributions,

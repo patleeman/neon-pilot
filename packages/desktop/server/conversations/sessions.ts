@@ -14,7 +14,18 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, closeSync, type Dirent, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync } from 'node:fs';
+import {
+  appendFileSync,
+  closeSync,
+  type Dirent,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  rmSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { type SessionEntry, SessionManager } from '@earendil-works/pi-coding-agent';
@@ -2262,7 +2273,14 @@ export function pruneSessionsByRetention(input: {
   archivedConversationIds?: string[];
   archivedOnly?: boolean;
   dryRun?: boolean;
-}): { ok: true; dryRun: boolean; cutoff: string; candidates: Array<{ id: string; file: string; timestamp: string }>; deleted: Array<{ id: string; file: string }>; skipped: number } {
+}): {
+  ok: true;
+  dryRun: boolean;
+  cutoff: string;
+  candidates: Array<{ id: string; file: string; timestamp: string }>;
+  deleted: Array<{ id: string; file: string }>;
+  skipped: number;
+} {
   const nowMs = input.now?.getTime() ?? Date.now();
   const cutoffMs = nowMs - input.olderThanMs;
   const archivedIds = new Set((input.archivedConversationIds ?? []).map((id) => id.trim()).filter(Boolean));
@@ -2275,7 +2293,14 @@ export function pruneSessionsByRetention(input: {
     })
     .map((meta) => ({ id: meta.id, file: meta.file, timestamp: meta.lastActivityAt ?? meta.timestamp }));
   const deleted = input.dryRun ? [] : deleteSessions(candidates.map((candidate) => candidate.id)).deleted;
-  return { ok: true, dryRun: Boolean(input.dryRun), cutoff: new Date(cutoffMs).toISOString(), candidates, deleted, skipped: allSessions.length - candidates.length };
+  return {
+    ok: true,
+    dryRun: Boolean(input.dryRun),
+    cutoff: new Date(cutoffMs).toISOString(),
+    candidates,
+    deleted,
+    skipped: allSessions.length - candidates.length,
+  };
 }
 
 function readSessionIdFromSessionRecord(filePath: string): string | null {

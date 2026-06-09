@@ -1,3 +1,5 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import {
@@ -16,7 +18,6 @@ import {
   ToolbarButton,
   Tooltip,
 } from '../primitives';
-import '../styles.css';
 import { StorySection, StoryStack, Wrap } from './storyUtils';
 
 const meta = {

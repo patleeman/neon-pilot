@@ -91,7 +91,8 @@ describe('extension catalog', () => {
           id: 'system-suggested-context',
           installed: false,
           updateAvailable: false,
-          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-suggested-context.neon-extension.zip',
+          bundleUrl:
+            'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-suggested-context.neon-extension.zip',
         }),
         expect.objectContaining({
           id: 'system-ds4',
@@ -303,7 +304,11 @@ describe('extension catalog', () => {
         }),
       })),
     );
-    importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-alleycat', enabled: true }, packageRoot: '/tmp/ext' });
+    importRuntimeExtensionBundle.mockReturnValue({
+      ok: true,
+      extension: { id: 'system-alleycat', enabled: true },
+      packageRoot: '/tmp/ext',
+    });
     summaries.mockReturnValue([{ id: 'system-alleycat', name: 'Alleycat', enabled: false, version: '0.1.0' }]);
 
     const { installCatalogExtension } = await import('./extensionCatalog.js');
@@ -348,7 +353,9 @@ describe('extension catalog', () => {
   });
 
   it('refuses to update incompatible catalog entries before deleting the installed copy', async () => {
-    summaries.mockReturnValue([{ id: 'system-writing-studio', name: 'Writing Studio', enabled: true, version: '0.1.1', packageType: 'user' }]);
+    summaries.mockReturnValue([
+      { id: 'system-writing-studio', name: 'Writing Studio', enabled: true, version: '0.1.1', packageType: 'user' },
+    ]);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -379,7 +386,11 @@ describe('extension catalog', () => {
       .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: false, version: '0.1.0', packageType: 'user' }])
       .mockReturnValueOnce([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.1.0', packageType: 'user' }]);
     deleteRuntimeExtension.mockResolvedValue({ ok: true, extensionId: 'system-browser', deleted: true });
-    importRuntimeExtensionBundle.mockReturnValue({ ok: true, extension: { id: 'system-browser', enabled: false }, packageRoot: '/tmp/ext' });
+    importRuntimeExtensionBundle.mockReturnValue({
+      ok: true,
+      extension: { id: 'system-browser', enabled: false },
+      packageRoot: '/tmp/ext',
+    });
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string | URL) =>

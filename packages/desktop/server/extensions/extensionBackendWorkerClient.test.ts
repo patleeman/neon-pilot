@@ -102,13 +102,7 @@ describe('ExtensionBackendWorkerClient', () => {
 
   it('sends backend export execution requests to the worker', async () => {
     const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js') });
-    const run = client.runExport(
-      'ext',
-      { path: '/tmp/backend.mjs', hash: 'hash-1' },
-      'doThing',
-      [{ ok: true }],
-      { context: 'backend' },
-    );
+    const run = client.runExport('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing', [{ ok: true }], { context: 'backend' });
     const worker = workerThreads.instances[0]!;
 
     expect(worker.postMessage).toHaveBeenCalledWith({

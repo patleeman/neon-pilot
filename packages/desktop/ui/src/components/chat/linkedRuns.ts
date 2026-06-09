@@ -280,7 +280,13 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       const phase = read('activePhase');
       const agentDefaultsModel = isRecord(input.agentDefaults) ? readRunField(input.agentDefaults, 'model') : null;
       const model = read('model') ?? agentDefaultsModel;
-      const subject = [name, status ? `[${status}]` : null, phase ? `phase ${phase}` : null, result ?? description, model ? `· ${model}` : null]
+      const subject = [
+        name,
+        status ? `[${status}]` : null,
+        phase ? `phase ${phase}` : null,
+        result ?? description,
+        model ? `· ${model}` : null,
+      ]
         .filter(Boolean)
         .join(' ');
       return subject || 'dynamic workflow';

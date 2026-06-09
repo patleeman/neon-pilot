@@ -1,3 +1,5 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import {
@@ -7,6 +9,8 @@ import {
   CardTitle,
   CodeBlock,
   CompactCard,
+  DashboardGrid,
+  DashboardGridCell,
   DataTable,
   DataTableActionGroup,
   DataTableBody,
@@ -15,8 +19,6 @@ import {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
-  DashboardGrid,
-  DashboardGridCell,
   Disclosure,
   InlineCode,
   InlineCodeButton,
@@ -42,12 +44,11 @@ import {
   Spinner,
   Stat,
   StatGrid,
-  SurfacePanel,
   SupportingText,
+  SurfacePanel,
   TextButton,
   ToolResultCard,
 } from '../primitives';
-import '../styles.css';
 import { StorySection, StoryStack, Wrap } from './storyUtils';
 
 const meta = {
@@ -118,7 +119,7 @@ export const CardsAndLists: Story = {
             body="The renderer could not load the generated artifact."
           />
         </StorySection>
-      <StorySection title="Resource Lists">
+        <StorySection title="Resource Lists">
           <ResourceListItem label="Architecture diagram" meta="mermaid" detail="artifact_123" leading="#" selected />
           <ResourceListItem label="Release notes" meta="html" detail="artifact_456" />
           <ResourceList>
@@ -128,7 +129,12 @@ export const CardsAndLists: Story = {
               detail="extensions/system-example/skills/review/SKILL.md"
               actions={<Button variant="ghost">Enabled</Button>}
             />
-            <ResourceListLink href="#resource-link" label="Default workflow" meta="4 items" detail="Navigates to the workflow detail route." />
+            <ResourceListLink
+              href="#resource-link"
+              label="Default workflow"
+              meta="4 items"
+              detail="Navigates to the workflow detail route."
+            />
           </ResourceList>
           <div style={{ display: 'grid', gap: 4 }}>
             <RowButton compact selected>

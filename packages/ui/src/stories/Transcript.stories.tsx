@@ -1,7 +1,8 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { MessageActionButton, MessageCard, MessageMeta } from '../primitives';
-import '../styles.css';
 import { StorySection, StoryStack } from './storyUtils';
 
 const meta = {

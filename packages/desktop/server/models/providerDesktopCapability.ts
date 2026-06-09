@@ -1,5 +1,4 @@
 import { refreshAllLiveSessionModelRegistries, reloadAllLiveSessionAuth } from '../middleware/index.js';
-import { createModelRegistryForAuthFile } from './modelRegistry.js';
 import type { ModelProviderApi, ModelProviderModelConfig, ModelProviderState } from './modelProviders.js';
 import {
   readModelProvidersState,
@@ -8,6 +7,7 @@ import {
   upsertModelProvider,
   upsertModelProviderModel,
 } from './modelProviders.js';
+import { createModelRegistryForAuthFile } from './modelRegistry.js';
 import type { ProviderAuthState, ProviderOAuthLoginState } from './providerAuth.js';
 import {
   cancelProviderOAuthLogin,
@@ -16,8 +16,8 @@ import {
   removeProviderCredential,
   setProviderApiKey,
   startProviderOAuthLogin,
-  subscribeProviderOAuthLogin,
   submitProviderOAuthLoginInput,
+  subscribeProviderOAuthLogin,
 } from './providerAuth.js';
 
 export interface ProviderDesktopCapabilityContext {
@@ -52,7 +52,9 @@ function readOptionalPositiveInteger(value: unknown): number | undefined {
 }
 
 function readOptionalNonNegativeNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER && value >= 0 ? value : undefined;
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER && value >= 0
+    ? value
+    : undefined;
 }
 
 function readOptionalStringRecord(value: unknown): Record<string, string> | undefined {
@@ -121,12 +123,7 @@ function readModelApi(value: unknown): ModelProviderApi | undefined {
     return undefined;
   }
 
-  if (
-    api === 'openai-completions' ||
-    api === 'openai-responses' ||
-    api === 'anthropic-messages' ||
-    api === 'google-generative-ai'
-  ) {
+  if (api === 'openai-completions' || api === 'openai-responses' || api === 'anthropic-messages' || api === 'google-generative-ai') {
     return api;
   }
 
@@ -165,12 +162,7 @@ function buildProviderDefaultModels(authFile: string, providerId: string): Model
   return [...providerModels.values()];
 }
 
-function seedProviderDefaults(
-  scope: string,
-  providerId: string,
-  authFile: string,
-  state: ModelProviderState,
-): ModelProviderState {
+function seedProviderDefaults(scope: string, providerId: string, authFile: string, state: ModelProviderState): ModelProviderState {
   const defaults = buildProviderDefaultModels(authFile, providerId);
   if (defaults.length === 0) {
     return state;

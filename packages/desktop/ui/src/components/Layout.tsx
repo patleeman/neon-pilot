@@ -355,7 +355,10 @@ export function shouldResetEmptyArtifactsRail(input: {
   );
 }
 
-export function shouldAllowWorkbenchRailSurface(input: { activeToolSlot: WorkbenchRailMode | string; hasPairedDocument: boolean }): boolean {
+export function shouldAllowWorkbenchRailSurface(input: {
+  activeToolSlot: WorkbenchRailMode | string;
+  hasPairedDocument: boolean;
+}): boolean {
   if (input.activeToolSlot === 'files') return true;
   if (input.activeToolSlot === 'knowledge') return true;
   return input.hasPairedDocument;
@@ -915,11 +918,7 @@ function WorkbenchNewTabPage({
             />
           ) : null}
           {systemTerminalExtensionSurface ? (
-            <ActionTile
-              icon="▸"
-              label="Terminal"
-              onClick={() => openTool(systemTerminalExtensionSurface)}
-            />
+            <ActionTile icon="▸" label="Terminal" onClick={() => openTool(systemTerminalExtensionSurface)} />
           ) : null}
           {availableTools.map((surface) => (
             <ActionTile
@@ -1081,10 +1080,7 @@ function WorkbenchTabStrip({
       </div>
       <IconButton
         size="sm"
-        className={cx(
-          'ml-1 h-8 w-8 shrink-0 rounded-md text-[16px]',
-          isNewWorkbenchTabMode(activeTool) && 'bg-surface text-primary',
-        )}
+        className={cx('ml-1 h-8 w-8 shrink-0 rounded-md text-[16px]', isNewWorkbenchTabMode(activeTool) && 'bg-surface text-primary')}
         title="New tab"
         aria-label="New tab"
         onClick={openNewTab}

@@ -58,10 +58,7 @@ export function ModelPicker({
                     onSelect(modelValue);
                   }}
                   selected={isFocused}
-                  className={cx(
-                    'flex w-full items-center gap-3 px-3 py-2.5',
-                    !isFocused && 'text-secondary',
-                  )}
+                  className={cx('flex w-full items-center gap-3 px-3 py-2.5', !isFocused && 'text-secondary')}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -104,10 +101,7 @@ export function SlashMenu({ items, idx, onSelect }: { items: SlashMenuItem[]; id
             onSelect(item);
           }}
           selected={itemIndex === selectedIndex}
-          className={cx(
-            'flex w-full items-start gap-3 px-3 py-2.5',
-            itemIndex !== selectedIndex && 'text-secondary',
-          )}
+          className={cx('flex w-full items-start gap-3 px-3 py-2.5', itemIndex !== selectedIndex && 'text-secondary')}
         >
           <span className="w-5 pt-0.5 text-center text-[13px] select-none text-dim/70">{item.icon}</span>
           <div className="min-w-0 flex-1">
@@ -158,10 +152,7 @@ export function MentionMenu({
             onSelect(item.id);
           }}
           selected={index === selectedIndex}
-          className={cx(
-            'flex w-full items-start gap-3 px-3 py-2.5',
-            index !== selectedIndex && 'text-secondary',
-          )}
+          className={cx('flex w-full items-start gap-3 px-3 py-2.5', index !== selectedIndex && 'text-secondary')}
         >
           <Pill tone="muted">{item.kind}</Pill>
           <div className="min-w-0 flex-1">

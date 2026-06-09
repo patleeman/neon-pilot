@@ -216,7 +216,9 @@ function parseDs4RunToolCall(text: string): { toolName: string; params: unknown 
 function toolResultText(result: unknown): string {
   if (isRecord(result) && Array.isArray(result.content)) {
     const text = result.content
-      .map((entry) => (isRecord(entry) && (entry.type === 'text' || entry.type === undefined) && typeof entry.text === 'string' ? entry.text : ''))
+      .map((entry) =>
+        isRecord(entry) && (entry.type === 'text' || entry.type === undefined) && typeof entry.text === 'string' ? entry.text : '',
+      )
       .filter(Boolean)
       .join('\n');
     if (text.trim()) return text.trim();
@@ -436,11 +438,7 @@ async function createHiddenLiveSession(input: ExtensionAgentConversationCreateIn
   const options: Record<string, unknown> = {
     ...(input.modelRef ? { initialModel: input.modelRef } : {}),
     ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
-    ...(input.tools === 'none'
-      ? { allowedToolNames: [] }
-      : input.allowedToolNames
-        ? { allowedToolNames: input.allowedToolNames }
-        : {}),
+    ...(input.tools === 'none' ? { allowedToolNames: [] } : input.allowedToolNames ? { allowedToolNames: input.allowedToolNames } : {}),
   };
   const created = await callServerModuleExport<{ id: string; sessionFile: string }>(
     '../../conversations/liveSessions.js',
@@ -767,27 +765,26 @@ export async function streamAgentMessage(
       notify?.();
       notify = null;
     };
-  const unsubscribe =
-      record.liveSessionId
-        ? ((await callServerModuleExport<(() => void) | null>(
-            '../../conversations/liveSessions.js',
-            'subscribe',
-            record.liveSessionId,
-            (event: unknown) => {
-              const normalized = normalizeLiveSessionEvent(event);
-              if (normalized?.type === 'error') failure = new Error(normalized.message);
-              if (normalized && normalized.type !== 'agent_end' && normalized.type !== 'turn_end') enqueue(normalized);
-            },
-            { deferInitialReplayMs: 0 },
-          )) ?? (() => undefined))
-        : record.session!.subscribe((event) => {
-            const normalized = normalizeSessionEvent(event);
-            if (normalized) enqueue(normalized);
-            if (isRecord(event) && event.type === 'message_end' && isRecord(event.message) && event.message.role === 'assistant') {
-              const finalText = extractTextContent(event.message.content).trim();
-              if (finalText && !streamedText) enqueue({ type: 'text_delta', delta: finalText });
-            }
-          });
+    const unsubscribe = record.liveSessionId
+      ? ((await callServerModuleExport<(() => void) | null>(
+          '../../conversations/liveSessions.js',
+          'subscribe',
+          record.liveSessionId,
+          (event: unknown) => {
+            const normalized = normalizeLiveSessionEvent(event);
+            if (normalized?.type === 'error') failure = new Error(normalized.message);
+            if (normalized && normalized.type !== 'agent_end' && normalized.type !== 'turn_end') enqueue(normalized);
+          },
+          { deferInitialReplayMs: 0 },
+        )) ?? (() => undefined))
+      : record.session!.subscribe((event) => {
+          const normalized = normalizeSessionEvent(event);
+          if (normalized) enqueue(normalized);
+          if (isRecord(event) && event.type === 'message_end' && isRecord(event.message) && event.message.role === 'assistant') {
+            const finalText = extractTextContent(event.message.content).trim();
+            if (finalText && !streamedText) enqueue({ type: 'text_delta', delta: finalText });
+          }
+        });
     if (!record.liveSessionId) {
       // Direct Pi sessions do not emit host snapshot events, so the direct subscription above is enough.
     }
@@ -835,11 +832,11 @@ export async function streamAgentMessage(
     const streamStartedAt = Date.now();
     while (!done || queue.length > 0) {
       if (queue.length === 0) {
-        const remainingMs =
-          input.timeoutMs === undefined ? undefined : Math.max(0, input.timeoutMs - (Date.now() - streamStartedAt));
+        const remainingMs = input.timeoutMs === undefined ? undefined : Math.max(0, input.timeoutMs - (Date.now() - streamStartedAt));
         if (remainingMs !== undefined && remainingMs <= 0) {
           failure = new Error(`Agent task timed out after ${input.timeoutMs}ms.`);
-          if (record.liveSessionId) void callServerModuleExport('../../conversations/liveSessions.js', 'abortSession', record.liveSessionId);
+          if (record.liveSessionId)
+            void callServerModuleExport('../../conversations/liveSessions.js', 'abortSession', record.liveSessionId);
           else void record.session?.abort?.();
           done = true;
           record.isBusy = false;
@@ -969,23 +966,19 @@ export async function runAgentTask(
           throw new Error(`Extension agent task attempted unavailable tool: ${call.toolName}`);
         }
         const record = getOwnedRecord(conversation.id, ctx);
-        const toolResult = await callServerModuleExport(
-          '../../tools/toolGateway.js',
-          'invokeToolByName',
-          {
-            name: call.toolName,
-            input: call.params,
-            runtime: {
-              ...(input.modelRef ? { modelRef: input.modelRef } : {}),
-              directToolNames: [...new Set([...allowedToolNames, 'bash', 'read', 'edit'])],
-            },
-            toolContext: {
-              conversationId: record.liveSessionId ?? record.id,
-              sessionId: record.liveSessionId ?? record.id,
-              cwd: record.cwd,
-            },
+        const toolResult = await callServerModuleExport('../../tools/toolGateway.js', 'invokeToolByName', {
+          name: call.toolName,
+          input: call.params,
+          runtime: {
+            ...(input.modelRef ? { modelRef: input.modelRef } : {}),
+            directToolNames: [...new Set([...allowedToolNames, 'bash', 'read', 'edit'])],
           },
-        );
+          toolContext: {
+            conversationId: record.liveSessionId ?? record.id,
+            sessionId: record.liveSessionId ?? record.id,
+            cwd: record.cwd,
+          },
+        });
         if (isRecord(toolResult) && toolResult.terminate === true) {
           return { text: toolResultText(toolResult), model: result.model, provider: result.provider };
         }

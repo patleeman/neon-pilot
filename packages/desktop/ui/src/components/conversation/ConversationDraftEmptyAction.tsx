@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { cx, RowButton, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
@@ -62,7 +62,10 @@ export function ConversationDraftEmptyAction({
       {
         value: '',
         label: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Loading workspaces…' : 'Chat — no workspace',
-        detail: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Fetching saved workspace paths' : 'No attached workspace',
+        detail:
+          savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0
+            ? 'Fetching saved workspace paths'
+            : 'No attached workspace',
         title:
           savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0
             ? 'Fetching saved workspace paths'

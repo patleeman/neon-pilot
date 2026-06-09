@@ -66,7 +66,9 @@ export async function controlPlaneDoctor(_input: unknown, ctx: ExtensionBackendC
     check('app_commands_list', async () => ({ count: countArray(await ctx.commands.list()) })),
     check('conversations_list', async () => ({ count: countArray(await ctx.conversations.list()) })),
     check('conversations_workspace', async () => ctx.conversations.getWorkspace()),
-    check('conversations_retention_dry_run', async () => ctx.conversations.prune({ olderThanMs: 365_000 * 86_400_000, dryRun: true, archivedOnly: true })),
+    check('conversations_retention_dry_run', async () =>
+      ctx.conversations.prune({ olderThanMs: 365_000 * 86_400_000, dryRun: true, archivedOnly: true }),
+    ),
     check('runtime_repo_root', async () => ({ repoRoot: ctx.runtime.getRepoRoot() })),
     check('storage_round_trip', async () => {
       const key = `control-plane-doctor/${Date.now()}`;

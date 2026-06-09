@@ -1,12 +1,11 @@
-export { buildApiPath } from '../client/apiBase';
-export { ActivityTreeView, type ActivityTreeDropPosition } from '../activity/ActivityTreeView';
 export type { ActivityTreeItem } from '../activity/activityTree';
+export { type ActivityTreeDropPosition, ActivityTreeView } from '../activity/ActivityTreeView';
+export { buildApiPath } from '../client/apiBase';
 export { ChatRailComposer, type ChatRailComposerProps } from '../components/chat/ChatRailComposer';
 export { ChatView, type ChatViewProps } from '../components/chat/ChatView';
 export type { ChatViewLayout } from '../components/chat/chatViewTypes';
 export { CheckpointInlineDiff } from '../components/chat/CheckpointInlineDiff';
 export { DiffActionButton, GitDiffIcon } from '../components/chat/DiffActionButton';
-export { ExtensionChatRail, type ExtensionChatContextMessage, type ExtensionChatRailProps } from './ExtensionChatRail';
 export { ContextMenuWrapper } from '../components/shared/ContextMenuWrapper';
 export { canDropAllPaths, getTopLevelDraggedPaths, useFileTreeModel } from '../components/shared/useFileTreeModel';
 export {
@@ -18,29 +17,33 @@ export {
   AttachmentChip,
   AttachmentChipButton,
   type AttachmentChipSize,
+  BrowsePathButton,
   Button,
   ButtonLink,
-  BrowsePathButton,
   CardBody,
   CardMeta,
   CardTitle,
   CenteredLoadingState,
   CenteredMessage,
   CenteredState,
+  ChatBubbleIcon,
   Checkbox,
   CheckButton,
-  ChatBubbleIcon,
   ChoiceRow,
   CodeBlock,
-  ComposerActionButton,
-  type ComposerActionButtonSize,
-  type ComposerActionButtonTone,
   CompactCard,
   type CompactCardPadding,
   type CompactCardTone,
+  ComposerActionButton,
+  type ComposerActionButtonSize,
+  type ComposerActionButtonTone,
   ConfirmDialog,
   type ConfirmDialogProps,
   cx,
+  DashboardGrid,
+  DashboardGridCell,
+  type DashboardGridColumns,
+  type DashboardGridDivide,
   DataTable,
   DataTableActionGroup,
   DataTableBody,
@@ -49,15 +52,11 @@ export {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
-  DashboardGrid,
-  DashboardGridCell,
-  type DashboardGridColumns,
-  type DashboardGridDivide,
-  Disclosure,
   Dialog,
   DialogBody,
   DialogFooter,
   DialogHeader,
+  Disclosure,
   EditorToolbar,
   EditorToolbarButton,
   EditorToolbarGroup,
@@ -70,6 +69,7 @@ export {
   FilterToolbar,
   FolderIcon,
   FolderPlusIcon,
+  formatKeyboardShortcutLabel,
   IconButton,
   type IconButtonShape,
   type IconButtonSize,
@@ -84,19 +84,18 @@ export {
   KeyValueList,
   KeyValueTable,
   type KeyValueTableColumns,
-  formatKeyboardShortcutLabel,
   LoadingState,
-  MessageActionButton,
-  MessageCard,
-  MessageMeta,
-  type MessageCardRole,
-  MetaLabel,
-  MetricTile,
-  type MetricTone,
   MenuGroupLabel,
   MenuItem,
   MenuSeparator,
   MenuShell,
+  MessageActionButton,
+  MessageCard,
+  type MessageCardRole,
+  MessageMeta,
+  MetaLabel,
+  MetricTile,
+  type MetricTone,
   Notice,
   PanelHeader,
   PanelMessage,
@@ -106,13 +105,13 @@ export {
   ProgressRow,
   RailSection,
   RailSubsection,
-  ResourcePickerDialog,
-  ResourcePickerList,
-  ResourcePickerToolbar,
   ResourceList,
   ResourceListItem,
   ResourceListLink,
   ResourceListRow,
+  ResourcePickerDialog,
+  ResourcePickerList,
+  ResourcePickerToolbar,
   RingStatusDot,
   RowButton,
   RuntimeFooter,
@@ -130,8 +129,8 @@ export {
   Select,
   SettingsPanel,
   SettingsRow,
-  SettingToggleRow,
   SettingsSection,
+  SettingToggleRow,
   ShelfBody,
   ShelfHeader,
   ShelfSection,
@@ -139,32 +138,31 @@ export {
   Stat,
   StatGrid,
   StatusDot,
-  SwatchOption,
-  SurfacePanel,
   SupportingText,
+  SurfacePanel,
+  SwatchOption,
   Switch,
   TabButton,
   TabList,
   TabPanel,
   TaskListItem,
-  TextButton,
+  TerminalBlock,
   Textarea,
+  TextButton,
   TextInput,
   TextLink,
   TextPromptDialog,
   type TextPromptDialogProps,
-  TerminalBlock,
-  Tooltip,
+  ToolbarButton,
   ToolResultCard,
   type ToolResultCardTone,
-  ToolbarButton,
+  Tooltip,
   WorkbenchHeader,
   WorkbenchShell,
 } from '../components/ui';
 export { Keycap } from '../components/ui';
 export { type DesktopKnowledgeEntryContextMenuAction, getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 export { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
-export { streamExtensionRouteSse } from './extensionRouteStream';
 export { useApi } from '../hooks/useApi';
 export { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 export {
@@ -189,5 +187,7 @@ export {
   writeStoredExpandedFolderIds,
 } from '../local/knowledgeTreeState';
 export { lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
+export { type ExtensionChatContextMessage, ExtensionChatRail, type ExtensionChatRailProps } from './ExtensionChatRail';
+export { streamExtensionRouteSse } from './extensionRouteStream';
 export { type ExtensionSettingsPanelRegistration, SettingsPanelHost } from './SettingsPanelHost';
 export type { ExtensionSurfaceProps } from './types';

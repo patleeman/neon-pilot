@@ -56,14 +56,7 @@
             },
             "inspectAction": {
               "type": "string",
-              "enum": [
-                "list",
-                "search",
-                "query",
-                "diff",
-                "outline",
-                "read_window"
-              ],
+              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
               "description": "Inspect operation when action is inspect."
             },
             "scope": {
@@ -194,19 +187,11 @@
             },
             "deferredAction": {
               "type": "string",
-              "enum": [
-                "add",
-                "list",
-                "cancel"
-              ]
+              "enum": ["add", "list", "cancel"]
             },
             "trigger": {
               "type": "string",
-              "enum": [
-                "after_turn",
-                "delay",
-                "at"
-              ]
+              "enum": ["after_turn", "delay", "at"]
             },
             "delay": {
               "type": "string"
@@ -216,10 +201,7 @@
             },
             "deliverAs": {
               "type": "string",
-              "enum": [
-                "steer",
-                "followUp"
-              ]
+              "enum": ["steer", "followUp"]
             },
             "reason": {
               "type": "string"
@@ -305,9 +287,7 @@
               }
             }
           },
-          "required": [
-            "action"
-          ],
+          "required": ["action"],
           "additionalProperties": false
         }
       },
@@ -318,9 +298,7 @@
         "description": "Ask the user one or more focused questions in the desktop UI.",
         "action": "askUser",
         "promptSnippet": "Ask the user structured questions with buttons, radio choices, or checkboxes.",
-        "promptGuidelines": [
-          "Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."
-        ],
+        "promptGuidelines": ["Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -367,11 +345,7 @@
                   },
                   "style": {
                     "type": "string",
-                    "enum": [
-                      "radio",
-                      "check",
-                      "checkbox"
-                    ],
+                    "enum": ["radio", "check", "checkbox"],
                     "description": "radio for one choice, check/checkbox for multi-select."
                   },
                   "options": {
@@ -402,17 +376,13 @@
                               "description": "Optional supporting text shown under the option."
                             }
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "required": ["value"]
                         }
                       ]
                     }
                   }
                 },
-                "required": [
-                  "options"
-                ]
+                "required": ["options"]
               }
             }
           },
@@ -434,14 +404,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": [
-                "list",
-                "search",
-                "query",
-                "diff",
-                "outline",
-                "read_window"
-              ],
+              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
               "description": "Inspect operation to perform."
             },
             "conversationId": {
@@ -548,9 +511,7 @@
               "description": "Character cap per returned search snippet."
             }
           },
-          "required": [
-            "action"
-          ],
+          "required": ["action"],
           "additionalProperties": false
         }
       },
@@ -561,9 +522,7 @@
         "description": "Set the current conversation title.",
         "action": "conversationTitle",
         "promptSnippet": "Set a short, specific conversation title once the user intent is clear.",
-        "promptGuidelines": [
-          "Set one short, concrete 3-7 word title early when intent is clear; do not mention the title update in chat."
-        ],
+        "promptGuidelines": ["Set one short, concrete 3-7 word title early when intent is clear; do not mention the title update in chat."],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -572,9 +531,7 @@
               "description": "Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters."
             }
           },
-          "required": [
-            "title"
-          ],
+          "required": ["title"],
           "additionalProperties": false
         }
       },
@@ -600,9 +557,7 @@
               "description": "Optional prompt to continue automatically in the new working directory after the switch completes."
             }
           },
-          "required": [
-            "cwd"
-          ],
+          "required": ["cwd"],
           "additionalProperties": false
         }
       },
@@ -621,11 +576,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": [
-                "add",
-                "list",
-                "cancel"
-              ],
+              "enum": ["add", "list", "cancel"],
               "description": "Deferred resume operation to perform."
             },
             "id": {
@@ -636,11 +587,7 @@
             },
             "trigger": {
               "type": "string",
-              "enum": [
-                "after_turn",
-                "delay",
-                "at"
-              ]
+              "enum": ["after_turn", "delay", "at"]
             },
             "delay": {
               "type": "string"
@@ -650,10 +597,7 @@
             },
             "deliverAs": {
               "type": "string",
-              "enum": [
-                "steer",
-                "followUp"
-              ]
+              "enum": ["steer", "followUp"]
             },
             "title": {
               "type": "string",
@@ -664,9 +608,7 @@
               "description": "Required when scheduling a wakeup that references a running background run which already delivers completion, explaining the distinct time-based action."
             }
           },
-          "required": [
-            "action"
-          ],
+          "required": ["action"],
           "additionalProperties": false
         }
       }
@@ -726,9 +668,7 @@
       {
         "id": "open-thread-palette",
         "title": "Open thread palette",
-        "keys": [
-          "mod+p"
-        ],
+        "keys": ["mod+p"],
         "command": "palette.open",
         "args": {
           "scope": "threads"
@@ -737,9 +677,7 @@
       {
         "id": "open-command-palette",
         "title": "Open command palette",
-        "keys": [
-          "mod+shift+p"
-        ],
+        "keys": ["mod+shift+p"],
         "command": "palette.open",
         "args": {
           "scope": "commands"
@@ -1076,9 +1014,5 @@
       }
     ]
   },
-  "permissions": [
-    "conversations:readwrite",
-    "storage:readwrite",
-    "ui:notify"
-  ]
+  "permissions": ["conversations:readwrite", "storage:readwrite", "ui:notify"]
 }

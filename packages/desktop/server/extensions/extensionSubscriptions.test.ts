@@ -20,7 +20,12 @@ let handlers: Array<{ extensionId: string; pattern: string; handler: (event: unk
   [];
 
 vi.mock('../shared/logging.js', () => ({ logError, logInfo }));
-vi.mock('./extensionBackend.js', () => ({ createBackendContext, loadExtensionBackend, runExtensionBackendExport, runExtensionBackendExportInWorker }));
+vi.mock('./extensionBackend.js', () => ({
+  createBackendContext,
+  loadExtensionBackend,
+  runExtensionBackendExport,
+  runExtensionBackendExportInWorker,
+}));
 vi.mock('./extensionBackendRunner.js', () => ({
   extensionBackendOperation: (type: string, label: string, options: { target?: string } = {}) => ({ type, label, ...options }),
   getExtensionBackendRunner: () => ({ run: runnerRun }),
@@ -82,13 +87,7 @@ describe('extensionSubscriptions', () => {
       },
     );
     runExtensionBackendExportInWorker.mockImplementation(
-      async (
-        extensionId: string,
-        exportName: string,
-        operation: unknown,
-        args: unknown[],
-        serverContext?: unknown,
-      ) => {
+      async (extensionId: string, exportName: string, operation: unknown, args: unknown[], serverContext?: unknown) => {
         const backend = await loadExtensionBackend(extensionId);
         const handler = backend[exportName];
         if (typeof handler !== 'function') throw new Error(`Missing subscription handler export "${exportName}".`);

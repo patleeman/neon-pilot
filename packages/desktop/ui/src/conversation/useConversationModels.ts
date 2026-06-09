@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../client/api';
-import type { ModelInfo } from '../shared/types';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
+import type { ModelInfo } from '../shared/types';
 
 export function useConversationModels(enabled: boolean) {
   const [models, setModels] = useState<ModelInfo[]>([]);

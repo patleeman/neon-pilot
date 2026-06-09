@@ -48,8 +48,6 @@ describe('conversationPreferenceSaving', () => {
         models,
       }),
     ).toBe(false);
-    expect(resolveSelectedModelNotice(models, 'ds4/deepseek-v4-flash')).toBe(
-      'Model set to DeepSeek V4 Flash for this conversation.',
-    );
+    expect(resolveSelectedModelNotice(models, 'ds4/deepseek-v4-flash')).toBe('Model set to DeepSeek V4 Flash for this conversation.');
   });
 });

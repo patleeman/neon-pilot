@@ -1,6 +1,9 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import {
+  ActionTile,
   CodeBlock,
   FolderIcon,
   InlineMeta,
@@ -16,11 +19,9 @@ import {
   SearchInput,
   TextButton,
   ToolbarButton,
-  ActionTile,
   WorkbenchHeader,
   WorkbenchShell,
 } from '../primitives';
-import '../styles.css';
 import { StorySection, StoryStack } from './storyUtils';
 
 const meta = {
@@ -88,7 +89,11 @@ export const ResourcePicker: Story = {
             <ResourcePickerList>
               <ResourceListItem label="neon-pilot" detail="/Users/patrick/workingdir/neon-pilot" selected />
               <ResourceListItem label="neon-pilot-extensions" detail="/Users/patrick/workingdir/neon-pilot-extensions" />
-              <ResourceListItem label="Choose a new folder" detail="Use the system picker to add another workspace." leading={<FolderIcon />} />
+              <ResourceListItem
+                label="Choose a new folder"
+                detail="Use the system picker to add another workspace."
+                leading={<FolderIcon />}
+              />
             </ResourcePickerList>
           </ResourcePickerDialog>
         </div>

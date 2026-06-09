@@ -1,8 +1,8 @@
 import type { ActivityTreeItem } from '../activity/activityTree';
 import { DRAFT_CONVERSATION_ID } from '../conversation/draftConversation';
 import type { SessionMeta } from '../shared/types';
-import { MenuItem } from './ui';
 import type { SidebarConversationGroup, SidebarConversationItem } from './sidebarThreadModel';
+import { MenuItem } from './ui';
 
 type ActivityContextMenuContribution = {
   extensionId: string;

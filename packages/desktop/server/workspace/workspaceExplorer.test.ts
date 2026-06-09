@@ -13,10 +13,10 @@ import {
   listWorkspaceDirectory,
   moveWorkspacePath,
   readUncommittedDiffAsync,
-  resolveWorkspacePathLinks,
   readWorkspaceDiffOverlay,
   readWorkspaceFile,
   renameWorkspacePath,
+  resolveWorkspacePathLinks,
   writeWorkspaceFile,
 } from './workspaceExplorer.js';
 

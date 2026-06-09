@@ -1,7 +1,4 @@
-export type ExtensionHostProtocolClientFrame =
-  | { type: 'stdin'; data: string }
-  | { type: 'stdinEnd' }
-  | { type: 'abort' };
+export type ExtensionHostProtocolClientFrame = { type: 'stdin'; data: string } | { type: 'stdinEnd' } | { type: 'abort' };
 
 export type ExtensionHostProtocolServerFrame =
   | { type: 'stdout'; data: string }

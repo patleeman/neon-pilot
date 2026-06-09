@@ -10,6 +10,8 @@ import {
 } from 'react';
 
 import { buildSlashMenuItems, type SlashMenuItem } from '../../commands/slashMenu';
+import { resolveConversationContextUsageTokens } from '../../conversation/conversationComposerPresentation';
+import { formatContextUsageLabel } from '../../conversation/conversationHeader';
 import { type MentionItem } from '../../conversation/conversationMentions';
 import { parseConversationSlashCommand } from '../../conversation/conversationSlashCommand';
 import {
@@ -26,8 +28,6 @@ import {
 import { useComposerController } from '../../conversation/useComposerController';
 import { useConversationComposerMenus, type UseConversationComposerMenusState } from '../../conversation/useConversationComposerMenus';
 import { useComposerModifierKeys } from '../../conversation/useConversationKeyboardState';
-import { formatContextUsageLabel } from '../../conversation/conversationHeader';
-import { resolveConversationContextUsageTokens } from '../../conversation/conversationComposerPresentation';
 import type { ModelInfo, PromptAttachmentRefInput, PromptImageInput, SessionContextUsage } from '../../shared/types';
 import { ConversationComposer } from '../conversation/ConversationComposer';
 import { ChatBubbleIcon, FolderIcon } from '../conversation/ConversationComposerChrome';
@@ -309,12 +309,14 @@ export function ChatRailComposer({
     (altKeyHeld: boolean) => {
       if (!hasContent) return;
       const { promptImages, attachmentRefs } = buildSubmitPayload();
-      void Promise.resolve(onSubmit(
-        input.trim(),
-        isStreaming ? (altKeyHeld ? 'followUp' : 'steer') : altKeyHeld ? 'followUp' : undefined,
-        promptImages,
-        attachmentRefs,
-      )).then(clearComposerAfterSubmit);
+      void Promise.resolve(
+        onSubmit(
+          input.trim(),
+          isStreaming ? (altKeyHeld ? 'followUp' : 'steer') : altKeyHeld ? 'followUp' : undefined,
+          promptImages,
+          attachmentRefs,
+        ),
+      ).then(clearComposerAfterSubmit);
     },
     [buildSubmitPayload, clearComposerAfterSubmit, hasContent, input, isStreaming, onSubmit],
   );

@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  detectTranscriptPathCandidates,
-  normalizeTranscriptPathTarget,
-  readKnowledgeBaseFileIdFromPath,
-} from './transcriptPathLinks.js';
+import { detectTranscriptPathCandidates, normalizeTranscriptPathTarget, readKnowledgeBaseFileIdFromPath } from './transcriptPathLinks.js';
 
 describe('transcript path links', () => {
   it('detects workspace-looking file paths and normalizes line suffixes', () => {
@@ -17,8 +13,7 @@ describe('transcript path links', () => {
   });
 
   it('ignores URLs, prose slashes, and knowledge base repository paths', () => {
-    const text =
-      'See https://example.test/packages/app.ts and /runtime/knowledge-base/repo/projects/Plan.md before the chat/skip wording.';
+    const text = 'See https://example.test/packages/app.ts and /runtime/knowledge-base/repo/projects/Plan.md before the chat/skip wording.';
 
     expect(detectTranscriptPathCandidates(text)).toEqual([]);
     expect(readKnowledgeBaseFileIdFromPath('/runtime/knowledge-base/repo/projects/Plan.md')).toBe('projects/Plan.md');

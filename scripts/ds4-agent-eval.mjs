@@ -227,13 +227,20 @@ const progressiveSkills = [
 
 const directToolsBaseline = ['bash', 'read', 'edit', 'subagent', 'web_search', 'web_fetch', 'write', 'more', 'bash_status', 'bash_stop'];
 const directToolsOptimized = ['bash', 'read', 'edit'];
-const toolSchemaBaseline = directToolsBaseline.map((name) => `${name}: ${JSON.stringify({ type: 'object', properties: { input: { type: 'string' } } })}`).join('\n');
-const toolSchemaOptimized = directToolsOptimized.map((name) => `${name}: ${JSON.stringify({ type: 'object', properties: { input: { type: 'string' } } })}`).join('\n');
+const toolSchemaBaseline = directToolsBaseline
+  .map((name) => `${name}: ${JSON.stringify({ type: 'object', properties: { input: { type: 'string' } } })}`)
+  .join('\n');
+const toolSchemaOptimized = directToolsOptimized
+  .map((name) => `${name}: ${JSON.stringify({ type: 'object', properties: { input: { type: 'string' } } })}`)
+  .join('\n');
 
 const rawShellOutput = [
   '$ pnpm vitest run packages/desktop/server/conversations/liveSessionLoader.test.ts',
   'RUN  v4.0.18 /Users/patrick/workingdir/neon-pilot',
-  ...Array.from({ length: 90 }, (_, index) => `stdout line ${index + 1}: transform module-${index}.ts in ${12 + (index % 17)}ms with sourcemap and dependency cache`),
+  ...Array.from(
+    { length: 90 },
+    (_, index) => `stdout line ${index + 1}: transform module-${index}.ts in ${12 + (index % 17)}ms with sourcemap and dependency cache`,
+  ),
   '✓ packages/desktop/server/conversations/liveSessionLoader.test.ts (6 tests) 62ms',
   'Test Files  1 passed (1)',
   'Tests  6 passed (6)',
@@ -248,7 +255,10 @@ const rtkShellOutput = [
 
 const cliDiscoveryBaseline = [
   'The agent searches the repository for missing tool capabilities, reads extension manifests, opens backend files, and infers how to call actions.',
-  ...Array.from({ length: 40 }, (_, index) => `rg/read result ${index + 1}: packages/desktop/server/extensions/example-${index}.ts action schema and handler metadata`),
+  ...Array.from(
+    { length: 40 },
+    (_, index) => `rg/read result ${index + 1}: packages/desktop/server/extensions/example-${index}.ts action schema and handler metadata`,
+  ),
 ].join('\n');
 const cliDiscoveryOptimized = [
   '$ ds4 tools',
@@ -261,16 +271,64 @@ const cliDiscoveryOptimized = [
 
 const benchmarks = [
   measure('prompt.main_guidelines', mainGuidelinesBaseline, mainGuidelinesOptimized, 'APPEND/main instruction cleanup.', 'prompt'),
-  measure('prompt.ds4_mode', ds4ModeBaseline, ds4ModeOptimized, 'DS4-specific harness instructions, now focused on progressive disclosure.', 'prompt'),
+  measure(
+    'prompt.ds4_mode',
+    ds4ModeBaseline,
+    ds4ModeOptimized,
+    'DS4-specific harness instructions, now focused on progressive disclosure.',
+    'prompt',
+  ),
   measure('prompt.agents', agentsEmbedded, agentsPointerOnly, 'Global and repo AGENTS are pointer-only in DS4 mode.', 'prompt'),
   measure('prompt.skills', embeddedSkills, progressiveSkills, 'Skills move from prompt injection to ds4 skills list/search/get.', 'prompt'),
-  measure('tool_schema.direct', toolSchemaBaseline, toolSchemaOptimized, 'Direct tool definition surface shrinks; withheld tools move behind the ds4 CLI. Synthetic schema fixture.', 'tool_schema'),
-  measure('cli.discovery', cliDiscoveryBaseline, cliDiscoveryOptimized, 'Agent discovers withheld tools through ds4 CLI instead of repo spelunking.', 'cli'),
-  measure('read_output.50_lines', paddedRead(read50, 121), compactRead(read50, 121), 'Padded gutter vs compact line|text gutter.', 'read_output'),
-  measure('read_output.200_lines', paddedRead(read200, 121), compactRead(read200, 121), 'Padded gutter vs compact line|text gutter.', 'read_output'),
-  measure('read_output.500_lines', paddedRead(read500, 1), compactRead(read500, 1), 'Padded gutter vs compact line|text gutter.', 'read_output'),
-  measure('read_output.200_short_lines', paddedRead(shortLines, 1), compactRead(shortLines, 1), 'Short-line fixture where gutter overhead dominates.', 'read_output'),
-  measure('edit_payload.large_function', oldNewEditPayload(oldFunction, newFunction), uptoEditPayload(oldFunction, newFunction), 'Exact old/new replacement payload vs [upto] anchored replacement.', 'edit_payload'),
+  measure(
+    'tool_schema.direct',
+    toolSchemaBaseline,
+    toolSchemaOptimized,
+    'Direct tool definition surface shrinks; withheld tools move behind the ds4 CLI. Synthetic schema fixture.',
+    'tool_schema',
+  ),
+  measure(
+    'cli.discovery',
+    cliDiscoveryBaseline,
+    cliDiscoveryOptimized,
+    'Agent discovers withheld tools through ds4 CLI instead of repo spelunking.',
+    'cli',
+  ),
+  measure(
+    'read_output.50_lines',
+    paddedRead(read50, 121),
+    compactRead(read50, 121),
+    'Padded gutter vs compact line|text gutter.',
+    'read_output',
+  ),
+  measure(
+    'read_output.200_lines',
+    paddedRead(read200, 121),
+    compactRead(read200, 121),
+    'Padded gutter vs compact line|text gutter.',
+    'read_output',
+  ),
+  measure(
+    'read_output.500_lines',
+    paddedRead(read500, 1),
+    compactRead(read500, 1),
+    'Padded gutter vs compact line|text gutter.',
+    'read_output',
+  ),
+  measure(
+    'read_output.200_short_lines',
+    paddedRead(shortLines, 1),
+    compactRead(shortLines, 1),
+    'Short-line fixture where gutter overhead dominates.',
+    'read_output',
+  ),
+  measure(
+    'edit_payload.large_function',
+    oldNewEditPayload(oldFunction, newFunction),
+    uptoEditPayload(oldFunction, newFunction),
+    'Exact old/new replacement payload vs [upto] anchored replacement.',
+    'edit_payload',
+  ),
   measure('shell.rtk_output', rawShellOutput, rtkShellOutput, 'Synthetic RTK-style compression fixture for noisy command output.', 'shell'),
 ];
 
@@ -326,7 +384,9 @@ if (asJson) {
   console.log(`Total: ${totals.baselineTokens} -> ${totals.optimizedTokens} tokens (${totals.tokensSaved} saved, ${totals.percentSaved}%)`);
   console.log('');
   for (const group of groups) {
-    console.log(`${group.group}: ${group.baselineTokens} -> ${group.optimizedTokens} tokens (${group.tokensSaved} saved, ${group.percentSaved}%)`);
+    console.log(
+      `${group.group}: ${group.baselineTokens} -> ${group.optimizedTokens} tokens (${group.tokensSaved} saved, ${group.percentSaved}%)`,
+    );
   }
   console.log('');
   for (const row of benchmarks) {

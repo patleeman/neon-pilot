@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { ScheduledTaskSummary } from '../shared/types';
 import { executionStore, presenceStore, resetAllStores, sessionStore, taskStore } from './stores';
 
 function session(id: string, isRunning = false) {
@@ -38,15 +39,17 @@ describe('presenceStore', () => {
 
   it('marks only the task-bound conversation as automation running', () => {
     sessionStore.replaceAll([session('conv-1'), session('conv-2')]);
-    taskStore.replaceAll([
-      {
-        id: 'task-1',
-        title: 'Daily',
-        enabled: true,
-        running: true,
-        threadConversationId: 'conv-2',
-      },
-    ] as any);
+    const task: ScheduledTaskSummary = {
+      id: 'task-1',
+      title: 'Daily',
+      enabled: true,
+      running: true,
+      scheduleType: 'cron',
+      prompt: 'Run daily',
+      threadMode: 'existing',
+      threadConversationId: 'conv-2',
+    };
+    taskStore.replaceAll([task]);
 
     expect(presenceStore.get('conv-1')).toBe('idle');
     expect(presenceStore.get('conv-2')).toBe('automation');

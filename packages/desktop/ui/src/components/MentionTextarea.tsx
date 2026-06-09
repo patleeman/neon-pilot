@@ -148,10 +148,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
                 applyMention(item);
               }}
               selected={index === selectedMentionIndex}
-              className={cx(
-                'flex w-full items-start gap-3 px-3 py-2.5',
-                index !== selectedMentionIndex && 'text-secondary',
-              )}
+              className={cx('flex w-full items-start gap-3 px-3 py-2.5', index !== selectedMentionIndex && 'text-secondary')}
             >
               <Pill tone="muted">{item.kind}</Pill>
               <div className="min-w-0 flex-1">

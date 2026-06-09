@@ -119,9 +119,7 @@ async function fetchCoreHfCases({ dataset, split = 'train', perType = 3 }) {
     if (!row) continue;
     const resolution = resolutionByCaseId.get(basis.id);
     const selectedCommit =
-      stringOrEmpty(resolution?.selected_commit) ||
-      stringOrEmpty(resolution?.recommended_base_commit) ||
-      stringOrEmpty(row.base_commit);
+      stringOrEmpty(resolution?.selected_commit) || stringOrEmpty(resolution?.recommended_base_commit) || stringOrEmpty(row.base_commit);
     if (hasFlag('require-commit') && (!selectedCommit || !commitExists(targetRepo, selectedCommit))) continue;
     selected.push({
       ...row,
@@ -180,10 +178,16 @@ function waitForChildReady(child, label) {
 async function startBenchBackend({ mode, stateRoot }) {
   const extensionHostFile = path.join(repoRoot, 'packages', 'desktop', 'dist', 'backend', 'extension-host-child.js');
   const backendFile = path.join(repoRoot, 'packages', 'desktop', 'dist', 'backend', 'local-backend-child.js');
-  assert(existsSync(extensionHostFile), `Missing desktop backend build: ${extensionHostFile}\nRun: pnpm --dir packages/desktop run build:main`);
+  assert(
+    existsSync(extensionHostFile),
+    `Missing desktop backend build: ${extensionHostFile}\nRun: pnpm --dir packages/desktop run build:main`,
+  );
   assert(existsSync(backendFile), `Missing desktop backend build: ${backendFile}\nRun: pnpm --dir packages/desktop run build:main`);
   const existingTestingStateRoot = path.join(process.env.HOME ?? '', '.local', 'state', 'neon-pilot-testing');
-  const root = stateRoot || process.env.NEON_PILOT_STATE_ROOT || (existsSync(existingTestingStateRoot) ? existingTestingStateRoot : mkdtempSync(path.join(tmpdir(), `neon-pilot-ds4-bench-${mode}-`)));
+  const root =
+    stateRoot ||
+    process.env.NEON_PILOT_STATE_ROOT ||
+    (existsSync(existingTestingStateRoot) ? existingTestingStateRoot : mkdtempSync(path.join(tmpdir(), `neon-pilot-ds4-bench-${mode}-`)));
   const env = {
     ...process.env,
     ELECTRON_RUN_AS_NODE: '1',
@@ -339,10 +343,7 @@ assert.equal(slugifyTitle('Already-ok'), 'already-ok');
 `,
       );
     },
-    prompt: [
-      'Fix this workspace so `node test.mjs` passes.',
-      'Keep the change focused. Run the test before you finish.',
-    ].join('\n'),
+    prompt: ['Fix this workspace so `node test.mjs` passes.', 'Keep the change focused. Run the test before you finish.'].join('\n'),
     grade(workspace) {
       runNodeTest(workspace);
       const text = readFileSync(path.join(workspace, 'src', 'slug.js'), 'utf8');
@@ -503,7 +504,9 @@ async function listHfCases() {
     : await fetchHfCases({ dataset, offset, length: Math.min(Math.max(limit, 1), 100) });
   for (const row of cases) {
     const scoring = parseMaybeJson(row.scoring, {});
-    const prompt = normalizeNewlines(String(row.prompt ?? '')).replace(/\s+/g, ' ').trim();
+    const prompt = normalizeNewlines(String(row.prompt ?? ''))
+      .replace(/\s+/g, ' ')
+      .trim();
     const kind = row.coreType ?? row.type ?? scoring?.type ?? 'case';
     const failure = row.coreFailureMode ? `\t${row.coreFailureMode}` : '';
     const commit = row.resolvedCommit ? `\t${row.resolvedCommit.slice(0, 12)}` : '';
@@ -649,7 +652,13 @@ function buildHfPrompt(row, mode, targetRepo) {
 async function runOneCase({ client, row, mode, outputDir, timeoutMs, attempt }) {
   const sourceRepo = path.resolve(arg('target-repo', repoRoot));
   const workspaceMode = attempt > 1 ? `${mode}-attempt${attempt}` : mode;
-  const workspaceInfo = createCaseWorkspace({ sourceRepo, outputDir, mode: workspaceMode, caseId: row.id, commit: row.resolvedCommit || row.base_commit });
+  const workspaceInfo = createCaseWorkspace({
+    sourceRepo,
+    outputDir,
+    mode: workspaceMode,
+    caseId: row.id,
+    commit: row.resolvedCommit || row.base_commit,
+  });
   const targetRepo = workspaceInfo.workspace;
   const prompt = buildHfPrompt(row, mode, targetRepo);
   const startedAtMs = Date.now();
@@ -776,7 +785,9 @@ async function runCore() {
   assert(['optimized', 'baseline', 'both'].includes(requestedMode), '--mode must be optimized, baseline, or both');
   const modes = requestedMode === 'both' ? ['optimized', 'baseline'] : [requestedMode];
   const timeoutMs = Number(arg('timeout-ms', '900000')) || 900_000;
-  const outputDir = path.resolve(arg('out') || path.join(repoRoot, 'artifacts', 'ds4-evals', new Date().toISOString().replace(/[:.]/g, '-')));
+  const outputDir = path.resolve(
+    arg('out') || path.join(repoRoot, 'artifacts', 'ds4-evals', new Date().toISOString().replace(/[:.]/g, '-')),
+  );
   mkdirSync(outputDir, { recursive: true });
   const limit = Number(arg('limit', '0')) || 0;
   const cases = (await loadRunCoreCases({ dataset })).slice(0, limit > 0 ? limit : undefined);

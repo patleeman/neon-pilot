@@ -5,7 +5,9 @@ const maxExtensionHostAuditEvents = 500;
 let nextExtensionHostAuditEventId = 1;
 const extensionHostAuditEvents: ExtensionHostAuditEvent[] = [];
 
-export function recordExtensionHostAuditEvent(event: Omit<ExtensionHostAuditEvent, 'id' | 'at'> & { at?: string }): ExtensionHostAuditEvent {
+export function recordExtensionHostAuditEvent(
+  event: Omit<ExtensionHostAuditEvent, 'id' | 'at'> & { at?: string },
+): ExtensionHostAuditEvent {
   const recorded: ExtensionHostAuditEvent = {
     id: nextExtensionHostAuditEventId,
     requestType: event.requestType,

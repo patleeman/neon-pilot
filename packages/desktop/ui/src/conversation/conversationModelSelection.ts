@@ -1,5 +1,5 @@
-import { buildConversationServiceTierPreferenceInput } from './conversationInitialState';
 import { resolveSelectableModel, resolveSelectableModelId } from '../model/modelPreferences';
+import { buildConversationServiceTierPreferenceInput } from './conversationInitialState';
 
 export function selectComposerModel<TModel extends { id: string; provider?: string }>(
   models: TModel[],

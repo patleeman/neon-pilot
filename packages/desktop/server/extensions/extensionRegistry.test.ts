@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -8,24 +8,23 @@ const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn(), publishAppEv
 
 vi.mock('../shared/appEvents.js', () => appEvents);
 
-import { deleteRuntimeExtension } from './extensionLifecycle.js';
 import {
   beginExtensionStartupGuard,
   clearExtensionFailureRecordsForOperation,
   completeExtensionStartupGuard,
-  isExtensionEnabled,
   invalidateExtensionRegistryReadCaches,
+  isExtensionEnabled,
   listExtensionAssemblyProviderRegistrations,
   listExtensionCliCommandRegistrations,
   listExtensionCommandRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionInstallSummaries,
   listExtensionKeybindingRegistrations,
-  markExtensionStartupActive,
   listExtensionModelProfileRegistrations,
   listExtensionPromptAssemblyHookRegistrations,
   listExtensionSkillRegistrations,
   listExtensionToolRegistrations,
+  markExtensionStartupActive,
   parseExtensionManifest,
   readExtensionRegistrySnapshot,
   readExtensionSchema,

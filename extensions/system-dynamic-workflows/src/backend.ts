@@ -1,12 +1,7 @@
 import vm from 'node:vm';
 
 import type { ExtensionBackendContext, ExtensionSqliteDatabase } from '@neon-pilot/extensions';
-import {
-  cancelDurableRun,
-  getDurableRun,
-  pingDaemon,
-  startBackgroundRun,
-} from '@neon-pilot/extensions/backend/runs';
+import { cancelDurableRun, getDurableRun, pingDaemon, startBackgroundRun } from '@neon-pilot/extensions/backend/runs';
 import { readExtensionSettings } from '@neon-pilot/extensions/backend/settings';
 
 const WORKFLOW_BLOCK_TYPE = 'dynamic_workflow';
@@ -243,12 +238,7 @@ export function resolveAgentModel(input: {
 }
 
 export function normalizeAllowedTools(value: unknown, fallback: string[] = []): string[] {
-  const raw =
-    typeof value === 'string'
-      ? value.split(',')
-      : Array.isArray(value)
-        ? value
-        : [];
+  const raw = typeof value === 'string' ? value.split(',') : Array.isArray(value) ? value : [];
   const seen = new Set<string>();
   const next: string[] = [];
   for (const item of raw) {
@@ -486,7 +476,14 @@ async function openStorageBackedDatabase(ctx: ExtensionBackendContext): Promise<
             nodes.delete(String(params[0]));
             void persist();
           } else if (sql.startsWith('INSERT INTO workflow_events')) {
-            events.push({ id: params[0], workflow_id: params[1], event_type: params[2], message: params[3], data_json: params[4], created_at: params[5] });
+            events.push({
+              id: params[0],
+              workflow_id: params[1],
+              event_type: params[2],
+              message: params[3],
+              data_json: params[4],
+              created_at: params[5],
+            });
             void persist();
           } else if (sql.startsWith('INSERT INTO saved_workflows')) {
             saved.set(String(params[0]), {
@@ -893,11 +890,17 @@ function createLimiter(limit: number) {
   };
 }
 
-async function waitForRunCompletion(runId: string, timeoutMs: number, signal?: AbortSignal): Promise<{ summary: string; status: NodeStatus }> {
+async function waitForRunCompletion(
+  runId: string,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<{ summary: string; status: NodeStatus }> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     if (signal?.aborted) throw new Error('Workflow cancelled.');
-    const detail = (await getDurableRun(runId)) as { run?: { status?: { status?: string }; result?: { summary?: string; error?: string } } } | undefined;
+    const detail = (await getDurableRun(runId)) as
+      | { run?: { status?: { status?: string }; result?: { summary?: string; error?: string } } }
+      | undefined;
     const status = detail?.run?.status?.status;
     if (status === 'completed' || status === 'failed' || status === 'cancelled') {
       const summary = detail?.run?.result?.summary ?? detail?.run?.result?.error ?? `Subagent ${status}.`;
@@ -1049,7 +1052,8 @@ async function runWorkflowScript(input: {
       workflow: Object.freeze(workflowApi),
       args: input.args,
       console: Object.freeze({
-        log: (...values: unknown[]) => workflowApi.log(values.map((value) => (typeof value === 'string' ? value : JSON.stringify(value))).join(' ')),
+        log: (...values: unknown[]) =>
+          workflowApi.log(values.map((value) => (typeof value === 'string' ? value : JSON.stringify(value))).join(' ')),
       }),
     },
     { name: `dynamic-workflow:${input.workflowId}`, codeGeneration: { strings: false, wasm: false } },
@@ -1058,7 +1062,10 @@ async function runWorkflowScript(input: {
   const result = await Promise.race([
     script.runInContext(sandbox, { timeout: 1000 }) as Promise<unknown>,
     new Promise<never>((_resolve, reject) => {
-      setTimeout(() => reject(new Error(`Workflow timed out after ${input.settings.workflowTimeoutMinutes} minutes.`)), input.settings.workflowTimeoutMinutes * 60 * 1000).unref();
+      setTimeout(
+        () => reject(new Error(`Workflow timed out after ${input.settings.workflowTimeoutMinutes} minutes.`)),
+        input.settings.workflowTimeoutMinutes * 60 * 1000,
+      ).unref();
     }),
   ]);
   return finished ? finalResult : result;

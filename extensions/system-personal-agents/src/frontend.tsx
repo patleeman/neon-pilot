@@ -169,7 +169,10 @@ export function PersonalAgentsShell({ HostComponent, ...props }: HostWrapperProp
 
   async function deleteSelected() {
     if (!selectedProfile) return;
-    const ok = await pa.ui.confirm({ title: 'Delete personal agent?', message: `Delete ${selectedProfile.name}? Its conversation is kept.` });
+    const ok = await pa.ui.confirm({
+      title: 'Delete personal agent?',
+      message: `Delete ${selectedProfile.name}? Its conversation is kept.`,
+    });
     if (!ok) return;
     const deleted = await run('delete', () => paRef.current.extension.invoke('deleteProfile', { id: selectedProfile.id }));
     if (!deleted) return;
@@ -390,7 +393,9 @@ function AgentDetailsPanel({
                 <Field label="Trust">
                   <Select
                     value={binding.trustLevel}
-                    onChange={(event) => updateBinding(index, { trustLevel: event.target.value as PersonalAgentGatewayBinding['trustLevel'] })}
+                    onChange={(event) =>
+                      updateBinding(index, { trustLevel: event.target.value as PersonalAgentGatewayBinding['trustLevel'] })
+                    }
                   >
                     <option value="paired">Paired</option>
                     <option value="allowlisted">Allowlisted</option>

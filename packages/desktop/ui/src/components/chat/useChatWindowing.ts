@@ -116,10 +116,7 @@ export function resolveVisibleChunkRange({
   } else {
     const viewportHeight = Math.max(1, viewport.clientHeight);
     const maxViewportTop = Math.max(0, totalHeight - viewportHeight);
-    const viewportTop =
-      anchorToTail && focusChunkIndex < 0
-        ? maxViewportTop
-        : Math.min(maxViewportTop, Math.max(0, viewport.scrollTop));
+    const viewportTop = anchorToTail && focusChunkIndex < 0 ? maxViewportTop : Math.min(maxViewportTop, Math.max(0, viewport.scrollTop));
     const viewportBottom = Math.min(totalHeight, viewportTop + viewportHeight);
     const firstVisibleChunkIndex = resolveChunkIndexForOffset(viewportTop, tops, heights);
     const lastVisibleChunkIndex = resolveChunkIndexForOffset(viewportBottom, tops, heights);

@@ -33,17 +33,11 @@ const keybindings: ExtensionKeybindingRegistration[] = [
 describe('extension keybindings', () => {
   it('keeps Cmd+P and Cmd+Shift+P distinct', () => {
     expect(
-      findMatchingExtensionKeybinding(
-        { key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false },
-        keybindings,
-      )?.args,
+      findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, keybindings)?.args,
     ).toEqual({ scope: 'threads' });
 
     expect(
-      findMatchingExtensionKeybinding(
-        { key: 'P', metaKey: true, ctrlKey: false, altKey: false, shiftKey: true },
-        keybindings,
-      )?.args,
+      findMatchingExtensionKeybinding({ key: 'P', metaKey: true, ctrlKey: false, altKey: false, shiftKey: true }, keybindings)?.args,
     ).toEqual({ scope: 'commands' });
   });
 });

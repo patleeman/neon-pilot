@@ -256,7 +256,13 @@ describe('App execution state integration', () => {
 
   it('preserves running state when the running event arrives before the session row', async () => {
     fetchSessionsSnapshotMock.mockResolvedValueOnce([]);
-    apiSessionMetaMock.mockResolvedValue({ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: false });
+    apiSessionMetaMock.mockResolvedValue({
+      id: 'conv-1',
+      title: 'Conversation',
+      cwd: '/repo',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      isRunning: false,
+    });
     ({ container, root } = await renderApp());
 
     await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: true });

@@ -75,9 +75,7 @@ function buildScannedDurableRunsResult(runsRoot: string): ListDurableRunsResult 
   };
 }
 
-async function buildDaemonDurableRunsResult(
-  runsRoot: string,
-): Promise<(ListDurableRunsResult & { runsRoot: string }) | null> {
+async function buildDaemonDurableRunsResult(runsRoot: string): Promise<(ListDurableRunsResult & { runsRoot: string }) | null> {
   if (!(await pingDaemon())) {
     return null;
   }

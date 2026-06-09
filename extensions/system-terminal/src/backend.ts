@@ -21,9 +21,9 @@ export async function writeTerminal(input: { id: string; data: string }): Promis
   return writeTerminalSession(input);
 }
 
-export async function drainTerminal(
-  input: { id: string },
-): Promise<{ ok: boolean; output: string; exited: boolean; exitCode: number | null }> {
+export async function drainTerminal(input: {
+  id: string;
+}): Promise<{ ok: boolean; output: string; exited: boolean; exitCode: number | null }> {
   return drainTerminalSession(input);
 }
 

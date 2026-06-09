@@ -216,19 +216,25 @@ export function App() {
     return session.isRunning === running ? session : { ...session, isRunning: running };
   }, []);
 
-  const setSessions = useCallback((items: SessionMeta[]) => {
-    sessionStore.replaceAll(items.map(applySessionRunningOverride));
-    sessionStore.markReady?.();
-  }, [applySessionRunningOverride]);
+  const setSessions = useCallback(
+    (items: SessionMeta[]) => {
+      sessionStore.replaceAll(items.map(applySessionRunningOverride));
+      sessionStore.markReady?.();
+    },
+    [applySessionRunningOverride],
+  );
 
-  const applySessionMetaUpdate = useCallback((sessionId: string, nextSession: SessionMeta | null) => {
-    if (!nextSession) {
-      sessionRunningOverridesRef.current.delete(sessionId);
-      sessionStore.remove(sessionId);
-      return;
-    }
-    sessionStore.upsert(applySessionRunningOverride(nextSession));
-  }, [applySessionRunningOverride]);
+  const applySessionMetaUpdate = useCallback(
+    (sessionId: string, nextSession: SessionMeta | null) => {
+      if (!nextSession) {
+        sessionRunningOverridesRef.current.delete(sessionId);
+        sessionStore.remove(sessionId);
+        return;
+      }
+      sessionStore.upsert(applySessionRunningOverride(nextSession));
+    },
+    [applySessionRunningOverride],
+  );
 
   const bumpConversationVersion = useCallback((sessionId: string) => {
     setConversationVersions((previous) => bumpConversationScopedEventVersions(previous, sessionId));
@@ -239,7 +245,7 @@ export function App() {
   }, []);
 
   const refreshSessionMeta = useCallback(
-    (sessionId: string, running?: boolean) => {
+    (sessionId: string) => {
       const nextSeq = (refreshSessionMetaSeqRef.current.get(sessionId) ?? 0) + 1;
       refreshSessionMetaSeqRef.current.set(sessionId, nextSeq);
 

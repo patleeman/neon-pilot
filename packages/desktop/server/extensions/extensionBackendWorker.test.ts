@@ -24,7 +24,9 @@ async function flushPromises(): Promise<void> {
 
 async function waitForPostMessage(message: unknown): Promise<void> {
   for (let index = 0; index < 250; index += 1) {
-    if (workerThreads.parentPort.postMessage.mock.calls.some(([candidate]) => expect.objectContaining(message).asymmetricMatch(candidate))) {
+    if (
+      workerThreads.parentPort.postMessage.mock.calls.some(([candidate]) => expect.objectContaining(message).asymmetricMatch(candidate))
+    ) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -364,7 +366,7 @@ export async function doThing(_input, ctx) {
       .find((message) => {
         const candidate = message as { id?: number; capability?: string; operation?: string };
         return candidate.id === 1 && candidate.capability === 'agent' && candidate.operation === 'streamMessage';
-    }) as { input?: { handleId?: string; input?: unknown } };
+      }) as { input?: { handleId?: string; input?: unknown } };
     expect(request.input).toMatchObject({ input: { conversationId: 'agent-1', text: 'hello' } });
     expect(request).toMatchObject({
       context: {
@@ -543,7 +545,12 @@ export async function doThing(_input, ctx) {
       operation: 'setActiveTools',
       input: { conversationId: 'conv-1', toolNames: ['exec_code'] },
     });
-    workerThreads.messageHandler?.({ id: 3, kind: 'capabilityResponse', ok: true, result: { conversationId: 'conv-1', toolNames: ['exec_code'] } });
+    workerThreads.messageHandler?.({
+      id: 3,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { conversationId: 'conv-1', toolNames: ['exec_code'] },
+    });
 
     await waitForPostMessage({
       id: 4,
@@ -678,7 +685,12 @@ export async function doThing(_input, ctx) {
       operation: 'fork',
       input: { conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' },
     });
-    workerThreads.messageHandler?.({ id: 14, kind: 'capabilityResponse', ok: true, result: { id: 'conv-fork', conversationId: 'conv-fork' } });
+    workerThreads.messageHandler?.({
+      id: 14,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { id: 'conv-fork', conversationId: 'conv-fork' },
+    });
 
     await waitForPostMessage({
       id: 15,
@@ -854,7 +866,12 @@ export async function doThing(_input, ctx) {
       operation: 'readText',
       input: { cwd: '/repo', path: 'README.md', maxBytes: 100 },
     });
-    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { path: 'README.md', content: 'hello', sha256: 'abc' } });
+    workerThreads.messageHandler?.({
+      id: 1,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { path: 'README.md', content: 'hello', sha256: 'abc' },
+    });
 
     await waitForPostMessage({
       id: 2,

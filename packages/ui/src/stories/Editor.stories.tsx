@@ -1,7 +1,8 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { EditorToolbar, EditorToolbarButton, EditorToolbarGroup } from '../primitives';
-import '../styles.css';
 
 const meta = {
   title: 'Patterns/Editor',

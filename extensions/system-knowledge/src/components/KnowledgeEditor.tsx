@@ -780,7 +780,12 @@ export function KnowledgeEditor({ fileId, fileName, onFileNavigate, onFileRename
           >
             <Ico d={ICON.strike} />
           </EditorToolbarButton>
-          <EditorToolbarButton icon active={editor.isActive('code')} onPress={() => editor.chain().focus().toggleCode().run()} title="Inline code">
+          <EditorToolbarButton
+            icon
+            active={editor.isActive('code')}
+            onPress={() => editor.chain().focus().toggleCode().run()}
+            title="Inline code"
+          >
             <Ico d={ICON.code} />
           </EditorToolbarButton>
           <div className="w-px h-4 bg-border-subtle mx-0.5 shrink-0" />

@@ -7,7 +7,6 @@ import { parentPort } from 'node:worker_threads';
 import { getPiAgentRuntimeDir, getStateRoot } from '@neon-pilot/core';
 
 import { prependNeonPilotCliBin } from '../cliEnvironment.js';
-
 import type { ExtensionBackendModule } from './extensionBackendRunner.js';
 import type {
   ExtensionBackendWorkerBackendContextOptions,
@@ -32,7 +31,10 @@ const shellHandleCallbacks = new Map<
 let nextCapabilityRequestId = 0;
 let nextShellHandleId = 0;
 let nextRouteStreamHandleId = 0;
-const extensionCapabilityScope = new AsyncLocalStorage<{ extensionId: string; contextOptions?: ExtensionBackendWorkerBackendContextOptions }>();
+const extensionCapabilityScope = new AsyncLocalStorage<{
+  extensionId: string;
+  contextOptions?: ExtensionBackendWorkerBackendContextOptions;
+}>();
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 const EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS = Symbol.for('neon-pilot.extensionHostCapabilityEventHandlers');
 
@@ -106,7 +108,8 @@ function handleCapabilityEvent(event: ExtensionBackendWorkerCapabilityEvent): vo
   }
 
   if (event.capability !== 'shell') return;
-  const input = event.input && typeof event.input === 'object' && !Array.isArray(event.input) ? (event.input as Record<string, unknown>) : null;
+  const input =
+    event.input && typeof event.input === 'object' && !Array.isArray(event.input) ? (event.input as Record<string, unknown>) : null;
   const handleId = typeof input?.handleId === 'string' ? input.handleId : '';
   const callbacks = shellHandleCallbacks.get(handleId);
   if (!callbacks) return;
@@ -128,7 +131,10 @@ function handleCapabilityEvent(event: ExtensionBackendWorkerCapabilityEvent): vo
   }
 }
 
-function createWorkerBackendContext(extensionId: string, options: ExtensionBackendWorkerBackendContextOptions = {}): Record<string, unknown> {
+function createWorkerBackendContext(
+  extensionId: string,
+  options: ExtensionBackendWorkerBackendContextOptions = {},
+): Record<string, unknown> {
   const runtimeScope = options.runtimeScope ?? 'shared';
   const repoRoot = options.repoRoot ?? process.cwd();
   const stateRoot = options.stateRoot?.trim() || getStateRoot();
@@ -147,13 +153,12 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     additionalPromptTemplatePaths: [],
     additionalThemePaths: [],
   };
-  const extensionBinDirs =
-    Array.isArray(liveSessionResourceOptions.additionalExtensionPaths)
-      ? liveSessionResourceOptions.additionalExtensionPaths
-          .filter((extensionPath): extensionPath is string => typeof extensionPath === 'string')
-          .map((extensionPath) => path.join(extensionPath, 'bin'))
-          .filter((binDir) => existsSync(binDir))
-      : [];
+  const extensionBinDirs = Array.isArray(liveSessionResourceOptions.additionalExtensionPaths)
+    ? liveSessionResourceOptions.additionalExtensionPaths
+        .filter((extensionPath): extensionPath is string => typeof extensionPath === 'string')
+        .map((extensionPath) => path.join(extensionPath, 'bin'))
+        .filter((binDir) => existsSync(binDir))
+    : [];
   const shellEnv = (inputEnv?: unknown): Record<string, string> | undefined => {
     const env =
       inputEnv && typeof inputEnv === 'object' && !Array.isArray(inputEnv)
@@ -301,17 +306,16 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     },
     models: {
       list: () => callHostCapability(extensionId, 'models', 'list'),
-      saveProvider: (input: unknown) =>
-        callHostCapability(extensionId, 'models', 'saveProvider', { input, ...modelWriteContext }),
+      saveProvider: (input: unknown) => callHostCapability(extensionId, 'models', 'saveProvider', { input, ...modelWriteContext }),
       saveProviderModel: (input: unknown) =>
         callHostCapability(extensionId, 'models', 'saveProviderModel', { input, ...modelWriteContext }),
-      deleteProvider: (provider: string) =>
-        callHostCapability(extensionId, 'models', 'deleteProvider', { provider, ...modelWriteContext }),
+      deleteProvider: (provider: string) => callHostCapability(extensionId, 'models', 'deleteProvider', { provider, ...modelWriteContext }),
       deleteProviderModel: (input: unknown) =>
         callHostCapability(extensionId, 'models', 'deleteProviderModel', { input, ...modelWriteContext }),
     },
     notify: {
-      toast: (message: string, type?: 'info' | 'warning' | 'error') => callHostCapability(extensionId, 'notify', 'toast', { message, type }),
+      toast: (message: string, type?: 'info' | 'warning' | 'error') =>
+        callHostCapability(extensionId, 'notify', 'toast', { message, type }),
       system: (input: unknown) => callHostCapability(extensionId, 'notify', 'system', input),
       setBadge: (count: number) => callHostCapability(extensionId, 'notify', 'setBadge', { count }),
       clearBadge: () => callHostCapability(extensionId, 'notify', 'clearBadge'),
@@ -326,7 +330,8 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
     },
     shell: {
       exec: (input: unknown) => {
-        const serializableInput: unknown = input && typeof input === 'object' && !Array.isArray(input) ? { ...(input as Record<string, unknown>) } : input;
+        const serializableInput: unknown =
+          input && typeof input === 'object' && !Array.isArray(input) ? { ...(input as Record<string, unknown>) } : input;
         if (serializableInput && typeof serializableInput === 'object' && !Array.isArray(serializableInput)) {
           const record = serializableInput as Record<string, unknown>;
           const env = shellEnv(record.env);
@@ -385,7 +390,8 @@ function createWorkerBackendContext(extensionId: string, options: ExtensionBacke
       workspace: (input?: { cwd?: string; access?: string[]; reason?: string }) =>
         createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'workspace' }),
       app: (input?: { access?: string[]; reason?: string }) => createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'app' }),
-      cache: (input?: { access?: string[]; reason?: string }) => createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'cache' }),
+      cache: (input?: { access?: string[]; reason?: string }) =>
+        createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'cache' }),
       temp: (input?: { access?: string[]; reason?: string; prefix?: string }) =>
         createWorkerFilesystemRoot(extensionId, { ...(input ?? {}), kind: 'temp' }),
     },

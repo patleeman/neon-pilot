@@ -48,7 +48,8 @@ export function createConversationAgentExtension(options: {
       label: 'Conversation',
       description:
         'Ask the user, inspect conversations, set the title, change working directory, or schedule a deferred resume for this conversation.',
-      promptSnippet: 'Use conversation_admin for conversation/session state, questions, inspection, title, cwd changes, and deferred resumes.',
+      promptSnippet:
+        'Use conversation_admin for conversation/session state, questions, inspection, title, cwd changes, and deferred resumes.',
       promptGuidelines: [
         'Use action="deferred_resume" for wait-then-continue; do not run sleep in bash.',
         'Ask the user only when blocked on a real decision or approval.',

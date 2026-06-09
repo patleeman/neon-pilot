@@ -29,7 +29,9 @@ function readManifest(): {
   backend: { actions: Array<{ id: string; worker?: { enabled?: boolean; inputActions?: string[] } }> };
   contributes: { tools: Array<{ id: string; inputSchema?: { properties?: { action?: { enum?: string[] } } } }> };
 } {
-  return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'extension.json'), 'utf-8')) as ReturnType<typeof readManifest>;
+  return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'extension.json'), 'utf-8')) as ReturnType<
+    typeof readManifest
+  >;
 }
 
 function buildHandler() {

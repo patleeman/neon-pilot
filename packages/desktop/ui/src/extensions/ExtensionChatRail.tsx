@@ -2,12 +2,12 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../client/api';
-import type { DesktopConversationState, MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
-import { useDesktopConversationState } from '../hooks/useDesktopConversationState';
-import { getModelSelectionValue } from '../model/modelPreferences';
-import { CenteredLoadingState } from '../components/ui';
 import { ChatRailComposer } from '../components/chat/ChatRailComposer';
 import { ChatView } from '../components/chat/ChatView';
+import { CenteredLoadingState } from '../components/ui';
+import { useDesktopConversationState } from '../hooks/useDesktopConversationState';
+import { getModelSelectionValue } from '../model/modelPreferences';
+import type { DesktopConversationState, MessageBlock, ModelInfo, PromptAttachmentRefInput, PromptImageInput } from '../shared/types';
 
 export interface ExtensionChatContextMessage {
   customType: string;

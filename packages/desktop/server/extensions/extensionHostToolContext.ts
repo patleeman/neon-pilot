@@ -8,9 +8,7 @@ export interface ExtensionHostToolContextSnapshot {
   preferredVisionModel?: string;
 }
 
-export function createExtensionHostToolContextSnapshot(
-  context?: ExtensionHostToolContext,
-): ExtensionHostToolContextSnapshot | undefined {
+export function createExtensionHostToolContextSnapshot(context?: ExtensionHostToolContext): ExtensionHostToolContextSnapshot | undefined {
   if (!context) return undefined;
   return {
     ...(context.conversationId ? { conversationId: context.conversationId } : {}),

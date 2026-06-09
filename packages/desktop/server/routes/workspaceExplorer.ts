@@ -10,11 +10,11 @@ import {
   listWorkspaceDirectory,
   moveWorkspacePath,
   readUncommittedDiffAsync,
-  resolveWorkspacePathLinks,
   readWorkspaceDiffOverlay,
   readWorkspaceFile,
   readWorkspaceRootSnapshot,
   renameWorkspacePath,
+  resolveWorkspacePathLinks,
   writeWorkspaceFile,
 } from '../workspace/workspaceExplorer.js';
 import type { ServerRouteContext } from './context.js';
@@ -40,9 +40,11 @@ function writeWorkspaceError(res: { status: (code: number) => { json: (body: unk
 
 function publishHostEvent(source: string, payload: unknown): void {
   try {
-    void getExtensionHostClient().publishEvent(source, payload).catch((error) => {
-      logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
-    });
+    void getExtensionHostClient()
+      .publishEvent(source, payload)
+      .catch((error) => {
+        logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
+      });
   } catch (error) {
     logError('extension host event publish failed', { message: error instanceof Error ? error.message : String(error) });
   }

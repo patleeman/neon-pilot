@@ -138,7 +138,9 @@ export function ConversationArtifactWorkbenchPane({ conversationId, artifactId }
     window.setTimeout(() => setCopied(false), 1200);
   }, [artifact]);
 
-  const artifactTitle = artifact ? `${artifact.title} · ${artifact.id} · rev ${artifact.revision} · updated ${formatDate(artifact.updatedAt)}` : artifactId;
+  const artifactTitle = artifact
+    ? `${artifact.title} · ${artifact.id} · rev ${artifact.revision} · updated ${formatDate(artifact.updatedAt)}`
+    : artifactId;
 
   return (
     <WorkbenchShell

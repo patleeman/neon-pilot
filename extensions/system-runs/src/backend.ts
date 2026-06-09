@@ -126,11 +126,15 @@ function normalizeRunCliInput(input: unknown): Record<string, unknown> {
     ...(args[0] ? { runId: args[0] } : {}),
     ...(cliFlagString(flags, 'task-slug') ? { taskSlug: cliFlagString(flags, 'task-slug') } : {}),
     ...(cliFlagString(flags, 'command') ? { command: cliFlagString(flags, 'command') } : {}),
-    ...(cliFlagString(flags, 'prompt') ?? cliFlagString(flags, 'text') ? { prompt: cliFlagString(flags, 'prompt') ?? cliFlagString(flags, 'text') } : {}),
+    ...((cliFlagString(flags, 'prompt') ?? cliFlagString(flags, 'text'))
+      ? { prompt: cliFlagString(flags, 'prompt') ?? cliFlagString(flags, 'text') }
+      : {}),
     ...(cliFlagString(flags, 'cwd') ? { cwd: cliFlagString(flags, 'cwd') } : {}),
     ...(cliFlagString(flags, 'model') ? { model: cliFlagString(flags, 'model') } : {}),
     ...(cliFlagNumber(flags, 'tail') ? { tail: cliFlagNumber(flags, 'tail') } : {}),
-    ...(cliFlagBoolean(flags, 'deliver-result-to-conversation') !== undefined ? { deliverResultToConversation: cliFlagBoolean(flags, 'deliver-result-to-conversation') } : {}),
+    ...(cliFlagBoolean(flags, 'deliver-result-to-conversation') !== undefined
+      ? { deliverResultToConversation: cliFlagBoolean(flags, 'deliver-result-to-conversation') }
+      : {}),
   };
 }
 

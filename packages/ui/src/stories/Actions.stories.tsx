@@ -1,11 +1,13 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import {
+  BrowsePathButton,
   Button,
   ButtonLink,
-  BrowsePathButton,
-  CheckButton,
   ChatBubbleIcon,
+  CheckButton,
   ComposerActionButton,
   FolderIcon,
   IconButton,
@@ -18,7 +20,6 @@ import {
   TitleButton,
   ToolbarButton,
 } from '../primitives';
-import '../styles.css';
 import { StorySection, StoryStack, Wrap } from './storyUtils';
 
 const meta = {

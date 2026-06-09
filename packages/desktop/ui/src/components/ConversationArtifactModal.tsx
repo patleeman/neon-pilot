@@ -229,12 +229,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                   {artifacts.map((item) => {
                     const selected = item.id === selectedArtifactId;
                     return (
-                      <RowButton
-                        key={item.id}
-                        onClick={() => openArtifact(item.id)}
-                        selected={selected}
-                        className="px-3 py-2.5"
-                      >
+                      <RowButton key={item.id} onClick={() => openArtifact(item.id)} selected={selected} className="px-3 py-2.5">
                         <div className="flex items-center gap-2">
                           <span className="truncate text-[12px] font-medium">{item.title}</span>
                           <MetaLabel tone="muted">{item.kind}</MetaLabel>
@@ -255,12 +250,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
                   {artifacts.map((item) => {
                     const selected = item.id === selectedArtifactId;
                     return (
-                      <TabButton
-                        key={item.id}
-                        onClick={() => openArtifact(item.id)}
-                        active={selected}
-                        className="shrink-0"
-                      >
+                      <TabButton key={item.id} onClick={() => openArtifact(item.id)} active={selected} className="shrink-0">
                         {item.title}
                       </TabButton>
                     );

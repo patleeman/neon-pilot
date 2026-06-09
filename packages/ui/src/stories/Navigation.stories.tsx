@@ -1,8 +1,10 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import {
-  IconButton,
   FilterToolbar,
+  IconButton,
   MenuGroupLabel,
   MenuItem,
   MenuSeparator,
@@ -20,7 +22,6 @@ import {
   WorkbenchTabButton,
   WorkbenchTabCloseButton,
 } from '../primitives';
-import '../styles.css';
 import { StorySection, StoryStack, Wrap } from './storyUtils';
 
 const meta = {

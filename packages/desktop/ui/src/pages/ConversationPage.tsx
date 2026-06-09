@@ -12,11 +12,11 @@ import {
 } from '../client/perfDiagnostics';
 import { buildSlashMenuItems, parseSlashInput, type SlashMenuItem } from '../commands/slashMenu';
 import { ComposerAttachmentShelf } from '../components/chat/ComposerAttachmentShelf';
+import { detectTranscriptPathCandidates, normalizeTranscriptPathTarget } from '../components/chat/transcriptPathLinks';
 import { ConversationComposer } from '../components/conversation/ConversationComposer';
 import { ConversationComposerInputControls } from '../components/conversation/ConversationComposerInputControls';
 import { MentionMenu, ModelPicker, SlashMenu } from '../components/conversation/ConversationComposerMenus';
 import { ConversationComposerMeta } from '../components/conversation/ConversationComposerMeta';
-import { detectTranscriptPathCandidates, normalizeTranscriptPathTarget } from '../components/chat/transcriptPathLinks';
 import {
   ConversationDraftEmptyAction,
   DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS,
@@ -167,6 +167,7 @@ import {
 } from '../conversation/conversationQuestionAnswers';
 import { insertReplyQuoteIntoComposer } from '../conversation/conversationReplyQuote';
 import { didConversationStopMidTurn, didConversationStopWithError, getConversationResumeState } from '../conversation/conversationResume';
+import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
 import {
   filterVisibleActiveConversationBackgroundExecutions,
   shouldLoadConversationRun as resolveShouldLoadConversationRun,
@@ -183,7 +184,6 @@ import { type ConversationSlashCommand, parseConversationSlashCommand } from '..
 import { buildSuggestedContextShelfState } from '../conversation/conversationSuggestedContextShelf';
 import { NEW_CONVERSATION_TITLE } from '../conversation/conversationTitle';
 import { INITIAL_CONVERSATION_TRANSCRIPT_TAIL_BLOCKS } from '../conversation/conversationTranscriptPaging';
-import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
 import { buildOpenArtifactSearch, buildOpenKnowledgeFileSearch } from '../conversation/conversationWorkbenchNavigation';
 import { buildAvailableDraftWorkspacePaths, resolveConversationCurrentCwd } from '../conversation/conversationWorkspaceState';
 import {
@@ -5170,7 +5170,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               void (async () => {
                 try {
                   const created = await createdPromise;
-                  const draftOptions = await draftOptionsPromise;
                   recordSubmitPhase('createReservedLiveSession', createStartedAtMs, {
                     conversationId: created.id,
                     serverPerf: created.perf ?? null,
@@ -6531,10 +6530,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                     <div className="border-b border-border-subtle/60 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
                         <SectionLabel tone="muted">Browser comments</SectionLabel>
-                        <ToolbarButton
-                          className="px-2 py-1 text-[11px]"
-                          onClick={() => setPendingBrowserComments([])}
-                        >
+                        <ToolbarButton className="px-2 py-1 text-[11px]" onClick={() => setPendingBrowserComments([])}>
                           Clear
                         </ToolbarButton>
                       </div>

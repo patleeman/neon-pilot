@@ -216,7 +216,9 @@ describe('extension backend capability dispatcher', () => {
 
     expect(conversations.get).toHaveBeenCalledWith('system-conversation-tools', 'conv-1');
     expect(conversations.setActiveTools).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', ['read']);
-    expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'conversation-tools-state', { enabled: true });
+    expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'conversation-tools-state', {
+      enabled: true,
+    });
     expect(conversations.create).toHaveBeenCalledWith('system-onboarding', { cwd: '/repo', title: 'Welcome', live: false });
     expect(conversations.appendTranscriptBlock).toHaveBeenCalledWith('system-onboarding', {
       conversationId: 'conv-2',
@@ -253,7 +255,12 @@ describe('extension backend capability dispatcher', () => {
   });
 
   it('rejects malformed live conversation capability inputs', async () => {
-    const conversations = { get: vi.fn(), setActiveTools: vi.fn(), appendCustomEntry: vi.fn(), metadata: { get: vi.fn(), set: vi.fn(), query: vi.fn() } };
+    const conversations = {
+      get: vi.fn(),
+      setActiveTools: vi.fn(),
+      appendCustomEntry: vi.fn(),
+      metadata: { get: vi.fn(), set: vi.fn(), query: vi.fn() },
+    };
     const dispatch = createExtensionBackendCapabilityDispatcher({ conversations });
 
     await expect(async () =>
@@ -1328,7 +1335,10 @@ describe('extension backend capability dispatcher', () => {
           extensionId: 'system-codex-profile',
           capability: 'image',
           operation: 'generate',
-          input: { input: { prompt: 'draw smoke' }, toolContext: { sessionFile: '/tmp/session.json', preferredVisionModel: 'openai/gpt-4o' } },
+          input: {
+            input: { prompt: 'draw smoke' },
+            toolContext: { sessionFile: '/tmp/session.json', preferredVisionModel: 'openai/gpt-4o' },
+          },
         }),
       ),
     ).resolves.toEqual({ text: 'generated' });

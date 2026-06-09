@@ -90,10 +90,7 @@ function satisfiesComparator(version: ParsedVersion, comparator: string): boolea
 export function satisfiesVersionRange(versionValue: string, rangeValue: string): boolean | null {
   const version = parseVersion(versionValue);
   if (!version) return null;
-  const tokens = rangeValue
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const tokens = rangeValue.trim().split(/\s+/).filter(Boolean);
   if (tokens.length === 0 || tokens.some((token) => token === '*' || token.toLowerCase() === 'x')) return true;
   let sawComparableToken = false;
   for (const token of tokens) {

@@ -69,7 +69,9 @@ describe('live session broadcasts', () => {
 
   it('delivers events to remaining listeners when one listener.send throws', () => {
     const e = entry() as { listeners: Array<{ send: ReturnType<typeof vi.fn> }> };
-    e.listeners[0].send = vi.fn(() => { throw new Error('SSE connection closed'); });
+    e.listeners[0].send = vi.fn(() => {
+      throw new Error('SSE connection closed');
+    });
 
     broadcast(e as never, { type: 'agent_end' } as never);
 

@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PassThrough } from 'node:stream';
 
-const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn(() => '/agent'), getStateRoot: vi.fn(() => '/tmp/neon-pilot-protocol-cli-test') }));
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const core = vi.hoisted(() => ({
+  getPiAgentRuntimeDir: vi.fn(() => '/agent'),
+  getStateRoot: vi.fn(() => '/tmp/neon-pilot-protocol-cli-test'),
+}));
 const runtime = vi.hoisted(() => ({
   createRuntimeState: vi.fn(() => ({
     getRuntimeScope: vi.fn(() => 'shared'),
@@ -106,7 +110,9 @@ describe('protocol CLI', () => {
       extensionHost: { baseUrl: 'http://127.0.0.1:9876', token: 'control-token' },
     });
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
-      cliCommandRegistrations: [{ extensionId: 'system-settings', surfaceId: 'settings-list', command: 'settings list', action: 'manageSettings' }],
+      cliCommandRegistrations: [
+        { extensionId: 'system-settings', surfaceId: 'settings-list', command: 'settings list', action: 'manageSettings' },
+      ],
     });
 
     await expect(runProtocolCli(['commands', '--json'])).resolves.toBe(0);
@@ -121,7 +127,9 @@ describe('protocol CLI', () => {
 
   it('lists extension-contributed CLI commands', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
-      cliCommandRegistrations: [{ extensionId: 'system-extension-manager', surfaceId: 'extensions-list', command: 'extensions list', action: 'manageExtension' }],
+      cliCommandRegistrations: [
+        { extensionId: 'system-extension-manager', surfaceId: 'extensions-list', command: 'extensions list', action: 'manageExtension' },
+      ],
     });
 
     await expect(runProtocolCli(['commands', '--json'])).resolves.toBe(0);

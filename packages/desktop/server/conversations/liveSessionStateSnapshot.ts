@@ -105,9 +105,7 @@ function isSmallLiveSessionFile(filePath: string): boolean {
 function isLiveSessionSnapshotStreaming(entry: LiveSessionSnapshotHost): boolean {
   if (entry.isCompacting) return true;
   if (entry.lastDurableRunState === 'waiting') return false;
-  return Boolean(
-    entry.session.isStreaming || entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering',
-  );
+  return Boolean(entry.session.isStreaming || entry.lastDurableRunState === 'running' || entry.lastDurableRunState === 'recovering');
 }
 
 export function buildLiveSessionSnapshot(entry: LiveSessionSnapshotHost, tailBlocks?: number): LiveSessionSnapshot {

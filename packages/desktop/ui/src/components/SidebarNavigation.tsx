@@ -121,12 +121,7 @@ function TopNavItem({
   );
 
   return (
-    <SidebarNavButton
-      onClick={handleClick}
-      active={active}
-      data-route={to}
-      className="w-full text-left"
-    >
+    <SidebarNavButton onClick={handleClick} active={active} data-route={to} className="w-full text-left">
       <svg
         width="15"
         height="15"

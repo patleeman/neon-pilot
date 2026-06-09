@@ -310,23 +310,23 @@ Before targeting an unclear conversation, use `action: "inspect"` with `inspectA
 
 ## Admin Actions
 
-| Action                    | Required fields                         | Behavior                                                                 |
-| ------------------------- | --------------------------------------- | ------------------------------------------------------------------------ |
-| `create`                  | none                                    | Creates a conversation. Supports `title`, `cwd`, `live`, `prompt`, `initialPrompt`, `model`, `thinkingLevel`, `serviceTier`, and `allowedToolNames`. |
-| `ensure_live`             | `conversationId`                        | Resumes a persisted conversation into the live registry. Optional `cwd`. |
-| `send_message`            | `conversationId`, `text`                | Sends a prompt/follow-up/steer into a live conversation. Supports `steer` and `images`. |
-| `run_turn`                | `conversationId`, `text`                | Ensures the target is live, sends the message, and waits for turn completion. Supports `cwd`, `steer`, `images`, and `timeoutMs`. |
-| `abort`                   | `conversationId`                        | Aborts a live conversation turn. Host live-state errors are returned directly. |
-| `set_title`               | `title`                                 | Sets the current conversation title, or another conversation when `conversationId` is provided. |
-| `compact`                 | `conversationId`                        | Triggers compaction on a live conversation. Optional `customInstructions`. |
-| `fork`                    | `conversationId`                        | Forks a live conversation. Supports `targetCwd`, `cwd`, and `title`. |
-| `set_active_tools`        | `conversationId`, `toolNames`           | Replaces active tools for a live conversation. |
-| `workspace_get`           | none                                    | Reads open, pinned, archived, active, workspace path, and remote-controlled conversation state. |
-| `workspace_update`        | any workspace field                     | Updates only provided workspace fields: open, pinned, archived, active, paths, or remote-controlled ids. |
-| `workspace_open_update`   | `operation`                             | Ergonomic CLI-only open/sidebar mutation for add, remove, pin, unpin, active, archive, and unarchive. |
-| `append_transcript_block` | `conversationId`, `blockType`, `data`   | Appends an extension-owned visible transcript block. Optional `title`, `blockId`. |
-| `update_transcript_block` | `conversationId`, `blockType`, `blockId`, `data` | Updates an extension-owned visible transcript block. |
-| `rollback`                | `conversationId`                        | Rolls back a live conversation by `count` turns. Defaults to `1`. |
+| Action                    | Required fields                                  | Behavior                                                                                                                                             |
+| ------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create`                  | none                                             | Creates a conversation. Supports `title`, `cwd`, `live`, `prompt`, `initialPrompt`, `model`, `thinkingLevel`, `serviceTier`, and `allowedToolNames`. |
+| `ensure_live`             | `conversationId`                                 | Resumes a persisted conversation into the live registry. Optional `cwd`.                                                                             |
+| `send_message`            | `conversationId`, `text`                         | Sends a prompt/follow-up/steer into a live conversation. Supports `steer` and `images`.                                                              |
+| `run_turn`                | `conversationId`, `text`                         | Ensures the target is live, sends the message, and waits for turn completion. Supports `cwd`, `steer`, `images`, and `timeoutMs`.                    |
+| `abort`                   | `conversationId`                                 | Aborts a live conversation turn. Host live-state errors are returned directly.                                                                       |
+| `set_title`               | `title`                                          | Sets the current conversation title, or another conversation when `conversationId` is provided.                                                      |
+| `compact`                 | `conversationId`                                 | Triggers compaction on a live conversation. Optional `customInstructions`.                                                                           |
+| `fork`                    | `conversationId`                                 | Forks a live conversation. Supports `targetCwd`, `cwd`, and `title`.                                                                                 |
+| `set_active_tools`        | `conversationId`, `toolNames`                    | Replaces active tools for a live conversation.                                                                                                       |
+| `workspace_get`           | none                                             | Reads open, pinned, archived, active, workspace path, and remote-controlled conversation state.                                                      |
+| `workspace_update`        | any workspace field                              | Updates only provided workspace fields: open, pinned, archived, active, paths, or remote-controlled ids.                                             |
+| `workspace_open_update`   | `operation`                                      | Ergonomic CLI-only open/sidebar mutation for add, remove, pin, unpin, active, archive, and unarchive.                                                |
+| `append_transcript_block` | `conversationId`, `blockType`, `data`            | Appends an extension-owned visible transcript block. Optional `title`, `blockId`.                                                                    |
+| `update_transcript_block` | `conversationId`, `blockType`, `blockId`, `data` | Updates an extension-owned visible transcript block.                                                                                                 |
+| `rollback`                | `conversationId`                                 | Rolls back a live conversation by `count` turns. Defaults to `1`.                                                                                    |
 
 Use `run_turn` when the caller needs to wait for the remote conversation to finish. Use `send_message` for fire-and-forget steering or follow-up delivery. Use `deferred_resume` for time-based continuation; do not run sleeping shell commands as timers.
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
@@ -179,9 +179,12 @@ describe('ExtensionChatRail', () => {
       expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
     });
     expect(onTurnComplete).not.toHaveBeenCalled();
-    await waitFor(() => {
-      expect(desktopConversationStateMock).toHaveBeenCalledTimes(3);
-    }, { timeout: 2500 });
+    await waitFor(
+      () => {
+        expect(desktopConversationStateMock).toHaveBeenCalledTimes(3);
+      },
+      { timeout: 2500 },
+    );
     await waitFor(() => {
       expect(onTurnComplete).toHaveBeenCalled();
     });

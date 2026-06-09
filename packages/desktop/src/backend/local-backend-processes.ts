@@ -6,11 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { getStateRoot } from '@neon-pilot/core';
 
+import { removeNeonPilotCliControlPlaneRecord, writeNeonPilotCliControlPlaneRecord } from '../../server/cliControlPlane.js';
 import type { DesktopApiStreamEvent } from '../hosts/types.js';
-import {
-  removeNeonPilotCliControlPlaneRecord,
-  writeNeonPilotCliControlPlaneRecord,
-} from '../../server/cliControlPlane.js';
 
 export interface LocalBackendWorkbenchBrowserToolHost {
   isActive(conversationId: string): Promise<boolean>;
@@ -112,7 +109,9 @@ export class LocalBackendProcesses {
   private backendLiveConversationIds = new Set<string>();
   private pendingLocalApiRpcResponses = new Map<string, (message: LocalApiRpcResponseMessage) => void>();
   private lastStartPerf?: { totalMs: number; spawnMs: number; readyWaitMs: number; assignMs: number };
-  private criticalExtensionRegistryModulePromise?: Promise<typeof import('../../server/extensions/extensionCriticalRegistryPresentation.js')>;
+  private criticalExtensionRegistryModulePromise?: Promise<
+    typeof import('../../server/extensions/extensionCriticalRegistryPresentation.js')
+  >;
 
   async ensureStarted(): Promise<void> {
     if (this.startPromise) {
@@ -496,7 +495,9 @@ export class LocalBackendProcesses {
     });
   }
 
-  private warmCriticalExtensionRegistryModule(): Promise<typeof import('../../server/extensions/extensionCriticalRegistryPresentation.js')> {
+  private warmCriticalExtensionRegistryModule(): Promise<
+    typeof import('../../server/extensions/extensionCriticalRegistryPresentation.js')
+  > {
     if (!this.criticalExtensionRegistryModulePromise) {
       this.criticalExtensionRegistryModulePromise = import('../../server/extensions/extensionCriticalRegistryPresentation.js');
     }

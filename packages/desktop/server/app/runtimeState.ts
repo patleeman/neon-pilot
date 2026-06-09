@@ -6,6 +6,7 @@ import { AuthStorage, type ExtensionAPI, type ExtensionFactory } from '@earendil
 import { getRuntimeConfigRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
 import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
+import { ensureNeonPilotCliLauncher, prependNeonPilotCliBin } from '../cliEnvironment.js';
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
 import {
   createManifestAgentExtensions,
@@ -13,17 +14,13 @@ import {
   resolveManifestAgentLifecycleModelProfile,
 } from '../extensions/extensionAgentExtensions.js';
 import { listRuntimeExtensionBackendEntries } from '../extensions/extensionRuntimeResources.js';
-import {
-  createManifestToolAgentExtensions,
-  listManifestToolAgentExtensionCacheEntries,
-} from '../extensions/manifestToolAgentExtension.js';
+import { createManifestToolAgentExtensions, listManifestToolAgentExtensionCacheEntries } from '../extensions/manifestToolAgentExtension.js';
 import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
 import { LIVE_SESSION_RESOURCE_OPTIONS_PERF, type LiveSessionResourceOptions } from '../routes/context.js';
-import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
-import { ensureNeonPilotCliLauncher, prependNeonPilotCliBin } from '../cliEnvironment.js';
 import { registerProcessWrapper } from '../shared/processLauncher.js';
+import { buildSkillInjectionPlan, buildSkillInjectionPlanAsync } from '../skills/skillInventory.js';
 
 export interface RuntimeStateLogger {
   warn: (message: string, fields?: Record<string, unknown>) => void;

@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 
 const loadExtensionAgentFactory = vi.fn();
-const runExtensionAgentFactory = vi.fn(async (_extensionId: string, _exportName: string, factory: (pi: unknown) => unknown, pi: unknown) => factory(pi));
+const runExtensionAgentFactory = vi.fn(async (_extensionId: string, _exportName: string, factory: (pi: unknown) => unknown, pi: unknown) =>
+  factory(pi),
+);
 const listExtensionAgentRegistrations = vi.fn();
 const recordExtensionFailure = vi.fn();
 const setExtensionEnabled = vi.fn();
@@ -22,9 +24,9 @@ const { createManifestAgentExtensions } = await import('./extensionAgentExtensio
 describe('extensionAgentExtensions', () => {
   beforeEach(() => {
     loadExtensionAgentFactory.mockReset();
-    runExtensionAgentFactory.mockReset().mockImplementation(async (_extensionId: string, _exportName: string, factory: (pi: unknown) => unknown, pi: unknown) =>
-      factory(pi),
-    );
+    runExtensionAgentFactory
+      .mockReset()
+      .mockImplementation(async (_extensionId: string, _exportName: string, factory: (pi: unknown) => unknown, pi: unknown) => factory(pi));
     listExtensionAgentRegistrations.mockReset();
     recordExtensionFailure.mockReset();
     setExtensionEnabled.mockReset();
@@ -41,7 +43,12 @@ describe('extensionAgentExtensions', () => {
     await result.factories[0]?.({ registerTool: vi.fn() } as never);
 
     expect(factory).toHaveBeenCalledOnce();
-    expect(runExtensionAgentFactory).toHaveBeenCalledWith('ext', 'create', factory, expect.objectContaining({ registerTool: expect.any(Function) }));
+    expect(runExtensionAgentFactory).toHaveBeenCalledWith(
+      'ext',
+      'create',
+      factory,
+      expect.objectContaining({ registerTool: expect.any(Function) }),
+    );
     expect(result.errors).toEqual([]);
   });
 

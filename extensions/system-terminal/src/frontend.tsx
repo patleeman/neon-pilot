@@ -20,7 +20,9 @@ function readRgbVar(element: HTMLElement, name: string): string {
 function normalizeDrainResult(value: unknown): { ok: boolean; output: string; exited: boolean; exitCode: number | null } | null {
   if (!value || typeof value !== 'object') return null;
   const candidate =
-    'result' in value && value.result && typeof value.result === 'object' ? (value.result as Record<string, unknown>) : (value as Record<string, unknown>);
+    'result' in value && value.result && typeof value.result === 'object'
+      ? (value.result as Record<string, unknown>)
+      : (value as Record<string, unknown>);
   if (typeof candidate.ok !== 'boolean') return null;
   return {
     ok: candidate.ok,

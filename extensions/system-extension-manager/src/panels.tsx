@@ -715,14 +715,14 @@ function ExtensionRepositoriesControl({
             titleClassName="text-[12px]"
             actions={
               source.id !== 'neon-pilot' ? (
-              <Button
-                variant="action"
-                className="px-3 py-1.5 text-[12px]"
-                disabled={busyId === `extension-source:${source.id}`}
-                onClick={() => onRemove(source)}
-              >
-                Remove
-              </Button>
+                <Button
+                  variant="action"
+                  className="px-3 py-1.5 text-[12px]"
+                  disabled={busyId === `extension-source:${source.id}`}
+                  onClick={() => onRemove(source)}
+                >
+                  Remove
+                </Button>
               ) : null
             }
           />
@@ -1406,10 +1406,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           <DataTableCell className="min-w-0 py-4 pl-0 pr-6">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <TextButton
-                  className="truncate text-left text-[14px] font-semibold"
-                  onClick={() => setDetailsExtensionId(extension.id)}
-                >
+                <TextButton className="truncate text-left text-[14px] font-semibold" onClick={() => setDetailsExtensionId(extension.id)}>
                   {extension.name}
                 </TextButton>
                 <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
@@ -1523,7 +1520,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     </div>
   );
 
-  const renderExtensionTable = (items: ExtensionInstallSummary[]) => (
+  const renderExtensionTable = (items: ExtensionInstallSummary[]) =>
     compactExtensionsLayout ? (
       renderExtensionCards(items)
     ) : (
@@ -1546,8 +1543,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         </DataTableHead>
         <DataTableBody>{renderExtensionRows(items)}</DataTableBody>
       </DataTable>
-    )
-  );
+    );
 
   if (loading) {
     return <LoadingState label="Loading extensions…" />;

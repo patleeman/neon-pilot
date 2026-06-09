@@ -1340,10 +1340,7 @@ export function WorkspaceFileDocument({
           <div className="space-y-px">
             {onReplyWithSelection ? (
               <>
-                <MenuItem
-                  onClick={() => replyWithSelectedText(selectionContextMenu.text)}
-                  role="menuitem"
-                >
+                <MenuItem onClick={() => replyWithSelectedText(selectionContextMenu.text)} role="menuitem">
                   Reply with Selection
                 </MenuItem>
                 <MenuSeparator className="mx-1 my-1" />

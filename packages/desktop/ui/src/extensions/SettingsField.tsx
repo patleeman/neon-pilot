@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 
-import { Button, FieldHint, FieldLabel, IconButton, Select, Switch, TextInput, cx } from '../components/ui';
+import { Button, cx, FieldHint, FieldLabel, IconButton, Select, Switch, TextInput } from '../components/ui';
 import type { UnifiedSettingsEntry } from '../shared/types';
 
 const EMOJI_OPTIONS = ['👍', '👎', '✅', '❓', '💡', '📋', '❤️', '🚀', '👀', '🙌', '🙏', '⚠️'];
@@ -46,7 +46,7 @@ function renderControl(entry: UnifiedSettingsEntry, currentValue: unknown, onCha
 
   switch (entry.type) {
     case 'boolean':
-      return <Switch checked={Boolean(currentValue)} label="Enabled" onClick={() => onChange(!Boolean(currentValue))} />;
+      return <Switch checked={Boolean(currentValue)} label="Enabled" onClick={() => onChange(!currentValue)} />;
 
     case 'select':
       return (

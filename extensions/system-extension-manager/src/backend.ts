@@ -213,14 +213,32 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
   const command = typeof cli.command === 'string' ? cli.command : '';
   const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
   if (command === 'extensions list') return { ...body, action: 'list' };
-  if (command === 'extensions create') return { ...body, action: 'create', id: flags.id ?? args[0], name: flags.name, description: flags.description, template: flags.template };
+  if (command === 'extensions create')
+    return {
+      ...body,
+      action: 'create',
+      id: flags.id ?? args[0],
+      name: flags.name,
+      description: flags.description,
+      template: flags.template,
+    };
   if (command === 'extensions snapshot') return { ...body, action: 'snapshot', extensionId: args[0] };
   if (command === 'extensions delete' || command === 'extensions uninstall') return { ...body, action: 'delete', extensionId: args[0] };
   if (command === 'extensions catalog') return { ...body, action: 'listInstallable' };
   if (command === 'extensions install') return { ...body, action: 'installCatalog', id: args[0] };
   if (command === 'extensions update') return { ...body, action: 'updateCatalog', id: args[0] };
-  if (command === 'extensions install-url') return { ...body, action: 'installFromUrl', url: args[0] ?? flags.url, expectedId: flags['expected-id'] ?? flags.expectedId };
-  if (command === 'extensions install-marketplace') return { ...body, action: 'installMarketplacePackage', packageType: flags.type ?? flags['package-type'], source: args[0] ?? flags.source, ecosystem: flags.ecosystem, target: flags.target, sourceBaseDir: flags['source-base-dir'] };
+  if (command === 'extensions install-url')
+    return { ...body, action: 'installFromUrl', url: args[0] ?? flags.url, expectedId: flags['expected-id'] ?? flags.expectedId };
+  if (command === 'extensions install-marketplace')
+    return {
+      ...body,
+      action: 'installMarketplacePackage',
+      packageType: flags.type ?? flags['package-type'],
+      source: args[0] ?? flags.source,
+      ecosystem: flags.ecosystem,
+      target: flags.target,
+      sourceBaseDir: flags['source-base-dir'],
+    };
   if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0], packageRoot };
   if (command === 'extensions reload')
     return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };

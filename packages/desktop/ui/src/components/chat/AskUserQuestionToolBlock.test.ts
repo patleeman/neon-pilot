@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
 import { AskUserQuestionToolBlock, describeAskUserQuestionState, summarizeAskUserQuestionAnswer } from './AskUserQuestionToolBlock.js';

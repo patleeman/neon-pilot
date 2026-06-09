@@ -111,10 +111,13 @@ export class ExtensionBackendWorkerClient {
     const outbound = { ...request, id };
 
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`Extension backend worker ${request.type} timed out.`));
-      }, ('timeoutMs' in request && request.timeoutMs ? request.timeoutMs : undefined) ?? this.options.timeoutMs ?? 30_000);
+      const timeout = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(new Error(`Extension backend worker ${request.type} timed out.`));
+        },
+        ('timeoutMs' in request && request.timeoutMs ? request.timeoutMs : undefined) ?? this.options.timeoutMs ?? 30_000,
+      );
 
       this.pending.set(id, { resolve, reject, timeout });
       try {

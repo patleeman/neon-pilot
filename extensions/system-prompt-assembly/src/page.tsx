@@ -356,7 +356,12 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             </>
           }
           actions={
-            <SearchInput className="w-72" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agent context…" />
+            <SearchInput
+              className="w-72"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search agent context…"
+            />
           }
           className="border-t border-border-subtle pt-10"
           titleClassName="text-[22px]"

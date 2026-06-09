@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { addNotification } from '../components/notifications/notificationStore';
 import { ErrorState, LoadingState } from '../components/ui';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
-import { type NativeExtensionViewSummary, isNativeExtensionPageSurface } from './types';
+import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { useExtensionRegistry } from './useExtensionRegistry';
 
 const STALE_EXTENSION_ROUTES = new Set(['/gateways', '/local-models']);

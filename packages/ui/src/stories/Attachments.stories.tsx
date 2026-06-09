@@ -1,7 +1,8 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { AttachmentChip, AttachmentChipButton, IconButton, TextButton } from '../primitives';
-import '../styles.css';
 import { StoryStack, Wrap } from './storyUtils';
 
 const meta = {

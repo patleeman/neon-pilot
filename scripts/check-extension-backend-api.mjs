@@ -124,10 +124,9 @@ for (const moduleName of hostModules) {
 for (const fileName of readdirSync(hostBackendApiRoot)) {
   if (!fileName.endsWith('.ts')) continue;
   const filePath = join(hostBackendApiRoot, fileName);
-  const forbidden = [
-    ...collectImportSpecifiers(filePath, { staticOnly: true }),
-    ...collectStaticExportSpecifiers(filePath),
-  ].filter(isForbiddenStaticImport);
+  const forbidden = [...collectImportSpecifiers(filePath, { staticOnly: true }), ...collectStaticExportSpecifiers(filePath)].filter(
+    isForbiddenStaticImport,
+  );
   assert(
     forbidden.length === 0,
     failures,

@@ -4,11 +4,7 @@ import { PassThrough, Writable } from 'node:stream';
 import { describe, expect, it, vi } from 'vitest';
 
 import { decodeExtensionHostProtocolFrame, encodeExtensionHostProtocolFrame } from './extensionHostProtocolFrames.js';
-import {
-  createExtensionHostRpcClient,
-  hasFunction,
-  isWireableExtensionHostInvokeActionInput,
-} from './extensionHostRpcClient.js';
+import { createExtensionHostRpcClient, hasFunction, isWireableExtensionHostInvokeActionInput } from './extensionHostRpcClient.js';
 
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init });
@@ -129,7 +125,9 @@ describe('extension host RPC client', () => {
       .mockResolvedValueOnce(jsonResponse({ ok: true, results: [{ extensionId: 'startup-ext', ok: true }] }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, subscriptionsUpdated: true }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, services: [{ extensionId: 'ext', serviceId: 'svc', startedAt: '2026-01-01T00:00:00.000Z' }] }))
+      .mockResolvedValueOnce(
+        jsonResponse({ ok: true, services: [{ extensionId: 'ext', serviceId: 'svc', startedAt: '2026-01-01T00:00:00.000Z' }] }),
+      )
       .mockResolvedValueOnce(jsonResponse({ ok: true, serviceResults: [{ extensionId: 'ext', serviceId: 'svc', ok: true }] }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, servicesStopped: true }))
       .mockResolvedValueOnce(
@@ -146,14 +144,20 @@ describe('extension host RPC client', () => {
         jsonResponse({
           ok: true,
           staticContributions: {
-            tools: [{ extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} }],
-            skills: [{ extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' }],
+            tools: [
+              { extensionId: 'ext', packageType: 'system', id: 'tool', name: 'tool', action: 'run', description: 'Tool', inputSchema: {} },
+            ],
+            skills: [
+              { extensionId: 'ext', packageType: 'system', id: 'skill', name: 'skill', path: '/ext/skill/SKILL.md', packageRoot: '/ext' },
+            ],
             modelDiscovery: [{ extensionId: 'ext', action: 'discoverModels' }],
           },
         }),
       )
       .mockResolvedValueOnce(jsonResponse({ ok: true, eventSubscriptions: [{ extensionId: 'ext', pattern: 'host:*' }] }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, state: { operation: 'list', documents: [{ key: 'tasks/one', value: 1, version: 1 }] } }))
+      .mockResolvedValueOnce(
+        jsonResponse({ ok: true, state: { operation: 'list', documents: [{ key: 'tasks/one', value: 1, version: 1 }] } }),
+      )
       .mockResolvedValueOnce(jsonResponse({ ok: true, registryMaintained: true }))
       .mockResolvedValueOnce(
         jsonResponse({
@@ -255,7 +259,11 @@ describe('extension host RPC client', () => {
       'http://host/rpc',
       expect.objectContaining({
         body: JSON.stringify({
-          request: { type: 'installSubscriptions', extensionId: 'ext', serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' } },
+          request: {
+            type: 'installSubscriptions',
+            extensionId: 'ext',
+            serverContextSnapshot: { runtimeScope: 'shared', repoRoot: '/repo' },
+          },
         }),
       }),
     );
@@ -338,7 +346,12 @@ describe('extension host RPC client', () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ ok: true, telemetry: [{ extensionId: 'ext', actionId: 'run', ok: true }] }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, auditEvents: [{ id: 1, requestType: 'health', requestName: 'health', ok: true, durationMs: 1, at: '2026-01-01T00:00:00.000Z' }] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          auditEvents: [{ id: 1, requestType: 'health', requestName: 'health', ok: true, durationMs: 1, at: '2026-01-01T00:00:00.000Z' }],
+        }),
+      )
       .mockResolvedValueOnce(jsonResponse({ ok: true, selfTest: { ok: true, extensionId: 'ext', checks: [] } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, reload: { ok: true, extensionId: 'ext', rebuilt: false } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, enabledResult: { ok: true, extension: { id: 'ext', enabled: true } } }))
@@ -354,7 +367,9 @@ describe('extension host RPC client', () => {
     ]);
     await expect(client.runSelfTest({ extensionId: 'ext' })).resolves.toEqual({ ok: true, extensionId: 'ext', checks: [] });
     await expect(client.reloadBackend({ extensionId: 'ext' })).resolves.toEqual({ ok: true, extensionId: 'ext', rebuilt: false });
-    await expect(client.setEnabled({ extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } })).resolves.toEqual({
+    await expect(
+      client.setEnabled({ extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } }),
+    ).resolves.toEqual({
       ok: true,
       extension: { id: 'ext', enabled: true },
     });
@@ -463,10 +478,13 @@ describe('extension host RPC client', () => {
 
   it('streams action updates over the action transport', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
-      new Response('event: update\ndata: {"content":[{"type":"text","text":"working"}]}\n\nevent: result\ndata: {"ok":true,"result":{"done":true}}\n\n', {
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
-      }),
+      new Response(
+        'event: update\ndata: {"content":[{"type":"text","text":"working"}]}\n\nevent: result\ndata: {"ok":true,"result":{"done":true}}\n\n',
+        {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
+        },
+      ),
     );
     const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
     const onUpdate = vi.fn();

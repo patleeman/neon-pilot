@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+
 import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
 import { resolveSecret } from '../secrets/secretStore.js';
@@ -11,27 +12,6 @@ import { createSettingsStore } from '../settings/settingsStore.js';
 import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
-import type {
-  ExtensionBackendWorkerCapabilityEvent,
-  ExtensionBackendWorkerCapabilityRequest,
-} from './extensionBackendWorkerProtocol.js';
-import { emitExtensionToolUpdate } from './extensionBackendLiveHandles.js';
-import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
-import { createExtensionConversationsCapability } from './extensionConversations.js';
-import { publishExtensionEvent } from './extensionEventBus.js';
-import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
-import { createExtensionBackendServerContextFromSnapshot } from './extensionHostServerContext.js';
-import { createExtensionModelsCapability } from './extensionModels.js';
-import {
-  isSystemNotificationAvailable,
-  sendNotifyAsSystemNotification,
-  setExtensionBadge,
-} from './extensionNotifications.js';
-import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
-import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
-import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
-import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
-import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 import {
   abortAgentConversation,
   createAgentConversation,
@@ -42,7 +22,21 @@ import {
   sendAgentMessage,
   streamAgentMessage,
 } from './backendApi/agent.js';
-import { refreshHostSkillMcpConfig, type ExtensionRuntimeRefreshSkillMcpConfigInput } from './extensionRuntimeCapability.js';
+import { emitExtensionToolUpdate } from './extensionBackendLiveHandles.js';
+import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
+import type { ExtensionBackendWorkerCapabilityEvent, ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
+import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
+import { createExtensionConversationsCapability } from './extensionConversations.js';
+import { publishExtensionEvent } from './extensionEventBus.js';
+import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
+import { createExtensionBackendServerContextFromSnapshot } from './extensionHostServerContext.js';
+import { createExtensionModelsCapability } from './extensionModels.js';
+import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
+import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
+import { type ExtensionRuntimeRefreshSkillMcpConfigInput, refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
+import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
+import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
+import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -83,7 +77,10 @@ interface ExtensionBackendCapabilityEvents {
 }
 
 interface ExtensionBackendCapabilityImage {
-  generate(extensionId: string, input: { input: unknown; toolContext?: { preferredVisionModel?: string; sessionFile?: string } }): Promise<unknown>;
+  generate(
+    extensionId: string,
+    input: { input: unknown; toolContext?: { preferredVisionModel?: string; sessionFile?: string } },
+  ): Promise<unknown>;
 }
 
 interface ExtensionBackendCapabilityConversations {
@@ -182,7 +179,10 @@ interface ExtensionBackendCapabilityModels {
   saveProvider?(input: unknown, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
   saveProviderModel?(input: unknown, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
   deleteProvider?(provider: string, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
-  deleteProviderModel?(input: { provider: string; modelId: string }, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
+  deleteProviderModel?(
+    input: { provider: string; modelId: string },
+    context?: ExtensionBackendModelWriteContext,
+  ): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendModelWriteContext {
@@ -194,13 +194,16 @@ interface ExtensionBackendModelWriteContext {
 
 interface ExtensionBackendCapabilityNotify {
   toast(extensionId: string, message: string, type: 'info' | 'warning' | 'error'): unknown;
-  system(extensionId: string, input: {
-    message: string;
-    title?: string;
-    subtitle?: string;
-    persistent?: boolean;
-    actionPayload?: unknown;
-  }): unknown;
+  system(
+    extensionId: string,
+    input: {
+      message: string;
+      title?: string;
+      subtitle?: string;
+      persistent?: boolean;
+      actionPayload?: unknown;
+    },
+  ): unknown;
   setBadge(extensionId: string, count: number): unknown;
   clearBadge(extensionId: string): unknown;
   isSystemAvailable(): unknown;
@@ -393,7 +396,11 @@ function dispatchConversationsCapability(
       ...(input.title !== undefined ? { title: optionalString(input.title, 'Conversation title') } : {}),
       ...(input.prompt !== undefined ? { prompt: optionalString(input.prompt, 'Conversation prompt') } : {}),
       ...(input.initialPrompt !== undefined ? { initialPrompt: optionalString(input.initialPrompt, 'Conversation initialPrompt') } : {}),
-      ...(input.model === null ? { model: null } : input.model !== undefined ? { model: optionalString(input.model, 'Conversation model') } : {}),
+      ...(input.model === null
+        ? { model: null }
+        : input.model !== undefined
+          ? { model: optionalString(input.model, 'Conversation model') }
+          : {}),
       ...(input.thinkingLevel === null
         ? { thinkingLevel: null }
         : input.thinkingLevel !== undefined
@@ -556,9 +563,7 @@ function dispatchConversationsCapability(
               return;
             }
             const assistantMessageEvent =
-              record.type === 'message_update' &&
-              typeof record.assistantMessageEvent === 'object' &&
-              record.assistantMessageEvent !== null
+              record.type === 'message_update' && typeof record.assistantMessageEvent === 'object' && record.assistantMessageEvent !== null
                 ? (record.assistantMessageEvent as Record<string, unknown>)
                 : undefined;
             if (assistantMessageEvent?.type === 'text_delta' && typeof assistantMessageEvent.delta === 'string') {
@@ -645,7 +650,10 @@ function dispatchConversationsCapability(
   throw new Error(`Unsupported conversations capability operation: ${request.operation}`);
 }
 
-function dispatchExtensionsCapability(extensions: ExtensionBackendCapabilityExtensions, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+function dispatchExtensionsCapability(
+  extensions: ExtensionBackendCapabilityExtensions,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
   if (request.operation === 'listActions') {
     return extensions.listActions();
   }
@@ -769,9 +777,13 @@ function normalizeModelWriteContext(input: Record<string, unknown>): ExtensionBa
   };
 }
 
-function createModelsCapabilityForWriteContext(context?: ExtensionBackendModelWriteContext): ReturnType<typeof createExtensionModelsCapability> {
+function createModelsCapabilityForWriteContext(
+  context?: ExtensionBackendModelWriteContext,
+): ReturnType<typeof createExtensionModelsCapability> {
   return createExtensionModelsCapability(
-    createExtensionBackendServerContextFromSnapshot(context?.runtimeScope ? { runtimeScope: context.runtimeScope, ...context } : undefined) as never,
+    createExtensionBackendServerContextFromSnapshot(
+      context?.runtimeScope ? { runtimeScope: context.runtimeScope, ...context } : undefined,
+    ) as never,
   );
 }
 
@@ -791,7 +803,11 @@ function dispatchGitCapability(git: ExtensionBackendCapabilityGit, request: Exte
     if (staged !== undefined && typeof staged !== 'boolean') {
       throw new Error('Git staged must be a boolean when provided.');
     }
-    return git.diff({ cwd: requireString(input.cwd, 'Git cwd'), ...(path === undefined ? {} : { path }), ...(staged === undefined ? {} : { staged }) });
+    return git.diff({
+      cwd: requireString(input.cwd, 'Git cwd'),
+      ...(path === undefined ? {} : { path }),
+      ...(staged === undefined ? {} : { staged }),
+    });
   }
 
   if (request.operation === 'log') {
@@ -961,7 +977,10 @@ function dispatchSecretsCapability(secrets: ExtensionBackendCapabilitySecrets, r
   return secrets.get(request.extensionId, requireString(input.secretId, 'Secret id'));
 }
 
-function dispatchSettingsCapability(settings: ExtensionBackendCapabilitySettings, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+function dispatchSettingsCapability(
+  settings: ExtensionBackendCapabilitySettings,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
   const stateRoot = request.context?.stateRoot?.trim() || undefined;
 
   if (request.operation === 'read') {
@@ -1283,9 +1302,8 @@ async function dispatchBrowserCapability(request: ExtensionBackendWorkerCapabili
   if (!host) {
     throw new Error('Workbench Browser tools are only available in the desktop app.');
   }
-  const input = request.input && typeof request.input === 'object' && !Array.isArray(request.input)
-    ? (request.input as Record<string, unknown>)
-    : {};
+  const input =
+    request.input && typeof request.input === 'object' && !Array.isArray(request.input) ? (request.input as Record<string, unknown>) : {};
   if (request.operation === 'isActive') {
     return host.isActive(requireString(input.conversationId, 'Browser conversationId'));
   }
@@ -1327,7 +1345,10 @@ function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: Extensi
   return ui.invalidate(topics);
 }
 
-function dispatchWorkspaceCapability(workspace: ExtensionBackendCapabilityWorkspace, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+function dispatchWorkspaceCapability(
+  workspace: ExtensionBackendCapabilityWorkspace,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): unknown {
   const input = normalizeRecordInput(request.input, 'Workspace');
   const cwd = requireString(input.cwd, 'Workspace cwd');
 
@@ -1457,7 +1478,9 @@ function dispatchFilesystemCapability(
   if (request.operation === 'list') {
     return root.list(input.path !== undefined ? optionalString(input.path, 'Filesystem path') : undefined, {
       ...(input.depth !== undefined ? { depth: optionalNumber(input.depth, 'Filesystem depth') } : {}),
-      ...(input.excludeNames !== undefined ? { excludeNames: optionalStringArray(input.excludeNames, 'Filesystem excludeNames') ?? [] } : {}),
+      ...(input.excludeNames !== undefined
+        ? { excludeNames: optionalStringArray(input.excludeNames, 'Filesystem excludeNames') ?? [] }
+        : {}),
     });
   }
 
@@ -1470,7 +1493,10 @@ function dispatchFilesystemCapability(
     });
   }
   if (request.operation === 'copyIn') {
-    return root.copyIn(requireString(input.to, 'Filesystem copy destination'), requireString(input.absoluteSource, 'Filesystem copy source'));
+    return root.copyIn(
+      requireString(input.to, 'Filesystem copy destination'),
+      requireString(input.absoluteSource, 'Filesystem copy source'),
+    );
   }
   if (request.operation === 'remove') {
     return root.remove(requireString(input.path, 'Filesystem path'), {
@@ -1568,8 +1594,10 @@ export function createExtensionBackendCapabilityDispatcher(
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
         readConversationMetadata({ ...input, extensionId }),
-      set: (extensionId: string, input: { conversationId: string; namespace?: string; values: Record<string, unknown>; profile?: string }) =>
-        writeConversationMetadata({ ...input, extensionId }),
+      set: (
+        extensionId: string,
+        input: { conversationId: string; namespace?: string; values: Record<string, unknown>; profile?: string },
+      ) => writeConversationMetadata({ ...input, extensionId }),
       query: (
         extensionId: string,
         input: {
@@ -1739,7 +1767,10 @@ export function createExtensionBackendCapabilityDispatcher(
       return dispatchTerminalCapability(request);
     }
     if (request.capability === 'toolContext') {
-      const input = request.input && typeof request.input === 'object' && !Array.isArray(request.input) ? request.input as Record<string, unknown> : {};
+      const input =
+        request.input && typeof request.input === 'object' && !Array.isArray(request.input)
+          ? (request.input as Record<string, unknown>)
+          : {};
       const handleId = typeof input.handleId === 'string' ? input.handleId : '';
       if (!handleId) throw new Error('Missing tool context update handle.');
       if (request.operation === 'update') {

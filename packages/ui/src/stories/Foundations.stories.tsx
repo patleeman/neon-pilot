@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
-
 import '../styles.css';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Foundations/Tokens',

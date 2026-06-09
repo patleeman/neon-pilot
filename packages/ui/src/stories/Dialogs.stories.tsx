@@ -1,7 +1,18 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { Button, ConfirmDialog, DialogBody, DialogFooter, DialogHeader, Field, SupportingText, TextInput, TextPromptDialog } from '../primitives';
-import '../styles.css';
+import {
+  Button,
+  ConfirmDialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  Field,
+  SupportingText,
+  TextInput,
+  TextPromptDialog,
+} from '../primitives';
 import { StorySection, StoryStack } from './storyUtils';
 
 const meta = {

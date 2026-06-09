@@ -1,6 +1,6 @@
 import {
-  type DragEvent,
   type CSSProperties,
+  type DragEvent,
   memo,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -34,8 +34,8 @@ import {
 } from '../conversation/conversationExecutionActivity';
 import {
   buildConversationDeeplink,
-  readConversationIdFromPathname,
   buildConversationSurfacePath,
+  readConversationIdFromPathname,
   resolveConversationAdjacentPath,
   resolveConversationCloseRedirect,
 } from '../conversation/conversationRoutes';
@@ -54,8 +54,8 @@ import { startNewConversation } from '../conversation/newConversationNavigation'
 import { writeClipboardText } from '../desktop/clipboard';
 import { getDesktopBridge, shouldUseNativeAppContextMenus } from '../desktop/desktopBridge';
 import { ConversationDecoratorHost } from '../extensions/ConversationDecoratorHost';
-import { createNativeExtensionClient } from '../extensions/nativePaClient';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
+import { createNativeExtensionClient } from '../extensions/nativePaClient';
 import { ThreadHeaderActionHost } from '../extensions/ThreadHeaderActionHost';
 import { type ExtensionSurfaceSummary, isExtensionLeftNavItemSurface, isNativeExtensionSidebarSurface } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
@@ -79,8 +79,8 @@ import { timeAgoCompact } from '../shared/utils';
 import { sessionStore, useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPresence, useSessionsReady } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
-import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 import { TextPromptDialog } from './shared/TextPromptDialog';
+import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 import { IconButton, MenuItem, MenuSeparator, PanelMessage, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
@@ -3562,7 +3562,9 @@ export function Sidebar() {
 
   function handleArchiveConversation(sessionId: string) {
     const archivingActiveConversation = activeConversationId === sessionId;
-    const session = workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ?? sessions?.find((candidate) => candidate.id === sessionId);
+    const session =
+      workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ??
+      sessions?.find((candidate) => candidate.id === sessionId);
     rememberWorkspacePath(getLocalSessionWorkspacePath(session));
 
     if (draggingSessionId === sessionId) {
@@ -3582,7 +3584,9 @@ export function Sidebar() {
   function handleCloseConversation(sessionId: string) {
     const closingActiveConversation = activeConversationId === sessionId;
     const conversationIsOpen = tabs.some((session) => session.id === sessionId);
-    const session = workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ?? sessions?.find((candidate) => candidate.id === sessionId);
+    const session =
+      workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ??
+      sessions?.find((candidate) => candidate.id === sessionId);
     rememberWorkspacePath(getLocalSessionWorkspacePath(session));
 
     if (draggingSessionId === sessionId) {
@@ -3609,7 +3613,9 @@ export function Sidebar() {
 
   function handleClosePinnedConversation(sessionId: string) {
     const closingActiveConversation = activeConversationId === sessionId;
-    const session = workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ?? sessions?.find((candidate) => candidate.id === sessionId);
+    const session =
+      workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ??
+      sessions?.find((candidate) => candidate.id === sessionId);
     rememberWorkspacePath(getLocalSessionWorkspacePath(session));
 
     if (draggingSessionId === sessionId) {
@@ -3828,9 +3834,7 @@ export function Sidebar() {
   const extensionNavItems = useMemo<SidebarExtensionNavItem[]>(() => {
     const registeredRoutes = new Set(extensionRegistry.routes.map((route) => route.route));
     const registeredSidebarSurfaces = new Set(
-      extensionRegistry.surfaces
-        .filter(isNativeExtensionSidebarSurface)
-        .map((surface) => `${surface.extensionId}:${surface.id}`),
+      extensionRegistry.surfaces.filter(isNativeExtensionSidebarSurface).map((surface) => `${surface.extensionId}:${surface.id}`),
     );
     const legacy = extensionRegistry.surfaces
       .filter(isExtensionLeftNavItemSurface)
@@ -3842,17 +3846,17 @@ export function Sidebar() {
         const warningCount = extension.diagnostics?.length ?? 0;
         const attention =
           errorCount > 0
-            ? ({ attentionCount: errorCount, attentionSeverity: 'error' as const })
+            ? { attentionCount: errorCount, attentionSeverity: 'error' as const }
             : warningCount > 0
-              ? ({ attentionCount: warningCount, attentionSeverity: 'warning' as const })
+              ? { attentionCount: warningCount, attentionSeverity: 'warning' as const }
               : {};
         return (extension.contributes?.nav ?? []).flatMap((item) => {
           const navItem = {
-              ...item,
-              ...attention,
-              extensionId: extension.id,
-              packageType: extension.packageType ?? 'user',
-            } as ExtensionSurfaceSummary & typeof item;
+            ...item,
+            ...attention,
+            extensionId: extension.id,
+            packageType: extension.packageType ?? 'user',
+          } as ExtensionSurfaceSummary & typeof item;
           return isRegisteredExtensionNavItem(navItem, registeredRoutes, registeredSidebarSurfaces)
             ? [navItem as SidebarExtensionNavItem]
             : [];

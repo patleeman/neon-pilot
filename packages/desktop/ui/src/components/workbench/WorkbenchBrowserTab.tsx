@@ -410,13 +410,7 @@ export function WorkbenchBrowserTab({
           onChange={(event) => handleUrlInputChange(event.target.value)}
           placeholder="https://example.com"
         />
-        <IconButton
-          compact
-          size="sm"
-          aria-label="Close browser"
-          title="Close browser"
-          onClick={handleCloseBrowser}
-        >
+        <IconButton compact size="sm" aria-label="Close browser" title="Close browser" onClick={handleCloseBrowser}>
           ×
         </IconButton>
       </form>

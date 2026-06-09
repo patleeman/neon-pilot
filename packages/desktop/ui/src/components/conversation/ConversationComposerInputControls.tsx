@@ -22,7 +22,12 @@ import type { ComposerDrawingAttachment } from '../../conversation/promptAttachm
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import { getModelSelectionValue, groupModelsByProvider, resolveSelectableModel, THINKING_LEVEL_OPTIONS } from '../../model/modelPreferences';
+import {
+  getModelSelectionValue,
+  groupModelsByProvider,
+  resolveSelectableModel,
+  THINKING_LEVEL_OPTIONS,
+} from '../../model/modelPreferences';
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
@@ -577,12 +582,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             shouldKeepControlRowInline && 'flex-nowrap',
           )}
         >
-          <div
-            className={cx(
-              'flex min-w-0 flex-1 flex-wrap items-center gap-1.5',
-              shouldKeepControlRowInline && 'flex-nowrap',
-            )}
-          >
+          <div className={cx('flex min-w-0 flex-1 flex-wrap items-center gap-1.5', shouldKeepControlRowInline && 'flex-nowrap')}>
             <CoreAttachControl disabled={composerDisabled} onOpenFilePicker={onOpenFilePicker} />
             {visibleLeadingControls.map((control) => (
               <ComposerButtonHost

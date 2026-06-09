@@ -63,16 +63,7 @@ import {
   useTheme,
   formatKeyboardShortcutLabel,
 } from '@neon-pilot/extensions/settings';
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const SETTINGS_QUICK_LINKS = [
@@ -1466,19 +1457,10 @@ function ExtensionSettingsSection({
             />
           ))}
           <div className="flex items-center gap-2 pt-2">
-            <ToolbarButton
-              type="button"
-              className="text-accent"
-              disabled={!hasPendingChanges || saving}
-              onClick={saveChanges}
-            >
+            <ToolbarButton type="button" className="text-accent" disabled={!hasPendingChanges || saving} onClick={saveChanges}>
               {saving ? 'Saving…' : 'Save'}
             </ToolbarButton>
-            <ToolbarButton
-              type="button"
-              disabled={!hasPendingChanges || saving}
-              onClick={resetChanges}
-            >
+            <ToolbarButton type="button" disabled={!hasPendingChanges || saving} onClick={resetChanges}>
               Reset
             </ToolbarButton>
             {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
@@ -1500,7 +1482,11 @@ function ExtensionSettingsComponentPanels({
   return (
     <div className="space-y-0 border-t border-border-subtle/70 pt-6">
       {registrations.map((registration) => (
-        <SettingsPanel key={`${registration.extensionId}:${registration.id}`} title={registration.label} description={registration.description}>
+        <SettingsPanel
+          key={`${registration.extensionId}:${registration.id}`}
+          title={registration.label}
+          description={registration.description}
+        >
           <SettingsPanelHost registration={registration} />
         </SettingsPanel>
       ))}
@@ -2922,7 +2908,10 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                         {groupedModels.map(([provider, models]) => (
                           <optgroup key={provider} label={provider}>
                             {models.map((model) => (
-                              <option key={`${model.provider}/${model.id}`} value={formatSettingsModelOptionValue(model, modelState.models)}>
+                              <option
+                                key={`${model.provider}/${model.id}`}
+                                value={formatSettingsModelOptionValue(model, modelState.models)}
+                              >
                                 {model.name} · {formatContextWindowLabel(model.context)} ctx
                               </option>
                             ))}
@@ -4013,7 +4002,9 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
                                           </div>
                                         </div>
                                         <div className="space-y-1.5">
-                                          <p className="text-[12px] font-medium text-primary">2. Open the verification page and paste the code</p>
+                                          <p className="text-[12px] font-medium text-primary">
+                                            2. Open the verification page and paste the code
+                                          </p>
                                           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                                             <a
                                               href={selectedProviderLogin.deviceCode.verificationUri}
@@ -4237,7 +4228,6 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
               <DesktopConnectionsSettingsPanel />
               <TelemetryLogsSettingsPanel />
             </SettingsSection>
-
           </div>
         </AppPageLayout>
       </div>

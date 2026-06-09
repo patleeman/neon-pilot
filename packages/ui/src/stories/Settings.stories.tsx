@@ -1,7 +1,18 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { Field, Select, SettingsPanel, SettingsRow, SettingToggleRow, SettingsSection, SurfacePanel, Switch, TextInput } from '../primitives';
-import '../styles.css';
+import {
+  Field,
+  Select,
+  SettingsPanel,
+  SettingsRow,
+  SettingsSection,
+  SettingToggleRow,
+  SurfacePanel,
+  Switch,
+  TextInput,
+} from '../primitives';
 
 const meta = {
   title: 'Patterns/Settings',
@@ -24,7 +35,10 @@ export const SettingsSectionPattern: Story = {
               <Switch checked label="Enabled" />
             </SettingsRow>
           </SettingsPanel>
-          <SettingsRow title="Update path" description="Use settings rows when a setting needs copy plus a trailing control, button, or select.">
+          <SettingsRow
+            title="Update path"
+            description="Use settings rows when a setting needs copy plus a trailing control, button, or select."
+          >
             <Select defaultValue="stable" style={{ minWidth: 180 }}>
               <option value="stable">Stable</option>
               <option value="test">Test</option>

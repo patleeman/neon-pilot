@@ -281,7 +281,9 @@ async function main(): Promise<void> {
             Connection: 'keep-alive',
           });
           const agentToolContext =
-            body.request.agentToolContext && typeof body.request.agentToolContext === 'object' && !Array.isArray(body.request.agentToolContext)
+            body.request.agentToolContext &&
+            typeof body.request.agentToolContext === 'object' &&
+            !Array.isArray(body.request.agentToolContext)
               ? { ...(body.request.agentToolContext as Record<string, unknown>), signal: abort.signal }
               : { signal: abort.signal };
           const result = await handleInProcessExtensionHostRequest({
@@ -292,7 +294,10 @@ async function main(): Promise<void> {
               onUpdate: (update) => writeSseEvent(response, { event: 'update', data: update }),
             },
           });
-          writeSseEvent(response, result.ok && 'result' in result ? { event: 'result', data: result.result } : { event: 'error', data: result });
+          writeSseEvent(
+            response,
+            result.ok && 'result' in result ? { event: 'result', data: result.result } : { event: 'error', data: result },
+          );
           response.end();
           return;
         }

@@ -17,7 +17,12 @@
       { "id": "listWorkflows", "handler": "listWorkflows", "title": "List workflows", "worker": { "enabled": true } },
       { "id": "getWorkflow", "handler": "getWorkflow", "title": "Get workflow", "worker": { "enabled": true } },
       { "id": "cancelWorkflow", "handler": "cancelWorkflow", "title": "Cancel workflow", "worker": { "enabled": true } },
-      { "id": "listWorkflowTemplates", "handler": "listWorkflowTemplates", "title": "List workflow templates", "worker": { "enabled": true } },
+      {
+        "id": "listWorkflowTemplates",
+        "handler": "listWorkflowTemplates",
+        "title": "List workflow templates",
+        "worker": { "enabled": true }
+      },
       { "id": "saveWorkflow", "handler": "saveWorkflow", "title": "Save workflow", "worker": { "enabled": true } },
       { "id": "listSavedWorkflows", "handler": "listSavedWorkflows", "title": "List saved workflows", "worker": { "enabled": true } },
       { "id": "deleteSavedWorkflow", "handler": "deleteSavedWorkflow", "title": "Delete saved workflow", "worker": { "enabled": true } },

@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 
 import { writeClipboardText } from '../../desktop/clipboard';
-import { cx, IconButton, MetaLabel, StatusDot, TextButton, type StatusDotTone } from '../ui';
+import { cx, IconButton, MetaLabel, StatusDot, type StatusDotTone, TextButton } from '../ui';
 import { type NotificationItem, type NotificationType, useNotificationStore } from './notificationStore';
 
 const TYPE_DOT_TONE: Record<NotificationType, StatusDotTone> = {
@@ -203,19 +203,11 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
           <div className="flex items-center gap-1">
             {hasNotifications && (
               <>
-                <TextButton
-                  type="button"
-                  className="px-1.5 py-0.5 text-[9px]"
-                  onClick={dismissAll}
-                >
+                <TextButton type="button" className="px-1.5 py-0.5 text-[9px]" onClick={dismissAll}>
                   Dismiss all
                 </TextButton>
                 {hasUnread && (
-                  <TextButton
-                    type="button"
-                    className="px-1.5 py-0.5 text-[9px]"
-                    onClick={markAllRead}
-                  >
+                  <TextButton type="button" className="px-1.5 py-0.5 text-[9px]" onClick={markAllRead}>
                     Mark read
                   </TextButton>
                 )}

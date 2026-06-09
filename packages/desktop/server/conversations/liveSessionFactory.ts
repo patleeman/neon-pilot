@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 import {
   AgentSession,
   AuthStorage,
@@ -8,8 +11,6 @@ import {
   type SessionManager,
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { resolveChildProcessEnv } from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
@@ -87,7 +88,11 @@ async function resolveModelProfileSessionPolicy(modelRef: string): Promise<Resol
   const progressiveSkills = ds4EnvFlag('NEON_PILOT_DS4_PROGRESSIVE_SKILLS', true);
   return {
     activeTools:
-      ds4Profile && directCoreTools && Array.isArray(activeTools) && activeTools.every((tool): tool is string => typeof tool === 'string') && activeTools.length
+      ds4Profile &&
+      directCoreTools &&
+      Array.isArray(activeTools) &&
+      activeTools.every((tool): tool is string => typeof tool === 'string') &&
+      activeTools.length
         ? activeTools
         : null,
     progressiveSkillDiscovery: ds4Profile && progressiveSkills,
@@ -152,7 +157,13 @@ function shellEnvAssignments(env: NodeJS.ProcessEnv, names: string[]): string {
     .join(' ');
 }
 
-function patchConversationBashTool(session: AgentSession, cwd: string, conversationId: string, sessionFile?: string, ds4CliBinDir?: string | null): void {
+function patchConversationBashTool(
+  session: AgentSession,
+  cwd: string,
+  conversationId: string,
+  sessionFile?: string,
+  ds4CliBinDir?: string | null,
+): void {
   const patchableSession = session as unknown as ToolPatchableSessionInternals;
   if (!(patchableSession._baseToolRegistry instanceof Map) || typeof patchableSession._refreshToolRegistry !== 'function') {
     return;
@@ -172,7 +183,12 @@ function patchConversationBashTool(session: AgentSession, cwd: string, conversat
         );
         const launchEnv = ds4CliBinDir ? { ...prependPath(env, ds4CliBinDir), DS4_CLI_BIN: path.join(ds4CliBinDir, 'ds4') } : env;
         const launch = resolveProcessLaunch({ command: 'sh', args: ['-lc', context.command], cwd: context.cwd, env: launchEnv });
-        const inlineEnv = shellEnvAssignments(launch.env, ['NEON_PILOT_SOURCE_CONVERSATION_ID', 'NEON_PILOT_SOURCE_SESSION_FILE', 'DS4_CLI_BIN', 'PATH']);
+        const inlineEnv = shellEnvAssignments(launch.env, [
+          'NEON_PILOT_SOURCE_CONVERSATION_ID',
+          'NEON_PILOT_SOURCE_SESSION_FILE',
+          'DS4_CLI_BIN',
+          'PATH',
+        ]);
         const command = formatProcessLaunchShellCommand(launch);
         return {
           ...context,
@@ -249,15 +265,16 @@ export async function createPreparedLiveAgentSession(input: {
   try {
     const existingContext =
       typeof (input.sessionManager as { buildSessionContext?: () => unknown })?.buildSessionContext === 'function'
-        ? (input.sessionManager as { buildSessionContext: () => { messages: unknown[]; model?: { provider: string; modelId: string } | null } }).buildSessionContext()
+        ? (
+            input.sessionManager as {
+              buildSessionContext: () => { messages: unknown[]; model?: { provider: string; modelId: string } | null };
+            }
+          ).buildSessionContext()
         : null;
     const hasExistingMessages = existingContext ? existingContext.messages.length > 0 : false;
     const transcriptModel =
       hasExistingMessages && existingContext?.model
-        ? resolveInitialModel(
-            `${existingContext.model.provider}/${existingContext.model.modelId}`,
-            modelRegistry.getAll(),
-          )
+        ? resolveInitialModel(`${existingContext.model.provider}/${existingContext.model.modelId}`, modelRegistry.getAll())
         : null;
     if (transcriptModel) {
       effectiveInitialModel = transcriptModel;

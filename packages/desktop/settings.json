@@ -12,9 +12,7 @@
       "019ea523-4ad9-7ad8-a8e5-431e0dba670a",
       "019ea52c-91a4-7a3c-a1c1-bf801b86d501"
     ],
-    "workspacePaths": [
-      "/Users/patrick/workingdir/neon-pilot"
-    ]
+    "workspacePaths": ["/Users/patrick/workingdir/neon-pilot"]
   },
   "dictation": {
     "enabled": false,

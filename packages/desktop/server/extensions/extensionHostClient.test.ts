@@ -261,14 +261,7 @@ describe('extension host client', () => {
       }),
     ).resolves.toEqual({ ok: true, result: { ok: true, result: { done: true } } });
 
-    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith(
-      'ext',
-      'doThing',
-      {},
-      undefined,
-      undefined,
-      undefined,
-    );
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith('ext', 'doThing', {}, undefined, undefined, undefined);
   });
 
   it('converts request handler throws into protocol errors', async () => {
@@ -367,17 +360,23 @@ describe('extension host client', () => {
     ).resolves.toEqual([{ extensionId: 'ext', serviceId: 'svc', ok: true }]);
     await expect(getExtensionHostClient().stopServices('ext')).resolves.toBeUndefined();
 
-    expect(extensionServices.startExtensionServices).toHaveBeenCalledWith(expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
+    expect(extensionServices.startExtensionServices).toHaveBeenCalledWith(
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
     expect(extensionServices.stopExtensionServices).toHaveBeenCalledWith('ext');
   });
 
   it('routes prompt assembly contribution reads through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
-    extensionRegistry.listExtensionPromptContextProviderRegistrations.mockReturnValueOnce([{ extensionId: 'ext', id: 'ctx', handler: 'context' }]);
+    extensionRegistry.listExtensionPromptContextProviderRegistrations.mockReturnValueOnce([
+      { extensionId: 'ext', id: 'ctx', handler: 'context' },
+    ]);
     extensionRegistry.listExtensionAssemblyProviderRegistrations.mockReturnValueOnce([
       { extensionId: 'ext', id: 'instructions', handler: 'instructions', kind: 'instructions' },
     ]);
-    extensionRegistry.listExtensionPromptAssemblyHookRegistrations.mockReturnValueOnce([{ extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' }]);
+    extensionRegistry.listExtensionPromptAssemblyHookRegistrations.mockReturnValueOnce([
+      { extensionId: 'ext', id: 'hook', handler: 'hook', phase: 'after-assembly' },
+    ]);
 
     await expect(getExtensionHostClient().listPromptAssemblyContributions()).resolves.toEqual({
       contextProviders: [{ extensionId: 'ext', id: 'ctx', handler: 'context' }],
@@ -468,7 +467,10 @@ describe('extension host client', () => {
       actionResult: { ok: true, result: { enabled: true } },
     });
     expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('ext', true);
-    expect(extensionSubscriptions.installSubscriptionsForExtension).toHaveBeenCalledWith('ext', expect.objectContaining({ getRuntimeScope: expect.any(Function) }));
+    expect(extensionSubscriptions.installSubscriptionsForExtension).toHaveBeenCalledWith(
+      'ext',
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
     expect(extensionServices.startServicesForExtension).toHaveBeenCalledWith(
       'ext',
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
@@ -639,7 +641,9 @@ describe('extension host client', () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
 
     await expect(getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' })).resolves.toBeUndefined();
-    await expect(getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: 'ext' })).resolves.toBeUndefined();
+    await expect(
+      getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: 'ext' }),
+    ).resolves.toBeUndefined();
     await expect(
       getExtensionHostClient().registryMaintenance({ operation: 'setBuildError', extensionId: 'ext', error: 'Build failed' }),
     ).resolves.toBeUndefined();
@@ -702,9 +706,7 @@ describe('extension host client', () => {
     });
     extensionBackend.reloadExtensionBackend.mockResolvedValueOnce({ ok: true, extensionId: 'ext', rebuilt: false });
 
-    await expect(getExtensionHostClient().listActionTelemetry('ext')).resolves.toEqual([
-      { extensionId: 'ext', actionId: 'run', ok: true },
-    ]);
+    await expect(getExtensionHostClient().listActionTelemetry('ext')).resolves.toEqual([{ extensionId: 'ext', actionId: 'run', ok: true }]);
     await expect(getExtensionHostClient().runSelfTest({ extensionId: 'ext' })).resolves.toEqual({
       ok: true,
       extensionId: 'ext',
@@ -725,9 +727,9 @@ describe('extension host client', () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.startExtensionStartupActions.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);
 
-    await expect(
-      getExtensionHostClient().startStartupActions({ serverContext: { getRuntimeScope: () => 'shared' } }),
-    ).resolves.toEqual([{ extensionId: 'ext', ok: true }]);
+    await expect(getExtensionHostClient().startStartupActions({ serverContext: { getRuntimeScope: () => 'shared' } })).resolves.toEqual([
+      { extensionId: 'ext', ok: true },
+    ]);
 
     expect(extensionBackend.startExtensionStartupActions).toHaveBeenCalledWith({ getRuntimeScope: expect.any(Function) });
   });
@@ -748,11 +750,15 @@ describe('extension host client', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(extensionBackend.invokeExtensionProtocolEntrypoint).toHaveBeenCalledWith('acp', { args: ['--stdio'] }, {
-      serverContext: { getRuntimeScope: expect.any(Function) },
-      stdio,
-      signal,
-    });
+    expect(extensionBackend.invokeExtensionProtocolEntrypoint).toHaveBeenCalledWith(
+      'acp',
+      { args: ['--stdio'] },
+      {
+        serverContext: { getRuntimeScope: expect.any(Function) },
+        stdio,
+        signal,
+      },
+    );
   });
 
   it('names requests for logs and future RPC diagnostics', () => {

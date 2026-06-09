@@ -80,9 +80,7 @@ describe('local API critical extension registry presentation', () => {
     } as never);
 
     expect(response.extensions.map((extension) => extension.id)).toEqual(['checkpoint-renderer']);
-    expect(response.extensions[0]?.manifest.contributes?.transcriptRenderers).toEqual([
-      expect.objectContaining({ id: 'checkpoint-card' }),
-    ]);
+    expect(response.extensions[0]?.manifest.contributes?.transcriptRenderers).toEqual([expect.objectContaining({ id: 'checkpoint-card' })]);
     expect(response.routes).toHaveLength(0);
     expect(response.surfaces).toHaveLength(0);
   });

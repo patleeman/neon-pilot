@@ -112,8 +112,7 @@ export async function probeImage(input: ProbeImageInput, ctx: ExtensionBackendCo
   // If the session ID changed (e.g. after archive/re-live), fall back to scanning
   // all sessions for matching image IDs.
   if (attachments.length !== imageIds.length) {
-    const allSessionAttachments =
-      (await getImageProbeAttachmentsByIdFromAnySession(imageIds)) as StoredImageProbeAttachment[];
+    const allSessionAttachments = (await getImageProbeAttachmentsByIdFromAnySession(imageIds)) as StoredImageProbeAttachment[];
     if (allSessionAttachments.length > 0) {
       attachments = allSessionAttachments;
     }

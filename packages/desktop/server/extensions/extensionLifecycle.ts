@@ -6,6 +6,7 @@ import { basename, join, resolve, sep } from 'node:path';
 import { getStateRoot } from '@neon-pilot/core';
 
 import { getExtensionCompatibilityError } from './extensionCompatibility.js';
+import type { ExtensionManifest } from './extensionManifest.js';
 import {
   findExtensionEntry,
   getRuntimeExtensionsRoot,
@@ -13,7 +14,6 @@ import {
   listExtensionInstallSummaries,
   parseExtensionManifest,
 } from './extensionRegistry.js';
-import type { ExtensionManifest } from './extensionManifest.js';
 
 export interface CreateRuntimeExtensionInput {
   id?: unknown;

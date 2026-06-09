@@ -63,8 +63,7 @@ const forbiddenPatterns = [
     message: 'product runtime code must manage extension subscriptions through ExtensionHostClient',
   },
   {
-    pattern:
-      /import\s+\{[^}]*\blistExtensionEventSubscriptions\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionEventBus\.js['"]/,
+    pattern: /import\s+\{[^}]*\blistExtensionEventSubscriptions\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionEventBus\.js['"]/,
     message: 'product runtime code must list extension event subscriptions through ExtensionHostClient',
   },
   {
@@ -125,8 +124,7 @@ const forbiddenPatterns = [
     message: 'product runtime presentation code must read extension registry presentation through ExtensionHostClient',
   },
   {
-    pattern:
-      /import\s+\{[^}]*\blistEnabledExtensionEntries\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    pattern: /import\s+\{[^}]*\blistEnabledExtensionEntries\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'product runtime code must read model discovery registrations through ExtensionHostClient',
   },
   {
@@ -150,7 +148,8 @@ const forbiddenPatterns = [
     message: 'product runtime code must update extension keybindings through ExtensionHostClient',
   },
   {
-    pattern: /import\s+\{[^}]*\b(?:beginExtensionStartupGuard|completeExtensionStartupGuard)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
+    pattern:
+      /import\s+\{[^}]*\b(?:beginExtensionStartupGuard|completeExtensionStartupGuard)\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/extensionRegistry\.js['"]/,
     message: 'product runtime code must manage extension startup guards through ExtensionHostClient',
   },
   {
@@ -195,7 +194,8 @@ const forbiddenPatterns = [
     message: 'product runtime code must not depend on extension registry read-cache internals',
   },
   {
-    pattern: /import\s+\{[^}]*\bresolveExtensionPromptReferences\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/promptReferenceResolvers\.js['"]/,
+    pattern:
+      /import\s+\{[^}]*\bresolveExtensionPromptReferences\b[^}]*\}\s+from\s+['"][^'"]*\/extensions\/promptReferenceResolvers\.js['"]/,
     message: 'product runtime code must resolve extension prompt references through ExtensionHostClient',
   },
   {
@@ -276,7 +276,9 @@ if (existsSync(architectureDocPath)) {
   const staleInProcessStart = /\bextension host interface starts in-process\b/i.exec(text);
   if (staleInProcessStart) {
     const line = text.slice(0, staleInProcessStart.index).split('\n').length;
-    failures.push(`${architectureDoc}:${line}: architecture doc must describe the RPC extension-host client boundary as current product behavior`);
+    failures.push(
+      `${architectureDoc}:${line}: architecture doc must describe the RPC extension-host client boundary as current product behavior`,
+    );
   }
 }
 

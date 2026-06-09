@@ -66,7 +66,11 @@ export function ConversationQuestionShelf({
           )}
         </div>
 
-        <div className="mt-2 space-y-0.5" role={activeQuestion.style === 'check' ? 'group' : 'radiogroup'} aria-label={activeQuestion.label}>
+        <div
+          className="mt-2 space-y-0.5"
+          role={activeQuestion.style === 'check' ? 'group' : 'radiogroup'}
+          aria-label={activeQuestion.label}
+        >
           {activeQuestion.options.map((option, optionIndex) => {
             const selectedValues = answers[activeQuestion.id] ?? [];
             const checked = selectedValues.includes(option.value);

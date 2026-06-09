@@ -26,9 +26,7 @@ function createCtx() {
         return { ok: true, deleted };
       }),
       list: vi.fn(async (prefix = '') =>
-        [...storage.entries()]
-          .filter(([key]) => key.startsWith(prefix))
-          .map(([key, value]) => ({ key, value })),
+        [...storage.entries()].filter(([key]) => key.startsWith(prefix)).map(([key, value]) => ({ key, value })),
       ),
     },
     conversations: {
@@ -40,13 +38,16 @@ function createCtx() {
         sentMessages.push({ conversationId, text });
       }),
       metadata: {
-        get: vi.fn(async ({ conversationId, namespace }: { conversationId: string; namespace: string }) =>
-          metadata.get(`${conversationId}:${namespace}`) ?? {},
+        get: vi.fn(
+          async ({ conversationId, namespace }: { conversationId: string; namespace: string }) =>
+            metadata.get(`${conversationId}:${namespace}`) ?? {},
         ),
-        set: vi.fn(async ({ conversationId, namespace, values }: { conversationId: string; namespace: string; values: Record<string, unknown> }) => {
-          metadata.set(`${conversationId}:${namespace}`, values);
-          return values;
-        }),
+        set: vi.fn(
+          async ({ conversationId, namespace, values }: { conversationId: string; namespace: string; values: Record<string, unknown> }) => {
+            metadata.set(`${conversationId}:${namespace}`, values);
+            return values;
+          },
+        ),
       },
     },
     toolContext: {},
@@ -92,22 +93,25 @@ describe('system-personal-agents backend', () => {
   it('routes gateway messages to matching enabled profile bindings', async () => {
     const ctx = createCtx();
     const created = await createProfile({ name: 'Telegram Agent' }, ctx);
-    await updateProfile({
-      id: created.profile.id,
-      gatewayBindings: [
-        {
-          id: 'telegram-main',
-          gatewayId: 'telegram',
-          senderId: 'patrick',
-          displayName: 'Telegram',
-          enabled: true,
-          conversationPolicy: 'default',
-          trustLevel: 'paired',
-          createdAt: '2026-06-09T00:00:00.000Z',
-          updatedAt: '2026-06-09T00:00:00.000Z',
-        },
-      ],
-    }, ctx);
+    await updateProfile(
+      {
+        id: created.profile.id,
+        gatewayBindings: [
+          {
+            id: 'telegram-main',
+            gatewayId: 'telegram',
+            senderId: 'patrick',
+            displayName: 'Telegram',
+            enabled: true,
+            conversationPolicy: 'default',
+            trustLevel: 'paired',
+            createdAt: '2026-06-09T00:00:00.000Z',
+            updatedAt: '2026-06-09T00:00:00.000Z',
+          },
+        ],
+      },
+      ctx,
+    );
 
     const result = await routeGatewayMessage(
       {

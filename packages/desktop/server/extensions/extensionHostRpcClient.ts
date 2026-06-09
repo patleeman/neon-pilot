@@ -46,11 +46,7 @@ function hasOnlyToolUpdateCallback(input: ExtensionHostInvokeActionInput): boole
 
 function isWireableExtensionHostStreamingActionInput(input: ExtensionHostInvokeActionInput): boolean {
   if (!hasOnlyToolUpdateCallback(input)) return false;
-  return (
-    !hasFunction(input.serverContextSnapshot) &&
-    !hasFunction(input.toolContextSnapshot) &&
-    !hasFunction(input.agentToolContext)
-  );
+  return !hasFunction(input.serverContextSnapshot) && !hasFunction(input.toolContextSnapshot) && !hasFunction(input.agentToolContext);
 }
 
 function isWireableExtensionHostInvokeRouteInput(input: Parameters<ExtensionHostClient['invokeRoute']>[0]): boolean {
@@ -219,10 +215,15 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
     for await (const event of parseSseEvents(response)) {
       if (event.event === 'update') {
         input.toolContext?.onUpdate?.(
-          (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Parameters<NonNullable<typeof input.toolContext.onUpdate>>[0],
+          (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Parameters<
+            NonNullable<typeof input.toolContext.onUpdate>
+          >[0],
         );
       } else if (event.event === 'result') {
-        finalResult = typeof event.data === 'string' ? (JSON.parse(event.data) as ExtensionHostActionInvokeResult) : (event.data as ExtensionHostActionInvokeResult);
+        finalResult =
+          typeof event.data === 'string'
+            ? (JSON.parse(event.data) as ExtensionHostActionInvokeResult)
+            : (event.data as ExtensionHostActionInvokeResult);
       } else if (event.event === 'error') {
         const message = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
         finalResult = { ok: false, error: message };

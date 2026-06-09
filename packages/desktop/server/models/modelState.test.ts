@@ -37,9 +37,9 @@ describe('modelState', () => {
   });
 
   it('does not reuse an empty cold-start cache when models become available', async () => {
-    getAvailableModels.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      { id: 'ready', provider: 'local', name: 'Ready', contextWindow: 42, input: ['text'] },
-    ]);
+    getAvailableModels
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'ready', provider: 'local', name: 'Ready', contextWindow: 42, input: ['text'] }]);
 
     await expect(listModelDefinitions()).resolves.toEqual([]);
     await expect(listModelDefinitions()).resolves.toMatchObject([{ id: 'ready', provider: 'local' }]);
@@ -141,9 +141,7 @@ describe('modelState', () => {
         baseUrl: 'http://127.0.0.1:4444',
         api: 'openai',
         apiKey: 'x',
-        models: [
-          { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 128_000, input: ['text'], reasoning: true },
-        ],
+        models: [{ id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 128_000, input: ['text'], reasoning: true }],
       },
     ]);
     readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');

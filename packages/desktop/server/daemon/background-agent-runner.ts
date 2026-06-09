@@ -9,9 +9,9 @@ import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot } from '@neon-
 import { appendConversationOffshootMetadata } from '../conversations/conversationService.js';
 import { createPreparedLiveAgentSession } from '../conversations/liveSessionFactory.js';
 import { resolveLiveSessionFile } from '../conversations/liveSessionPersistence.js';
+import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
 import { setExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from '../extensions/extensionHostRpcClient.js';
-import { createManifestAgentExtensions } from '../extensions/extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from '../extensions/manifestToolAgentExtension.js';
 import { buildLiveSessionResourceOptionsForRuntime } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';

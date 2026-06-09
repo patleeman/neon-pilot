@@ -20,7 +20,12 @@ export async function resolveRequestedCwd(...args: unknown[]) {
 export async function resolveExistingConversationDirectory(cwd: unknown, baseCwd?: unknown): Promise<string> {
   const requested = typeof cwd === 'string' ? cwd : '';
   const base = typeof baseCwd === 'string' ? baseCwd : undefined;
-  const nextCwd = await callModuleExport<string | undefined>('../../conversations/conversationCwd.js', 'resolveRequestedCwd', requested, base);
+  const nextCwd = await callModuleExport<string | undefined>(
+    '../../conversations/conversationCwd.js',
+    'resolveRequestedCwd',
+    requested,
+    base,
+  );
   if (!nextCwd) {
     throw new Error('cwd is required.');
   }

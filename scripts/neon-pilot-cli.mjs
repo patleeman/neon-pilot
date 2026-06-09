@@ -29,10 +29,7 @@ const cliArgs = process.argv.slice(2);
 const command = canUseBuiltCli() ? process.execPath : tsxPath;
 const args = canUseBuiltCli()
   ? [cliDistPath, ...cliArgs]
-  : [
-      '--eval',
-      `import(${JSON.stringify(pathToFileURL(cliSourcePath).href)}).then((module) => module.main(${JSON.stringify(cliArgs)}))`,
-    ];
+  : ['--eval', `import(${JSON.stringify(pathToFileURL(cliSourcePath).href)}).then((module) => module.main(${JSON.stringify(cliArgs)}))`];
 
 const child = spawn(command, args, {
   stdio: 'inherit',

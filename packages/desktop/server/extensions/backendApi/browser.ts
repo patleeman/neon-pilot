@@ -22,7 +22,9 @@ function createWorkerWorkbenchBrowserToolHost(
     snapshot: (conversationId: string, tabId?: string) =>
       bridge('browser', 'snapshot', { conversationId, ...(tabId ? { tabId } : {}) }) as ReturnType<WorkbenchBrowserToolHost['snapshot']>,
     screenshot: (conversationId: string, tabId?: string) =>
-      bridge('browser', 'screenshot', { conversationId, ...(tabId ? { tabId } : {}) }) as ReturnType<WorkbenchBrowserToolHost['screenshot']>,
+      bridge('browser', 'screenshot', { conversationId, ...(tabId ? { tabId } : {}) }) as ReturnType<
+        WorkbenchBrowserToolHost['screenshot']
+      >,
     cdp: (input) => bridge('browser', 'cdp', input) as ReturnType<WorkbenchBrowserToolHost['cdp']>,
   };
 }

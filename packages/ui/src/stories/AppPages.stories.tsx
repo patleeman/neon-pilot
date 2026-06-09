@@ -1,3 +1,5 @@
+import '../styles.css';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import {
@@ -13,7 +15,6 @@ import {
   SurfacePanel,
   ToolbarButton,
 } from '../primitives';
-import '../styles.css';
 
 const meta = {
   title: 'Patterns/App Pages',

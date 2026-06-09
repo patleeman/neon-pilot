@@ -221,8 +221,10 @@ export function createWorkerImportExtensionBackendRunner(
 ): ExtensionBackendWorkerExportRunner {
   return {
     async loadModule(extensionId, compiled) {
-      await auditBackendOperation(extensionId, extensionBackendOperation('backend-import', 'backend import', { target: compiled.path }), () =>
-        client.loadModule(extensionId, compiled),
+      await auditBackendOperation(
+        extensionId,
+        extensionBackendOperation('backend-import', 'backend import', { target: compiled.path }),
+        () => client.loadModule(extensionId, compiled),
       );
       return {};
     },
@@ -256,8 +258,10 @@ export function createWorkerImportExtensionBackendRunner(
       args: unknown[],
       options?: ExtensionBackendWorkerExportOptions,
     ) {
-      return auditBackendOperation(extensionId, { ...operation, exportName: operation.exportName ?? exportName }, () =>
-        client.runExport(extensionId, compiled, exportName, args, options) as Promise<unknown>,
+      return auditBackendOperation(
+        extensionId,
+        { ...operation, exportName: operation.exportName ?? exportName },
+        () => client.runExport(extensionId, compiled, exportName, args, options) as Promise<unknown>,
       ) as Promise<T>;
     },
   };

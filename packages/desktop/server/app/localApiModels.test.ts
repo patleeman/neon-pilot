@@ -1,16 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  modelPreferencesImportedMock,
-  providerDesktopCapabilityImportedMock,
-  prewarmModelDefinitionsMock,
-  readModelStateMock,
-} = vi.hoisted(() => ({
-  modelPreferencesImportedMock: vi.fn(),
-  providerDesktopCapabilityImportedMock: vi.fn(),
-  prewarmModelDefinitionsMock: vi.fn(),
-  readModelStateMock: vi.fn(),
-}));
+const { modelPreferencesImportedMock, providerDesktopCapabilityImportedMock, prewarmModelDefinitionsMock, readModelStateMock } = vi.hoisted(
+  () => ({
+    modelPreferencesImportedMock: vi.fn(),
+    providerDesktopCapabilityImportedMock: vi.fn(),
+    prewarmModelDefinitionsMock: vi.fn(),
+    readModelStateMock: vi.fn(),
+  }),
+);
 
 vi.mock('../models/modelPreferences.js', () => {
   modelPreferencesImportedMock();

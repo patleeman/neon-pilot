@@ -11,6 +11,7 @@ import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
+import { registerExtensionToolUpdateHandle, unregisterExtensionToolUpdateHandle } from './extensionBackendLiveHandles.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
 import {
   createWorkerImportExtensionBackendRunner,
@@ -21,7 +22,6 @@ import {
   extensionBackendOperation,
   getExtensionBackendRunner,
 } from './extensionBackendRunner.js';
-import { registerExtensionToolUpdateHandle, unregisterExtensionToolUpdateHandle } from './extensionBackendLiveHandles.js';
 import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
@@ -40,17 +40,17 @@ import {
   isExtensionEnabled,
   listExtensionCommandRegistrations,
   listExtensionInstallSummaries,
-  markExtensionStartupActive,
   listExtensionRuntimeProviderRegistrations,
+  markExtensionStartupActive,
   recordExtensionFailure,
   setExtensionEnabled,
   setExtensionHealthError,
 } from './extensionRegistry.js';
 import { createExtensionExecutionsCapability, createExtensionRunsCapability } from './extensionRuns.js';
+import { refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
-import { refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
 export interface ExtensionBackendNotifyInput {
@@ -1067,7 +1067,6 @@ export async function invokeExtensionAction(
     }
     const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
     const handlerName = action?.handler ?? actionId;
-    let result: unknown;
     if (!canRunActionInBackendWorker(action, input)) {
       throw new ExtensionLoadError({
         extensionId,
@@ -1076,7 +1075,7 @@ export async function invokeExtensionAction(
       });
     }
     actionHandlerStarted = true;
-    result = await runExtensionBackendActionInWorker(
+    const result = await runExtensionBackendActionInWorker(
       extensionId,
       actionId,
       handlerName,

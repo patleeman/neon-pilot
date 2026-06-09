@@ -13,8 +13,8 @@ import type {
   ThreadGoal,
 } from '../shared/types';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
-import { readCachedConversationBootstrap, readCachedOrPersistedConversationBootstrap } from './useConversationBootstrap';
 import { detectConversationSurfaceType, getOrCreateConversationSurfaceId } from './sessionStream';
+import { readCachedConversationBootstrap, readCachedOrPersistedConversationBootstrap } from './useConversationBootstrap';
 
 const MAX_DESKTOP_CONVERSATION_STATE_TAIL_BLOCKS = 10000;
 const MAX_CACHED_DESKTOP_CONVERSATION_STATES = 8;
@@ -526,9 +526,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
     const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
     const cachedState = desktopConversationStateCache.get(cacheKey) ?? null;
     const cachedBootstrap = cachedState ? null : readCachedConversationBootstrap(conversationId, requestOptions);
-    const bootstrapState = cachedBootstrap
-      ? createDesktopConversationStateFromBootstrap(conversationId, cachedBootstrap)
-      : null;
+    const bootstrapState = cachedBootstrap ? createDesktopConversationStateFromBootstrap(conversationId, cachedBootstrap) : null;
     if (bootstrapState) {
       rememberDesktopConversationState(desktopConversationStateCache, cacheKey, bootstrapState);
     }
@@ -726,7 +724,9 @@ export function useDesktopConversationState(conversationId: string | null, optio
         return {
           ...previous,
           stream,
-          liveSession: previous.liveSession?.live ? { ...previous.liveSession, isStreaming: false } : (previous.liveSession ?? { live: false }),
+          liveSession: previous.liveSession?.live
+            ? { ...previous.liveSession, isStreaming: false }
+            : (previous.liveSession ?? { live: false }),
         };
       });
       scheduleReconnectRetry();

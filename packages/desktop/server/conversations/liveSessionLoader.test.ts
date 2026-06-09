@@ -20,7 +20,10 @@ const agent = vi.hoisted(() => {
 const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn(() => '/agent-runtime') }));
 const logging = vi.hoisted(() => ({ logWarn: vi.fn() }));
 
-vi.mock('@earendil-works/pi-coding-agent', () => ({ DefaultResourceLoader: agent.DefaultResourceLoader, loadProjectContextFiles: agent.loadProjectContextFiles }));
+vi.mock('@earendil-works/pi-coding-agent', () => ({
+  DefaultResourceLoader: agent.DefaultResourceLoader,
+  loadProjectContextFiles: agent.loadProjectContextFiles,
+}));
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('../shared/logging.js', () => logging);
 

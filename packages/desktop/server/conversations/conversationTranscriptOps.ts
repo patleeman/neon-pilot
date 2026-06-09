@@ -36,9 +36,7 @@ export function appendConversationWorkspaceMetadata(input: Parameters<typeof app
   appendSessionConversationWorkspaceMetadata(input);
 }
 
-export function appendConversationCompactionSummary(
-  input: Parameters<typeof appendSessionConversationCompactionSummary>[0],
-): void {
+export function appendConversationCompactionSummary(input: Parameters<typeof appendSessionConversationCompactionSummary>[0]): void {
   appendSessionConversationCompactionSummary(input);
 }
 

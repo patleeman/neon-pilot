@@ -77,7 +77,14 @@ function createMemoryDb() {
           } else if (sql.startsWith('DELETE FROM workflow_nodes')) {
             nodesTable.delete(String(params[0]));
           } else if (sql.startsWith('INSERT INTO workflow_events')) {
-            eventsTable.push({ id: params[0], workflow_id: params[1], event_type: params[2], message: params[3], data_json: params[4], created_at: params[5] });
+            eventsTable.push({
+              id: params[0],
+              workflow_id: params[1],
+              event_type: params[2],
+              message: params[3],
+              data_json: params[4],
+              created_at: params[5],
+            });
           } else if (sql.startsWith('INSERT INTO saved_workflows')) {
             savedTable.set(String(params[0]), {
               id: params[0],
@@ -114,7 +121,12 @@ function createMemoryDb() {
     close: vi.fn(),
     pragma: vi.fn(),
     transaction: (fn: (...args: unknown[]) => void) => fn,
-    dump: () => ({ runs: Array.from(runsTable.values()), nodes: Array.from(nodesTable.values()), saved: Array.from(savedTable.values()), events: eventsTable }),
+    dump: () => ({
+      runs: Array.from(runsTable.values()),
+      nodes: Array.from(nodesTable.values()),
+      saved: Array.from(savedTable.values()),
+      events: eventsTable,
+    }),
   };
 }
 
@@ -208,7 +220,9 @@ describe('dynamic workflows backend', () => {
       },
       ctx,
     );
-    expect(runs.startBackgroundRun).toHaveBeenCalledWith(expect.objectContaining({ agent: expect.objectContaining({ model: 'agent/model' }) }));
+    expect(runs.startBackgroundRun).toHaveBeenCalledWith(
+      expect.objectContaining({ agent: expect.objectContaining({ model: 'agent/model' }) }),
+    );
   });
 
   it('preserves explicit empty allowed tools for workflow agents', async () => {
@@ -232,10 +246,13 @@ describe('dynamic workflows backend', () => {
 
   it('explains empty results when a script forgets to return from the async body', async () => {
     const { ctx } = createCtx();
-    const result = await workflow({
-      name: 'IIFE',
-      script: `(async () => { return { ok: true }; })()`,
-    }, ctx);
+    const result = await workflow(
+      {
+        name: 'IIFE',
+        script: `(async () => { return { ok: true }; })()`,
+      },
+      ctx,
+    );
 
     expect(result).toMatchObject({ details: { status: 'completed' } });
     expect(result.content[0].text).toContain('Workflow completed without a result.');
@@ -286,7 +303,9 @@ describe('dynamic workflows backend', () => {
     await expect(listWorkflows({}, ctx)).resolves.toMatchObject({ workflows: [] });
     const result = await workflow({ name: 'Storage', script: `return workflow.finish("stored");` }, ctx);
     expect(result).toMatchObject({ details: { status: 'completed', result: 'stored' } });
-    await expect(listWorkflows({}, ctx)).resolves.toMatchObject({ workflows: [expect.objectContaining({ name: 'Storage', resultText: 'stored' })] });
+    await expect(listWorkflows({}, ctx)).resolves.toMatchObject({
+      workflows: [expect.objectContaining({ name: 'Storage', resultText: 'stored' })],
+    });
   });
 
   it('lists built-in workflow templates', async () => {
@@ -334,7 +353,22 @@ describe('dynamic workflows backend', () => {
     db.prepare('DELETE FROM workflow_nodes WHERE id = ?').run(nodeId);
     db.prepare(
       'INSERT INTO workflow_nodes (id, workflow_id, phase, role, prompt, status, run_id, model, allowed_tools_json, result_text, error, created_at, updated_at, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(nodeId, workflowId, null, 'worker', 'work', 'running', 'run-1', null, '[]', null, null, new Date().toISOString(), new Date().toISOString(), null);
+    ).run(
+      nodeId,
+      workflowId,
+      null,
+      'worker',
+      'work',
+      'running',
+      'run-1',
+      null,
+      '[]',
+      null,
+      null,
+      new Date().toISOString(),
+      new Date().toISOString(),
+      null,
+    );
 
     await expect(cancelWorkflow({ workflowId }, ctx)).resolves.toMatchObject({ ok: true, cancelledNodes: 1 });
     expect(runs.cancelDurableRun).toHaveBeenCalledWith('run-1');

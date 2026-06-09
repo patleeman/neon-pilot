@@ -36,12 +36,12 @@ vi.mock('../shared/appEvents.js', () => ({
   invalidateAppTopics: vi.fn(),
 }));
 
-import * as appEvents from '../shared/appEvents.js';
 import * as middleware from '../middleware/index.js';
-import * as modelState from './modelState.js';
+import * as appEvents from '../shared/appEvents.js';
 import * as modelProviders from './modelProviders.js';
-import * as providerAuth from './providerAuth.js';
 import * as modelRegistry from './modelRegistry.js';
+import * as modelState from './modelState.js';
+import * as providerAuth from './providerAuth.js';
 import {
   cancelProviderOAuthLoginCapability,
   deleteModelProviderCapability,
@@ -295,7 +295,11 @@ describe('OAuth login capabilities', () => {
   it('refreshes runtime models after OAuth login completion', async () => {
     let listener: ((state: import('./providerAuth.js').ProviderOAuthLoginState) => void) | null = null;
     const unsubscribe = vi.fn();
-    vi.mocked(providerAuth.startProviderOAuthLogin).mockReturnValue({ id: 'login-1', provider: 'openai-codex', status: 'running' } as never);
+    vi.mocked(providerAuth.startProviderOAuthLogin).mockReturnValue({
+      id: 'login-1',
+      provider: 'openai-codex',
+      status: 'running',
+    } as never);
     vi.mocked(providerAuth.subscribeProviderOAuthLogin).mockImplementation((_loginId, callback) => {
       listener = callback as typeof listener;
       return unsubscribe;

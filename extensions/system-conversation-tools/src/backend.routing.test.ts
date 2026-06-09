@@ -155,16 +155,28 @@ describe('system-conversation-tools backend routing', () => {
     await conversationTool({ cli: { command: 'conversations abort', args: ['conv-2'] } }, context);
     expect(conversations.abort).toHaveBeenLastCalledWith('conv-2');
 
-    await conversationTool({ cli: { command: 'conversations run-turn', args: ['conv-2', '--text', 'Finish', '--timeout-ms', '123'] } }, context);
+    await conversationTool(
+      { cli: { command: 'conversations run-turn', args: ['conv-2', '--text', 'Finish', '--timeout-ms', '123'] } },
+      context,
+    );
     expect(conversations.runTurn).toHaveBeenLastCalledWith('conv-2', 'Finish', { timeoutMs: 123 });
 
-    await conversationTool({ cli: { command: 'conversations workspace update', args: ['--open', 'conv-1,conv-2', '--active', 'conv-2'] } }, context);
-    expect(conversations.updateWorkspace).toHaveBeenLastCalledWith({ openConversationIds: ['conv-1', 'conv-2'], activeConversationId: 'conv-2' });
+    await conversationTool(
+      { cli: { command: 'conversations workspace update', args: ['--open', 'conv-1,conv-2', '--active', 'conv-2'] } },
+      context,
+    );
+    expect(conversations.updateWorkspace).toHaveBeenLastCalledWith({
+      openConversationIds: ['conv-1', 'conv-2'],
+      activeConversationId: 'conv-2',
+    });
 
     await conversationTool({ cli: { command: 'conversations delete', args: ['conv-old'] } }, context);
     expect(conversations.delete).toHaveBeenLastCalledWith({ conversationIds: ['conv-old'] });
 
-    await conversationTool({ cli: { command: 'conversations retention prune', args: ['--older-than', '90d', '--archived-only', '--dry-run'] } }, context);
+    await conversationTool(
+      { cli: { command: 'conversations retention prune', args: ['--older-than', '90d', '--archived-only', '--dry-run'] } },
+      context,
+    );
     expect(conversations.prune).toHaveBeenLastCalledWith({ olderThanMs: 7_776_000_000, archivedOnly: true, dryRun: true });
   });
 
@@ -317,9 +329,11 @@ describe('system-conversation-tools backend routing', () => {
 
   it('routes transcript block writes', async () => {
     const context = ctx();
-    const conversations = (context as {
-      conversations: { appendTranscriptBlock: ReturnType<typeof vi.fn>; updateTranscriptBlock: ReturnType<typeof vi.fn> };
-    }).conversations;
+    const conversations = (
+      context as {
+        conversations: { appendTranscriptBlock: ReturnType<typeof vi.fn>; updateTranscriptBlock: ReturnType<typeof vi.fn> };
+      }
+    ).conversations;
 
     await conversationTool(
       { action: 'append_transcript_block', conversationId: 'conv-2', blockType: 'note', title: 'Note', data: { ok: true } },

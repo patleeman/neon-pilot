@@ -65,7 +65,8 @@ function removeDuplicateReasoningPayloadFields(payload: unknown, model: Model<Ap
     return payload;
   }
 
-  const { thinking: _thinking, ...safePayload } = payloadRecord;
+  const safePayload = { ...payloadRecord };
+  delete safePayload.thinking;
   return safePayload;
 }
 

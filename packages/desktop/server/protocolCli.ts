@@ -3,13 +3,9 @@ import { pathToFileURL } from 'node:url';
 import { getPiAgentRuntimeDir, getStateRoot } from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
-import {
-  installNeonPilotUserCli,
-  readNeonPilotCliInstallStatus,
-  uninstallNeonPilotUserCli,
-} from './cliEnvironment.js';
 import { readNeonPilotCliControlPlaneRecord } from './cliControlPlane.js';
-import { getExtensionHostClient, type ExtensionHostClient } from './extensions/extensionHostClient.js';
+import { installNeonPilotUserCli, readNeonPilotCliInstallStatus, uninstallNeonPilotUserCli } from './cliEnvironment.js';
+import { type ExtensionHostClient, getExtensionHostClient } from './extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 import { getRuntimeSettingsFilePath } from './ui/settingsPersistence.js';
@@ -151,7 +147,11 @@ async function manageCliInstall(args: string[]): Promise<number> {
   try {
     if (action === 'status') {
       const result = readNeonPilotCliInstallStatus({ repoRoot });
-      process.stdout.write(wantsJson(args) ? `${JSON.stringify(result, null, 2)}\n` : `Neon Pilot CLI: ${result.target}\nUser shell link: ${result.globallyInstalled ? result.linkPath : 'not installed'}\n`);
+      process.stdout.write(
+        wantsJson(args)
+          ? `${JSON.stringify(result, null, 2)}\n`
+          : `Neon Pilot CLI: ${result.target}\nUser shell link: ${result.globallyInstalled ? result.linkPath : 'not installed'}\n`,
+      );
       return 0;
     }
     if (action === 'install') {
@@ -161,7 +161,11 @@ async function manageCliInstall(args: string[]): Promise<number> {
     }
     if (action === 'uninstall') {
       const result = uninstallNeonPilotUserCli({ repoRoot });
-      process.stdout.write(wantsJson(args) ? `${JSON.stringify(result, null, 2)}\n` : `${result.removed ? `Removed ${result.linkPath}` : 'No Neon Pilot-owned user shell link found.'}\n`);
+      process.stdout.write(
+        wantsJson(args)
+          ? `${JSON.stringify(result, null, 2)}\n`
+          : `${result.removed ? `Removed ${result.linkPath}` : 'No Neon Pilot-owned user shell link found.'}\n`,
+      );
       return 0;
     }
     process.stderr.write(`Unknown cli action: ${action}\n`);
@@ -188,7 +192,7 @@ async function invokeProtocolCli(protocolId: string, protocolArgs: string[], opt
         stderr: process.stderr,
       },
       signal,
-      });
+    });
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

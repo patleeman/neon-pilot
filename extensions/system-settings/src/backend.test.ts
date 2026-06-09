@@ -50,9 +50,7 @@ describe('system-settings backend CLI', () => {
   });
 
   it('lists settings with optional prefix filtering', async () => {
-    await expect(
-      manageSettings({ cli: { command: 'settings list', args: ['conversation'] } }, {} as never),
-    ).resolves.toMatchObject({
+    await expect(manageSettings({ cli: { command: 'settings list', args: ['conversation'] } }, {} as never)).resolves.toMatchObject({
       settings: {
         'conversation.pinnedToolCalls': true,
         'conversation.transcriptDisclosure': 'auto',
@@ -74,9 +72,9 @@ describe('system-settings backend CLI', () => {
     ).resolves.toMatchObject({ key: 'conversation.pinnedToolCalls', value: false });
     expect(settingsApi.updateExtensionSettings).toHaveBeenCalledWith({ 'conversation.pinnedToolCalls': false });
 
-    await expect(
-      manageSettings({ cli: { command: 'settings set', args: ['unknown.value', 'true'] } }, {} as never),
-    ).rejects.toThrow('Unknown setting: unknown.value');
+    await expect(manageSettings({ cli: { command: 'settings set', args: ['unknown.value', 'true'] } }, {} as never)).rejects.toThrow(
+      'Unknown setting: unknown.value',
+    );
   });
 
   it('routes CLI install management through the host CLI backend API', async () => {

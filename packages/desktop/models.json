@@ -19,9 +19,7 @@
           "id": "deepseek-v4-flash",
           "name": "DeepSeek V4 Flash",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 1000000,
           "maxTokens": 384000,
           "cost": {
@@ -41,9 +39,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 400000,
           "maxTokens": 384000,
           "cost": {
@@ -63,9 +59,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 1000000,
           "maxTokens": 384000,
           "cost": {
@@ -85,9 +79,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 202752,
           "maxTokens": 32768,
           "cost": {
@@ -103,9 +95,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 202752,
           "maxTokens": 32768,
           "cost": {
@@ -121,10 +111,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text",
-            "image"
-          ],
+          "input": ["text", "image"],
           "contextWindow": 262144,
           "maxTokens": 65536,
           "cost": {
@@ -140,10 +127,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text",
-            "image"
-          ],
+          "input": ["text", "image"],
           "contextWindow": 1000000,
           "maxTokens": 128000,
           "cost": {
@@ -159,9 +143,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 1048576,
           "maxTokens": 128000,
           "cost": {
@@ -177,9 +159,7 @@
           "api": "anthropic-messages",
           "baseUrl": "https://opencode.ai/zen/go",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 204800,
           "maxTokens": 65536,
           "cost": {
@@ -195,9 +175,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 204800,
           "maxTokens": 131072,
           "cost": {
@@ -213,10 +191,7 @@
           "api": "openai-completions",
           "baseUrl": "https://opencode.ai/zen/go/v1",
           "reasoning": true,
-          "input": [
-            "text",
-            "image"
-          ],
+          "input": ["text", "image"],
           "contextWindow": 262144,
           "maxTokens": 65536,
           "cost": {
@@ -235,9 +210,7 @@
           "api": "anthropic-messages",
           "baseUrl": "https://opencode.ai/zen/go",
           "reasoning": true,
-          "input": [
-            "text"
-          ],
+          "input": ["text"],
           "contextWindow": 1000000,
           "maxTokens": 65536,
           "cost": {

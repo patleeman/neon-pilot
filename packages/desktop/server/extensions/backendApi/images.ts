@@ -40,11 +40,7 @@ export async function getImageProbeAttachmentsById(...args: unknown[]) {
 }
 
 export async function getImageProbeAttachmentsByIdFromAnySession(...args: unknown[]) {
-  return callServerModuleExport<StoredImageProbeAttachment[]>(
-    IMAGE_PROBE_STORE,
-    'getImageProbeAttachmentsByIdFromAnySession',
-    ...args,
-  );
+  return callServerModuleExport<StoredImageProbeAttachment[]>(IMAGE_PROBE_STORE, 'getImageProbeAttachmentsByIdFromAnySession', ...args);
 }
 
 export async function rememberImageProbeAttachments(...args: unknown[]) {

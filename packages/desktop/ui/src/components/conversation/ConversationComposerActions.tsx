@@ -224,13 +224,7 @@ export function ConversationComposerActions({
           )}
         </ComposerActionButton>
       ) : (
-        <ComposerActionButton
-          type="button"
-          disabled={true}
-          tone="disabled"
-          title="Send"
-          aria-label="Send"
-        >
+        <ComposerActionButton type="button" disabled={true} tone="disabled" title="Send" aria-label="Send">
           <svg
             width="14"
             height="14"
