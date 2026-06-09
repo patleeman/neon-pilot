@@ -75,7 +75,7 @@ import {
 } from '../session/sessionTabs';
 import type { GatewayState, SessionMeta } from '../shared/types';
 import { timeAgoCompact } from '../shared/utils';
-import { useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPresence, useSessionsReady } from '../store';
+import { sessionStore, useAllExecutions, useAllSessions, useAllTasks, useSession, useSessionPresence, useSessionsReady } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
 import { addNotification } from './notifications/notificationStore';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
@@ -3104,8 +3104,16 @@ export function Sidebar() {
       return;
     }
 
+    sessionStore.patch(activeConversationId, {
+      needsAttention: false,
+      attentionUnreadMessageCount: 0,
+      attentionUnreadActivityCount: 0,
+      attentionActivityIds: [],
+    });
+
     void api.markConversationAttentionRead(activeConversationId).catch(() => {
-      // Ignore optimistic attention-clear failures.
+      // Ignore attention-clear failures; the next sessions refresh restores the
+      // authoritative state if the backend did not accept the update.
     });
   }, [activeConversationId, sessions]);
 
