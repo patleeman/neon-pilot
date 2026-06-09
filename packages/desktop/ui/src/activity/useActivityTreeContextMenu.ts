@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ActivityTreeItem } from './activityTree';
 
-export interface ActivityTreeContextMenuState {
+interface ActivityTreeContextMenuState {
   item: ActivityTreeItem;
   x: number;
   y: number;

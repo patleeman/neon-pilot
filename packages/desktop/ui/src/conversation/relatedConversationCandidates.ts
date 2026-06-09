@@ -65,7 +65,7 @@ function compareRecentConversationCandidates(left: SessionMeta, right: SessionMe
   return left.title.localeCompare(right.title);
 }
 
-export function selectRecentConversationCandidates(
+function selectRecentConversationCandidates(
   sessions: SessionMeta[] | null | undefined,
   options: {
     workspaceCwd?: string | null;

@@ -373,8 +373,6 @@ export {
   hasConversationTranscriptAcceptedPendingInitialPrompt,
   shouldAutoDispatchPendingInitialPrompt,
 } from '../conversation/pendingInitialPromptLogic';
-export { constrainPromptImageDimensions } from '../conversation/promptAttachments';
-
 const ConversationArtifactModal = lazy(() =>
   import('../components/ConversationArtifactModal').then((module) => ({ default: module.ConversationArtifactModal })),
 );

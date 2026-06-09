@@ -36,11 +36,3 @@ export function dispatchOpenCompanionChat(detail: CompanionChatOpenDetail): void
  * or when the companion conversation itself is deleted.
  */
 export const COMPANION_CHAT_CLOSE_EVENT = 'pa:companion-chat-close';
-
-export interface CompanionChatCloseDetail {
-  conversationId: string;
-}
-
-export function dispatchCloseCompanionChat(detail: CompanionChatCloseDetail): void {
-  window.dispatchEvent(new CustomEvent(COMPANION_CHAT_CLOSE_EVENT, { detail }));
-}

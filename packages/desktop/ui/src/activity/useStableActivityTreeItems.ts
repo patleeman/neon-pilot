@@ -1,14 +1,4 @@
-import { useRef } from 'react';
-
 import type { ActivityTreeItem } from './activityTree';
-
-export function useStableActivityTreeItems(items: readonly ActivityTreeItem[]): readonly ActivityTreeItem[] {
-  const previousItemsRef = useRef<readonly ActivityTreeItem[] | null>(null);
-  const previousItems = previousItemsRef.current;
-  const stableItems = previousItems ? reuseStableActivityTreeItems(previousItems, items) : items;
-  previousItemsRef.current = stableItems;
-  return stableItems;
-}
 
 export function reuseStableActivityTreeItems(
   previousItems: readonly ActivityTreeItem[],

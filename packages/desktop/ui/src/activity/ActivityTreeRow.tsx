@@ -16,7 +16,7 @@ import { buildActivityTreeRowModel } from './activityTreeRowModel';
 import { sanitizeCssColor } from './cssColors';
 import type { ActivityTreeDropPosition } from './useActivityTreeDrag';
 
-export type ActivityTreeRowProps = {
+type ActivityTreeRowProps = {
   active: boolean;
   canArchive: boolean;
   canCreateChild: boolean;

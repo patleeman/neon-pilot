@@ -10,7 +10,7 @@ import type { SessionMeta } from '../shared/types';
 
 export type ThreadsOrganizeMode = 'project' | 'chronological';
 export type ThreadsFilterMode = 'all' | 'human' | 'automation';
-export type ThreadsSortMode = 'created' | 'updated';
+type ThreadsSortMode = 'created' | 'updated';
 
 export type SidebarConversationItem = {
   session: SessionMeta;

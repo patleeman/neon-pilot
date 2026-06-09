@@ -41,10 +41,6 @@ export function routeIsKnowledge(pathname: string, surfaces: ExtensionSurfaceSum
   return routeHasCapability(pathname, 'knowledgeFiles', surfaces);
 }
 
-export function routeSupportsContextRail(pathname: string, surfaces: ExtensionSurfaceSummary[] = []): boolean {
-  return routeHasCapability(pathname, 'contextRail', surfaces);
-}
-
 export function routeSupportsWorkbench(pathname: string, surfaces: ExtensionSurfaceSummary[] = []): boolean {
   return routeHasCapability(pathname, 'workbench', surfaces);
 }

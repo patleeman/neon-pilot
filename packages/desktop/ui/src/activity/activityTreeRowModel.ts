@@ -4,7 +4,7 @@ import type { ActivityTreeItem } from './activityTree';
 const ACTIVITY_TREE_ROOT_INDENT_REM = 0.25;
 const ACTIVITY_TREE_CHILD_INDENT_REM = 0.375;
 
-export function getActivityTreeRowPaddingLeftRem(item: ActivityTreeItem, depth: number): number {
+function getActivityTreeRowPaddingLeftRem(item: ActivityTreeItem, depth: number): number {
   if (item.kind === 'group') {
     return ACTIVITY_TREE_ROOT_INDENT_REM;
   }

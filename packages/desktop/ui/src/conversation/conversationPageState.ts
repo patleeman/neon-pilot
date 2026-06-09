@@ -193,7 +193,7 @@ export function resolveConversationPageTitle(input: {
   return getConversationDisplayTitle(input.titleOverride, input.streamTitle, input.liveTitle, input.detailTitle, input.sessionTitle);
 }
 
-export function replaceConversationTitleInSessionList<T extends { id: string; title: string }>(
+function replaceConversationTitleInSessionList<T extends { id: string; title: string }>(
   sessions: T[] | null,
   conversationId: string | null | undefined,
   nextTitle: string | null | undefined,

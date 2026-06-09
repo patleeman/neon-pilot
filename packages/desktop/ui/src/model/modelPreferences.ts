@@ -80,7 +80,7 @@ export function groupModelsByProvider<T extends Pick<ModelInfo, 'provider'>>(mod
   return [...groups.entries()];
 }
 
-export function modelIdHasMultipleProviders<T extends Pick<ModelInfo, 'id'>>(models: readonly T[], modelId: string): boolean {
+function modelIdHasMultipleProviders<T extends Pick<ModelInfo, 'id'>>(models: readonly T[], modelId: string): boolean {
   return models.filter((model) => model.id === modelId).length > 1;
 }
 

@@ -40,7 +40,7 @@ export function buildDraftConversationComposerStorageKey(): string {
   return DRAFT_CONVERSATION_COMPOSER_STORAGE_KEY;
 }
 
-export function buildDraftConversationCwdStorageKey(): string {
+function buildDraftConversationCwdStorageKey(): string {
   return DRAFT_CONVERSATION_CWD_STORAGE_KEY;
 }
 

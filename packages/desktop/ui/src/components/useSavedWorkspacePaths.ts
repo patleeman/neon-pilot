@@ -106,7 +106,7 @@ export function useSavedWorkspacePaths({
   };
 }
 
-export function sameStringLists(left: readonly string[], right: readonly string[]): boolean {
+function sameStringLists(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) {
     return false;
   }

@@ -12,7 +12,7 @@ export function readSessionDetailSignature(detail: SessionDetail | null | undefi
   return signature && signature.length > 0 ? signature : undefined;
 }
 
-export function readSessionDetailLastBlockId(detail: SessionDetail | null | undefined): string | undefined {
+function readSessionDetailLastBlockId(detail: SessionDetail | null | undefined): string | undefined {
   const blockId = detail?.blocks.at(-1)?.id?.trim();
   return blockId && blockId.length > 0 ? blockId : undefined;
 }
