@@ -40,11 +40,12 @@ Before reporting setup complete, run:
 neon-pilot cli status --json
 neon-pilot commands --json
 neon-pilot bootstrap doctor --json
+neon-pilot control-plane doctor --json
 neon-pilot protocol neon-pilot-agent capabilities --json
 neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
 ```
 
-If `bootstrap doctor` fails, fix the failed check before continuing. Common failures are: app not running, CLI not linked, no default provider/model, missing provider credential, or disabled Neon Pilot Agent CLI/MCP settings.
+If `bootstrap doctor` or `control-plane doctor` fails, fix the failed check before continuing. Common failures are: app not running, CLI not linked, no default provider/model, missing provider credential, stale extension discovery, or disabled Neon Pilot Agent CLI/MCP settings.
 
 ## MCP For External Orchestrators
 
