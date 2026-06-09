@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
@@ -71,11 +71,13 @@ export async function installMarketplacePackage(input: unknown, ctx: ExtensionBa
   const source = typeof body.source === 'string' ? body.source.trim() : '';
   if (!source) throw new Error('marketplace package source is required.');
 
-  const ecosystem = typeof body.ecosystem === 'string' ? body.ecosystem : 'external';
+  const prepared = await prepareMarketplacePackageSource(source, ctx);
+  const ecosystem = detectMarketplaceEcosystem(prepared.source, body.ecosystem);
+  const packageTypeForInstall = detectMarketplacePackageType(prepared.source, packageType);
   const result = await installMarketplacePackageAsExtension({
     ecosystem,
-    packageType,
-    source,
+    packageType: packageTypeForInstall,
+    source: prepared.source,
     target: body.target === 'local' || body.target === undefined ? 'local' : body.target,
     sourceBaseDir: body.sourceBaseDir,
     runtimeDir: ctx.runtimeDir,
@@ -197,6 +199,48 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
     return { ok: true, extensionId, enabled: action === 'enable', text: `${action === 'enable' ? 'Enabled' : 'Disabled'} ${extensionId}.` };
   }
   throw new Error(`Unsupported extension manager action: ${action}`);
+}
+
+async function prepareMarketplacePackageSource(source: string, ctx: ExtensionBackendContext): Promise<{ source: string; cloned: boolean }> {
+  if (!isGitSource(source)) return { source, cloned: false };
+  const importedSourcesRoot = join(ctx.runtimeDir, 'imported-plugin-sources');
+  mkdirSync(importedSourcesRoot, { recursive: true });
+  const target = join(importedSourcesRoot, `${slugifySourceLabel(source)}-${hashSource(source)}`);
+  if (existsSync(target)) rmSync(target, { recursive: true, force: true });
+  const result = await ctx.shell.exec({
+    command: 'git',
+    args: ['clone', '--depth', '1', source, target],
+    timeoutMs: 120_000,
+    maxBuffer: 1024 * 1024,
+  });
+  if (result.stderr && !existsSync(target)) throw new Error(result.stderr.trim());
+  return { source: target, cloned: true };
+}
+
+function isGitSource(source: string): boolean {
+  return /^(git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)/i.test(source) || source.endsWith('.git');
+}
+
+function detectMarketplaceEcosystem(source: string, requested: unknown): string {
+  if (existsSync(join(source, '.codex-plugin', 'plugin.json'))) return 'codex';
+  if (existsSync(join(source, '.claude-plugin', 'plugin.json')) || existsSync(join(source, '.claude-plugin'))) return 'claude';
+  return typeof requested === 'string' && requested.trim() ? requested.trim() : 'external';
+}
+
+function detectMarketplacePackageType(source: string, requested: MarketplaceBehaviorPackageType): MarketplaceBehaviorPackageType {
+  if (existsSync(join(source, '.codex-plugin', 'plugin.json')) || existsSync(join(source, '.claude-plugin'))) return 'agent';
+  return requested;
+}
+
+function slugifySourceLabel(source: string): string {
+  const label = basename(source.replace(/\.git$/, '').replace(/\/$/, '')) || 'plugin';
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'plugin';
+}
+
+function hashSource(source: string): string {
+  let hash = 0;
+  for (let index = 0; index < source.length; index += 1) hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
+  return hash.toString(16).padStart(8, '0');
 }
 
 function normalizeManagerInput(input: unknown): Record<string, unknown> {

@@ -1779,7 +1779,7 @@ function InstallExtensionModal({
     >
       <DialogHeader
         title="Install Extension"
-        description="Install a Neon Pilot extension or import an agent plugin as a Neon Pilot extension."
+        description="Install Neon Pilot extensions, or import Codex/Claude agent plugins as managed compatibility packages."
         className="px-6 py-4"
         actions={
           <IconButton type="button" onClick={onClose} aria-label="Close install dialog" title="Close">
@@ -1812,7 +1812,7 @@ function InstallExtensionModal({
           </Button>
         </div>
         <p className="text-[12px] leading-5 text-dim">
-          Neon Pilot extensions install directly. Agent plugins, including Codex and Claude-style packages, are imported as extensions.
+          Extensions are Neon Pilot app packages that can add UI, tools, settings, and backend actions. Agent plugins are portable Codex/Claude-style instruction packages; Neon Pilot imports compatible content as a managed wrapper, not as a native app extension.
         </p>
 
         <section className="space-y-2">

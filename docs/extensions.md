@@ -4,6 +4,8 @@ The normal way to create a Neon Pilot extension is to ask your agent to build it
 
 This reference covers the extension package contract: manifests, frontend/backend entries, tools, skills, agent hooks, event bus, permissions, build behavior, and integration testing. Use it when implementing or debugging an extension, not as the first stop for a user who just wants a new feature.
 
+Terminology: **extensions** are Neon Pilot app packages that can add UI, tools, backend actions, settings, and skills. **Agent plugins** are portable Codex/Claude-style capability packages, often with files such as `.codex-plugin/plugin.json`; they are imported as managed compatibility packages and may contribute instructions or skills, but they are not native app extensions unless wrapped with `extension.json` and built extension artifacts.
+
 ## Contents
 
 - [Agent-first workflow](#agent-first-workflow)
