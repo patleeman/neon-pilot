@@ -368,7 +368,7 @@ describe('registerExtensionRoutes', () => {
           extensionId: 'agent-board',
           surfaceId: 'open-board-rail',
           packageType: 'user',
-          title: 'Open Board Rail',
+          title: 'Open Board Rail panel',
           action: 'rail.open',
           args: { extensionId: 'agent-board', surfaceId: 'board-rail' },
           icon: 'kanban',
