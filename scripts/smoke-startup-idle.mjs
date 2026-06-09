@@ -89,11 +89,20 @@ async function main() {
     }
     const executablePath = join(launchApp, 'Contents', 'MacOS', basename(launchApp, '.app'));
     if (!existsSync(executablePath)) throw new Error(`Packaged app executable not found: ${executablePath}`);
-    child = spawn(executablePath, [desktopMainFile, '--no-quit-confirmation', `--neon-pilot-state-root=${stateRoot}`], {
+    const isPackagedApp = Boolean(app);
+    const launchArgs = isPackagedApp
+      ? ['--no-quit-confirmation', `--neon-pilot-state-root=${stateRoot}`]
+      : [desktopMainFile, '--no-quit-confirmation', `--neon-pilot-state-root=${stateRoot}`];
+    child = spawn(executablePath, launchArgs, {
       env: {
         ...env,
-        NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
-        NEON_PILOT_REPO_ROOT: repo,
+        ELECTRON_RUN_AS_NODE: undefined,
+        ...(isPackagedApp
+          ? {}
+          : {
+              NEON_PILOT_DESKTOP_DEV_BUNDLE: '1',
+              NEON_PILOT_REPO_ROOT: repo,
+            }),
         NEON_PILOT_RUNTIME_CHANNEL: 'test',
         NEON_PILOT_DESKTOP_USER_DATA_DIR: join(stateRoot, 'user-data'),
         NEON_PILOT_DAEMON_SOCKET_PATH: join(stateRoot, 'daemon.sock'),
