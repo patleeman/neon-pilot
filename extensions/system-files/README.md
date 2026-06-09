@@ -30,6 +30,10 @@ The tree follows the filesystem. Directories that match common ignore patterns (
 
 Type `@` in the composer to open a fuzzy-search overlay. Start typing a filename and matching files from the workspace appear. Select one to insert a file reference that the agent can read.
 
+### Transcript path links
+
+Plain file paths in conversation messages render as links. Workspace-relative paths open the File Explorer in Workbench with that file selected. Absolute paths inside the conversation workspace are converted to workspace-relative paths before opening; absolute paths outside the workspace fall back to the desktop shell path opener.
+
 ### Drag and drop
 
 Drag files from the File Explorer into the composer to attach them to the message. The file content is included in the prompt.

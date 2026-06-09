@@ -269,7 +269,7 @@ import { useWorkspaceComposerEvents } from '../conversation/useWorkspaceComposer
 import { shouldAutoResumeDeferredResumes } from '../deferred-resume/deferredResumeAutoResume';
 import { describeDeferredResumeStatus, resolveDeferredResumePresentationState } from '../deferred-resume/deferredResumeIndicator';
 import { parseDeferredResumeSlashCommand } from '../deferred-resume/deferredResumeSlashCommand';
-import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT } from '../desktop/desktopBridge';
+import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, getDesktopBridge } from '../desktop/desktopBridge';
 import { ComposerShelfHost } from '../extensions/ComposerShelfHost';
 import { ConversationHeaderHost } from '../extensions/ConversationHeaderHost';
 import { ConversationLifecycleHost } from '../extensions/ConversationLifecycleHost';
@@ -424,6 +424,41 @@ const MAX_RENDERED_BLOCKS = 300;
 const HISTORICAL_PREFETCH_SCROLL_THRESHOLD_PX = 700;
 const HISTORICAL_PREFETCH_COOLDOWN_MS = 800;
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
+const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
+
+function stripTranscriptPathLineSuffix(path: string): string {
+  return path.trim().replace(/:\d+(?::\d+)?$/, '');
+}
+
+function resolveTranscriptWorkspaceFilePath(path: string, cwd: string | null): string | null {
+  const normalizedPath = stripTranscriptPathLineSuffix(path);
+  if (!normalizedPath) {
+    return null;
+  }
+
+  if (normalizedPath.startsWith('./')) {
+    return normalizedPath.slice(2);
+  }
+
+  if (!normalizedPath.startsWith('/') && !normalizedPath.startsWith('~/') && !normalizedPath.startsWith('../')) {
+    return normalizedPath;
+  }
+
+  if (!cwd) {
+    return null;
+  }
+
+  const normalizedCwd = cwd.replace(/\/+$/, '');
+  if (normalizedPath === normalizedCwd) {
+    return null;
+  }
+
+  if (normalizedPath.startsWith(`${normalizedCwd}/`)) {
+    return normalizedPath.slice(normalizedCwd.length + 1);
+  }
+
+  return null;
+}
 const EMPTY_PENDING_BROWSER_COMMENTS: PendingBrowserComment[] = [];
 
 export { shouldEnableMessageForkControls };
@@ -2279,6 +2314,35 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
         sessionCwd: currentSessionMeta?.cwd,
       }),
     [draft, draftCwdValue, liveSessionContext?.cwd, currentSessionMeta?.cwd],
+  );
+  const openTranscriptFilePath = useCallback(
+    (path: string) => {
+      const normalizedPath = stripTranscriptPathLineSuffix(path);
+      if (!normalizedPath) {
+        return;
+      }
+
+      const knowledgeMarker = '/knowledge-base/repo/';
+      const knowledgeMarkerIndex = normalizedPath.indexOf(knowledgeMarker);
+      if (knowledgeMarkerIndex >= 0) {
+        openKnowledgeFilePath(normalizedPath.slice(knowledgeMarkerIndex + knowledgeMarker.length));
+        return;
+      }
+
+      const workspaceFilePath = resolveTranscriptWorkspaceFilePath(normalizedPath, currentCwd);
+      if (workspaceFilePath) {
+        setAppLayoutMode('workbench');
+        writeAppLayoutMode('workbench');
+        window.dispatchEvent(new CustomEvent(WORKBENCH_OPEN_WORKSPACE_FILE_EVENT, { detail: { path: workspaceFilePath } }));
+        return;
+      }
+
+      const desktopBridge = getDesktopBridge();
+      if (desktopBridge?.openPath && (normalizedPath.startsWith('/') || normalizedPath.startsWith('~/'))) {
+        void desktopBridge.openPath(normalizedPath);
+      }
+    },
+    [currentCwd, openKnowledgeFilePath],
   );
   const currentCwdLabel = useMemo(() => formatConversationCwdLabel(currentCwd), [currentCwd]);
   const hasDraftCwd = hasDraftConversationCwd(draftCwdValue);
@@ -6056,7 +6120,7 @@ export function ConversationPage({ draft = false }: { draft?: boolean }) {
                 onOpenCheckpoint={renderingStaleTranscript ? undefined : openCheckpoint}
                 activeCheckpointId={renderingStaleTranscript ? null : selectedCheckpointId}
                 onOpenBrowser={renderingStaleTranscript ? undefined : openWorkbenchBrowser}
-                onOpenFilePath={renderingStaleTranscript ? undefined : openKnowledgeFilePath}
+                onOpenFilePath={renderingStaleTranscript ? undefined : openTranscriptFilePath}
                 onSubmitAskUserQuestion={renderingStaleTranscript ? undefined : submitAskUserQuestion}
                 askUserQuestionDisplayMode="composer"
                 onResumeConversation={renderingStaleTranscript || !conversationResumeState.canResume ? undefined : resumeConversation}

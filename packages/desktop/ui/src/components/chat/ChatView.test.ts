@@ -224,7 +224,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('ui-markdown-code-copy');
   });
 
-  it('does not auto-link file paths inside assistant message text', () => {
+  it('auto-links plain file paths inside assistant message text', () => {
     const html = renderAssistantText(
       [
         'Touch packages/desktop/ui/src/app/App.tsx next.',
@@ -239,8 +239,9 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain('packages/desktop/ui/src/app/App.tsx');
     expect(html).toContain('packages/desktop/ui/src/app/main.tsx');
     expect(html).toContain('relative file');
-    expect(html).not.toContain('data-file-path-link=');
-    expect(html).not.toContain('role="button"');
+    expect(html.match(/href="file:\/\/packages\/desktop\/ui\/src\/app\//g)).toHaveLength(2);
+    expect(html).toContain('title="Open packages/desktop/ui/src/app/App.tsx in File Explorer"');
+    expect(html).toContain('title="Open packages/desktop/ui/src/app/main.tsx in File Explorer"');
     expect(html).not.toContain('href="packages/desktop/ui/src/content/latexArtifacts.ts"');
   });
 

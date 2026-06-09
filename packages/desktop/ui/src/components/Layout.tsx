@@ -107,6 +107,7 @@ const WORKBENCH_EXPLORER_WIDTH_STORAGE_KEY = 'pa:workbench-explorer-width';
 const WORKBENCH_EXPLORER_OPEN_STORAGE_KEY = 'pa:workbench-explorer-open';
 const WORKBENCH_OPEN_TOOL_TAB_EVENT = 'pa:workbench-open-tool-tab';
 const WORKBENCH_OPEN_ARTIFACT_TAB_EVENT = 'pa:workbench-open-artifact-tab';
+const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
 const WORKBENCH_CLOSE_TAB_EVENT = 'pa:workbench-close-tab';
 const BROWSER_TABS_CHANGED_EVENT = 'pa:system-browser-tabs-changed';
 
@@ -2206,6 +2207,27 @@ export function Layout() {
       });
     }
 
+    function handleOpenWorkbenchWorkspaceFile(event: Event) {
+      const path = (event as CustomEvent<{ path?: unknown }>).detail?.path;
+      if (typeof path !== 'string' || path.trim().length === 0 || !activeConversationId) return;
+      const workspaceFile = path.trim().replace(/^\.\/+/, '');
+      handleAppLayoutModeChange('workbench');
+      setSelectedWorkspaceFileByConversation((current) => ({
+        ...current,
+        [activeConversationId]: workspaceFile,
+      }));
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete('file');
+        next.delete('artifact');
+        next.delete('checkpoint');
+        next.delete('run');
+        next.set('workspaceFile', workspaceFile);
+        return next;
+      });
+      setActiveConversationTool('files');
+    }
+
     function handleCloseWorkbenchTab(event: Event) {
       const tabId = (event as CustomEvent<{ tabId?: unknown }>).detail?.tabId;
       if (typeof tabId !== 'string' || tabId.trim().length === 0) return;
@@ -2217,6 +2239,7 @@ export function Layout() {
     window.addEventListener(DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, handleShowWorkbenchBrowser);
     window.addEventListener(WORKBENCH_OPEN_TOOL_TAB_EVENT, handleOpenWorkbenchToolTab);
     window.addEventListener(WORKBENCH_OPEN_ARTIFACT_TAB_EVENT, handleOpenWorkbenchArtifactTab);
+    window.addEventListener(WORKBENCH_OPEN_WORKSPACE_FILE_EVENT, handleOpenWorkbenchWorkspaceFile);
     window.addEventListener(WORKBENCH_CLOSE_TAB_EVENT, handleCloseWorkbenchTab);
     return () => {
       window.removeEventListener(DESKTOP_SHORTCUT_EVENT, handleDesktopShortcut);
@@ -2224,9 +2247,11 @@ export function Layout() {
       window.removeEventListener(DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, handleShowWorkbenchBrowser);
       window.removeEventListener(WORKBENCH_OPEN_TOOL_TAB_EVENT, handleOpenWorkbenchToolTab);
       window.removeEventListener(WORKBENCH_OPEN_ARTIFACT_TAB_EVENT, handleOpenWorkbenchArtifactTab);
+      window.removeEventListener(WORKBENCH_OPEN_WORKSPACE_FILE_EVENT, handleOpenWorkbenchWorkspaceFile);
       window.removeEventListener(WORKBENCH_CLOSE_TAB_EVENT, handleCloseWorkbenchTab);
     };
   }, [
+    activeConversationId,
     activeRightRailControl,
     appLayoutMode,
     canToggleWorkbench,
@@ -2242,6 +2267,8 @@ export function Layout() {
     openWorkbenchToolTab,
     extensionRightToolPanels,
     systemBrowserExtensionSurface,
+    setActiveConversationTool,
+    setSearchParams,
   ]);
 
   return (

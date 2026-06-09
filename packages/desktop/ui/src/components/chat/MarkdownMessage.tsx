@@ -17,9 +17,12 @@ function MentionPill({ text }: { text: string }) {
 
 type EnhancedTextFragment = {
   text: string;
-  kind: 'text' | 'mention' | 'commit' | 'knowledge-file';
+  kind: 'text' | 'mention' | 'commit' | 'knowledge-file' | 'file-path';
   fileId?: string;
 };
+
+const FILE_PATH_TRAILING_PUNCTUATION = /[),.;:!?\]}>]+$/;
+const FILE_PATH_WITH_LINE_SUFFIX = /^(.+?)(?::\d+(?::\d+)?)?$/;
 
 function looksLikeCommitHash(value: string): boolean {
   const normalized = value.trim();
@@ -43,7 +46,7 @@ function CommitHashButton({ hash, onOpenCheckpoint }: { hash: string; onOpenChec
 }
 
 function readKnowledgeBaseFileIdFromPath(value: string): string | null {
-  const normalized = value.trim().replace(/[),.;:!?\]}>]+$/, '');
+  const normalized = value.trim().replace(FILE_PATH_TRAILING_PUNCTUATION, '');
   const marker = '/knowledge-base/repo/';
   const markerIndex = normalized.indexOf(marker);
   if (markerIndex < 0 || normalized.endsWith('/')) {
@@ -72,7 +75,59 @@ function KnowledgeFileLink({ path, fileId, onOpenFilePath }: { path: string; fil
         }
 
         event.preventDefault();
-        onOpenFilePath(fileId);
+        onOpenFilePath(`/knowledge-base/repo/${fileId}`);
+      }}
+    >
+      {path}
+    </a>
+  );
+}
+
+function trimPathToken(value: string): string {
+  return value.trim().replace(FILE_PATH_TRAILING_PUNCTUATION, '');
+}
+
+function normalizePathTarget(value: string): string {
+  const trimmed = trimPathToken(value);
+  return trimmed.match(FILE_PATH_WITH_LINE_SUFFIX)?.[1] ?? trimmed;
+}
+
+function looksLikeFilePath(value: string): boolean {
+  const normalized = normalizePathTarget(value);
+  if (!normalized || normalized.endsWith('/')) {
+    return false;
+  }
+
+  if (/^(?:https?|file):\/\//i.test(normalized)) {
+    return false;
+  }
+
+  if (/^(?:\/|~\/|\.{1,2}\/)/.test(normalized)) {
+    return normalized.includes('/');
+  }
+
+  return /^[A-Za-z0-9_.+-]+(?:\/[A-Za-z0-9_.+-]+)+$/.test(normalized) && /\/[^/\s]+\.[A-Za-z0-9][A-Za-z0-9_-]*$/.test(normalized);
+}
+
+function FilePathLink({ path, onOpenFilePath }: { path: string; onOpenFilePath?: (path: string) => void }) {
+  if (!onOpenFilePath) {
+    return <React.Fragment>{path}</React.Fragment>;
+  }
+
+  const targetPath = normalizePathTarget(path);
+
+  return (
+    <a
+      href={`file://${encodeURI(targetPath)}`}
+      className="font-mono text-[0.82em] text-accent underline decoration-accent/35 underline-offset-2 transition-colors hover:decoration-accent"
+      title={`Open ${targetPath} in File Explorer`}
+      onClick={(event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
+          return;
+        }
+
+        event.preventDefault();
+        onOpenFilePath(targetPath);
       }}
     >
       {path}
@@ -82,7 +137,8 @@ function KnowledgeFileLink({ path, fileId, onOpenFilePath }: { path: string; fil
 
 function splitEnhancedTextFragments(text: string): EnhancedTextFragment[] {
   const fragments: EnhancedTextFragment[] = [];
-  const tokenRegex = /\/[^\s`<>]*knowledge-base\/repo\/[^\s`<>]+|@[A-Za-z0-9_][A-Za-z0-9_./-]*|[A-Fa-f0-9]{7,64}/g;
+  const tokenRegex =
+    /\/[^\s`<>]*knowledge-base\/repo\/[^\s`<>]+|(?:~?\/|\.{1,2}\/)[^\s`<>]+|[A-Za-z0-9_.+-]+(?:\/[A-Za-z0-9_.+-]+)+(?::\d+(?::\d+)?)?|@[A-Za-z0-9_][A-Za-z0-9_./-]*|[A-Fa-f0-9]{7,64}/g;
   let cursor = 0;
   let match: RegExpExecArray | null = null;
 
@@ -93,7 +149,7 @@ function splitEnhancedTextFragments(text: string): EnhancedTextFragment[] {
 
     const knowledgeFileId = rawToken.startsWith('/') ? readKnowledgeBaseFileIdFromPath(rawToken) : null;
     if (knowledgeFileId) {
-      const path = rawToken.replace(/[),.;:!?\]}>]+$/, '');
+      const path = trimPathToken(rawToken);
       if (start > cursor) {
         fragments.push({ text: text.slice(cursor, start), kind: 'text' });
       }
@@ -103,8 +159,19 @@ function splitEnhancedTextFragments(text: string): EnhancedTextFragment[] {
       continue;
     }
 
+    if (looksLikeFilePath(rawToken)) {
+      const path = trimPathToken(rawToken);
+      if (start > cursor) {
+        fragments.push({ text: text.slice(cursor, start), kind: 'text' });
+      }
+
+      fragments.push({ text: path, kind: 'file-path' });
+      cursor = start + path.length;
+      continue;
+    }
+
     if (rawToken.startsWith('@')) {
-      const mention = rawToken.replace(/[),.;:!?\]}>]+$/, '');
+      const mention = trimPathToken(rawToken);
       const end = start + mention.length;
       const shouldSkip = start > 0 && /[\w./+-]/.test(previous);
 
@@ -170,6 +237,10 @@ function renderEnhancedTextFragments(
           onOpenFilePath={options?.onOpenFilePath}
         />
       );
+    }
+
+    if (fragment.kind === 'file-path') {
+      return <FilePathLink key={`${fragment.text}-${index}`} path={fragment.text} onOpenFilePath={options?.onOpenFilePath} />;
     }
 
     return <React.Fragment key={`${index}-${fragment.text}`}>{fragment.text}</React.Fragment>;
@@ -301,6 +372,10 @@ function MarkdownInlineCodeWithCommitHash({
   const knowledgeFileId = !isBlock ? readKnowledgeBaseFileIdFromPath(content) : null;
   if (knowledgeFileId && onOpenFilePath) {
     return <KnowledgeFileLink path={content} fileId={knowledgeFileId} onOpenFilePath={onOpenFilePath} />;
+  }
+
+  if (!isBlock && onOpenFilePath && looksLikeFilePath(content)) {
+    return <FilePathLink path={content} onOpenFilePath={onOpenFilePath} />;
   }
 
   return <InlineMarkdownCode className={className}>{children}</InlineMarkdownCode>;
