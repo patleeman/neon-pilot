@@ -134,7 +134,8 @@ describe('extensionConversations', () => {
 
     expect(live.createSession).toHaveBeenCalledWith('/repo', { initialModel: 'model-2', allowedToolNames: ['bash'] });
     expect(entry.session.setSessionName).toHaveBeenCalledWith('Created Title');
-    expect(entry.session.followUp).toHaveBeenCalledWith('Start here');
+    expect(entry.session.prompt).toHaveBeenCalledWith('Start here');
+    expect(entry.session.followUp).not.toHaveBeenCalled();
     expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
     expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'open_session', sessionId: 'conv-1' });
     expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {

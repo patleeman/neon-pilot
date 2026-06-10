@@ -438,7 +438,7 @@ export function createExtensionConversationsCapability(
       }
       if (initialPrompt) {
         const entry = liveSessionRegistry.get(created.id);
-        if (entry) await entry.session.followUp(initialPrompt);
+        if (entry) await entry.session.prompt(initialPrompt);
       }
 
       await addCreatedConversationToWorkspace(created.id);
