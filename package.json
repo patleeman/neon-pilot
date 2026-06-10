@@ -46,6 +46,7 @@
     "check:extensions:static": "node scripts/check-extension-worker-coverage.mjs && node scripts/check-extension-backend-api.mjs && node scripts/check-filesystem-authority.mjs && node scripts/check-conversation-storage-boundary.mjs && node scripts/check-core-extension-boundary.mjs && node scripts/check-product-extension-host-seam.mjs && node scripts/check-extension-permission-boundary.mjs && node scripts/check-extension-host-runtime-boundary.mjs && node scripts/check-packaged-extensions.mjs",
     "check:release": "pnpm run build:ts && pnpm run build:extensions && pnpm test && pnpm run check:extensions:static && pnpm run check:release:doctor",
     "check:release:doctor": "node scripts/release-reliability-doctor.mjs",
+    "qa:release": "node scripts/release-qa.mjs",
     "check:extension-runtime-contracts": "vitest run packages/desktop/server/extensions/manifestToolAgentExtension.test.ts packages/desktop/server/extensions/extensionBackend.test.ts extensions/system-runs/src/backend.test.ts",
     "extensions:bundle-report": "node scripts/report-extension-bundles.mjs",
     "fix": "pnpm run fmt:fix && pnpm run lint:fix",

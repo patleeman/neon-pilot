@@ -73,14 +73,15 @@ Each release command performs these steps in order:
 4. **Dependency sync** — updates workspace package versions and regenerates `pnpm-lock.yaml`
 5. **Changelog scaffold** — adds a dated `CHANGELOG.md` section with a release-note TODO and commit count since the previous tag
 6. **Release note edit** — replace the TODO with 3-6 human-written bullets summarizing user-visible outcomes and important reliability/build changes; do not dump raw commit messages
-7. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot, including TypeScript, Settings page render tests, extension smoke tests, and packaged extension validation
-8. **Build** — builds signed desktop artifacts locally
-9. **Extension golden smoke** — launches the packaged app in isolated state, verifies the release-critical extension matrix, opens extension routes, and invokes representative extension backend actions
-10. **Notarize** — submits the built `.app` for Apple notarization
-11. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
-12. **Git push** — pushes the version commit and tag to the remote
-13. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
-14. **First-party extension release** — publish the matching `patleeman/neon-pilot-extensions` release tag and assets for the same app version. The release must include `neon-extension-catalog.json` plus every stable `.neon-extension.zip` package that should appear in Settings → Extensions → Install.
+7. **Pre-release checks** — runs `pnpm run check:release` from a clean release snapshot, including TypeScript, Settings page render tests, extension smoke tests, packaged extension validation, and the release reliability doctor
+8. **Release QA** — run `pnpm run qa:release` and complete the hands-on checklist in `docs/release-qa.md` against the app build or packaged release candidate; record commit SHA, build, and pass/fail notes before continuing
+9. **Build** — builds signed desktop artifacts locally
+10. **Extension golden smoke** — launches the packaged app in isolated state, verifies the release-critical extension matrix, opens extension routes, and invokes representative extension backend actions
+11. **Notarize** — submits the built `.app` for Apple notarization
+12. **Smoke test** — launches the built app in an isolated environment and verifies basic functionality
+13. **Git push** — pushes the version commit and tag to the remote
+14. **GitHub release** — creates or updates the matching release in the releases repository, using the matching `CHANGELOG.md` section as the release notes
+15. **First-party extension release** — publish the matching `patleeman/neon-pilot-extensions` release tag and assets for the same app version. The release must include `neon-extension-catalog.json` plus every stable `.neon-extension.zip` package that should appear in Settings → Extensions → Install.
 
 Use `pnpm run release:verify-local` for release-blocking repro and iteration before rerunning `pnpm run release:publish`. It builds the full signed desktop app with Electron Builder `--publish never`, packages installable extensions, validates packaged extensions, then runs the extension golden smoke, automated release smoke, seeded startup idle smoke, and full desktop performance smoke against `dist/release/*.app`. It intentionally does not notarize, push tags, create releases, or upload assets.
 

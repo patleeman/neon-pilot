@@ -34,6 +34,7 @@ neon-pilot is Patrick's personal AI agent runtime. Keep core small and build use
 - For extension/core boundary work, run `pnpm run check:extensions:static` or at least `node scripts/check-core-extension-boundary.mjs && node scripts/check-extension-backend-api.mjs`.
 - If you modify web UI, perform a visual check. Use the repo wrapper for agent-browser sessions and clean up only processes you started.
 - Before final summary, use the `checkpoint` skill/tool for a targeted commit when available; otherwise use git directly. Do not stage unrelated files.
+- Before cutting a Neon Pilot release, run the release reliability gate and hands-on QA process in `docs/release-qa.md`. At minimum run `pnpm run check:release:doctor`, `pnpm run test:release-hardening`, and `pnpm run qa:release`, then record the app build, commit SHA, and pass/fail notes for the hands-on smoke checklist.
 
 ## UI design bans
 
