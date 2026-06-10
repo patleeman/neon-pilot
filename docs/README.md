@@ -23,7 +23,6 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Conversation context](conversation-context.md) — attach files, folders, and generated context
 - [Conversations](conversations.md) — live threads, branching, async follow-through
 - [Projects](projects.md) — project records and workspace metadata
-- [Embedded Personal Agents](embedded-personal-agents.md) — OpenClaw/Hermes-inspired personal agents, soul documents, gateways, automations, and sidebar shape
 - [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
@@ -83,7 +82,6 @@ Feature-specific documentation lives beside the owning extension package:
 - [MCP](../extensions/system-mcp/README.md)
 - [Model Picker](../extensions/system-model-picker/README.md)
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run onboarding bootstrap and conversation flow
-- [Personal Agents](../installable-extensions/system-personal-agents/README.md) — installable profiles, soul documents, gateways, and dedicated agent chats
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md)
 - [Runs](../extensions/system-runs/README.md)
