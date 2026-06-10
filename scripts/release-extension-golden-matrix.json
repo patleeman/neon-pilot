@@ -103,8 +103,7 @@
       "bash",
       "background_bash",
       "checkpoint",
-      "conversation_admin",
-      "conversation_inspect",
+      "neon_pilot",
       "mcp",
       "scheduled_task",
       "subagent",
@@ -126,11 +125,11 @@
         "text": ["tasks"]
       },
       {
-        "name": "conversation_inspect",
-        "extensionId": "system-conversation-tools",
-        "actionId": "conversationInspect",
-        "input": { "action": "list", "limit": 1 },
-        "text": ["ok"]
+        "name": "neon_pilot",
+        "extensionId": "system-neon-pilot-admin-cli",
+        "actionId": "neonPilotTool",
+        "input": { "action": "list_admin_commands" },
+        "text": ["list_app_commands"]
       },
       {
         "name": "mcp",
