@@ -1932,7 +1932,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { versions } = useAppEvents();
-  const { titles: liveTitles, pushTitle } = useLiveTitles();
+  const { titles: liveTitles, setTitle: pushTitle } = useLiveTitles();
   const sessions = useAllSessions();
   const sessionsReady = useSessionsReady();
   const tasks = useAllTasks();

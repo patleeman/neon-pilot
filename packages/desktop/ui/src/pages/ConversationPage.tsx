@@ -1426,7 +1426,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     if (shouldPushLiveTitle && id && normalizedTitle) {
       pushTitle(id, normalizedTitle);
-      sessionStore.patch(id, { title: normalizedTitle });
     }
   }, [draft, id, pushTitle, stream.title, titles]);
 

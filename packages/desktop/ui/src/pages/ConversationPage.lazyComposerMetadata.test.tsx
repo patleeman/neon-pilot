@@ -351,6 +351,7 @@ describe('ConversationPage lazy composer metadata', () => {
     });
 
     expect(patchSpy).not.toHaveBeenCalledWith('conv-regression', expect.objectContaining({ isRunning: true }));
+    expect(patchSpy).not.toHaveBeenCalledWith('conv-regression', expect.objectContaining({ title: 'Regression conversation' }));
   });
 
   it('defers saved-conversation model catalog loading past initial route settle', async () => {
