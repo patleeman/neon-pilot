@@ -57,6 +57,7 @@ function createExtension() {
     status: 'enabled',
     packageType: 'user',
     packageRoot: '/tmp/menu-test',
+    uninstallable: true,
     routes: [],
     manifest: { contributes: { views: [] } },
     diagnostics: [],
@@ -94,6 +95,7 @@ function createSystemExtension() {
     id: 'system-menu-test',
     name: 'System Menu Test',
     packageType: 'system',
+    uninstallable: false,
   } as never;
 }
 
@@ -391,6 +393,28 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Agent Browser')).toBeTruthy();
+  });
+
+  it('uninstalls runtime-installed system-declared extensions', async () => {
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createSystemExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        uninstallable: true,
+      } as never,
+    ]);
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn().mockResolvedValue(true) },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction: vi.fn().mockResolvedValue({ ok: true, version: '0.1.0', tag: 'v0.1.0', extensions: [] }) },
+    });
+
+    expect(await screen.findByText('Browser')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Uninstall'));
+
+    await waitFor(() => expect(mocks.deleteExtension).toHaveBeenCalledWith('system-browser'));
   });
 
   it('removes deleted catalog-installed extensions from the installed list', async () => {

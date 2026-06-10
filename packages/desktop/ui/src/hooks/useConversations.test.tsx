@@ -420,8 +420,15 @@ describe('useConversations', () => {
     expect(localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)).toBe('remote-conv');
   });
 
-  it('loads row metadata for locally open ids before the full sessions snapshot arrives', async () => {
+  it('loads row metadata for backend-open ids before the full sessions snapshot arrives', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-one']));
+    apiMocks.openConversationTabs.mockResolvedValue({
+      sessionIds: ['open-one'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+    });
 
     renderStatefulProbe({
       sessions: null,
@@ -437,6 +444,13 @@ describe('useConversations', () => {
 
   it('does not let stale remote layout sync close locally visible live conversation tabs', async () => {
     localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-live']));
+    apiMocks.openConversationTabs.mockResolvedValueOnce({
+      sessionIds: ['conv-live'],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      activeConversationId: null,
+      workspacePaths: [],
+    });
     apiMocks.openConversationTabs.mockResolvedValue({
       sessionIds: [],
       pinnedSessionIds: [],
@@ -472,6 +486,13 @@ describe('useConversations', () => {
   describe('bootstrap / individual sessionMeta fetch race', () => {
     it('preserves all open IDs when individual sessionMeta fetches resolve out of order', async () => {
       localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-a', 'open-b', 'open-c']));
+      apiMocks.openConversationTabs.mockResolvedValue({
+        sessionIds: ['open-a', 'open-b', 'open-c'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: null,
+        workspacePaths: [],
+      });
 
       // Deferred promises let us control resolution order.
       let resolveA!: (session: SessionMeta) => void;
@@ -521,6 +542,13 @@ describe('useConversations', () => {
 
     it('does not let individual sessionMeta fetches overwrite a later-arriving full snapshot', async () => {
       localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['open-a', 'open-b']));
+      apiMocks.openConversationTabs.mockResolvedValue({
+        sessionIds: ['open-a', 'open-b'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        activeConversationId: null,
+        workspacePaths: [],
+      });
 
       let resolveA!: (session: SessionMeta) => void;
       let resolveB!: (session: SessionMeta) => void;

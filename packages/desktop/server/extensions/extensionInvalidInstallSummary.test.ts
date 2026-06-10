@@ -14,6 +14,7 @@ describe('extensionInvalidInstallSummary', () => {
       status: 'invalid',
       errors: ['oops'],
       packageRoot: '/tmp/bad',
+      uninstallable: true,
       manifest: { schemaVersion: 2, id: 'bad', name: 'Bad', packageType: 'user' },
       permissions: [],
       surfaces: [],

@@ -43,6 +43,7 @@ interface ConversationInspectSessionSummary {
   lastActivityAt: string;
   isLive: boolean;
   isRunning: boolean;
+  isArchived: boolean;
   isCurrent: boolean;
   messageCount: number;
 }
@@ -60,6 +61,7 @@ interface ConversationInspectSessionSnapshotEntry {
   lastActivityAt?: string;
   isLive?: boolean;
   isRunning?: boolean;
+  isArchived?: boolean;
   messageCount?: number;
 }
 
@@ -530,7 +532,10 @@ function statusLabel(session: ConversationInspectSessionSummary): string {
   if (session.isLive) {
     return 'live';
   }
-  return 'archived';
+  if (session.isArchived) {
+    return 'archived';
+  }
+  return 'stored';
 }
 
 function toInspectableSessionRecord(
@@ -554,6 +559,7 @@ function toInspectableSessionRecord(
     lastActivityAt,
     isLive: Boolean(session.isLive),
     isRunning: Boolean(session.isRunning),
+    isArchived: Boolean(session.isArchived),
     isCurrent: id === currentConversationId,
     messageCount: readNonNegativeInteger(session.messageCount),
     file,
@@ -583,6 +589,7 @@ function buildInspectableSessionsFromService(currentConversationId?: string): Co
     lastActivityAt: session.lastActivityAt ?? session.timestamp,
     isLive: Boolean(session.isLive),
     isRunning: Boolean(session.isRunning),
+    isArchived: false,
     isCurrent: session.id === currentConversationId,
     messageCount: session.messageCount,
     file: session.file,
@@ -634,7 +641,7 @@ function collectInspectableSessions(
         case 'live':
           return session.isLive;
         case 'archived':
-          return !session.isLive;
+          return session.isArchived;
         default:
           return true;
       }

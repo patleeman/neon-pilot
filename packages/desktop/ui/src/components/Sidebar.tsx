@@ -1932,7 +1932,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { versions } = useAppEvents();
-  const { titles: liveTitles } = useLiveTitles();
+  const { titles: liveTitles, pushTitle } = useLiveTitles();
   const sessions = useAllSessions();
   const sessionsReady = useSessionsReady();
   const tasks = useAllTasks();
@@ -3344,9 +3344,17 @@ export function Sidebar() {
     defaultLabel: string;
     currentLabel: string;
   } | null>(null);
+  const [renameConversationPrompt, setRenameConversationPrompt] = useState<{
+    conversationId: string;
+    currentTitle: string;
+  } | null>(null);
 
   const handleRenameConversationGroup = useCallback((groupKey: string, defaultLabel: string, currentLabel: string) => {
     setRenameConversationGroupPrompt({ groupKey, defaultLabel, currentLabel });
+  }, []);
+
+  const handleRenameConversation = useCallback((conversationId: string, currentTitle: string) => {
+    setRenameConversationPrompt({ conversationId, currentTitle });
   }, []);
 
   const submitRenameConversationGroup = useCallback(
@@ -3369,6 +3377,28 @@ export function Sidebar() {
       showSidebarNotice('accent', `Workspace name reset to ${prompt.defaultLabel}.`);
     },
     [renameConversationGroupPrompt, showSidebarNotice, updateConversationGroupLabelOverride],
+  );
+
+  const submitRenameConversation = useCallback(
+    async (nextTitle: string) => {
+      const prompt = renameConversationPrompt;
+      if (!prompt) return;
+      const normalizedTitle = nextTitle.trim();
+      if (!normalizedTitle) {
+        showSidebarNotice('danger', 'Thread name cannot be empty.', 4000);
+        return;
+      }
+      setRenameConversationPrompt(null);
+      try {
+        const result = await api.renameConversation(prompt.conversationId, normalizedTitle);
+        sessionStore.patch(prompt.conversationId, { title: result.title });
+        pushTitle(prompt.conversationId, result.title);
+        showSidebarNotice('accent', 'Thread renamed.');
+      } catch (error) {
+        showSidebarNotice('danger', error instanceof Error ? error.message : String(error), 4000);
+      }
+    },
+    [pushTitle, renameConversationPrompt, showSidebarNotice],
   );
 
   const handleArchiveConversationGroup = useCallback(
@@ -4098,6 +4128,14 @@ export function Sidebar() {
                               <MenuItem
                                 onClick={() => {
                                   context.close();
+                                  handleRenameConversation(conversationId, conversationItem.session.title);
+                                }}
+                              >
+                                Rename Thread
+                              </MenuItem>
+                              <MenuItem
+                                onClick={() => {
+                                  context.close();
                                   if (conversationItem.pinned) {
                                     unpinSession(conversationId);
                                   } else {
@@ -4255,6 +4293,16 @@ export function Sidebar() {
           confirmLabel="Save"
           onCancel={() => setRenameConversationGroupPrompt(null)}
           onSubmit={submitRenameConversationGroup}
+        />
+      ) : null}
+      {renameConversationPrompt ? (
+        <TextPromptDialog
+          title="Rename thread"
+          label="Thread name"
+          initialValue={renameConversationPrompt.currentTitle}
+          confirmLabel="Save"
+          onCancel={() => setRenameConversationPrompt(null)}
+          onSubmit={(nextTitle) => void submitRenameConversation(nextTitle)}
         />
       ) : null}
       {workspaceQuickSelectOpen ? (

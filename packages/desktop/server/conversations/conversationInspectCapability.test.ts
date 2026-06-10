@@ -178,6 +178,45 @@ describe('conversationInspectCapability', () => {
     expect(listConversationSessionsSnapshotMock).not.toHaveBeenCalled();
   });
 
+  it('filters archived scope by explicit workspace archive state instead of not-live state', () => {
+    listConversationSessionsSnapshotMock.mockReturnValue([]);
+
+    const result = listConversationInspectSessions({
+      scope: 'archived',
+      includeCurrent: true,
+      sessionSnapshot: [
+        {
+          id: 'conv-stored',
+          title: 'Stored visible thread',
+          cwd: '/repo/stored',
+          file: '/sessions/conv-stored.jsonl',
+          timestamp: '2026-04-20T10:00:00.000Z',
+          isLive: false,
+          isRunning: false,
+          isArchived: false,
+          messageCount: 2,
+        },
+        {
+          id: 'conv-archived',
+          title: 'Archived thread',
+          cwd: '/repo/archive',
+          file: '/sessions/conv-archived.jsonl',
+          timestamp: '2026-04-20T09:00:00.000Z',
+          isLive: false,
+          isRunning: false,
+          isArchived: true,
+          messageCount: 4,
+        },
+      ],
+    });
+
+    expect(result.sessions.map((session) => session.id)).toEqual(['conv-archived']);
+    expect(formatConversationInspectSessionList(result)).toContain('conv-archived [archived]');
+    expect(formatConversationInspectSessionList({ ...result, sessions: [{ ...result.sessions[0]!, isArchived: false }] })).toContain(
+      'conv-archived [stored]',
+    );
+  });
+
   it('searches visible transcript blocks across conversations and returns match snippets', () => {
     listConversationSessionsSnapshotMock.mockReturnValue([
       {

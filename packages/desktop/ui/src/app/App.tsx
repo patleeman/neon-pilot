@@ -203,11 +203,16 @@ export function App() {
     const running = sessionRunningOverridesRef.current.get(session.id);
     if (running === undefined) return session;
 
-    // Running overrides are optimistic event-stream state, not durable truth.
-    // Keep them only while the follow-up session-meta refresh is pending so a
-    // stale snapshot cannot immediately undo a transition. Once there is no
-    // pending refresh, trust the canonical snapshot/meta response; otherwise a
-    // missed terminal running:false event can leave conversations stuck busy.
+    // A running:true event is the most recent live-session truth. Keep it until
+    // the matching running:false event arrives; route changes and snapshot
+    // refreshes can otherwise overwrite the sidebar/header indicator with stale
+    // persisted metadata while the assistant is still working.
+    if (running === true) {
+      return session.isRunning === true ? session : { ...session, isRunning: true };
+    }
+
+    // running:false overrides are short-lived guards for the follow-up metadata
+    // refresh. Once that refresh window closes, trust the canonical snapshot.
     if (!refreshSessionMetaTimersRef.current.has(session.id)) {
       sessionRunningOverridesRef.current.delete(session.id);
       return session;
@@ -262,7 +267,9 @@ export function App() {
             if (refreshSessionMetaSeqRef.current.get(sessionId) !== nextSeq) {
               return;
             }
-            sessionRunningOverridesRef.current.delete(sessionId);
+            if (sessionRunningOverridesRef.current.get(sessionId) !== true || session.isRunning === true) {
+              sessionRunningOverridesRef.current.delete(sessionId);
+            }
             applySessionMetaUpdate(sessionId, session);
           })
           .catch((error) => {

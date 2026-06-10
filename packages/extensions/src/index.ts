@@ -1391,7 +1391,7 @@ export interface ExtensionBackendContext {
       conversationId: string,
       text: string,
       options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
-    ): Promise<unknown>;
+    ): Promise<{ accepted: boolean; delivery?: 'started' | 'queued' }>;
     setActiveTools(conversationId: string, toolNames: string[]): Promise<{ conversationId: string; toolNames: string[] }>;
     appendCustomEntry(conversationId: string, customType: string, data?: unknown): Promise<{ ok: true }>;
     runTurn(

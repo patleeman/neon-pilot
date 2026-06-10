@@ -83,6 +83,7 @@ interface WorkerConversationInspectSessionSnapshotEntry {
   lastActivityAt?: string;
   isLive: boolean;
   isRunning: boolean;
+  isArchived: boolean;
   messageCount: number;
 }
 
@@ -139,6 +140,7 @@ async function buildWorkerConversationInspectSessionSnapshot(
           ...(session.lastActivityAt ? { lastActivityAt: session.lastActivityAt } : {}),
           isLive: Boolean(session.isLive) || visibleInWorkspace,
           isRunning: Boolean(session.isRunning),
+          isArchived: Boolean(workspace?.archivedIds.has(session.id)),
           messageCount: session.messageCount,
         };
       });

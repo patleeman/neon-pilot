@@ -256,6 +256,7 @@ export interface ExtensionInstallSummary {
   description?: string;
   version?: string;
   packageRoot?: string;
+  uninstallable: boolean;
   manifest: LoadedExtensionManifest;
   permissions: ExtensionManifest['permissions'];
   surfaces: ExtensionSurface[];
@@ -1220,6 +1221,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       ...(manifest.description ? { description: manifest.description } : {}),
       ...(manifest.version ? { version: manifest.version } : {}),
       ...(entry.packageRoot ? { packageRoot: entry.packageRoot } : {}),
+      uninstallable: Boolean(entry.packageRoot && isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot)),
       manifest,
       permissions: manifest.permissions ?? [],
       surfaces,

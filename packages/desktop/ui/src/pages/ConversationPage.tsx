@@ -6122,11 +6122,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                       </IconButton>
                     </form>
                   ) : draft ? (
-                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[26px] font-semibold leading-[1.08] tracking-normal text-primary">
+                    <h1 className="ui-conversation-title-clamp max-w-4xl break-words pr-4 text-[38px] font-semibold leading-[1.05] tracking-[-0.02em] text-primary sm:text-[42px]">
                       {title}
                     </h1>
                   ) : (
-                    <Suspense fallback={<h1 className="ui-conversation-title-clamp text-[30px] font-semibold">{title}</h1>}>
+                    <Suspense fallback={<h1 className="ui-conversation-title-clamp text-[38px] font-semibold leading-[1.05] sm:text-[42px]">{title}</h1>}>
                       <ConversationSavedHeader
                         title={title}
                         cwd={currentCwd}

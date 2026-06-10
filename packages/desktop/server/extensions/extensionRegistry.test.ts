@@ -53,7 +53,7 @@ describe('extension registry', () => {
     );
 
     expect(listExtensionInstallSummaries(stateRoot)).toContainEqual(
-      expect.objectContaining({ id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'user' }),
+      expect.objectContaining({ id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'user', uninstallable: true }),
     );
 
     rmSync(stateRoot, { recursive: true, force: true });

@@ -281,7 +281,7 @@ describe('App execution state integration', () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain('conversation idle');
+    expect(container.textContent).toContain('conversation running');
   });
 
   it('keeps an active running event from being overwritten by a stale sessions snapshot while meta refresh is pending', async () => {
@@ -298,13 +298,13 @@ describe('App execution state integration', () => {
     expect(container.textContent).toContain('conversation running');
   });
 
-  it('trusts a later canonical sessions snapshot after the optimistic running refresh window closes', async () => {
+  it('keeps running state across later stale snapshots until a stopped event arrives', async () => {
     apiSessionMetaMock.mockResolvedValue({
       id: 'conv-1',
       title: 'Conversation',
       cwd: '/repo',
       timestamp: '2026-01-01T00:00:00.000Z',
-      isRunning: true,
+      isRunning: false,
     });
     ({ container, root } = await renderApp());
 
@@ -322,6 +322,9 @@ describe('App execution state integration', () => {
       sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: false }],
     });
 
+    expect(container.textContent).toContain('conversation running');
+
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: false });
     expect(container.textContent).toContain('conversation idle');
   });
 

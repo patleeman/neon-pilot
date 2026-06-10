@@ -2,6 +2,10 @@ import type { SessionEntry } from '@earendil-works/pi-coding-agent';
 
 import { reserveConversationSession } from '../conversations/conversationReservation.js';
 import {
+  type LiveSessionCapabilityContext,
+  submitLiveSessionPromptCapability,
+} from '../conversations/liveSessionCapability.js';
+import {
   appendStoredVisibleCustomMessage,
   renameStoredConversation,
   resolveConversationSessionFile,
@@ -22,6 +26,10 @@ import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js'
 import type { ServerRouteContext } from '../routes/context.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
+import {
+  buildLiveSessionExtensionFactoriesForRuntime,
+  buildLiveSessionResourceOptionsForRuntime,
+} from './runtimeAgentHooks.js';
 import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 
 const reservedConversationFiles = new Map<string, string>();
@@ -35,6 +43,11 @@ export interface ExtensionConversationSendOptions {
   steer?: boolean;
   /** Image attachments to send with the prompt. */
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+}
+
+export interface ExtensionConversationSendResult {
+  accepted: true;
+  delivery: 'started' | 'queued';
 }
 
 export interface ExtensionConversationRunTurnOptions extends ExtensionConversationSendOptions {
@@ -83,7 +96,21 @@ export interface ExtensionConversationSubscriptionOptions {
  * Read-only meta operations work against persisted session data.
  */
 export function createExtensionConversationsCapability(
-  serverContext?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getSettingsFile'>>,
+  serverContext?: Pick<ServerRouteContext, 'getRuntimeScope'> &
+    Partial<
+      Pick<
+        ServerRouteContext,
+        | 'buildLiveSessionExtensionFactories'
+        | 'buildLiveSessionResourceOptions'
+        | 'buildLiveSessionResourceOptionsAsync'
+        | 'flushLiveDeferredResumes'
+        | 'getDefaultWebCwd'
+        | 'getRepoRoot'
+        | 'getSettingsFile'
+        | 'listMemoryDocs'
+        | 'listTasksForRuntimeScope'
+      >
+    >,
   extensionId = 'extension',
 ) {
   const findLiveEntry = (conversationId: string) => {
@@ -146,6 +173,24 @@ export function createExtensionConversationsCapability(
       activeConversationId: saved.activeConversationId ?? null,
     });
     return saved;
+  };
+
+  const buildLiveSessionCapabilityContext = (): LiveSessionCapabilityContext => {
+    const runtimeScope = serverContext?.getRuntimeScope ?? (() => 'shared');
+    return {
+      getRuntimeScope: runtimeScope,
+      getRepoRoot: serverContext?.getRepoRoot ?? (() => process.env.NEON_PILOT_REPO_ROOT || process.cwd()),
+      getDefaultWebCwd: serverContext?.getDefaultWebCwd ?? (() => process.env.NEON_PILOT_REPO_ROOT || process.cwd()),
+      buildLiveSessionResourceOptions: serverContext?.buildLiveSessionResourceOptions ?? (() => buildLiveSessionResourceOptionsForRuntime()),
+      ...(serverContext?.buildLiveSessionResourceOptionsAsync
+        ? { buildLiveSessionResourceOptionsAsync: serverContext.buildLiveSessionResourceOptionsAsync }
+        : {}),
+      buildLiveSessionExtensionFactories:
+        serverContext?.buildLiveSessionExtensionFactories ?? (() => buildLiveSessionExtensionFactoriesForRuntime()),
+      flushLiveDeferredResumes: serverContext?.flushLiveDeferredResumes ?? (async () => {}),
+      listTasksForRuntimeScope: serverContext?.listTasksForRuntimeScope ?? (() => []),
+      listMemoryDocs: serverContext?.listMemoryDocs ?? (() => []),
+    };
   };
 
   return {
@@ -486,23 +531,22 @@ export function createExtensionConversationsCapability(
     /**
      * Send a message into a live conversation.
      */
-    async sendMessage(conversationId: string, text: string, options?: ExtensionConversationSendOptions): Promise<{ accepted: boolean }> {
-      const entry = findLiveEntry(conversationId);
-      const session = entry.session;
-
+    async sendMessage(
+      conversationId: string,
+      text: string,
+      options?: ExtensionConversationSendOptions,
+    ): Promise<ExtensionConversationSendResult> {
       try {
-        const images = options?.images?.map((image) => ({ type: 'image' as const, ...image }));
-        if (entry.session.isStreaming) {
-          if (options?.steer) {
-            await (images && images.length > 0 ? session.steer(text, images) : session.steer(text));
-          } else {
-            await (images && images.length > 0 ? session.followUp(text, images) : session.followUp(text));
-          }
-        } else {
-          await (images && images.length > 0 ? session.prompt(text, { images }) : session.prompt(text));
-        }
-        invalidateAppTopics('sessions');
-        return { accepted: true };
+        const result = await submitLiveSessionPromptCapability(
+          {
+            conversationId,
+            text,
+            behavior: options?.steer ? 'steer' : undefined,
+            images: options?.images,
+          },
+          buildLiveSessionCapabilityContext(),
+        );
+        return { accepted: true, delivery: result.delivery };
       } catch (error) {
         throw new Error(`Failed to send message: ${(error as Error).message}`);
       }

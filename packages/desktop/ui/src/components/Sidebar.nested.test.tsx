@@ -45,10 +45,21 @@ function session(overrides: Partial<SessionMeta> & Pick<SessionMeta, 'id' | 'tit
   };
 }
 
+function readStoredIds(key: string): string[] {
+  return JSON.parse(localStorage.getItem(key) ?? '[]') as string[];
+}
+
 function renderSidebar(pathname: string, sessions: SessionMeta[]) {
   // Seed the store so useConversations finds the sessions it needs
   sessionStore.replaceAll(sessions);
   sessionStore.markReady?.();
+  apiMocks.openConversationTabs.mockResolvedValue({
+    sessionIds: readStoredIds(OPEN_SESSION_IDS_STORAGE_KEY),
+    pinnedSessionIds: readStoredIds(PINNED_SESSION_IDS_STORAGE_KEY),
+    archivedSessionIds: readStoredIds(ARCHIVED_SESSION_IDS_STORAGE_KEY),
+    activeConversationId: pathname.startsWith('/conversations/') ? pathname.slice('/conversations/'.length) : undefined,
+    workspacePaths: [],
+  });
 
   const container = document.createElement('div');
   document.body.appendChild(container);

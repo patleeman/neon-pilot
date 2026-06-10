@@ -689,7 +689,8 @@ function canRunActionInBackendWorker(
   if (!action?.worker?.enabled) return false;
   if (action.worker.inputActions && action.worker.inputActions.length > 0) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
-    const inputAction = (input as { action?: unknown }).action;
+    const body = input as { action?: unknown; command?: unknown };
+    const inputAction = typeof body.action === 'string' ? body.action : body.command;
     return typeof inputAction === 'string' && action.worker.inputActions.includes(inputAction);
   }
   return true;

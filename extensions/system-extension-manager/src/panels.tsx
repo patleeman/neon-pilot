@@ -315,7 +315,7 @@ function ExtensionActionsMenu({
     setOpen(false);
     action();
   }, []);
-  const canDelete = extension.packageType !== 'system';
+  const canDelete = extension.uninstallable === true || extension.packageType !== 'system';
   const hasActions = Boolean(extension.packageRoot || onUpdate || onReinstall || canDelete);
 
   if (!hasActions) {
@@ -840,6 +840,7 @@ function installedCatalogItemToSummary(item: InstallableExtensionCatalogItem): E
     status: enabled ? 'enabled' : 'disabled',
     ...(item.description ? { description: item.description } : {}),
     ...((item.installedVersion ?? item.version) ? { version: item.installedVersion ?? item.version } : {}),
+    uninstallable: true,
     manifest: {
       schemaVersion: 2,
       id: item.id,
@@ -1104,7 +1105,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   const deleteExtension = useCallback(
     async (extension: ExtensionInstallSummary) => {
-      if (extension.packageType === 'system') return;
+      if (extension.uninstallable !== true && extension.packageType === 'system') return;
       const confirmed = await pa.ui.confirm({
         title: 'Delete extension',
         message: `Delete ${extension.name}? This removes the extension package from disk.`,
@@ -1140,7 +1141,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   const reinstallExtension = useCallback(
     async (extension: ExtensionInstallSummary) => {
-      if (extension.packageType === 'system') return;
+      if (extension.uninstallable !== true && extension.packageType === 'system') return;
       const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
       if (!catalogItem) return;
       const confirmed = await pa.ui.confirm({

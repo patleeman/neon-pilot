@@ -563,6 +563,7 @@ export interface ExtensionInstallSummary {
   description?: string;
   version?: string;
   packageRoot?: string;
+  uninstallable?: boolean;
   manifest: ExtensionManifest;
   permissions?: string[];
   surfaces: ExtensionSurface[];

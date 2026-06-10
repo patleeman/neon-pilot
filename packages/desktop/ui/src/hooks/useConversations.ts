@@ -1,8 +1,8 @@
 /**
  * Arc-style tab model:
- *   - pinnedIds               (localStorage + settings) = conversations always visible above open tabs
- *   - openIds                 (localStorage + settings) = active workspace tabs below the pinned shelf
- *   - archivedConversationIds (localStorage + settings) = conversations explicitly archived out of live/review focus
+ *   - pinnedIds               (backend settings, mirrored to localStorage) = conversations always visible above open tabs
+ *   - openIds                 (backend settings, mirrored to localStorage) = active workspace tabs below the pinned shelf
+ *   - archivedConversationIds (backend settings, mirrored to localStorage) = conversations explicitly archived out of live/review focus
  *   - archivedSessions        = all other sessions, restored on demand
  *
  * Restoring an archived conversation calls restoreSession() → removes archived state → tab appears.
@@ -139,12 +139,6 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
 
   useEffect(() => {
     let cancelled = false;
-    const localLayout = readConversationLayout();
-
-    if (localLayout.sessionIds.length > 0 || localLayout.pinnedSessionIds.length > 0 || localLayout.archivedSessionIds.length > 0) {
-      setLayoutHydrating(false);
-      return;
-    }
 
     void api
       .openConversationTabs()
@@ -153,17 +147,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
           return;
         }
 
-        if (sessionIds.length === 0 && pinnedSessionIds.length === 0 && archivedSessionIds.length === 0) {
-          setLayoutHydrating(false);
-          return;
-        }
-
-        const currentLayout = readConversationLayout();
-        if (
-          currentLayout.sessionIds.length > 0 ||
-          currentLayout.pinnedSessionIds.length > 0 ||
-          currentLayout.archivedSessionIds.length > 0
-        ) {
+        if (isWithinLocalWriteGrace()) {
           setLayoutHydrating(false);
           return;
         }

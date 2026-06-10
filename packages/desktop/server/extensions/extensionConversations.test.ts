@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const sessionsCapability = vi.hoisted(() => ({ readConversationSessionsCapability: vi.fn() }));
 const broadcasts = vi.hoisted(() => ({ broadcastTitle: vi.fn() }));
 const reservation = vi.hoisted(() => ({ reserveConversationSession: vi.fn() }));
+const liveSessionCapability = vi.hoisted(() => ({
+  submitLiveSessionPromptCapability: vi.fn(),
+}));
 const conversationService = vi.hoisted(() => ({
   appendStoredVisibleCustomMessage: vi.fn(),
   renameStoredConversation: vi.fn(),
@@ -48,6 +51,7 @@ const settingsPersistence = vi.hoisted(() => ({ persistSettingsWrite: vi.fn((wri
 vi.mock('../conversations/conversationSessionCapability.js', () => sessionsCapability);
 vi.mock('../conversations/liveSessionBroadcasts.js', () => broadcasts);
 vi.mock('../conversations/conversationReservation.js', () => reservation);
+vi.mock('../conversations/liveSessionCapability.js', () => liveSessionCapability);
 vi.mock('../conversations/conversationService.js', () => conversationService);
 vi.mock('../conversations/liveSessions.js', () => live);
 vi.mock('../conversations/liveSessionTitle.js', () => titles);
@@ -89,6 +93,15 @@ describe('extensionConversations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     live.registry.clear();
+    liveSessionCapability.submitLiveSessionPromptCapability.mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
     reservation.reserveConversationSession.mockReturnValue({ id: 'reserved-1', sessionFile: '/sessions/reserved-1.jsonl', cwd: '/repo' });
     conversationService.resolveConversationSessionFile.mockReturnValue('/sessions/persisted.jsonl');
     conversationService.appendStoredVisibleCustomMessage.mockReturnValue('block-1');
@@ -216,20 +229,33 @@ describe('extensionConversations', () => {
     });
   });
 
-  it('sends prompts, follow-ups, and steering messages based on live streaming state', async () => {
+  it('sends prompts through the shared live session prompt capability', async () => {
     const entry = liveEntry();
     live.registry.set('conv-1', entry);
     const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
 
-    await expect(capability.sendMessage('conv-1', 'hello')).resolves.toEqual({ accepted: true });
-    expect(entry.session.prompt).toHaveBeenCalledWith('hello');
+    await expect(capability.sendMessage('conv-1', 'hello')).resolves.toEqual({ accepted: true, delivery: 'started' });
+    expect(liveSessionCapability.submitLiveSessionPromptCapability).toHaveBeenLastCalledWith(
+      expect.objectContaining({ conversationId: 'conv-1', text: 'hello', behavior: undefined }),
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
+    expect(entry.session.prompt).not.toHaveBeenCalled();
 
-    entry.session.isStreaming = true;
-    await expect(capability.sendMessage('conv-1', 'later')).resolves.toEqual({ accepted: true });
-    expect(entry.session.followUp).toHaveBeenCalledWith('later');
-
-    await expect(capability.sendMessage('conv-1', 'now', { steer: true })).resolves.toEqual({ accepted: true });
-    expect(entry.session.steer).toHaveBeenCalledWith('now');
+    liveSessionCapability.submitLiveSessionPromptCapability.mockResolvedValueOnce({
+      ok: true,
+      accepted: true,
+      delivery: 'queued',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+    await expect(capability.sendMessage('conv-1', 'now', { steer: true })).resolves.toEqual({ accepted: true, delivery: 'queued' });
+    expect(liveSessionCapability.submitLiveSessionPromptCapability).toHaveBeenLastCalledWith(
+      expect.objectContaining({ conversationId: 'conv-1', text: 'now', behavior: 'steer' }),
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
+    expect(entry.session.steer).not.toHaveBeenCalled();
   });
 
   it('sets titles through the session and broadcasts title changes', async () => {

@@ -15,6 +15,7 @@ export function buildInvalidExtensionInstallSummary(entry: {
     status: 'invalid' as const,
     errors: entry.errors,
     packageRoot: entry.packageRoot,
+    uninstallable: Boolean(entry.packageRoot),
     manifest: { schemaVersion: 2 as const, id: entry.id, name: entry.name, packageType: entry.packageType },
     permissions: [],
     surfaces: [],
