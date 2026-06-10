@@ -73,11 +73,80 @@ export function checkUnifiedAdminSurface(manifests) {
   return { ok: failures.length === 0, failures, inventory };
 }
 
+function findManifest(manifests, extensionId) {
+  return (manifests ?? listExtensionManifests().map((path) => ({ path, manifest: readJson(path) }))).find(
+    (entry) => entry.manifest.id === extensionId,
+  )?.manifest;
+}
+
+function commandNames(manifest) {
+  return asArray(manifest?.contributes?.cliCommands).map((entry) => entry.command).filter(Boolean);
+}
+
+function toolNames(manifest) {
+  return asArray(manifest?.contributes?.tools).map((entry) => entry.name).filter(Boolean);
+}
+
+function backendActionInputActions(manifest, actionId) {
+  const action = asArray(manifest?.backend?.actions).find((entry) => entry.id === actionId || entry.handler === actionId);
+  return asArray(action?.worker?.inputActions);
+}
+
+export function checkConversationAdminFlows(manifests) {
+  const failures = [];
+  const manifest = findManifest(manifests, 'system-conversation-tools');
+  const commands = commandNames(manifest);
+  for (const command of ['conversations create', 'conversations inspect', 'conversations open add', 'conversations open list', 'conversations open active']) {
+    if (!commands.includes(command)) failures.push(`Conversation CLI missing ${command}.`);
+  }
+  const agentExtension = readFileSync(join(repoRoot, 'extensions/system-conversation-tools/src/conversationAgentExtension.ts'), 'utf8');
+  if (!agentExtension.includes("name: 'conversation_admin'")) failures.push('Conversation admin agent tool missing.');
+  const actions = backendActionInputActions(manifest, 'conversationTool');
+  for (const action of ['create', 'inspect', 'workspace_open_update']) {
+    if (!actions.includes(action)) failures.push(`Conversation backend worker missing ${action}.`);
+  }
+  return { ok: failures.length === 0, failures };
+}
+
+export function checkDeferredResumeLifecycle(manifests) {
+  const failures = [];
+  const manifest = findManifest(manifests, 'system-conversation-tools');
+  if (!backendActionInputActions(manifest, 'conversationTool').includes('deferred_resume')) {
+    failures.push('Conversation backend worker missing deferred_resume.');
+  }
+  const schema = readFileSync(join(repoRoot, 'extensions/system-conversation-tools/src/conversationToolSchema.ts'), 'utf8');
+  for (const token of ['deferred_resume', 'deferredAction', 'add', 'list', 'cancel']) {
+    if (!schema.includes(token)) failures.push(`Deferred resume schema missing ${token}.`);
+  }
+  const lifecycle = readFileSync(join(repoRoot, 'packages/desktop/server/runs/deferred-resume-conversations.ts'), 'utf8');
+  for (const event of ['scheduled', 'ready', 'retry_scheduled', 'completed', 'cancelled']) {
+    if (!lifecycle.includes(`conversation.deferred_resume.${event}`)) failures.push(`Deferred resume lifecycle missing ${event} event.`);
+  }
+  return { ok: failures.length === 0, failures };
+}
+
+export function checkExtensionStateSanity(manifests) {
+  const failures = [];
+  const manifest = findManifest(manifests, 'system-extension-manager');
+  const commands = commandNames(manifest);
+  for (const command of ['extensions list', 'extensions validate', 'extensions enable', 'extensions disable', 'extensions delete']) {
+    if (!commands.includes(command)) failures.push(`Extension manager CLI missing ${command}.`);
+  }
+  const actions = backendActionInputActions(manifest, 'manageExtension');
+  for (const action of ['list', 'validate', 'enable', 'disable', 'delete']) {
+    if (!actions.includes(action)) failures.push(`Extension manager worker missing ${action}.`);
+  }
+  const backend = readFileSync(join(repoRoot, 'extensions/system-extension-manager/src/backend.ts'), 'utf8');
+  if (!backend.includes("command === 'extensions delete' || command === 'extensions uninstall'")) {
+    failures.push('Extension uninstall alias no longer routes to delete.');
+  }
+  if (!backend.includes('ctx.extensions?.setEnabled?.(extensionId')) failures.push('Extension enable/disable no longer calls host state API.');
+  return { ok: failures.length === 0, failures };
+}
+
 export function checkHeartbeatConfig(manifests) {
   const failures = [];
-  const admin = (manifests ?? listExtensionManifests().map((path) => ({ path, manifest: readJson(path) }))).find(
-    (entry) => entry.manifest.id === 'system-neon-pilot-admin-cli',
-  )?.manifest;
+  const admin = findManifest(manifests, 'system-neon-pilot-admin-cli');
   const tool = asArray(admin?.contributes?.tools).find((entry) => entry.name === 'neon_pilot');
   const commands = tool?.inputSchema?.properties?.command?.enum ?? [];
   for (const command of ['heartbeat_start', 'heartbeat_list', 'heartbeat_stop']) {
@@ -108,6 +177,9 @@ export function runStaticDoctor() {
   const manifests = listExtensionManifests().map((path) => ({ path, manifest: readJson(path) }));
   const checks = [
     { name: 'unified-admin-surface', ...checkUnifiedAdminSurface(manifests) },
+    { name: 'conversation-admin-flows', ...checkConversationAdminFlows(manifests) },
+    { name: 'deferred-resume-lifecycle', ...checkDeferredResumeLifecycle(manifests) },
+    { name: 'extension-state-sanity', ...checkExtensionStateSanity(manifests) },
     { name: 'heartbeat-config', ...checkHeartbeatConfig(manifests) },
     runCheck('packaged-extension-validity', process.execPath, ['scripts/check-packaged-extensions.mjs']),
   ];

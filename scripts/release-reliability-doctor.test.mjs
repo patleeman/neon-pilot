@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkHeartbeatConfig, checkUnifiedAdminSurface } from './release-reliability-doctor.mjs';
+import {
+  checkConversationAdminFlows,
+  checkDeferredResumeLifecycle,
+  checkExtensionStateSanity,
+  checkHeartbeatConfig,
+  checkUnifiedAdminSurface,
+} from './release-reliability-doctor.mjs';
 
 const manifest = (id, contributes = {}) => ({ path: `${id}/extension.json`, manifest: { id, contributes } });
 
@@ -31,6 +37,12 @@ describe('release reliability doctor', () => {
 
     expect(result.ok).toBe(false);
     expect(result.failures.join('\n')).toContain('Unexpected internal admin-like tool conversation_admin');
+  });
+
+  it('validates conversation, deferred resume, and extension state seams in repo manifests', () => {
+    expect(checkConversationAdminFlows().ok).toBe(true);
+    expect(checkDeferredResumeLifecycle().ok).toBe(true);
+    expect(checkExtensionStateSanity().ok).toBe(true);
   });
 
   it('validates heartbeat command inventory', () => {
