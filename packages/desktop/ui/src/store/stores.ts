@@ -2,7 +2,7 @@
  * Singleton entity stores for the reactive data layer.
  *
  * These are the canonical sources of truth for session, task, run, and
- * execution data. Only the SSE event handler in App.tsx writes to them;
+ * execution data. Backend snapshots and backend-published events write to them;
  * components and hooks read through granular subscriptions.
  */
 import type { DurableRunRecord, ExecutionRecord, ScheduledTaskSummary, SessionMeta } from '../shared/types';

@@ -537,6 +537,7 @@ describe('useConversations', () => {
       await flushAsyncWork();
 
       expect(latestHookResult?.tabs.map((s) => s.id)).toEqual(['open-a', 'open-b', 'open-c']);
+      expect(latestHookResult?.tabs.map((s) => s.title)).toEqual(['Session A', 'Session B', 'Session C']);
       expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-a', 'open-b', 'open-c']);
     });
 
