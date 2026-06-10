@@ -301,6 +301,58 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(apiMock.extensionMentions).toHaveBeenCalledTimes(2);
   });
 
+  it('does not write local stream running state into the global session store', async () => {
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = {
+      conversationId: 'conv-regression',
+      sessionDetail: regressionBootstrapData.sessionDetail,
+      liveSession: {
+        live: true,
+        id: 'conv-regression',
+        cwd: '/tmp/project',
+        sessionFile: '/tmp/conv-regression.jsonl',
+        title: 'Regression conversation',
+        isStreaming: true,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: regressionBootstrapData.sessionDetail.blocks,
+        blockOffset: 0,
+        totalBlocks: 2,
+        hasSnapshot: true,
+        isStreaming: true,
+        isCompacting: false,
+        error: null,
+        title: 'Regression conversation',
+        tokens: null,
+        cost: null,
+        contextUsage: null,
+        pendingQueue: { steering: [], followUp: [] },
+        parallelJobs: [],
+        presence: {
+          surfaces: [],
+          controllerSurfaceId: null,
+          controllerSurfaceType: null,
+          controllerAcquiredAt: null,
+        },
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        cwdChange: null,
+      },
+    };
+    const patchSpy = vi.spyOn(sessionStore, 'patch');
+
+    renderConversationPage();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(patchSpy).not.toHaveBeenCalledWith('conv-regression', expect.objectContaining({ isRunning: true }));
+  });
+
   it('defers saved-conversation model catalog loading past initial route settle', async () => {
     renderConversationPage();
 

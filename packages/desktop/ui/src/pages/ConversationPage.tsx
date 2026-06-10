@@ -936,13 +936,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [latchedStreamControlsActive, setLatchedStreamControlsActive] = useState(rawComposerRunState.streamControlsActive);
 
   useEffect(() => {
-    if (!id || draft) {
-      return;
-    }
-    sessionStore.patch(id, { isRunning: rawComposerRunState.streamControlsActive });
-  }, [draft, id, rawComposerRunState.streamControlsActive]);
-
-  useEffect(() => {
     if (rawComposerRunState.streamControlsActive) {
       setLatchedStreamControlsActive(true);
       return;
