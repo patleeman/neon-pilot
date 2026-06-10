@@ -113,10 +113,45 @@ describe('Execution projection', () => {
   });
 
   it('treats only non-terminal execution statuses as active', () => {
+    expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'queued' } })))).toBe(true);
+    expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'waiting' } })))).toBe(true);
     expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'running' } })))).toBe(true);
     expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'recovering' } })))).toBe(true);
     expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'completed' } })))).toBe(false);
     expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'cancelled' } })))).toBe(false);
     expect(isExecutionActive(projectExecution(run({ status: { ...run({}).status, status: 'unknown' } })))).toBe(false);
+  });
+
+  it('exposes execution actions only for explicit active or terminal statuses', () => {
+    expect(projectExecution(run({ status: { ...run({}).status, status: 'queued' } })).capabilities).toMatchObject({
+      canCancel: true,
+      canRerun: false,
+    });
+    expect(projectExecution(run({ status: { ...run({}).status, status: 'completed' } })).capabilities).toMatchObject({
+      canCancel: false,
+      canRerun: true,
+    });
+    expect(projectExecution(run({ status: { ...run({}).status, status: 'unknown' } })).capabilities).toMatchObject({
+      canCancel: false,
+      canRerun: false,
+    });
+  });
+
+  it('allows subagent follow-up only after terminal completion', () => {
+    const backgroundRun = run({
+      manifest: {
+        version: 1,
+        id: 'run-agent',
+        kind: 'background-run',
+        resumePolicy: 'manual',
+        createdAt: '2026-05-15T00:00:00.000Z',
+        spec: { agent: { prompt: 'Review the current diff', model: 'gpt-5.5' }, cwd: '/repo' },
+        source: { type: 'tool', id: 'conversation-1' },
+      },
+    });
+
+    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'running' } }).capabilities.canFollowUp).toBe(false);
+    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'completed' } }).capabilities.canFollowUp).toBe(true);
+    expect(projectExecution({ ...backgroundRun, status: { ...backgroundRun.status, status: 'unknown' } }).capabilities.canFollowUp).toBe(false);
   });
 });

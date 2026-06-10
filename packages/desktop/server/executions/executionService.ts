@@ -69,14 +69,16 @@ function readRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
-function terminalStatus(status: string | undefined): boolean {
+export function isExecutionActive(execution: ExecutionRecord): boolean {
+  return isActiveExecutionStatus(execution.status);
+}
+
+function isTerminalExecutionStatus(status: string | undefined): boolean {
   return status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'interrupted';
 }
 
-export function isExecutionActive(execution: ExecutionRecord): boolean {
-  return (
-    execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering'
-  );
+function isActiveExecutionStatus(status: string | undefined): boolean {
+  return status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
 }
 
 function readShellCommand(spec: Record<string, unknown> | undefined): string | undefined {
@@ -182,9 +184,9 @@ export function projectExecution(run: ScannedDurableRun): ExecutionRecord {
       ...(run.recoveryAction ? { reason: run.recoveryAction } : {}),
     },
     capabilities: {
-      canCancel: !terminalStatus(status) && (run.manifest?.kind === 'background-run' || run.manifest?.kind === 'raw-shell'),
-      canRerun: terminalStatus(status) && (run.manifest?.kind === 'background-run' || run.manifest?.kind === 'raw-shell'),
-      canFollowUp: kind === 'subagent' && terminalStatus(status),
+      canCancel: isActiveExecutionStatus(status) && (run.manifest?.kind === 'background-run' || run.manifest?.kind === 'raw-shell'),
+      canRerun: isTerminalExecutionStatus(status) && (run.manifest?.kind === 'background-run' || run.manifest?.kind === 'raw-shell'),
+      canFollowUp: kind === 'subagent' && isTerminalExecutionStatus(status),
       hasLog,
       hasResult,
     },
@@ -192,8 +194,8 @@ export function projectExecution(run: ScannedDurableRun): ExecutionRecord {
 }
 
 function sortExecutions(left: ExecutionRecord, right: ExecutionRecord): number {
-  const leftActive = terminalStatus(left.status) ? 0 : 1;
-  const rightActive = terminalStatus(right.status) ? 0 : 1;
+  const leftActive = isExecutionActive(left) ? 1 : 0;
+  const rightActive = isExecutionActive(right) ? 1 : 0;
   if (leftActive !== rightActive) return rightActive - leftActive;
   return (right.updatedAt ?? right.startedAt ?? right.createdAt ?? '').localeCompare(
     left.updatedAt ?? left.startedAt ?? left.createdAt ?? '',

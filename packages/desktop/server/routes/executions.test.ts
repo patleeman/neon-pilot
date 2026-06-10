@@ -5,6 +5,7 @@ const {
   followUpExecutionMock,
   getExecutionLogMock,
   getExecutionMock,
+  isExecutionActiveMock,
   invalidateAppTopicsMock,
   listConversationExecutionsMock,
   listExecutionsMock,
@@ -15,6 +16,9 @@ const {
   followUpExecutionMock: vi.fn(),
   getExecutionLogMock: vi.fn(),
   getExecutionMock: vi.fn(),
+  isExecutionActiveMock: vi.fn((execution: { status?: string }) =>
+    execution.status === 'queued' || execution.status === 'waiting' || execution.status === 'running' || execution.status === 'recovering',
+  ),
   invalidateAppTopicsMock: vi.fn(),
   listConversationExecutionsMock: vi.fn(),
   listExecutionsMock: vi.fn(),
@@ -29,6 +33,7 @@ vi.mock('../executions/executionService.js', () => ({
   getExecutionLog: getExecutionLogMock,
   listConversationExecutions: listConversationExecutionsMock,
   listExecutions: listExecutionsMock,
+  isExecutionActive: isExecutionActiveMock,
   rerunExecution: rerunExecutionMock,
 }));
 
@@ -45,6 +50,7 @@ describe('registerExecutionRoutes', () => {
     followUpExecutionMock.mockReset();
     getExecutionLogMock.mockReset();
     getExecutionMock.mockReset();
+    isExecutionActiveMock.mockClear();
     invalidateAppTopicsMock.mockReset();
     listConversationExecutionsMock.mockReset();
     listExecutionsMock.mockReset();

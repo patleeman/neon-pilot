@@ -6,6 +6,7 @@ import {
   followUpExecution,
   getExecution,
   getExecutionLog,
+  isExecutionActive,
   listConversationExecutions,
   listExecutions,
   rerunExecution,
@@ -39,10 +40,6 @@ function parseExecutionVisibilityQuery(value: unknown): 'primary' | 'system' | '
 const ACTIVE_EXECUTION_POLL_INTERVAL_MS = 1_000;
 const ACTIVE_EXECUTION_LOG_POLL_INTERVAL_MS = 500;
 const TERMINAL_EXECUTION_STREAM_GRACE_MS = 1_500;
-
-function isExecutionActive(status: string | undefined): boolean {
-  return status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
-}
 
 function handleError(res: Response, err: unknown): void {
   logError('request handler error', {
@@ -114,7 +111,7 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
       let logPath = initialLog.path;
       let logCursor = getDurableRunLogCursor(logPath);
       let previousStatus = initialDetail.execution.status;
-      let active = isExecutionActive(previousStatus);
+      let active = isExecutionActive(initialDetail.execution);
       const heartbeat = setInterval(() => {
         if (!closed) res.write(': heartbeat\n\n');
       }, 15_000);
@@ -156,7 +153,7 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
             return;
           }
           const nextStatus = detail.execution.status;
-          active = isExecutionActive(nextStatus);
+          active = isExecutionActive(detail.execution);
           if (nextStatus !== previousStatus) {
             previousStatus = nextStatus;
             invalidateAppTopics('executions', 'runs');
