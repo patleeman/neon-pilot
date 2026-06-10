@@ -79,11 +79,25 @@ export function isExecutionActive(execution: ExecutionRecord): boolean {
   );
 }
 
+function readShellCommand(spec: Record<string, unknown> | undefined): string | undefined {
+  const direct = readString(spec?.shellCommand);
+  if (direct) return direct;
+  const target = readRecord(spec?.target);
+  return readString(target?.command);
+}
+
+function readCwd(spec: Record<string, unknown> | undefined): string | undefined {
+  const direct = readString(spec?.cwd);
+  if (direct) return direct;
+  const target = readRecord(spec?.target);
+  return readString(target?.cwd);
+}
+
 function inferExecutionKind(run: ScannedDurableRun): ExecutionKind {
   const manifest = run.manifest;
   const spec = readRecord(manifest?.spec);
   const sourceType = manifest?.source?.type;
-  if (manifest?.kind === 'raw-shell' || readString(spec?.shellCommand)) return 'background-command';
+  if (manifest?.kind === 'raw-shell' || readShellCommand(spec)) return 'background-command';
   if (manifest?.kind === 'background-run') return 'subagent';
   if (manifest?.kind === 'scheduled-task' || sourceType === 'scheduled-task') return 'scheduled-task';
   if (sourceType === 'deferred-resume') return 'deferred-resume';
@@ -101,7 +115,8 @@ function inferConversationId(run: ScannedDurableRun): string | undefined {
   const source = run.manifest?.source;
   const spec = readRecord(run.manifest?.spec);
   const metadata = readRecord(spec?.metadata) ?? readRecord(spec?.manifestMetadata);
-  const metadataConversationId = readString(metadata?.conversationId);
+  const callbackConversation = readRecord(metadata?.callbackConversation) ?? readRecord(spec?.callbackConversation);
+  const metadataConversationId = readString(metadata?.conversationId) ?? readString(callbackConversation?.conversationId);
   if (metadataConversationId) return metadataConversationId;
   if (source?.type === 'tool') return readString(source.id);
   const sourceId = readString(source?.id);
@@ -112,7 +127,8 @@ function inferConversationId(run: ScannedDurableRun): string | undefined {
 function inferSessionFile(run: ScannedDurableRun): string | undefined {
   const source = run.manifest?.source;
   const spec = readRecord(run.manifest?.spec);
-  const callback = readRecord(spec?.callbackConversation);
+  const metadata = readRecord(spec?.metadata) ?? readRecord(spec?.manifestMetadata);
+  const callback = readRecord(spec?.callbackConversation) ?? readRecord(metadata?.callbackConversation);
   return readString(source?.filePath) ?? readString(callback?.sessionFile);
 }
 
@@ -121,7 +137,7 @@ function inferTitle(run: ScannedDurableRun, kind: ExecutionKind): string {
   const metadata = readRecord(spec?.metadata) ?? readRecord(spec?.manifestMetadata);
   const title = readString(metadata?.title) ?? readString(metadata?.taskSlug) ?? readString(spec?.taskSlug);
   if (title) return title;
-  const command = readString(spec?.shellCommand);
+  const command = readShellCommand(spec);
   if (command) return command;
   const prompt = readString(spec?.prompt) ?? readString(readRecord(spec?.agent)?.prompt);
   if (prompt) return prompt.split(/\s+/).slice(0, 8).join(' ');
@@ -136,7 +152,8 @@ export function projectExecution(run: ScannedDurableRun): ExecutionRecord {
   const agent = readRecord(spec?.agent);
   const kind = inferExecutionKind(run);
   const status = run.status?.status ?? 'unknown';
-  const command = readString(spec?.shellCommand);
+  const command = readShellCommand(spec);
+  const cwd = readCwd(spec);
   const prompt = readString(spec?.prompt) ?? readString(agent?.prompt);
   const model = readString(spec?.model) ?? readString(agent?.model);
   const taskId = readString(spec?.taskId) ?? readString(spec?.taskSlug) ?? readString(run.manifest?.source?.id);
@@ -151,7 +168,7 @@ export function projectExecution(run: ScannedDurableRun): ExecutionRecord {
     title: inferTitle(run, kind),
     ...(command && kind !== 'background-command' ? { subtitle: command } : {}),
     status,
-    ...(readString(spec?.cwd) ? { cwd: readString(spec?.cwd) } : {}),
+    ...(cwd ? { cwd } : {}),
     ...(command ? { command } : {}),
     ...(prompt ? { prompt } : {}),
     ...(model ? { model } : {}),

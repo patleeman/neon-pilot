@@ -55,6 +55,39 @@ describe('Execution projection', () => {
     });
   });
 
+  it('projects daemon target-shaped raw shell runs as conversation background commands', () => {
+    expect(
+      projectExecution(
+        run({
+          manifest: {
+            version: 1,
+            id: 'run-target-shell',
+            kind: 'raw-shell',
+            resumePolicy: 'manual',
+            createdAt: '2026-05-15T00:00:00.000Z',
+            spec: {
+              target: { type: 'shell', command: 'pnpm run release:publish', cwd: '/repo' },
+              metadata: {
+                taskSlug: 'publish-release',
+                callbackConversation: { conversationId: 'conversation-1', sessionFile: '/sessions/conversation-1.jsonl' },
+              },
+            },
+            source: { type: 'system', id: 'background-command' },
+          },
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'background-command',
+      visibility: 'primary',
+      conversationId: 'conversation-1',
+      sessionFile: '/sessions/conversation-1.jsonl',
+      title: 'publish-release',
+      command: 'pnpm run release:publish',
+      cwd: '/repo',
+      status: 'running',
+    });
+  });
+
   it('projects agent background runs as primary subagent executions', () => {
     expect(
       projectExecution(
