@@ -15,6 +15,25 @@ export interface NeonPilotCliCommandDefinition {
   description?: string;
   usage?: string;
   examples?: string[];
+  argsSchema?: Record<string, unknown>;
+  flagsSchema?: Record<string, unknown>;
+  mode?: 'read' | 'write' | 'destructive' | 'background' | 'streaming';
+  requiresApp?: boolean;
+  destructive?: boolean;
+  idempotent?: boolean;
+  startsBackgroundWork?: boolean;
+  supportsDryRun?: boolean;
+  outputModes?: Array<'text' | 'json' | 'jsonl'>;
+  streaming?: {
+    supportsFollow?: boolean;
+    supportsJsonl?: boolean;
+    cancelOnInterruptDefault?: boolean;
+  };
+  smoke?: {
+    argv?: string[];
+    expectHumanIncludes?: string[];
+    expectJsonFields?: string[];
+  };
   aliases?: string[];
   jsonDefault?: boolean;
   source?: 'core' | 'extension';
@@ -46,6 +65,18 @@ export interface NeonPilotCliHelpOptions {
   summary?: string;
   builtInCommands?: string[];
   examples?: string[];
+}
+
+export interface NeonPilotCliErrorResult {
+  ok: false;
+  error: {
+    code: string;
+    category: 'usage' | 'not_found' | 'ambiguous' | 'load_failure' | 'runtime_failure';
+    message: string;
+    command?: string;
+    hint?: string;
+    recoverable: boolean;
+  };
 }
 
 export function wantsJson(args: string[]): boolean {
@@ -163,6 +194,32 @@ export function formatCliResult(result: unknown, json: boolean): string {
   return `${JSON.stringify(result, null, 2)}\n`;
 }
 
+export function formatCliError(
+  input: {
+    code: string;
+    category: NeonPilotCliErrorResult['error']['category'];
+    message: string;
+    command?: string;
+    hint?: string;
+    recoverable?: boolean;
+  },
+  json: boolean,
+): string {
+  if (!json) return `${input.message}\n`;
+  const result: NeonPilotCliErrorResult = {
+    ok: false,
+    error: {
+      code: input.code,
+      category: input.category,
+      message: input.message,
+      ...(input.command ? { command: input.command } : {}),
+      ...(input.hint ? { hint: input.hint } : {}),
+      recoverable: input.recoverable ?? input.category !== 'runtime_failure',
+    },
+  };
+  return `${JSON.stringify(result, null, 2)}\n`;
+}
+
 export function renderCliUsage(options: NeonPilotCliHelpOptions = {}): string {
   const commandName = options.commandName ?? 'neon-pilot';
   const builtInCommands = options.builtInCommands ?? [
@@ -205,6 +262,15 @@ export function renderCliCommandHelp(definition: NeonPilotCliCommandDefinition, 
   if (description) lines.push('', description);
   lines.push('', `Usage: ${commandName} ${definition.usage ?? definition.command}`);
   if (definition.aliases?.length) lines.push('', `Aliases: ${definition.aliases.join(', ')}`);
+  const details = [
+    definition.mode ? `mode=${definition.mode}` : undefined,
+    definition.requiresApp === false ? 'offline-ok' : definition.requiresApp === true ? 'requires-app' : undefined,
+    definition.destructive ? 'destructive' : undefined,
+    definition.supportsDryRun ? 'dry-run' : undefined,
+    definition.startsBackgroundWork ? 'starts-background-work' : undefined,
+    definition.outputModes?.length ? `output=${definition.outputModes.join('|')}` : undefined,
+  ].filter((item): item is string => Boolean(item));
+  if (details.length > 0) lines.push('', `Contract: ${details.join(', ')}`);
   if (definition.examples?.length) {
     lines.push('', 'Examples:');
     lines.push(...definition.examples.map((example) => `  ${example}`));
@@ -220,4 +286,131 @@ export function findCliHelpTarget<T extends NeonPilotCliCommandDefinition>(defin
 
 export function actionFromCliCommand(command: string): string | undefined {
   return commandTokens(command).at(-1);
+}
+
+export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefinition>(definition: T): T {
+  const mode = definition.mode ?? inferCliCommandMode(definition.command);
+  const requiresApp = definition.requiresApp ?? inferCliCommandRequiresApp(definition.command);
+  const supportsDryRun =
+    definition.supportsDryRun ??
+    (mode === 'write' || mode === 'destructive' || mode === 'background' || definition.command === 'conversations run-turn');
+  const usage = definition.usage ?? inferCliCommandUsage(definition.command);
+  const outputModes = definition.outputModes ?? (mode === 'streaming' ? ['text', 'json', 'jsonl'] : ['text', 'json']);
+  return {
+    ...definition,
+    usage,
+    examples: definition.examples ?? [exampleFromCliUsage(usage), `${exampleFromCliUsage(usage)} --json`],
+    argsSchema: definition.argsSchema ?? inferCliArgsSchema(definition.command),
+    flagsSchema: definition.flagsSchema ?? inferCliFlagsSchema(definition.command, { supportsDryRun, mode }),
+    mode,
+    requiresApp,
+    destructive: definition.destructive ?? mode === 'destructive',
+    idempotent: definition.idempotent ?? mode === 'read',
+    startsBackgroundWork: definition.startsBackgroundWork ?? mode === 'background',
+    supportsDryRun,
+    outputModes,
+    ...(definition.streaming ?? mode === 'streaming'
+      ? { streaming: definition.streaming ?? { supportsFollow: true, supportsJsonl: outputModes.includes('jsonl'), cancelOnInterruptDefault: false } }
+      : {}),
+  };
+}
+
+function inferCliCommandMode(command: string): NonNullable<NeonPilotCliCommandDefinition['mode']> {
+  if (command === 'conversations run-turn' || command === 'protocol') return 'streaming';
+  if (
+    command.startsWith('background-commands start') ||
+    command.startsWith('subagents start') ||
+    command.startsWith('subagents follow-up') ||
+    command.startsWith('tasks run') ||
+    command.startsWith('heartbeats start')
+  ) {
+    return 'background';
+  }
+  if (command.includes(' delete') || command.includes(' uninstall') || command.includes('retention prune')) return 'destructive';
+  const readVerbs = new Set(['list', 'get', 'search', 'inspect', 'schema', 'doctor', 'catalog', 'paths', 'sources', 'logs', 'workspace', 'validate']);
+  if (readVerbs.has(commandTokens(command).at(-1) ?? '') || command.endsWith('open list') || command.endsWith('scratchpad get')) return 'read';
+  return 'write';
+}
+
+function inferCliCommandRequiresApp(command: string): boolean {
+  if (command.startsWith('app-commands')) return true;
+  return ['conversations send', 'conversations run-turn', 'conversations ensure-live', 'conversations abort', 'protocol'].includes(command);
+}
+
+function inferCliCommandUsage(command: string): string {
+  const args = inferRequiredCliArgs(command).map((arg) => `<${arg}>`);
+  if (command === 'settings set') args.push('<value>');
+  if (command === 'conversations run-turn') args.push('--text <message> [--follow] [--format text|json|jsonl]');
+  if (command === 'background-commands start') args.push('--command <shell> [--cwd <path>]');
+  if (command === 'subagents start') args.push('--prompt <prompt> [--cwd <path>]');
+  return [command, ...args, '[--json]'].join(' ');
+}
+
+function inferRequiredCliArgs(command: string): string[] {
+  if (
+    command.endsWith(' list') ||
+    command.endsWith(' schema') ||
+    command.endsWith(' doctor') ||
+    command.endsWith(' catalog') ||
+    command.endsWith(' paths') ||
+    command.endsWith(' sources') ||
+    command === 'commands' ||
+    command === 'help' ||
+    command === 'cli status' ||
+    command === 'conversations workspace' ||
+    command === 'conversations open list'
+  ) {
+    return [];
+  }
+  if (command === 'settings get' || command === 'settings set' || command === 'settings reset') return ['key'];
+  if (command.includes(' delete') || command.includes(' get') || command.includes(' logs') || command.includes(' rerun') || command.includes(' cancel')) {
+    return ['id'];
+  }
+  if (command.startsWith('conversations')) return ['conversationId'];
+  if (command.startsWith('extensions') && !['extensions reload'].includes(command)) return ['extensionId'];
+  if (command === 'protocol') return ['protocolId'];
+  return [];
+}
+
+function inferCliArgsSchema(command: string): Record<string, unknown> {
+  const required = inferRequiredCliArgs(command);
+  return {
+    type: 'array',
+    items: { type: 'string' },
+    ...(required.length ? { minItems: required.length, description: `Positional args: ${required.join(', ')}.` } : {}),
+  };
+}
+
+function inferCliFlagsSchema(
+  command: string,
+  contract: Pick<NeonPilotCliCommandDefinition, 'supportsDryRun' | 'mode'>,
+): Record<string, unknown> {
+  const properties: Record<string, unknown> = {
+    json: { type: 'boolean', description: 'Print structured JSON output.' },
+  };
+  if (contract.supportsDryRun) {
+    properties['dry-run'] = { type: 'boolean', description: 'Validate and describe the operation without changing runtime state.' };
+  }
+  if (contract.mode === 'streaming') {
+    properties.follow = { type: 'boolean', description: 'Follow progress when supported.' };
+    properties.format = { enum: ['text', 'json', 'jsonl'], description: 'Output format.' };
+    properties['cancel-on-interrupt'] = { type: 'boolean', description: 'Cancel remote work on interrupt when supported.' };
+  }
+  if (command.includes('run-turn') || command.includes('send')) properties.text = { type: 'string' };
+  return { type: 'object', properties, additionalProperties: true };
+}
+
+function exampleFromCliUsage(usage: string): string {
+  let example = usage.replace(/\[--json\]/g, '').replace(/\[[^\]]+\]/g, '').trim();
+  example = example
+    .replace(/<key>/g, 'conversation.pinnedToolCalls')
+    .replace(/<value>/g, 'false')
+    .replace(/<id>/g, 'example-id')
+    .replace(/<conversationId>/g, 'conversation-example')
+    .replace(/<extensionId>/g, 'system-settings')
+    .replace(/<protocolId>/g, 'acp')
+    .replace(/<message>/g, 'Hello')
+    .replace(/<shell>/g, 'echo ok')
+    .replace(/<prompt>/g, 'Summarize status');
+  return `neon-pilot ${example}`.replace(/\s+/g, ' ').trim();
 }

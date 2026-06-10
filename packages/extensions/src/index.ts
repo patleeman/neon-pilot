@@ -312,6 +312,29 @@ export interface ExtensionCliCommandContribution {
   usage?: string;
   /** Copy-pasteable examples including the neon-pilot executable. */
   examples?: string[];
+  /** JSON schema for positional args after the command path. */
+  argsSchema?: Record<string, unknown>;
+  /** JSON schema for supported flags without leading "--". */
+  flagsSchema?: Record<string, unknown>;
+  /** Command behavior class used by help, audits, and agents. */
+  mode?: 'read' | 'write' | 'destructive' | 'background' | 'streaming';
+  /** Whether this command needs a running app/extension host. */
+  requiresApp?: boolean;
+  destructive?: boolean;
+  idempotent?: boolean;
+  startsBackgroundWork?: boolean;
+  supportsDryRun?: boolean;
+  outputModes?: Array<'text' | 'json' | 'jsonl'>;
+  streaming?: {
+    supportsFollow?: boolean;
+    supportsJsonl?: boolean;
+    cancelOnInterruptDefault?: boolean;
+  };
+  smoke?: {
+    argv?: string[];
+    expectHumanIncludes?: string[];
+    expectJsonFields?: string[];
+  };
   /** Backend action id invoked with parsed CLI args and flags. */
   action: string;
   /** Explicit action hint passed to the backend action. Defaults to the final command token. */

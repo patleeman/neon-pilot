@@ -69,7 +69,9 @@
               "type": "boolean"
             }
           },
-          "required": ["command"],
+          "required": [
+            "command"
+          ],
           "additionalProperties": false
         }
       },
@@ -84,7 +86,14 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["list", "get", "logs", "start", "rerun", "cancel"]
+              "enum": [
+                "list",
+                "get",
+                "logs",
+                "start",
+                "rerun",
+                "cancel"
+              ]
             },
             "runId": {
               "type": "string"
@@ -107,7 +116,9 @@
               "type": "boolean"
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       },
@@ -122,7 +133,15 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["list", "get", "logs", "start", "rerun", "follow_up", "cancel"]
+              "enum": [
+                "list",
+                "get",
+                "logs",
+                "start",
+                "rerun",
+                "follow_up",
+                "cancel"
+              ]
             },
             "runId": {
               "type": "string"
@@ -171,7 +190,9 @@
               ]
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       }
@@ -191,7 +212,45 @@
         "description": "List durable background commands.",
         "action": "background_bash",
         "inputAction": "list",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "background-commands list [--json]",
+        "examples": [
+          "neon-pilot background-commands list",
+          "neon-pilot background-commands list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "background-commands",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "background-commands-get",
@@ -199,7 +258,40 @@
         "description": "Inspect a background command: background-commands get <run-id>.",
         "action": "background_bash",
         "inputAction": "get",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "background-commands get <id> [--json]",
+        "examples": [
+          "neon-pilot background-commands get example-id",
+          "neon-pilot background-commands get example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "background-commands-logs",
@@ -207,7 +299,40 @@
         "description": "Read background command logs: background-commands logs <run-id> [--tail <n>]",
         "action": "background_bash",
         "inputAction": "logs",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "background-commands logs <id> [--json]",
+        "examples": [
+          "neon-pilot background-commands logs example-id",
+          "neon-pilot background-commands logs example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "background-commands-start",
@@ -215,7 +340,42 @@
         "description": "Start a durable background command: background-commands start --command <shell> [--cwd <path>]",
         "action": "background_bash",
         "inputAction": "start",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "background-commands start --command <shell> [--cwd <path>] [--json]",
+        "examples": [
+          "neon-pilot background-commands start --command echo ok",
+          "neon-pilot background-commands start --command echo ok --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "background-commands-rerun",
@@ -223,7 +383,44 @@
         "description": "Rerun a background command: background-commands rerun <run-id>.",
         "action": "background_bash",
         "inputAction": "rerun",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "background-commands rerun <id> [--json]",
+        "examples": [
+          "neon-pilot background-commands rerun example-id",
+          "neon-pilot background-commands rerun example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "background-commands-cancel",
@@ -231,7 +428,44 @@
         "description": "Cancel a background command: background-commands cancel <run-id>.",
         "action": "background_bash",
         "inputAction": "cancel",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "background-commands cancel <id> [--json]",
+        "examples": [
+          "neon-pilot background-commands cancel example-id",
+          "neon-pilot background-commands cancel example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "subagents-list",
@@ -239,7 +473,45 @@
         "description": "List durable subagent runs.",
         "action": "subagent",
         "inputAction": "list",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "subagents list [--json]",
+        "examples": [
+          "neon-pilot subagents list",
+          "neon-pilot subagents list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "subagents",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "subagents-get",
@@ -247,7 +519,40 @@
         "description": "Inspect a subagent run: subagents get <run-id>.",
         "action": "subagent",
         "inputAction": "get",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "subagents get <id> [--json]",
+        "examples": [
+          "neon-pilot subagents get example-id",
+          "neon-pilot subagents get example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "subagents-logs",
@@ -255,7 +560,40 @@
         "description": "Read subagent logs: subagents logs <run-id> [--tail <n>]",
         "action": "subagent",
         "inputAction": "logs",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "subagents logs <id> [--json]",
+        "examples": [
+          "neon-pilot subagents logs example-id",
+          "neon-pilot subagents logs example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "subagents-start",
@@ -263,7 +601,42 @@
         "description": "Start a durable subagent: subagents start --prompt <prompt> [--cwd <path>]",
         "action": "subagent",
         "inputAction": "start",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "subagents start --prompt <prompt> [--cwd <path>] [--json]",
+        "examples": [
+          "neon-pilot subagents start --prompt Summarize status",
+          "neon-pilot subagents start --prompt Summarize status --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "subagents-rerun",
@@ -271,7 +644,44 @@
         "description": "Rerun a subagent: subagents rerun <run-id>.",
         "action": "subagent",
         "inputAction": "rerun",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "subagents rerun <id> [--json]",
+        "examples": [
+          "neon-pilot subagents rerun example-id",
+          "neon-pilot subagents rerun example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "subagents-follow-up",
@@ -279,7 +689,42 @@
         "description": "Continue a subagent: subagents follow-up <run-id> --prompt <prompt>.",
         "action": "subagent",
         "inputAction": "follow_up",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "subagents follow-up [--json]",
+        "examples": [
+          "neon-pilot subagents follow-up",
+          "neon-pilot subagents follow-up --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "subagents-cancel",
@@ -287,7 +732,44 @@
         "description": "Cancel a subagent: subagents cancel <run-id>.",
         "action": "subagent",
         "inputAction": "cancel",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "subagents cancel <id> [--json]",
+        "examples": [
+          "neon-pilot subagents cancel example-id",
+          "neon-pilot subagents cancel example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       }
     ],
     "skills": [
@@ -299,5 +781,8 @@
       }
     ]
   },
-  "permissions": ["runs:read", "runs:write"]
+  "permissions": [
+    "runs:read",
+    "runs:write"
+  ]
 }

@@ -41,10 +41,56 @@ export function validateCliCommandContributions(value: unknown): void {
     validateOptionalString(command.description, `contributes.cliCommands[${index}].description`);
     validateOptionalString(command.usage, `contributes.cliCommands[${index}].usage`);
     if (command.examples !== undefined) requireStringArray(command.examples, `contributes.cliCommands[${index}].examples`);
+    validateOptionalRecord(command.argsSchema, `contributes.cliCommands[${index}].argsSchema`);
+    validateOptionalRecord(command.flagsSchema, `contributes.cliCommands[${index}].flagsSchema`);
+    if (command.mode !== undefined) {
+      validateEnum(command.mode, ['read', 'write', 'destructive', 'background', 'streaming'], `contributes.cliCommands[${index}].mode`);
+    }
+    validateOptionalBoolean(command.requiresApp, `contributes.cliCommands[${index}].requiresApp`);
+    validateOptionalBoolean(command.destructive, `contributes.cliCommands[${index}].destructive`);
+    validateOptionalBoolean(command.idempotent, `contributes.cliCommands[${index}].idempotent`);
+    validateOptionalBoolean(command.startsBackgroundWork, `contributes.cliCommands[${index}].startsBackgroundWork`);
+    validateOptionalBoolean(command.supportsDryRun, `contributes.cliCommands[${index}].supportsDryRun`);
+    if (command.outputModes !== undefined) {
+      const outputModes = requireStringArray(command.outputModes, `contributes.cliCommands[${index}].outputModes`);
+      for (const mode of outputModes) {
+        validateEnum(mode, ['text', 'json', 'jsonl'], `contributes.cliCommands[${index}].outputModes[]`);
+      }
+    }
+    if (command.streaming !== undefined) {
+      validateOptionalRecord(command.streaming, `contributes.cliCommands[${index}].streaming`);
+      const streaming = command.streaming as Record<string, unknown>;
+      validateOptionalBoolean(streaming.supportsFollow, `contributes.cliCommands[${index}].streaming.supportsFollow`);
+      validateOptionalBoolean(streaming.supportsJsonl, `contributes.cliCommands[${index}].streaming.supportsJsonl`);
+      validateOptionalBoolean(streaming.cancelOnInterruptDefault, `contributes.cliCommands[${index}].streaming.cancelOnInterruptDefault`);
+    }
+    if (command.smoke !== undefined) {
+      validateOptionalRecord(command.smoke, `contributes.cliCommands[${index}].smoke`);
+      const smoke = command.smoke as Record<string, unknown>;
+      if (smoke.argv !== undefined) requireStringArray(smoke.argv, `contributes.cliCommands[${index}].smoke.argv`);
+      if (smoke.expectHumanIncludes !== undefined) {
+        requireStringArray(smoke.expectHumanIncludes, `contributes.cliCommands[${index}].smoke.expectHumanIncludes`);
+      }
+      if (smoke.expectJsonFields !== undefined) {
+        requireStringArray(smoke.expectJsonFields, `contributes.cliCommands[${index}].smoke.expectJsonFields`);
+      }
+    }
     if (command.aliases !== undefined) requireStringArray(command.aliases, `contributes.cliCommands[${index}].aliases`);
     if (command.jsonDefault !== undefined && typeof command.jsonDefault !== 'boolean') {
       throw new Error(`Extension manifest contributes.cliCommands[${index}].jsonDefault must be a boolean.`);
     }
+  }
+}
+
+function validateOptionalBoolean(value: unknown, path: string): void {
+  if (value !== undefined && typeof value !== 'boolean') {
+    throw new Error(`Extension manifest ${path} must be a boolean.`);
+  }
+}
+
+function validateOptionalRecord(value: unknown, path: string): void {
+  if (value !== undefined && (typeof value !== 'object' || value === null || Array.isArray(value))) {
+    throw new Error(`Extension manifest ${path} must be an object.`);
   }
 }
 

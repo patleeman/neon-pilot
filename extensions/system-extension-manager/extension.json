@@ -181,7 +181,15 @@
     ]
   },
   "contributes": {
-    "nav": [{ "id": "extensions-nav", "label": "Extensions", "route": "/extensions", "icon": "sparkle", "section": "settings" }],
+    "nav": [
+      {
+        "id": "extensions-nav",
+        "label": "Extensions",
+        "route": "/extensions",
+        "icon": "sparkle",
+        "section": "settings"
+      }
+    ],
     "views": [
       {
         "id": "extensions-page",
@@ -208,7 +216,45 @@
         "command": "extensions list",
         "description": "List installed Neon Pilot extensions.",
         "action": "manageExtension",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "extensions list [--json]",
+        "examples": [
+          "neon-pilot extensions list",
+          "neon-pilot extensions list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "extensions",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "extensions-create",
@@ -216,7 +262,44 @@
         "description": "Create a runtime extension: extensions create <id> --name <name> [--template <template>]",
         "action": "manageExtension",
         "jsonDefault": true,
-        "inputAction": "create"
+        "inputAction": "create",
+        "usage": "extensions create <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions create system-settings",
+          "neon-pilot extensions create system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-snapshot",
@@ -224,7 +307,44 @@
         "description": "Snapshot a runtime extension by id.",
         "action": "manageExtension",
         "jsonDefault": true,
-        "inputAction": "snapshot"
+        "inputAction": "snapshot",
+        "usage": "extensions snapshot <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions snapshot system-settings",
+          "neon-pilot extensions snapshot system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-delete",
@@ -233,7 +353,46 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "delete",
-        "aliases": ["extensions uninstall"]
+        "aliases": [
+          "extensions uninstall"
+        ],
+        "usage": "extensions delete <id> [--json]",
+        "examples": [
+          "neon-pilot extensions delete example-id",
+          "neon-pilot extensions delete example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": false,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-catalog",
@@ -241,7 +400,45 @@
         "description": "List installable extension catalog entries.",
         "action": "manageExtension",
         "jsonDefault": true,
-        "inputAction": "listInstallable"
+        "inputAction": "listInstallable",
+        "usage": "extensions catalog [--json]",
+        "examples": [
+          "neon-pilot extensions catalog",
+          "neon-pilot extensions catalog --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "extensions",
+            "catalog"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "extensions-install",
@@ -249,7 +446,44 @@
         "description": "Install an extension from the catalog: extensions install <id>",
         "action": "manageExtension",
         "jsonDefault": true,
-        "inputAction": "installCatalog"
+        "inputAction": "installCatalog",
+        "usage": "extensions install <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions install system-settings",
+          "neon-pilot extensions install system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-update",
@@ -257,7 +491,44 @@
         "description": "Update a catalog-installed extension: extensions update <id>",
         "action": "manageExtension",
         "jsonDefault": true,
-        "inputAction": "updateCatalog"
+        "inputAction": "updateCatalog",
+        "usage": "extensions update <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions update system-settings",
+          "neon-pilot extensions update system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-install-url",
@@ -265,7 +536,44 @@
         "description": "Install an extension bundle from URL: extensions install-url <url> [--expected-id <id>]",
         "action": "manageExtension",
         "jsonDefault": true,
-        "inputAction": "installFromUrl"
+        "inputAction": "installFromUrl",
+        "usage": "extensions install-url <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions install-url system-settings",
+          "neon-pilot extensions install-url system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-install-marketplace",
@@ -273,56 +581,348 @@
         "description": "Install a marketplace behavior package as an extension: extensions install-marketplace <source> --type skill|instruction-pack|agent|template",
         "action": "manageExtension",
         "jsonDefault": true,
-        "inputAction": "installMarketplacePackage"
+        "inputAction": "installMarketplacePackage",
+        "usage": "extensions install-marketplace <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions install-marketplace system-settings",
+          "neon-pilot extensions install-marketplace system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-validate",
         "command": "extensions validate",
         "description": "Validate an installed extension by id.",
         "action": "manageExtension",
-        "inputAction": "validate"
+        "inputAction": "validate",
+        "usage": "extensions validate <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions validate system-settings",
+          "neon-pilot extensions validate system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-reload",
         "command": "extensions reload",
         "description": "Reload an extension backend by id, or refresh registry state.",
         "action": "manageExtension",
-        "inputAction": "reload"
+        "inputAction": "reload",
+        "usage": "extensions reload [--json]",
+        "examples": [
+          "neon-pilot extensions reload",
+          "neon-pilot extensions reload --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-smoke",
         "command": "extensions smoke",
         "description": "Run backend smoke checks for an installed extension.",
         "action": "manageExtension",
-        "inputAction": "smoke"
+        "inputAction": "smoke",
+        "usage": "extensions smoke <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions smoke system-settings",
+          "neon-pilot extensions smoke system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-enable",
         "command": "extensions enable",
         "description": "Enable an installed extension.",
         "action": "manageExtension",
-        "inputAction": "enable"
+        "inputAction": "enable",
+        "usage": "extensions enable <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions enable system-settings",
+          "neon-pilot extensions enable system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-disable",
         "command": "extensions disable",
         "description": "Disable an installed extension.",
         "action": "manageExtension",
-        "inputAction": "disable"
+        "inputAction": "disable",
+        "usage": "extensions disable <extensionId> [--json]",
+        "examples": [
+          "neon-pilot extensions disable system-settings",
+          "neon-pilot extensions disable system-settings --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: extensionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "extensions-paths",
         "command": "extensions paths",
         "description": "Read extension search paths.",
         "action": "manageExtension",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "extensions paths [--json]",
+        "examples": [
+          "neon-pilot extensions paths",
+          "neon-pilot extensions paths --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "extensions",
+            "paths"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "extensions-sources",
         "command": "extensions sources",
         "description": "Read extension catalog sources.",
         "action": "manageExtension",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "extensions sources [--json]",
+        "examples": [
+          "neon-pilot extensions sources",
+          "neon-pilot extensions sources --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "extensions",
+            "sources"
+          ],
+          "expectJsonFields": []
+        }
       }
     ],
     "skills": [
@@ -340,5 +940,8 @@
       }
     ]
   },
-  "permissions": ["extensions:read", "extensions:write"]
+  "permissions": [
+    "extensions:read",
+    "extensions:write"
+  ]
 }

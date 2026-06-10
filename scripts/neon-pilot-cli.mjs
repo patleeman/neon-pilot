@@ -13,6 +13,7 @@ const cliSourcePath = resolve(repoRoot, 'packages/desktop/server/protocolCli.ts'
 const tsxPath = resolve(repoRoot, 'node_modules/.bin/tsx');
 
 function canUseBuiltCli() {
+  if (process.env.NEON_PILOT_FORCE_SOURCE_CLI === '1') return false;
   if (!existsSync(cliDistPath)) return false;
   try {
     require.resolve('@neon-pilot/core');

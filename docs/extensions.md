@@ -544,6 +544,20 @@ Core owns the `neon-pilot` CLI shell. Extensions contribute product-specific ver
         "description": "List example records.",
         "usage": "example list [--json]",
         "examples": ["neon-pilot example list", "neon-pilot example list --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" } },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "idempotent": true,
+        "outputModes": ["text", "json"],
+        "smoke": {
+          "argv": ["example", "list"],
+          "expectJsonFields": ["records"]
+        },
         "action": "manageExample",
         "jsonDefault": true
       }
@@ -555,6 +569,8 @@ Core owns the `neon-pilot` CLI shell. Extensions contribute product-specific ver
 The action receives `{ action, cli: { command, rawArgv, args, flags, json, cwd } }`, where `action` defaults to the final command token as a convenience hint. Return `{ text }` for human output and structured fields for `--json`; the shell is human-first and only sets `cli.json` when the caller passes `--json`. Keep CLI commands coarse and administrative; do not expose every UI button as a command. Agents should discover commands with `neon-pilot commands --json` and prefer extension-contributed CLI commands over direct runtime file edits. System extensions use this surface for extension-owned administration such as `extensions ...`, `settings ...`, and `conversations ...`. CLI commands route through the same extension host and permission boundary as UI actions; do not expose secret reads or raw host file mutation through CLI handlers.
 
 Each command should include a human-readable `description`; add `usage` and `examples` when the command accepts arguments or flags. `pnpm run check:cli:surface` validates command discovery and help output for all system extension CLI commands.
+
+System extension CLI commands must also declare a contract: `argsSchema`, `flagsSchema`, `mode`, `requiresApp`, `idempotent`, and `outputModes`. Mutating commands (`write`, `destructive`, or `background`) must support and document `--dry-run`; the core CLI shell short-circuits declared dry-runs before invoking the backend action. Long-running commands should declare `mode: "streaming"`, include `jsonl` in `outputModes`, and document flags such as `--follow`, `--format text|json|jsonl`, and `--cancel-on-interrupt` when supported. Use optional `smoke` metadata for safe read-only contract tests.
 
 ### Quick-open surfaces (`quickOpen`)
 

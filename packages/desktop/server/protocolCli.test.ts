@@ -140,6 +140,78 @@ describe('protocol CLI', () => {
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"command": "extensions list"'));
   });
 
+  it('prints stable human help for the core shell', async () => {
+    await expect(runProtocolCli(['help'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenCalledWith(`Usage: neon-pilot <command> [args]
+
+Neon Pilot command line administration for the local runtime and enabled extensions.
+
+Built-in commands:
+  commands [--json]             List core and extension CLI commands
+  cli status|install|uninstall  Manage the optional user-shell CLI symlink
+  help [command]                Show help
+  protocol <protocol-id> ...    Invoke a raw extension protocol entrypoint
+
+Examples:
+  neon-pilot commands
+  neon-pilot help extensions list
+  neon-pilot extensions list
+  neon-pilot protocol acp
+`);
+  });
+
+  it('prints stable human command lists with source ownership', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-settings',
+          surfaceId: 'settings-list',
+          command: 'settings list',
+          action: 'manageSettings',
+          description: 'List runtime settings.',
+          usage: 'settings list [--json]',
+          mode: 'read',
+          requiresApp: false,
+          idempotent: true,
+          outputModes: ['text', 'json'],
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['commands'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('settings list [system-settings]  List runtime settings.'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('cli status  Show the channel-local launcher'));
+  });
+
+  it('returns structured errors for JSON callers', async () => {
+    await expect(runProtocolCli(['unknown-command', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.notFound);
+
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"category": "not_found"'));
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"code": "unknown_command"'));
+  });
+
+  it('short-circuits extension dry-runs before invoking backend actions', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-settings',
+          surfaceId: 'settings-set',
+          command: 'settings set',
+          action: 'manageSettings',
+          supportsDryRun: true,
+          mode: 'write',
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['settings', 'set', 'conversation.pinnedToolCalls', 'false', '--dry-run'])).resolves.toBe(0);
+
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Dry run: settings set would run'));
+  });
+
   it('dispatches extension-contributed CLI commands through extension actions', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
@@ -242,6 +314,11 @@ describe('protocol CLI', () => {
   it('reports CLI install status as a built-in command', async () => {
     await expect(runProtocolCli(['cli', 'status', '--json'])).resolves.toBe(0);
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"binDir"'));
+  });
+
+  it('supports dry-run for built-in CLI install management', async () => {
+    await expect(runProtocolCli(['cli', 'install', '--dry-run'])).resolves.toBe(0);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Dry run: would install'));
   });
 
   it('maps extension protocol errors to specific exit codes', async () => {

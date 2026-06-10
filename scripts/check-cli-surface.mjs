@@ -3,9 +3,11 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const repoRoot = resolve(new URL('..', import.meta.url).pathname);
-const cliBin = resolve(repoRoot, 'scripts/neon-pilot-cli.mjs');
+const tsxBin = resolve(repoRoot, 'node_modules/.bin/tsx');
+const cliSource = pathToFileURL(resolve(repoRoot, 'packages/desktop/server/protocolCli.ts')).href;
 const repeat = readRepeat(process.argv.slice(2));
 const failures = [];
 
@@ -18,11 +20,11 @@ function readRepeat(args) {
 }
 
 function runCli(args, options = {}) {
-  const result = spawnSync(process.execPath, [cliBin, ...args], {
+  const result = spawnSync(tsxBin, ['--eval', `import(${JSON.stringify(cliSource)}).then((module) => module.main(${JSON.stringify(args)}))`], {
     cwd: repoRoot,
     encoding: 'utf-8',
     timeout: options.timeoutMs ?? 30_000,
-    env: { ...process.env, NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT || repoRoot },
+    env: { ...process.env, NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT || repoRoot, NEON_PILOT_FORCE_SOURCE_CLI: '1' },
   });
   return {
     args,
@@ -85,11 +87,33 @@ function validateManifestCliCommands(commands) {
       `${label} (${command.command}) needs a human-readable description.`,
     );
     if (command.usage !== undefined) assert(typeof command.usage === 'string' && command.usage.trim(), `${label} has an empty usage.`);
+    assert(typeof command.usage === 'string' && command.usage.trim(), `${label} (${command.command}) needs usage for help.`);
     if (command.examples !== undefined) {
       assert(Array.isArray(command.examples), `${label} examples must be an array.`);
       for (const [exampleIndex, example] of (command.examples ?? []).entries()) {
         assert(typeof example === 'string' && example.includes('neon-pilot '), `${label} examples[${exampleIndex}] must be copy-pasteable.`);
       }
+    }
+    assert(Array.isArray(command.examples) && command.examples.length > 0, `${label} (${command.command}) needs at least one example.`);
+    assert(isRecord(command.argsSchema), `${label} (${command.command}) needs argsSchema.`);
+    assert(isRecord(command.flagsSchema), `${label} (${command.command}) needs flagsSchema.`);
+    assert(
+      ['read', 'write', 'destructive', 'background', 'streaming'].includes(command.mode),
+      `${label} (${command.command}) needs a valid mode.`,
+    );
+    assert(typeof command.requiresApp === 'boolean', `${label} (${command.command}) needs requiresApp.`);
+    assert(typeof command.idempotent === 'boolean', `${label} (${command.command}) needs idempotent.`);
+    assert(Array.isArray(command.outputModes) && command.outputModes.length > 0, `${label} (${command.command}) needs outputModes.`);
+    if (['write', 'destructive', 'background'].includes(command.mode)) {
+      assert(command.supportsDryRun === true, `${label} (${command.command}) is mutating and must support --dry-run.`);
+      assert(
+        isRecord(command.flagsSchema?.properties) && isRecord(command.flagsSchema.properties['dry-run']),
+        `${label} (${command.command}) supports --dry-run but flagsSchema does not document it.`,
+      );
+    }
+    if (command.mode === 'streaming') {
+      assert(isRecord(command.streaming), `${label} (${command.command}) is streaming and needs streaming metadata.`);
+      assert(command.outputModes.includes('jsonl'), `${label} (${command.command}) is streaming and should declare jsonl output mode.`);
     }
     const normalized = command.command.trim().replace(/\s+/g, ' ');
     const owner = seenCommands.get(normalized);
@@ -107,11 +131,73 @@ function validateRuntimeCommands(discoveredCommands, manifestCommands) {
       typeof command.description === 'string' && command.description.trim(),
       `Runtime command "${command.command}" needs a description for human help.`,
     );
+    assert(typeof command.usage === 'string' && command.usage.trim(), `Runtime command "${command.command}" needs usage.`);
+    assert(Array.isArray(command.examples) && command.examples.length > 0, `Runtime command "${command.command}" needs examples.`);
+    assert(isRecord(command.argsSchema), `Runtime command "${command.command}" needs argsSchema.`);
+    assert(isRecord(command.flagsSchema), `Runtime command "${command.command}" needs flagsSchema.`);
+    assert(['read', 'write', 'destructive', 'background', 'streaming'].includes(command.mode), `Runtime command "${command.command}" needs mode.`);
+    assert(typeof command.requiresApp === 'boolean', `Runtime command "${command.command}" needs requiresApp.`);
+    assert(typeof command.idempotent === 'boolean', `Runtime command "${command.command}" needs idempotent.`);
+    assert(Array.isArray(command.outputModes) && command.outputModes.length > 0, `Runtime command "${command.command}" needs outputModes.`);
+    if (['write', 'destructive', 'background'].includes(command.mode)) {
+      assert(command.supportsDryRun === true, `Runtime command "${command.command}" is mutating and must support --dry-run.`);
+    }
   }
   for (const command of manifestCommands) {
     const normalized = command.command.trim().replace(/\s+/g, ' ');
     assert(discoveredByCommand.has(normalized), `System extension command "${normalized}" is not discoverable at runtime.`);
   }
+}
+
+function isRecord(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function hasField(value, field) {
+  if (!field) return true;
+  let current = value;
+  for (const part of field.split('.')) {
+    if (!isRecord(current) || !(part in current)) return false;
+    current = current[part];
+  }
+  return true;
+}
+
+function runContractSmoke(command, iteration) {
+  const smoke = command.smoke;
+  if (!isRecord(smoke) || !Array.isArray(smoke.argv) || smoke.argv.length === 0) return;
+  const label = `iteration ${iteration}: smoke ${command.command}`;
+  const human = runCli(smoke.argv);
+  assertCliOk(human, label);
+  for (const expected of smoke.expectHumanIncludes ?? []) {
+    assert(human.stdout.includes(expected), `${label} human output did not include ${JSON.stringify(expected)}.`);
+  }
+  if (!(command.outputModes ?? []).includes('json')) return;
+  const json = runCli([...smoke.argv, '--json']);
+  assertCliOk(json, `${label} --json`);
+  const parsed = parseJson(json.stdout, `${label} --json`);
+  for (const field of smoke.expectJsonFields ?? []) {
+    assert(hasField(parsed, field), `${label} --json missing field ${field}.`);
+  }
+}
+
+function runDryRunSmoke(command, iteration) {
+  if (!command.supportsDryRun) return;
+  const label = `iteration ${iteration}: dry-run ${command.command}`;
+  const argv = [...command.command.split(/\s+/), ...(sampleArgs(command.argsSchema) ?? []), '--dry-run'];
+  const human = runCli(argv);
+  assertCliOk(human, label);
+  assert(human.stdout.includes('Dry run:'), `${label} did not print dry-run human output.`);
+  const json = runCli([...argv, '--json']);
+  assertCliOk(json, `${label} --json`);
+  const parsed = parseJson(json.stdout, `${label} --json`);
+  assert(parsed?.dryRun === true, `${label} --json did not set dryRun=true.`);
+}
+
+function sampleArgs(argsSchema) {
+  const minItems = Number.isInteger(argsSchema?.minItems) ? argsSchema.minItems : 0;
+  if (minItems <= 0) return [];
+  return Array.from({ length: minItems }, (_, index) => `sample-${index + 1}`);
 }
 
 function smokeCli(iteration) {
@@ -144,6 +230,11 @@ function smokeCli(iteration) {
     const commandHelp = runCli(['help', ...commandPath.split(/\s+/)]);
     assertCliOk(commandHelp, `${label}: neon-pilot help ${commandPath}`);
     assert(commandHelp.stdout.includes('Usage: neon-pilot '), `${label}: help for "${commandPath}" did not include usage.`);
+    if (commandHelp.stdout.includes('Contract:')) {
+      assert(commandHelp.stdout.includes('output='), `${label}: help for "${commandPath}" contract did not include output modes.`);
+    }
+    runContractSmoke(command, iteration);
+    runDryRunSmoke(command, iteration);
   }
 
   return commands;

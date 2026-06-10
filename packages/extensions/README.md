@@ -822,6 +822,17 @@ Core owns the `neon-pilot` CLI shell. Extensions can add administrative commands
         "description": "List tasks.",
         "usage": "tasks list [--json]",
         "examples": ["neon-pilot tasks list", "neon-pilot tasks list --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" } },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean" } },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "idempotent": true,
+        "outputModes": ["text", "json"],
+        "smoke": { "argv": ["tasks", "list"] },
         "action": "manageTasks",
         "jsonDefault": true
       }
@@ -833,6 +844,8 @@ Core owns the `neon-pilot` CLI shell. Extensions can add administrative commands
 The backend action receives `{ action, cli: { command, rawArgv, args, flags, json, cwd } }`, where `action` defaults to the final command token as a convenience hint. Return `{ text }` for human-readable output and structured fields for `--json`; `cli.json` is true only when the caller passes `--json`. Keep CLI commands coarse and workflow-oriented. Agents should start with `neon-pilot commands --json` and use extension CLI commands for Neon Pilot administration instead of editing runtime files directly. First-party self-administration commands include `extensions ...`, `settings ...`, and `conversations ...`. CLI handlers run through the extension host permission boundary; do not expose secret reads or raw host file mutation.
 
 Every command should have a `description`; add `usage` and `examples` for commands with arguments or flags so `neon-pilot help <command>` is useful to humans. Run `pnpm run check:cli:surface` after changing CLI contributions.
+
+System extension commands must declare `argsSchema`, `flagsSchema`, `mode`, `requiresApp`, `idempotent`, and `outputModes`. Mutating commands must support `--dry-run`; the core CLI shell returns a dry-run result before invoking the backend action. Streaming commands should declare `mode: "streaming"`, include `jsonl` in `outputModes`, and document `--follow`, `--format`, and interrupt behavior when supported.
 
 ## Storage
 

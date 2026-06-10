@@ -202,7 +202,45 @@
         "description": "List conversations, optionally filtered by query.",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "inspect"
+        "inputAction": "inspect",
+        "usage": "conversations list [--json]",
+        "examples": [
+          "neon-pilot conversations list",
+          "neon-pilot conversations list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "conversations",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "conversations-search",
@@ -210,7 +248,45 @@
         "description": "Search visible conversation transcript text.",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "inspect"
+        "inputAction": "inspect",
+        "usage": "conversations search [--json]",
+        "examples": [
+          "neon-pilot conversations search",
+          "neon-pilot conversations search --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "conversations",
+            "search"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "conversations-inspect",
@@ -218,7 +294,40 @@
         "description": "Inspect a conversation by id; optional second arg is outline, query, diff, or read_window.",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "inspect"
+        "inputAction": "inspect",
+        "usage": "conversations inspect <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations inspect conversation-example",
+          "neon-pilot conversations inspect conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-create",
@@ -226,21 +335,132 @@
         "description": "Create a conversation with an optional title.",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "create"
+        "inputAction": "create",
+        "usage": "conversations create <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations create conversation-example",
+          "neon-pilot conversations create conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-title",
         "command": "conversations title",
         "description": "Set a conversation title: conversations title <id> <title>.",
         "action": "conversationTool",
-        "inputAction": "set_title"
+        "inputAction": "set_title",
+        "usage": "conversations title <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations title conversation-example",
+          "neon-pilot conversations title conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-cwd",
         "command": "conversations cwd",
         "description": "Change a conversation working directory: conversations cwd <id> <path>.",
         "action": "conversationTool",
-        "inputAction": "change_working_directory"
+        "inputAction": "change_working_directory",
+        "usage": "conversations cwd <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations cwd conversation-example",
+          "neon-pilot conversations cwd conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-ensure-live",
@@ -248,7 +468,44 @@
         "description": "Ensure a conversation has a live runtime: conversations ensure-live <id> [--cwd <path>]",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "ensure_live"
+        "inputAction": "ensure_live",
+        "usage": "conversations ensure-live <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations ensure-live conversation-example",
+          "neon-pilot conversations ensure-live conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-send",
@@ -256,7 +513,44 @@
         "description": "Send a message to a conversation: conversations send <id> --text <message> [--steer]",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "send_message"
+        "inputAction": "send_message",
+        "usage": "conversations send <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations send conversation-example",
+          "neon-pilot conversations send conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-run-turn",
@@ -264,21 +558,160 @@
         "description": "Run a conversation turn and wait for completion: conversations run-turn <id> --text <message> [--timeout-ms <ms>]",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "run_turn"
+        "inputAction": "run_turn",
+        "usage": "conversations run-turn <conversationId> --text <message> [--follow] [--format text|json|jsonl] [--json]",
+        "examples": [
+          "neon-pilot conversations run-turn conversation-example --text Hello",
+          "neon-pilot conversations run-turn conversation-example --text Hello --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "text": {
+              "type": "string"
+            },
+            "timeout-ms": {
+              "type": "number"
+            },
+            "follow": {
+              "type": "boolean",
+              "description": "Follow turn progress when supported."
+            },
+            "format": {
+              "enum": [
+                "text",
+                "json",
+                "jsonl"
+              ],
+              "description": "Output format."
+            },
+            "cancel-on-interrupt": {
+              "type": "boolean",
+              "description": "Cancel the remote work on Ctrl-C when supported."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without sending a turn."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "streaming",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json",
+          "jsonl"
+        ],
+        "streaming": {
+          "supportsFollow": true,
+          "supportsJsonl": true,
+          "cancelOnInterruptDefault": false
+        }
       },
       {
         "id": "conversations-abort",
         "command": "conversations abort",
         "description": "Abort a live conversation turn.",
         "action": "conversationTool",
-        "inputAction": "abort"
+        "inputAction": "abort",
+        "usage": "conversations abort <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations abort conversation-example",
+          "neon-pilot conversations abort conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-compact",
         "command": "conversations compact",
         "description": "Compact a conversation transcript.",
         "action": "conversationTool",
-        "inputAction": "compact"
+        "inputAction": "compact",
+        "usage": "conversations compact <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations compact conversation-example",
+          "neon-pilot conversations compact conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-fork",
@@ -286,7 +719,44 @@
         "description": "Fork a conversation: conversations fork <id> [--title <title>] [--target-cwd <path>]",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "fork"
+        "inputAction": "fork",
+        "usage": "conversations fork <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations fork conversation-example",
+          "neon-pilot conversations fork conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-tools",
@@ -294,7 +764,44 @@
         "description": "Set active tools for a conversation: conversations tools <id> <tool...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "set_active_tools"
+        "inputAction": "set_active_tools",
+        "usage": "conversations tools <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations tools conversation-example",
+          "neon-pilot conversations tools conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-rollback",
@@ -302,7 +809,44 @@
         "description": "Rollback recent conversation transcript blocks: conversations rollback <id> [count]",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "rollback"
+        "inputAction": "rollback",
+        "usage": "conversations rollback <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations rollback conversation-example",
+          "neon-pilot conversations rollback conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-workspace",
@@ -310,7 +854,45 @@
         "description": "Read conversation workspace state.",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_get"
+        "inputAction": "workspace_get",
+        "usage": "conversations workspace [--json]",
+        "examples": [
+          "neon-pilot conversations workspace",
+          "neon-pilot conversations workspace --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "conversations",
+            "workspace"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "conversations-workspace-update",
@@ -318,7 +900,44 @@
         "description": "Update open/sidebar workspace state with --open, --pinned, --archived, --active, --workspace-path, or --remote-controlled.",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_update"
+        "inputAction": "workspace_update",
+        "usage": "conversations workspace update <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations workspace update conversation-example",
+          "neon-pilot conversations workspace update conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-open-list",
@@ -326,7 +945,46 @@
         "description": "List conversations currently open in the sidebar.",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_get"
+        "inputAction": "workspace_get",
+        "usage": "conversations open list [--json]",
+        "examples": [
+          "neon-pilot conversations open list",
+          "neon-pilot conversations open list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "conversations",
+            "open",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "conversations-open-add",
@@ -334,7 +992,44 @@
         "description": "Add conversations to the open/sidebar list: conversations open add <id...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_open_update"
+        "inputAction": "workspace_open_update",
+        "usage": "conversations open add <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations open add conversation-example",
+          "neon-pilot conversations open add conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-open-remove",
@@ -342,7 +1037,44 @@
         "description": "Remove conversations from open/sidebar state: conversations open remove <id...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_open_update"
+        "inputAction": "workspace_open_update",
+        "usage": "conversations open remove <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations open remove conversation-example",
+          "neon-pilot conversations open remove conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-open-pin",
@@ -350,7 +1082,44 @@
         "description": "Pin conversations in the sidebar: conversations open pin <id...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_open_update"
+        "inputAction": "workspace_open_update",
+        "usage": "conversations open pin <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations open pin conversation-example",
+          "neon-pilot conversations open pin conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-open-unpin",
@@ -358,7 +1127,44 @@
         "description": "Unpin conversations in the sidebar: conversations open unpin <id...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_open_update"
+        "inputAction": "workspace_open_update",
+        "usage": "conversations open unpin <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations open unpin conversation-example",
+          "neon-pilot conversations open unpin conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-open-active",
@@ -366,7 +1172,44 @@
         "description": "Set or clear the active sidebar conversation: conversations open active [id]",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_open_update"
+        "inputAction": "workspace_open_update",
+        "usage": "conversations open active <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations open active conversation-example",
+          "neon-pilot conversations open active conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-archive",
@@ -374,7 +1217,44 @@
         "description": "Archive conversations by hiding them from normal sidebar/history views: conversations archive <id...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_open_update"
+        "inputAction": "workspace_open_update",
+        "usage": "conversations archive <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations archive conversation-example",
+          "neon-pilot conversations archive conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-unarchive",
@@ -382,7 +1262,44 @@
         "description": "Unarchive conversations: conversations unarchive <id...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "workspace_open_update"
+        "inputAction": "workspace_open_update",
+        "usage": "conversations unarchive <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations unarchive conversation-example",
+          "neon-pilot conversations unarchive conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-delete",
@@ -390,7 +1307,44 @@
         "description": "Permanently delete persisted conversations and remove workspace/sidebar references: conversations delete <id...>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "delete"
+        "inputAction": "delete",
+        "usage": "conversations delete <id> [--json]",
+        "examples": [
+          "neon-pilot conversations delete example-id",
+          "neon-pilot conversations delete example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": false,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-retention-prune",
@@ -398,7 +1352,44 @@
         "description": "Prune old persisted conversations: conversations retention prune --older-than 90d --archived-only --dry-run",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "retention_prune"
+        "inputAction": "retention_prune",
+        "usage": "conversations retention prune <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations retention prune conversation-example",
+          "neon-pilot conversations retention prune conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": false,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-transcript-append",
@@ -406,7 +1397,44 @@
         "description": "Append a transcript block: conversations transcript append <id> --type <type> --data <json>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "append_transcript_block"
+        "inputAction": "append_transcript_block",
+        "usage": "conversations transcript append <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations transcript append conversation-example",
+          "neon-pilot conversations transcript append conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-transcript-update",
@@ -414,7 +1442,44 @@
         "description": "Update a transcript block: conversations transcript update <id> <block-id> --type <type> --data <json>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "update_transcript_block"
+        "inputAction": "update_transcript_block",
+        "usage": "conversations transcript update <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations transcript update conversation-example",
+          "neon-pilot conversations transcript update conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-scratchpad-get",
@@ -422,7 +1487,40 @@
         "description": "Get a conversation scratchpad: conversations scratchpad get <id>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "scratchpad"
+        "inputAction": "scratchpad",
+        "usage": "conversations scratchpad get <id> [--json]",
+        "examples": [
+          "neon-pilot conversations scratchpad get example-id",
+          "neon-pilot conversations scratchpad get example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-scratchpad-set",
@@ -430,7 +1528,44 @@
         "description": "Replace a conversation scratchpad: conversations scratchpad set <id> --content <markdown>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "scratchpad"
+        "inputAction": "scratchpad",
+        "usage": "conversations scratchpad set <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations scratchpad set conversation-example",
+          "neon-pilot conversations scratchpad set conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "conversations-scratchpad-patch",
@@ -438,7 +1573,44 @@
         "description": "Append/prepend to a scratchpad: conversations scratchpad patch <id> --operation append --content <markdown>",
         "action": "conversationTool",
         "jsonDefault": true,
-        "inputAction": "scratchpad"
+        "inputAction": "scratchpad",
+        "usage": "conversations scratchpad patch <conversationId> [--json]",
+        "examples": [
+          "neon-pilot conversations scratchpad patch conversation-example",
+          "neon-pilot conversations scratchpad patch conversation-example --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       }
     ]
   },

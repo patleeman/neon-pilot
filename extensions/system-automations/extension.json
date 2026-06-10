@@ -43,7 +43,14 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["list", "get", "save", "delete", "validate", "run"]
+              "enum": [
+                "list",
+                "get",
+                "save",
+                "delete",
+                "validate",
+                "run"
+              ]
             },
             "profile": {
               "type": "string"
@@ -65,18 +72,28 @@
             },
             "targetType": {
               "type": "string",
-              "enum": ["background-agent", "conversation"]
+              "enum": [
+                "background-agent",
+                "conversation"
+              ]
             },
             "threadMode": {
               "type": "string",
-              "enum": ["dedicated", "existing", "none"]
+              "enum": [
+                "dedicated",
+                "existing",
+                "none"
+              ]
             },
             "threadConversationId": {
               "type": "string"
             },
             "deliverAs": {
               "type": "string",
-              "enum": ["steer", "followUp"]
+              "enum": [
+                "steer",
+                "followUp"
+              ]
             },
             "model": {
               "type": "string"
@@ -118,7 +135,9 @@
               "type": "boolean"
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       }
@@ -150,7 +169,45 @@
         "description": "List scheduled tasks.",
         "action": "scheduledTask",
         "inputAction": "list",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "tasks list [--json]",
+        "examples": [
+          "neon-pilot tasks list",
+          "neon-pilot tasks list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "tasks",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "tasks-get",
@@ -158,7 +215,40 @@
         "description": "Inspect a scheduled task: tasks get <task-id>.",
         "action": "scheduledTask",
         "inputAction": "get",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "tasks get <id> [--json]",
+        "examples": [
+          "neon-pilot tasks get example-id",
+          "neon-pilot tasks get example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "tasks-save",
@@ -166,7 +256,42 @@
         "description": "Create or update a scheduled task: tasks save [task-id] --title <title> --prompt <prompt> [--cron <expr>|--at <iso>]",
         "action": "scheduledTask",
         "inputAction": "save",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "tasks save [--json]",
+        "examples": [
+          "neon-pilot tasks save",
+          "neon-pilot tasks save --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "tasks-delete",
@@ -174,7 +299,44 @@
         "description": "Delete a scheduled task: tasks delete <task-id>.",
         "action": "scheduledTask",
         "inputAction": "delete",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "tasks delete <id> [--json]",
+        "examples": [
+          "neon-pilot tasks delete example-id",
+          "neon-pilot tasks delete example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "destructive",
+        "requiresApp": false,
+        "destructive": true,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "tasks-validate",
@@ -182,7 +344,45 @@
         "description": "Validate a scheduled task payload: tasks validate [task-id] ...",
         "action": "scheduledTask",
         "inputAction": "validate",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "tasks validate [--json]",
+        "examples": [
+          "neon-pilot tasks validate",
+          "neon-pilot tasks validate --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "tasks",
+            "validate"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "tasks-run",
@@ -190,7 +390,42 @@
         "description": "Run a scheduled task immediately: tasks run <task-id>.",
         "action": "scheduledTask",
         "inputAction": "run",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "tasks run [--json]",
+        "examples": [
+          "neon-pilot tasks run",
+          "neon-pilot tasks run --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       }
     ],
     "skills": [
@@ -208,5 +443,10 @@
       }
     ]
   },
-  "permissions": ["runs:read", "runs:start", "conversations:readwrite", "ui:notify"]
+  "permissions": [
+    "runs:read",
+    "runs:start",
+    "conversations:readwrite",
+    "ui:notify"
+  ]
 }

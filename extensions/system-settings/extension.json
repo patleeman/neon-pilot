@@ -14,7 +14,11 @@
       "secrets.provider": {
         "type": "select",
         "default": "keychain",
-        "enum": ["keychain", "file", "env-only"],
+        "enum": [
+          "keychain",
+          "file",
+          "env-only"
+        ],
         "description": "Secret storage backend. Keychain is recommended on macOS; file is for dev/headless; env-only disables writes.",
         "group": "Security",
         "order": 1
@@ -22,7 +26,10 @@
       "conversation.transcriptDisclosure": {
         "type": "select",
         "default": "auto",
-        "enum": ["auto", "expanded"],
+        "enum": [
+          "auto",
+          "expanded"
+        ],
         "description": "Conversation transcript details. Auto keeps completed tool and thinking blocks collapsed; Expanded keeps them open.",
         "group": "Conversation",
         "order": 10
@@ -30,7 +37,10 @@
       "conversation.diffDisclosure": {
         "type": "select",
         "default": "collapsed",
-        "enum": ["collapsed", "expanded"],
+        "enum": [
+          "collapsed",
+          "expanded"
+        ],
         "description": "Inline file diffs in conversations. Collapsed shows a View diff button; Expanded opens file-changing diffs by default.",
         "group": "Conversation",
         "order": 11
@@ -57,7 +67,9 @@
         "id": "open-settings",
         "title": "Open Settings",
         "action": "app.navigate",
-        "args": { "to": "/settings" },
+        "args": {
+          "to": "/settings"
+        },
         "icon": "gear"
       }
     ],
@@ -67,28 +79,174 @@
         "command": "settings list",
         "description": "List merged Neon Pilot settings, optionally filtered by key prefix.",
         "action": "manageSettings",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "settings list [--json]",
+        "examples": [
+          "neon-pilot settings list",
+          "neon-pilot settings list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "settings",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "settings-schema",
         "command": "settings schema",
         "description": "List manifest-declared settings schema.",
         "action": "manageSettings",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "settings schema [--json]",
+        "examples": [
+          "neon-pilot settings schema",
+          "neon-pilot settings schema --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "settings",
+            "schema"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "settings-get",
         "command": "settings get",
         "description": "Read a single setting by key.",
         "action": "manageSettings",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "settings get <key> [--json]",
+        "examples": [
+          "neon-pilot settings get conversation.pinnedToolCalls",
+          "neon-pilot settings get conversation.pinnedToolCalls --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: key."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "settings-set",
         "command": "settings set",
         "description": "Update a manifest-declared non-secret setting by key and JSON value.",
         "action": "manageSettings",
-        "inputAction": "set"
+        "inputAction": "set",
+        "usage": "settings set <key> <value> [--json]",
+        "examples": [
+          "neon-pilot settings set conversation.pinnedToolCalls false",
+          "neon-pilot settings set conversation.pinnedToolCalls false --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: key."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "settings-reset",
@@ -96,7 +254,44 @@
         "description": "Reset one or more settings to manifest defaults: settings reset <key...>",
         "action": "manageSettings",
         "jsonDefault": true,
-        "inputAction": "reset"
+        "inputAction": "reset",
+        "usage": "settings reset <key> [--json]",
+        "examples": [
+          "neon-pilot settings reset conversation.pinnedToolCalls",
+          "neon-pilot settings reset conversation.pinnedToolCalls --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: key."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       }
     ],
     "views": [
@@ -141,7 +336,13 @@
         "title": "Manage settings",
         "worker": {
           "enabled": true,
-          "inputActions": ["list", "schema", "get", "set", "reset"]
+          "inputActions": [
+            "list",
+            "schema",
+            "get",
+            "set",
+            "reset"
+          ]
         }
       },
       {
@@ -150,10 +351,17 @@
         "title": "Manage Neon Pilot CLI",
         "worker": {
           "enabled": true,
-          "inputActions": ["status", "install", "uninstall"]
+          "inputActions": [
+            "status",
+            "install",
+            "uninstall"
+          ]
         }
       }
     ]
   },
-  "permissions": ["settings:read", "settings:write"]
+  "permissions": [
+    "settings:read",
+    "settings:write"
+  ]
 }

@@ -67,7 +67,38 @@
         "description": "List command-palette/app commands available to extensions.",
         "action": "manageAppCommands",
         "jsonDefault": true,
-        "inputAction": "list"
+        "inputAction": "list",
+        "usage": "app-commands list [--json]",
+        "examples": [
+          "neon-pilot app-commands list",
+          "neon-pilot app-commands list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "app-commands-run",
@@ -75,7 +106,42 @@
         "description": "Run a command-palette/app command by id: app-commands run <command-id> [--args <json>]",
         "action": "manageAppCommands",
         "jsonDefault": true,
-        "inputAction": "run"
+        "inputAction": "run",
+        "usage": "app-commands run [--json]",
+        "examples": [
+          "neon-pilot app-commands run",
+          "neon-pilot app-commands run --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "control-plane-doctor",
@@ -83,7 +149,45 @@
         "description": "Run control-plane smoke checks for commands, conversations, retention dry-run, runtime, and extension storage.",
         "action": "controlPlaneDoctor",
         "jsonDefault": true,
-        "inputAction": "doctor"
+        "inputAction": "doctor",
+        "usage": "control-plane doctor [--json]",
+        "examples": [
+          "neon-pilot control-plane doctor",
+          "neon-pilot control-plane doctor --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "control-plane",
+            "doctor"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "heartbeats-start",
@@ -91,7 +195,42 @@
         "description": "Start a recurring conversation heartbeat: heartbeats start <id> --interval-minutes <n> --conversation-id <id> --prompt <prompt>.",
         "action": "neonPilotAdmin",
         "jsonDefault": true,
-        "inputAction": "heartbeat_start"
+        "inputAction": "heartbeat_start",
+        "usage": "heartbeats start [--json]",
+        "examples": [
+          "neon-pilot heartbeats start",
+          "neon-pilot heartbeats start --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "background",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": true,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "heartbeats-list",
@@ -99,7 +238,45 @@
         "description": "List recurring conversation heartbeats.",
         "action": "neonPilotAdmin",
         "jsonDefault": true,
-        "inputAction": "heartbeat_list"
+        "inputAction": "heartbeat_list",
+        "usage": "heartbeats list [--json]",
+        "examples": [
+          "neon-pilot heartbeats list",
+          "neon-pilot heartbeats list --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "heartbeats",
+            "list"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "heartbeats-stop",
@@ -107,7 +284,44 @@
         "description": "Stop a recurring conversation heartbeat: heartbeats stop <id>.",
         "action": "neonPilotAdmin",
         "jsonDefault": true,
-        "inputAction": "heartbeat_stop"
+        "inputAction": "heartbeat_stop",
+        "usage": "heartbeats stop <id> [--json]",
+        "examples": [
+          "neon-pilot heartbeats stop example-id",
+          "neon-pilot heartbeats stop example-id --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       }
     ],
     "skills": [

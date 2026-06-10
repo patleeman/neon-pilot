@@ -417,6 +417,9 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       steer: flagBoolean(flags, 'steer'),
       cwd: flagString(flags, 'cwd'),
       timeoutMs: flagNumber(flags, 'timeout-ms') ?? flagNumber(flags, 'timeout'),
+      follow: flagBoolean(flags, 'follow'),
+      format: flagString(flags, 'format'),
+      cancelOnInterrupt: flagBoolean(flags, 'cancel-on-interrupt'),
     };
   if (command === 'conversations abort') return { ...body, action: 'abort', conversationId: positionals[0] };
   if (command === 'conversations compact')

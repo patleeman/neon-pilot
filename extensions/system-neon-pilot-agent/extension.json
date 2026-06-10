@@ -54,42 +54,255 @@
         "command": "bootstrap doctor",
         "description": "Check whether Neon Pilot is ready for external agent control.",
         "action": "neonPilotAgent",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "bootstrap doctor [--json]",
+        "examples": [
+          "neon-pilot bootstrap doctor",
+          "neon-pilot bootstrap doctor --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ],
+        "smoke": {
+          "argv": [
+            "bootstrap",
+            "doctor"
+          ],
+          "expectJsonFields": []
+        }
       },
       {
         "id": "bootstrap-configure",
         "command": "bootstrap configure",
         "description": "Configure Neon Pilot defaults and external-agent entrypoints.",
         "action": "neonPilotAgent",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "bootstrap configure [--json]",
+        "examples": [
+          "neon-pilot bootstrap configure",
+          "neon-pilot bootstrap configure --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "bootstrap-defaults-set",
         "command": "bootstrap defaults set",
         "description": "Set default provider, model, cwd, thinking level, and service tier.",
         "action": "neonPilotAgent",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "bootstrap defaults set [--json]",
+        "examples": [
+          "neon-pilot bootstrap defaults set",
+          "neon-pilot bootstrap defaults set --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "bootstrap-provider-set-key",
         "command": "bootstrap provider set-key",
         "description": "Store a provider API key through the configured secrets backend. Use --stdin.",
         "action": "neonPilotAgent",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "bootstrap provider set-key [--json]",
+        "examples": [
+          "neon-pilot bootstrap provider set-key",
+          "neon-pilot bootstrap provider set-key --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "bootstrap-provider-save",
         "command": "bootstrap provider save",
         "description": "Create or update a model provider definition.",
         "action": "neonPilotAgent",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "bootstrap provider save [--json]",
+        "examples": [
+          "neon-pilot bootstrap provider save",
+          "neon-pilot bootstrap provider save --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       },
       {
         "id": "bootstrap-provider-model",
         "command": "bootstrap provider model",
         "description": "Create or update a provider model definition.",
         "action": "neonPilotAgent",
-        "jsonDefault": true
+        "jsonDefault": true,
+        "usage": "bootstrap provider model [--json]",
+        "examples": [
+          "neon-pilot bootstrap provider model",
+          "neon-pilot bootstrap provider model --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json"
+        ]
       }
     ],
     "settingsComponent": {

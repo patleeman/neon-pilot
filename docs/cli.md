@@ -17,6 +17,19 @@ neon-pilot help conversations run-turn
 ```
 
 CLI output is human-first. Commands should return `{ text }` or `{ message }` when they can explain the result directly, and callers use `--json` when they need structured output for automation.
+Errors are human-readable by default and structured under `--json`:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "unknown_command",
+    "category": "not_found",
+    "message": "Unknown Neon Pilot command: nope",
+    "recoverable": true
+  }
+}
+```
 
 ## Availability
 
@@ -71,6 +84,20 @@ The CLI shell is core-owned: parsing, command matching, help, command discovery,
 - Core/runtime administration uses built-in commands.
 - A command should move only when feature ownership moves; do not create a CLI-only extension just to add a command.
 
+## Command Contracts
+
+`neon-pilot commands --json` returns command contracts for agents and scripts:
+
+- `argsSchema` and `flagsSchema`
+- `mode`: `read`, `write`, `destructive`, `background`, or `streaming`
+- `requiresApp`, `idempotent`, `destructive`, `startsBackgroundWork`, and `supportsDryRun`
+- `outputModes`: `text`, `json`, and where supported `jsonl`
+- `streaming` and `smoke` metadata when applicable
+
+Mutating extension commands must support `--dry-run`. The core shell handles declared dry-runs before invoking the backend action, so dry-run checks are no-side-effect by construction.
+
+Streaming commands should document `--follow`, `--format text|json|jsonl`, and interrupt behavior. The shell accepts `--format json` and `--format jsonl` only when the command contract declares those output modes.
+
 ## Agent Bootstrap
 
 External agents can install and configure Neon Pilot through the packaged installer and bootstrap commands. See [Agent bootstrap](agent-bootstrap.md) for the end-to-end flow.
@@ -88,6 +115,9 @@ Run the CLI surface audit after changing command parsing, command metadata, exte
 ```bash
 pnpm run check:cli:surface
 pnpm run check:cli:surface -- --repeat 3
+pnpm run docs:cli
+pnpm run check:cli:docs
 ```
 
 The audit invokes the real `neon-pilot` command, validates human help for every discovered command, checks JSON mode for discovery/status, and confirms system extension CLI contributions are discoverable.
+The generated [CLI reference](cli-reference.md) is derived from `neon-pilot commands --json`; update it with `pnpm run docs:cli` whenever command contracts change.

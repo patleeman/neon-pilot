@@ -530,6 +530,25 @@ export interface ExtensionCliCommandContribution {
   description?: string;
   usage?: string;
   examples?: string[];
+  argsSchema?: Record<string, unknown>;
+  flagsSchema?: Record<string, unknown>;
+  mode?: 'read' | 'write' | 'destructive' | 'background' | 'streaming';
+  requiresApp?: boolean;
+  destructive?: boolean;
+  idempotent?: boolean;
+  startsBackgroundWork?: boolean;
+  supportsDryRun?: boolean;
+  outputModes?: Array<'text' | 'json' | 'jsonl'>;
+  streaming?: {
+    supportsFollow?: boolean;
+    supportsJsonl?: boolean;
+    cancelOnInterruptDefault?: boolean;
+  };
+  smoke?: {
+    argv?: string[];
+    expectHumanIncludes?: string[];
+    expectJsonFields?: string[];
+  };
   action: string;
   inputAction?: string;
   aliases?: string[];
