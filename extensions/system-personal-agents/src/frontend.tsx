@@ -30,6 +30,12 @@ interface EnsureConversationResult {
   conversationId: string;
 }
 
+const PROFILES_CHANGED_EVENT = 'personal-agents:profiles-changed';
+
+function publishProfilesChanged(pa: ExtensionSurfaceProps['pa'], profileId: string | null) {
+  pa.events?.publish(PROFILES_CHANGED_EVENT, { profileId });
+}
+
 export function parseAgentId(pathname: string): string | null {
   const match = pathname.match(/^\/agents\/([^/?#]+)/);
   if (!match?.[1]) return null;
@@ -95,6 +101,14 @@ function usePersonalAgentsList(pa: ExtensionSurfaceProps['pa'], pathname: string
     };
   }, [refresh]);
 
+  useEffect(() => {
+    if (!pa.events) return;
+    const subscription = pa.events.subscribe(PROFILES_CHANGED_EVENT, () => {
+      void refresh().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    });
+    return () => subscription.unsubscribe();
+  }, [pa.events, refresh]);
+
   const selectedProfile = useMemo(
     () => (routeAgentId ? (profiles.find((profile) => profile.id === routeAgentId) ?? null) : (profiles[0] ?? null)),
     [profiles, routeAgentId],
@@ -140,6 +154,7 @@ export function PersonalAgentsShell({ HostComponent, ...props }: HostWrapperProp
   async function createAgent() {
     try {
       const result = await paRef.current.extension.invoke<{ profile: PersonalAgentProfile }>('createProfile', { name: 'New Agent' });
+      publishProfilesChanged(paRef.current, result.profile.id);
       void paRef.current.commands.execute('app.navigate', { to: `/agents/${encodeURIComponent(result.profile.id)}` });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -185,7 +200,8 @@ export function PersonalAgentsSidebar(props: ExtensionSurfaceProps) {
     setError(null);
     try {
       const result = await pa.extension.invoke<{ profile: PersonalAgentProfile }>('createProfile', { name: 'New Agent' });
-      setProfiles((current) => [...current, result.profile].sort((a, b) => a.name.localeCompare(b.name)));
+      setProfiles((current) => [...current.filter((profile) => profile.id !== result.profile.id), result.profile].sort((a, b) => a.name.localeCompare(b.name)));
+      publishProfilesChanged(pa, result.profile.id);
       navigateAgent(result.profile.id);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -278,6 +294,7 @@ export function PersonalAgentsDetails(props: ExtensionSurfaceProps) {
     if (!result) return;
     setSelected(result.profile);
     await refresh();
+    publishProfilesChanged(pa, result.profile.id);
   }
 
   async function deleteSelected() {
@@ -286,6 +303,7 @@ export function PersonalAgentsDetails(props: ExtensionSurfaceProps) {
     if (!ok) return;
     const deleted = await run('delete', () => pa.extension.invoke('deleteProfile', { id: profile.id }));
     if (!deleted) return;
+    publishProfilesChanged(pa, profile.id);
     const remaining = profiles.filter((item) => item.id !== profile.id);
     const next = remaining[0] ?? null;
     void pa.commands.execute('app.navigate', { to: next ? `/agents/${encodeURIComponent(next.id)}` : '/agents' });
