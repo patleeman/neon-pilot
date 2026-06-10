@@ -68,7 +68,7 @@ export function NeonPilotAgentSettingsPanel() {
       />
       <SettingToggleRow
         title="MCP entrypoint"
-        description="Allows neon-pilot protocol neon-pilot-agent-mcp to expose Neon Pilot tools over MCP stdio."
+        description="Deprecated admin surface. Use the neon-pilot CLI externally and the canonical neon_pilot tool internally."
         checked={settings.mcpEnabled}
         disabled={saving}
         onCheckedChange={(checked) => void save({ mcpEnabled: checked })}
