@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
@@ -726,6 +726,13 @@ export function setExtensionEnabled(extensionId: string, enabled: boolean, state
   }
 }
 
+function isRuntimeInstalledPackageRoot(packageRoot: string | undefined, stateRoot: string): boolean {
+  if (!packageRoot) return false;
+  const runtimeRoot = resolve(getRuntimeExtensionsRoot(stateRoot));
+  const resolvedPackageRoot = resolve(packageRoot);
+  return resolvedPackageRoot === runtimeRoot || resolvedPackageRoot.startsWith(`${runtimeRoot}${sep}`);
+}
+
 export function removeExtensionFromRegistry(extensionId: string, stateRoot: string = getStateRoot()): void {
   const config = readExtensionRegistryConfig(stateRoot);
   const disabledIds = (config.disabledIds ?? []).filter((id) => id !== extensionId);
@@ -1192,13 +1199,14 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const diagnostics = listExtensionContributionDiagnostics(entry, availableExtensionIds);
     const buildError = buildErrors.get(manifest.id);
     const healthError = healthErrors.get(manifest.id);
-    const compatibilityDiagnostic = manifest.packageType === 'system' ? null : getExtensionCompatibilityError(manifest);
+    const effectivePackageType = isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot) ? 'user' : (manifest.packageType ?? 'user');
+    const compatibilityDiagnostic = effectivePackageType === 'system' ? null : getExtensionCompatibilityError(manifest);
     const quarantine = config.quarantined?.[manifest.id];
     const quarantineDiagnostic = buildExtensionQuarantineDiagnostic(quarantine);
     return {
       id: manifest.id,
       name: manifest.name,
-      packageType: manifest.packageType ?? 'user',
+      packageType: effectivePackageType,
       enabled,
       status: enabled ? ('enabled' as const) : ('disabled' as const),
       ...(buildError ? { buildError } : {}),

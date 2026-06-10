@@ -223,6 +223,36 @@ describe('extensionLifecycle', () => {
     expect(existsSync(join(runtimeRoot, 'source-only-ext'))).toBe(false);
   });
 
+  it('blocks deleting bundled packaged system extensions', async () => {
+    const packageRoot = join(stateRoot, 'bundled', 'system-extension');
+    mkdirSync(packageRoot, { recursive: true });
+    findExtensionEntry.mockReturnValue({
+      manifest: { id: 'system-extension', name: 'System Extension', packageType: 'system' },
+      packageRoot,
+    });
+
+    await expect(deleteRuntimeExtension('system-extension', stateRoot)).rejects.toThrow('Packaged system extensions cannot be deleted.');
+    expect(removeExtensionFromRegistry).not.toHaveBeenCalled();
+  });
+
+  it('deletes runtime-installed extensions even when their manifest packageType is system', async () => {
+    const packageRoot = join(runtimeRoot, 'system-hermes-agent');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(join(packageRoot, 'extension.json'), JSON.stringify({ id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'system' }));
+    findExtensionEntry.mockReturnValue({
+      manifest: { id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'system' },
+      packageRoot,
+    });
+
+    await expect(deleteRuntimeExtension('system-hermes-agent', stateRoot)).resolves.toEqual({
+      ok: true,
+      extensionId: 'system-hermes-agent',
+      deleted: true,
+    });
+    expect(existsSync(packageRoot)).toBe(false);
+    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('system-hermes-agent', stateRoot);
+  });
+
   it('deletes invalid runtime extension packages by id', async () => {
     const packageRoot = join(runtimeRoot, 'bad-extension');
     mkdirSync(packageRoot, { recursive: true });

@@ -63,10 +63,14 @@ function getExtensionExportsRoot(stateRoot: string = getStateRoot()): string {
   return join(stateRoot, 'extension-exports');
 }
 
-function assertInside(root: string, candidate: string): void {
+function isInsidePath(root: string, candidate: string): boolean {
   const resolvedRoot = resolve(root);
   const resolvedCandidate = resolve(candidate);
-  if (resolvedCandidate !== resolvedRoot && !resolvedCandidate.startsWith(`${resolvedRoot}${sep}`)) {
+  return resolvedCandidate === resolvedRoot || resolvedCandidate.startsWith(`${resolvedRoot}${sep}`);
+}
+
+function assertInside(root: string, candidate: string): void {
+  if (!isInsidePath(root, candidate)) {
     throw new Error('Path escapes extension root.');
   }
 }
@@ -450,14 +454,15 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
     invalidateExtensionRegistryReadCaches(stateRoot);
     return { ok: true as const, extensionId: id, deleted: true };
   }
-  if (entry.manifest.packageType === 'system') {
-    throw new Error('Packaged system extensions cannot be deleted.');
-  }
   if (!entry.packageRoot) {
     throw new Error('Extension package root is unavailable.');
   }
 
   const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
+  const runtimeInstalled = isInsidePath(runtimeRoot, entry.packageRoot);
+  if (entry.manifest.packageType === 'system' && !runtimeInstalled) {
+    throw new Error('Packaged system extensions cannot be deleted.');
+  }
   assertInside(runtimeRoot, entry.packageRoot);
 
   const { stopExtensionServices } = await import('./extensionServices.js');

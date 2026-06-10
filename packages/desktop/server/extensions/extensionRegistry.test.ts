@@ -43,6 +43,22 @@ describe('extension registry', () => {
     appEvents.publishAppEvent.mockReset();
   });
 
+  it('reports runtime-installed system-prefixed catalog extensions as uninstallable user packages', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'system-hermes-agent');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({ schemaVersion: 2, id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'system' }),
+    );
+
+    expect(listExtensionInstallSummaries(stateRoot)).toContainEqual(
+      expect.objectContaining({ id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'user' }),
+    );
+
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
   it('persists custom keybindings only for declared commands', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
