@@ -24,6 +24,10 @@ export type RunningState = 'idle' | 'streaming' | 'automation' | 'hasRuns' | 'st
 let presenceStates = new Map<string, RunningState>();
 const presenceListeners = new Map<string, Set<() => void>>();
 
+function isActiveExecutionStatus(status: string | undefined): boolean {
+  return status === 'pending' || status === 'queued' || status === 'waiting' || status === 'running' || status === 'recovering';
+}
+
 function computeRunningState(sessionId: string): RunningState {
   const session = sessionStore.get(sessionId);
   if (!session) return 'idle';
@@ -36,9 +40,7 @@ function computeRunningState(sessionId: string): RunningState {
   if (hasAutomation) return 'automation';
 
   // Pending executions (background commands, subagents, etc.) for this thread only.
-  const hasPendingRuns = executionStore
-    .getAll()
-    .some((e) => e.conversationId === sessionId && (e.status === 'pending' || e.status === 'running'));
+  const hasPendingRuns = executionStore.getAll().some((e) => e.conversationId === sessionId && isActiveExecutionStatus(e.status));
   if (hasPendingRuns) return 'hasRuns';
 
   return 'idle';

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ScheduledTaskSummary } from '../shared/types';
+import type { ExecutionRecord, ScheduledTaskSummary } from '../shared/types';
 import { executionStore, presenceStore, resetAllStores, sessionStore, taskStore } from './stores';
 
 function session(id: string, isRunning = false) {
@@ -14,6 +14,19 @@ function session(id: string, isRunning = false) {
   };
 }
 
+function execution(id: string, conversationId: string, status: string): ExecutionRecord {
+  return {
+    id,
+    kind: 'background-command',
+    visibility: 'primary',
+    conversationId,
+    title: id,
+    status,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    capabilities: { canCancel: false, canRerun: false, canFollowUp: false, hasLog: false, hasResult: false },
+  };
+}
+
 describe('presenceStore', () => {
   afterEach(() => {
     resetAllStores();
@@ -21,21 +34,31 @@ describe('presenceStore', () => {
 
   it('does not mark unrelated conversations as having pending runs', () => {
     sessionStore.replaceAll([session('conv-1'), session('conv-2')]);
-    executionStore.replaceAll([
-      {
-        id: 'run-1',
-        kind: 'background_bash',
-        conversationId: 'conv-1',
-        title: 'npm test',
-        status: 'running',
-        visibility: 'normal',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    ]);
+    executionStore.replaceAll([execution('run-1', 'conv-1', 'running')]);
 
     expect(presenceStore.get('conv-1')).toBe('hasRuns');
     expect(presenceStore.get('conv-2')).toBe('idle');
   });
+
+  it.each(['pending', 'queued', 'waiting', 'running', 'recovering'])(
+    'marks %s executions as pending background work',
+    (status) => {
+      sessionStore.replaceAll([session('conv-1')]);
+      executionStore.replaceAll([execution('run-1', 'conv-1', status)]);
+
+      expect(presenceStore.get('conv-1')).toBe('hasRuns');
+    },
+  );
+
+  it.each(['completed', 'failed', 'cancelled', 'interrupted'])(
+    'does not mark terminal %s executions as pending background work',
+    (status) => {
+      sessionStore.replaceAll([session('conv-1')]);
+      executionStore.replaceAll([execution('run-1', 'conv-1', status)]);
+
+      expect(presenceStore.get('conv-1')).toBe('idle');
+    },
+  );
 
   it('marks only the task-bound conversation as automation running', () => {
     sessionStore.replaceAll([session('conv-1'), session('conv-2')]);
