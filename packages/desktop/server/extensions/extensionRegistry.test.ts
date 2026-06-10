@@ -523,6 +523,7 @@ describe('extension registry', () => {
     setExtensionEnabled('agent-board', false, stateRoot);
     expect(isExtensionEnabled('agent-board', stateRoot)).toBe(false);
     expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'agent-board')?.enabled).toBe(false);
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('extensions', 'notifications');
   });
 
   it('quarantines an extension after repeated failures', () => {

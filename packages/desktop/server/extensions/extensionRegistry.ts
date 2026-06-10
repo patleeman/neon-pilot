@@ -721,6 +721,8 @@ export function setExtensionEnabled(extensionId: string, enabled: boolean, state
   assertCanSetExtensionEnabled({ extensionId, enabled, lockedExtensionIds: LOCKED_EXTENSION_IDS });
   const config = readExtensionRegistryConfig(stateRoot);
   writeExtensionRegistryConfig(buildExtensionEnabledConfigPatch(config, { extensionId, enabled }), stateRoot);
+  invalidateExtensionRegistryReadCaches(stateRoot);
+  invalidateAppTopics('extensions', 'notifications');
   if (enabled) {
     completeExtensionStartupGuard(stateRoot);
   }
