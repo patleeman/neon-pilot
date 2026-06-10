@@ -542,6 +542,8 @@ Core owns the `neon-pilot` CLI shell. Extensions contribute product-specific ver
         "id": "example-list",
         "command": "example list",
         "description": "List example records.",
+        "usage": "example list [--json]",
+        "examples": ["neon-pilot example list", "neon-pilot example list --json"],
         "action": "manageExample",
         "jsonDefault": true
       }
@@ -550,7 +552,9 @@ Core owns the `neon-pilot` CLI shell. Extensions contribute product-specific ver
 }
 ```
 
-The action receives `{ action, cli: { command, rawArgv, args, flags, json, cwd } }`, where `action` defaults to the final command token as a convenience hint. Return `{ text }` for human output and structured fields for `--json`. Keep CLI commands coarse and administrative; do not expose every UI button as a command. Agents should discover commands with `neon-pilot commands --json` and prefer extension-contributed CLI commands over direct runtime file edits. System extensions use this surface for `extensions ...`, `settings ...`, and `conversations ...` administration. CLI commands route through the same extension host and permission boundary as UI actions; do not expose secret reads or raw host file mutation through CLI handlers.
+The action receives `{ action, cli: { command, rawArgv, args, flags, json, cwd } }`, where `action` defaults to the final command token as a convenience hint. Return `{ text }` for human output and structured fields for `--json`; the shell is human-first and only sets `cli.json` when the caller passes `--json`. Keep CLI commands coarse and administrative; do not expose every UI button as a command. Agents should discover commands with `neon-pilot commands --json` and prefer extension-contributed CLI commands over direct runtime file edits. System extensions use this surface for extension-owned administration such as `extensions ...`, `settings ...`, and `conversations ...`. CLI commands route through the same extension host and permission boundary as UI actions; do not expose secret reads or raw host file mutation through CLI handlers.
+
+Each command should include a human-readable `description`; add `usage` and `examples` when the command accepts arguments or flags. `pnpm run check:cli:surface` validates command discovery and help output for all system extension CLI commands.
 
 ### Quick-open surfaces (`quickOpen`)
 

@@ -1369,6 +1369,8 @@ export function listExtensionCliCommandRegistrations(): ExtensionCliCommandRegis
       ...(command.inputAction ? { inputAction: command.inputAction } : {}),
       ...(command.title ? { title: command.title } : {}),
       ...(command.description ? { description: command.description } : {}),
+      ...(command.usage ? { usage: command.usage } : {}),
+      ...(command.examples?.length ? { examples: command.examples } : {}),
       aliases: (command.aliases ?? []).map((alias) => alias.trim().replace(/\s+/g, ' ')).filter(Boolean),
       jsonDefault: command.jsonDefault === true,
     })),

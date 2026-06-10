@@ -39,6 +39,8 @@ export function validateCliCommandContributions(value: unknown): void {
     validateOptionalString(command.inputAction, `contributes.cliCommands[${index}].inputAction`);
     validateOptionalString(command.title, `contributes.cliCommands[${index}].title`);
     validateOptionalString(command.description, `contributes.cliCommands[${index}].description`);
+    validateOptionalString(command.usage, `contributes.cliCommands[${index}].usage`);
+    if (command.examples !== undefined) requireStringArray(command.examples, `contributes.cliCommands[${index}].examples`);
     if (command.aliases !== undefined) requireStringArray(command.aliases, `contributes.cliCommands[${index}].aliases`);
     if (command.jsonDefault !== undefined && typeof command.jsonDefault !== 'boolean') {
       throw new Error(`Extension manifest contributes.cliCommands[${index}].jsonDefault must be a boolean.`);

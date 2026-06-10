@@ -1,6 +1,21 @@
 import { pathToFileURL } from 'node:url';
 
-import { getPiAgentRuntimeDir, getStateRoot } from '@neon-pilot/core';
+import {
+  actionFromCliCommand,
+  buildCliInvocation,
+  findCliHelpTarget,
+  formatCliResult,
+  getPiAgentRuntimeDir,
+  getStateRoot,
+  NEON_PILOT_CLI_EXIT_CODES,
+  renderCliCommandHelp,
+  renderCliCommandList,
+  renderCliUsage,
+  selectCliCommandMatch,
+  stripJsonFlag,
+  wantsJson,
+  type NeonPilotCliCommandDefinition,
+} from '@neon-pilot/core';
 
 import { createRuntimeState } from './app/runtimeState.js';
 import { readNeonPilotCliControlPlaneRecord } from './cliControlPlane.js';
@@ -10,24 +25,13 @@ import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClien
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 import { getRuntimeSettingsFilePath } from './ui/settingsPersistence.js';
 
-export const PROTOCOL_CLI_EXIT_CODES = {
-  usage: 1,
-  notFound: 2,
-  ambiguous: 3,
-  loadFailure: 4,
-  runtimeFailure: 5,
-} as const;
+export const PROTOCOL_CLI_EXIT_CODES = NEON_PILOT_CLI_EXIT_CODES;
 
-interface CliCommandRegistration {
+interface CliCommandRegistration extends NeonPilotCliCommandDefinition {
   extensionId: string;
   surfaceId: string;
-  command: string;
   action: string;
   inputAction?: string;
-  title?: string;
-  description?: string;
-  aliases?: string[];
-  jsonDefault?: boolean;
 }
 
 function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
@@ -58,21 +62,70 @@ function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
 }
 
 function usage(): string {
-  return [
-    'Usage: neon-pilot <command> [args]',
-    '',
-    'Built-in commands:',
-    '  commands [--json]             List extension-contributed CLI commands',
-    '  cli status|install|uninstall  Manage the optional user-shell CLI symlink',
-    '  help [command]                Show help',
-    '  protocol <protocol-id> ...    Invoke a raw extension protocol entrypoint',
-    '',
-    'Examples:',
-    '  neon-pilot commands',
-    '  neon-pilot extensions list --json',
-    '  neon-pilot protocol acp',
-  ].join('\n');
+  return renderCliUsage({
+    commandName: 'neon-pilot',
+    summary: 'Neon Pilot command line administration for the local runtime and enabled extensions.',
+    builtInCommands: [
+      'commands [--json]             List core and extension CLI commands',
+      'cli status|install|uninstall  Manage the optional user-shell CLI symlink',
+      'help [command]                Show help',
+      'protocol <protocol-id> ...    Invoke a raw extension protocol entrypoint',
+    ],
+    examples: ['neon-pilot commands', 'neon-pilot help extensions list', 'neon-pilot extensions list', 'neon-pilot protocol acp'],
+  });
 }
+
+const CORE_CLI_COMMANDS: NeonPilotCliCommandDefinition[] = [
+  {
+    id: 'commands',
+    command: 'commands',
+    description: 'List core and enabled extension CLI commands.',
+    usage: 'commands [--json]',
+    examples: ['neon-pilot commands', 'neon-pilot commands --json'],
+    source: 'core',
+  },
+  {
+    id: 'help',
+    command: 'help',
+    aliases: ['--help', '-h'],
+    description: 'Show general help or help for a specific command.',
+    usage: 'help [command]',
+    examples: ['neon-pilot help', 'neon-pilot help settings list'],
+    source: 'core',
+  },
+  {
+    id: 'cli-status',
+    command: 'cli status',
+    description: 'Show the channel-local launcher and optional user-shell link status.',
+    usage: 'cli status [--json]',
+    examples: ['neon-pilot cli status', 'neon-pilot cli status --json'],
+    source: 'core',
+  },
+  {
+    id: 'cli-install',
+    command: 'cli install',
+    description: 'Install the optional user-shell neon-pilot symlink.',
+    usage: 'cli install [--json]',
+    examples: ['neon-pilot cli install'],
+    source: 'core',
+  },
+  {
+    id: 'cli-uninstall',
+    command: 'cli uninstall',
+    description: 'Remove the optional Neon Pilot-owned user-shell symlink.',
+    usage: 'cli uninstall [--json]',
+    examples: ['neon-pilot cli uninstall'],
+    source: 'core',
+  },
+  {
+    id: 'protocol',
+    command: 'protocol',
+    description: 'Invoke a raw extension protocol entrypoint.',
+    usage: 'protocol <protocol-id> [args]',
+    examples: ['neon-pilot protocol acp', 'neon-pilot protocol ds4-tools tools'],
+    source: 'core',
+  },
+];
 
 function createExtensionHostClientFromEnv(): ExtensionHostClient | null {
   const baseUrl = process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL?.trim();
@@ -201,62 +254,6 @@ async function invokeProtocolCli(protocolId: string, protocolArgs: string[], opt
   }
 }
 
-function wantsJson(args: string[]): boolean {
-  return args.includes('--json');
-}
-
-function stripJsonFlag(args: string[]): string[] {
-  return args.filter((arg) => arg !== '--json');
-}
-
-function parseFlags(args: string[]): { positional: string[]; flags: Record<string, string | boolean> } {
-  const positional: string[] = [];
-  const flags: Record<string, string | boolean> = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index] as string;
-    if (!arg.startsWith('--') || arg === '--') {
-      positional.push(arg);
-      continue;
-    }
-    const eq = arg.indexOf('=');
-    if (eq > 2) {
-      flags[arg.slice(2, eq)] = arg.slice(eq + 1);
-      continue;
-    }
-    const key = arg.slice(2);
-    const next = args[index + 1];
-    if (next && !next.startsWith('--')) {
-      flags[key] = next;
-      index += 1;
-    } else {
-      flags[key] = true;
-    }
-  }
-  return { positional, flags };
-}
-
-async function readCliStdinIfRequested(flags: Record<string, string | boolean>): Promise<string | undefined> {
-  if (flags.stdin !== true && flags['api-key-stdin'] !== true) return undefined;
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-  }
-  return Buffer.concat(chunks).toString('utf-8');
-}
-
-function commandTokens(command: string): string[] {
-  return command.trim().split(/\s+/).filter(Boolean);
-}
-
-function commandMatches(registration: CliCommandRegistration, argv: string[]): { matched: boolean; length: number } {
-  const candidates = [registration.command, ...(registration.aliases ?? [])].map(commandTokens);
-  for (const candidate of candidates) {
-    if (candidate.length === 0 || candidate.length > argv.length) continue;
-    if (candidate.every((token, index) => argv[index] === token)) return { matched: true, length: candidate.length };
-  }
-  return { matched: false, length: 0 };
-}
-
 async function readCliCommandRegistrations(): Promise<CliCommandRegistration[]> {
   const extensionHostClient = await getCliExtensionHostClient();
   const presentation = await extensionHostClient.readRegistryPresentation();
@@ -271,13 +268,17 @@ async function readCliCommandRegistrations(): Promise<CliCommandRegistration[]> 
     }
     return [
       {
+        id: entry.surfaceId,
         extensionId: entry.extensionId,
         surfaceId: entry.surfaceId,
         command: entry.command,
         action: entry.action,
+        source: 'extension',
         ...(typeof entry.inputAction === 'string' ? { inputAction: entry.inputAction } : {}),
         ...(typeof entry.title === 'string' ? { title: entry.title } : {}),
         ...(typeof entry.description === 'string' ? { description: entry.description } : {}),
+        ...(typeof entry.usage === 'string' ? { usage: entry.usage } : {}),
+        ...(Array.isArray(entry.examples) ? { examples: entry.examples.filter((example): example is string => typeof example === 'string') } : {}),
         aliases: Array.isArray(entry.aliases) ? entry.aliases.filter((alias): alias is string => typeof alias === 'string') : [],
         jsonDefault: entry.jsonDefault === true,
       },
@@ -288,18 +289,7 @@ async function readCliCommandRegistrations(): Promise<CliCommandRegistration[]> 
 async function listCliCommands(args: string[]): Promise<number> {
   try {
     const registrations = await readCliCommandRegistrations();
-    if (wantsJson(args)) {
-      process.stdout.write(`${JSON.stringify({ commands: registrations }, null, 2)}\n`);
-      return 0;
-    }
-    process.stdout.write(
-      [
-        'Neon Pilot commands:',
-        ...registrations
-          .sort((a, b) => a.command.localeCompare(b.command))
-          .map((command) => `  ${command.command}${command.description ? `  ${command.description}` : ''}`),
-      ].join('\n') + '\n',
-    );
+    process.stdout.write(renderCliCommandList([...CORE_CLI_COMMANDS, ...registrations], wantsJson(args)));
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -316,12 +306,12 @@ async function printHelp(args: string[]): Promise<number> {
   }
   try {
     const registrations = await readCliCommandRegistrations();
-    const match = registrations.find((registration) => registration.command === helpTarget || registration.aliases?.includes(helpTarget));
+    const match = findCliHelpTarget([...CORE_CLI_COMMANDS, ...registrations], helpTarget);
     if (!match) {
       process.stderr.write(`Unknown Neon Pilot command: ${helpTarget}\n`);
       return PROTOCOL_CLI_EXIT_CODES.notFound;
     }
-    process.stdout.write(`${match.command}\n${match.description ?? match.title ?? ''}\n`);
+    process.stdout.write(renderCliCommandHelp(match));
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -330,67 +320,44 @@ async function printHelp(args: string[]): Promise<number> {
   }
 }
 
-function formatActionResult(result: unknown, json: boolean): string {
-  if (json) return `${JSON.stringify(result, null, 2)}\n`;
-  if (result && typeof result === 'object' && !Array.isArray(result)) {
-    const record = result as Record<string, unknown>;
-    if (typeof record.text === 'string') return `${record.text}\n`;
-    if (typeof record.message === 'string') return `${record.message}\n`;
-  }
-  return `${JSON.stringify(result, null, 2)}\n`;
-}
-
-function actionFromCliCommand(command: string): string | undefined {
-  const lastToken = commandTokens(command).at(-1);
-  return lastToken;
-}
-
 async function invokeContributedCliCommand(argv: string[], options?: { signal?: AbortSignal }): Promise<number> {
   try {
     const registrations = await readCliCommandRegistrations();
-    const matches = registrations
-      .map((registration) => ({ registration, ...commandMatches(registration, argv) }))
-      .filter((match) => match.matched)
-      .sort((a, b) => b.length - a.length);
-    if (matches.length === 0) {
+    const selected = selectCliCommandMatch(registrations, argv);
+    if (selected.status === 'notFound') {
       process.stderr.write(`Unknown Neon Pilot command: ${argv.join(' ')}\n\n${usage()}\n`);
       return PROTOCOL_CLI_EXIT_CODES.notFound;
     }
-    const bestLength = matches[0]!.length;
-    const bestMatches = matches.filter((match) => match.length === bestLength);
-    if (bestMatches.length > 1) {
-      process.stderr.write(`Ambiguous Neon Pilot command: ${argv.slice(0, bestLength).join(' ')}\n`);
+    if (selected.status === 'ambiguous') {
+      process.stderr.write(`Ambiguous Neon Pilot command: ${selected.command}\n`);
       return PROTOCOL_CLI_EXIT_CODES.ambiguous;
     }
 
-    const match = bestMatches[0]!;
+    const match = selected.match;
     const rawArgs = argv.slice(match.length);
-    const json = wantsJson(rawArgs) || match.registration.jsonDefault === true;
-    const cleanArgs = stripJsonFlag(rawArgs);
-    const parsed = parseFlags(cleanArgs);
-    const stdinText = await readCliStdinIfRequested(parsed.flags);
+    const invocation = await buildCliInvocation(match.definition, rawArgs);
     const extensionHostClient = await getCliExtensionHostClient();
-    const inputAction = match.registration.inputAction ?? actionFromCliCommand(match.registration.command);
+    const inputAction = match.definition.inputAction ?? actionFromCliCommand(match.definition.command);
     const invokeResult = await extensionHostClient.invokeAction({
-      extensionId: match.registration.extensionId,
-      actionId: match.registration.action,
+      extensionId: match.definition.extensionId,
+      actionId: match.definition.action,
       input: {
         ...(inputAction ? { action: inputAction } : {}),
         cli: {
-          command: match.registration.command,
-          rawArgv: cleanArgs,
-          args: parsed.positional,
-          flags: parsed.flags,
-          json,
-          cwd: process.cwd(),
-          ...(stdinText !== undefined ? { stdinText } : {}),
+          command: match.definition.command,
+          rawArgv: invocation.rawArgv,
+          args: invocation.args,
+          flags: invocation.flags,
+          json: invocation.json,
+          cwd: invocation.cwd,
+          ...(invocation.stdinText !== undefined ? { stdinText: invocation.stdinText } : {}),
         },
       },
       serverContextSnapshot: buildServerContextSnapshot(),
       signal: options?.signal,
     });
     if (!invokeResult.ok) throw new Error('error' in invokeResult ? invokeResult.error : 'Extension CLI command failed.');
-    process.stdout.write(formatActionResult(invokeResult.result, json));
+    process.stdout.write(formatCliResult(invokeResult.result, invocation.json));
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

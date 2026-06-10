@@ -8,6 +8,16 @@ Core owns the shell and built-in commands. Extensions add product commands with 
 neon-pilot commands --json
 ```
 
+Use `neon-pilot help` for the core shell and `neon-pilot help <command>` for a specific command:
+
+```bash
+neon-pilot help
+neon-pilot help settings list
+neon-pilot help conversations run-turn
+```
+
+CLI output is human-first. Commands should return `{ text }` or `{ message }` when they can explain the result directly, and callers use `--json` when they need structured output for automation.
+
 ## Availability
 
 Neon Pilot creates a channel-local launcher at:
@@ -40,18 +50,26 @@ If no running app is discoverable, built-in commands such as `neon-pilot cli sta
 ## First-Party Commands
 
 ```bash
-neon-pilot extensions list --json
-neon-pilot settings list --json
-neon-pilot settings get conversation.pinnedToolCalls --json
+neon-pilot extensions list
+neon-pilot settings list
+neon-pilot settings get conversation.pinnedToolCalls
 neon-pilot settings set conversation.pinnedToolCalls false
-neon-pilot bootstrap doctor --json
-neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4 --json
-printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin --json
-neon-pilot conversations list --json
-neon-pilot conversations search "query text" --json
+neon-pilot bootstrap doctor
+neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
+printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin
+neon-pilot conversations list
+neon-pilot conversations search "query text"
 ```
 
-Agents should prefer JSON for inspection and automation, list or inspect before mutating, and use CLI commands instead of editing runtime files directly when a command exists.
+Agents should prefer `--json` for inspection and automation, list or inspect before mutating, and use CLI commands instead of editing runtime files directly when a command exists.
+
+## Ownership
+
+The CLI shell is core-owned: parsing, command matching, help, command discovery, result formatting, install/status management, and raw protocol dispatch live in the core/host CLI layer. Product commands stay with the owner of the product capability:
+
+- Extension-owned features expose CLI verbs from their owning extension with `contributes.cliCommands`.
+- Core/runtime administration uses built-in commands.
+- A command should move only when feature ownership moves; do not create a CLI-only extension just to add a command.
 
 ## Agent Bootstrap
 
@@ -62,3 +80,14 @@ Provider credentials must not be passed in command arguments. Use `--stdin`, Key
 ## Security
 
 CLI commands route through the same extension host boundary as UI actions. Extension-contributed commands must obey extension permissions, should avoid raw runtime-file mutation, and must not expose secret reads. Settings mutation is limited to manifest-declared non-secret settings.
+
+## Validation
+
+Run the CLI surface audit after changing command parsing, command metadata, extension CLI contributions, or docs:
+
+```bash
+pnpm run check:cli:surface
+pnpm run check:cli:surface -- --repeat 3
+```
+
+The audit invokes the real `neon-pilot` command, validates human help for every discovered command, checks JSON mode for discovery/status, and confirms system extension CLI contributions are discoverable.

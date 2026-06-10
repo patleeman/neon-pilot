@@ -308,8 +308,14 @@ export interface ExtensionCliCommandContribution {
   command: string;
   title?: string;
   description?: string;
+  /** Human CLI usage after the neon-pilot executable, e.g. "tasks list [--json]". */
+  usage?: string;
+  /** Copy-pasteable examples including the neon-pilot executable. */
+  examples?: string[];
   /** Backend action id invoked with parsed CLI args and flags. */
   action: string;
+  /** Explicit action hint passed to the backend action. Defaults to the final command token. */
+  inputAction?: string;
   aliases?: string[];
   /** Print structured data by default when the command returns it. */
   jsonDefault?: boolean;

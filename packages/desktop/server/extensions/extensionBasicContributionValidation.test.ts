@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  validateCliCommandContributions,
   validateCommandContributions,
   validateKeybindingContributions,
   validateMentionContributions,
@@ -12,6 +13,18 @@ describe('extensionBasicContributionValidation', () => {
   it('validates basic contribution groups', () => {
     expect(validateNavigationContributions([{ id: 'home', label: 'Home', route: '/home', section: 'primary' }])).toBeUndefined();
     expect(validateCommandContributions([{ id: 'cmd', title: 'Run', action: 'run', category: 'Tools' }])).toBeUndefined();
+    expect(
+      validateCliCommandContributions([
+        {
+          id: 'tasks-list',
+          command: 'tasks list',
+          description: 'List tasks.',
+          usage: 'tasks list [--json]',
+          examples: ['neon-pilot tasks list'],
+          action: 'manageTasks',
+        },
+      ]),
+    ).toBeUndefined();
     expect(
       validateKeybindingContributions([{ id: 'kb', title: 'Run', keys: ['Meta+K'], command: 'cmd', scope: 'global' }]),
     ).toBeUndefined();
@@ -26,6 +39,9 @@ describe('extensionBasicContributionValidation', () => {
     expect(() => validateCommandContributions([{ id: 'cmd', title: 'Run', action: 'run', icon: 'bad-icon' }])).toThrow(
       'Extension manifest contributes.commands[0].icon must be one of:',
     );
+    expect(() =>
+      validateCliCommandContributions([{ id: 'tasks-list', command: 'tasks list', action: 'manageTasks', examples: [''] }]),
+    ).toThrow('Extension manifest contributes.cliCommands[0].examples must be an array of non-empty strings.');
     expect(() => validateKeybindingContributions([{ id: 'kb', title: 'Run', keys: [''], command: 'cmd' }])).toThrow(
       'Extension manifest contributes.keybindings[0].keys must be an array of non-empty strings.',
     );

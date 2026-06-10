@@ -75,6 +75,7 @@ export * from './projects.js';
 
 // CLI binary inspection exports
 export * from './cli-binary.js';
+export * from './cli.js';
 
 // Child-process environment helpers
 export * from './shell-env.js';

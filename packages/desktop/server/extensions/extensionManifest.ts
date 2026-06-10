@@ -528,6 +528,8 @@ export interface ExtensionCliCommandContribution {
   command: string;
   title?: string;
   description?: string;
+  usage?: string;
+  examples?: string[];
   action: string;
   inputAction?: string;
   aliases?: string[];

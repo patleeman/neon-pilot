@@ -25,7 +25,10 @@ const cliControlPlane = vi.hoisted(() => ({
   readNeonPilotCliControlPlaneRecord: vi.fn(() => null),
 }));
 
-vi.mock('@neon-pilot/core', () => core);
+vi.mock('@neon-pilot/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@neon-pilot/core')>()),
+  ...core,
+}));
 vi.mock('./app/runtimeState.js', () => runtime);
 vi.mock('./extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => extensionHostClient,
@@ -227,6 +230,7 @@ describe('protocol CLI', () => {
           cli: expect.objectContaining({
             args: ['openai'],
             flags: { stdin: true },
+            json: false,
             stdinText: 'sk-secret\n',
           }),
         }),
