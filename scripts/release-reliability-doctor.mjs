@@ -39,6 +39,16 @@ function collectAdminSurfaceInventory(manifests = listExtensionManifests().map((
   return { tools, cliCommands };
 }
 
+function isExplicitNonNeonPilotAdminSurface(tool) {
+  const description = String(tool.description ?? '').toLowerCase();
+  return (
+    tool.extensionId === 'system-mcp' &&
+    tool.name === 'mcp' &&
+    description.includes('not a neon pilot self-admin surface') &&
+    (description.includes('use neon_pilot') || description.includes('use the canonical neon_pilot tool'))
+  );
+}
+
 export function checkUnifiedAdminSurface(manifests) {
   const inventory = collectAdminSurfaceInventory(manifests);
   const failures = [];
@@ -48,12 +58,11 @@ export function checkUnifiedAdminSurface(manifests) {
   }
 
   const adminLikeTools = inventory.tools.filter((tool) => {
+    if (isExplicitNonNeonPilotAdminSurface(tool)) return false;
     const haystack = `${tool.name ?? ''} ${tool.id ?? ''} ${tool.description ?? ''}`.toLowerCase();
     return /(^|[_-])admin($|[_-])|(^|[_-])admin-like|admin tool|admin surface|self-admin|self admin|control plane|control-plane/.test(haystack);
   });
   for (const tool of adminLikeTools) {
-    const description = String(tool.description ?? '').toLowerCase();
-    if (tool.extensionId === 'system-mcp' && description.includes('not a neon pilot self-admin surface')) continue;
     if (tool.name !== 'neon_pilot') failures.push(`Unexpected internal admin-like tool ${tool.name ?? tool.id} in ${tool.extensionId}`);
   }
 
@@ -63,7 +72,7 @@ export function checkUnifiedAdminSurface(manifests) {
   const mcpTools = asArray(mcpManifest?.manifest?.contributes?.tools);
   for (const tool of mcpTools) {
     const haystack = `${tool.name ?? ''} ${tool.id ?? ''} ${tool.description ?? ''}`.toLowerCase();
-    if (haystack.includes('self-admin') && !haystack.includes('not a neon pilot self-admin surface')) {
+    if (haystack.includes('self-admin') && !isExplicitNonNeonPilotAdminSurface({ ...tool, extensionId: 'system-mcp' })) {
       failures.push('system-mcp describes itself as a Neon Pilot self-admin surface.');
     }
   }
