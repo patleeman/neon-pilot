@@ -257,6 +257,8 @@ function publicRuntimeSettings(ctx: ExtensionBackendContext): JsonRecord {
 
 function mcpConfig() {
   return {
+    deprecated: true,
+    message: 'Neon Pilot MCP admin exposure is deprecated. Use the neon-pilot CLI externally and the canonical neon_pilot tool internally.',
     mcpServers: {
       'neon-pilot': {
         command: 'neon-pilot',
