@@ -76,10 +76,6 @@
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
     },
-    "packages/daemon": {
-      "entry": ["src/**/*.test.ts"],
-      "project": ["src/**/*.ts"]
-    },
     "packages/desktop": {
       "entry": [
         "src/preload.cts",

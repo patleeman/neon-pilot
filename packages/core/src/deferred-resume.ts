@@ -437,6 +437,11 @@ export function saveDeferredResumeState(state: DeferredResumeStateFile, path = r
 
 const LOCK_RETRY_MS = 50;
 const LOCK_TIMEOUT_MS = 5_000;
+const LOCK_SLEEP_BUFFER = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+
+function sleepSync(ms: number): void {
+  Atomics.wait(LOCK_SLEEP_BUFFER, 0, 0, ms);
+}
 
 /**
  * Acquire an exclusive file lock by atomically creating a lockfile.
@@ -502,11 +507,7 @@ function acquireDeferredResumeLock(lockPath: string): { release: () => void } {
         throw new Error(`Timed out waiting for deferred resume lock: ${lockPath}`);
       }
 
-      // Busy-wait before retry (sync context — no sleepSync available)
-      const pollUntil = Date.now() + LOCK_RETRY_MS;
-      while (Date.now() < pollUntil) {
-        /* spin */
-      }
+      sleepSync(LOCK_RETRY_MS);
     }
   }
 }

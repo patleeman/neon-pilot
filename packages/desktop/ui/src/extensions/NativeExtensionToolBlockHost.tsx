@@ -1,6 +1,7 @@
 import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
+import { stripAnsiForTranscript } from '../components/chat/toolPresentation';
 import { addNotification } from '../components/notifications/notificationStore';
 import { cx, LoadingState, Pill, SurfacePanel } from '../components/ui';
 import type { MessageBlock } from '../shared/types';
@@ -86,14 +87,6 @@ function lazyRendererComponent(extension: ExtensionInstallSummary, renderer: Ext
     if (typeof component !== 'function') throw new Error(`Extension transcript renderer not found: ${renderer.component}`);
     return { default: component as ExtensionToolBlockComponent };
   });
-}
-
-function stripAnsiForTranscript(value: string): string {
-  const escape = String.fromCharCode(27);
-  const bell = String.fromCharCode(7);
-  const oscPattern = new RegExp(`${escape}\\][^${bell}${escape}]*(?:${bell}|${escape}\\\\)`, 'gu');
-  const csiPattern = new RegExp(`${escape}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`, 'gu');
-  return value.replace(oscPattern, '').replace(csiPattern, '');
 }
 
 function MissingExtensionRendererFallback({ block }: { block: ToolBlock }) {

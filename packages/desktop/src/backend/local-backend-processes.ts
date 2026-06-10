@@ -37,6 +37,34 @@ type BackendChildMessage = BackendReadyMessage | BackendFatalMessage;
 const nativeWorkbenchBrowserMethods = new Set(['isActive', 'listTabs', 'snapshot', 'screenshot', 'cdp']);
 const NATIVE_WORKBENCH_BROWSER_SLOW_MS = 1_000;
 
+const DESKTOP_CHILD_ENV_ALLOWLIST = new Set([
+  'CI',
+  'DISPLAY',
+  'HOME',
+  'LANG',
+  'LOGNAME',
+  'PATH',
+  'PWD',
+  'SHELL',
+  'SSH_AUTH_SOCK',
+  'TEMP',
+  'TMP',
+  'TMPDIR',
+  'USER',
+  'XAUTHORITY',
+]);
+
+function createDesktopChildEnv(overrides: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value !== 'string') continue;
+    if (DESKTOP_CHILD_ENV_ALLOWLIST.has(key) || key.startsWith('LC_')) {
+      env[key] = value;
+    }
+  }
+  return { ...env, ...overrides };
+}
+
 interface NativeWorkbenchBrowserRequest {
   type: 'native-workbench-browser-request';
   id: string;
@@ -538,8 +566,7 @@ export class LocalBackendProcesses {
     const repoRoot = resolve(currentDir, '..', '..', '..');
     const child = spawn(process.execPath, [resolveBackendChildEntry()], {
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-      env: {
-        ...process.env,
+      env: createDesktopChildEnv({
         ELECTRON_RUN_AS_NODE: '1',
         NEON_PILOT_BACKEND_TOKEN: token,
         ...(extensionHostReady
@@ -549,7 +576,7 @@ export class LocalBackendProcesses {
             }
           : {}),
         NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT ?? repoRoot,
-      },
+      }),
     });
 
     this.child = child;
@@ -649,12 +676,11 @@ export class LocalBackendProcesses {
     const repoRoot = resolve(currentDir, '..', '..', '..');
     const child = spawn(process.execPath, [resolveExtensionHostChildEntry()], {
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-      env: {
-        ...process.env,
+      env: createDesktopChildEnv({
         ELECTRON_RUN_AS_NODE: '1',
         NEON_PILOT_EXTENSION_HOST_TOKEN: token,
         NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT ?? repoRoot,
-      },
+      }),
     });
 
     this.extensionHostChild = child;

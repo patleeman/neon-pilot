@@ -111,22 +111,18 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  let attempt = 0;
-
-  for (;;) {
-    const delayMs = attempt < RETRY_DELAYS_MS.length ? RETRY_DELAYS_MS[attempt] : null;
-    attempt++;
+  for (let attempt = 0; ; attempt++) {
     try {
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
-      if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status)) {
-        await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
+      if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status) && attempt < RETRY_DELAYS_MS.length) {
+        await sleep(RETRY_DELAYS_MS[attempt]);
         continue;
       }
       return res;
     } catch (error) {
-      if (isTransientNetworkError(error)) {
-        await sleep(delayMs ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
+      if (isTransientNetworkError(error) && attempt < RETRY_DELAYS_MS.length) {
+        await sleep(RETRY_DELAYS_MS[attempt]);
         continue;
       }
       throw error;

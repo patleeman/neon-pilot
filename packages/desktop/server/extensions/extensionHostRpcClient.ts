@@ -17,13 +17,16 @@ export interface ExtensionHostRpcClientOptions {
   fetchImpl?: typeof fetch;
 }
 
-export function hasFunction(value: unknown, seen = new WeakSet<object>()): boolean {
+const MAX_FUNCTION_SCAN_DEPTH = 100;
+
+export function hasFunction(value: unknown, seen = new WeakSet<object>(), depth = 0): boolean {
   if (typeof value === 'function') return true;
   if (!value || typeof value !== 'object') return false;
+  if (depth >= MAX_FUNCTION_SCAN_DEPTH) return false;
   if (seen.has(value)) return false;
   seen.add(value);
-  if (Array.isArray(value)) return value.some((item) => hasFunction(item, seen));
-  return Object.values(value as Record<string, unknown>).some((item) => hasFunction(item, seen));
+  if (Array.isArray(value)) return value.some((item) => hasFunction(item, seen, depth + 1));
+  return Object.values(value as Record<string, unknown>).some((item) => hasFunction(item, seen, depth + 1));
 }
 
 export function isWireableExtensionHostInvokeActionInput(input: ExtensionHostInvokeActionInput): boolean {

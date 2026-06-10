@@ -227,6 +227,11 @@ export function saveAttentionEventsState(state: AttentionEventsStateFile, path =
 
 const LOCK_RETRY_MS = 50;
 const LOCK_TIMEOUT_MS = 5_000;
+const LOCK_SLEEP_BUFFER = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+
+function sleepSync(ms: number): void {
+  Atomics.wait(LOCK_SLEEP_BUFFER, 0, 0, ms);
+}
 
 function acquireAttentionEventsLock(lockPath: string): { release: () => void } {
   const deadline = Date.now() + LOCK_TIMEOUT_MS;
@@ -276,10 +281,7 @@ function acquireAttentionEventsLock(lockPath: string): { release: () => void } {
         }
         throw new Error(`Timed out waiting for attention events lock: ${lockPath}`);
       }
-      const pollUntil = Date.now() + LOCK_RETRY_MS;
-      while (Date.now() < pollUntil) {
-        /* spin */
-      }
+      sleepSync(LOCK_RETRY_MS);
     }
   }
 }

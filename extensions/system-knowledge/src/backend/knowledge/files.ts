@@ -232,7 +232,7 @@ export async function deleteFile(input: { id: string }, ctx: ExtensionBackendCon
 
 export async function rename(input: { id: string; newName: string }, ctx: ExtensionBackendContext) {
   const source = await resolveId(ctx, input.id);
-  const target = resolve(source.root, dirname(source.id), basename(input.newName));
+  const target = resolve(dirname(source.path), basename(input.newName));
   if (!inside(source.root, target)) throw new Error('invalid path');
   mkdirSync(dirname(target), { recursive: true });
   renameSync(source.path, target);

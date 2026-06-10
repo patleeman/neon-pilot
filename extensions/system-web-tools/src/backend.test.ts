@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('node:dns/promises', () => ({
+  lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]),
+}));
+
 vi.mock('@neon-pilot/extensions/backend/webContent', () => ({
   extractReadableHtml: vi.fn(async ({ html }) => ({ markdown: html.replace(/<[^>]+>/g, '').trim(), title: 'Example' })),
 }));
@@ -28,6 +32,13 @@ describe('system-web-tools backend', () => {
       expect(result.raw).toBe(true);
       expect(result.text).toContain('raw data');
       expect(result.url).toBe('https://example.com');
+    });
+
+    it('rejects private network URLs before fetching', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+      await expect(webFetch({ url: 'http://127.0.0.1:3000' })).rejects.toThrow('Private, loopback, and link-local hosts are not allowed');
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('throws on HTTP error', async () => {
