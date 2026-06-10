@@ -138,6 +138,26 @@ function queuedPromptPreviewsEqual(
   });
 }
 
+function parallelPromptPreviewsEqual(
+  left: DesktopConversationState['stream']['parallelJobs'] | undefined,
+  right: DesktopConversationState['stream']['parallelJobs'] | undefined,
+): boolean {
+  if (left === right) return true;
+  const leftItems = left ?? [];
+  const rightItems = right ?? [];
+  if (leftItems.length !== rightItems.length) return false;
+  return leftItems.every((item, index) => {
+    const other = rightItems[index];
+    return (
+      item.id === other?.id &&
+      item.prompt === other.prompt &&
+      item.childConversationId === other.childConversationId &&
+      item.status === other.status &&
+      item.imageCount === other.imageCount
+    );
+  });
+}
+
 function tokenCountsEqual(
   left: DesktopConversationState['stream']['tokens'],
   right: DesktopConversationState['stream']['tokens'],
@@ -294,6 +314,11 @@ export function applyDesktopConversationStreamEvent(
         return stream;
       }
       return { ...stream, pendingQueue: { steering: event.steering, followUp: event.followUp } };
+    case 'parallel_state':
+      if (parallelPromptPreviewsEqual(stream.parallelJobs, event.jobs)) {
+        return stream;
+      }
+      return { ...stream, parallelJobs: event.jobs };
     case 'presence_state':
       if (stream.presence === event.state) {
         return stream;

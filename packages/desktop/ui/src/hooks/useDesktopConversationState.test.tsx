@@ -217,7 +217,23 @@ describe('applyDesktopConversationStreamEvent', () => {
     };
 
     const emptyQueueUpdated = applyDesktopConversationStreamEvent(stream, { type: 'queue_state', steering: [], followUp: [] });
-    const queueUpdated = applyDesktopConversationStreamEvent(stream, { type: 'queue_state', steering: ['note'], followUp: [] });
+    const queueUpdated = applyDesktopConversationStreamEvent(stream, {
+      type: 'queue_state',
+      steering: [{ id: 'note', text: 'note', imageCount: 0 }],
+      followUp: [],
+    });
+    const parallelUpdated = applyDesktopConversationStreamEvent(stream, {
+      type: 'parallel_state',
+      jobs: [
+        {
+          id: 'parallel-1',
+          prompt: 'Check docs',
+          childConversationId: 'child-1',
+          status: 'running',
+          imageCount: 0,
+        },
+      ],
+    });
     const statsUpdated = applyDesktopConversationStreamEvent(stream, { type: 'stats_update', tokens: 10, cost: 0.01 });
     const repeatedAgentStart = applyDesktopConversationStreamEvent(stream, { type: 'agent_start' });
     const idleToolEnd = applyDesktopConversationStreamEvent(stream, {
@@ -231,9 +247,59 @@ describe('applyDesktopConversationStreamEvent', () => {
 
     expect(emptyQueueUpdated).toBe(stream);
     expect(queueUpdated.blocks).toBe(blocks);
+    expect(parallelUpdated.blocks).toBe(blocks);
+    expect(parallelUpdated.parallelJobs).toEqual([
+      expect.objectContaining({ id: 'parallel-1', status: 'running', childConversationId: 'child-1' }),
+    ]);
     expect(statsUpdated.blocks).toBe(blocks);
     expect(repeatedAgentStart).toBe(stream);
     expect(idleToolEnd).toBe(stream);
+  });
+
+  it('preserves stream identity for repeated parallel state events', () => {
+    const stream = {
+      blocks: [],
+      blockOffset: 0,
+      totalBlocks: 0,
+      hasSnapshot: true,
+      isStreaming: true,
+      isCompacting: false,
+      error: null,
+      goalState: null,
+      systemPrompt: null,
+      toolDefinitions: [],
+      pendingQueue: { steering: [], followUp: [] },
+      parallelJobs: [
+        {
+          id: 'parallel-1',
+          prompt: 'Check docs',
+          childConversationId: 'child-1',
+          status: 'running' as const,
+          imageCount: 0,
+        },
+      ],
+      presence: null,
+      contextUsage: null,
+      tokens: null,
+      cost: null,
+      cwdChange: null,
+      title: null,
+    };
+
+    expect(
+      applyDesktopConversationStreamEvent(stream, {
+        type: 'parallel_state',
+        jobs: [
+          {
+            id: 'parallel-1',
+            prompt: 'Check docs',
+            childConversationId: 'child-1',
+            status: 'running',
+            imageCount: 0,
+          },
+        ],
+      }),
+    ).toBe(stream);
   });
 
   it('ignores empty streamed transcript deltas', () => {
