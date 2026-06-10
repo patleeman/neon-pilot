@@ -21,13 +21,29 @@ const live = vi.hoisted(() => ({
 const titles = vi.hoisted(() => ({
   resolveStableSessionTitle: vi.fn((session: { name?: string }) => session.name ?? 'Stable Title'),
 }));
-const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn() }));
+const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn(), publishAppEvent: vi.fn() }));
 const metadata = vi.hoisted(() => ({
   queryConversationMetadata: vi.fn(),
   readConversationMetadata: vi.fn(),
   writeConversationMetadata: vi.fn(),
 }));
 const subscriptions = vi.hoisted(() => ({ publishExtensionHostEvent: vi.fn() }));
+const uiPreferences = vi.hoisted(() => ({
+  saved: {
+    openConversationIds: ['existing-open'],
+    pinnedConversationIds: ['existing-pinned'],
+    archivedConversationIds: ['existing-archived'],
+    activeConversationId: 'existing-open',
+    workspacePaths: [],
+    remoteControlledConversationIds: [],
+  },
+  readSavedUiPreferences: vi.fn(() => uiPreferences.saved),
+  writeSavedUiPreferences: vi.fn((patch: Record<string, unknown>) => {
+    uiPreferences.saved = { ...uiPreferences.saved, ...patch } as typeof uiPreferences.saved;
+    return uiPreferences.saved;
+  }),
+}));
+const settingsPersistence = vi.hoisted(() => ({ persistSettingsWrite: vi.fn((writer: (settingsFile: string) => unknown) => writer('/settings.json')) }));
 
 vi.mock('../conversations/conversationSessionCapability.js', () => sessionsCapability);
 vi.mock('../conversations/liveSessionBroadcasts.js', () => broadcasts);
@@ -38,6 +54,8 @@ vi.mock('../conversations/liveSessionTitle.js', () => titles);
 vi.mock('../shared/appEvents.js', () => appEvents);
 vi.mock('./extensionConversationMetadata.js', () => metadata);
 vi.mock('./extensionSubscriptions.js', () => subscriptions);
+vi.mock('../ui/uiPreferences.js', () => uiPreferences);
+vi.mock('../ui/settingsPersistence.js', () => settingsPersistence);
 
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 
@@ -74,6 +92,14 @@ describe('extensionConversations', () => {
     reservation.reserveConversationSession.mockReturnValue({ id: 'reserved-1', sessionFile: '/sessions/reserved-1.jsonl', cwd: '/repo' });
     conversationService.resolveConversationSessionFile.mockReturnValue('/sessions/persisted.jsonl');
     conversationService.appendStoredVisibleCustomMessage.mockReturnValue('block-1');
+    uiPreferences.saved = {
+      openConversationIds: ['existing-open'],
+      pinnedConversationIds: ['existing-pinned'],
+      archivedConversationIds: ['existing-archived'],
+      activeConversationId: 'existing-open',
+      workspacePaths: [],
+      remoteControlledConversationIds: [],
+    };
   });
 
   it('lists conversations and returns live conversation details', async () => {
@@ -110,12 +136,49 @@ describe('extensionConversations', () => {
     expect(entry.session.setSessionName).toHaveBeenCalledWith('Created Title');
     expect(entry.session.followUp).toHaveBeenCalledWith('Start here');
     expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'open_session', sessionId: 'conv-1' });
     expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
       type: 'session.created',
       conversationId: 'conv-1',
       cwd: '/repo',
     });
     expect(result).toEqual({ id: 'conv-1', conversationId: 'conv-1' });
+  });
+
+  it('adds conversations created through extensions to the persisted workspace so sidebars refresh', async () => {
+    live.createSession.mockResolvedValue({ id: 'conv-created' });
+    live.registry.set('conv-created', liveEntry());
+
+    await expect(
+      createExtensionConversationsCapability({ getRuntimeScope: () => 'shared', getSettingsFile: () => '/settings.json' }).create({
+        cwd: '/repo',
+      }),
+    ).resolves.toEqual({ id: 'conv-created', conversationId: 'conv-created' });
+
+    expect(uiPreferences.writeSavedUiPreferences).toHaveBeenCalledWith(
+      { openConversationIds: ['existing-open', 'conv-created'] },
+      '/settings.json',
+    );
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.workspace.updated',
+      openConversationIds: ['existing-open', 'conv-created'],
+      pinnedConversationIds: ['existing-pinned'],
+      archivedConversationIds: ['existing-archived'],
+      activeConversationId: 'existing-open',
+    });
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'open_session', sessionId: 'conv-created' });
+  });
+
+  it('does not reopen created conversations that are already archived in the workspace', async () => {
+    live.createSession.mockResolvedValue({ id: 'existing-archived' });
+    live.registry.set('existing-archived', liveEntry());
+
+    await createExtensionConversationsCapability({ getRuntimeScope: () => 'shared', getSettingsFile: () => '/settings.json' }).create({
+      cwd: '/repo',
+    });
+
+    expect(uiPreferences.writeSavedUiPreferences).not.toHaveBeenCalled();
   });
 
   it('creates non-live conversations without starting an agent session and can append persisted transcript blocks', async () => {

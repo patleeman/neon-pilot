@@ -20,7 +20,7 @@ import {
 } from '../conversations/liveSessions.js';
 import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js';
 import type { ServerRouteContext } from '../routes/context.js';
-import { invalidateAppTopics } from '../shared/appEvents.js';
+import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 
@@ -113,6 +113,39 @@ export function createExtensionConversationsCapability(
         ),
       { runtimeSettingsFile: serverContext.getSettingsFile() },
     );
+  };
+
+  const addCreatedConversationToWorkspace = async (conversationId: string) => {
+    if (!serverContext?.getSettingsFile) return null;
+    const { readSavedUiPreferences, writeSavedUiPreferences } = await import('../ui/uiPreferences.js');
+    const { persistSettingsWrite } = await import('../ui/settingsPersistence.js');
+    const before = readSavedUiPreferences(serverContext.getSettingsFile());
+    if (
+      before.openConversationIds.includes(conversationId) ||
+      before.pinnedConversationIds.includes(conversationId) ||
+      before.archivedConversationIds.includes(conversationId)
+    ) {
+      return before;
+    }
+
+    const saved = persistSettingsWrite(
+      (settingsFile) =>
+        writeSavedUiPreferences(
+          {
+            openConversationIds: [...before.openConversationIds, conversationId],
+          },
+          settingsFile,
+        ),
+      { runtimeSettingsFile: serverContext.getSettingsFile() },
+    );
+    await publishExtensionHostEvent('conversationSessions', {
+      type: 'session.workspace.updated',
+      openConversationIds: saved.openConversationIds,
+      pinnedConversationIds: saved.pinnedConversationIds,
+      archivedConversationIds: saved.archivedConversationIds,
+      activeConversationId: saved.activeConversationId ?? null,
+    });
+    return saved;
   };
 
   return {
@@ -377,7 +410,9 @@ export function createExtensionConversationsCapability(
         if (input.title?.trim()) {
           renameStoredConversation(reserved.id, input.title.trim());
         }
+        await addCreatedConversationToWorkspace(reserved.id);
         invalidateAppTopics('sessions');
+        publishAppEvent({ type: 'open_session', sessionId: reserved.id });
         await publishExtensionHostEvent('conversationSessions', { type: 'session.created', conversationId: reserved.id, cwd });
         return { id: reserved.id, conversationId: reserved.id };
       }
@@ -406,7 +441,9 @@ export function createExtensionConversationsCapability(
         if (entry) await entry.session.followUp(initialPrompt);
       }
 
+      await addCreatedConversationToWorkspace(created.id);
       invalidateAppTopics('sessions');
+      publishAppEvent({ type: 'open_session', sessionId: created.id });
       await publishExtensionHostEvent('conversationSessions', { type: 'session.created', conversationId: created.id, cwd });
       return { id: created.id, conversationId: created.id };
     },
