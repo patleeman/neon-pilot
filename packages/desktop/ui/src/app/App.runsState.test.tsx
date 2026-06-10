@@ -387,6 +387,40 @@ describe('App execution state integration', () => {
     expect(container.textContent).toContain('conversation idle');
   });
 
+  it('does not let stale meta refresh undo a stopped running event', async () => {
+    apiSessionMetaMock.mockResolvedValue({
+      id: 'conv-1',
+      title: 'Conversation',
+      cwd: '/repo',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      isRunning: true,
+    });
+    ({ container, root } = await renderApp());
+
+    await emitDesktopEvent({
+      type: 'sessions_snapshot',
+      sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: true }],
+    });
+    await emitDesktopEvent({ type: 'session_meta_changed', sessionId: 'conv-1', running: false });
+    expect(container.textContent).toContain('conversation idle');
+
+    await act(async () => {
+      vi.advanceTimersByTime(750);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiSessionMetaMock).toHaveBeenCalledWith('conv-1');
+    expect(container.textContent).toContain('conversation idle');
+
+    await emitDesktopEvent({
+      type: 'sessions_snapshot',
+      sessions: [{ id: 'conv-1', title: 'Conversation', cwd: '/repo', timestamp: '2026-01-01T00:00:00.000Z', isRunning: true }],
+    });
+
+    expect(container.textContent).toContain('conversation idle');
+  });
+
   it('does not wake AppData consumers for unrelated app event versions', async () => {
     ({ root } = await renderApp());
     const globalWithProbe = globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number };
