@@ -188,6 +188,35 @@ describe('ExtensionChatRail', () => {
     await waitFor(() => {
       expect(onTurnComplete).toHaveBeenCalled();
     });
+    expect(onTurnComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not complete a submitted turn until a result block appears', async () => {
+    const onTurnComplete = vi.fn();
+    desktopConversationStateMock.mockResolvedValue({
+      conversationId: 'conversation-1',
+      sessionDetail: { meta: { cwd: null } },
+      liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
+      stream: {
+        blocks: [],
+        isStreaming: false,
+        isCompacting: false,
+        contextUsage: null,
+        tokens: null,
+      },
+    });
+
+    render(<ExtensionChatRail conversationId="conversation-1" onTurnComplete={onTurnComplete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'send' }));
+
+    await waitFor(() => {
+      expect(sendMock).toHaveBeenCalledWith('Review this draft', 'steer', undefined, undefined, undefined);
+    });
+    await waitFor(() => {
+      expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+    });
+    expect(onTurnComplete).not.toHaveBeenCalled();
   });
 
   it('routes model changes through the host conversation model API', async () => {

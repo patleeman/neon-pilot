@@ -111,9 +111,8 @@ export function ExtensionChatRail({
   }, [hydrateConversationState, maybeCompleteTurn]);
 
   const refreshExtensionState = useCallback(async () => {
-    const nextState = await refreshConversationState();
-    if (nextState && !nextState.stream.isStreaming) await onTurnComplete?.();
-  }, [onTurnComplete, refreshConversationState]);
+    await refreshConversationState();
+  }, [refreshConversationState]);
 
   useEffect(() => {
     if (!pendingTurnRefreshRef.current || isStreaming || !hasTurnResultBlock(messages, submittedBlockCountRef.current)) return;
