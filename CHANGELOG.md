@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.12 — 2026-06-10
+
+### Highlights
+
+- Consolidates Neon Pilot self-administration around the canonical `neon-pilot` CLI and internal `neon_pilot` tool while removing duplicate internal admin tool surfaces.
+- Deprecates Neon Pilot MCP bootstrap/admin usage so MCP remains an external client surface, not a self-control plane.
+- Fixes conversation lifecycle seams for extension-created conversations, sidebar hydration, open/archive workspace state, and deferred-resume cleanup.
+- Hardens extension lifecycle behavior, including registry invalidation after enable changes and uninstall handling for runtime-installed catalog extensions.
+- Adds release reliability gates and required hands-on QA documentation covering launch, admin, deferred resume, extension, heartbeat, registry, and route smoke flows.
+
+### Notes
+
+- 26 commits since the previous release.
+
 ## 0.11.11 — 2026-06-10
 
 ### Highlights
