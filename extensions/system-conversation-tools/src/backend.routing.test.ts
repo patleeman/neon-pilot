@@ -67,6 +67,10 @@ function ctx(overrides: Record<string, unknown> = {}) {
     appendTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'block-1' }),
     updateTranscriptBlock: vi.fn().mockResolvedValue({ blockId: 'block-1' }),
     rollback: vi.fn().mockResolvedValue({ rolledBackTo: 'entry-1' }),
+    metadata: {
+      get: vi.fn().mockResolvedValue({ content: 'Existing', updatedAt: '2026-01-01T00:00:00.000Z' }),
+      set: vi.fn().mockImplementation(async ({ values }: { values: Record<string, unknown> }) => values),
+    },
   };
   return {
     profile: 'shared',
@@ -306,6 +310,35 @@ describe('system-conversation-tools backend routing', () => {
 
     await conversationTool({ action: 'rollback', conversationId: 'conv-2', count: 2 }, context);
     expect(conversations.rollback).toHaveBeenCalledWith('conv-2', 2);
+  });
+
+  it('routes conversation scratchpad admin actions through conversation metadata', async () => {
+    const context = ctx();
+    const conversations = (context as { conversations: { metadata: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> } } }).conversations;
+
+    await expect(
+      conversationTool({ action: 'scratchpad', conversationId: 'conv-2', scratchpadOperation: 'get' }, context),
+    ).resolves.toMatchObject({ details: { conversationId: 'conv-2', content: 'Existing' } });
+    expect(conversations.metadata.get).toHaveBeenCalledWith({ conversationId: 'conv-2', namespace: 'threadScratchpad' });
+
+    await conversationTool({ action: 'scratchpad', conversationId: 'conv-2', scratchpadOperation: 'append', content: 'Next' }, context);
+    expect(conversations.metadata.set).toHaveBeenCalledWith({
+      conversationId: 'conv-2',
+      namespace: 'threadScratchpad',
+      values: expect.objectContaining({ content: 'Existing\n\nNext', updatedAt: expect.any(String) }),
+    });
+  });
+
+  it('normalizes conversations scratchpad cli commands', async () => {
+    const context = ctx();
+    const conversations = (context as { conversations: { metadata: { set: ReturnType<typeof vi.fn> } } }).conversations;
+
+    await conversationTool({ cli: { command: 'conversations scratchpad set', args: ['conv-2', '--content', 'From CLI'] } }, context);
+    expect(conversations.metadata.set).toHaveBeenCalledWith({
+      conversationId: 'conv-2',
+      namespace: 'threadScratchpad',
+      values: expect.objectContaining({ content: 'From CLI' }),
+    });
   });
 
   it('passes only provided fields for workspace updates', async () => {

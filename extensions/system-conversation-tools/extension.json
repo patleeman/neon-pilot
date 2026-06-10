@@ -21,7 +21,8 @@
         "promptGuidelines": [
           "Inspect or list before targeting an unclear conversation.",
           "Use run_turn when you need the remote conversation turn to finish; use send_message for fire-and-forget steering or follow-up.",
-          "Use deferred_resume for time-based continuation; avoid changing unrelated workspace state."
+          "Use deferred_resume for time-based continuation; avoid changing unrelated workspace state.",
+          "Use scratchpad for non-secret operational state that should survive compaction/restarts."
         ],
         "inputSchema": {
           "type": "object",
@@ -44,6 +45,7 @@
                 "set_active_tools",
                 "workspace_get",
                 "workspace_update",
+                "scratchpad",
                 "append_transcript_block",
                 "update_transcript_block",
                 "rollback"
@@ -56,7 +58,14 @@
             },
             "inspectAction": {
               "type": "string",
-              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
+              "enum": [
+                "list",
+                "search",
+                "query",
+                "diff",
+                "outline",
+                "read_window"
+              ],
               "description": "Inspect operation when action is inspect."
             },
             "scope": {
@@ -187,11 +196,19 @@
             },
             "deferredAction": {
               "type": "string",
-              "enum": ["add", "list", "cancel"]
+              "enum": [
+                "add",
+                "list",
+                "cancel"
+              ]
             },
             "trigger": {
               "type": "string",
-              "enum": ["after_turn", "delay", "at"]
+              "enum": [
+                "after_turn",
+                "delay",
+                "at"
+              ]
             },
             "delay": {
               "type": "string"
@@ -201,7 +218,10 @@
             },
             "deliverAs": {
               "type": "string",
-              "enum": ["steer", "followUp"]
+              "enum": [
+                "steer",
+                "followUp"
+              ]
             },
             "reason": {
               "type": "string"
@@ -285,9 +305,25 @@
               "items": {
                 "type": "string"
               }
+            },
+            "scratchpadOperation": {
+              "type": "string",
+              "enum": [
+                "get",
+                "set",
+                "append",
+                "prepend"
+              ],
+              "description": "Scratchpad operation when action is scratchpad."
+            },
+            "content": {
+              "type": "string",
+              "description": "Markdown content for scratchpad set/append/prepend. Do not store secrets."
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       },
@@ -298,7 +334,9 @@
         "description": "Ask the user one or more focused questions in the desktop UI.",
         "action": "askUser",
         "promptSnippet": "Ask the user structured questions with buttons, radio choices, or checkboxes.",
-        "promptGuidelines": ["Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."],
+        "promptGuidelines": [
+          "Ask only when blocked on a real decision or approval. Prefer questions[] for structured choices."
+        ],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -345,7 +383,11 @@
                   },
                   "style": {
                     "type": "string",
-                    "enum": ["radio", "check", "checkbox"],
+                    "enum": [
+                      "radio",
+                      "check",
+                      "checkbox"
+                    ],
                     "description": "radio for one choice, check/checkbox for multi-select."
                   },
                   "options": {
@@ -376,13 +418,17 @@
                               "description": "Optional supporting text shown under the option."
                             }
                           },
-                          "required": ["value"]
+                          "required": [
+                            "value"
+                          ]
                         }
                       ]
                     }
                   }
                 },
-                "required": ["options"]
+                "required": [
+                  "options"
+                ]
               }
             }
           },
@@ -404,7 +450,14 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["list", "search", "query", "diff", "outline", "read_window"],
+              "enum": [
+                "list",
+                "search",
+                "query",
+                "diff",
+                "outline",
+                "read_window"
+              ],
               "description": "Inspect operation to perform."
             },
             "conversationId": {
@@ -511,7 +564,9 @@
               "description": "Character cap per returned search snippet."
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       },
@@ -522,7 +577,9 @@
         "description": "Set the current conversation title.",
         "action": "conversationTitle",
         "promptSnippet": "Set a short, specific conversation title once the user intent is clear.",
-        "promptGuidelines": ["Set one short, concrete 3-7 word title early when intent is clear; do not mention the title update in chat."],
+        "promptGuidelines": [
+          "Set one short, concrete 3-7 word title early when intent is clear; do not mention the title update in chat."
+        ],
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -531,7 +588,9 @@
               "description": "Short, specific conversation title. Aim for 3-7 words and keep it under 80 characters."
             }
           },
-          "required": ["title"],
+          "required": [
+            "title"
+          ],
           "additionalProperties": false
         }
       },
@@ -557,7 +616,9 @@
               "description": "Optional prompt to continue automatically in the new working directory after the switch completes."
             }
           },
-          "required": ["cwd"],
+          "required": [
+            "cwd"
+          ],
           "additionalProperties": false
         }
       },
@@ -576,7 +637,11 @@
           "properties": {
             "action": {
               "type": "string",
-              "enum": ["add", "list", "cancel"],
+              "enum": [
+                "add",
+                "list",
+                "cancel"
+              ],
               "description": "Deferred resume operation to perform."
             },
             "id": {
@@ -587,7 +652,11 @@
             },
             "trigger": {
               "type": "string",
-              "enum": ["after_turn", "delay", "at"]
+              "enum": [
+                "after_turn",
+                "delay",
+                "at"
+              ]
             },
             "delay": {
               "type": "string"
@@ -597,7 +666,10 @@
             },
             "deliverAs": {
               "type": "string",
-              "enum": ["steer", "followUp"]
+              "enum": [
+                "steer",
+                "followUp"
+              ]
             },
             "title": {
               "type": "string",
@@ -608,7 +680,9 @@
               "description": "Required when scheduling a wakeup that references a running background run which already delivers completion, explaining the distinct time-based action."
             }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         }
       }
@@ -668,7 +742,9 @@
       {
         "id": "open-thread-palette",
         "title": "Open thread palette",
-        "keys": ["mod+p"],
+        "keys": [
+          "mod+p"
+        ],
         "command": "palette.open",
         "args": {
           "scope": "threads"
@@ -677,7 +753,9 @@
       {
         "id": "open-command-palette",
         "title": "Open command palette",
-        "keys": ["mod+shift+p"],
+        "keys": [
+          "mod+shift+p"
+        ],
         "command": "palette.open",
         "args": {
           "scope": "commands"
@@ -904,6 +982,30 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "update_transcript_block"
+      },
+      {
+        "id": "conversations-scratchpad-get",
+        "command": "conversations scratchpad get",
+        "description": "Get a conversation scratchpad: conversations scratchpad get <id>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "scratchpad"
+      },
+      {
+        "id": "conversations-scratchpad-set",
+        "command": "conversations scratchpad set",
+        "description": "Replace a conversation scratchpad: conversations scratchpad set <id> --content <markdown>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "scratchpad"
+      },
+      {
+        "id": "conversations-scratchpad-patch",
+        "command": "conversations scratchpad patch",
+        "description": "Append/prepend to a scratchpad: conversations scratchpad patch <id> --operation append --content <markdown>",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "scratchpad"
       }
     ]
   },
@@ -934,6 +1036,7 @@
             "workspace_open_update",
             "delete",
             "retention_prune",
+            "scratchpad",
             "append_transcript_block",
             "update_transcript_block",
             "rollback"
@@ -1014,5 +1117,9 @@
       }
     ]
   },
-  "permissions": ["conversations:readwrite", "storage:readwrite", "ui:notify"]
+  "permissions": [
+    "conversations:readwrite",
+    "storage:readwrite",
+    "ui:notify"
+  ]
 }

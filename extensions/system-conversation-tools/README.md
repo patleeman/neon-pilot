@@ -326,6 +326,7 @@ Before targeting an unclear conversation, use `action: "inspect"` with `inspectA
 | `workspace_open_update`   | `operation`                                      | Ergonomic CLI-only open/sidebar mutation for add, remove, pin, unpin, active, archive, and unarchive.                                                |
 | `append_transcript_block` | `conversationId`, `blockType`, `data`            | Appends an extension-owned visible transcript block. Optional `title`, `blockId`.                                                                    |
 | `update_transcript_block` | `conversationId`, `blockType`, `blockId`, `data` | Updates an extension-owned visible transcript block.                                                                                                 |
+| `scratchpad`              | `conversationId`, `scratchpadOperation`          | Gets, replaces, appends, or prepends a durable per-conversation markdown scratchpad. Use only for non-secret operational state.                       |
 | `rollback`                | `conversationId`                                 | Rolls back a live conversation by `count` turns. Defaults to `1`.                                                                                    |
 
 Use `run_turn` when the caller needs to wait for the remote conversation to finish. Use `send_message` for fire-and-forget steering or follow-up delivery. Use `deferred_resume` for time-based continuation; do not run sleeping shell commands as timers.
@@ -379,5 +380,10 @@ neon-pilot conversations archive conv-old --json
 neon-pilot conversations unarchive conv-old --json
 neon-pilot conversations delete conv-old --json
 neon-pilot conversations retention prune --older-than 180d --archived-only --dry-run --json
+neon-pilot conversations scratchpad get <id> --json
+neon-pilot conversations scratchpad set <id> --content "## Plan" --json
+neon-pilot conversations scratchpad patch <id> --operation append --content "Validation passed" --json
 neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}' --json
 ```
+
+Conversation scratchpads are stored in conversation metadata under the `threadScratchpad` namespace, keyed by `conversationId`, so they survive compaction and restarts. Do not store secrets.

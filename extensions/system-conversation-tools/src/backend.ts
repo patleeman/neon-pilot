@@ -17,6 +17,58 @@ import { CONVERSATION_ACTIONS, type ConversationAction } from './conversationToo
 
 type ConversationContextMenuInput = { conversationId?: string; sessionTitle?: string; cwd?: string };
 
+const SCRATCHPAD_METADATA_NAMESPACE = 'threadScratchpad';
+const MAX_SCRATCHPAD_CONTENT_LENGTH = 200_000;
+
+type ScratchpadOperation = 'get' | 'set' | 'append' | 'prepend';
+
+function validateScratchpadContent(content: string): string {
+  if (content.length > MAX_SCRATCHPAD_CONTENT_LENGTH) {
+    throw new Error(`Scratchpad content exceeds ${MAX_SCRATCHPAD_CONTENT_LENGTH} characters.`);
+  }
+  return content;
+}
+
+function joinScratchpadMarkdown(first: string, second: string): string {
+  if (!first) return second;
+  if (!second) return first;
+  return `${first.replace(/\s+$/u, '')}\n\n${second.replace(/^\s+/u, '')}`;
+}
+
+function scratchpadFromMetadata(metadata: Record<string, unknown>) {
+  return {
+    content: typeof metadata.content === 'string' ? metadata.content : '',
+    updatedAt: typeof metadata.updatedAt === 'string' ? metadata.updatedAt : null,
+  };
+}
+
+async function getConversationScratchpad(ctx: ExtensionBackendContext, conversationId: string) {
+  const metadata = await ctx.conversations.metadata.get({ conversationId, namespace: SCRATCHPAD_METADATA_NAMESPACE });
+  return scratchpadFromMetadata(metadata as Record<string, unknown>);
+}
+
+async function setConversationScratchpad(ctx: ExtensionBackendContext, conversationId: string, content: string) {
+  const updatedAt = new Date().toISOString();
+  const values = await ctx.conversations.metadata.set({
+    conversationId,
+    namespace: SCRATCHPAD_METADATA_NAMESPACE,
+    values: { content: validateScratchpadContent(content), updatedAt },
+  });
+  return scratchpadFromMetadata(values as Record<string, unknown>);
+}
+
+async function patchConversationScratchpad(ctx: ExtensionBackendContext, params: Record<string, unknown>) {
+  const conversationId = requiredString(params, 'conversationId');
+  const operation = (optionalString(params.scratchpadOperation) ?? 'get') as ScratchpadOperation;
+  if (operation === 'get') return { conversationId, ...(await getConversationScratchpad(ctx, conversationId)) };
+  if (!['set', 'append', 'prepend'].includes(operation)) throw new Error(`Unsupported scratchpad operation: ${operation}`);
+  const content = validateScratchpadContent(typeof params.content === 'string' ? params.content : '');
+  if (operation === 'set') return { conversationId, ...(await setConversationScratchpad(ctx, conversationId, content)) };
+  const existing = await getConversationScratchpad(ctx, conversationId);
+  const nextContent = operation === 'prepend' ? joinScratchpadMarkdown(content, existing.content) : joinScratchpadMarkdown(existing.content, content);
+  return { conversationId, ...(await setConversationScratchpad(ctx, conversationId, nextContent)) };
+}
+
 export async function duplicateConversation(input: ConversationContextMenuInput, ctx: ExtensionBackendContext) {
   ctx.log.info('context menu: duplicate conversation', {
     conversationId: input.conversationId,
@@ -439,6 +491,24 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       archivedOnly: flagBoolean(flags, 'archived-only'),
       dryRun: flagBoolean(flags, 'dry-run'),
     };
+  if (command === 'conversations scratchpad get')
+    return { ...body, action: 'scratchpad', scratchpadOperation: 'get', conversationId: positionals[0] };
+  if (command === 'conversations scratchpad set')
+    return {
+      ...body,
+      action: 'scratchpad',
+      scratchpadOperation: 'set',
+      conversationId: positionals[0],
+      content: flagString(flags, 'content') ?? positionals.slice(1).join(' '),
+    };
+  if (command === 'conversations scratchpad patch')
+    return {
+      ...body,
+      action: 'scratchpad',
+      scratchpadOperation: flagString(flags, 'operation') ?? positionals[1] ?? 'append',
+      conversationId: positionals[0],
+      content: flagString(flags, 'content') ?? positionals.slice(2).join(' '),
+    };
   if (command === 'conversations transcript append')
     return {
       ...body,
@@ -604,6 +674,9 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
         await ctx.conversations.prune({ olderThanMs, archivedOnly: payload.archivedOnly === true, dryRun: payload.dryRun === true }),
       );
     }
+
+    case 'scratchpad':
+      return toolResult(action, await patchConversationScratchpad(ctx, payload));
 
     case 'append_transcript_block':
       return toolResult(
