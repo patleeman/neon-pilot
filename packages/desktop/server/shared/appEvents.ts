@@ -95,6 +95,7 @@ const ALL_TOPICS: AppEventTopic[] = [
   'daemon',
   'workspace',
   'knowledgeBase',
+  'notifications',
 ];
 const listeners = new Set<AppEventListener>();
 let monitorStop: WatchStop | undefined;
