@@ -324,18 +324,39 @@ export async function routeGatewayMessage(
   return { routed: true, agentProfileId: target.id, conversationId: ensured.conversationId };
 }
 
+async function resolveProfileForConversation(
+  input: { conversationId?: unknown },
+  ctx: ExtensionBackendContext,
+): Promise<PersonalAgentProfile | null> {
+  const toolContext = (ctx as ExtensionBackendContext & { toolContext?: { conversationId?: unknown; sessionId?: unknown } }).toolContext;
+  const conversationId =
+    cleanString(input?.conversationId, 160) ?? cleanString(toolContext?.conversationId, 160) ?? cleanString(toolContext?.sessionId, 160);
+  if (!conversationId) return null;
+  const metadata = await ctx.conversations.metadata.get({ conversationId, namespace: METADATA_NAMESPACE });
+  const agentProfileId = cleanString(metadata.agentProfileId, 120);
+  if (!agentProfileId) return null;
+  return readProfile(agentProfileId, ctx);
+}
+
+export async function updateSelfProfile(
+  input: Omit<ProfileUpdateInput, 'id'> & { conversationId?: unknown },
+  ctx: ExtensionBackendContext,
+): Promise<{ profile: PersonalAgentProfile; content: Array<{ type: 'text'; text: string }> }> {
+  const profile = await resolveProfileForConversation(input, ctx);
+  if (!profile) throw new Error('This conversation is not bound to a personal agent profile.');
+  const result = await updateProfile({ ...input, id: profile.id }, ctx);
+  return {
+    profile: result.profile,
+    content: [{ type: 'text', text: `Updated personal agent profile: ${result.profile.name}` }],
+  };
+}
+
 export async function provideAgentTurnContext(
   input: { conversationId?: unknown },
   ctx: ExtensionBackendContext,
 ): Promise<{ blocks: Array<{ title: string; content: string }> }> {
-  const toolContext = (ctx as ExtensionBackendContext & { toolContext?: { conversationId?: unknown; sessionId?: unknown } }).toolContext;
-  const conversationId =
-    cleanString(input?.conversationId, 160) ?? cleanString(toolContext?.conversationId, 160) ?? cleanString(toolContext?.sessionId, 160);
-  if (!conversationId) return { blocks: [] };
-  const metadata = await ctx.conversations.metadata.get({ conversationId, namespace: METADATA_NAMESPACE });
-  const agentProfileId = cleanString(metadata.agentProfileId, 120);
-  if (!agentProfileId) return { blocks: [] };
-  const profile = await readProfile(agentProfileId, ctx);
+  const profile = await resolveProfileForConversation(input, ctx);
+  if (!profile) return { blocks: [] };
   const lines = [`You are currently speaking as the personal agent "${profile.name}".`, '', '## Soul Document', profile.soul];
   if (profile.memoryScopes.length > 0) {
     lines.push('', '## Selected Memory Scopes', ...profile.memoryScopes.map((scope) => `- ${scope}`));

@@ -7,6 +7,7 @@ import {
   provideAgentTurnContext,
   routeGatewayMessage,
   updateProfile,
+  updateSelfProfile,
 } from './backend';
 
 function createCtx() {
@@ -88,6 +89,20 @@ describe('system-personal-agents backend', () => {
     expect(result.blocks).toHaveLength(1);
     expect(result.blocks[0]!.title).toBe('Personal agent: Operator');
     expect(result.blocks[0]!.content).toContain('Keep operations crisp.');
+  });
+
+  it('lets a personal agent update its own profile from its bound conversation', async () => {
+    const ctx = createCtx();
+    const created = await createProfile({ name: 'Operator', soul: 'Keep operations crisp.' }, ctx);
+    const ensured = await ensureDefaultConversation({ id: created.profile.id }, ctx);
+
+    const result = await updateSelfProfile(
+      { conversationId: ensured.conversationId, description: 'Owns ops handoffs', soul: 'Run ops calmly.' },
+      ctx,
+    );
+
+    expect(result.profile).toMatchObject({ id: created.profile.id, description: 'Owns ops handoffs', soul: 'Run ops calmly.' });
+    expect(result.content[0]!.text).toContain('Updated personal agent profile');
   });
 
   it('routes gateway messages to matching enabled profile bindings', async () => {
