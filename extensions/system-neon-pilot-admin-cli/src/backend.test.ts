@@ -88,6 +88,31 @@ describe('system-neon-pilot-admin-cli backend', () => {
     });
   });
 
+  it('uses shared semantics for heartbeat CLI and neon_pilot tool inputs', async () => {
+    const setup = () => {
+      automations.loadScheduledTasksForProfile.mockResolvedValueOnce({ tasks: [], parseErrors: [] });
+      automations.resolveScheduledTaskThreadBinding.mockResolvedValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.jsonl' });
+      automations.createStoredAutomation.mockResolvedValue({ id: 'hb-1', enabled: true, schedule: { type: 'cron', expression: '*/5 * * * *' } });
+      automations.applyScheduledTaskThreadBinding.mockResolvedValue({ threadConversationId: 'conv-1' });
+    };
+
+    setup();
+    const cliResult = await neonPilotAdmin(
+      { cli: { command: 'heartbeats start', args: ['hb-1'], flags: { 'interval-minutes': '5', 'conversation-id': 'conv-1', prompt: 'Check work.' } } },
+      ctx(),
+    );
+    vi.clearAllMocks();
+    automations.invalidateAppTopics.mockResolvedValue(undefined);
+    setup();
+    const toolResult = await neonPilotAdmin(
+      { command: 'heartbeat_start', heartbeatId: 'hb-1', intervalMinutes: 5, conversationId: 'conv-1', prompt: 'Check work.' },
+      ctx(),
+    );
+
+    expect(toolResult).toEqual(cliResult);
+    expect(toolResult).toMatchObject({ ok: true, action: 'heartbeat_start', heartbeat: { id: 'hb-1', intervalMinutes: 5 } });
+  });
+
   it('starts, lists, and stops heartbeats through the shared admin schema', async () => {
     automations.loadScheduledTasksForProfile.mockResolvedValueOnce({ tasks: [], parseErrors: [] });
     automations.resolveScheduledTaskThreadBinding.mockResolvedValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.jsonl' });
