@@ -5,7 +5,7 @@ const MAX_ITEM_TEXT_LENGTH = 500;
 const MAX_NOTE_LENGTH = 500;
 const MAX_ITEMS = 200;
 
-type TodoStatus = 'todo' | 'done';
+type TodoStatus = 'todo' | 'doing' | 'blocked' | 'done';
 
 interface TodoItem {
   id: string;
@@ -42,8 +42,10 @@ function conversationIdFrom(input: unknown, ctx: ExtensionBackendContext): strin
 }
 
 function normalizeStatus(value: unknown, fallback: TodoStatus = 'todo'): TodoStatus {
-  if (value === 'done') return 'done';
-  if (value === 'todo' || value === 'doing' || value === 'blocked') return 'todo';
+  if (value === 'done' || value === 'completed') return 'done';
+  if (value === 'doing' || value === 'in_progress') return 'doing';
+  if (value === 'blocked') return 'blocked';
+  if (value === 'todo' || value === 'pending') return 'todo';
   return fallback;
 }
 
@@ -165,6 +167,32 @@ export async function clearItems(input: unknown, ctx: ExtensionBackendContext): 
   return writeState(conversationId, { ...state, items: state.items.filter((item) => item.status !== 'done') }, ctx);
 }
 
+function planItemsFrom(input: unknown): Array<{ text: string; status: TodoStatus; note?: string }> {
+  const record = input && typeof input === 'object' ? (input as { items?: unknown; plan?: unknown }) : {};
+  const rawItems = Array.isArray(record.items) ? record.items : Array.isArray(record.plan) ? record.plan : undefined;
+  if (!rawItems) throw new Error('items or plan required');
+  if (rawItems.length > MAX_ITEMS) throw new Error(`items must contain at most ${MAX_ITEMS} entries`);
+
+  return rawItems.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`item ${index + 1} must be an object`);
+    const raw = item as { text?: unknown; step?: unknown; status?: unknown; note?: unknown };
+    const note = optionalNote(raw.note);
+    return {
+      text: requireText(typeof raw.text === 'string' ? raw.text : raw.step),
+      status: normalizeStatus(raw.status),
+      ...(note ? { note } : {}),
+    };
+  });
+}
+
+export async function setPlan(input: unknown, ctx: ExtensionBackendContext): Promise<TodoState> {
+  const conversationId = conversationIdFrom(input, ctx);
+  const at = nowIso();
+  const items = planItemsFrom(input).map((item) => ({ id: makeId(), ...item, createdAt: at, updatedAt: at }));
+  const state = await readState(conversationId, ctx);
+  return writeState(conversationId, { ...state, items }, ctx);
+}
+
 export async function todoTool(input: unknown, ctx: ExtensionBackendContext): Promise<unknown> {
   const action = input && typeof input === 'object' ? (input as { action?: unknown }).action : undefined;
   if (action === 'list') {
@@ -187,7 +215,11 @@ export async function todoTool(input: unknown, ctx: ExtensionBackendContext): Pr
     const state = await clearItems(input, ctx);
     return { text: `Cleared todos. ${summarize(state)}` };
   }
-  throw new Error('action must be list, add, update, delete, or clear');
+  if (action === 'set' || action === 'update_plan') {
+    const state = await setPlan(input, ctx);
+    return { text: `Set todo plan. ${summarize(state)}` };
+  }
+  throw new Error('action must be list, add, update, delete, clear, set, or update_plan');
 }
 
 export async function provideTurnContext(
@@ -204,9 +236,9 @@ export async function provideTurnContext(
       {
         title: 'Todos',
         content: [
-          'Conversation todos are short-lived execution state. Use `todo` to add, update, complete, delete, or list items. Do not replace the active goal for temporary subtasks.',
+          'Conversation todos are short-lived execution state. Prefer `todo` action `update_plan`/`set` to replace the whole checklist atomically when planning or marking multiple steps. Use item-level add/update/delete for one-off manual edits only. Do not replace the active goal for temporary subtasks.',
           '',
-          ...openItems.map((item) => `- ${item.id}: ${item.text}${item.note ? ` — ${item.note}` : ''}`),
+          ...openItems.map((item) => `- ${item.id}: [${item.status}] ${item.text}${item.note ? ` — ${item.note}` : ''}`),
         ].join('\n'),
       },
     ],

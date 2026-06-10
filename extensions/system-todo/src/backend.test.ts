@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { addItem, clearItems, deleteItem, getState, provideTurnContext, todoTool, updateItem } from './backend';
+import { addItem, clearItems, deleteItem, getState, provideTurnContext, setPlan, todoTool, updateItem } from './backend';
 
 function createCtx() {
   const store = new Map<string, unknown>();
@@ -54,14 +54,36 @@ describe('system-todo backend', () => {
     expect(context.blocks[0]!.content).not.toContain('Done work');
   });
 
-  it('migrates legacy doing and blocked statuses back to open todos', async () => {
+  it('preserves active and blocked open statuses', async () => {
     const ctx = createCtx();
 
-    await expect(addItem({ text: 'Legacy doing', status: 'doing' }, ctx)).resolves.toMatchObject({
-      items: [expect.objectContaining({ status: 'todo' })],
+    await expect(addItem({ text: 'Active work', status: 'doing' }, ctx)).resolves.toMatchObject({
+      items: [expect.objectContaining({ status: 'doing' })],
     });
-    const state = await addItem({ text: 'Legacy blocked', status: 'blocked' }, ctx);
-    expect(state.items.map((item) => item.status)).toEqual(['todo', 'todo']);
+    const state = await addItem({ text: 'Blocked work', status: 'blocked' }, ctx);
+    expect(state.items.map((item) => item.status)).toEqual(['blocked', 'doing']);
+  });
+
+  it('atomically replaces todos with a Codex-style plan', async () => {
+    const ctx = createCtx();
+    await addItem({ text: 'Old item' }, ctx);
+
+    const state = await setPlan(
+      {
+        plan: [
+          { step: 'Inspect files', status: 'completed' },
+          { step: 'Implement change', status: 'in_progress' },
+          { step: 'Run validation', status: 'pending' },
+        ],
+      },
+      ctx,
+    );
+
+    expect(state.items.map((item) => ({ text: item.text, status: item.status }))).toEqual([
+      { text: 'Inspect files', status: 'done' },
+      { text: 'Implement change', status: 'doing' },
+      { text: 'Run validation', status: 'todo' },
+    ]);
   });
 
   it('supports the todo tool action surface', async () => {
@@ -73,6 +95,9 @@ describe('system-todo backend', () => {
       text: expect.stringContaining('Updated todo'),
     });
     await expect(todoTool({ action: 'list' }, ctx)).resolves.toMatchObject({ text: expect.stringContaining('One') });
+    await expect(todoTool({ action: 'update_plan', plan: [{ step: 'Next', status: 'in_progress' }] }, ctx)).resolves.toMatchObject({
+      text: expect.stringContaining('Set todo plan'),
+    });
     await expect(todoTool({ action: 'clear', scope: 'all' }, ctx)).resolves.toMatchObject({ text: expect.stringContaining('0 open') });
   });
 });

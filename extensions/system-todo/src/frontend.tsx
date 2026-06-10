@@ -1,7 +1,7 @@
 import { CheckButton, IconButton, Notice, TaskListItem, TextButton } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-type TodoStatus = 'todo' | 'done';
+type TodoStatus = 'todo' | 'doing' | 'blocked' | 'done';
 
 interface TodoItem {
   id: string;
@@ -208,7 +208,9 @@ export function TodoShelf({
               key={item.id}
               checked={isDone(item)}
               label={item.text}
-              detail={item.note}
+              detail={[item.status === 'doing' ? 'In progress' : item.status === 'blocked' ? 'Blocked' : null, item.note]
+                .filter(Boolean)
+                .join(' — ')}
               control={
                 <CheckButton
                   checked={isDone(item)}

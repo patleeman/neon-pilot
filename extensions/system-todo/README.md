@@ -6,7 +6,22 @@ Todos are short-lived working plans shared by the user and agent. They are not p
 
 ## Tool
 
-Use the `todo` tool to list, add, update, delete, or clear todos.
+Use the `todo` tool to list, add, update, delete, clear, or atomically replace todos.
+
+Agents should prefer Codex-style full-plan updates for multi-step work or multiple status changes:
+
+```json
+{
+  "action": "update_plan",
+  "plan": [
+    { "step": "Inspect relevant files", "status": "completed" },
+    { "step": "Implement focused change", "status": "in_progress" },
+    { "step": "Run validation", "status": "pending" }
+  ]
+}
+```
+
+`set` also replaces the full list with `items: [{ "text", "status", "note" }]`. Item-level `add`, `update`, and `delete` remain available for one-off edits, but agents should not run parallel item-level updates to mark multiple todos done.
 
 ## UI
 

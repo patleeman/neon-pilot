@@ -13,13 +13,70 @@
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
-      { "id": "getState", "handler": "getState", "title": "Get Todos", "worker": { "enabled": true } },
-      { "id": "addItem", "handler": "addItem", "title": "Add Todo", "worker": { "enabled": true } },
-      { "id": "updateItem", "handler": "updateItem", "title": "Update Todo", "worker": { "enabled": true } },
-      { "id": "deleteItem", "handler": "deleteItem", "title": "Delete Todo", "worker": { "enabled": true } },
-      { "id": "clearItems", "handler": "clearItems", "title": "Clear Todos", "worker": { "enabled": true } },
-      { "id": "todoTool", "handler": "todoTool", "title": "Todo tool", "worker": { "enabled": true } },
-      { "id": "provideTurnContext", "handler": "provideTurnContext", "title": "Todo turn context", "worker": { "enabled": true } }
+      {
+        "id": "getState",
+        "handler": "getState",
+        "title": "Get Todos",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "addItem",
+        "handler": "addItem",
+        "title": "Add Todo",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "updateItem",
+        "handler": "updateItem",
+        "title": "Update Todo",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "deleteItem",
+        "handler": "deleteItem",
+        "title": "Delete Todo",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "clearItems",
+        "handler": "clearItems",
+        "title": "Clear Todos",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "setPlan",
+        "handler": "setPlan",
+        "title": "Set Todo Plan",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "todoTool",
+        "handler": "todoTool",
+        "title": "Todo tool",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "provideTurnContext",
+        "handler": "provideTurnContext",
+        "title": "Todo turn context",
+        "worker": {
+          "enabled": true
+        }
+      }
     ]
   },
   "contributes": {
@@ -41,18 +98,130 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "action": { "type": "string", "enum": ["list", "add", "update", "delete", "clear"] },
-            "id": { "type": "string", "description": "Required for update and delete." },
-            "text": { "type": "string", "description": "Required for add; optional for update." },
-            "status": { "type": "string", "enum": ["todo", "doing", "done", "blocked"], "description": "Optional status for update." },
-            "note": { "type": "string", "description": "Optional note for update." },
-            "scope": { "type": "string", "enum": ["done", "all"], "description": "Clear only done todos or all todos." }
+            "action": {
+              "type": "string",
+              "enum": [
+                "list",
+                "add",
+                "update",
+                "delete",
+                "clear",
+                "set",
+                "update_plan"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "description": "Required for update and delete."
+            },
+            "text": {
+              "type": "string",
+              "description": "Required for add; optional for update."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "todo",
+                "doing",
+                "done",
+                "blocked",
+                "pending",
+                "in_progress",
+                "completed"
+              ],
+              "description": "Optional status for add/update. Codex-style aliases are accepted."
+            },
+            "note": {
+              "type": "string",
+              "description": "Optional note for add/update/set items."
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "done",
+                "all"
+              ],
+              "description": "Clear only done todos or all todos."
+            },
+            "items": {
+              "type": "array",
+              "description": "Required for set. Replaces the full todo list atomically. Each item uses text/status/note.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "todo",
+                      "doing",
+                      "done",
+                      "blocked",
+                      "pending",
+                      "in_progress",
+                      "completed"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "plan": {
+              "type": "array",
+              "description": "Required for update_plan. Codex-style full checklist replacement using step/status/note.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "step": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "in_progress",
+                      "completed",
+                      "todo",
+                      "doing",
+                      "done",
+                      "blocked"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "step",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "explanation": {
+              "type": "string",
+              "description": "Optional explanation for set/update_plan updates."
+            }
           },
-          "required": ["action"],
+          "required": [
+            "action"
+          ],
           "additionalProperties": false
         },
         "promptGuidelines": [
           "Use todo for short-lived execution plans and progress tracking within the current conversation.",
+          "For multi-step plans or multiple status changes, prefer one atomic full-plan call: action update_plan with plan [{ step, status }], using pending, in_progress, or completed.",
+          "Keep at most one in_progress/doing item unless the user explicitly wants parallel work.",
+          "Use item-level add/update/delete only for one-off edits; do not make parallel item-level updates to mark multiple todos done.",
           "Do not use todo as a durable project manager, scheduler, or knowledge base.",
           "Do not replace the active goal for temporary subtasks; add or update todos instead."
         ]
@@ -64,9 +233,13 @@
         "handler": "provideTurnContext",
         "title": "Todos",
         "priority": 70,
-        "scope": ["conversation"]
+        "scope": [
+          "conversation"
+        ]
       }
     ]
   },
-  "permissions": ["conversations:readwrite"]
+  "permissions": [
+    "conversations:readwrite"
+  ]
 }
