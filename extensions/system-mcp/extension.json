@@ -69,7 +69,7 @@
         "id": "mcp",
         "name": "mcp",
         "title": "MCP",
-        "description": "Inspect and call MCP (Model Context Protocol) servers. Supports listing configured servers, inspecting tools, calling tools, searching tools, and managing OAuth authentication.",
+        "description": "Inspect and call external MCP (Model Context Protocol) servers. Not a Neon Pilot self-admin surface; use the canonical neon_pilot tool for Neon Pilot administration. Supports listing configured servers, inspecting tools, calling tools, searching tools, and managing OAuth authentication.",
         "action": "mcpTool",
         "inputSchema": {
           "type": "object",

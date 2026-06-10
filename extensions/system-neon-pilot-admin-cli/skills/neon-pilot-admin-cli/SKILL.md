@@ -5,16 +5,22 @@ description: Use the Neon Pilot Admin CLI for self-administration of conversatio
 
 # Neon Pilot Admin CLI
 
-Use the `neon-pilot` CLI as the primary Neon Pilot self-administration surface when it is available in the agent shell. Prefer CLI + JSON over direct runtime-file edits or lower-level tools.
+Use the unified Neon Pilot self-administration surface instead of direct runtime-file edits, standalone model tools, or MCP. External/other agents use the `neon-pilot` CLI; internal Neon Pilot agents use the `neon_pilot` tool. These are dual interfaces over the same admin command semantics.
 
 ## Workflow
 
-1. Discover commands before using an unfamiliar surface:
+1. Discover commands before using an unfamiliar surface. From an external shell, use the CLI:
 
    ```sh
    neon-pilot commands --json
    neon-pilot control-plane doctor --json
    neon-pilot help conversations
+   ```
+
+   From an internal Neon Pilot conversation, prefer the canonical tool when it has the needed command:
+
+   ```json
+   { "command": "list_admin_commands" }
    ```
 
 2. Prefer JSON for inspection and automation. Pick the conversation surface by intent:
@@ -165,6 +171,10 @@ neon-pilot tasks list --json
 neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summarize status" --json
 neon-pilot tasks run <task-id> --json
 neon-pilot tasks delete <task-id> --json
+
+neon-pilot heartbeats start <heartbeat-id> --interval-minutes 5 --conversation-id <conversation-id> --prompt "Wake up, check whether work remains, and stop this heartbeat when done." --json
+neon-pilot heartbeats list --json
+neon-pilot heartbeats stop <heartbeat-id> --json
 ```
 
 ## Sharp transcript operations
@@ -185,4 +195,4 @@ neon-pilot conversations transcript update <id> <block-id> --type text --data '{
 - Built-in system extensions contribute the primary self-administration surfaces: `extensions ...`, `settings ...`, and `conversations ...`.
 - The agent shell receives Neon Pilot's channel-local CLI bin directory automatically. User shell installation is opt-in through `neon-pilot cli install`.
 - Do not edit internal runtime files directly when an extension-contributed CLI command exists for the same operation.
-- If the CLI lacks a needed Neon Pilot admin operation, add a narrow CLI command to the owning extension instead of teaching agents to depend on hidden files or ad hoc scripts.
+- If the unified admin surface lacks a needed Neon Pilot admin operation, add it to the shared admin command registry/service and expose it through both `neon-pilot` CLI and `neon_pilot` tool instead of adding a one-off tool, MCP endpoint, hidden-file workflow, or ad hoc script.

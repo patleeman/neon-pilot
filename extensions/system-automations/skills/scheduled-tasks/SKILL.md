@@ -32,9 +32,12 @@ neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summari
 neon-pilot tasks validate --title "One shot" --at "2026-06-10T09:00:00Z" --prompt "Follow up" --json
 neon-pilot tasks run <task-id> --json
 neon-pilot tasks delete <task-id> --json
+neon-pilot heartbeats start <heartbeat-id> --interval-minutes 5 --conversation-id <conversation-id> --prompt "Wake up, check whether work remains, and stop this heartbeat when done." --json
+neon-pilot heartbeats list --json
+neon-pilot heartbeats stop <heartbeat-id> --json
 ```
 
-Use the `scheduled_task` tool from inside a model turn when direct tool execution is more appropriate than shell administration.
+Use the unified `neon_pilot` internal tool from inside a model turn when direct tool execution is more appropriate than shell administration. `scheduled_task` remains available for low-level scheduled task management, but recurring self-admin heartbeats should go through the Neon Pilot admin surface.
 
 ## When to use scheduled tasks
 
@@ -144,7 +147,7 @@ Important behavior to understand:
 
 - tasks are daemon-managed
 - cron tasks run at most once per matching minute
-- overlap is prevented; if one run is still active, the next due run is skipped
+- overlap is prevented; if one run is still active, the next due run is skipped/coalesced
 - retries happen up to the configured retry limit
 - each run writes a log
 - every automation defaults to a dedicated thread unless you explicitly bind it to an existing thread or disable thread ownership
@@ -217,6 +220,18 @@ Useful `save` fields beyond the schedule itself:
 - `deliverResultToConversation` only for background-agent automations that should callback later
 
 Use the web UI when you want to inspect automation detail, status, and owned run history visually.
+
+## Scheduled heartbeats
+
+A scheduled heartbeat is a Neon Pilot admin primitive backed by scheduled conversation automations. It is managed through the unified admin surface, not as a separate model tool:
+
+```sh
+neon-pilot heartbeats start <heartbeat-id> --interval-minutes 5 --conversation-id <conversation-id> --prompt "Wake up, check whether work remains, and stop this heartbeat when done." --json
+neon-pilot heartbeats list --json
+neon-pilot heartbeats stop <heartbeat-id> --json
+```
+
+Internal agents use `neon_pilot` with `action: "heartbeat_start" | "heartbeat_list" | "heartbeat_stop"`. `intervalMinutes` is stored as the cron wrapper `*/N * * * *`; use normal scheduled task cron automation for other cadences. Heartbeats target a conversation and set skip/coalesce behavior so a due tick is skipped when the previous callback is still running.
 
 ## Logs and runtime state
 

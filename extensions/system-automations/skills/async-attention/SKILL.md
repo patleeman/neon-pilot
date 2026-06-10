@@ -10,6 +10,7 @@ tools:
   - conversation action `deferred_resume`
   - activity
   - scheduled_task
+  - neon_pilot
 ---
 
 # Async Attention and Wakeups
@@ -60,9 +61,11 @@ Use `conversation` action `deferred_resume` with `action: "list"` before assumin
 
 Do **not** schedule a `conversation` action `deferred_resume` just to poll a running background command/subagent that was started with `deliverResultToConversation: true`. That run already owns completion/failure delivery. Only schedule a wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
 
-## `scheduled_task`
+## `scheduled_task` and heartbeats
 
 Use `scheduled_task` for app-wide recurring or one-time automations, especially work that can run without this conversation being active.
+
+For recurring conversation self-admin callbacks, use the unified Neon Pilot admin surface instead: `neon-pilot heartbeats start/list/stop` externally or the internal `neon_pilot` tool actions `heartbeat_start`, `heartbeat_list`, and `heartbeat_stop`. Heartbeats are backed by scheduled conversation automations and coalesce by skipping due ticks while the target conversation is already running.
 
 ## Do not
 

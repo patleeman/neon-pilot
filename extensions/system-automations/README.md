@@ -176,18 +176,32 @@ Activity is viewable in the Automations UI. Skipped cron slots outside the catch
 
 The Automations page also shows scheduler health from the daemon scheduler state. If the scheduler has not checked schedules within the stale window, the UI surfaces a warning and raises an active alert. Automation detail pages show the latest expected scheduled slot next to the actual recorded result, so a missing run is visible without spelunking through logs. Failures that happen before a durable run can be created are recorded as automation activity and alerted separately.
 
+## Heartbeats
+
+A heartbeat is a recurring conversation-target scheduled task for agent self-administration. It is not a separate product store: it uses the scheduled task daemon, an existing conversation thread binding, and the standard overlap skip policy so due ticks coalesce when the thread is already running.
+
+Heartbeats are managed through the unified Neon Pilot admin surface, backed by the same automation schema/service as scheduled tasks:
+
+```sh
+neon-pilot heartbeats start <heartbeat-id> --interval-minutes 5 --conversation-id <conversation-id> --prompt "Wake up, check whether work remains, and stop this heartbeat when done." --json
+neon-pilot heartbeats list --json
+neon-pilot heartbeats stop <heartbeat-id> --json
+```
+
+Internal agents use the `neon_pilot` tool with `heartbeat_start`, `heartbeat_list`, and `heartbeat_stop`. `--interval-minutes N` is stored as the cron wrapper `*/N * * * *`; use scheduled task cron automation for cadences that do not fit that form. The callback stops itself through the admin surface when its done condition is met.
+
 ## Agent Tool Reference
 
 The `scheduled_task` tool manages tasks from within a conversation:
 
-| Action     | Description                 |
-| ---------- | --------------------------- |
-| `list`     | List tasks                  |
-| `get`      | Get a task by ID            |
-| `save`     | Create or update a task     |
-| `delete`   | Delete a task               |
-| `validate` | Validate task configuration |
-| `run`      | Trigger immediate execution |
+| Action      | Description                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
+| `list`      | List tasks                                                                  |
+| `get`       | Get a task by ID                                                            |
+| `save`      | Create or update a task                                                     |
+| `delete`    | Delete a task                                                               |
+| `validate`  | Validate task configuration                                                 |
+| `run`       | Trigger immediate execution                                                 |
 
 ## Managing Tasks
 

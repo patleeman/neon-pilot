@@ -7,6 +7,55 @@
   "version": "0.1.0",
   "defaultEnabled": true,
   "contributes": {
+    "tools": [
+      {
+        "id": "neon-pilot-admin",
+        "name": "neon_pilot",
+        "title": "Neon Pilot",
+        "description": "Canonical internal Neon Pilot self-admin tool. Use this instead of standalone self-admin tools or MCP. Includes app commands, control-plane checks, and scheduled heartbeats.",
+        "action": "neonPilotTool",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "enum": [
+                "list_admin_commands",
+                "list_app_commands",
+                "run_app_command",
+                "control_plane_doctor",
+                "heartbeat_start",
+                "heartbeat_list",
+                "heartbeat_stop"
+              ],
+              "description": "Admin command to run. Defaults to list_admin_commands."
+            },
+            "commandId": {
+              "type": "string",
+              "description": "App command id for run_app_command."
+            },
+            "args": {
+              "description": "Arguments for run_app_command."
+            },
+            "heartbeatId": {
+              "type": "string"
+            },
+            "intervalMinutes": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 59
+            },
+            "conversationId": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    ],
     "cliCommands": [
       {
         "id": "app-commands-list",
@@ -31,6 +80,30 @@
         "action": "controlPlaneDoctor",
         "jsonDefault": true,
         "inputAction": "doctor"
+      },
+      {
+        "id": "heartbeats-start",
+        "command": "heartbeats start",
+        "description": "Start a recurring conversation heartbeat: heartbeats start <id> --interval-minutes <n> --conversation-id <id> --prompt <prompt>.",
+        "action": "neonPilotAdmin",
+        "jsonDefault": true,
+        "inputAction": "heartbeat_start"
+      },
+      {
+        "id": "heartbeats-list",
+        "command": "heartbeats list",
+        "description": "List recurring conversation heartbeats.",
+        "action": "neonPilotAdmin",
+        "jsonDefault": true,
+        "inputAction": "heartbeat_list"
+      },
+      {
+        "id": "heartbeats-stop",
+        "command": "heartbeats stop",
+        "description": "Stop a recurring conversation heartbeat: heartbeats stop <id>.",
+        "action": "neonPilotAdmin",
+        "jsonDefault": true,
+        "inputAction": "heartbeat_stop"
       }
     ],
     "skills": [
@@ -46,12 +119,32 @@
     "entry": "src/backend.ts",
     "actions": [
       {
+        "id": "neonPilotAdmin",
+        "handler": "neonPilotAdmin",
+        "title": "Neon Pilot Admin",
+        "worker": {
+          "enabled": true,
+          "inputActions": [
+            "list_admin_commands",
+            "list_app_commands",
+            "run_app_command",
+            "control_plane_doctor",
+            "heartbeat_start",
+            "heartbeat_list",
+            "heartbeat_stop"
+          ]
+        }
+      },
+      {
         "id": "manageAppCommands",
         "handler": "manageAppCommands",
         "title": "App Commands",
         "worker": {
           "enabled": true,
-          "inputActions": ["list", "run"]
+          "inputActions": [
+            "list",
+            "run"
+          ]
         }
       },
       {
@@ -60,7 +153,26 @@
         "title": "Control Plane Doctor",
         "worker": {
           "enabled": true,
-          "inputActions": ["doctor"]
+          "inputActions": [
+            "doctor"
+          ]
+        }
+      },
+      {
+        "id": "neonPilotTool",
+        "handler": "neonPilotTool",
+        "title": "Neon Pilot Admin Tool",
+        "worker": {
+          "enabled": true,
+          "inputActions": [
+            "list_admin_commands",
+            "list_app_commands",
+            "run_app_command",
+            "control_plane_doctor",
+            "heartbeat_start",
+            "heartbeat_list",
+            "heartbeat_stop"
+          ]
         }
       }
     ]

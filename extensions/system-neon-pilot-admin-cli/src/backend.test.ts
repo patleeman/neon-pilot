@@ -1,6 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import { controlPlaneDoctor, manageAppCommands } from './backend.js';
+const automations = vi.hoisted(() => ({
+  applyScheduledTaskThreadBinding: vi.fn(),
+  createStoredAutomation: vi.fn(),
+  invalidateAppTopics: vi.fn(),
+  loadScheduledTasksForProfile: vi.fn(),
+  resolveScheduledTaskThreadBinding: vi.fn(),
+  updateStoredAutomation: vi.fn(),
+}));
+
+vi.mock('@neon-pilot/extensions/backend/automations', () => automations);
+
+import { controlPlaneDoctor, manageAppCommands, neonPilotAdmin, neonPilotTool } from './backend.js';
 
 function ctx(overrides: Record<string, unknown> = {}) {
   const storage = new Map<string, unknown>();
@@ -30,6 +41,11 @@ function ctx(overrides: Record<string, unknown> = {}) {
 }
 
 describe('system-neon-pilot-admin-cli backend', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    automations.invalidateAppTopics.mockResolvedValue(undefined);
+  });
+
   it('normalizes app command CLI list and run inputs', async () => {
     const context = ctx();
     await expect(manageAppCommands({ cli: { command: 'app-commands list' } }, context)).resolves.toEqual({
@@ -41,6 +57,95 @@ describe('system-neon-pilot-admin-cli backend', () => {
       manageAppCommands({ cli: { command: 'app-commands run', args: ['cmd-1'], flags: { args: '{"value":1}' } } }, context),
     ).resolves.toEqual({ ok: true, commandId: 'cmd-1', executed: true });
     expect((context as { commands: { execute: ReturnType<typeof vi.fn> } }).commands.execute).toHaveBeenCalledWith('cmd-1', { value: 1 });
+  });
+
+  it('uses shared semantics for CLI and neon_pilot tool inputs', async () => {
+    const cliContext = ctx();
+    const toolContext = ctx();
+    const cliResult = await manageAppCommands({ cli: { command: 'app-commands run', args: ['cmd-1'], flags: { args: '{"value":1}' } } }, cliContext);
+    const toolResult = await neonPilotAdmin({ command: 'run_app_command', commandId: 'cmd-1', args: { value: 1 } }, toolContext);
+
+    expect(toolResult).toEqual(cliResult);
+    expect((toolContext as { commands: { execute: ReturnType<typeof vi.fn> } }).commands.execute).toHaveBeenCalledWith('cmd-1', { value: 1 });
+  });
+
+  it('wraps neon_pilot tool results in agent tool content with details', async () => {
+    const result = await neonPilotTool({ command: 'list_app_commands' }, ctx());
+    expect(result.details).toEqual({ ok: true, commands: [{ id: 'cmd-1' }] });
+    expect(result.content[0]?.type).toBe('text');
+    expect(result.content[0]?.text).toContain('cmd-1');
+  });
+
+  it('lists canonical admin commands by default', async () => {
+    await expect(neonPilotAdmin({}, ctx())).resolves.toMatchObject({
+      ok: true,
+      commands: expect.arrayContaining([
+        { id: 'list_app_commands', description: expect.any(String), inputSchema: expect.any(Object) },
+        { id: 'run_app_command', description: expect.any(String), inputSchema: expect.any(Object) },
+        { id: 'control_plane_doctor', description: expect.any(String), inputSchema: expect.any(Object) },
+        { id: 'heartbeat_start', description: expect.any(String), inputSchema: expect.any(Object) },
+      ]),
+    });
+  });
+
+  it('starts, lists, and stops heartbeats through the shared admin schema', async () => {
+    automations.loadScheduledTasksForProfile.mockResolvedValueOnce({ tasks: [], parseErrors: [] });
+    automations.resolveScheduledTaskThreadBinding.mockResolvedValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.jsonl' });
+    automations.createStoredAutomation.mockResolvedValue({ id: 'hb-1', enabled: true, schedule: { type: 'cron', expression: '*/5 * * * *' } });
+    automations.applyScheduledTaskThreadBinding.mockResolvedValue({ threadConversationId: 'conv-1' });
+
+    await expect(
+      neonPilotAdmin({ command: 'heartbeat_start', heartbeatId: 'hb-1', intervalMinutes: 5, conversationId: 'conv-1', prompt: 'Check work.' }, ctx()),
+    ).resolves.toMatchObject({ ok: true, heartbeat: { id: 'hb-1', intervalMinutes: 5, skipIfRunning: true, coalesce: true } });
+    expect(automations.createStoredAutomation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'hb-1',
+        cron: '*/5 * * * *',
+        targetType: 'conversation',
+        policies: [{ kind: 'overlap', enabled: true, behavior: 'skip' }],
+      }),
+    );
+
+    automations.loadScheduledTasksForProfile.mockResolvedValueOnce({
+      tasks: [
+        {
+          id: 'hb-1',
+          enabled: true,
+          targetType: 'conversation',
+          threadConversationId: 'conv-1',
+          schedule: { type: 'cron', expression: '*/5 * * * *' },
+          policies: [{ kind: 'overlap', enabled: true, behavior: 'skip' }],
+          prompt: 'Check work.',
+        },
+        { id: 'daily', enabled: true, targetType: 'background-agent', schedule: { type: 'cron', expression: '0 9 * * *' }, policies: [] },
+      ],
+      parseErrors: [],
+    });
+    await expect(neonPilotAdmin({ command: 'heartbeat_list' }, ctx())).resolves.toMatchObject({
+      ok: true,
+      count: 1,
+      heartbeats: [{ id: 'hb-1', intervalMinutes: 5, coalesce: true }],
+    });
+
+    automations.loadScheduledTasksForProfile.mockResolvedValueOnce({
+      tasks: [
+        {
+          id: 'hb-1',
+          enabled: true,
+          targetType: 'conversation',
+          schedule: { type: 'cron', expression: '*/5 * * * *' },
+          policies: [{ kind: 'overlap', enabled: true, behavior: 'skip' }],
+          prompt: 'Check work.',
+        },
+      ],
+      parseErrors: [],
+    });
+    automations.updateStoredAutomation.mockResolvedValue({ id: 'hb-1', enabled: false, schedule: { type: 'cron', expression: '*/5 * * * *' } });
+    await expect(neonPilotAdmin({ command: 'heartbeat_stop', heartbeatId: 'hb-1' }, ctx())).resolves.toMatchObject({
+      ok: true,
+      heartbeat: { id: 'hb-1', enabled: false },
+    });
+    expect(automations.updateStoredAutomation).toHaveBeenCalledWith('hb-1', expect.objectContaining({ enabled: false }));
   });
 
   it('runs non-destructive control-plane doctor checks', async () => {
