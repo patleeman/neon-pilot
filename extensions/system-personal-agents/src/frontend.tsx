@@ -1,4 +1,5 @@
 import type { ExtensionSurfaceProps, PersonalAgentGatewayBinding, PersonalAgentProfile } from '@neon-pilot/extensions';
+import type { ExtensionChatModelInfo } from '@neon-pilot/extensions/ui';
 import {
   Button,
   EmptyState,
@@ -69,6 +70,23 @@ function gatewaySummary(bindings: PersonalAgentGatewayBinding[]): string {
 
 function cloneBindings(bindings: PersonalAgentGatewayBinding[]): PersonalAgentGatewayBinding[] {
   return bindings.map((binding) => ({ ...binding }));
+}
+
+function modelLabel(model: ExtensionChatModelInfo): string {
+  return model.label ?? model.name ?? model.id;
+}
+
+function modelValue(model: ExtensionChatModelInfo): string {
+  return model.provider ? `${model.provider}/${model.id}` : model.id;
+}
+
+function groupModelsByProvider(models: ExtensionChatModelInfo[]): Array<[string, ExtensionChatModelInfo[]]> {
+  const groups = new Map<string, ExtensionChatModelInfo[]>();
+  for (const model of models) {
+    const provider = model.provider ?? 'Models';
+    groups.set(provider, [...(groups.get(provider) ?? []), model]);
+  }
+  return [...groups.entries()];
 }
 
 function usePersonalAgentsList(pa: ExtensionSurfaceProps['pa'], pathname: string) {
@@ -264,7 +282,23 @@ export function PersonalAgentsDetails(props: ExtensionSurfaceProps) {
   const { profiles, selectedProfile, loading, error, setError, refresh } = usePersonalAgentsList(pa, context.pathname);
   const [selected, setSelected] = useState<PersonalAgentProfile | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [models, setModels] = useState<ExtensionChatModelInfo[]>([]);
   const profile = selected ?? selectedProfile;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof pa.models !== 'function') return;
+    void pa.models()
+      .then((result) => {
+        if (!cancelled) setModels(Array.isArray(result) ? (result as ExtensionChatModelInfo[]) : []);
+      })
+      .catch(() => {
+        if (!cancelled) setModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pa]);
 
   useEffect(() => {
     setSelected(null);
@@ -316,6 +350,7 @@ export function PersonalAgentsDetails(props: ExtensionSurfaceProps) {
       profile={profile}
       busy={busy}
       error={error}
+      models={models}
       onSave={(patch) => void saveProfile(patch)}
       onDelete={() => void deleteSelected()}
     />
@@ -325,12 +360,14 @@ function AgentDetailsPanel({
   profile,
   busy,
   error,
+  models,
   onSave,
   onDelete,
 }: {
   profile: PersonalAgentProfile | null;
   busy: string | null;
   error: string | null;
+  models: ExtensionChatModelInfo[];
   onSave: (patch: Partial<PersonalAgentProfile>) => void;
   onDelete: () => void;
 }) {
@@ -417,11 +454,24 @@ function AgentDetailsPanel({
             <TextInput value={draft.defaultCwd ?? ''} onChange={(event) => setDraft({ ...draft, defaultCwd: event.target.value })} />
           </Field>
           <Field label="Model">
-            <TextInput
-              placeholder="provider/model"
+            <Select
               value={draft.defaultModelRef ?? ''}
-              onChange={(event) => setDraft({ ...draft, defaultModelRef: event.target.value })}
-            />
+              onChange={(event) => setDraft({ ...draft, defaultModelRef: event.target.value || undefined })}
+            >
+              <option value="">Default</option>
+              {draft.defaultModelRef && !models.some((model) => modelValue(model) === draft.defaultModelRef) ? (
+                <option value={draft.defaultModelRef}>{draft.defaultModelRef}</option>
+              ) : null}
+              {groupModelsByProvider(models).map(([provider, providerModels]) => (
+                <optgroup key={provider} label={provider}>
+                  {providerModels.map((model) => (
+                    <option key={`${model.provider ?? 'default'}:${model.id}`} value={modelValue(model)}>
+                      {modelLabel(model)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </Select>
           </Field>
           <Field label="Tool policy">
             <Select
