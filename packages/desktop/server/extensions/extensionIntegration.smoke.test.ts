@@ -680,10 +680,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
       'background_bash',
       'subagent',
       'ask_user',
-      'conversation_inspect',
-      'conversation_title',
-      'conversation_cwd',
-      'deferred_resume',
+      'neon_pilot',
     ]) {
       expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
@@ -695,6 +692,11 @@ describe('extension manifests - cross-extension conflict detection', () => {
       'set_conversation_title',
       'change_working_directory',
       'conversation',
+      'conversation_admin',
+      'conversation_inspect',
+      'conversation_title',
+      'conversation_cwd',
+      'deferred_resume',
       'background_command',
       'local_models_status',
     ]) {

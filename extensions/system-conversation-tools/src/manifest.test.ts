@@ -61,21 +61,11 @@ describe('system-conversation-tools manifest', () => {
     expect(bashRenderer).not.toHaveProperty('standalone');
   });
 
-  it('declares focused conversation tools in contributes.tools', () => {
+  it('does not expose duplicate conversation self-admin tools to models', () => {
     const toolNames = (manifest.contributes.tools ?? []).map((t: { name?: string }) => t.name);
-    expect(toolNames).toEqual([
-      'conversation_admin',
-      'ask_user',
-      'conversation_inspect',
-      'conversation_title',
-      'conversation_cwd',
-      'deferred_resume',
-    ]);
-    expect(manifest.contributes.tools[0]).toEqual(
-      expect.objectContaining({
-        name: 'conversation_admin',
-        action: 'conversationTool',
-      }),
+    expect(toolNames).toEqual(['ask_user']);
+    expect(toolNames).not.toEqual(
+      expect.arrayContaining(['conversation_admin', 'conversation_inspect', 'conversation_title', 'conversation_cwd', 'deferred_resume']),
     );
   });
 

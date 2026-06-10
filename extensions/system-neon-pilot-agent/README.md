@@ -1,8 +1,6 @@
 # Neon Pilot Agent
 
-This system extension exposes Neon Pilot as a delegated worker for other agents.
-
-It has two protocol entrypoints:
+This system extension exposes Neon Pilot as a delegated worker for other agents through the `neon-pilot` CLI/protocol entrypoint.
 
 ```bash
 neon-pilot protocol neon-pilot-agent run --prompt "Review this diff" --cwd . --tools default --json
@@ -14,10 +12,4 @@ neon-pilot protocol neon-pilot-agent conversation send <conversationId> --prompt
 neon-pilot protocol neon-pilot-agent conversation close <conversationId>
 ```
 
-The MCP entrypoint is:
-
-```bash
-neon-pilot protocol neon-pilot-agent-mcp
-```
-
-The MCP server exposes the same small orchestration surface: run one-shot tasks, create/send/close agent conversations, start/follow-up/cancel subagents, and inspect durable runs/logs. It intentionally does not expose raw app internals, settings mutation, arbitrary filesystem APIs, or shell APIs.
+Neon Pilot self-administration is not exposed through MCP. External agents should use `neon-pilot` commands; internal agents should use the canonical `neon_pilot` tool.

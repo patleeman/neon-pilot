@@ -28,8 +28,8 @@ Created -> Queued -> Running -> Completed
 - `subagent.allowedTools` accepts agent tool names, not shell commands. Use names like `bash`, `read`, `edit`, `web_fetch`, `conversation` action `inspect`, or `checkpoint`; for `rg`, `grep`, `find`, or `ls`, allow `bash` and run the command inside bash.
 - Keep `scheduled_task` separate for persistent automations.
 - `background_bash` is shell-only; it lists/inspects background commands and rejects subagent IDs with a hint to use `subagent`.
-- Use `conversation` action `deferred_resume` for “wait, then continue this conversation” requests. Do not use foreground `bash` with `sleep` as a timer.
-- Do not pair `deliverResultToConversation: true` background work with a wakeup that only polls the same run. Completion delivery already resumes the conversation; use a wakeup only for a distinct time-based action. If a distinct action is genuinely needed, pass a clear `reason` to `conversation` action `deferred_resume`.
+- Use the unified conversation deferred-resume admin command for “wait, then continue this conversation” requests. Do not use foreground `bash` with `sleep` as a timer.
+- Do not pair `deliverResultToConversation: true` background work with a wakeup that only polls the same run. Completion delivery already resumes the conversation; use a wakeup only for a distinct time-based action. If a distinct action is genuinely needed, pass a clear `reason` to the unified conversation deferred-resume admin command.
 
 ## UI
 

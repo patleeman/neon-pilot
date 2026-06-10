@@ -29,13 +29,11 @@ type ConversationVisibility = 'hidden' | 'visible';
 type ConversationPersistence = 'ephemeral' | 'saved';
 type NeonPilotAgentSettings = {
   cliEnabled: boolean;
-  mcpEnabled: boolean;
 };
 
 const SETTINGS_KEY = 'settings';
 const DEFAULT_SETTINGS: NeonPilotAgentSettings = {
   cliEnabled: true,
-  mcpEnabled: true,
 };
 
 type AgentApi = {
@@ -177,7 +175,6 @@ function normalizeSettings(value: unknown): NeonPilotAgentSettings {
   const record = isRecord(value) ? value : {};
   return {
     cliEnabled: typeof record.cliEnabled === 'boolean' ? record.cliEnabled : DEFAULT_SETTINGS.cliEnabled,
-    mcpEnabled: typeof record.mcpEnabled === 'boolean' ? record.mcpEnabled : DEFAULT_SETTINGS.mcpEnabled,
   };
 }
 
@@ -255,19 +252,6 @@ function publicRuntimeSettings(ctx: ExtensionBackendContext): JsonRecord {
   };
 }
 
-function mcpConfig() {
-  return {
-    deprecated: true,
-    message: 'Neon Pilot MCP admin exposure is deprecated. Use the neon-pilot CLI externally and the canonical neon_pilot tool internally.',
-    mcpServers: {
-      'neon-pilot': {
-        command: 'neon-pilot',
-        args: ['protocol', 'neon-pilot-agent-mcp'],
-      },
-    },
-  };
-}
-
 async function applyBootstrapDefaults(input: JsonRecord, ctx: ExtensionBackendContext): Promise<JsonRecord> {
   const patch: JsonRecord = {};
   const provider = readString(input.provider ?? readCliFlag(input, 'provider'));
@@ -292,7 +276,6 @@ async function bootstrapDoctor(ctx: ExtensionBackendContext) {
   const runtimeSettings = publicRuntimeSettings(ctx);
   const checks = {
     cliEnabled: settings.cliEnabled,
-    mcpEnabled: settings.mcpEnabled,
     daemon,
     defaultProviderConfigured: Boolean(runtimeSettings.defaultProvider),
     defaultModelConfigured: Boolean(runtimeSettings.defaultModel),
@@ -304,14 +287,12 @@ async function bootstrapDoctor(ctx: ExtensionBackendContext) {
     checks,
     runtimeSettings,
     modelCount: Array.isArray(models) ? models.length : 0,
-    mcp: mcpConfig(),
   };
 }
 
 async function bootstrapConfigure(input: JsonRecord, ctx: ExtensionBackendContext) {
   const cliEnabled = readBoolean(input.cliEnabled ?? readCliFlag(input, 'cli')) ?? true;
-  const mcpEnabled = readBoolean(input.mcpEnabled ?? readCliFlag(input, 'mcp')) ?? true;
-  await updateSettings({ cliEnabled, mcpEnabled }, ctx);
+  await updateSettings({ cliEnabled }, ctx);
   const secretsProvider = readString(input.secretsProvider ?? readCliFlag(input, 'secrets-provider'));
   if (secretsProvider) {
     await updateExtensionSettings({ 'secrets.provider': secretsProvider });
@@ -794,178 +775,4 @@ async function readAllStdin(stdin: NodeJS.ReadableStream): Promise<string> {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
   }
   return Buffer.concat(chunks).toString('utf-8');
-}
-
-const MCP_TOOLS = [
-  { name: 'neon_pilot_run_task', action: 'run_task', description: 'Run a one-shot hidden Neon Pilot task.' },
-  { name: 'neon_pilot_start_subagent', action: 'subagent_start', description: 'Start a durable Neon Pilot subagent.' },
-  { name: 'neon_pilot_continue_subagent', action: 'subagent_follow_up', description: 'Send a follow-up prompt to a durable subagent.' },
-  { name: 'neon_pilot_list_runs', action: 'runs_list', description: 'List durable Neon Pilot runs.' },
-  { name: 'neon_pilot_get_run', action: 'runs_get', description: 'Inspect one durable run.' },
-  { name: 'neon_pilot_get_run_logs', action: 'runs_logs', description: 'Read durable run logs.' },
-  { name: 'neon_pilot_cancel_run', action: 'runs_cancel', description: 'Cancel a durable run.' },
-  { name: 'neon_pilot_rerun', action: 'runs_rerun', description: 'Rerun a durable run.' },
-  {
-    name: 'neon_pilot_create_conversation',
-    action: 'conversation_create',
-    description: 'Create an extension-owned Neon Pilot conversation.',
-  },
-  { name: 'neon_pilot_send_message', action: 'conversation_send', description: 'Send a message to an extension-owned conversation.' },
-  { name: 'neon_pilot_close_conversation', action: 'conversation_close', description: 'Close an ephemeral extension-owned conversation.' },
-] as const;
-
-function toolSchema() {
-  return {
-    type: 'object',
-    properties: {
-      prompt: { type: 'string' },
-      text: { type: 'string' },
-      cwd: { type: 'string' },
-      model: { type: 'string' },
-      modelRef: { type: 'string' },
-      tools: { type: 'string', enum: ['none', 'default'] },
-      timeoutMs: { type: 'number' },
-      taskSlug: { type: 'string' },
-      runId: { type: 'string' },
-      conversationId: { type: 'string' },
-      kind: { type: 'string', enum: ['subagent', 'background-command'] },
-      tail: { type: 'number', minimum: 1, maximum: 1000 },
-      allowedTools: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
-    },
-    additionalProperties: true,
-  };
-}
-
-function encodeMcpMessage(message: unknown): string {
-  const body = JSON.stringify(message);
-  return `Content-Length: ${Buffer.byteLength(body, 'utf8')}\r\n\r\n${body}`;
-}
-
-function mcpResponse(id: unknown, result: unknown): string {
-  return encodeMcpMessage({ jsonrpc: '2.0', id, result });
-}
-
-function mcpError(id: unknown, message: string, code = -32000): string {
-  return encodeMcpMessage({ jsonrpc: '2.0', id, error: { code, message } });
-}
-
-async function handleMcpMessage(message: JsonRecord, ctx: ExtensionProtocolContext): Promise<string | undefined> {
-  const method = readString(message.method);
-  const id = message.id;
-  if (method === 'initialize') {
-    return mcpResponse(id, {
-      protocolVersion: '2024-11-05',
-      serverInfo: { name: 'neon-pilot-agent', version: '0.1.0' },
-      capabilities: { tools: {}, resources: {} },
-    });
-  }
-  if (method === 'notifications/initialized') return undefined;
-  if (method === 'tools/list') {
-    return mcpResponse(id, {
-      tools: MCP_TOOLS.map((tool) => ({ name: tool.name, description: tool.description, inputSchema: toolSchema() })),
-    });
-  }
-  if (method === 'tools/call') {
-    const params = isRecord(message.params) ? message.params : {};
-    const name = requiredString(params.name, 'name');
-    const tool = MCP_TOOLS.find((candidate) => candidate.name === name);
-    if (!tool) return mcpError(id, `Unknown tool: ${name}`, -32602);
-    try {
-      const args = isRecord(params.arguments) ? params.arguments : {};
-      const result = await neonPilotAgent({ ...args, action: tool.action }, ctx);
-      return mcpResponse(id, {
-        content: (result as { content?: unknown }).content ?? [{ type: 'text', text: String((result as { text?: unknown }).text ?? '') }],
-        isError: Boolean((result as { isError?: unknown }).isError),
-      });
-    } catch (error) {
-      return mcpResponse(id, {
-        content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
-        isError: true,
-      });
-    }
-  }
-  if (method === 'resources/list') {
-    return mcpResponse(id, {
-      resources: [
-        { uri: 'neon-pilot://capabilities', name: 'Neon Pilot capabilities', mimeType: 'application/json' },
-        { uri: 'neon-pilot://runs', name: 'Neon Pilot durable runs', mimeType: 'application/json' },
-      ],
-    });
-  }
-  if (method === 'resources/read') {
-    const uri = readString(isRecord(message.params) ? message.params.uri : undefined);
-    if (uri === 'neon-pilot://capabilities') {
-      const result = await neonPilotAgent({ action: 'capabilities' }, ctx);
-      return mcpResponse(id, {
-        contents: [{ uri, mimeType: 'application/json', text: String((result as { text?: unknown }).text ?? '') }],
-      });
-    }
-    if (uri === 'neon-pilot://runs') {
-      const result = await neonPilotAgent({ action: 'runs_list' }, ctx);
-      return mcpResponse(id, {
-        contents: [{ uri, mimeType: 'application/json', text: String((result as { text?: unknown }).text ?? '') }],
-      });
-    }
-    return mcpError(id, `Unknown resource: ${uri}`, -32602);
-  }
-  return id === undefined ? undefined : mcpError(id, `Unsupported method: ${method}`, -32601);
-}
-
-export async function neonPilotAgentMcp(_input: unknown, ctx: ExtensionProtocolContext): Promise<void> {
-  await assertEntrypointEnabled(ctx, 'mcpEnabled', 'MCP');
-  let buffer = '';
-  const pending = new Set<Promise<void>>();
-  const dispatch = (line: string) => {
-    if (!line) return;
-    const task = (async () => {
-      try {
-        const parsed = JSON.parse(line);
-        if (!isRecord(parsed)) throw new Error('MCP message must be a JSON object.');
-        const response = await handleMcpMessage(parsed, ctx);
-        if (response) ctx.stdio.stdout.write(response);
-      } catch (error) {
-        ctx.stdio.stdout.write(mcpError(null, error instanceof Error ? error.message : String(error), -32700));
-      }
-    })();
-    pending.add(task);
-    task.finally(() => pending.delete(task));
-  };
-  const drain = () => {
-    while (buffer.length > 0) {
-      const headerEnd = buffer.indexOf('\r\n\r\n');
-      if (headerEnd >= 0) {
-        const header = buffer.slice(0, headerEnd);
-        const match = header.match(/(?:^|\r\n)Content-Length:\s*(\d+)(?:\r\n|$)/i);
-        if (!match) {
-          ctx.stdio.stdout.write(mcpError(null, 'MCP frame is missing Content-Length.', -32700));
-          buffer = buffer.slice(headerEnd + 4);
-          continue;
-        }
-        const length = Number(match[1]);
-        const bodyStart = headerEnd + 4;
-        if (buffer.length < bodyStart + length) return;
-        const body = buffer.slice(bodyStart, bodyStart + length);
-        buffer = buffer.slice(bodyStart + length);
-        dispatch(body);
-        continue;
-      }
-
-      const newline = buffer.indexOf('\n');
-      if (newline < 0) return;
-      const line = buffer.slice(0, newline).trim();
-      buffer = buffer.slice(newline + 1);
-      dispatch(line);
-    }
-  };
-
-  await new Promise<void>((resolve) => {
-    ctx.signal.addEventListener('abort', () => resolve(), { once: true });
-    ctx.stdio.stdin.on('data', (chunk) => {
-      buffer += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
-      drain();
-    });
-    ctx.stdio.stdin.on('end', () => {
-      void Promise.allSettled([...pending]).then(() => resolve());
-    });
-  });
 }

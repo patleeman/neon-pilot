@@ -9,7 +9,6 @@ import {
   __setNeonPilotAgentApisForTest,
   neonPilotAgent,
   neonPilotAgentCli,
-  neonPilotAgentMcp,
   readSettings,
   updateSettings,
 } from './backend';
@@ -99,11 +98,11 @@ describe('system-neon-pilot-agent backend', () => {
     const storage = createStorage();
     const context = ctx({ storage });
 
-    await expect(readSettings({}, context)).resolves.toEqual({ settings: { cliEnabled: true, mcpEnabled: true } });
+    await expect(readSettings({}, context)).resolves.toEqual({ settings: { cliEnabled: true } });
     await expect(updateSettings({ cliEnabled: false }, context)).resolves.toEqual({
-      settings: { cliEnabled: false, mcpEnabled: true },
+      settings: { cliEnabled: false },
     });
-    await expect(readSettings({}, context)).resolves.toEqual({ settings: { cliEnabled: false, mcpEnabled: true } });
+    await expect(readSettings({}, context)).resolves.toEqual({ settings: { cliEnabled: false } });
   });
 
   it('maps CLI commands to agent actions', async () => {
@@ -124,7 +123,7 @@ describe('system-neon-pilot-agent backend', () => {
     expect(JSON.parse(output)).toMatchObject({ action: 'run_task' });
   });
 
-  it('runs bootstrap doctor with readiness checks and MCP config', async () => {
+  it('runs bootstrap doctor with readiness checks', async () => {
     __setNeonPilotAgentApisForTest({ runs: { pingDaemon: vi.fn(async () => true) } });
     const context = ctx({
       models: { list: vi.fn(async () => [{ id: 'gpt-5.4', provider: 'openai-codex' }]) },
@@ -136,13 +135,11 @@ describe('system-neon-pilot-agent backend', () => {
         ready: true,
         checks: {
           cliEnabled: true,
-          mcpEnabled: true,
           daemon: true,
           defaultProviderConfigured: true,
           defaultModelConfigured: true,
           modelInventoryReadable: true,
         },
-        mcp: { mcpServers: { 'neon-pilot': { command: 'neon-pilot' } } },
       },
     });
   });
@@ -187,7 +184,7 @@ describe('system-neon-pilot-agent backend', () => {
   });
 
   it('rejects CLI protocol calls when the CLI entrypoint is disabled', async () => {
-    const storage = createStorage({ settings: { cliEnabled: false, mcpEnabled: true } });
+    const storage = createStorage({ settings: { cliEnabled: false } });
 
     await expect(
       neonPilotAgentCli({ args: ['run', '--prompt', 'Hello'] }, {
@@ -197,51 +194,5 @@ describe('system-neon-pilot-agent backend', () => {
         protocolId: 'neon-pilot-agent',
       } as never),
     ).rejects.toThrow('CLI entrypoint is disabled in Settings.');
-  });
-
-  it('serves MCP tool calls over newline-delimited JSON-RPC', async () => {
-    const stdin = new PassThrough();
-    const stdout = new PassThrough();
-    const controller = new AbortController();
-    let output = '';
-    stdout.on('data', (chunk) => {
-      output += chunk.toString('utf8');
-    });
-    __setNeonPilotAgentApisForTest({ agent: { runAgentTask: vi.fn(async () => ({ text: 'mcp done' })) } });
-
-    const promise = neonPilotAgentMcp({}, {
-      ...ctx(),
-      stdio: { stdin, stdout, stderr: new PassThrough() },
-      signal: controller.signal,
-      protocolId: 'neon-pilot-agent-mcp',
-    } as never);
-    stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' })}\n`);
-    stdin.write(
-      `${JSON.stringify({
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/call',
-        params: { name: 'neon_pilot_run_task', arguments: { prompt: 'Do work' } },
-      })}\n`,
-    );
-    stdin.end();
-    await promise;
-
-    expect(output).toContain('"id":1');
-    expect(output).toContain('neon_pilot_run_task');
-    expect(output).toContain('mcp done');
-  });
-
-  it('rejects MCP protocol startup when the MCP entrypoint is disabled', async () => {
-    const storage = createStorage({ settings: { cliEnabled: true, mcpEnabled: false } });
-
-    await expect(
-      neonPilotAgentMcp({}, {
-        ...ctx({ storage }),
-        stdio: { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() },
-        signal: new AbortController().signal,
-        protocolId: 'neon-pilot-agent-mcp',
-      } as never),
-    ).rejects.toThrow('MCP entrypoint is disabled in Settings.');
   });
 });

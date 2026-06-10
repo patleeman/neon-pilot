@@ -1,11 +1,11 @@
 ---
 name: neon-pilot-control
-description: Use when installing, bootstrapping, configuring, verifying, or controlling Neon Pilot from an external agent through the CLI or MCP interface, including provider setup, Hermes integration, headless setup, conversation control, subagent runs, and runtime readiness troubleshooting.
+description: Use when installing, bootstrapping, configuring, verifying, or controlling Neon Pilot from an external agent through the neon-pilot CLI, including provider setup, headless setup, conversation control, subagent runs, and runtime readiness troubleshooting.
 ---
 
 # Neon Pilot Control
 
-Use the packaged app and CLI control plane. Do not build from source unless the user asks for development setup.
+Use the packaged app and `neon-pilot` CLI control plane. Do not build from source unless the user asks for development setup. Neon Pilot self-administration is not exposed through MCP; internal agents use the canonical `neon_pilot` tool.
 
 ## Install
 
@@ -45,29 +45,14 @@ neon-pilot protocol neon-pilot-agent capabilities --json
 neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
 ```
 
-If `bootstrap doctor` or `control-plane doctor` fails, fix the failed check before continuing. Common failures are: app not running, CLI not linked, no default provider/model, missing provider credential, stale extension discovery, or disabled Neon Pilot Agent CLI/MCP settings.
-
-## MCP For External Orchestrators
-
-Use this MCP server config for Hermes or another orchestrator:
-
-```json
-{
-  "mcpServers": {
-    "neon-pilot": {
-      "command": "neon-pilot",
-      "args": ["protocol", "neon-pilot-agent-mcp"]
-    }
-  }
-}
-```
+If `bootstrap doctor` or `control-plane doctor` fails, fix the failed check before continuing. Common failures are: app not running, CLI not linked, no default provider/model, missing provider credential, stale extension discovery, or disabled Neon Pilot Agent CLI settings.
 
 ## Operate
 
 Create a controlled conversation:
 
 ```bash
-neon-pilot protocol neon-pilot-agent conversation create --title "Hermes task" --cwd "$PWD" --tools default --json
+neon-pilot protocol neon-pilot-agent conversation create --title "External task" --cwd "$PWD" --tools default --json
 ```
 
 Send a message:

@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 
 type Settings = {
   cliEnabled: boolean;
-  mcpEnabled: boolean;
 };
 
 type SettingsState = {
@@ -12,7 +11,6 @@ type SettingsState = {
 
 const DEFAULT_SETTINGS: Settings = {
   cliEnabled: true,
-  mcpEnabled: true,
 };
 
 async function readAgentSettings(): Promise<SettingsState> {
@@ -56,22 +54,15 @@ export function NeonPilotAgentSettingsPanel() {
   }
 
   return (
-    <SettingsSection title="External agent access" description="Control which Neon Pilot agent entrypoints can be launched by other tools.">
+    <SettingsSection title="External agent access" description="Control whether the Neon Pilot delegated-agent CLI entrypoint can be launched by other tools.">
       {loading ? <LoadingState label="Loading settings..." /> : null}
       {error ? <ErrorState title="Settings failed to load" body={error instanceof Error ? error.message : String(error)} /> : null}
       <SettingToggleRow
         title="CLI entrypoint"
-        description="Allows neon-pilot protocol neon-pilot-agent to run tasks, start subagents, and inspect runs."
+        description="Allows neon-pilot protocol neon-pilot-agent to run delegated tasks, start subagents, and inspect runs. Use neon-pilot commands for self-admin."
         checked={settings.cliEnabled}
         disabled={saving}
         onCheckedChange={(checked) => void save({ cliEnabled: checked })}
-      />
-      <SettingToggleRow
-        title="MCP entrypoint"
-        description="Deprecated admin surface. Use the neon-pilot CLI externally and the canonical neon_pilot tool internally."
-        checked={settings.mcpEnabled}
-        disabled={saving}
-        onCheckedChange={(checked) => void save({ mcpEnabled: checked })}
       />
       <div className="flex items-center gap-2 text-[12px] text-secondary">
         <ToolbarButton disabled={saving} onClick={() => void refetch()}>

@@ -136,7 +136,7 @@ The user must respond before the agent continues. The response is returned to th
 
 # Change Working Directory
 
-The `conversation_cwd` tool switches the conversation's working directory. After the change, all tool calls (file reads, shell commands, file writes) execute relative to the new directory.
+The `neon-pilot conversations cwd` CLI command switches the conversation's working directory. After the change, all tool calls (file reads, shell commands, file writes) execute relative to the new directory.
 
 ## Parameters
 
@@ -187,7 +187,7 @@ The `conversation_cwd` tool switches the conversation's working directory. After
 
 ## Compared to @ references
 
-|          | `conversation_cwd`                      | `@` file reference          |
+|          | `neon-pilot conversations cwd`                      | `@` file reference          |
 | -------- | --------------------------------------- | --------------------------- |
 | Scope    | All subsequent tool calls               | Single message              |
 | Cwd      | Permanently changed                     | Unchanged                   |
@@ -197,9 +197,9 @@ The `conversation_cwd` tool switches the conversation's working directory. After
 
 <!-- Source: docs/conversation-inspect.md -->
 
-# Conversation Inspect
+# Conversation Inspect (CLI/Admin)
 
-The `conversation_inspect` tool gives the agent read-only access to other conversation transcripts. It can list, search, query, outline, and diff conversations without modifying any state. Live and running scopes include other currently active conversations, not just persisted session files.
+The `neon-pilot conversations inspect` CLI command and canonical `neon_pilot` admin surface give agents read-only access to other conversation transcripts. It can list, search, query, outline, and diff conversations without modifying any state. Live and running scopes include other currently active conversations, not just persisted session files.
 
 ## Actions
 
@@ -302,9 +302,9 @@ The inspect tool cannot create, modify, or delete conversation state. It is stri
 
 ---
 
-# Conversation Admin
+# Conversation Admin (CLI/Admin)
 
-The combined `conversation_admin` tool exposes conversation administration actions. It includes the read-only inspect, ask, title, cwd, and deferred-resume behaviors above, plus cross-conversation write/control actions backed by the host `ctx.conversations` API.
+Conversation administration is exposed through `neon-pilot conversations ...` externally and the canonical `neon_pilot` tool internally. It includes the read-only inspect, ask, title, cwd, and deferred-resume behaviors above, plus cross-conversation write/control actions backed by the host `ctx.conversations` API.
 
 Before targeting an unclear conversation, use `action: "inspect"` with `inspectAction: "list"` or `inspectAction: "search"` to find the right `conversationId`.
 
@@ -329,7 +329,7 @@ Before targeting an unclear conversation, use `action: "inspect"` with `inspectA
 | `scratchpad`              | `conversationId`, `scratchpadOperation`          | Gets, replaces, appends, or prepends a durable per-conversation markdown scratchpad. Use only for non-secret operational state.                       |
 | `rollback`                | `conversationId`                                 | Rolls back a live conversation by `count` turns. Defaults to `1`.                                                                                    |
 
-Use `run_turn` when the caller needs to wait for the remote conversation to finish. Use `send_message` for fire-and-forget steering or follow-up delivery. Use `deferred_resume` for time-based continuation; do not run sleeping shell commands as timers.
+Use `run_turn`/`neon-pilot conversations run-turn` when the caller needs to wait for the remote conversation to finish. Use `send_message` for fire-and-forget steering or follow-up delivery. Use the unified deferred-resume admin command for time-based continuation; do not run sleeping shell commands as timers.
 
 ## Examples
 

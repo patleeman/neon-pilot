@@ -181,7 +181,7 @@ This is the right fit for:
 - "run this later and tell me what happened"
 - "watch for deployment gates and bring this thread back when it matters"
 
-It is **not** the same as a same-thread follow-up. For direct human tell-me-later requests, prefer `conversation` action `deferred_resume`.
+It is **not** the same as a same-thread follow-up. For direct human tell-me-later requests, prefer the unified conversation deferred-resume admin command.
 
 ## Managing tasks from the web UI
 

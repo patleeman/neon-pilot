@@ -257,7 +257,7 @@ export function createRunAgentExtension(options: {
       promptGuidelines: [
         'Runs are detached by default. Only set deliverResultToConversation=true when the result should flow back to this conversation.',
         'For persistent time-based automations, prefer scheduled_task.',
-        'For pure conversation follow-up later, prefer conversation action deferred_resume with trigger="after_turn", "delay", or "at" instead.',
+        'For pure conversation follow-up later, prefer the canonical neon_pilot admin surface for delayed conversation follow-up instead.',
       ],
       parameters: RunToolParams,
       async execute(

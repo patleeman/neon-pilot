@@ -4,7 +4,7 @@
   "name": "Neon Pilot Agent",
   "packageType": "system",
   "defaultEnabled": true,
-  "description": "Expose Neon Pilot as a CLI delegated agent runtime. MCP admin exposure is deprecated; use the neon-pilot CLI externally and the canonical neon_pilot tool internally.",
+  "description": "Expose Neon Pilot as a CLI delegated agent runtime. Use neon-pilot for external self-admin and the canonical neon_pilot tool internally.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -44,12 +44,6 @@
         "handler": "neonPilotAgentCli",
         "title": "Neon Pilot Agent CLI",
         "description": "Command-line interface for delegating tasks to Neon Pilot and inspecting durable runs."
-      },
-      {
-        "id": "neon-pilot-agent-mcp",
-        "handler": "neonPilotAgentMcp",
-        "title": "Neon Pilot Agent MCP Server (deprecated)",
-        "description": "Deprecated admin surface. Use the neon-pilot CLI for external agents and the canonical neon_pilot tool for internal agents."
       }
     ]
   },
@@ -103,7 +97,7 @@
       "component": "NeonPilotAgentSettingsPanel",
       "sectionId": "neon-pilot-agent-capabilities",
       "label": "Neon Pilot Agent",
-      "description": "Enable or disable external Neon Pilot agent entrypoints. MCP admin exposure is deprecated; prefer the neon-pilot CLI.",
+      "description": "Enable or disable external Neon Pilot agent CLI entrypoints.",
       "order": 45
     },
     "skills": [

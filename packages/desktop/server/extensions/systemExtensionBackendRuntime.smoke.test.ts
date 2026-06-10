@@ -585,7 +585,7 @@ const smokes = {
       },
     });
     const settings = await module.readSettings({}, ctx);
-    assert(settings.settings.cliEnabled === true && settings.settings.mcpEnabled === true, 'agent settings failed');
+    assert(settings.settings.cliEnabled === true, 'agent settings failed');
     const capabilities = await module.neonPilotAgent({ action: 'capabilities' }, ctx);
     assert(capabilities.text.includes('run_task'), 'agent capabilities missing run_task');
     const runs = await module.neonPilotAgent({ action: 'runs_list', kind: 'subagent' }, ctx);

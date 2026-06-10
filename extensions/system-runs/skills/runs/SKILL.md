@@ -10,12 +10,12 @@ tools:
   - bash
   - background_bash
   - subagent
-  - conversation action `deferred_resume`
+  - the unified conversation deferred-resume admin command
 ---
 
 # Background Work
 
-Use intent-shaped tools. For waiting/resuming this conversation later, use `conversation` action `deferred_resume`; do not run `sleep` in bash.
+Use intent-shaped tools. For waiting/resuming this conversation later, use the unified conversation deferred-resume admin command; do not run `sleep` in bash.
 
 ## Choose the tool
 
@@ -25,11 +25,11 @@ Use intent-shaped tools. For waiting/resuming this conversation later, use `conv
 | `background_bash`                       | Lifecycle tool for background command records.                           |
 | `subagent`                              | A delegated agent task that should run durably outside the current turn. |
 | `scheduled_task`                        | A persistent automation with a cron/time trigger and delivery policy.    |
-| `conversation` action `deferred_resume` | Continue this same conversation later.                                   |
+| the unified conversation deferred-resume admin command | Continue this same conversation later.                                   |
 
 ## Background commands
 
-Completion delivery is the normal “wake me when this finishes” path. If a background command/subagent uses `deliverResultToConversation: true`, do **not** also schedule a `conversation` action `deferred_resume` merely to check whether it finished. Only schedule a separate wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
+Completion delivery is the normal “wake me when this finishes” path. If a background command/subagent uses `deliverResultToConversation: true`, do **not** also schedule a the unified conversation deferred-resume admin command merely to check whether it finished. Only schedule a separate wakeup for a distinct time-based action that should happen regardless of completion timing, and include a clear `reason`.
 
 For Neon Pilot administration from shell, prefer the CLI equivalents:
 

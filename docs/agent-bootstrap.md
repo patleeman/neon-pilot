@@ -46,22 +46,12 @@ An agent should not report setup complete until these checks pass:
 neon-pilot cli status --json
 neon-pilot commands --json
 neon-pilot bootstrap doctor --json
+neon-pilot control-plane doctor --json
 neon-pilot protocol neon-pilot-agent capabilities --json
 neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
 ```
 
-The MCP configuration for Hermes or another orchestrator is:
-
-```json
-{
-  "mcpServers": {
-    "neon-pilot": {
-      "command": "neon-pilot",
-      "args": ["protocol", "neon-pilot-agent-mcp"]
-    }
-  }
-}
-```
+Neon Pilot self-administration is through `neon-pilot` for external agents and the canonical `neon_pilot` tool for internal agents. Do not configure Neon Pilot admin through MCP.
 
 ## Rules For Agents
 
