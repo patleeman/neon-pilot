@@ -16,9 +16,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function normalizeDictationSettings(value: unknown): DictationSettings {
   const input = isRecord(value) ? value : {};
-  const enabled = typeof input.enabled === 'boolean' ? input.enabled : false;
   const model = typeof input.model === 'string' && input.model.trim().length > 0 ? input.model.trim() : DEFAULT_MODEL;
-  return { enabled, model };
+  return { model };
 }
 
 function readSettingsRoot(settingsFile: string): Record<string, unknown> {

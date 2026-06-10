@@ -22,8 +22,8 @@ describe('local dictation backend', () => {
   const ctx = { runtimeDir: '/runtime', runtimeSettingsFilePath: '/runtime-settings.json' } as never;
 
   beforeEach(() => {
-    buildDictationSettingsState.mockReset().mockReturnValue({ settings: { enabled: false, model: 'base.en' } });
-    readDictationSettings.mockReset().mockReturnValue({ enabled: true, model: 'base.en' });
+    buildDictationSettingsState.mockReset().mockReturnValue({ settings: { model: 'base.en' } });
+    readDictationSettings.mockReset().mockReturnValue({ model: 'base.en' });
     writeDictationSettings.mockReset();
     getModelStatus.mockReset().mockResolvedValue({ installed: true });
     installModel.mockReset().mockResolvedValue({ installed: true });
@@ -32,19 +32,18 @@ describe('local dictation backend', () => {
   });
 
   it('reads settings from the runtime settings file', async () => {
-    await expect(readSettings({}, ctx)).resolves.toEqual({ settings: { enabled: false, model: 'base.en' } });
+    await expect(readSettings({}, ctx)).resolves.toEqual({ settings: { model: 'base.en' } });
 
     expect(buildDictationSettingsState).toHaveBeenCalledWith('/runtime/settings.json');
   });
 
   it('validates and persists settings to runtime settings then runtime-local settings', async () => {
-    await updateSettings({ enabled: true, model: ' tiny.en ' }, ctx);
+    await updateSettings({ model: ' tiny.en ' }, ctx);
 
-    expect(writeDictationSettings).toHaveBeenNthCalledWith(1, '/runtime-settings.json', { enabled: true, model: 'tiny.en' });
-    expect(writeDictationSettings).toHaveBeenNthCalledWith(2, '/runtime/settings.json', { enabled: true, model: 'tiny.en' });
+    expect(writeDictationSettings).toHaveBeenNthCalledWith(1, '/runtime-settings.json', { model: 'tiny.en' });
+    expect(writeDictationSettings).toHaveBeenNthCalledWith(2, '/runtime/settings.json', { model: 'tiny.en' });
     expect(buildDictationSettingsState).toHaveBeenCalledWith('/runtime/settings.json');
 
-    await expect(updateSettings({ enabled: 'yes' }, ctx)).rejects.toThrow('enabled must be a boolean');
     await expect(updateSettings({ model: '   ' }, ctx)).rejects.toThrow('model must be a non-empty string');
   });
 
@@ -56,7 +55,7 @@ describe('local dictation backend', () => {
     expect(providerConstructor).toHaveBeenLastCalledWith({ model: 'base.en', modelRootPath: '/runtime/transcription-models' });
   });
 
-  it('transcribes base64 audio when dictation is enabled', async () => {
+  it('transcribes base64 audio', async () => {
     await expect(
       transcribeFile(
         { dataBase64: Buffer.from('audio').toString('base64'), mimeType: ' audio/wav ', fileName: ' clip.wav ', language: ' en ' },
@@ -70,11 +69,7 @@ describe('local dictation backend', () => {
     );
   });
 
-  it('rejects transcription when disabled or base64 input is invalid', async () => {
-    readDictationSettings.mockReturnValue({ enabled: false, model: 'base.en' });
-    await expect(transcribeFile({ dataBase64: 'YQ==' }, ctx)).rejects.toThrow('Enable dictation');
-
-    readDictationSettings.mockReturnValue({ enabled: true, model: 'base.en' });
+  it('rejects invalid base64 input', async () => {
     await expect(transcribeFile({ dataBase64: '' }, ctx)).rejects.toThrow('dataBase64 is required');
     await expect(transcribeFile({ dataBase64: 'abcde' }, ctx)).rejects.toThrow('valid base64');
   });

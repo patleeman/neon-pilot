@@ -25,6 +25,13 @@ describe('dictation settings', () => {
     const settingsFile = join(createTempDir(), 'settings.json');
     writeFileSync(settingsFile, '{ nope');
 
-    expect(readDictationSettings(settingsFile)).toEqual({ enabled: false, model: 'base.en' });
+    expect(readDictationSettings(settingsFile)).toEqual({ model: 'base.en' });
+  });
+
+  it('ignores legacy enabled values because extension enablement controls availability', () => {
+    const settingsFile = join(createTempDir(), 'settings.json');
+    writeFileSync(settingsFile, JSON.stringify({ dictation: { enabled: false, model: 'small.en' } }));
+
+    expect(readDictationSettings(settingsFile)).toEqual({ model: 'small.en' });
   });
 });

@@ -35,12 +35,8 @@ export async function readSettings(_input: unknown, ctx: ExtensionBackendContext
   return buildDictationSettingsState(settingsFile(ctx.runtimeDir));
 }
 
-export async function updateSettings(input: { enabled?: unknown; model?: unknown }, ctx: ExtensionBackendContext) {
+export async function updateSettings(input: { model?: unknown }, ctx: ExtensionBackendContext) {
   const update: Parameters<typeof writeDictationSettings>[1] = {};
-  if ('enabled' in input) {
-    if (typeof input.enabled !== 'boolean') throw new Error('enabled must be a boolean');
-    update.enabled = input.enabled;
-  }
   if ('model' in input) {
     const model = readOptionalString(input.model);
     if (!model) throw new Error('model must be a non-empty string');
@@ -72,7 +68,6 @@ export async function transcribeFile(
   ctx: ExtensionBackendContext,
 ) {
   const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
-  if (!settings.enabled) throw new Error('Enable dictation in Settings before using it.');
   const provider = createProvider(settings.model, ctx.runtimeDir);
   return provider.transcribeFile(
     {

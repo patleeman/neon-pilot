@@ -1,5 +1,4 @@
 export interface DictationSettings {
-  enabled: boolean;
   model: string;
 }
 

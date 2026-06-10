@@ -12,7 +12,7 @@ import type {
 
 describe('local dictation public types', () => {
   it('keeps the settings and transcription result shapes assignable', () => {
-    const settings: DictationSettings = { enabled: true, model: 'whisper-tiny' };
+    const settings: DictationSettings = { model: 'whisper-tiny' };
     const file: TranscriptionFileInput = { data: Buffer.from('audio'), mimeType: 'audio/wav', fileName: 'sample.wav' };
     const options: TranscriptionOptions = { language: 'en', signal: new AbortController().signal };
     const segment: TranscriptionSegment = { startMs: 0, endMs: 1000, text: 'hello' };
@@ -34,7 +34,7 @@ describe('local dictation public types', () => {
     };
 
     expect({ settings, file, options, result, install, status }).toMatchObject({
-      settings: { enabled: true, model: 'whisper-tiny' },
+      settings: { model: 'whisper-tiny' },
       file: { mimeType: 'audio/wav', fileName: 'sample.wav' },
       result: { text: 'hello', segments: [{ text: 'hello' }] },
       install: { cacheDir: '/cache' },

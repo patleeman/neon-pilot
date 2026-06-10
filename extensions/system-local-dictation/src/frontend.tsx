@@ -1,13 +1,11 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
 import {
-  CardMeta,
   cx,
   Field,
   IconButton,
   LoadingState,
   Notice,
   Select,
-  SettingToggleRow,
   SettingsSection,
   Spinner,
   TextInput,
@@ -31,7 +29,6 @@ const TRANSCRIPTION_MODEL_OPTIONS = [
 const TRANSCRIPTION_MODEL_IDS = new Set(TRANSCRIPTION_MODEL_OPTIONS.map((option) => option.id));
 
 interface DictationSettings {
-  enabled: boolean;
   model: string;
 }
 interface DictationSettingsState {
@@ -114,38 +111,11 @@ export function DictationButton({
   };
 }) {
   const [state, setState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
-  const [enabled, setEnabled] = useState(false);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [samples, setSamples] = useState<number[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const captureRef = useRef<ComposerDictationCapture | null>(null);
   const pendingStartRef = useRef<Promise<void> | null>(null);
   const pointerRef = useRef<{ pointerId: number; startedAt: number; startedExistingRecording: boolean } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadSettings = () => {
-      if (cancelled) return;
-      void pa.extension
-        .invoke('readSettings')
-        .then((value) => {
-          if (cancelled) return;
-          const next = value as DictationSettingsState;
-          setEnabled(next.settings.enabled);
-        })
-        .catch(() => {
-          if (!cancelled) setEnabled(false);
-        })
-        .finally(() => {
-          if (!cancelled) setSettingsLoaded(true);
-        });
-    };
-    const timeoutId = window.setTimeout(loadSettings, 6_000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [pa]);
 
   const stop = useCallback(async () => {
     if (pendingStartRef.current) {
@@ -178,7 +148,7 @@ export function DictationButton({
   }, [buttonContext, pa]);
 
   const start = useCallback(async () => {
-    if (!enabled || buttonContext.composerDisabled || captureRef.current || pendingStartRef.current || state === 'transcribing') return;
+    if (buttonContext.composerDisabled || captureRef.current || pendingStartRef.current || state === 'transcribing') return;
     const pendingStart = (async () => {
       try {
         setSamples([]);
@@ -197,7 +167,7 @@ export function DictationButton({
     })();
     pendingStartRef.current = pendingStart;
     await pendingStart;
-  }, [buttonContext.composerDisabled, enabled, pa, state]);
+  }, [buttonContext.composerDisabled, pa, state]);
 
   useEffect(() => {
     const handleDictationToggleCommand = () => {
@@ -208,8 +178,6 @@ export function DictationButton({
     window.addEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
     return () => window.removeEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
   }, [start, stop]);
-
-  if (!settingsLoaded || !enabled) return null;
 
   return (
     <>
@@ -263,7 +231,6 @@ export function DictationButton({
 
 export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExtensionClient; settingsContext?: { extensionId?: string } }) {
   const [settings, setSettings] = useState<DictationSettings | null>(null);
-  const [enabled, setEnabled] = useState(false);
   const [model, setModel] = useState('base.en');
   const [customModelUrl, setCustomModelUrl] = useState('');
   const [status, setStatus] = useState<DictationModelStatus | null>(null);
@@ -273,7 +240,6 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
   const load = useCallback(async () => {
     const state = (await pa.extension.invoke('readSettings')) as DictationSettingsState;
     setSettings(state.settings);
-    setEnabled(state.settings.enabled);
     setModel(state.settings.model);
     setCustomModelUrl(TRANSCRIPTION_MODEL_IDS.has(state.settings.model) ? '' : state.settings.model);
   }, [pa]);
@@ -283,7 +249,7 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
   }, [load]);
 
   useEffect(() => {
-    if (!enabled || !model.trim()) {
+    if (!model.trim()) {
       setStatus(null);
       return;
     }
@@ -299,14 +265,13 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
     return () => {
       cancelled = true;
     };
-  }, [model, enabled, pa]);
+  }, [model, pa]);
 
-  async function saveFields(nextEnabled = enabled, nextModel = model) {
+  async function saveFields(nextModel = model) {
     setBusy('Saving…');
     setMessage(null);
     try {
       const saved = (await pa.extension.invoke('updateSettings', {
-        enabled: nextEnabled,
         model: nextModel.trim(),
       })) as DictationSettingsState;
       setSettings(saved.settings);
@@ -319,7 +284,7 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
   }
 
   async function install() {
-    if (!enabled || !model.trim()) return;
+    if (!model.trim()) return;
     setBusy('Installing…');
     setMessage(null);
     try {
@@ -337,11 +302,11 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
   }
 
   const statusLabel =
-    enabled && model.trim()
+    model.trim()
       ? status?.installed
         ? `Installed locally${status.sizeBytes ? ` · ${formatBytes(status.sizeBytes)}` : ''}`
         : 'Not installed yet'
-      : 'Enable dictation to check model install status.';
+      : 'Pick a model to check install status.';
 
   return (
     <div className="space-y-0">
@@ -362,78 +327,64 @@ export function DictationSettingsPanel({ pa, settingsContext }: { pa: NativeExte
         {!settings ? <LoadingState label="Loading dictation settings..." /> : null}
         {settings ? (
           <div className="space-y-3">
-            <SettingToggleRow
-              title="Enable local dictation"
-              checked={enabled}
-              onCheckedChange={(next) => {
-                setEnabled(next);
-                void saveFields(next, model);
-              }}
-            />
-            {enabled ? (
-              <>
-                <Field label="Model" className="pt-1">
-                  <Select
-                    id="settings-dictation-model"
-                    value={TRANSCRIPTION_MODEL_IDS.has(model) ? model : CUSTOM_MODEL_VALUE}
-                    onChange={(event) => {
-                      const next = event.target.value;
-                      if (next === CUSTOM_MODEL_VALUE) {
-                        const custom = customModelUrl.trim();
-                        setModel(custom);
-                        setCustomModelUrl(custom);
-                        return;
-                      }
-                      setModel(next);
-                      void saveFields(enabled, next);
-                    }}
-                  >
-                    {TRANSCRIPTION_MODEL_OPTIONS.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                    <option value={CUSTOM_MODEL_VALUE}>Custom Hugging Face URL…</option>
-                  </Select>
-                </Field>
-                {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
-                  <Field
-                    label="Custom model URL"
-                    hint={
-                      <>
-                        Use a direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
-                        <span className="font-mono">ggml-*.bin</span> file.
-                      </>
-                    }
-                  >
-                    <TextInput
-                      id="settings-dictation-custom-model"
-                      value={customModelUrl}
-                      onChange={(event) => {
-                        setCustomModelUrl(event.target.value);
-                        setModel(event.target.value);
-                      }}
-                      onBlur={() => void saveFields(enabled, customModelUrl)}
-                      className="font-mono text-[13px]"
-                      placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                  </Field>
-                ) : null}
-                <p className={cx('text-[12px]', status?.installed ? 'text-success' : 'text-dim')}>{statusLabel}</p>
-                <ToolbarButton
-                  type="button"
-                  className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
-                  disabled={Boolean(busy) || !model.trim()}
-                  onClick={() => void install()}
-                >
-                  {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}
-                </ToolbarButton>
-              </>
-            ) : (
-              <CardMeta>Dictation is disabled.</CardMeta>
-            )}
+            <Field label="Model" className="pt-1">
+              <Select
+                id="settings-dictation-model"
+                value={TRANSCRIPTION_MODEL_IDS.has(model) ? model : CUSTOM_MODEL_VALUE}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (next === CUSTOM_MODEL_VALUE) {
+                    const custom = customModelUrl.trim();
+                    setModel(custom);
+                    setCustomModelUrl(custom);
+                    return;
+                  }
+                  setModel(next);
+                  void saveFields(next);
+                }}
+              >
+                {TRANSCRIPTION_MODEL_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+                <option value={CUSTOM_MODEL_VALUE}>Custom Hugging Face URL…</option>
+              </Select>
+            </Field>
+            {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
+              <Field
+                label="Custom model URL"
+                hint={
+                  <>
+                    Use a direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
+                    <span className="font-mono">ggml-*.bin</span> file.
+                  </>
+                }
+              >
+                <TextInput
+                  id="settings-dictation-custom-model"
+                  value={customModelUrl}
+                  onChange={(event) => {
+                    setCustomModelUrl(event.target.value);
+                    setModel(event.target.value);
+                  }}
+                  onBlur={() => void saveFields(customModelUrl)}
+                  className="font-mono text-[13px]"
+                  placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </Field>
+            ) : null}
+            <p className={cx('text-[12px]', status?.installed ? 'text-success' : 'text-dim')}>{statusLabel}</p>
+            <ToolbarButton
+              type="button"
+              className="rounded-lg px-3 py-1.5 text-[12px] shadow-none"
+              disabled={Boolean(busy) || !model.trim()}
+              onClick={() => void install()}
+            >
+              {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}
+            </ToolbarButton>
             {busy === 'Saving…' ? <LoadingState label="Saving..." /> : null}
             {message ? <Notice>{message}</Notice> : null}
           </div>

@@ -34,7 +34,7 @@
       "component": "DictationSettingsPanel",
       "sectionId": "settings-dictation",
       "label": "Dictation",
-      "description": "Enable local dictation via Whisper.cpp for the composer mic button.",
+      "description": "Configure local dictation via Whisper.cpp for the composer mic button.",
       "order": 30
     }
   },
