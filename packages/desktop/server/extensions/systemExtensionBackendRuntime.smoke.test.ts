@@ -597,16 +597,6 @@ const smokes = {
     const result = await module.ensure({}, ctx);
     assert(result.created === true && conversations.length === 1, 'onboarding ensure failed');
   },
-  async 'system-personal-agents'() {
-    const created = await module.createProfile({ name: 'Smoke Agent', soul: 'Keep smoke tests small.' }, ctx);
-    assert(created.profile?.name === 'Smoke Agent', 'personal agent profile create failed');
-    const listed = await module.listProfiles({}, ctx);
-    assert(listed.profiles.length === 1 && listed.profiles[0].id === created.profile.id, 'personal agent profile list failed');
-    const ensured = await module.ensureDefaultConversation({ id: created.profile.id }, ctx);
-    assert(ensured.conversationId === 'smoke-created-1', 'personal agent default conversation ensure failed');
-    const context = await module.provideAgentTurnContext({ conversationId: ensured.conversationId }, ctx);
-    assert(context.blocks?.[0]?.content?.includes('Keep smoke tests small.'), 'personal agent turn context missing soul');
-  },
   async 'system-prompt-assembly'() {
     const result = await module.inspectPromptAssembly({}, ctx);
     assert(result.ok === true && result.plan && Array.isArray(result.skills), 'prompt assembly inspect failed');

@@ -6,9 +6,9 @@ import { describe, expect, it } from 'vitest';
 const manifest = JSON.parse(readFileSync(resolve(import.meta.dirname, '..', 'extension.json'), 'utf-8'));
 
 describe('system-personal-agents manifest', () => {
-  it('is a default-off bundled system extension', () => {
+  it('is a default-off installable extension', () => {
     expect(manifest.id).toBe('system-personal-agents');
-    expect(manifest.packageType).toBe('system');
+    expect(manifest.packageType).toBe('user');
     expect(manifest.defaultEnabled).toBe(false);
   });
 

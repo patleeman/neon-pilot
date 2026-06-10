@@ -69,6 +69,13 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     tag: 'v0.10.2',
   },
   {
+    id: 'system-personal-agents',
+    name: 'Personal Agents',
+    description: 'Create durable personal agent profiles with chat-first UI, soul documents, gateway bindings, and profile-scoped context.',
+    version: '0.1.0',
+    tag: 'v0.11.11',
+  },
+  {
     id: 'system-self-preservation',
     name: 'Self Preservation',
     description: 'Blocks the agent from killing its own process.',

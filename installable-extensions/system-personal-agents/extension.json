@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "system-personal-agents",
   "name": "Personal Agents",
-  "packageType": "system",
+  "packageType": "user",
   "defaultEnabled": false,
   "description": "Create durable personal agent profiles with chat-first UI, soul documents, gateway bindings, and profile-scoped context.",
   "version": "0.1.0",

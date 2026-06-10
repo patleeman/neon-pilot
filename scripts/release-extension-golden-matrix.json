@@ -69,6 +69,11 @@
       "extensionId": "system-telemetry",
       "path": "/telemetry",
       "text": ["Telemetry"]
+    },
+    {
+      "extensionId": "system-personal-agents",
+      "path": "/agents",
+      "text": ["Create your first personal agent"]
     }
   ],
   "actions": [
@@ -153,6 +158,11 @@
       }
     ]
   },
-  "installablePackages": [],
+  "installablePackages": [
+    {
+      "extensionId": "system-personal-agents",
+      "zipPath": "dist/installable-extensions/system-personal-agents.neon-extension.zip"
+    }
+  ],
   "catalogInstalls": []
 }

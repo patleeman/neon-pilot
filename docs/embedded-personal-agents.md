@@ -1,6 +1,6 @@
 # Embedded Personal Agents
 
-This note turns the OpenClaw/Hermes-style "single entity you can talk to anywhere" idea into a Neon Pilot product shape. The feature should live as a system extension unless a missing shared boundary needs to be added to core.
+This note turns the OpenClaw/Hermes-style "single entity you can talk to anywhere" idea into a Neon Pilot product shape. The feature lives as an installable extension unless a missing shared boundary needs to be added to core.
 
 ## External Feature Sweep
 
@@ -24,7 +24,7 @@ High-signal ideas to bring into Neon Pilot:
 
 ## Product Shape
 
-Build a `system-personal-agents` extension with:
+Build the installable `system-personal-agents` extension with:
 
 - Main route: `/agents`
 - Left sidebar view while `/agents` is active, similar to Knowledge's `sidebarView`.
@@ -47,7 +47,7 @@ Do not hardcode Hermes/OpenClaw behavior in desktop core. Core should expose dur
 
 ## Implemented Small Core
 
-The bundled `system-personal-agents` extension ships default-off and implements the first small core:
+The installable `system-personal-agents` extension ships default-off and implements the first small core:
 
 - Create/read/update/delete personal agents in extension storage.
 - Create and edit the agent's soul document in the agent details panel.

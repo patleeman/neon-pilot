@@ -1,6 +1,6 @@
 # Personal Agents
 
-Personal Agents is a default-off system extension for durable agent identities.
+Personal Agents is an installable extension for durable agent identities.
 
 When enabled, it contributes the **Agents** nav item at `/agents`. The route is chat-first:
 
@@ -30,8 +30,8 @@ The extension matches enabled gateway bindings, ensures the target profile conve
 ## Validation
 
 ```bash
-pnpm run extension:build -- extensions/system-personal-agents
-vitest run extensions/system-personal-agents/src/backend.test.ts extensions/system-personal-agents/src/frontend.test.tsx
+pnpm run extension:build -- installable-extensions/system-personal-agents
+vitest run installable-extensions/system-personal-agents/src/backend.test.ts installable-extensions/system-personal-agents/src/frontend.test.tsx
 ```
 
 For app-path QA, enable the extension in Settings -> Extensions, open `/agents`, create an agent, edit the soul document, and confirm the center pane renders the standard conversation UI while the right panel remains visible.
