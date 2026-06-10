@@ -86,24 +86,62 @@ interface WorkerConversationInspectSessionSnapshotEntry {
   messageCount: number;
 }
 
+interface ConversationInspectToolContext {
+  sessionManager: { getSessionId(): string };
+  conversations?: {
+    getWorkspace?: () => Promise<unknown>;
+  };
+}
+
+function readWorkspaceConversationIds(workspace: unknown): { openIds: Set<string>; pinnedIds: Set<string>; archivedIds: Set<string> } {
+  const readIds = (key: string) =>
+    new Set(
+      workspace && typeof workspace === 'object' && Array.isArray((workspace as Record<string, unknown>)[key])
+        ? ((workspace as Record<string, unknown>)[key] as unknown[]).filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+        : [],
+    );
+  return {
+    openIds: readIds('openConversationIds'),
+    pinnedIds: readIds('pinnedConversationIds'),
+    archivedIds: readIds('archivedConversationIds'),
+  };
+}
+
+async function readWorkspaceConversationState(ctx?: ConversationInspectToolContext) {
+  if (typeof ctx?.conversations?.getWorkspace !== 'function') {
+    return undefined;
+  }
+  try {
+    return readWorkspaceConversationIds(await ctx.conversations.getWorkspace());
+  } catch {
+    return undefined;
+  }
+}
+
 async function buildWorkerConversationInspectSessionSnapshot(
   conversationId?: string,
+  ctx?: ConversationInspectToolContext,
 ): Promise<WorkerConversationInspectSessionSnapshotEntry[] | undefined> {
   try {
-    const sessions = await readConversationSessionsCapability();
+    const [sessions, workspace] = await Promise.all([readConversationSessionsCapability(), readWorkspaceConversationState(ctx)]);
     return sessions
       .filter((session) => !conversationId || session.id === conversationId)
-      .map((session) => ({
-        id: session.id,
-        title: session.title,
-        cwd: session.cwd,
-        file: session.file,
-        timestamp: session.timestamp,
-        ...(session.lastActivityAt ? { lastActivityAt: session.lastActivityAt } : {}),
-        isLive: Boolean(session.isLive),
-        isRunning: Boolean(session.isRunning),
-        messageCount: session.messageCount,
-      }));
+      .map((session) => {
+        const visibleInWorkspace = Boolean(
+          workspace && !workspace.archivedIds.has(session.id) && (workspace.openIds.has(session.id) || workspace.pinnedIds.has(session.id)),
+        );
+        return {
+          id: session.id,
+          title: session.title,
+          cwd: session.cwd,
+          file: session.file,
+          timestamp: session.timestamp,
+          ...(session.lastActivityAt ? { lastActivityAt: session.lastActivityAt } : {}),
+          isLive: Boolean(session.isLive) || visibleInWorkspace,
+          isRunning: Boolean(session.isRunning),
+          messageCount: session.messageCount,
+        };
+      });
   } catch {
     return undefined;
   }
@@ -131,7 +169,7 @@ async function trackContextPointerInspect(currentSessionId: string, targetConver
   }
 }
 
-export async function executeConversationInspectTool(params: Record<string, unknown>, ctx: { sessionManager: { getSessionId(): string } }) {
+export async function executeConversationInspectTool(params: Record<string, unknown>, ctx: ConversationInspectToolContext) {
   const workerParams: Record<string, unknown> = { ...params };
   delete workerParams.action;
   const currentSessionId = ctx.sessionManager.getSessionId();
@@ -139,12 +177,12 @@ export async function executeConversationInspectTool(params: Record<string, unkn
 
   if (params.action === 'list' || params.action === 'search') {
     workerParams.currentConversationId = currentSessionId;
-    const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot();
+    const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot(undefined, ctx);
     if (sessionSnapshot !== undefined) {
       workerParams.sessionSnapshot = sessionSnapshot;
     }
   } else if (targetConversationId) {
-    const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot(targetConversationId);
+    const sessionSnapshot = await buildWorkerConversationInspectSessionSnapshot(targetConversationId, ctx);
     if (sessionSnapshot !== undefined) {
       workerParams.sessionSnapshot = sessionSnapshot;
     }

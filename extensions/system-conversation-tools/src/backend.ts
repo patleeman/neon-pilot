@@ -492,7 +492,7 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
       return executeAskUserQuestion(payload, sessionManagerCtx);
 
     case 'inspect':
-      return executeConversationInspectTool(conversationInspectPayload(params), sessionManagerCtx);
+      return executeConversationInspectTool(conversationInspectPayload(params), { ...sessionManagerCtx, conversations: ctx.conversations });
 
     case 'set_title':
       return executeSetConversationTitle(payload, sessionManagerCtx, (title) =>
@@ -661,7 +661,7 @@ export async function askUser(input: unknown, ctx: ExtensionBackendContext) {
 
 export async function conversationInspect(input: unknown, ctx: ExtensionBackendContext) {
   const { sessionManagerCtx } = toolSessionManagerCtx(ctx);
-  return executeConversationInspectTool(input as Record<string, unknown>, sessionManagerCtx);
+  return executeConversationInspectTool(input as Record<string, unknown>, { ...sessionManagerCtx, conversations: ctx.conversations });
 }
 
 export async function conversationTitle(input: unknown, ctx: ExtensionBackendContext) {

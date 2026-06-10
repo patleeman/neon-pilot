@@ -330,6 +330,58 @@ describe('conversation inspect agent extension', () => {
     expect(diffResult.details).toMatchObject({ action: 'diff', conversationId: 'conv-2' });
   });
 
+  it('treats workspace-open conversations as live for list/search snapshots', async () => {
+    readConversationSessionsCapabilityMock.mockReturnValue([
+      {
+        id: 'conv-self',
+        title: 'Current thread',
+        cwd: '/repo/current',
+        file: '/sessions/conv-self.jsonl',
+        timestamp: '2026-05-12T10:00:00.000Z',
+        isLive: false,
+        isRunning: false,
+        messageCount: 12,
+      },
+      {
+        id: 'conv-archived',
+        title: 'Archived thread',
+        cwd: '/repo/archive',
+        file: '/sessions/conv-archived.jsonl',
+        timestamp: '2026-05-12T09:00:00.000Z',
+        isLive: false,
+        isRunning: false,
+        messageCount: 4,
+      },
+    ]);
+    executeConversationInspectMock.mockResolvedValue({
+      action: 'list',
+      result: { scope: 'live', totalMatching: 1, returnedCount: 1, sessions: [{ id: 'conv-self' }] },
+      text: 'list text',
+    });
+
+    const tool = registerConversationInspectTool();
+    await tool.execute('tool-1', { action: 'list', scope: 'live', includeCurrent: true }, undefined, undefined, {
+      ...createToolContext('conv-self'),
+      conversations: {
+        getWorkspace: async () => ({
+          openConversationIds: ['conv-self'],
+          pinnedConversationIds: [],
+          archivedConversationIds: ['conv-archived'],
+        }),
+      },
+    });
+
+    expect(executeConversationInspectMock).toHaveBeenCalledWith('list', {
+      scope: 'live',
+      includeCurrent: true,
+      currentConversationId: 'conv-self',
+      sessionSnapshot: [
+        expect.objectContaining({ id: 'conv-self', isLive: true, isRunning: false }),
+        expect.objectContaining({ id: 'conv-archived', isLive: false, isRunning: false }),
+      ],
+    });
+  });
+
   it('falls back to worker-local inspection when the main-thread snapshot is unavailable', async () => {
     readConversationSessionsCapabilityMock.mockImplementation(() => {
       throw new Error('conversation service unavailable');
