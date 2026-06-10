@@ -510,6 +510,8 @@ export function useDesktopConversationState(conversationId: string | null, optio
   const pendingStreamFlushDelayRef = useRef<number | null>(null);
   const reconnectRetryRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const matchedState = state?.conversationId === conversationId ? state : null;
+  const activeConversationIdRef = useRef(conversationId);
+  activeConversationIdRef.current = conversationId;
 
   useEffect(() => {
     if (!enabled) {
@@ -812,7 +814,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
       let stateForSend = matchedState;
       if (!stateForSend) {
         stateForSend = await api.desktopConversationState(conversationId, requestOptions);
-        setState((previous) => mergeDesktopConversationState(previous, stateForSend));
+        setState((previous) => {
+          if (activeConversationIdRef.current !== conversationId || (previous?.conversationId && previous.conversationId !== conversationId)) {
+            return previous;
+          }
+          return mergeDesktopConversationState(previous, stateForSend);
+        });
       }
 
       let targetConversationId = conversationId;
@@ -822,7 +829,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         if (sessionFile) {
           const resumed = await api.resumeSession(sessionFile, stateForSend?.sessionDetail?.meta?.cwd);
           targetConversationId = resumed.id || conversationId;
-          if (targetConversationId === conversationId) {
+          if (targetConversationId === conversationId && activeConversationIdRef.current === conversationId) {
             setState((previous) => {
               if (previous?.conversationId !== conversationId) return previous;
               return {
@@ -838,6 +845,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
             });
             void api.desktopConversationState(conversationId, requestOptions).then((nextState) => {
               setState((previous) => {
+                if (
+                  activeConversationIdRef.current !== conversationId ||
+                  (previous?.conversationId && previous.conversationId !== conversationId)
+                ) {
+                  return previous;
+                }
                 const mergedState = mergeDesktopConversationState(previous, nextState);
                 const cacheKey = buildDesktopConversationStateCacheKey(conversationId, tailBlocks, requestOptions.includeToolBlocks);
                 rememberDesktopConversationState(desktopConversationStateCache, cacheKey, mergedState);

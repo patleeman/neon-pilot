@@ -764,6 +764,126 @@ describe('useDesktopConversationState', () => {
     );
   });
 
+  it('does not apply stale pre-send state after switching conversations', async () => {
+    const convOneState = {
+      conversationId: 'conv-1',
+      sessionDetail: {
+        meta: {
+          id: 'conv-1',
+          file: '/repo/conv-1.jsonl',
+          timestamp: '2026-05-30T00:00:00.000Z',
+          cwd: '/repo',
+          cwdSlug: 'repo',
+          model: 'gpt',
+          title: 'First Conversation',
+          messageCount: 1,
+        },
+        blocks: [{ type: 'text', id: 'text-1', text: 'First reply', ts: '2026-05-30T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        contextUsage: null,
+      },
+      liveSession: { live: false },
+      stream: {
+        blocks: [{ type: 'text', id: 'text-1', text: 'First reply', ts: '2026-05-30T00:00:00.000Z' }],
+        blockOffset: 0,
+        totalBlocks: 1,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        pendingQueue: { steering: [], followUp: [] },
+        presence: null,
+        contextUsage: null,
+        tokens: null,
+        cost: null,
+        cwdChange: null,
+        title: null,
+      },
+    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
+    const convTwoState = {
+      ...convOneState,
+      conversationId: 'conv-2',
+      sessionDetail: {
+        ...convOneState.sessionDetail,
+        meta: { ...convOneState.sessionDetail.meta, id: 'conv-2', file: '/repo/conv-2.jsonl', title: 'Second Conversation' },
+      },
+      stream: {
+        ...convOneState.stream,
+        blocks: [{ type: 'text' as const, id: 'text-2', text: 'Second reply', ts: '2026-05-30T00:00:01.000Z' }],
+      },
+    } satisfies Awaited<ReturnType<typeof api.desktopConversationState>>;
+    let resolveSendState: (state: Awaited<ReturnType<typeof api.desktopConversationState>>) => void = () => {};
+    const sendStateRequest = new Promise<Awaited<ReturnType<typeof api.desktopConversationState>>>((resolve) => {
+      resolveSendState = resolve;
+    });
+    vi.spyOn(api, 'desktopConversationState')
+      .mockReturnValueOnce(new Promise(() => undefined))
+      .mockReturnValueOnce(sendStateRequest)
+      .mockResolvedValueOnce(convTwoState)
+      .mockResolvedValue({
+        ...convOneState,
+        liveSession: { live: true, id: 'conv-1', cwd: '/repo', sessionFile: '/repo/conv-1.jsonl', isStreaming: false },
+      });
+    vi.spyOn(api, 'resumeSession').mockResolvedValue({ id: 'conv-1' });
+    vi.spyOn(api, 'promptSession').mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-1" />);
+      await flushPromises();
+    });
+
+    const sendPromise = latestState?.send('send while switching');
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-2" />);
+      await flushPromises();
+      await flushPromises();
+    });
+    expect(latestState?.state?.conversationId).toBe('conv-2');
+
+    await act(async () => {
+      resolveSendState(convOneState);
+      await sendPromise;
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(api.promptSession).toHaveBeenCalledWith(
+      'conv-1',
+      'send while switching',
+      undefined,
+      undefined,
+      undefined,
+      expect.any(String),
+      undefined,
+      undefined,
+    );
+    expect(latestState?.state?.conversationId).toBe('conv-2');
+    expect(latestState?.state?.stream.blocks[0]).toEqual(expect.objectContaining({ text: 'Second reply' }));
+  });
+
   it('uses a primed reserved conversation as live state while refreshing desktop state and subscribing', async () => {
     const desktopConversationState = vi.spyOn(api, 'desktopConversationState').mockReturnValue(new Promise(() => undefined));
 
