@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.13 — 2026-06-10
+
+### Highlights
+
+- Fixes the internal `neon_pilot` admin tool worker gating so command-based calls use the canonical admin surface reliably.
+- Restores runtime-installed extension lifecycle behavior so installable extensions expose explicit uninstallability and can be removed even if their manifest package type is system-like.
+- Adds sidebar thread rename support and restores the larger draft/fallback conversation title treatment.
+- Keeps running conversation indicators authoritative until a live stopped event arrives, preventing stale refreshes from clearing active work state.
+- Publishes matching first-party extension artifacts for the 0.11.12 app train so install/update catalog lookups resolve against a real release.
+
+### Notes
+
+- 1 commit since the previous release.
+
 ## 0.11.12 — 2026-06-10
 
 ### Highlights
