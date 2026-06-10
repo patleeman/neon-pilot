@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.11 — 2026-06-10
+
+### Highlights
+
+- Hardens chat streaming and recovery so empty stream events and interrupted sessions no longer leave conversations stuck.
+- Improves Personal Agents panel mounting and idle conversation metadata handling for more reliable agent-focused workspaces.
+- Tightens extension build and plugin import paths so desktop type checks resolve extension/UI source contracts consistently.
+- Cleans stale UI modules, formatting, lint, and verified scan findings ahead of the patch release.
+- Adds atomic todo plan update handling for more reliable agent task state updates.
+
+### Notes
+
+- 13 commits since the previous release.
+
 ## 0.11.10 — 2026-06-09
 
 ### Highlights

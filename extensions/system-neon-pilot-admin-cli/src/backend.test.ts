@@ -56,7 +56,7 @@ describe('system-neon-pilot-admin-cli backend', () => {
       'storage_round_trip',
     ]);
     expect((context as { conversations: { prune: ReturnType<typeof vi.fn> } }).conversations.prune).toHaveBeenCalledWith({
-      olderThanMs: 365_000 * 86_400_000,
+      olderThanMs: 365 * 86_400_000,
       dryRun: true,
       archivedOnly: true,
     });

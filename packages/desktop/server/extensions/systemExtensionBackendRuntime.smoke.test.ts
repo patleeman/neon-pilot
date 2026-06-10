@@ -509,6 +509,7 @@ const smokes = {
       {
         name: 'Smoke workflow',
         args: { subject: 'runtime' },
+        waitForCompletion: true,
         script:
           "await workflow.phase('verify');\n" +
           "workflow.log('running ' + args.subject);\n" +
@@ -651,8 +652,15 @@ const smokes = {
     assert(context.blocks?.[0]?.content?.includes('Smoke todo'), 'todo turn context missing open todo');
   },
   async 'system-web-tools'() {
-    const result = await module.webFetch({ url: 'data:text/plain,smoke' }, ctx);
-    assert(result.text.includes('smoke'), 'webFetch data URL failed');
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { get: () => 'text/plain' },
+      text: async () => 'smoke',
+    });
+    const result = await module.webFetch({ url: 'https://example.org/smoke' }, ctx);
+    assert(result.text.includes('smoke'), 'webFetch HTTPS URL failed');
   },
   async 'system-duckduckgo-search'() {
     globalThis.fetch = async () => ({
