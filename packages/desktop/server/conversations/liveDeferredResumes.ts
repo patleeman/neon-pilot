@@ -327,36 +327,43 @@ export function createAttentionEventFlusher(options: CreateAttentionEventFlusher
               });
             }
 
-            if (deferredResumeBehavior === 'followUp') {
-              // followUp returns as soon as the prompt is queued — wait for
-              // actual completion before removing the deferred resume entry.
-              const { completion } = await submitPromptSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
-              await completion;
-            } else {
-              await promptLocalSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
-            }
+            const completion =
+              deferredResumeBehavior === 'followUp'
+                ? (await submitPromptSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior)).completion
+                : promptLocalSession(session.id, promptDelivery.visiblePrompt, deferredResumeBehavior);
 
+            const completedEntries: DeferredResumeLike[] = [];
             for (const readyEntry of readyGroup) {
               const completedEntry = completeDeferredResumeForSessionFile({
                 sessionFile: readyEntry.sessionFile,
                 id: readyEntry.id,
               });
               if (completedEntry) {
+                completedEntries.push(completedEntry);
                 mutated = true;
                 mutatedConversationIds.add(session.id);
-                await completeDeferredResumeConversationRun({
-                  daemonRoot,
-                  deferredResumeId: completedEntry.id,
-                  sessionFile: completedEntry.sessionFile,
-                  prompt: completedEntry.prompt,
-                  dueAt: completedEntry.dueAt,
-                  createdAt: completedEntry.createdAt,
-                  readyAt: completedEntry.readyAt,
-                  completedAt: new Date().toISOString(),
-                  conversationId: session.id,
-                  cwd: liveEntry.cwd,
-                });
               }
+            }
+
+            if (completedEntries.length > 0) {
+              options.publishConversationSessionMetaChanged(session.id);
+            }
+
+            await completion;
+
+            for (const completedEntry of completedEntries) {
+              await completeDeferredResumeConversationRun({
+                daemonRoot,
+                deferredResumeId: completedEntry.id,
+                sessionFile: completedEntry.sessionFile,
+                prompt: completedEntry.prompt,
+                dueAt: completedEntry.dueAt,
+                createdAt: completedEntry.createdAt,
+                readyAt: completedEntry.readyAt,
+                completedAt: new Date().toISOString(),
+                conversationId: session.id,
+                cwd: liveEntry.cwd,
+              });
             }
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);

@@ -18,6 +18,7 @@ const {
   saveAttentionEventsStateMock,
   getLiveSessionsMock,
   promptSessionMock,
+  submitPromptSessionMock,
   queuePromptContextMock,
   syncWebLiveConversationRunMock,
   liveRegistry,
@@ -39,6 +40,7 @@ const {
   saveAttentionEventsStateMock: vi.fn(),
   getLiveSessionsMock: vi.fn(),
   promptSessionMock: vi.fn(),
+  submitPromptSessionMock: vi.fn(),
   queuePromptContextMock: vi.fn(),
   syncWebLiveConversationRunMock: vi.fn(),
   liveRegistry: new Map<
@@ -81,12 +83,7 @@ vi.mock('@neon-pilot/daemon', () => ({
 vi.mock('./liveSessions.js', () => ({
   getLiveSessions: getLiveSessionsMock,
   promptSession: promptSessionMock,
-  submitPromptSession: vi.fn((_sessionId, text, behavior) => {
-    // Delegate to promptSessionMock so rejection tests still work,
-    // but expose the completion separately for followUp behavior.
-    const completion = promptSessionMock(_sessionId, text, behavior);
-    return { acceptedAs: 'started', completion };
-  }),
+  submitPromptSession: submitPromptSessionMock,
   queuePromptContext: queuePromptContextMock,
   registry: liveRegistry,
 }));
@@ -135,6 +132,7 @@ beforeEach(() => {
   saveAttentionEventsStateMock.mockReset();
   getLiveSessionsMock.mockReset();
   promptSessionMock.mockReset();
+  submitPromptSessionMock.mockReset();
   queuePromptContextMock.mockReset();
   syncWebLiveConversationRunMock.mockReset();
   liveRegistry.clear();
@@ -143,6 +141,10 @@ beforeEach(() => {
   completeDeferredResumeConversationRunMock.mockResolvedValue(undefined);
   markDeferredResumeConversationRunRetryScheduledMock.mockResolvedValue(undefined);
   promptSessionMock.mockResolvedValue(undefined);
+  submitPromptSessionMock.mockImplementation((_sessionId, text, behavior) => {
+    const completion = promptSessionMock(_sessionId, text, behavior);
+    return { acceptedAs: 'started', completion };
+  });
   queuePromptContextMock.mockResolvedValue(undefined);
   syncWebLiveConversationRunMock.mockResolvedValue(undefined);
   retryDeferredResumeForSessionFileMock.mockReturnValue(undefined);
@@ -270,6 +272,56 @@ describe('createAttentionEventFlusher', () => {
       }),
     );
     expect(promptSessionMock).toHaveBeenCalledWith('conv-1', expect.stringContaining('Continue from here.'), undefined);
+  });
+
+  it('consumes a follow-up deferred resume as soon as it is accepted by the live queue', async () => {
+    const ready = { ...createReadyResume(), behavior: 'followUp' as const };
+    getLiveSessionsMock.mockReturnValue([
+      {
+        id: 'conv-1',
+        cwd: '/repo',
+        sessionFile: '/tmp/session-1.jsonl',
+        title: 'Conversation 1',
+        isStreaming: true,
+        hasStaleTurnState: false,
+      },
+    ]);
+    liveRegistry.set('conv-1', {
+      cwd: '/repo',
+      title: 'Conversation 1',
+      session: {
+        sessionFile: '/tmp/session-1.jsonl',
+        isStreaming: true,
+      },
+    });
+    activateDueDeferredResumesForSessionFileMock.mockReturnValue([]);
+    listDeferredResumesForSessionFileMock.mockReturnValue([ready]);
+    completeDeferredResumeForSessionFileMock.mockReturnValue(ready);
+
+    let resolveCompletion: (() => void) | undefined;
+    const completion = new Promise<void>((resolve) => {
+      resolveCompletion = resolve;
+    });
+    submitPromptSessionMock.mockReturnValue({ acceptedAs: 'queued', completion });
+
+    const publishConversationSessionMetaChanged = vi.fn();
+    const flush = createAttentionEventFlusher({
+      getRuntimeScope: () => 'datadog',
+      getStateRoot: () => '/state',
+      resolveDaemonRoot: () => '/daemon',
+      publishConversationSessionMetaChanged,
+    });
+
+    const flushPromise = flush();
+    await vi.waitFor(() => expect(completeDeferredResumeForSessionFileMock).toHaveBeenCalledWith({ sessionFile: '/tmp/session-1.jsonl', id: 'resume-1' }));
+
+    expect(publishConversationSessionMetaChanged).toHaveBeenCalledWith('conv-1');
+    expect(completeDeferredResumeConversationRunMock).not.toHaveBeenCalled();
+
+    resolveCompletion?.();
+    await flushPromise;
+
+    expect(completeDeferredResumeConversationRunMock).toHaveBeenCalledWith(expect.objectContaining({ deferredResumeId: 'resume-1' }));
   });
 
   it('keeps background run callback details in internal context behind a clean visible prompt', async () => {
