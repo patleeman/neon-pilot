@@ -24,7 +24,7 @@ Examples:
 
 ### app-commands list
 
-List command-palette/app commands available to extensions.
+List command-palette/app commands available to extensions. Advanced escape hatch; prefer first-class CLI commands when available.
 
 - Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot app-commands list [--json]`
@@ -41,7 +41,7 @@ Examples:
 
 ### app-commands run
 
-Run a command-palette/app command by id: app-commands run <command-id> [--args <json>]
+Run a command-palette/app command by id. Advanced escape hatch; prefer first-class CLI commands when available.
 
 - Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot app-commands run <commandId> [args...] [--args <json>] [--json]`
@@ -809,7 +809,7 @@ Examples:
 
 ### conversations transcript append
 
-Append a transcript block: conversations transcript append <id> --type <type> --data <json>
+Append a transcript block. Advanced recovery/admin command; prefer normal conversation turns when possible.
 
 - Source: extension (system-conversation-tools)
 - Usage: `neon-pilot conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]`
@@ -826,7 +826,7 @@ Examples:
 
 ### conversations transcript update
 
-Update a transcript block: conversations transcript update <id> <block-id> --type <type> --data <json>
+Update a transcript block. Advanced recovery/admin command; inspect first and prefer safer conversation operations when possible.
 
 - Source: extension (system-conversation-tools)
 - Usage: `neon-pilot conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]`
@@ -1273,7 +1273,7 @@ Examples:
 
 ### protocol
 
-Invoke a raw extension protocol entrypoint.
+Invoke a raw extension protocol entrypoint. Advanced integration surface; prefer first-class CLI commands for normal automation.
 
 - Source: core
 - Usage: `neon-pilot protocol <protocol-id> [args]`

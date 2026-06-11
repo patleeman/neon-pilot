@@ -57,12 +57,12 @@ interface AdminCommandDefinition {
 const adminCommands: AdminCommandDefinition[] = [
   {
     id: 'list_app_commands',
-    description: 'List command-palette/app commands available to extensions.',
+    description: 'List command-palette/app commands available to extensions. Advanced escape hatch; prefer first-class CLI commands when available.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: true },
   },
   {
     id: 'run_app_command',
-    description: 'Run a command-palette/app command by id.',
+    description: 'Run a command-palette/app command by id. Advanced escape hatch; prefer first-class CLI commands when available.',
     inputSchema: {
       type: 'object',
       properties: { commandId: { type: 'string' }, args: {} },

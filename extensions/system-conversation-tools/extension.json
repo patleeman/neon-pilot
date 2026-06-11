@@ -1552,7 +1552,7 @@
       {
         "id": "conversations-transcript-append",
         "command": "conversations transcript append",
-        "description": "Append a transcript block: conversations transcript append <id> --type <type> --data <json>",
+        "description": "Append a transcript block. Advanced recovery/admin command; prefer normal conversation turns when possible.",
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "append_transcript_block",
@@ -1614,7 +1614,7 @@
       {
         "id": "conversations-transcript-update",
         "command": "conversations transcript update",
-        "description": "Update a transcript block: conversations transcript update <id> <block-id> --type <type> --data <json>",
+        "description": "Update a transcript block. Advanced recovery/admin command; inspect first and prefer safer conversation operations when possible.",
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "update_transcript_block",
