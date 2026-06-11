@@ -20,6 +20,7 @@ import { api } from '../../client/api';
 import { writeClipboardText } from '../../desktop/clipboard';
 import { getDesktopBridge, shouldUseNativeAppContextMenus } from '../../desktop/desktopBridge';
 import { createDesktopAwareEventSource } from '../../desktop/desktopEventSource';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import type {
   WorkspaceDiffOverlay,
   WorkspaceDirectoryListing,
@@ -1128,6 +1129,7 @@ export function WorkspaceFileDocument({
   );
 
   const selectedFile = fileState.data;
+  const canToggleDiff = Boolean(selectedFile?.gitStatus && !selectedFile.binary && !selectedFile.tooLarge);
 
   useEffect(() => {
     void loadFile();
@@ -1144,12 +1146,18 @@ export function WorkspaceFileDocument({
 
   useEffect(() => {
     function toggleDiff() {
+      if (!canToggleDiff) return;
       setShowDiff((value) => !value);
     }
 
     window.addEventListener(WORKBENCH_TOGGLE_DIFF_EVENT, toggleDiff);
     return () => window.removeEventListener(WORKBENCH_TOGGLE_DIFF_EVENT, toggleDiff);
-  }, []);
+  }, [canToggleDiff]);
+
+  useEffect(() => {
+    setExtensionCommandContext('workbench.canToggleDiff', canToggleDiff);
+    return () => setExtensionCommandContext('workbench.canToggleDiff', null);
+  }, [canToggleDiff]);
 
   // Debounced auto-save
   useEffect(() => {
@@ -1305,7 +1313,7 @@ export function WorkspaceFileDocument({
           </div>
         </div>
       )}
-      {selectedFile.gitStatus && !selectedFile.binary && !selectedFile.tooLarge && (
+      {canToggleDiff && (
         <div className="flex items-center justify-end border-b border-border-subtle bg-surface px-3 py-1.5">
           <ToolbarButton className={cx('px-2 text-[10px]', showDiff && 'text-accent')} onClick={() => setShowDiff((value) => !value)}>
             {showDiff ? 'Diff on' : 'Diff off'}

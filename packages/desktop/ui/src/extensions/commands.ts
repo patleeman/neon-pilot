@@ -1123,8 +1123,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleWorkbenchDiff?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleWorkbenchDiff);
+      canExecute(_args, context) {
+        return Boolean(options.toggleWorkbenchDiff) && readContextValue(context, 'workbench.canToggleDiff') === true;
       },
     },
     {

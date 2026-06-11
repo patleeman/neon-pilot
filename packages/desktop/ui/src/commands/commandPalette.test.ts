@@ -407,6 +407,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('workbench.toggleDiff', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.canToggleDiff': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('workbench.toggleDiff', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.canToggleDiff': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('drawingPicker.close', {
         activeConversationId: 'conversation-1',
         context: { 'drawingPicker.open': false },

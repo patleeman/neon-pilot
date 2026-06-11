@@ -1585,7 +1585,13 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('workbench.closeActiveFile', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('workbench.refreshActiveFile', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('workbench.toggleExplorer', undefined, options)).resolves.toBe(true);
-    await expect(executeExtensionCommand('workbench.toggleDiff', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.toggleDiff', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('workbench.toggleDiff', undefined, {
+        ...options,
+        context: { 'workbench.canToggleDiff': true },
+      }),
+    ).resolves.toBe(true);
 
     expect(newWorkbenchTab).toHaveBeenCalledTimes(1);
     expect(closeActiveWorkbenchTab).toHaveBeenCalledTimes(1);
