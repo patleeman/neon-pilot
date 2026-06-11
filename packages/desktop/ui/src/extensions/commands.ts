@@ -20,6 +20,9 @@ export interface ExtensionCommandExecutorOptions {
   navigate: NavigateFunction;
   goBack?(): boolean;
   goForward?(): boolean;
+  openNotifications?(): boolean;
+  markAllNotificationsRead?(): boolean;
+  dismissAllNotifications?(): boolean;
   openCommandPalette(scope?: string): void;
   openRightRail(target: string): boolean;
   setLayout(mode: 'compact' | 'workbench'): void;
@@ -118,6 +121,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'app.navigate', title: 'Navigate', category: 'App', argsSchema: { type: 'object', properties: { to: { type: 'string' } } } },
     { id: 'app.goBack', title: 'Go Back', category: 'App' },
     { id: 'app.goForward', title: 'Go Forward', category: 'App' },
+    { id: 'notifications.open', title: 'Open Notifications', category: 'App' },
+    { id: 'notifications.markAllRead', title: 'Mark Notifications Read', category: 'App' },
+    { id: 'notifications.dismissAll', title: 'Dismiss Notifications', category: 'App' },
     {
       id: 'palette.open',
       title: 'Open Command Palette',
@@ -236,6 +242,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute(args) {
         options.openCommandPalette(readStringArg(args, 'scope') ?? undefined);
         return true;
+      },
+    },
+    {
+      id: 'notifications.open',
+      title: 'Open Notifications',
+      category: 'App',
+      execute() {
+        return options.openNotifications?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.openNotifications);
+      },
+    },
+    {
+      id: 'notifications.markAllRead',
+      title: 'Mark Notifications Read',
+      category: 'App',
+      execute() {
+        return options.markAllNotificationsRead?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.markAllNotificationsRead) && readContextValue(context, 'notifications.hasUnread') === true;
+      },
+    },
+    {
+      id: 'notifications.dismissAll',
+      title: 'Dismiss Notifications',
+      category: 'App',
+      execute() {
+        return options.dismissAllNotifications?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.dismissAllNotifications) && readContextValue(context, 'notifications.hasVisible') === true;
       },
     },
     {

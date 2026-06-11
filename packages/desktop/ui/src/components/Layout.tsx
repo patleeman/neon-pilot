@@ -54,7 +54,7 @@ import {
   type WorkbenchRailMode,
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
-import { addNotification, NotificationProvider } from './notifications/notificationStore';
+import { addNotification, NotificationProvider, useNotificationStore } from './notifications/notificationStore';
 import {
   ActionTile,
   CenteredMessage,
@@ -76,6 +76,8 @@ const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
+const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
+const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -94,6 +96,39 @@ const ChatRail = lazyRouteWithRecovery('layout-chat-rail', () =>
 const ExtensionModalHost = lazyRouteWithRecovery('layout-extension-modal-host', () =>
   import('../extensions/ExtensionModalHost').then((module) => ({ default: module.ExtensionModalHost })),
 );
+
+function NotificationCommandBridge() {
+  const { notifications, unreadCount, markAllRead, dismissAll } = useNotificationStore();
+  const hasVisible = notifications.some((notification) => !notification.dismissed);
+
+  useEffect(() => {
+    setExtensionCommandContext('notifications.hasUnread', unreadCount > 0);
+    setExtensionCommandContext('notifications.hasVisible', hasVisible);
+    return () => {
+      setExtensionCommandContext('notifications.hasUnread', null);
+      setExtensionCommandContext('notifications.hasVisible', null);
+    };
+  }, [hasVisible, unreadCount]);
+
+  useEffect(() => {
+    function handleMarkAllRead() {
+      markAllRead();
+    }
+
+    function handleDismissAll() {
+      dismissAll();
+    }
+
+    window.addEventListener(NOTIFICATIONS_MARK_ALL_READ_EVENT, handleMarkAllRead);
+    window.addEventListener(NOTIFICATIONS_DISMISS_ALL_EVENT, handleDismissAll);
+    return () => {
+      window.removeEventListener(NOTIFICATIONS_MARK_ALL_READ_EVENT, handleMarkAllRead);
+      window.removeEventListener(NOTIFICATIONS_DISMISS_ALL_EVENT, handleDismissAll);
+    };
+  }, [dismissAll, markAllRead]);
+
+  return null;
+}
 const NotificationCenter = lazyRouteWithRecovery('layout-notification-center', () =>
   import('./notifications/NotificationCenter').then((module) => ({ default: module.NotificationCenter })),
 );
@@ -1796,6 +1831,18 @@ export function Layout() {
         window.dispatchEvent(new CustomEvent(APP_NAVIGATION_COMMAND_EVENT, { detail: { direction: 'forward' } }));
         return true;
       },
+      openNotifications() {
+        startTransition(() => setNotificationCenterOpen(true));
+        return true;
+      },
+      markAllNotificationsRead() {
+        window.dispatchEvent(new CustomEvent(NOTIFICATIONS_MARK_ALL_READ_EVENT));
+        return true;
+      },
+      dismissAllNotifications() {
+        window.dispatchEvent(new CustomEvent(NOTIFICATIONS_DISMISS_ALL_EVENT));
+        return true;
+      },
       openCommandPalette(scope?: string) {
         window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope } }));
       },
@@ -2417,6 +2464,7 @@ export function Layout() {
 
   return (
     <NotificationProvider>
+      <NotificationCommandBridge />
       <DesktopChromeContext.Provider value={{ setRightRailControl: setRegisteredRightRailControl }}>
         <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
           <DesktopTopBar

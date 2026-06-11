@@ -95,6 +95,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('notifications.markAllRead', {
+        activeConversationId: 'conversation-1',
+        context: { 'notifications.hasUnread': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('notifications.markAllRead', {
+        activeConversationId: 'conversation-1',
+        context: { 'notifications.hasUnread': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('notifications.dismissAll', {
+        activeConversationId: 'conversation-1',
+        context: { 'notifications.hasVisible': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('notifications.dismissAll', {
+        activeConversationId: 'conversation-1',
+        context: { 'notifications.hasVisible': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': false },

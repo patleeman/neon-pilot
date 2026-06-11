@@ -58,6 +58,8 @@ const ARGUMENT_REQUIRED_HOST_COMMANDS = new Set(['app.navigate', 'rail.open', 'l
 const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['app.goBack', 'app.canGoBack'],
   ['app.goForward', 'app.canGoForward'],
+  ['notifications.markAllRead', 'notifications.hasUnread'],
+  ['notifications.dismissAll', 'notifications.hasVisible'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
   ['dictation.toggle', 'system-local-dictation.toggleAvailable'],

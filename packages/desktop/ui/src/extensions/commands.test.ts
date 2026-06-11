@@ -77,6 +77,38 @@ describe('extension commands', () => {
     expect(goForward).toHaveBeenCalledTimes(1);
   });
 
+  it('includes notification commands gated by notification state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['notifications.open', 'notifications.markAllRead', 'notifications.dismissAll']),
+    );
+    const openNotifications = vi.fn(() => true);
+    const markAllNotificationsRead = vi.fn(() => true);
+    const dismissAllNotifications = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      openNotifications,
+      markAllNotificationsRead,
+      dismissAllNotifications,
+    };
+
+    await expect(executeExtensionCommand('notifications.open', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('notifications.markAllRead', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('notifications.dismissAll', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('notifications.markAllRead', undefined, { ...options, context: { 'notifications.hasUnread': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('notifications.dismissAll', undefined, { ...options, context: { 'notifications.hasVisible': true } }),
+    ).resolves.toBe(true);
+
+    expect(openNotifications).toHaveBeenCalledTimes(1);
+    expect(markAllNotificationsRead).toHaveBeenCalledTimes(1);
+    expect(dismissAllNotifications).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),
