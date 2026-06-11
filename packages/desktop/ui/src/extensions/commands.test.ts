@@ -1022,6 +1022,7 @@ describe('extension commands', () => {
         'composer.openSettings',
         'composer.closeSettings',
         'composer.openPreferences',
+        'composer.togglePreferences',
         'composer.closePreferences',
         'composer.previewFirstAttachment',
         'composer.removeFirstAttachment',
@@ -1033,6 +1034,7 @@ describe('extension commands', () => {
     const openComposerSettings = vi.fn(() => true);
     const closeComposerSettings = vi.fn(() => true);
     const openComposerPreferences = vi.fn(() => true);
+    const toggleComposerPreferences = vi.fn(() => true);
     const closeComposerPreferences = vi.fn(() => true);
     const previewFirstComposerAttachment = vi.fn(() => true);
     const removeFirstComposerAttachment = vi.fn(() => true);
@@ -1047,6 +1049,7 @@ describe('extension commands', () => {
       openComposerSettings,
       closeComposerSettings,
       openComposerPreferences,
+      toggleComposerPreferences,
       closeComposerPreferences,
       previewFirstComposerAttachment,
       removeFirstComposerAttachment,
@@ -1058,6 +1061,7 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('composer.openSettings', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.closeSettings', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.openPreferences', undefined, baseOptions)).resolves.toBe(false);
+    await expect(executeExtensionCommand('composer.togglePreferences', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.closePreferences', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.previewFirstAttachment', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.removeFirstAttachment', undefined, baseOptions)).resolves.toBe(false);
@@ -1078,6 +1082,12 @@ describe('extension commands', () => {
     ).resolves.toBe(true);
     await expect(
       executeExtensionCommand('composer.openPreferences', undefined, {
+        ...baseOptions,
+        context: { 'composer.preferencesAvailable': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('composer.togglePreferences', undefined, {
         ...baseOptions,
         context: { 'composer.preferencesAvailable': true },
       }),
@@ -1122,6 +1132,7 @@ describe('extension commands', () => {
     expect(openComposerSettings).toHaveBeenCalledTimes(1);
     expect(closeComposerSettings).toHaveBeenCalledTimes(1);
     expect(openComposerPreferences).toHaveBeenCalledTimes(1);
+    expect(toggleComposerPreferences).toHaveBeenCalledTimes(1);
     expect(closeComposerPreferences).toHaveBeenCalledTimes(1);
     expect(previewFirstComposerAttachment).toHaveBeenCalledTimes(1);
     expect(removeFirstComposerAttachment).toHaveBeenCalledTimes(1);

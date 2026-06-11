@@ -46,6 +46,7 @@ export interface ExtensionCommandExecutorOptions {
   closeComposerSettings?(): boolean;
   openComposerPreferences?(): boolean;
   closeComposerPreferences?(): boolean;
+  toggleComposerPreferences?(): boolean;
   previewFirstComposerAttachment?(): boolean;
   removeFirstComposerAttachment?(): boolean;
   previewFirstComposerDrawing?(): boolean;
@@ -266,6 +267,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'composer.openSettings', title: 'Open Composer Settings', category: 'Conversation' },
     { id: 'composer.closeSettings', title: 'Close Composer Settings', category: 'Conversation' },
     { id: 'composer.openPreferences', title: 'Open Composer Preferences', category: 'Conversation' },
+    { id: 'composer.togglePreferences', title: 'Toggle Composer Preferences', category: 'Conversation' },
     { id: 'composer.closePreferences', title: 'Close Composer Preferences', category: 'Conversation' },
     { id: 'composer.previewFirstAttachment', title: 'Preview First Attachment', category: 'Conversation' },
     { id: 'composer.removeFirstAttachment', title: 'Remove First Attachment', category: 'Conversation' },
@@ -946,6 +948,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.openComposerPreferences) && readContextValue(context, 'composer.preferencesAvailable') === true;
+      },
+    },
+    {
+      id: 'composer.togglePreferences',
+      title: 'Toggle Composer Preferences',
+      category: 'Conversation',
+      execute() {
+        return options.toggleComposerPreferences?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleComposerPreferences) && readContextValue(context, 'composer.preferencesAvailable') === true;
       },
     },
     {

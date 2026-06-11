@@ -127,6 +127,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['composer.openSettings', 'composer.settingsAvailable'],
   ['composer.closeSettings', 'composer.settingsOpen'],
   ['composer.openPreferences', 'composer.preferencesAvailable'],
+  ['composer.togglePreferences', 'composer.preferencesAvailable'],
   ['composer.closePreferences', 'composer.preferencesOpen'],
   ['composer.previewFirstAttachment', 'composer.canPreviewFirstAttachment'],
   ['composer.removeFirstAttachment', 'composer.canRemoveFirstAttachment'],

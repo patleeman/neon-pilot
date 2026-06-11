@@ -4,7 +4,11 @@ import { type ComposerButtonContext, ComposerButtonHost } from '../../extensions
 import { setExtensionCommandContext } from '../../extensions/commands';
 import type { ExtensionComposerControlRegistration } from '../../extensions/useExtensionRegistry';
 import { cx, IconButton } from '../ui';
-import { COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT } from './composerPreferenceCommands';
+import {
+  COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT,
+} from './composerPreferenceCommands';
 
 function MoreHorizontalIcon({ className }: { className?: string }) {
   return (
@@ -49,6 +53,15 @@ export function ConversationPreferencesRow({
 
     window.addEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
     return () => window.removeEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
+  }, [hasMenuItems]);
+
+  useEffect(() => {
+    function handleTogglePreferencesCommand() {
+      if (hasMenuItems) setMenuOpen((current) => !current);
+    }
+
+    window.addEventListener(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT, handleTogglePreferencesCommand);
+    return () => window.removeEventListener(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT, handleTogglePreferencesCommand);
   }, [hasMenuItems]);
 
   useEffect(() => {

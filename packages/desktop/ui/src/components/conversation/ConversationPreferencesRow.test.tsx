@@ -6,7 +6,11 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
-import { COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT } from './composerPreferenceCommands';
+import {
+  COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT,
+} from './composerPreferenceCommands';
 
 vi.mock('../../extensions/ComposerButtonHost', () => ({
   ComposerButtonHost: ({ registration, buttonContext }: { registration: { id: string }; buttonContext: { renderMode: string } }) => (
@@ -138,6 +142,26 @@ describe('ConversationPreferencesRow', () => {
 
       act(() => {
         window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT));
+      });
+      expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
+    } finally {
+      unmount();
+    }
+  });
+
+  it('toggles the overflow menu from the shared composer preference command', () => {
+    const { container, unmount } = renderInteractive({ inlineLimit: 1 });
+
+    try {
+      expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT));
+      });
+      expect(container.textContent).toContain('goal-mode:menu');
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT));
       });
       expect(container.querySelector<HTMLElement>('[role="dialog"][aria-label="Composer settings"]')).toBeNull();
     } finally {
