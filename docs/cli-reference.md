@@ -1370,10 +1370,10 @@ Examples:
 
 ### subagents follow-up
 
-Continue a subagent: subagents follow-up <run-id> --prompt <prompt>.
+Continue a subagent: subagents follow-up <run-id> [--prompt <prompt>].
 
 - Source: extension (system-runs)
-- Usage: `neon-pilot subagents follow-up [--json]`
+- Usage: `neon-pilot subagents follow-up <id> [--prompt <prompt>] [--json]`
 - Mode: background
 - Requires app: no
 - Idempotent: no
@@ -1382,8 +1382,8 @@ Continue a subagent: subagents follow-up <run-id> --prompt <prompt>.
 - Output: text, json
 
 Examples:
-- `neon-pilot subagents follow-up`
-- `neon-pilot subagents follow-up --json`
+- `neon-pilot subagents follow-up example-id`
+- `neon-pilot subagents follow-up example-id --prompt "Continue with the next finding" --json`
 
 ### subagents get
 

@@ -222,7 +222,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -626,10 +627,12 @@
             },
             "task-slug": {
               "type": "string",
+              "minLength": 1,
               "description": "Stable slug used to group and identify the durable subagent run."
             },
             "prompt": {
               "type": "string",
+              "minLength": 1,
               "description": "Instruction text for the subagent."
             },
             "cwd": {
@@ -641,6 +644,10 @@
               "description": "Optional provider/model override, for example opencode-go/deepseek-v4-flash."
             }
           },
+          "required": [
+            "task-slug",
+            "prompt"
+          ],
           "additionalProperties": true
         },
         "mode": "background",
@@ -702,20 +709,23 @@
       {
         "id": "subagents-follow-up",
         "command": "subagents follow-up",
-        "description": "Continue a subagent: subagents follow-up <run-id> --prompt <prompt>.",
+        "description": "Continue a subagent: subagents follow-up <run-id> [--prompt <prompt>].",
         "action": "subagent",
         "inputAction": "follow_up",
         "jsonDefault": true,
-        "usage": "subagents follow-up [--json]",
+        "usage": "subagents follow-up <id> [--prompt <prompt>] [--json]",
         "examples": [
-          "neon-pilot subagents follow-up",
-          "neon-pilot subagents follow-up --json"
+          "neon-pilot subagents follow-up example-id",
+          "neon-pilot subagents follow-up example-id --prompt \"Continue with the next finding\" --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Positional args: id."
         },
         "flagsSchema": {
           "type": "object",
@@ -727,6 +737,11 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional instruction text for the follow-up run."
             }
           },
           "additionalProperties": true

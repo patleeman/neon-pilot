@@ -254,6 +254,61 @@ describe('protocol CLI', () => {
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"code": "usage_error"'));
   });
 
+  it('validates required subagent start flags before dispatch', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-runs',
+          surfaceId: 'subagents-start',
+          command: 'subagents start',
+          action: 'subagent',
+          argsSchema: { type: 'array', maxItems: 0, items: { type: 'string' } },
+          flagsSchema: {
+            type: 'object',
+            properties: {
+              json: { type: 'boolean' },
+              'task-slug': { type: 'string', minLength: 1 },
+              prompt: { type: 'string', minLength: 1 },
+            },
+            required: ['task-slug', 'prompt'],
+            additionalProperties: true,
+          },
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['subagents', 'start', '--prompt', 'hello', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Missing required flag --task-slug'));
+  });
+
+  it('validates subagent follow-up run id before dispatch', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-runs',
+          surfaceId: 'subagents-follow-up',
+          command: 'subagents follow-up',
+          action: 'subagent',
+          argsSchema: { type: 'array', minItems: 1, maxItems: 1, items: { type: 'string' } },
+          flagsSchema: {
+            type: 'object',
+            properties: { json: { type: 'boolean' }, prompt: { type: 'string', minLength: 1 } },
+            additionalProperties: true,
+          },
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['subagents', 'follow-up', '--prompt', 'continue', '--json'])).resolves.toBe(
+      PROTOCOL_CLI_EXIT_CODES.usage,
+    );
+
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Expected at least 1 positional argument'));
+  });
+
   it('requires --yes for destructive contributed commands in non-interactive mode', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [

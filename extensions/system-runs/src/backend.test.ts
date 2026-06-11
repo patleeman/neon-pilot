@@ -200,5 +200,24 @@ describe('system-runs backend', () => {
       expect(result.text).toContain('agent failed');
       expect(mocks.getDurableRunLog).toHaveBeenCalledWith('run-agent', 120);
     });
+
+    it('normalizes CLI follow-up args and prompt flags before calling the host runs backend API', async () => {
+      mocks.getDurableRun.mockResolvedValue({ run: durableRun('run-agent', 'background-run', 'agent-task', 'failed') });
+      mocks.followUpDurableRun.mockResolvedValue({ accepted: true, runId: 'run-follow-up' });
+
+      const result = await subagent(
+        {
+          action: 'follow_up',
+          cli: {
+            args: ['run-agent'],
+            flags: { prompt: 'continue from here' },
+          },
+        },
+        createCtx(),
+      );
+
+      expect(result.text).toContain('Subagent follow-up started run-follow-up from run-agent.');
+      expect(mocks.followUpDurableRun).toHaveBeenCalledWith('run-agent', 'continue from here');
+    });
   });
 });
