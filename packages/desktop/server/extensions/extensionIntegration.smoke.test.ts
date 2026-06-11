@@ -35,6 +35,7 @@ import {
   parseExtensionManifest,
   readExtensionRegistrySnapshot,
 } from './extensionRegistry.js';
+import { isKnownHostCommand } from './hostCommands.js';
 
 const HOST_BACKED_EXTENSION_IDS = new Set(['system-prompt-assembly', 'system-skills']);
 const CLI_USAGE_HIDDEN_SCHEMA_FLAGS = new Map<string, Set<string>>([
@@ -445,21 +446,6 @@ describe('extension manifests - structural validation', () => {
     ]);
     // Known system action prefixes that don't reference backend handlers
     const knownSystemActionPrefixes = ['commandPalette:', 'navigate:', 'rightRail:'];
-    const knownHostCommands = new Set([
-      'app.navigate',
-      'palette.open',
-      'rail.open',
-      'layout.set',
-      'conversation.new',
-      'conversation.open',
-      'conversation.next',
-      'conversation.previous',
-      'composer.focus',
-      'sidebar.focus',
-      'focus.next',
-      'focus.previous',
-      'selection.activate',
-    ]);
 
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;
@@ -491,7 +477,7 @@ describe('extension manifests - structural validation', () => {
         // If the action matches a known built-in frontend action, it's valid
         if (knownBuiltInFrontendActions.has(action)) continue;
         // If the action matches a known host command, it's valid
-        if (knownHostCommands.has(action)) continue;
+        if (isKnownHostCommand(action)) continue;
         // If the action starts with a known system prefix, it's valid
         if (knownSystemActionPrefixes.some((prefix) => action.startsWith(prefix))) continue;
         // Otherwise, flag it as potentially dangling
@@ -503,6 +489,16 @@ describe('extension manifests - structural validation', () => {
         ).toBe(true);
       }
     }
+  });
+
+  it('all keybindings target executable commands', () => {
+    const commands = listExtensionCommandRegistrations();
+    const commandIds = new Set(commands.flatMap((command) => [`${command.extensionId}.${command.surfaceId}`, command.surfaceId]));
+    const dangling = listExtensionKeybindingRegistrations()
+      .filter((keybinding) => !isKnownHostCommand(keybinding.command) && !commandIds.has(keybinding.command))
+      .map((keybinding) => `${keybinding.extensionId}/${keybinding.surfaceId} -> ${keybinding.command}`);
+
+    expect(dangling, 'Keybindings must target a known host command or extension command').toEqual([]);
   });
 
   it('settings contributions have type-consistent values', () => {

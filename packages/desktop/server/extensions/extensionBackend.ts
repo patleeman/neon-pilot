@@ -52,6 +52,7 @@ import { refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
+import { isKnownHostCommand } from './hostCommands.js';
 import { buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
 export interface ExtensionBackendNotifyInput {
@@ -349,19 +350,7 @@ export type ExtensionActionInvokeResult = { ok: true; result: unknown } | { ok: 
 
 function isHostCommandAction(action: string): boolean {
   return (
-    action === 'app.navigate' ||
-    action === 'palette.open' ||
-    action === 'rail.open' ||
-    action === 'layout.set' ||
-    action === 'conversation.new' ||
-    action === 'conversation.open' ||
-    action === 'conversation.next' ||
-    action === 'conversation.previous' ||
-    action === 'composer.focus' ||
-    action === 'sidebar.focus' ||
-    action === 'focus.next' ||
-    action === 'focus.previous' ||
-    action === 'selection.activate' ||
+    isKnownHostCommand(action) ||
     action.startsWith('navigate:') ||
     action.startsWith('commandPalette:') ||
     action.startsWith('rightRail:') ||
