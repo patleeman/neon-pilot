@@ -107,6 +107,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.next', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canNavigate': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.next', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canNavigate': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.previous', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canNavigate': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.previous', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canNavigate': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('page.findNext', {
         activeConversationId: 'conversation-1',
         context: { 'pageSearch.hasMatches': false },

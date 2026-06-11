@@ -566,7 +566,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.navigateConversation?.('next') ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.navigateConversation) && hasActiveConversation(options, context);
+        return Boolean(options.navigateConversation) && readContextValue(context, 'conversation.canNavigate') === true;
       },
     },
     {
@@ -577,7 +577,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.navigateConversation?.('previous') ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.navigateConversation) && hasActiveConversation(options, context);
+        return Boolean(options.navigateConversation) && readContextValue(context, 'conversation.canNavigate') === true;
       },
     },
     {

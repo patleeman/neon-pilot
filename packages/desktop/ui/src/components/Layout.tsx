@@ -34,7 +34,7 @@ import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
-import { readConversationLayout } from '../session/sessionTabs';
+import { CONVERSATION_LAYOUT_CHANGED_EVENT, readConversationLayout } from '../session/sessionTabs';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useAllSessions, useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
@@ -1783,6 +1783,24 @@ export function Layout() {
     hasActiveWorkbenchFile,
     location.pathname,
   ]);
+
+  useEffect(() => {
+    function publishConversationNavigationAvailability() {
+      const layout = readConversationLayout();
+      const conversationIds = [...layout.pinnedSessionIds, ...layout.sessionIds];
+      setExtensionCommandContext(
+        'conversation.canNavigate',
+        Boolean(activeConversationId && conversationIds.length >= 2 && conversationIds.includes(activeConversationId)),
+      );
+    }
+
+    publishConversationNavigationAvailability();
+    window.addEventListener(CONVERSATION_LAYOUT_CHANGED_EVENT, publishConversationNavigationAvailability);
+    return () => {
+      window.removeEventListener(CONVERSATION_LAYOUT_CHANGED_EVENT, publishConversationNavigationAvailability);
+      setExtensionCommandContext('conversation.canNavigate', null);
+    };
+  }, [activeConversationId]);
 
   const creatingNewConversationRef = useRef(false);
   const startNewConversationFromLayout = useCallback(

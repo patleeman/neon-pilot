@@ -42,8 +42,6 @@ export const COMMAND_PALETTE_SCOPE_OPTIONS: Array<{ value: CommandPaletteScope; 
 
 const ACTIVE_CONVERSATION_HOST_COMMANDS = new Set([
   'conversation.open',
-  'conversation.next',
-  'conversation.previous',
   'conversation.close',
   'conversation.togglePinned',
   'conversation.toggleArchived',
@@ -69,6 +67,8 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.saveTitle', 'conversation.titleEditorOpen'],
   ['conversation.cancelTitleEdit', 'conversation.titleEditorOpen'],
   ['layout.toggleRightRail', 'layout.canToggleRightRail'],
+  ['conversation.next', 'conversation.canNavigate'],
+  ['conversation.previous', 'conversation.canNavigate'],
   ['conversation.editCwd', 'conversation.canEditCwd'],
   ['notifications.close', 'notifications.open'],
   ['notifications.markAllRead', 'notifications.hasUnread'],

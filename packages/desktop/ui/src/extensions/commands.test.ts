@@ -1514,6 +1514,37 @@ describe('extension commands', () => {
     expect(editConversationCwd).toHaveBeenCalledTimes(1);
   });
 
+  it('gates conversation navigation on available neighboring conversations', async () => {
+    const navigateConversation = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      activeConversationId: 'conversation-1',
+      navigateConversation,
+    };
+
+    await expect(executeExtensionCommand('conversation.next', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.previous', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('conversation.next', undefined, {
+        ...options,
+        context: { 'conversation.canNavigate': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.previous', undefined, {
+        ...options,
+        context: { 'conversation.canNavigate': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(navigateConversation).toHaveBeenCalledTimes(2);
+    expect(navigateConversation).toHaveBeenNthCalledWith(1, 'next');
+    expect(navigateConversation).toHaveBeenNthCalledWith(2, 'previous');
+  });
+
   it('blocks active-conversation commands when no conversation is active', async () => {
     const closeConversation = vi.fn(() => true);
     const toggleConversationPin = vi.fn(() => true);
