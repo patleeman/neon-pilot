@@ -148,10 +148,25 @@ describe('system-conversation-tools manifest', () => {
       },
     });
     expect(commands.get('ask')).toMatchObject({
-      usage: 'ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--timeout-ms <ms>] [--follow] [--json]',
+      usage:
+        'ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]',
       requiresApp: true,
       outputModes: ['text', 'json', 'jsonl'],
-      flagsSchema: { properties: { text: { type: 'string' }, cwd: { type: 'string' }, model: { type: 'string' } } },
+      flagsSchema: {
+        properties: {
+          text: { type: 'string' },
+          cwd: { type: 'string' },
+          model: { type: 'string' },
+          'thinking-level': { type: 'string' },
+          'service-tier': { type: 'string' },
+          tool: { type: 'string' },
+          tools: { type: 'string' },
+          'timeout-ms': { type: 'number' },
+          follow: { type: 'boolean' },
+          format: { type: 'string' },
+          'cancel-on-interrupt': { type: 'boolean' },
+        },
+      },
     });
     expect(commands.get('conversations open active')).toMatchObject({
       usage: 'conversations open active [conversationId] [--json]',

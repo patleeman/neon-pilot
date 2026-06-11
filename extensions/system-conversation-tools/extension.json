@@ -422,7 +422,7 @@
         "action": "conversationTool",
         "jsonDefault": false,
         "inputAction": "create_and_run",
-        "usage": "ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--timeout-ms <ms>] [--follow] [--json]",
+        "usage": "ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]",
         "examples": [
           "neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo \"Summarize the diff\"",
           "neon-pilot ask --text \"Reply with ready\" --json"

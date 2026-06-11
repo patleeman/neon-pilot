@@ -318,6 +318,11 @@ function flagStringArray(flags: ParsedCliArgs['flags'], key: string): string[] |
   return undefined;
 }
 
+function flagToolNames(flags: ParsedCliArgs['flags']): string[] | undefined {
+  const names = [...(flagStringArray(flags, 'tool') ?? []), ...(flagStringArray(flags, 'tools') ?? [])];
+  return names.length > 0 ? names : undefined;
+}
+
 function flagNumber(flags: ParsedCliArgs['flags'], key: string): number | undefined {
   const value = flagString(flags, key);
   if (!value) return undefined;
@@ -388,7 +393,7 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       model: flagString(flags, 'model'),
       thinkingLevel: flagString(flags, 'thinking-level'),
       serviceTier: flagString(flags, 'service-tier'),
-      allowedToolNames: flagStringArray(flags, 'tool') ?? flagStringArray(flags, 'tools'),
+      allowedToolNames: flagToolNames(flags),
     };
   if (command === 'ask')
     return {
@@ -400,7 +405,7 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       model: flagString(flags, 'model'),
       thinkingLevel: flagString(flags, 'thinking-level'),
       serviceTier: flagString(flags, 'service-tier'),
-      allowedToolNames: flagStringArray(flags, 'tool') ?? flagStringArray(flags, 'tools'),
+      allowedToolNames: flagToolNames(flags),
       timeoutMs: flagNumber(flags, 'timeout-ms') ?? flagNumber(flags, 'timeout'),
       follow: flagBoolean(flags, 'follow'),
       format: flagString(flags, 'format'),

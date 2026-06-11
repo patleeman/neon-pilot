@@ -61,7 +61,7 @@ Examples:
 Create a conversation, run one turn, and print the result.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--timeout-ms <ms>] [--follow] [--json]`
+- Usage: `neon-pilot ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]`
 - Mode: streaming
 - Requires app: yes
 - Idempotent: no

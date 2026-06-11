@@ -173,6 +173,8 @@ describe('system-conversation-tools backend routing', () => {
             'bash',
             '--tool',
             'apply_patch',
+            '--tools',
+            'read,edit',
           ],
         },
       },
@@ -186,7 +188,7 @@ describe('system-conversation-tools backend routing', () => {
       model: 'opencode-go/deepseek-v4-flash',
       thinkingLevel: 'medium',
       serviceTier: 'flex',
-      allowedToolNames: ['bash', 'apply_patch'],
+      allowedToolNames: ['bash', 'apply_patch', 'read', 'edit'],
     });
 
     await conversationTool(
@@ -233,6 +235,43 @@ describe('system-conversation-tools backend routing', () => {
     });
     expect(conversations.runTurn).toHaveBeenLastCalledWith('created-1', 'Do the thing', { cwd: '/repo', timeoutMs: 456 });
     expect(askResult).toMatchObject({ content: [{ type: 'text', text: 'done' }], details: { conversationId: 'created-1', text: 'done' } });
+
+    await conversationTool(
+      {
+        cli: {
+          command: 'ask',
+          args: [
+            '--thinking-level',
+            'medium',
+            '--service-tier',
+            'flex',
+            '--tool',
+            'bash',
+            '--tools',
+            'apply_patch,read',
+            '--timeout',
+            '789',
+            '--follow',
+            '--format',
+            'jsonl',
+            '--cancel-on-interrupt',
+            '--text',
+            'Use all flags',
+          ],
+        },
+      },
+      context,
+    );
+    expect(conversations.create).toHaveBeenLastCalledWith({
+      live: true,
+      thinkingLevel: 'medium',
+      serviceTier: 'flex',
+      allowedToolNames: ['bash', 'apply_patch', 'read'],
+    });
+    expect(conversations.runTurn).toHaveBeenLastCalledWith('created-1', 'Use all flags', {
+      timeoutMs: 789,
+      onEvent: expect.any(Function),
+    });
 
     await conversationTool(
       { cli: { command: 'conversations workspace update', args: ['--open', 'conv-1,conv-2', '--active', 'conv-2'] } },
