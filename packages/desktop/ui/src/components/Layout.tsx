@@ -57,6 +57,7 @@ import {
   CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
 } from './conversation/conversationActivityCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
+import { COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT } from './conversation/composerPreferenceCommands';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
 import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversation/conversationQueueCommands';
 import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
@@ -2150,6 +2151,14 @@ export function Layout() {
       },
       closeComposerSettings() {
         window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT));
+        return true;
+      },
+      openComposerPreferences() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT));
+        return true;
+      },
+      closeComposerPreferences() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT));
         return true;
       },
       pageConversation(direction: 'up' | 'down') {

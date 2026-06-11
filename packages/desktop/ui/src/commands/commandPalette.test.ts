@@ -605,6 +605,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('composer.openPreferences', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.preferencesAvailable': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.openPreferences', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.preferencesAvailable': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('composer.closePreferences', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.preferencesOpen': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.closePreferences', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.preferencesOpen': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': true },

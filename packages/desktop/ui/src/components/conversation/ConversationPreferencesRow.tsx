@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { type ComposerButtonContext, ComposerButtonHost } from '../../extensions/ComposerButtonHost';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import type { ExtensionComposerControlRegistration } from '../../extensions/useExtensionRegistry';
 import { cx, IconButton } from '../ui';
+import { COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT } from './composerPreferenceCommands';
 
 function MoreHorizontalIcon({ className }: { className?: string }) {
   return (
@@ -29,6 +31,36 @@ export function ConversationPreferencesRow({
   const inlineControls = composerButtons.slice(0, inlineCount);
   const menuControls = composerButtons.slice(inlineCount);
   const hasMenuItems = menuControls.length > 0;
+
+  useEffect(() => {
+    setExtensionCommandContext('composer.preferencesAvailable', hasMenuItems);
+    return () => setExtensionCommandContext('composer.preferencesAvailable', null);
+  }, [hasMenuItems]);
+
+  useEffect(() => {
+    setExtensionCommandContext('composer.preferencesOpen', menuOpen);
+    return () => setExtensionCommandContext('composer.preferencesOpen', null);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    function handleOpenPreferencesCommand() {
+      if (hasMenuItems) setMenuOpen(true);
+    }
+
+    window.addEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
+    return () => window.removeEventListener(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT, handleOpenPreferencesCommand);
+  }, [hasMenuItems]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handleClosePreferencesCommand() {
+      setMenuOpen(false);
+    }
+
+    window.addEventListener(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, handleClosePreferencesCommand);
+    return () => window.removeEventListener(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, handleClosePreferencesCommand);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!menuOpen) return;

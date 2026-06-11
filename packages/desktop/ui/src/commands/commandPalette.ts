@@ -106,6 +106,8 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['composer.stop', 'conversation.isStreaming'],
   ['composer.openSettings', 'composer.settingsAvailable'],
   ['composer.closeSettings', 'composer.settingsOpen'],
+  ['composer.openPreferences', 'composer.preferencesAvailable'],
+  ['composer.closePreferences', 'composer.preferencesOpen'],
   ['dictation.toggle', 'system-local-dictation.toggleAvailable'],
 ]);
 

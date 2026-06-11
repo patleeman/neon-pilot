@@ -48,6 +48,8 @@ export const HOST_COMMAND_IDS = [
   'composer.clear',
   'composer.openSettings',
   'composer.closeSettings',
+  'composer.openPreferences',
+  'composer.closePreferences',
   'conversation.pageUp',
   'conversation.pageDown',
   'workbench.newTab',
