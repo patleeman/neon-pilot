@@ -40,6 +40,18 @@ const keybindings: ExtensionKeybindingRegistration[] = [
     defaultKeys: ['mod+enter'],
     enabled: true,
   },
+  {
+    extensionId: 'system-test',
+    surfaceId: 'open-specific',
+    packageType: 'system',
+    title: 'Open specific palette',
+    keys: ['mod+ctrl+p'],
+    command: 'palette.open',
+    args: { scope: 'specific' },
+    scope: 'global',
+    defaultKeys: ['mod+ctrl+p'],
+    enabled: true,
+  },
 ];
 
 describe('extension keybindings', () => {
@@ -58,5 +70,15 @@ describe('extension keybindings', () => {
 
     expect(findMatchingExtensionKeybinding(event, keybindings, { 'composer.focused': false })).toBeNull();
     expect(findMatchingExtensionKeybinding(event, keybindings, { 'composer.focused': true })?.command).toBe('composer.submit');
+  });
+
+  it('does not collapse explicit ctrl/meta modifiers into mod', () => {
+    const specificOnly = keybindings.filter((keybinding) => keybinding.surfaceId === 'open-specific');
+
+    expect(findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, specificOnly)).toBeNull();
+    expect(findMatchingExtensionKeybinding({ key: 'p', metaKey: false, ctrlKey: true, altKey: false, shiftKey: false }, specificOnly)).toBeNull();
+    expect(
+      findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: true, altKey: false, shiftKey: false }, specificOnly)?.args,
+    ).toEqual({ scope: 'specific' });
   });
 });
