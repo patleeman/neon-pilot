@@ -99,6 +99,8 @@ export const HOST_COMMAND_IDS = [
   'drawingPicker.close',
   'drawingPicker.attachFirst',
   'drawingPicker.toggleFirstHistory',
+  'draftWorkspacePicker.open',
+  'draftWorkspacePicker.toggle',
   'draftWorkspacePicker.close',
   'workspaceQuickSelect.close',
   'extensionModal.close',

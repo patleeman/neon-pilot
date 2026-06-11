@@ -102,6 +102,8 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['drawingPicker.close', 'drawingPicker.open'],
   ['drawingPicker.attachFirst', 'drawingPicker.hasVisibleDrawing'],
   ['drawingPicker.toggleFirstHistory', 'drawingPicker.hasVisibleDrawing'],
+  ['draftWorkspacePicker.open', 'draftWorkspacePicker.available'],
+  ['draftWorkspacePicker.toggle', 'draftWorkspacePicker.available'],
   ['draftWorkspacePicker.close', 'draftWorkspacePicker.open'],
   ['workspaceQuickSelect.close', 'workspaceQuickSelect.open'],
   ['extensionModal.close', 'extensionModal.open'],

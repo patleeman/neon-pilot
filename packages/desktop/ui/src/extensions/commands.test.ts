@@ -867,17 +867,37 @@ describe('extension commands', () => {
   });
 
   it('includes draft workspace picker commands gated by picker state', async () => {
-    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['draftWorkspacePicker.close']));
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['draftWorkspacePicker.open', 'draftWorkspacePicker.toggle', 'draftWorkspacePicker.close']),
+    );
+    const openDraftWorkspacePicker = vi.fn(() => true);
+    const toggleDraftWorkspacePicker = vi.fn(() => true);
     const closeDraftWorkspacePicker = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
+      openDraftWorkspacePicker,
+      toggleDraftWorkspacePicker,
       closeDraftWorkspacePicker,
     };
 
+    await expect(executeExtensionCommand('draftWorkspacePicker.open', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('draftWorkspacePicker.toggle', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('draftWorkspacePicker.close', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('draftWorkspacePicker.open', undefined, {
+        ...options,
+        context: { 'draftWorkspacePicker.available': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('draftWorkspacePicker.toggle', undefined, {
+        ...options,
+        context: { 'draftWorkspacePicker.available': true },
+      }),
+    ).resolves.toBe(true);
     await expect(
       executeExtensionCommand('draftWorkspacePicker.close', undefined, {
         ...options,
@@ -885,6 +905,8 @@ describe('extension commands', () => {
       }),
     ).resolves.toBe(true);
 
+    expect(openDraftWorkspacePicker).toHaveBeenCalledTimes(1);
+    expect(toggleDraftWorkspacePicker).toHaveBeenCalledTimes(1);
     expect(closeDraftWorkspacePicker).toHaveBeenCalledTimes(1);
   });
 

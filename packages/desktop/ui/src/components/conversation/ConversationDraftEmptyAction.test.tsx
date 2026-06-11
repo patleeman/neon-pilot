@@ -7,7 +7,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConversationDraftEmptyAction, DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS } from './ConversationDraftEmptyAction';
-import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './draftWorkspacePickerCommands';
+import {
+  DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT,
+} from './draftWorkspacePickerCommands';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -136,6 +140,50 @@ describe('ConversationDraftEmptyAction', () => {
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT));
       });
 
+      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
+    } finally {
+      unmount();
+    }
+  });
+
+  it('opens and toggles the saved workspace picker from shared command events', () => {
+    const { container, unmount } = renderInteractive({
+      availableDraftWorkspacePaths: ['/Users/patrick/workingdir/neon-pilot', '/tmp/neon-pilot-long-worktree'],
+    });
+
+    try {
+      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT));
+      });
+      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).not.toBeNull();
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
+      });
+      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
+      });
+      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).not.toBeNull();
+    } finally {
+      unmount();
+    }
+  });
+
+  it('ignores open and toggle commands when the saved workspace picker is disabled', () => {
+    const { container, unmount } = renderInteractive({
+      savedWorkspacePathsLoading: true,
+      availableDraftWorkspacePaths: [],
+    });
+
+    try {
+      act(() => {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT));
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
+      });
       expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
     } finally {
       unmount();

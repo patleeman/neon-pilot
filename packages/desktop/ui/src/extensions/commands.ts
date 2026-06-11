@@ -116,6 +116,8 @@ export interface ExtensionCommandExecutorOptions {
   closeDrawingPicker?(): boolean;
   attachFirstDrawingFromPicker?(): boolean;
   toggleFirstDrawingHistory?(): boolean;
+  openDraftWorkspacePicker?(): boolean;
+  toggleDraftWorkspacePicker?(): boolean;
   closeDraftWorkspacePicker?(): boolean;
   closeWorkspaceQuickSelect?(): boolean;
   closeExtensionModal?(): boolean;
@@ -314,6 +316,8 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'drawingPicker.close', title: 'Close Drawing Picker', category: 'Conversation' },
     { id: 'drawingPicker.attachFirst', title: 'Attach First Visible Drawing', category: 'Conversation' },
     { id: 'drawingPicker.toggleFirstHistory', title: 'Toggle First Drawing History', category: 'Conversation' },
+    { id: 'draftWorkspacePicker.open', title: 'Open Draft Workspace Picker', category: 'Conversation' },
+    { id: 'draftWorkspacePicker.toggle', title: 'Toggle Draft Workspace Picker', category: 'Conversation' },
     { id: 'draftWorkspacePicker.close', title: 'Close Draft Workspace Picker', category: 'Conversation' },
     { id: 'workspaceQuickSelect.close', title: 'Close Workspace Picker', category: 'Conversation' },
     { id: 'extensionModal.close', title: 'Close Extension Modal', category: 'Extensions' },
@@ -1484,6 +1488,28 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.closeDraftWorkspacePicker) && readContextValue(context, 'draftWorkspacePicker.open') === true;
+      },
+    },
+    {
+      id: 'draftWorkspacePicker.open',
+      title: 'Open Draft Workspace Picker',
+      category: 'Conversation',
+      execute() {
+        return options.openDraftWorkspacePicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openDraftWorkspacePicker) && readContextValue(context, 'draftWorkspacePicker.available') === true;
+      },
+    },
+    {
+      id: 'draftWorkspacePicker.toggle',
+      title: 'Toggle Draft Workspace Picker',
+      category: 'Conversation',
+      execute() {
+        return options.toggleDraftWorkspacePicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleDraftWorkspacePicker) && readContextValue(context, 'draftWorkspacePicker.available') === true;
       },
     },
     {

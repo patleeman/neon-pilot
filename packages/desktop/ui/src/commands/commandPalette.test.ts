@@ -437,6 +437,30 @@ describe('command palette search', () => {
       }),
     ).toBe(true);
     expect(
+      isHostCommandDisabledInPalette('draftWorkspacePicker.open', {
+        activeConversationId: null,
+        context: { 'draftWorkspacePicker.available': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('draftWorkspacePicker.open', {
+        activeConversationId: null,
+        context: { 'draftWorkspacePicker.available': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('draftWorkspacePicker.toggle', {
+        activeConversationId: null,
+        context: { 'draftWorkspacePicker.available': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('draftWorkspacePicker.toggle', {
+        activeConversationId: null,
+        context: { 'draftWorkspacePicker.available': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('draftWorkspacePicker.close', {
         activeConversationId: null,
         context: { 'draftWorkspacePicker.open': true },

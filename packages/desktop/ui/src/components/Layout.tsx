@@ -81,7 +81,11 @@ import {
 } from './conversation/composerPreferenceCommands';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
 import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversation/conversationQueueCommands';
-import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
+import {
+  DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT,
+} from './conversation/draftWorkspacePickerCommands';
 import {
   IMAGE_PREVIEW_CLOSE_COMMAND_EVENT,
   IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT,
@@ -2236,6 +2240,14 @@ export function Layout() {
       },
       toggleFirstDrawingHistory() {
         window.dispatchEvent(new CustomEvent(DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT));
+        return true;
+      },
+      openDraftWorkspacePicker() {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT));
+        return true;
+      },
+      toggleDraftWorkspacePicker() {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
         return true;
       },
       closeDraftWorkspacePicker() {
