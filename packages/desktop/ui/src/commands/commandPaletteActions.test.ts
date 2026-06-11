@@ -55,7 +55,7 @@ describe('activateCommandPaletteItem', () => {
   it('ignores disabled items', async () => {
     const ctx = context();
 
-    await activateCommandPaletteItem(item({ kind: 'navigate', to: '/settings' }, { disabled: true }), ctx);
+    await expect(activateCommandPaletteItem(item({ kind: 'navigate', to: '/settings' }, { disabled: true }), ctx)).resolves.toBe(false);
 
     expect(ctx.navigate).not.toHaveBeenCalled();
     expect(ctx.closePalette).not.toHaveBeenCalled();
@@ -64,7 +64,7 @@ describe('activateCommandPaletteItem', () => {
   it('navigates and closes the palette', async () => {
     const ctx = context();
 
-    await activateCommandPaletteItem(item({ kind: 'navigate', to: '/settings' }), ctx);
+    await expect(activateCommandPaletteItem(item({ kind: 'navigate', to: '/settings' }), ctx)).resolves.toBe(true);
 
     expect(ctx.navigate).toHaveBeenCalledWith('/settings');
     expect(ctx.closePalette).toHaveBeenCalledOnce();
@@ -73,7 +73,7 @@ describe('activateCommandPaletteItem', () => {
   it('restores archived conversations before navigating', async () => {
     const ctx = context();
 
-    await activateCommandPaletteItem(item({ kind: 'restoreArchivedConversation', conversationId: 'conv 1' }), ctx);
+    await expect(activateCommandPaletteItem(item({ kind: 'restoreArchivedConversation', conversationId: 'conv 1' }), ctx)).resolves.toBe(true);
 
     expect(ctx.openSession).toHaveBeenCalledWith('conv 1');
     expect(ctx.navigate).toHaveBeenCalledWith('/conversations/conv%201');
@@ -83,7 +83,7 @@ describe('activateCommandPaletteItem', () => {
   it('builds workbench file open routes', async () => {
     const ctx = context();
 
-    await activateCommandPaletteItem(item({ kind: 'openFile', fileId: 'src/index.ts' }), ctx);
+    await expect(activateCommandPaletteItem(item({ kind: 'openFile', fileId: 'src/index.ts' }), ctx)).resolves.toBe(true);
 
     expect(ctx.navigate).toHaveBeenCalledWith('/conversations/new?artifact=a1&file=src%2Findex.ts#top');
     expect(ctx.closePalette).toHaveBeenCalledOnce();
@@ -93,7 +93,7 @@ describe('activateCommandPaletteItem', () => {
     const executeExtensionCommand = vi.fn().mockResolvedValue(undefined);
     const ctx = context({ executeExtensionCommand });
 
-    await activateCommandPaletteItem(item({ kind: 'command', command: 'host.test', args: { ok: true } }), ctx);
+    await expect(activateCommandPaletteItem(item({ kind: 'command', command: 'host.test', args: { ok: true } }), ctx)).resolves.toBe(true);
 
     expect(executeExtensionCommand).toHaveBeenCalledWith('host.test', { ok: true });
     expect(ctx.closePalette).toHaveBeenCalledOnce();
@@ -103,7 +103,7 @@ describe('activateCommandPaletteItem', () => {
     const executeExtensionCommand = vi.fn().mockResolvedValue(false);
     const ctx = context({ executeExtensionCommand });
 
-    await activateCommandPaletteItem(item({ kind: 'command', command: 'host.test', args: { ok: true } }), ctx);
+    await expect(activateCommandPaletteItem(item({ kind: 'command', command: 'host.test', args: { ok: true } }), ctx)).resolves.toBe(false);
 
     expect(executeExtensionCommand).toHaveBeenCalledWith('host.test', { ok: true });
     expect(ctx.closePalette).not.toHaveBeenCalled();
@@ -114,10 +114,12 @@ describe('activateCommandPaletteItem', () => {
     const declared = item({ kind: 'command', command: 'declared.command' }, { id: 'declared' });
     const ctx = context({ commandItems: [declared], executeExtensionCommand });
 
-    await activateCommandPaletteItem(
-      item({ kind: 'extensionSearchAction', extensionId: 'ext', action: { kind: 'command', command: 'declared.command', args: { x: 1 } } }),
-      ctx,
-    );
+    await expect(
+      activateCommandPaletteItem(
+        item({ kind: 'extensionSearchAction', extensionId: 'ext', action: { kind: 'command', command: 'declared.command', args: { x: 1 } } }),
+        ctx,
+      ),
+    ).resolves.toBe(true);
 
     expect(executeExtensionCommand).toHaveBeenCalledWith('declared.command', { x: 1 });
     expect(ctx.closePalette).toHaveBeenCalledOnce();
@@ -128,10 +130,12 @@ describe('activateCommandPaletteItem', () => {
     const declared = item({ kind: 'command', command: 'declared.command' }, { id: 'declared' });
     const ctx = context({ commandItems: [declared], executeExtensionCommand });
 
-    await activateCommandPaletteItem(
-      item({ kind: 'extensionSearchAction', extensionId: 'ext', action: { kind: 'command', command: 'declared.command', args: { x: 1 } } }),
-      ctx,
-    );
+    await expect(
+      activateCommandPaletteItem(
+        item({ kind: 'extensionSearchAction', extensionId: 'ext', action: { kind: 'command', command: 'declared.command', args: { x: 1 } } }),
+        ctx,
+      ),
+    ).resolves.toBe(false);
 
     expect(executeExtensionCommand).toHaveBeenCalledWith('declared.command', { x: 1 });
     expect(ctx.closePalette).not.toHaveBeenCalled();

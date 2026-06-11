@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -63,5 +63,38 @@ describe('CommandPalette', () => {
     await waitFor(() => {
       expect(sendButton?.disabled).toBe(false);
     });
+  });
+
+  it('shows an unavailable message when a command action is not handled', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    Element.prototype.scrollIntoView = vi.fn();
+    const listener = vi.fn((event: Event) => {
+      const detail = (event as CustomEvent<{ resolve?: (handled: boolean) => void }>).detail;
+      detail.resolve?.(false);
+    });
+    window.addEventListener('neon-pilot-extension-command-execute', listener);
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/conv-1']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands', query: 'toggle left sidebar' } }));
+    });
+
+    const command = await screen.findByText('Toggle Left Sidebar');
+    const button = command.closest('button');
+    expect(button).toBeTruthy();
+
+    fireEvent.click(button!);
+
+    expect(await screen.findByText('Command is unavailable right now.')).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeTruthy();
+    expect(listener).toHaveBeenCalledOnce();
+    window.removeEventListener('neon-pilot-extension-command-execute', listener);
   });
 });

@@ -55,9 +55,9 @@ async function executeDeclaredPaletteCommand(
 export async function activateCommandPaletteItem(
   item: CommandPaletteItem<CommandPaletteAction>,
   context: ActivateCommandPaletteItemContext,
-): Promise<void> {
+): Promise<boolean> {
   if (item.disabled) {
-    return;
+    return false;
   }
 
   const executeExtensionCommand = context.executeExtensionCommand ?? api.executeExtensionCommand;
@@ -67,12 +67,12 @@ export async function activateCommandPaletteItem(
     case 'navigate':
       context.navigate(item.action.to);
       context.closePalette();
-      return;
+      return true;
     case 'restoreArchivedConversation':
       context.openSession(item.action.conversationId);
       context.navigate(`/conversations/${encodeURIComponent(item.action.conversationId)}`);
       context.closePalette();
-      return;
+      return true;
     case 'openFile':
       context.navigate(
         buildCommandPaletteFileOpenRoute({
@@ -85,12 +85,13 @@ export async function activateCommandPaletteItem(
         }),
       );
       context.closePalette();
-      return;
+      return true;
     case 'command':
       if ((await executeExtensionCommand(item.action.command, item.action.args ?? {})) !== false) {
         context.closePalette();
+        return true;
       }
-      return;
+      return false;
     case 'extensionSearchAction': {
       const searchAction = item.action.action;
       let handled = true;
@@ -110,9 +111,9 @@ export async function activateCommandPaletteItem(
         );
       }
       if (handled) context.closePalette();
-      return;
+      return handled;
     }
     default:
-      return;
+      return false;
   }
 }

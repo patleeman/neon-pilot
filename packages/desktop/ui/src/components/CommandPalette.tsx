@@ -525,7 +525,7 @@ export function CommandPalette() {
       setBusyItemId(item.id);
 
       try {
-        await activateCommandPaletteItem(item, {
+        const handled = await activateCommandPaletteItem(item, {
           commandItems,
           location,
           navigate,
@@ -533,6 +533,9 @@ export function CommandPalette() {
           closePalette,
           executeExtensionCommand: executePaletteCommand,
         });
+        if (!handled) {
+          setActionError('Command is unavailable right now.');
+        }
       } catch (error) {
         setActionError(error instanceof Error ? error.message : String(error));
       } finally {
