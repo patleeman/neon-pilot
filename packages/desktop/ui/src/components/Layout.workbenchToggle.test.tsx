@@ -144,6 +144,36 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
   });
 
+  it('does not consume global keybindings for unavailable commands', async () => {
+    vi.mocked(api.extensionKeybindings).mockResolvedValue([
+      {
+        extensionId: 'host',
+        surfaceId: 'refresh-workbench-file',
+        packageType: 'system',
+        title: 'Refresh workbench file',
+        keys: ['F5'],
+        command: 'workbench.refreshActiveFile',
+        scope: 'global',
+        defaultKeys: ['F5'],
+        enabled: true,
+      },
+    ]);
+    vi.mocked(api.extensionCommands).mockResolvedValue([]);
+    const refreshListener = vi.fn();
+    window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
+    renderLayout('/conversations/conv-1');
+    await waitFor(() => expect(api.extensionKeybindings).toHaveBeenCalled());
+
+    const event = new KeyboardEvent('keydown', { key: 'F5', cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(refreshListener).not.toHaveBeenCalled();
+    window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
+  });
+
   it('accepts command-only desktop shortcut events for workbench diff toggle', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const diffListener = vi.fn();
