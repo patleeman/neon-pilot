@@ -6,6 +6,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ModelInfo } from '../../shared/types';
+import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationComposerInputControls, setComposerFocusedCommandContext } from './ConversationComposerInputControls';
 import { ConversationRunModePanel } from './ConversationRunModePanel';
 
@@ -288,6 +289,63 @@ describe('ConversationComposerInputControls', () => {
       });
 
       const menu = rendered.container.querySelector('[aria-label="Composer settings"]');
+      expect(menu).toBeTruthy();
+      expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();
+      expect(menu?.querySelector('[aria-label="Thinking level"]')).toBeTruthy();
+      expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
+    } finally {
+      rendered.unmount();
+    }
+  });
+
+  it('opens the narrow composer settings menu from the shared command event', () => {
+    const rendered = renderInteractive(
+      <ConversationComposerInputControls
+        fileInputRef={{ current: null }}
+        textareaRef={{ current: null }}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={320}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={vi.fn()}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    try {
+      expect(rendered.container.querySelector('[aria-label="Composer settings"]')).toBeNull();
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
+      });
+
+      const menu = rendered.container.querySelector('[aria-label="Composer settings"]');
+      const menuButton = rendered.container.querySelector<HTMLButtonElement>('button[aria-label="More composer settings"]');
       expect(menu).toBeTruthy();
       expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();
       expect(menu?.querySelector('[aria-label="Thinking level"]')).toBeTruthy();

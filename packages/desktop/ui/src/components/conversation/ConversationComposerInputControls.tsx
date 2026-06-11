@@ -32,6 +32,7 @@ import {
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
+import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
 function getComposerPreferenceInlineLimit(composerShellWidth: number | null): number {
@@ -242,6 +243,21 @@ function CoreModelPreferenceOverflow({
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const settingsAvailable = !(disabled && models.length === 0);
+
+  useEffect(() => {
+    setExtensionCommandContext('composer.settingsAvailable', settingsAvailable);
+    return () => setExtensionCommandContext('composer.settingsAvailable', null);
+  }, [settingsAvailable]);
+
+  useEffect(() => {
+    function handleOpenSettings() {
+      if (settingsAvailable) setOpen(true);
+    }
+
+    window.addEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
+    return () => window.removeEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
+  }, [settingsAvailable]);
 
   useEffect(() => {
     if (!open) return;
@@ -268,7 +284,7 @@ function CoreModelPreferenceOverflow({
         aria-label="More composer settings"
         aria-haspopup="dialog"
         aria-expanded={open}
-        disabled={disabled && models.length === 0}
+        disabled={!settingsAvailable}
         onPointerDown={(event) => {
           event.preventDefault();
           if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) setOpen((current) => !current);

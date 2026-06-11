@@ -43,6 +43,7 @@ import { ARTIFACT_MODAL_COMMAND_EVENT, type ArtifactModalCommand } from './artif
 import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
+import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -1989,6 +1990,10 @@ export function Layout() {
       },
       clearComposer() {
         window.dispatchEvent(new CustomEvent('neon-pilot:composer-clear'));
+        return true;
+      },
+      openComposerSettings() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
         return true;
       },
       pageConversation(direction: 'up' | 'down') {

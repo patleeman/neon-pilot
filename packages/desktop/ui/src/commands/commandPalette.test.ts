@@ -221,6 +221,18 @@ describe('command palette search', () => {
       }),
     ).toBe(true);
     expect(
+      isHostCommandDisabledInPalette('composer.openSettings', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.settingsAvailable': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.openSettings', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.settingsAvailable': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': true },

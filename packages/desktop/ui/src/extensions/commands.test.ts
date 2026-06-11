@@ -277,6 +277,28 @@ describe('extension commands', () => {
     expect(submitComposer).toHaveBeenCalledTimes(1);
   });
 
+  it('opens composer settings only when the composer publishes settings availability', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['composer.openSettings']));
+    const openComposerSettings = vi.fn(() => true);
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      openComposerSettings,
+    };
+
+    await expect(executeExtensionCommand('composer.openSettings', undefined, baseOptions)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('composer.openSettings', undefined, {
+        ...baseOptions,
+        context: { 'composer.settingsAvailable': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(openComposerSettings).toHaveBeenCalledTimes(1);
+  });
+
   it('includes command-backed app chrome actions', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['layout.toggle', 'layout.toggleSidebar', 'layout.toggleRightRail', 'page.find']),

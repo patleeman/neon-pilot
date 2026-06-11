@@ -70,6 +70,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['artifact.close', 'artifact.active'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
+  ['composer.openSettings', 'composer.settingsAvailable'],
   ['dictation.toggle', 'system-local-dictation.toggleAvailable'],
 ]);
 

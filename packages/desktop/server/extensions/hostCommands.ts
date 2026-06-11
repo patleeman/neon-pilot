@@ -26,6 +26,7 @@ export const HOST_COMMAND_IDS = [
   'composer.submit',
   'composer.stop',
   'composer.clear',
+  'composer.openSettings',
   'conversation.pageUp',
   'conversation.pageDown',
   'workbench.newTab',
