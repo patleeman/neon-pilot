@@ -1,10 +1,56 @@
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from './keyboard-shortcuts.js';
 import { buildDesktopApplicationMenuTemplate } from './menu.js';
 
 function noop() {}
 
+function collectAccelerators(items: Array<Electron.MenuItemConstructorOptions | Electron.MenuItem>): string[] {
+  const accelerators: string[] = [];
+  for (const item of items) {
+    if ('accelerator' in item && typeof item.accelerator === 'string') accelerators.push(item.accelerator);
+    if ('submenu' in item && Array.isArray(item.submenu)) {
+      accelerators.push(...collectAccelerators(item.submenu as Array<Electron.MenuItemConstructorOptions | Electron.MenuItem>));
+    }
+  }
+  return accelerators;
+}
+
 describe('buildDesktopApplicationMenuTemplate', () => {
+  it.each(['darwin', 'win32'] as const)('includes every default desktop shortcut accelerator on %s', (platform) => {
+    const items = buildDesktopApplicationMenuTemplate(
+      {
+        onOpen: noop,
+        onNewConversation: noop,
+        onCloseConversation: noop,
+        onReopenClosedConversation: noop,
+        onPreviousConversation: noop,
+        onNextConversation: noop,
+        onToggleConversationPin: noop,
+        onToggleConversationArchive: noop,
+        onRenameConversation: noop,
+        onFocusComposer: noop,
+        onEditWorkingDirectory: noop,
+        onFindInPage: noop,
+        onToggleSidebar: noop,
+        onToggleRightRail: noop,
+        onShowConversationMode: noop,
+        onShowWorkbenchMode: noop,
+        onNewWorkbenchTab: noop,
+        onCloseWorkbenchTab: noop,
+        onCloseWorkbenchFile: noop,
+        onRefreshWorkbenchFile: noop,
+        onToggleWorkbenchExplorer: noop,
+        onToggleWorkbenchDiff: noop,
+        onSettings: noop,
+        onQuit: noop,
+      } as unknown as Parameters<typeof buildDesktopApplicationMenuTemplate>[0],
+      { platform },
+    );
+
+    expect(new Set(collectAccelerators(items))).toEqual(new Set(Object.values(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS)));
+  });
+
   it('includes the File menu on macOS', () => {
     const items = buildDesktopApplicationMenuTemplate(
       {
