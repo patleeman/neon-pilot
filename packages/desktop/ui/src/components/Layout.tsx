@@ -89,7 +89,11 @@ import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from '.
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
 import { SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type SubagentBlockCommandDetail } from './chat/subagentBlockCommands';
 import { THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ThinkingBlockCommandDetail } from './chat/thinkingBlockCommands';
-import { TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ToolBlockCommandDetail } from './chat/toolBlockCommands';
+import {
+  TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
+  type ToolBlockCommandDetail,
+} from './chat/toolBlockCommands';
 import { TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, type TraceClusterCommandDetail } from './chat/traceClusterCommands';
 import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 import {
@@ -2163,6 +2167,10 @@ export function Layout() {
       },
       toggleFirstToolBlock() {
         window.dispatchEvent(new CustomEvent<ToolBlockCommandDetail>(TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstToolBlockLinkedRuns() {
+        window.dispatchEvent(new CustomEvent<ToolBlockCommandDetail>(TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT, { detail: {} }));
         return true;
       },
       toggleFirstTraceCluster() {

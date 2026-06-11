@@ -476,15 +476,19 @@ describe('extension commands', () => {
   });
 
   it('includes tool block commands gated by transcript tool state', async () => {
-    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['toolBlock.toggleFirst']));
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['toolBlock.toggleFirst', 'toolBlock.toggleFirstLinkedRuns']),
+    );
 
     const toggleFirstToolBlock = vi.fn(() => true);
+    const toggleFirstToolBlockLinkedRuns = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
       toggleFirstToolBlock,
+      toggleFirstToolBlockLinkedRuns,
     };
 
     await expect(executeExtensionCommand('toolBlock.toggleFirst', undefined, options)).resolves.toBe(false);
@@ -495,7 +499,16 @@ describe('extension commands', () => {
       }),
     ).resolves.toBe(true);
 
+    await expect(executeExtensionCommand('toolBlock.toggleFirstLinkedRuns', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('toolBlock.toggleFirstLinkedRuns', undefined, {
+        ...options,
+        context: { 'toolBlock.canToggleFirstLinkedRuns': true },
+      }),
+    ).resolves.toBe(true);
+
     expect(toggleFirstToolBlock).toHaveBeenCalledTimes(1);
+    expect(toggleFirstToolBlockLinkedRuns).toHaveBeenCalledTimes(1);
   });
 
   it('includes trace cluster commands gated by transcript trace state', async () => {

@@ -275,6 +275,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('toolBlock.toggleFirstLinkedRuns', {
+        activeConversationId: 'conversation-1',
+        context: { 'toolBlock.canToggleFirstLinkedRuns': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('toolBlock.toggleFirstLinkedRuns', {
+        activeConversationId: 'conversation-1',
+        context: { 'toolBlock.canToggleFirstLinkedRuns': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('traceCluster.toggleFirst', {
         activeConversationId: 'conversation-1',
         context: { 'traceCluster.canToggleFirst': false },

@@ -100,6 +100,7 @@ export interface ExtensionCommandExecutorOptions {
   loadFirstImagePreview?(): boolean;
   toggleFirstFileChange?(): boolean;
   toggleFirstToolBlock?(): boolean;
+  toggleFirstToolBlockLinkedRuns?(): boolean;
   toggleFirstTraceCluster?(): boolean;
   toggleFirstThinkingBlock?(): boolean;
   toggleFirstSubagentBlock?(): boolean;
@@ -294,6 +295,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'imagePreview.loadFirst', title: 'Load First Deferred Image', category: 'Image Preview' },
     { id: 'fileChange.toggleFirst', title: 'Toggle First File Change', category: 'Diff' },
     { id: 'toolBlock.toggleFirst', title: 'Toggle First Tool Block', category: 'Transcript' },
+    { id: 'toolBlock.toggleFirstLinkedRuns', title: 'Toggle First Tool Block Linked Runs', category: 'Transcript' },
     { id: 'traceCluster.toggleFirst', title: 'Toggle First Internal Work Cluster', category: 'Transcript' },
     { id: 'thinkingBlock.toggleFirst', title: 'Toggle First Thinking Block', category: 'Transcript' },
     { id: 'subagentBlock.toggleFirst', title: 'Toggle First Subagent Block', category: 'Transcript' },
@@ -1281,6 +1283,19 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.toggleFirstToolBlock) && readContextValue(context, 'toolBlock.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'toolBlock.toggleFirstLinkedRuns',
+      title: 'Toggle First Tool Block Linked Runs',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstToolBlockLinkedRuns?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.toggleFirstToolBlockLinkedRuns) && readContextValue(context, 'toolBlock.canToggleFirstLinkedRuns') === true
+        );
       },
     },
     {

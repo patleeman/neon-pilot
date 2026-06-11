@@ -22,7 +22,9 @@ import {
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
 import {
+  registerToolBlockLinkedRunsToggleCapability,
   registerToolBlockToggleCapability,
+  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
   TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
   type ToolBlockCommandDetail,
 } from './toolBlockCommands.js';
@@ -283,6 +285,10 @@ export function ToolBlock({
           : preview;
   const displayedLinkedRuns = linkedRuns.scope === 'listed' ? linkedRuns.runs : [];
   const hiddenRunCount = Math.max(0, displayedLinkedRuns.length - MAX_VISIBLE_LINKED_RUNS);
+  const toggleLinkedRuns = useCallback(() => {
+    setShowAllRuns((current) => !current);
+  }, []);
+  const canToggleLinkedRuns = hiddenRunCount > 0 && !pinnedTool && !backgroundShellStart;
   const visibleRuns = showAllRuns || hiddenRunCount === 0 ? displayedLinkedRuns : displayedLinkedRuns.slice(0, MAX_VISIBLE_LINKED_RUNS);
   const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
   const backgroundRun = backgroundRunId ? runRecords.find((candidate) => candidate.runId === backgroundRunId) : null;
@@ -322,6 +328,23 @@ export function ToolBlock({
     window.addEventListener(TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstToolBlock);
     return () => window.removeEventListener(TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstToolBlock);
   }, [canToggleHeaderDisclosure, toggleHeaderDisclosure]);
+
+  useEffect(() => {
+    if (!canToggleLinkedRuns) return undefined;
+    return registerToolBlockLinkedRunsToggleCapability();
+  }, [canToggleLinkedRuns]);
+
+  useEffect(() => {
+    function handleToggleFirstToolBlockLinkedRuns(event: Event) {
+      const detail = (event as CustomEvent<ToolBlockCommandDetail>).detail;
+      if (detail?.handled || !canToggleLinkedRuns) return;
+      if (detail) detail.handled = true;
+      toggleLinkedRuns();
+    }
+
+    window.addEventListener(TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT, handleToggleFirstToolBlockLinkedRuns);
+    return () => window.removeEventListener(TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT, handleToggleFirstToolBlockLinkedRuns);
+  }, [canToggleLinkedRuns, toggleLinkedRuns]);
 
   if (terminalBashBlock) {
     return <TerminalToolBlock block={block} onHydrateMessage={onHydrateMessage} hydratingMessageBlockIds={hydratingMessageBlockIds} />;
@@ -473,7 +496,7 @@ export function ToolBlock({
                   : `Showing ${MAX_VISIBLE_LINKED_RUNS} of ${displayedLinkedRuns.length} executions returned by the tool.`}
               </span>
               <span className="flex-1" />
-              <Button variant="action" onClick={() => setShowAllRuns((current) => !current)} className="text-[10px]">
+              <Button variant="action" onClick={toggleLinkedRuns} className="text-[10px]">
                 {showAllRuns ? 'Show fewer' : 'Show all'}
               </Button>
             </div>
