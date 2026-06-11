@@ -96,6 +96,8 @@ import { buildMissionAutoModeInputFromDraft, createDraftMissionTask } from '../c
 import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
 import {
   buildConversationInitialModelPreferenceState,
+  consumeConversationInitialPromptAlreadySubmitted,
+  hasConversationInitialPromptAlreadySubmitted,
   resolveConversationDraftHydrationState,
   resolveConversationInitialComposerDraftState,
   resolveConversationInitialDeferredResumeState,
@@ -1916,11 +1918,18 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return;
     }
 
+    const initialPromptAlreadySubmitted = hasConversationInitialPromptAlreadySubmitted({
+      draft,
+      conversationId: id,
+      locationState: location.state,
+    }) || consumeConversationInitialPromptAlreadySubmitted(id);
     setPendingInitialPrompt(
-      resolveConversationInitialPendingPromptState({ draft, conversationId: id, locationState: location.state }) ??
-        readPendingConversationPrompt(id),
+      initialPromptAlreadySubmitted
+        ? null
+        : (resolveConversationInitialPendingPromptState({ draft, conversationId: id, locationState: location.state }) ??
+            readPendingConversationPrompt(id)),
     );
-    setPendingInitialPromptDispatchingState(isPendingConversationPromptDispatching(id));
+    setPendingInitialPromptDispatchingState(initialPromptAlreadySubmitted ? false : isPendingConversationPromptDispatching(id));
     pendingInitialPromptSessionIdRef.current = null;
     pendingInitialPromptFailureSessionIdRef.current = null;
     pinnedInitialPromptScrollSessionIdRef.current = null;

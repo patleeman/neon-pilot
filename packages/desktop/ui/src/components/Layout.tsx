@@ -1667,7 +1667,7 @@ export function Layout() {
 
       creatingNewConversationRef.current = true;
       try {
-        void startNewConversation({
+        await startNewConversation({
           navigate,
           focusComposer,
           cwd: draft?.cwd,

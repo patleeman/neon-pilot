@@ -17,7 +17,7 @@ vi.mock('../ui/settingsPersistence.js', () => ({
   getRuntimeSettingsFilePath: () => '/runtime/settings.json',
 }));
 
-import { runPromptOnLiveEntry } from './liveSessionPromptOps.js';
+import { runPromptOnLiveEntry, submitPromptOnLiveEntry } from './liveSessionPromptOps.js';
 
 function createEntry(model: unknown) {
   return {
@@ -84,5 +84,68 @@ describe('runPromptOnLiveEntry image probing', () => {
 
     expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
     expect(entry.session.prompt).toHaveBeenCalledWith('What is wrong here?', { images });
+  });
+});
+
+describe('submitPromptOnLiveEntry', () => {
+  it('coalesces identical normal prompts during delayed startup', async () => {
+    vi.useFakeTimers();
+    try {
+      const entry = createEntry({ id: 'text-model', input: ['text'] });
+      const runPromptOnLiveEntryMock = vi.fn(async () => undefined);
+
+      const first = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, {
+        runPromptOnLiveEntry: runPromptOnLiveEntryMock,
+      });
+      const second = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, {
+        runPromptOnLiveEntry: runPromptOnLiveEntryMock,
+      });
+
+      expect(first.acceptedAs).toBe('started');
+      expect(second.acceptedAs).toBe('started');
+      expect(second.completion).toBe(first.completion);
+
+      await vi.advanceTimersByTimeAsync(250);
+      await first.completion;
+
+      expect(runPromptOnLiveEntryMock).toHaveBeenCalledTimes(1);
+      expect(runPromptOnLiveEntryMock).toHaveBeenCalledWith(entry, 'hello', undefined, undefined);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('drops identical normal prompts while that prompt is already streaming', async () => {
+    const entry = createEntry({ id: 'text-model', input: ['text'] });
+    Object.assign(entry.session, {
+      isStreaming: true,
+      messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+    });
+    const runPromptOnLiveEntryMock = vi.fn(async () => undefined);
+
+    const submitted = await submitPromptOnLiveEntry(entry, 'hello', undefined, undefined, {
+      runPromptOnLiveEntry: runPromptOnLiveEntryMock,
+    });
+
+    expect(submitted.acceptedAs).toBe('started');
+    await submitted.completion;
+    expect(runPromptOnLiveEntryMock).not.toHaveBeenCalled();
+  });
+
+  it('drops identical follow-up prompts while that prompt is already streaming', async () => {
+    const entry = createEntry({ id: 'text-model', input: ['text'] });
+    Object.assign(entry.session, {
+      isStreaming: true,
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    const runPromptOnLiveEntryMock = vi.fn(async () => undefined);
+
+    const submitted = await submitPromptOnLiveEntry(entry, 'hello', 'followUp', undefined, {
+      runPromptOnLiveEntry: runPromptOnLiveEntryMock,
+    });
+
+    expect(submitted.acceptedAs).toBe('queued');
+    await submitted.completion;
+    expect(runPromptOnLiveEntryMock).not.toHaveBeenCalled();
   });
 });

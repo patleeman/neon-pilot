@@ -170,6 +170,9 @@ describe('startNewConversation', () => {
       replace: undefined,
       state: {
         focusComposer: false,
+        initialPromptAlreadySubmittedState: {
+          conversationId: 'new-conversation',
+        },
       },
     });
     expect(window.dispatchEvent).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'neon-pilot:composer-focus' }));

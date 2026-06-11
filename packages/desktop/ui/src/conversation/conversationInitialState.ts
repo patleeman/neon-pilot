@@ -32,6 +32,52 @@ interface ConversationLocationState {
     conversationId: string;
     prompt?: PendingConversationPrompt | null;
   };
+  initialPromptAlreadySubmittedState?: {
+    conversationId: string;
+  };
+}
+
+const INITIAL_PROMPT_ALREADY_SUBMITTED_STORAGE_PREFIX = 'neon-pilot:conversation:initial-prompt-submitted:';
+
+function getSessionStorage(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function initialPromptAlreadySubmittedStorageKey(conversationId: string): string {
+  return `${INITIAL_PROMPT_ALREADY_SUBMITTED_STORAGE_PREFIX}${conversationId}`;
+}
+
+export function markConversationInitialPromptAlreadySubmitted(conversationId: string, storage: Storage | null = getSessionStorage()): void {
+  const normalizedConversationId = conversationId.trim();
+  if (!normalizedConversationId || !storage) {
+    return;
+  }
+
+  storage.setItem(initialPromptAlreadySubmittedStorageKey(normalizedConversationId), '1');
+}
+
+export function consumeConversationInitialPromptAlreadySubmitted(
+  conversationId: string,
+  storage: Storage | null = getSessionStorage(),
+): boolean {
+  const normalizedConversationId = conversationId.trim();
+  if (!normalizedConversationId || !storage) {
+    return false;
+  }
+
+  const key = initialPromptAlreadySubmittedStorageKey(normalizedConversationId);
+  const marked = storage.getItem(key) === '1';
+  if (marked) {
+    storage.removeItem(key);
+  }
+  return marked;
 }
 
 export function buildConversationServiceTierPreferenceInput(input: { currentServiceTier: string; hasExplicitServiceTier: boolean }): {
@@ -178,4 +224,17 @@ export function resolveConversationInitialPendingPromptState(input: {
     ...(Array.isArray(prompt.contextMessages) ? { contextMessages: prompt.contextMessages } : {}),
     ...(Array.isArray(prompt.relatedConversationIds) ? { relatedConversationIds: prompt.relatedConversationIds } : {}),
   };
+}
+
+export function hasConversationInitialPromptAlreadySubmitted(input: {
+  draft: boolean;
+  conversationId: string | null | undefined;
+  locationState: unknown;
+}): boolean {
+  if (input.draft || !input.conversationId || !input.locationState || typeof input.locationState !== 'object') {
+    return false;
+  }
+
+  const candidate = (input.locationState as ConversationLocationState).initialPromptAlreadySubmittedState;
+  return Boolean(candidate && typeof candidate === 'object' && candidate.conversationId === input.conversationId);
 }

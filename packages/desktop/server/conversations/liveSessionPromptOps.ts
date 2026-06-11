@@ -12,6 +12,53 @@ export interface LiveSessionPromptHost {
 
 export type LiveSessionPromptBehavior = 'steer' | 'followUp' | undefined;
 
+const pendingPromptStartupByEntry = new WeakMap<LiveSessionPromptHost, { key: string; completion: Promise<void> }>();
+
+function buildPromptStartupKey(text: string, images: PromptImageAttachment[] | undefined): string {
+  return JSON.stringify({
+    text,
+    images: (images ?? []).map((image) => ({
+      type: image.type,
+      mimeType: image.mimeType,
+      name: image.name ?? '',
+      data: image.data,
+    })),
+  });
+}
+
+function extractMessageText(message: unknown): string {
+  const content = (message as { content?: unknown } | undefined)?.content;
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string' ? (part as { text: string }).text : ''))
+      .join('')
+      .trim();
+  }
+  const text = (message as { text?: unknown } | undefined)?.text;
+  return typeof text === 'string' ? text.trim() : '';
+}
+
+function hasActivePromptText(session: AgentSession, text: string): boolean {
+  if (!(session as { isStreaming?: unknown }).isStreaming) {
+    return false;
+  }
+  const messages = (session as { messages?: Array<{ role?: string; content?: unknown; text?: unknown }> }).messages;
+  if (!messages || messages.length === 0) {
+    return false;
+  }
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role !== 'user') {
+      continue;
+    }
+    return extractMessageText(message) === text.trim();
+  }
+  return false;
+}
+
 export function isLikelyUnsupportedImageInputError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();
@@ -134,10 +181,32 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
     ) => Promise<void>;
   },
 ): Promise<{ acceptedAs: 'started' | 'queued'; completion: Promise<void> }> {
+  if (behavior === 'followUp' && (!images || images.length === 0) && hasActivePromptText(entry.session, text)) {
+    return {
+      acceptedAs: 'queued',
+      completion: Promise.resolve(),
+    };
+  }
+
   if (behavior === 'steer' || behavior === 'followUp') {
     await callbacks.runPromptOnLiveEntry(entry, text, behavior, images);
     return {
       acceptedAs: 'queued',
+      completion: Promise.resolve(),
+    };
+  }
+
+  const startupKey = buildPromptStartupKey(text, images);
+  const pendingStartup = pendingPromptStartupByEntry.get(entry);
+  if (pendingStartup?.key === startupKey) {
+    return {
+      acceptedAs: 'started',
+      completion: pendingStartup.completion,
+    };
+  }
+  if ((!images || images.length === 0) && hasActivePromptText(entry.session, text)) {
+    return {
+      acceptedAs: 'started',
       completion: Promise.resolve(),
     };
   }
@@ -152,6 +221,12 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
     // Accepted prompts expose their eventual failure through the transcript and
     // higher-level callers also attach their own completion logging. Keep this
     // detached startup from becoming an unhandled rejection.
+  });
+  pendingPromptStartupByEntry.set(entry, { key: startupKey, completion });
+  void completion.finally(() => {
+    if (pendingPromptStartupByEntry.get(entry)?.completion === completion) {
+      pendingPromptStartupByEntry.delete(entry);
+    }
   });
 
   return {

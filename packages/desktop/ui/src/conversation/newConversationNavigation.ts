@@ -2,6 +2,7 @@ import type { NavigateFunction } from 'react-router-dom';
 
 import { api } from '../client/api';
 import { ensureConversationTabOpen } from '../session/sessionTabs';
+import { markConversationInitialPromptAlreadySubmitted } from './conversationInitialState';
 import { primeCreatedConversationOpenCaches } from './conversationSessionLifecycle';
 import {
   clearDraftConversationAttachments,
@@ -71,11 +72,21 @@ export async function startNewConversation(input: StartDraftConversationInput): 
     clearDraftConversationCwd();
     clearDraftConversationModelPreferences();
     ensureConversationTabOpen(created.id);
+    if (initialPromptText) {
+      markConversationInitialPromptAlreadySubmitted(created.id);
+    }
 
     input.navigate(`/conversations/${encodeURIComponent(created.id)}`, {
       replace: input.replace,
       state: {
         focusComposer: shouldFocusComposer,
+        ...(initialPromptText
+          ? {
+              initialPromptAlreadySubmittedState: {
+                conversationId: created.id,
+              },
+            }
+          : {}),
       },
     });
 

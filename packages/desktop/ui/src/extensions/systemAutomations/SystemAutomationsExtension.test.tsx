@@ -182,7 +182,12 @@ describe('AutomationsPage', () => {
   });
 
   it('opens a chat draft instead of directly creating a new automation', async () => {
+    let resolveCommand: ((value: boolean) => void) | undefined;
+    const execute = vi.fn(() => new Promise<boolean>((resolve) => {
+      resolveCommand = resolve;
+    }));
     const pa = createPa();
+    pa.commands.execute = execute as never;
     const { container } = await renderPage(pa);
     const newButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === 'New automation');
     if (!newButton) throw new Error('New automation button not found');
@@ -199,6 +204,16 @@ describe('AutomationsPage', () => {
 
     await act(async () => {
       chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(pa.automations.create).not.toHaveBeenCalled();
+    expect(pa.commands.execute).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveCommand?.(true);
+      await Promise.resolve();
     });
 
     expect(pa.automations.create).not.toHaveBeenCalled();

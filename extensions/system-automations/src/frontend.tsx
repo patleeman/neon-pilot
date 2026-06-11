@@ -1038,6 +1038,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
   const [activeEditorSection, setActiveEditorSection] = useState<EditorSectionId>('automation-general');
   const [conversationOptions, setConversationOptions] = useState<ConversationOption[]>([]);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const createWithChatInFlightRef = useRef(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -1094,16 +1095,24 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
   }, []);
 
   const createWithChat = useCallback(async () => {
-    const prompt = buildCreateWithChatPrompt(form);
-    const opened = await pa.commands.execute('conversation.newAndFocus', {
-      initialPromptText: prompt,
-      cwd: form.cwd.trim() || undefined,
-    });
-    if (opened) {
-      closeEditor();
-      return;
+    if (createWithChatInFlightRef.current) return;
+    createWithChatInFlightRef.current = true;
+    setBusy('create-chat');
+    try {
+      const prompt = buildCreateWithChatPrompt(form);
+      const opened = await pa.commands.execute('conversation.newAndFocus', {
+        initialPromptText: prompt,
+        cwd: form.cwd.trim() || undefined,
+      });
+      if (opened) {
+        closeEditor();
+        return;
+      }
+      pa.ui.notify({ type: 'error', message: 'Could not open chat for automation creation.', source: 'system-automations' });
+    } finally {
+      createWithChatInFlightRef.current = false;
+      setBusy(null);
     }
-    pa.ui.notify({ type: 'error', message: 'Could not open chat for automation creation.', source: 'system-automations' });
   }, [closeEditor, form, pa]);
 
   const save = useCallback(
@@ -1388,8 +1397,8 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                     </ToolbarButton>
                   </div>
                 ) : (
-                  <ToolbarButton type="button" className="self-start" onClick={() => void createWithChat()}>
-                    Create with chat
+                  <ToolbarButton type="button" className="self-start" disabled={busy === 'create-chat'} onClick={() => void createWithChat()}>
+                    {busy === 'create-chat' ? 'Opening chat…' : 'Create with chat'}
                   </ToolbarButton>
                 )}
               </div>
@@ -1801,8 +1810,8 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
                       {busy === 'save' ? 'Saving…' : 'Save changes'}
                     </ToolbarButton>
                   ) : (
-                    <ToolbarButton type="button" onClick={() => void createWithChat()}>
-                      Create with chat
+                    <ToolbarButton type="button" disabled={busy === 'create-chat'} onClick={() => void createWithChat()}>
+                      {busy === 'create-chat' ? 'Opening chat…' : 'Create with chat'}
                     </ToolbarButton>
                   )}
                 </div>

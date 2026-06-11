@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildConversationInitialModelPreferenceState,
   buildConversationServiceTierPreferenceInput,
+  consumeConversationInitialPromptAlreadySubmitted,
+  hasConversationInitialPromptAlreadySubmitted,
+  markConversationInitialPromptAlreadySubmitted,
   resolveConversationDraftHydrationState,
   resolveConversationInitialComposerDraftState,
   resolveConversationInitialDeferredResumeState,
@@ -169,6 +172,51 @@ describe('conversation initial state helpers', () => {
         locationState,
       }),
     ).toBeNull();
+  });
+
+  it('detects already-submitted initial prompts only for the active saved conversation', () => {
+    const locationState = {
+      initialPromptAlreadySubmittedState: { conversationId: 'conv-1' },
+    };
+
+    expect(
+      hasConversationInitialPromptAlreadySubmitted({
+        draft: false,
+        conversationId: 'conv-1',
+        locationState,
+      }),
+    ).toBe(true);
+
+    expect(
+      hasConversationInitialPromptAlreadySubmitted({
+        draft: false,
+        conversationId: 'conv-2',
+        locationState,
+      }),
+    ).toBe(false);
+
+    expect(
+      hasConversationInitialPromptAlreadySubmitted({
+        draft: true,
+        conversationId: 'conv-1',
+        locationState,
+      }),
+    ).toBe(false);
+  });
+
+  it('marks already-submitted initial prompts in session storage once', () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    } as Storage;
+
+    markConversationInitialPromptAlreadySubmitted('conv-1', storage);
+
+    expect(consumeConversationInitialPromptAlreadySubmitted('conv-1', storage)).toBe(true);
+    expect(consumeConversationInitialPromptAlreadySubmitted('conv-1', storage)).toBe(false);
+    expect(consumeConversationInitialPromptAlreadySubmitted('conv-2', storage)).toBe(false);
   });
 
   it('accepts initial composer draft state only for the active saved conversation', () => {
