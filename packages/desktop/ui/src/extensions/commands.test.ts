@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { HOST_COMMAND_IDS } from '../../../server/extensions/hostCommands';
+import { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS } from '../../../src/keyboard-shortcuts';
 import {
   canExecuteExtensionCommand,
   createHostCommands,
@@ -13,6 +14,16 @@ import {
 describe('extension commands', () => {
   it('keeps the renderer host command catalog aligned with the server allowlist', () => {
     expect(listHostCommands().map((command) => command.id).sort()).toEqual([...HOST_COMMAND_IDS].sort());
+  });
+
+  it('keeps desktop shortcut commands backed by executable host commands', () => {
+    const desktopNativeCommands = new Set(['core.showApp', 'core.quit']);
+    const hostCommandIds = new Set(listHostCommands().map((command) => command.id));
+
+    for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
+      if (desktopNativeCommands.has(registration.command)) continue;
+      expect(hostCommandIds.has(normalizeLegacyCommand(registration.command).command), registration.id).toBe(true);
+    }
   });
 
   it('normalizes legacy host command strings', () => {
