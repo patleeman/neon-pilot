@@ -128,7 +128,7 @@ export function CommandPalette() {
         meta: command.category,
         keywords: [command.id, command.category].filter((keyword): keyword is string => typeof keyword === 'string'),
         order: index,
-        disabled: isHostCommandDisabledInPalette(command.id, { activeConversationId }),
+        disabled: isHostCommandDisabledInPalette(command.id, { activeConversationId, context: commandOptions.context }),
         action: { kind: 'command' as const, command: command.id },
       };
     });

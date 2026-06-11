@@ -69,6 +69,33 @@ describe('command palette search', () => {
     expect(isHostCommandDisabledInPalette('conversation.close', { activeConversationId: 'conversation-1' })).toBe(false);
   });
 
+  it('disables context-gated host commands when their prerequisites are unavailable', () => {
+    expect(
+      isHostCommandDisabledInPalette('composer.stop', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.isStreaming': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.stop', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.isStreaming': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('dictation.toggle', {
+        activeConversationId: 'conversation-1',
+        context: { 'system-local-dictation.toggleAvailable': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('dictation.toggle', {
+        activeConversationId: 'conversation-1',
+        context: { 'system-local-dictation.toggleAvailable': true },
+      }),
+    ).toBe(false);
+  });
+
   it('filters extension quick-open matches in the requested extension scope', () => {
     const results = searchCommandPaletteItems(ITEMS, { query: 'workspace', scope: 'knowledge', sectionLabels: { knowledge: 'Knowledge' } });
 

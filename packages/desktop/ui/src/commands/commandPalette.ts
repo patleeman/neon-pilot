@@ -1,3 +1,4 @@
+import { evaluateCommandEnablement, type ExtensionCommandContext } from '../extensions/commands';
 import { fuzzyScore } from './slashMenu';
 
 export type CommandPaletteSection = string;
@@ -54,12 +55,25 @@ const ACTIVE_CONVERSATION_HOST_COMMANDS = new Set([
 
 const ARGUMENT_REQUIRED_HOST_COMMANDS = new Set(['app.navigate', 'rail.open', 'layout.set']);
 
-export function isHostCommandDisabledInPalette(commandId: string, options: { activeConversationId?: string | null }): boolean {
+const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
+  ['composer.stop', 'conversation.isStreaming'],
+  ['dictation.toggle', 'system-local-dictation.toggleAvailable'],
+]);
+
+export function isHostCommandDisabledInPalette(
+  commandId: string,
+  options: { activeConversationId?: string | null; context?: ExtensionCommandContext },
+): boolean {
   if (ARGUMENT_REQUIRED_HOST_COMMANDS.has(commandId)) {
     return true;
   }
 
-  return ACTIVE_CONVERSATION_HOST_COMMANDS.has(commandId) && !options.activeConversationId;
+  if (ACTIVE_CONVERSATION_HOST_COMMANDS.has(commandId) && !options.activeConversationId) {
+    return true;
+  }
+
+  const requiredContext = CONTEXT_REQUIRED_HOST_COMMANDS.get(commandId);
+  return requiredContext ? !evaluateCommandEnablement(requiredContext, options.context) : false;
 }
 
 export function shouldBootstrapCommandPaletteThreads(options: {
