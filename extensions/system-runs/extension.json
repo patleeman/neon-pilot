@@ -370,8 +370,26 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "command": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Shell command to run in the background."
+            },
+            "cwd": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Working directory for the background command."
+            },
+            "task-slug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional stable label for the run."
             }
           },
+          "required": [
+            "command"
+          ],
           "additionalProperties": true
         },
         "mode": "background",

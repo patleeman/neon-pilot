@@ -158,6 +158,24 @@ describe('system-runs backend', () => {
       expect(result.text).not.toContain('run-agent');
     });
 
+    it('starts cli background commands without a hidden task slug flag', async () => {
+      mocks.startBackgroundRun.mockResolvedValue({ accepted: true, runId: 'run-123', logPath: '/tmp/run.log' });
+
+      const result = await background_bash(
+        {
+          action: 'start',
+          cli: {
+            args: [],
+            flags: { command: 'pnpm test' },
+          },
+        },
+        createCtx(),
+      );
+
+      expect(mocks.startBackgroundRun).toHaveBeenCalledWith(expect.objectContaining({ taskSlug: 'pnpm-test', shellCommand: 'pnpm test' }));
+      expect(result.text).toBe('Started background command run-123 for pnpm-test.');
+    });
+
     it('rejects subagent runs with a clear tool hint', async () => {
       mocks.getDurableRun.mockResolvedValue({ run: durableRun('run-agent', 'background-run', 'agent-task') });
 

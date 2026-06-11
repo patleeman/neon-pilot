@@ -378,11 +378,22 @@ function formatRunSummary(label: string, run: Record<string, unknown>): string {
   return [`${label} ${readRunId(run)}`, `status: ${readRunStatus(run)}`, `title: ${readRunTitle(run)}`].join('\n');
 }
 
+function deriveBackgroundCommandTaskSlug(command: string): string {
+  return (
+    command
+      .split(/\s+/)
+      .slice(0, 2)
+      .join('-')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .slice(0, 40) || 'background-command'
+  );
+}
+
 async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext) {
   const params = isRecord(input) ? input : {};
   const command = readRequiredString(params.command, 'command');
   const cwd = readRequiredString(readString(params.cwd) ?? ctx.toolContext?.cwd, 'cwd');
-  const taskSlug = readRequiredString(params.taskSlug, 'taskSlug');
+  const taskSlug = readString(params.taskSlug) ?? deriveBackgroundCommandTaskSlug(command);
   const conversationId = ctx.toolContext?.conversationId ?? ctx.toolContext?.sessionId ?? '';
   const conversationFile = ctx.toolContext?.sessionFile;
   const deliverResultToConversation = params.deliverResultToConversation === true;
@@ -448,14 +459,7 @@ export async function bash(input: unknown, ctx: NativeBackendContext) {
 
   if (params.background === true) {
     const taskSlug =
-      (readString(params.taskSlug) ??
-        command
-          .split(/\s+/)
-          .slice(0, 2)
-          .join('-')
-          .replace(/[^a-zA-Z0-9_-]+/g, '-')
-          .slice(0, 40)) ||
-      'background-command';
+      readString(params.taskSlug) ?? deriveBackgroundCommandTaskSlug(command);
     return startBackgroundCommand(
       {
         taskSlug,

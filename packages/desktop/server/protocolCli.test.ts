@@ -283,6 +283,36 @@ describe('protocol CLI', () => {
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Missing required flag --task-slug'));
   });
 
+  it('validates required background command start flags before dispatch', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-runs',
+          surfaceId: 'background-commands-start',
+          command: 'background-commands start',
+          action: 'background_bash',
+          argsSchema: { type: 'array', items: { type: 'string' } },
+          flagsSchema: {
+            type: 'object',
+            properties: {
+              json: { type: 'boolean' },
+              command: { type: 'string', minLength: 1 },
+              cwd: { type: 'string', minLength: 1 },
+              'task-slug': { type: 'string', minLength: 1 },
+            },
+            required: ['command'],
+            additionalProperties: true,
+          },
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['background-commands', 'start', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Missing required flag --command'));
+  });
+
   it('validates subagent follow-up run id before dispatch', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
