@@ -9,7 +9,7 @@ import {
   selectCommandPaletteScopedItems,
   shouldBootstrapCommandPaletteThreads,
 } from './commandPalette';
-import { listHostCommands } from '../extensions/commands';
+import { canExecuteExtensionCommand, listHostCommands, type ExtensionCommandExecutorOptions } from '../extensions/commands';
 
 interface TestAction {
   kind: string;
@@ -60,6 +60,35 @@ describe('command palette search', () => {
     const unknownGatedCommands = listCommandPaletteGatedHostCommandIds().filter((commandId) => !hostCommandIds.has(commandId));
 
     expect(unknownGatedCommands).toEqual([]);
+  });
+
+  it('keeps command palette host command gates aligned with command executor enablement', () => {
+    const context = {};
+    const activeConversationId = 'conversation-1';
+    const executorOptions = new Proxy(
+      {
+        activeConversationId,
+        context,
+        navigate() {},
+        openCommandPalette() {},
+        openRightRail() {
+          return true;
+        },
+        setLayout() {},
+      },
+      {
+        get(target, prop: keyof ExtensionCommandExecutorOptions) {
+          if (prop in target) return target[prop as keyof typeof target];
+          return () => true;
+        },
+      },
+    ) as ExtensionCommandExecutorOptions;
+
+    for (const command of listHostCommands()) {
+      expect(isHostCommandDisabledInPalette(command.id, { activeConversationId, context }), command.id).toBe(
+        !canExecuteExtensionCommand(command.id, undefined, executorOptions),
+      );
+    }
   });
 
   it('keeps bridge-handled app chrome host commands selectable in the command palette', () => {
