@@ -102,7 +102,7 @@ export function listExtensionPackagePaths(options: { runtimeRoot?: string } = {}
       return 0;
     })
     .filter((entry) => {
-      const key = entry.packageRoot;
+      const key = realpathSync(entry.packageRoot);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

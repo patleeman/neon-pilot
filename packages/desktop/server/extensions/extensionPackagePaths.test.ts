@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chdir } from 'node:process';
@@ -106,6 +106,35 @@ describe('extension package paths', () => {
       const paths = listExtensionPackagePaths().filter((entry) => entry.packageRoot.endsWith('/system-files'));
       expect(paths[0]).toMatchObject({ packageRoot: unpackedPackageRoot, source: 'bundled' });
       expect(paths[1]).toMatchObject({ packageRoot: realpathSync(asarPackageRoot), source: 'bundled' });
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('deduplicates package roots that resolve to the same real path', () => {
+    const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
+    const bundledRoot = join(tempRoot, 'extensions');
+    const packageRoot = writeExtension(bundledRoot, 'system-files');
+    const runtimeRoot = join(tempRoot, 'runtime-extensions');
+    const linkedPackageRoot = join(runtimeRoot, 'system-files');
+
+    Object.defineProperty(process, 'resourcesPath', {
+      value: tempRoot,
+      configurable: true,
+    });
+    delete process.env.NEON_PILOT_REPO_ROOT;
+
+    try {
+      mkdirSync(runtimeRoot, { recursive: true });
+      symlinkSync(packageRoot, linkedPackageRoot, 'dir');
+      chdir(tempRoot);
+
+      const paths = listExtensionPackagePaths({ runtimeRoot }).filter(
+        (entry) => realpathSync(entry.packageRoot) === realpathSync(packageRoot),
+      );
+
+      expect(paths).toHaveLength(1);
+      expect(paths[0]).toMatchObject({ packageRoot: realpathSync(packageRoot), source: 'bundled' });
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
