@@ -5,9 +5,9 @@ import { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUT
 // ── keyboard-shortcuts — default shortcut definitions ─────────────────────
 
 describe('DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS', () => {
-  it('defines all 18 expected shortcuts from the core registry', () => {
+  it('defines all expected shortcuts from the core registry', () => {
     const keys = Object.keys(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS);
-    expect(keys.length).toBe(18);
+    expect(keys.length).toBe(24);
     expect(CORE_KEYBOARD_SHORTCUT_REGISTRATIONS.map((registration) => registration.id)).toEqual(keys);
   });
 
@@ -25,6 +25,15 @@ describe('DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS', () => {
   it('includes sidebar and rail toggles', () => {
     expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.toggleSidebar).toBe('CommandOrControl+/');
     expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.toggleRightRail).toBe('CommandOrControl+\\');
+  });
+
+  it('includes workbench shortcuts', () => {
+    expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.newWorkbenchTab).toBe('CommandOrControl+T');
+    expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.closeWorkbenchTab).toBe('CommandOrControl+Shift+W');
+    expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.closeWorkbenchFile).toBe('CommandOrControl+Alt+W');
+    expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.refreshWorkbenchFile).toBe('F5');
+    expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.toggleWorkbenchExplorer).toBe('CommandOrControl+B');
+    expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.toggleWorkbenchDiff).toBe('CommandOrControl+Shift+D');
   });
 
   it('includes show app and quit', () => {

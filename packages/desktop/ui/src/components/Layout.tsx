@@ -228,7 +228,13 @@ type DesktopLayoutShortcutAction =
   | 'toggle-right-rail'
   | 'toggle-layout-mode'
   | 'show-conversation-mode'
-  | 'show-workbench-mode';
+  | 'show-workbench-mode'
+  | 'new-workbench-tab'
+  | 'close-workbench-tab'
+  | 'close-workbench-file'
+  | 'refresh-workbench-file'
+  | 'toggle-workbench-explorer'
+  | 'toggle-workbench-diff';
 
 function isDesktopLayoutShortcutAction(value: unknown): value is DesktopLayoutShortcutAction {
   return (
@@ -236,7 +242,13 @@ function isDesktopLayoutShortcutAction(value: unknown): value is DesktopLayoutSh
     value === 'toggle-right-rail' ||
     value === 'toggle-layout-mode' ||
     value === 'show-conversation-mode' ||
-    value === 'show-workbench-mode'
+    value === 'show-workbench-mode' ||
+    value === 'new-workbench-tab' ||
+    value === 'close-workbench-tab' ||
+    value === 'close-workbench-file' ||
+    value === 'refresh-workbench-file' ||
+    value === 'toggle-workbench-explorer' ||
+    value === 'toggle-workbench-diff'
   );
 }
 
@@ -252,6 +264,18 @@ function desktopLayoutShortcutCommand(action: DesktopLayoutShortcutAction): { co
       return { command: 'layout.set', args: { mode: 'compact' } };
     case 'show-workbench-mode':
       return { command: 'layout.set', args: { mode: 'workbench' } };
+    case 'new-workbench-tab':
+      return { command: 'workbench.newTab' };
+    case 'close-workbench-tab':
+      return { command: 'workbench.closeActiveTab' };
+    case 'close-workbench-file':
+      return { command: 'workbench.closeActiveFile' };
+    case 'refresh-workbench-file':
+      return { command: 'workbench.refreshActiveFile' };
+    case 'toggle-workbench-explorer':
+      return { command: 'workbench.toggleExplorer' };
+    case 'toggle-workbench-diff':
+      return { command: 'workbench.toggleDiff' };
   }
 }
 

@@ -24,6 +24,12 @@ export interface DesktopApplicationMenuActions {
   onToggleRightRail: () => void;
   onShowConversationMode: () => void;
   onShowWorkbenchMode: () => void;
+  onNewWorkbenchTab: () => void;
+  onCloseWorkbenchTab: () => void;
+  onCloseWorkbenchFile: () => void;
+  onRefreshWorkbenchFile: () => void;
+  onToggleWorkbenchExplorer: () => void;
+  onToggleWorkbenchDiff: () => void;
   onHideWindow: () => void;
   onSettings: () => void;
   onCheckForUpdates: () => void;
@@ -56,6 +62,12 @@ const DESKTOP_MENU_SHORTCUT_ACTIONS: Record<DesktopMenuShortcutId, keyof Desktop
   quit: 'onQuit',
   conversationMode: 'onShowConversationMode',
   workbenchMode: 'onShowWorkbenchMode',
+  newWorkbenchTab: 'onNewWorkbenchTab',
+  closeWorkbenchTab: 'onCloseWorkbenchTab',
+  closeWorkbenchFile: 'onCloseWorkbenchFile',
+  refreshWorkbenchFile: 'onRefreshWorkbenchFile',
+  toggleWorkbenchExplorer: 'onToggleWorkbenchExplorer',
+  toggleWorkbenchDiff: 'onToggleWorkbenchDiff',
   toggleSidebar: 'onToggleSidebar',
   toggleRightRail: 'onToggleRightRail',
 };
@@ -173,6 +185,13 @@ export function buildDesktopApplicationMenuTemplate(
       menuShortcut('toggleRightRail', 'Toggle Right Rail', actions, keyboardShortcuts),
       menuShortcut('conversationMode', 'Conversation Mode', actions, keyboardShortcuts),
       menuShortcut('workbenchMode', 'Workbench Mode', actions, keyboardShortcuts),
+      { type: 'separator' },
+      menuShortcut('newWorkbenchTab', 'New Workbench Tab', actions, keyboardShortcuts),
+      menuShortcut('closeWorkbenchTab', 'Close Workbench Tab', actions, keyboardShortcuts),
+      menuShortcut('closeWorkbenchFile', 'Close Workbench File', actions, keyboardShortcuts),
+      menuShortcut('refreshWorkbenchFile', 'Refresh Workbench File', actions, keyboardShortcuts),
+      menuShortcut('toggleWorkbenchExplorer', 'Toggle Workbench Explorer', actions, keyboardShortcuts),
+      menuShortcut('toggleWorkbenchDiff', 'Toggle Workbench Diff', actions, keyboardShortcuts),
       { type: 'separator' },
       { role: 'togglefullscreen' },
     ],

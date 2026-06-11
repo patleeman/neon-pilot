@@ -79,6 +79,12 @@ describe('buildDesktopApplicationMenuTemplate', () => {
       onToggleRightRail: noop,
       onShowConversationMode: noop,
       onShowWorkbenchMode: noop,
+      onNewWorkbenchTab: noop,
+      onCloseWorkbenchTab: noop,
+      onCloseWorkbenchFile: noop,
+      onRefreshWorkbenchFile: noop,
+      onToggleWorkbenchExplorer: noop,
+      onToggleWorkbenchDiff: noop,
     } as unknown as Parameters<typeof buildDesktopApplicationMenuTemplate>[0]);
 
     const viewMenu = items.find(
@@ -104,6 +110,24 @@ describe('buildDesktopApplicationMenuTemplate', () => {
             (sub as Record<string, unknown>).label === 'Workbench Mode',
         ),
       ).toBe(true);
+      for (const label of [
+        'New Workbench Tab',
+        'Close Workbench Tab',
+        'Close Workbench File',
+        'Refresh Workbench File',
+        'Toggle Workbench Explorer',
+        'Toggle Workbench Diff',
+      ]) {
+        expect(
+          viewMenu.submenu.some(
+            (sub: unknown) =>
+              typeof sub === 'object' &&
+              sub !== null &&
+              'label' in (sub as Record<string, unknown>) &&
+              (sub as Record<string, unknown>).label === label,
+          ),
+        ).toBe(true);
+      }
     }
   });
 

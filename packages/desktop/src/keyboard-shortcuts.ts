@@ -15,6 +15,12 @@ export type DesktopKeyboardShortcutId =
   | 'quit'
   | 'conversationMode'
   | 'workbenchMode'
+  | 'newWorkbenchTab'
+  | 'closeWorkbenchTab'
+  | 'closeWorkbenchFile'
+  | 'refreshWorkbenchFile'
+  | 'toggleWorkbenchExplorer'
+  | 'toggleWorkbenchDiff'
   | 'toggleSidebar'
   | 'toggleRightRail';
 
@@ -156,6 +162,54 @@ export const CORE_KEYBOARD_SHORTCUT_REGISTRATIONS: CoreKeyboardShortcutRegistrat
     description: 'Show the chat and workbench layout.',
     command: 'layout:workbench',
     defaultKeys: ['F2'],
+    menu: 'view',
+  },
+  {
+    id: 'newWorkbenchTab',
+    title: 'New workbench tab',
+    description: 'Open a new workbench tab.',
+    command: 'workbench.newTab',
+    defaultKeys: ['CommandOrControl+T'],
+    menu: 'view',
+  },
+  {
+    id: 'closeWorkbenchTab',
+    title: 'Close workbench tab',
+    description: 'Close the active workbench tab.',
+    command: 'workbench.closeActiveTab',
+    defaultKeys: ['CommandOrControl+Shift+W'],
+    menu: 'view',
+  },
+  {
+    id: 'closeWorkbenchFile',
+    title: 'Close workbench file',
+    description: 'Close the active workbench file.',
+    command: 'workbench.closeActiveFile',
+    defaultKeys: ['CommandOrControl+Alt+W'],
+    menu: 'view',
+  },
+  {
+    id: 'refreshWorkbenchFile',
+    title: 'Refresh workbench file',
+    description: 'Refresh the active workbench file and tree.',
+    command: 'workbench.refreshActiveFile',
+    defaultKeys: ['F5'],
+    menu: 'view',
+  },
+  {
+    id: 'toggleWorkbenchExplorer',
+    title: 'Toggle workbench explorer',
+    description: 'Collapse or restore the workbench file explorer.',
+    command: 'workbench.toggleExplorer',
+    defaultKeys: ['CommandOrControl+B'],
+    menu: 'view',
+  },
+  {
+    id: 'toggleWorkbenchDiff',
+    title: 'Toggle workbench diff',
+    description: 'Toggle git diff decorations for the active workbench file.',
+    command: 'workbench.toggleDiff',
+    defaultKeys: ['CommandOrControl+Shift+D'],
     menu: 'view',
   },
   {

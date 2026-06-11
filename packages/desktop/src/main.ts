@@ -518,6 +518,24 @@ async function bootstrapDesktopApp(): Promise<void> {
     onShowWorkbenchMode: () => {
       windowController?.sendShortcutToFocusedWindow('show-workbench-mode');
     },
+    onNewWorkbenchTab: () => {
+      windowController?.sendShortcutToFocusedWindow('new-workbench-tab');
+    },
+    onCloseWorkbenchTab: () => {
+      windowController?.sendShortcutToFocusedWindow('close-workbench-tab');
+    },
+    onCloseWorkbenchFile: () => {
+      windowController?.sendShortcutToFocusedWindow('close-workbench-file');
+    },
+    onRefreshWorkbenchFile: () => {
+      windowController?.sendShortcutToFocusedWindow('refresh-workbench-file');
+    },
+    onToggleWorkbenchExplorer: () => {
+      windowController?.sendShortcutToFocusedWindow('toggle-workbench-explorer');
+    },
+    onToggleWorkbenchDiff: () => {
+      windowController?.sendShortcutToFocusedWindow('toggle-workbench-diff');
+    },
     onHideWindow: () => {
       windowController?.hideFocusedWindow();
     },
