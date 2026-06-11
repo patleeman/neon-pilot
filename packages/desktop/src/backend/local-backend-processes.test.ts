@@ -93,7 +93,7 @@ vi.mock('../../server/extensions/extensionCriticalRegistryPresentation.js', () =
   };
 });
 
-import { LocalBackendProcesses, type LocalBackendWorkbenchBrowserToolHost } from './local-backend-processes.js';
+import { createDesktopChildEnv, LocalBackendProcesses, type LocalBackendWorkbenchBrowserToolHost } from './local-backend-processes.js';
 
 function createHost(): LocalBackendWorkbenchBrowserToolHost {
   return {
@@ -137,6 +137,30 @@ describe('LocalBackendProcesses', () => {
   it('starts', async () => {
     const backend = new LocalBackendProcesses();
     expect(backend).toBeDefined();
+  });
+
+  it('preserves packaged app roots without synthesizing a repo root for child processes', () => {
+    const originalEnv = { ...process.env };
+    try {
+      process.env = {
+        HOME: '/Users/patrick',
+        PATH: '/usr/bin',
+        NEON_PILOT_APP_ROOT: '/Applications/Neon Pilot.app/Contents/Resources/app.asar',
+        NEON_PILOT_RESOURCES_ROOT: '/Applications/Neon Pilot.app/Contents/Resources',
+        NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR: '/Applications/Neon Pilot.app/Contents/Resources/app.asar.unpacked',
+      };
+
+      expect(createDesktopChildEnv({ ELECTRON_RUN_AS_NODE: '1' })).toEqual({
+        HOME: '/Users/patrick',
+        PATH: '/usr/bin',
+        NEON_PILOT_APP_ROOT: '/Applications/Neon Pilot.app/Contents/Resources/app.asar',
+        NEON_PILOT_RESOURCES_ROOT: '/Applications/Neon Pilot.app/Contents/Resources',
+        NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR: '/Applications/Neon Pilot.app/Contents/Resources/app.asar.unpacked',
+        ELECTRON_RUN_AS_NODE: '1',
+      });
+    } finally {
+      process.env = originalEnv;
+    }
   });
 
   it('routes hot product API requests through direct backend RPC instead of generic dispatch', async () => {

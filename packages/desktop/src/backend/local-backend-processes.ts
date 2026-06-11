@@ -61,9 +61,12 @@ const DESKTOP_CHILD_ENV_ALLOWLIST = new Set([
   'NEON_PILOT_RUNTIME_CHANNEL',
   'NEON_PILOT_STATE_ROOT',
   'NEON_PILOT_COMPANION_PORT',
+  'NEON_PILOT_APP_ROOT',
+  'NEON_PILOT_DESKTOP_NATIVE_MODULES_DIR',
+  'NEON_PILOT_RESOURCES_ROOT',
 ]);
 
-function createDesktopChildEnv(overrides: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+export function createDesktopChildEnv(overrides: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value !== 'string') continue;
@@ -571,8 +574,6 @@ export class LocalBackendProcesses {
   private async startInternal(): Promise<void> {
     const token = randomUUID();
     const extensionHostReady = await this.startExtensionHostChild();
-    const currentDir = dirname(fileURLToPath(import.meta.url));
-    const repoRoot = resolve(currentDir, '..', '..', '..');
     const child = spawn(process.execPath, [resolveBackendChildEntry()], {
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       env: createDesktopChildEnv({
@@ -584,7 +585,7 @@ export class LocalBackendProcesses {
               NEON_PILOT_EXTENSION_HOST_TOKEN: extensionHostReady.token,
             }
           : {}),
-        NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT ?? repoRoot,
+        ...(process.env.NEON_PILOT_REPO_ROOT ? { NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT } : {}),
       }),
     });
 
@@ -681,14 +682,12 @@ export class LocalBackendProcesses {
     }
 
     const token = randomUUID();
-    const currentDir = dirname(fileURLToPath(import.meta.url));
-    const repoRoot = resolve(currentDir, '..', '..', '..');
     const child = spawn(process.execPath, [resolveExtensionHostChildEntry()], {
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       env: createDesktopChildEnv({
         ELECTRON_RUN_AS_NODE: '1',
         NEON_PILOT_EXTENSION_HOST_TOKEN: token,
-        NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT ?? repoRoot,
+        ...(process.env.NEON_PILOT_REPO_ROOT ? { NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT } : {}),
       }),
     });
 
