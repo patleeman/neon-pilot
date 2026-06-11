@@ -1551,6 +1551,9 @@ export function Layout() {
         selectedArtifactByConversation[activeConversationId] ??
         null)
       : null;
+  const hasActiveWorkbenchFile = Boolean(
+    activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId,
+  );
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
   const prewarmedLiveSessionWorkspaceCwdsRef = useRef(new Map<string, number>());
   const activeWorkspaceCwd = activeSessionCwd;
@@ -1768,7 +1771,8 @@ export function Layout() {
     setExtensionCommandContext('route', location.pathname);
     setExtensionCommandContext('layout.mode', appLayoutMode);
     setExtensionCommandContext('conversation.hasActive', Boolean(activeConversationId));
-  }, [activeConversationId, appLayoutMode, location.pathname]);
+    setExtensionCommandContext('workbench.hasActiveFile', hasActiveWorkbenchFile);
+  }, [activeConversationId, appLayoutMode, hasActiveWorkbenchFile, location.pathname]);
 
   const creatingNewConversationRef = useRef(false);
   const startNewConversationFromLayout = useCallback(
@@ -2092,14 +2096,12 @@ export function Layout() {
         return true;
       },
       closeActiveWorkbenchFile() {
-        const hasActiveFile = Boolean(
-          activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId,
-        );
-        if (!hasActiveFile) return false;
+        if (!hasActiveWorkbenchFile) return false;
         window.dispatchEvent(new CustomEvent(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT));
         return true;
       },
       refreshActiveWorkbenchFile() {
+        if (!hasActiveWorkbenchFile) return false;
         window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT));
         return true;
       },
@@ -2396,6 +2398,7 @@ export function Layout() {
       handleAppLayoutModeChange,
       handlePrimarySidebarToggle,
       handleWorkbenchToggle,
+      hasActiveWorkbenchFile,
       location.pathname,
       navigate,
       openWorkbenchNewTab,

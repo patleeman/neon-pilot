@@ -1090,8 +1090,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.closeActiveWorkbenchFile?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.closeActiveWorkbenchFile);
+      canExecute(_args, context) {
+        return Boolean(options.closeActiveWorkbenchFile) && readContextValue(context, 'workbench.hasActiveFile') === true;
       },
     },
     {
@@ -1101,8 +1101,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.refreshActiveWorkbenchFile?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.refreshActiveWorkbenchFile);
+      canExecute(_args, context) {
+        return Boolean(options.refreshActiveWorkbenchFile) && readContextValue(context, 'workbench.hasActiveFile') === true;
       },
     },
     {

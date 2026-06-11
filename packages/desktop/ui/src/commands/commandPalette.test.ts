@@ -407,6 +407,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('workbench.closeActiveFile', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.hasActiveFile': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('workbench.closeActiveFile', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.hasActiveFile': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('workbench.refreshActiveFile', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.hasActiveFile': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('workbench.refreshActiveFile', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.hasActiveFile': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('workbench.toggleDiff', {
         activeConversationId: 'conversation-1',
         context: { 'workbench.canToggleDiff': false },
