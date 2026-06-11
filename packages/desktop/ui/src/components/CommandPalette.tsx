@@ -27,7 +27,7 @@ import {
   type ScopedSessionMeta,
 } from '../commands/commandPaletteItems';
 import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
-import { canExecuteExtensionCommand, listHostCommands } from '../extensions/commands';
+import { canExecuteExtensionCommand, EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, listHostCommands } from '../extensions/commands';
 import { systemExtensionModules } from '../extensions/systemExtensionModules';
 import type {
   ExtensionCommandRegistration,
@@ -100,6 +100,7 @@ export function CommandPalette() {
   const [extensionSearchLoading, setExtensionSearchLoading] = useState(false);
   const [extensionSearchError, setExtensionSearchError] = useState<string | null>(null);
   const [extensionCommands, setExtensionCommands] = useState<ExtensionCommandRegistration[]>([]);
+  const [commandContextRevision, setCommandContextRevision] = useState(0);
   const openThreadSessions = useMemo(
     () => [...pinnedSessions.map((session) => ({ ...session, pinned: true }) satisfies ScopedSessionMeta), ...tabs],
     [pinnedSessions, tabs],
@@ -146,7 +147,7 @@ export function CommandPalette() {
       action: { kind: 'command' as const, command: `${command.extensionId}.${command.surfaceId}`, args: command.args },
     }));
     return [...hostItems, ...extensionItems];
-  }, [extensionCommands, location.pathname, navigate]);
+  }, [commandContextRevision, extensionCommands, location.pathname, navigate]);
   const fileItems = scope === 'commands' ? commandItems : quickOpenItems;
   const searchedFileItems = quickOpenSearchItems;
   const quickOpenScopes = useMemo(
@@ -241,6 +242,13 @@ export function CommandPalette() {
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent(COMMAND_PALETTE_STATE_EVENT, { detail: { open } }));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleCommandContextChanged = () => setCommandContextRevision((current) => current + 1);
+    window.addEventListener(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, handleCommandContextChanged);
+    return () => window.removeEventListener(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, handleCommandContextChanged);
   }, [open]);
 
   useEffect(() => {

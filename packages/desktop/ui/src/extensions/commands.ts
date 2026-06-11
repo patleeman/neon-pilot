@@ -66,6 +66,8 @@ export interface ExtensionCommandExecutorOptions {
   context?: ExtensionCommandContext;
 }
 
+export const EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT = 'neon-pilot-extension-command-context-changed';
+
 const extensionCommandContext = new Map<string, ExtensionCommandContextValue>();
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -89,7 +91,7 @@ export function setExtensionCommandContext(key: string, value: ExtensionCommandC
   if (!key.trim()) return;
   if (value === undefined || value === null) extensionCommandContext.delete(key);
   else extensionCommandContext.set(key, value);
-  window.dispatchEvent(new CustomEvent('neon-pilot-extension-command-context-changed', { detail: { key, value } }));
+  window.dispatchEvent(new CustomEvent(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, { detail: { key, value } }));
 }
 
 export function evaluateCommandEnablement(expression: string | undefined, context: ExtensionCommandContext = {}): boolean {
