@@ -543,6 +543,20 @@ describe('extension manifests - structural validation', () => {
     });
   });
 
+  it('exposes dictation toggle as a default host-command hotkey', () => {
+    const dictationKeybinding = listExtensionKeybindingRegistrations().find(
+      (keybinding) => keybinding.extensionId === 'system-local-dictation' && keybinding.surfaceId === 'dictation.toggle',
+    );
+
+    expect(dictationKeybinding).toMatchObject({
+      title: 'Start or Stop Dictation',
+      keys: ['mod+shift+m'],
+      command: 'dictation.toggle',
+      when: 'system-local-dictation.toggleAvailable',
+      scope: 'global',
+    });
+  });
+
   it('settings contributions have type-consistent values', () => {
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;

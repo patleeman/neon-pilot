@@ -204,6 +204,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Local Dictation (`system-local-dictation`)
 
 - Dictation composer/control surface.
+- Command/hotkey: `dictation.toggle` (`Cmd/Ctrl+Shift+M` default when available).
 - Actions: `readSettings`, `updateSettings`, `modelStatus`, `installModel`, `transcribeFile`.
 - Test settings, model installed/missing/installing/error, recording/transcribe file, cancellation, microphone unavailable, inserted text.
 
@@ -404,6 +405,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-local-dictation — Local Dictation
 
+- keybindings: dictation.toggle
 - composerButtons: dictation
 - settingsComponent: dictation
 - backend actions: readSettings, updateSettings, modelStatus, installModel, transcribeFile
