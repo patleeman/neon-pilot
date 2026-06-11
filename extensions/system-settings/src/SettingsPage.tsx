@@ -947,30 +947,34 @@ export function CommandsSettingsSection() {
                 const id = keybindingSettingId(keybinding);
                 const value = drafts[id] ?? keybinding.keys.join(', ');
                 const busy = busyId === id;
+                const editable = keybinding.extensionId !== 'host';
                 return (
                   <div key={id} className="relative">
                     <KeyboardShortcutCaptureInput
                       id={`settings-command-keybinding-${id}`}
                       value={keybinding.enabled ? value : ''}
-                      placeholder={keybinding.enabled ? 'Click to record shortcut' : 'Shortcut disabled'}
-                      disabled={busy}
+                      placeholder={editable ? (keybinding.enabled ? 'Click to record shortcut' : 'Shortcut disabled') : 'Configured in Desktop shortcuts'}
+                      disabled={busy || !editable}
                       reservedHint="Some shortcuts (Cmd+Q, Cmd+W, Cmd+N) are reserved by the app and cannot be captured here. Use the desktop app menu to change them."
                       onChange={(shortcut) => {
+                        if (!editable) return;
                         setDrafts((current) => ({ ...current, [id]: shortcut }));
                         void saveKeybinding(keybinding, shortcut);
                       }}
                     />
-                    <IconButton
-                      compact
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[15px]"
-                      disabled={busy}
-                      aria-label={keybinding.enabled ? `Clear shortcut for ${keybinding.title}` : `Enable shortcut for ${keybinding.title}`}
-                      title={keybinding.enabled ? 'Clear shortcut' : 'Enable shortcut'}
-                      onClick={() => void toggleKeybinding(keybinding)}
-                    >
-                      {keybinding.enabled ? '×' : '+'}
-                    </IconButton>
+                    {editable ? (
+                      <IconButton
+                        compact
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[15px]"
+                        disabled={busy}
+                        aria-label={keybinding.enabled ? `Clear shortcut for ${keybinding.title}` : `Enable shortcut for ${keybinding.title}`}
+                        title={keybinding.enabled ? 'Clear shortcut' : 'Enable shortcut'}
+                        onClick={() => void toggleKeybinding(keybinding)}
+                      >
+                        {keybinding.enabled ? '×' : '+'}
+                      </IconButton>
+                    ) : null}
                   </div>
                 );
               })}

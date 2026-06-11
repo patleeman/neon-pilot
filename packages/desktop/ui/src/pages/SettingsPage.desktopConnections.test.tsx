@@ -307,4 +307,37 @@ describe('CommandsSettingsSection', () => {
     expect(commandRow?.textContent).toContain('mod + shift + p');
     expect(commandRow?.textContent).not.toContain('mod + k');
   });
+
+  it('shows host commands as read-only in the command shortcut catalog', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    const keybindingsSpy = vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([]);
+    const updateSpy = vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<CommandsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    expect(keybindingsSpy).toHaveBeenCalled();
+    const rows = Array.from(container.querySelectorAll('.grid.gap-3.py-3'));
+    const focusComposerRow = rows.find((row) => row.textContent?.includes('Focus Composer'));
+    expect(focusComposerRow?.textContent).toContain('composer.focus');
+    expect(focusComposerRow?.textContent).toContain('host');
+
+    const shortcutCapture = focusComposerRow?.querySelector<HTMLButtonElement>('.ui-shortcut-capture');
+    expect(shortcutCapture).toBeInstanceOf(HTMLButtonElement);
+    expect(shortcutCapture?.disabled).toBe(true);
+    expect(shortcutCapture?.textContent).toContain('Configured in Desktop shortcuts');
+    expect(focusComposerRow?.querySelector('button[aria-label^="Clear shortcut"]')).toBeNull();
+    expect(focusComposerRow?.querySelector('button[aria-label^="Enable shortcut"]')).toBeNull();
+
+    shortcutCapture?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    shortcutCapture?.dispatchEvent(new KeyboardEvent('keydown', { key: 'K', metaKey: true, bubbles: true }));
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
 });
