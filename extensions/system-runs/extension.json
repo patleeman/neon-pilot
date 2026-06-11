@@ -358,7 +358,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -509,7 +510,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -644,7 +646,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
