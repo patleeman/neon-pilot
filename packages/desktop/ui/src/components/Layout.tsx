@@ -88,6 +88,7 @@ import { FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, type FileChangeCommandDetail } 
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './chat/messageActionCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
 import { TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ToolBlockCommandDetail } from './chat/toolBlockCommands';
+import { TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, type TraceClusterCommandDetail } from './chat/traceClusterCommands';
 import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 import {
   extensionToolPanelMode,
@@ -2160,6 +2161,10 @@ export function Layout() {
       },
       toggleFirstToolBlock() {
         window.dispatchEvent(new CustomEvent<ToolBlockCommandDetail>(TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstTraceCluster() {
+        window.dispatchEvent(new CustomEvent<TraceClusterCommandDetail>(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
         return true;
       },
       copyFirstMessageAction() {

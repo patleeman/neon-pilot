@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
@@ -9,6 +9,11 @@ import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { buildSummaryPreview } from './summaryPreview.js';
 import { ToolBlock } from './ToolBlock.js';
+import {
+  registerTraceClusterToggleCapability,
+  TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT,
+  type TraceClusterCommandDetail,
+} from './traceClusterCommands.js';
 import {
   type ConversationDiffDisclosureMode,
   type ConversationTranscriptDisclosureMode,
@@ -325,6 +330,9 @@ export function TraceClusterBlock({
   const title = stableActive ? 'Working' : 'Internal work';
   const autoOpen = transcriptDisclosureMode === 'expanded' ? true : shouldAutoOpenTraceCluster(stableActive, false);
   const open = resolveDisclosureOpen(autoOpen, preference);
+  const toggleTraceCluster = useCallback(() => {
+    setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+  }, [autoOpen]);
   const hydrateDeferredBlocks = () => {
     if (!onHydrateMessage || deferredBlockIds.length === 0) {
       return;
@@ -343,6 +351,18 @@ export function TraceClusterBlock({
       hydrateDeferredBlocks();
     }
   }, [open]);
+  useEffect(() => registerTraceClusterToggleCapability(), []);
+  useEffect(() => {
+    function handleToggleFirstTraceCluster(event: Event) {
+      const detail = (event as CustomEvent<TraceClusterCommandDetail>).detail;
+      if (detail?.handled) return;
+      if (detail) detail.handled = true;
+      toggleTraceCluster();
+    }
+
+    window.addEventListener(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstTraceCluster);
+    return () => window.removeEventListener(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstTraceCluster);
+  }, [toggleTraceCluster]);
   const runningBlockIndex = useMemo(
     () => blocks.findIndex((block) => block.type === 'tool_use' && (block.status === 'running' || !!block.running)),
     [blocks],
@@ -373,7 +393,7 @@ export function TraceClusterBlock({
           compact
           onMouseEnter={hydrateDeferredBlocks}
           onFocus={hydrateDeferredBlocks}
-          onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
+          onClick={toggleTraceCluster}
           aria-expanded={open}
           className={
             compact

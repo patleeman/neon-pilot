@@ -100,6 +100,7 @@ export interface ExtensionCommandExecutorOptions {
   loadFirstImagePreview?(): boolean;
   toggleFirstFileChange?(): boolean;
   toggleFirstToolBlock?(): boolean;
+  toggleFirstTraceCluster?(): boolean;
   copyFirstMessageAction?(): boolean;
   editFirstMessageAction?(): boolean;
   rewindFirstMessageAction?(): boolean;
@@ -291,6 +292,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'imagePreview.loadFirst', title: 'Load First Deferred Image', category: 'Image Preview' },
     { id: 'fileChange.toggleFirst', title: 'Toggle First File Change', category: 'Diff' },
     { id: 'toolBlock.toggleFirst', title: 'Toggle First Tool Block', category: 'Transcript' },
+    { id: 'traceCluster.toggleFirst', title: 'Toggle First Internal Work Cluster', category: 'Transcript' },
     { id: 'messageAction.copyFirst', title: 'Copy First Message', category: 'Message Actions' },
     { id: 'messageAction.editFirst', title: 'Edit First Message', category: 'Message Actions' },
     { id: 'messageAction.rewindFirst', title: 'Rewind First Message', category: 'Message Actions' },
@@ -1275,6 +1277,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.toggleFirstToolBlock) && readContextValue(context, 'toolBlock.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'traceCluster.toggleFirst',
+      title: 'Toggle First Internal Work Cluster',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstTraceCluster?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstTraceCluster) && readContextValue(context, 'traceCluster.canToggleFirst') === true;
       },
     },
     {

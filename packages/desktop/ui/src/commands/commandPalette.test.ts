@@ -275,6 +275,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('traceCluster.toggleFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'traceCluster.canToggleFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('traceCluster.toggleFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'traceCluster.canToggleFirst': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.openActiveCheckpoint', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.canOpenActiveCheckpoint': false },

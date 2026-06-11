@@ -87,6 +87,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['imagePreview.loadFirst', 'imagePreview.canLoadFirst'],
   ['fileChange.toggleFirst', 'fileChange.canToggleFirst'],
   ['toolBlock.toggleFirst', 'toolBlock.canToggleFirst'],
+  ['traceCluster.toggleFirst', 'traceCluster.canToggleFirst'],
   ['messageAction.copyFirst', 'messageAction.canCopyFirst'],
   ['messageAction.editFirst', 'messageAction.canEditFirst'],
   ['messageAction.rewindFirst', 'messageAction.canRewindFirst'],
