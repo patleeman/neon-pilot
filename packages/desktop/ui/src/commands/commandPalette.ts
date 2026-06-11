@@ -140,6 +140,13 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['dictation.toggle', 'system-local-dictation.toggleAvailable'],
 ]);
 
+const CONTEXT_BLOCKED_HOST_COMMANDS = new Map([
+  ['conversation.saveTitle', 'conversation.titleEditorBusy'],
+  ['conversation.cancelTitleEdit', 'conversation.titleEditorBusy'],
+  ['conversation.saveCwd', 'conversation.cwdEditorBusy'],
+  ['conversation.cancelCwdEdit', 'conversation.cwdEditorBusy'],
+]);
+
 export function isHostCommandDisabledInPalette(
   commandId: string,
   options: { activeConversationId?: string | null; context?: ExtensionCommandContext },
@@ -153,7 +160,12 @@ export function isHostCommandDisabledInPalette(
   }
 
   const requiredContext = CONTEXT_REQUIRED_HOST_COMMANDS.get(commandId);
-  return requiredContext ? !evaluateCommandEnablement(requiredContext, options.context) : false;
+  if (requiredContext && !evaluateCommandEnablement(requiredContext, options.context)) {
+    return true;
+  }
+
+  const blockedContext = CONTEXT_BLOCKED_HOST_COMMANDS.get(commandId);
+  return blockedContext ? evaluateCommandEnablement(blockedContext, options.context) : false;
 }
 
 export function shouldBootstrapCommandPaletteThreads(options: {

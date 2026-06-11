@@ -155,6 +155,12 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.saveTitle', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.titleEditorOpen': true, 'conversation.titleEditorBusy': true },
+      }),
+    ).toBe(true);
+    expect(
       isHostCommandDisabledInPalette('conversation.cancelTitleEdit', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.titleEditorOpen': false },
@@ -166,6 +172,12 @@ describe('command palette search', () => {
         context: { 'conversation.titleEditorOpen': true },
       }),
     ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelTitleEdit', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.titleEditorOpen': true, 'conversation.titleEditorBusy': true },
+      }),
+    ).toBe(true);
     expect(
       isHostCommandDisabledInPalette('messageEdit.save', {
         activeConversationId: 'conversation-1',
@@ -623,6 +635,12 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.saveCwd', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': true },
+      }),
+    ).toBe(true);
+    expect(
       isHostCommandDisabledInPalette('conversation.cancelCwdEdit', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.cwdEditorOpen': false },
@@ -634,6 +652,12 @@ describe('command palette search', () => {
         context: { 'conversation.cwdEditorOpen': true },
       }),
     ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelCwdEdit', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': true },
+      }),
+    ).toBe(true);
     expect(
       isHostCommandDisabledInPalette('conversation.cancelGoal', {
         activeConversationId: 'conversation-1',
