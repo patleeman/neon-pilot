@@ -279,6 +279,30 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByText('1 installed · 1 enabled · 1 platform')).toBeTruthy();
   });
 
+  it('uses platform-specific empty copy when no required extensions are installed', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createExtension()]);
+    renderPage();
+
+    expect(await screen.findByText('Menu Test')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform' }));
+
+    expect(screen.getByText('No platform extensions')).toBeTruthy();
+    expect(screen.getByText('Required platform surfaces appear here when they are installed.')).toBeTruthy();
+    expect(screen.queryByText('Clear search to show all installed extensions.')).toBeNull();
+  });
+
+  it('uses attention-specific empty copy when no extensions need attention', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createExtension()]);
+    renderPage();
+
+    expect(await screen.findByText('Menu Test')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Attention' }));
+
+    expect(screen.getByText('No extensions need attention')).toBeTruthy();
+    expect(screen.getByText('Diagnostics, updates, invalid state, and catalog drift will appear here.')).toBeTruthy();
+    expect(screen.queryByText('Clear search to show all installed extensions.')).toBeNull();
+  });
+
   it('sorts installed extensions by issue, disabled, then enabled', async () => {
     mocks.extensionInstallations.mockResolvedValue([
       {

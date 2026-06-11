@@ -1365,6 +1365,21 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       : activeFilter === 'platform'
         ? 'Required system surfaces that keep Neon Pilot configurable, diagnosable, and repairable.'
         : 'Installed extensions and built-in capabilities.';
+  const hasSearchQuery = query.trim().length > 0;
+  const emptyVisibleExtensionsTitle = hasSearchQuery
+    ? 'No matching extensions'
+    : activeFilter === 'platform'
+      ? 'No platform extensions'
+      : activeFilter === 'attention'
+        ? 'No extensions need attention'
+        : 'No matching extensions';
+  const emptyVisibleExtensionsBody = hasSearchQuery
+    ? 'Clear search to show all installed extensions.'
+    : activeFilter === 'platform'
+      ? 'Required platform surfaces appear here when they are installed.'
+      : activeFilter === 'attention'
+        ? 'Diagnostics, updates, invalid state, and catalog drift will appear here.'
+        : 'Clear search to show all installed extensions.';
 
   const renderExtensionActions = (
     extension: ExtensionInstallSummary,
@@ -1735,7 +1750,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               {extensions.length === 0 ? (
                 <EmptyState title="No extensions installed" body="Ask an agent to create one under the runtime extensions directory." />
               ) : visibleExtensions.length === 0 ? (
-                <EmptyState title="No matching extensions" body="Clear search to show all installed extensions." />
+                <EmptyState title={emptyVisibleExtensionsTitle} body={emptyVisibleExtensionsBody} />
               ) : (
                 renderExtensionTable(visibleExtensions, { showEnablement: activeFilter !== 'platform' })
               )}
