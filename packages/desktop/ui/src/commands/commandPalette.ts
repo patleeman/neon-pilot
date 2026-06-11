@@ -82,6 +82,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['messageEdit.cancel', 'messageEdit.active'],
   ['draftWorkspacePicker.close', 'draftWorkspacePicker.open'],
   ['workspaceQuickSelect.close', 'workspaceQuickSelect.open'],
+  ['extensionModal.close', 'extensionModal.open'],
   ['conversation.saveCwd', 'conversation.cwdEditorOpen'],
   ['conversation.cancelCwdEdit', 'conversation.cwdEditorOpen'],
   ['composer.submit', 'composer.canSubmit'],

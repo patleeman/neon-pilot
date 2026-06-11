@@ -2,13 +2,22 @@
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { setExtensionCommandContext } from './commands';
+import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { ExtensionModalHost, resolveExtensionModalSizeClasses } from './ExtensionModalHost';
+import { systemExtensionModules } from './systemExtensionModules';
+
+vi.mock('./commands', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./commands')>()),
+  setExtensionCommandContext: vi.fn(),
+}));
 
 describe('ExtensionModalHost confirm bridge', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    vi.mocked(setExtensionCommandContext).mockClear();
   });
 
   function dispatchConfirm(detail: {
@@ -63,6 +72,49 @@ describe('ExtensionModalHost confirm bridge', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
 
     await expect(result).resolves.toBe(false);
+  });
+});
+
+describe('ExtensionModalHost modal bridge', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    systemExtensionModules.delete('test-extension');
+    vi.mocked(setExtensionCommandContext).mockClear();
+  });
+
+  it('closes an extension modal from the shared command event', async () => {
+    systemExtensionModules.set('test-extension', async () => ({
+      TestModal: () => <div>Extension modal body</div>,
+    }));
+    render(<ExtensionModalHost />);
+
+    const result = new Promise<unknown>((resolve, reject) => {
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('neon-pilot-extension-modal', {
+            detail: {
+              extensionId: 'test-extension',
+              title: 'Test modal',
+              component: 'TestModal',
+              props: {},
+              resolve,
+              reject,
+            },
+          }),
+        );
+      });
+    });
+
+    expect(await screen.findByText('Extension modal body')).not.toBeNull();
+    expect(setExtensionCommandContext).toHaveBeenCalledWith('extensionModal.open', true);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(EXTENSION_MODAL_CLOSE_COMMAND_EVENT));
+    });
+
+    await expect(result).resolves.toBeNull();
+    await waitFor(() => expect(screen.queryByText('Extension modal body')).toBeNull());
+    expect(setExtensionCommandContext).toHaveBeenCalledWith('extensionModal.open', null);
   });
 });
 

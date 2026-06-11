@@ -55,6 +55,7 @@ export const HOST_COMMAND_IDS = [
   'messageEdit.cancel',
   'draftWorkspacePicker.close',
   'workspaceQuickSelect.close',
+  'extensionModal.close',
   'conversation.newAndFocus',
   'model.cycle',
   'thinking.cycle',

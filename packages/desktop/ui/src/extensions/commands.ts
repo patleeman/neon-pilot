@@ -72,6 +72,7 @@ export interface ExtensionCommandExecutorOptions {
   cancelMessageEdit?(): boolean;
   closeDraftWorkspacePicker?(): boolean;
   closeWorkspaceQuickSelect?(): boolean;
+  closeExtensionModal?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: {
@@ -223,6 +224,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'messageEdit.cancel', title: 'Cancel Message Edit', category: 'Message Edit' },
     { id: 'draftWorkspacePicker.close', title: 'Close Draft Workspace Picker', category: 'Conversation' },
     { id: 'workspaceQuickSelect.close', title: 'Close Workspace Picker', category: 'Conversation' },
+    { id: 'extensionModal.close', title: 'Close Extension Modal', category: 'Extensions' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -891,6 +893,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.closeWorkspaceQuickSelect) && readContextValue(context, 'workspaceQuickSelect.open') === true;
+      },
+    },
+    {
+      id: 'extensionModal.close',
+      title: 'Close Extension Modal',
+      category: 'Extensions',
+      execute() {
+        return options.closeExtensionModal?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeExtensionModal) && readContextValue(context, 'extensionModal.open') === true;
       },
     },
     {

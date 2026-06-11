@@ -12,6 +12,7 @@ import { startNewConversation } from '../conversation/newConversationNavigation'
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
+import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from '../extensions/extensionModalCommands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
@@ -2030,6 +2031,10 @@ export function Layout() {
       },
       closeWorkspaceQuickSelect() {
         window.dispatchEvent(new CustomEvent(WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      closeExtensionModal() {
+        window.dispatchEvent(new CustomEvent(EXTENSION_MODAL_CLOSE_COMMAND_EVENT));
         return true;
       },
       focusComposer() {

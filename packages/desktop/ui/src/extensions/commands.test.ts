@@ -384,6 +384,28 @@ describe('extension commands', () => {
     expect(closeWorkspaceQuickSelect).toHaveBeenCalledTimes(1);
   });
 
+  it('includes extension modal commands gated by modal state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['extensionModal.close']));
+    const closeExtensionModal = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      closeExtensionModal,
+    };
+
+    await expect(executeExtensionCommand('extensionModal.close', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('extensionModal.close', undefined, {
+        ...options,
+        context: { 'extensionModal.open': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(closeExtensionModal).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),

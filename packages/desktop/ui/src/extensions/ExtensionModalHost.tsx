@@ -2,6 +2,8 @@ import { type ComponentType, useCallback, useEffect, useRef, useState } from 're
 
 import { buildApiPath } from '../client/apiBase';
 import { ConfirmDialog, Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
+import { setExtensionCommandContext } from './commands';
+import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { createNativeExtensionClient } from './nativePaClient';
 import { systemExtensionModules } from './systemExtensionModules';
 
@@ -125,6 +127,23 @@ export function ExtensionModalHost() {
     confirmResolveRef.current = null;
     setConfirm(null);
   }, []);
+
+  useEffect(() => {
+    if (!modal) {
+      return;
+    }
+
+    function handleCloseCommand() {
+      handleClose();
+    }
+
+    setExtensionCommandContext('extensionModal.open', true);
+    window.addEventListener(EXTENSION_MODAL_CLOSE_COMMAND_EVENT, handleCloseCommand);
+    return () => {
+      setExtensionCommandContext('extensionModal.open', null);
+      window.removeEventListener(EXTENSION_MODAL_CLOSE_COMMAND_EVENT, handleCloseCommand);
+    };
+  }, [handleClose, modal]);
 
   // Load the component when modal state changes
   useEffect(() => {
