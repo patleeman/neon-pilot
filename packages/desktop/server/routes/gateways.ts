@@ -55,7 +55,7 @@ function publishTelegramGatewayHostApi(): void {
     ensureGatewayConnection: (input) => {
       const provider = requireRegisteredGatewayProvider(input.provider);
       ensureGatewayConnection({ ...currentGatewayContext(), provider });
-      return readCurrentGatewayState();
+      return readCurrentGatewayStateAfterMutation();
     },
     updateGatewayConnectionStatus: (input) => {
       const provider = requireRegisteredGatewayProvider(input.provider);
@@ -68,7 +68,7 @@ function publishTelegramGatewayHostApi(): void {
         enabled: input.enabled,
         statusMessage: input.statusMessage,
       });
-      return readCurrentGatewayState();
+      return readCurrentGatewayStateAfterMutation();
     },
     attachGatewayConversation: (input) => {
       const provider = requireRegisteredGatewayProvider(input.provider);
@@ -80,12 +80,12 @@ function publishTelegramGatewayHostApi(): void {
         externalChatId: input.externalChatId,
         externalChatLabel: input.externalChatLabel,
       });
-      return readCurrentGatewayState();
+      return readCurrentGatewayStateAfterMutation();
     },
     detachGatewayConversation: (input) => {
       const provider = input.provider === undefined ? undefined : requireRegisteredGatewayProvider(input.provider);
       detachGatewayConversation({ ...currentGatewayContext(), provider, conversationId: input.conversationId });
-      return readCurrentGatewayState();
+      return readCurrentGatewayStateAfterMutation();
     },
     recordGatewayEvent: (input) => {
       const provider = requireRegisteredGatewayProvider(input.provider);
@@ -95,7 +95,7 @@ function publishTelegramGatewayHostApi(): void {
           : null;
       if (!kind) throw new Error('Gateway event kind is invalid.');
       recordGatewayEvent({ ...currentGatewayContext(), provider, conversationId: input.conversationId, kind, message: input.message });
-      return readCurrentGatewayState();
+      return readCurrentGatewayStateAfterMutation();
     },
   };
 }
@@ -133,6 +133,11 @@ function currentGatewayReadContext(): { stateRoot: string; profile: string; prov
 
 function readCurrentGatewayState() {
   return readGatewayState(currentGatewayReadContext());
+}
+
+function readCurrentGatewayStateAfterMutation() {
+  invalidateAppTopics('sessions');
+  return readCurrentGatewayState();
 }
 
 function listGatewayProviderSummaries(): GatewayProviderSummary[] {

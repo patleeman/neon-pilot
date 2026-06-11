@@ -56,6 +56,10 @@ const capability = vi.hoisted(() => ({
   createLiveSessionCapability: vi.fn(async () => ({ id: 'conv-new' })),
   submitLiveSessionPromptCapability: vi.fn(),
 }));
+const appEvents = vi.hoisted(() => ({
+  invalidateAppTopics: vi.fn(),
+  publishAppEvent: vi.fn(),
+}));
 
 vi.mock('../gateways/gatewayState.js', () => gatewayState);
 vi.mock('../extensions/extensionRegistry.js', () => extensionRegistry);
@@ -68,7 +72,7 @@ vi.mock('../conversations/conversationService.js', () => ({
   readSessionDetailForRoute: vi.fn(async () => ({ sessionRead: { detail: { blocks: [{ type: 'text', text: ' latest reply ' }] } } })),
 }));
 vi.mock('../middleware/index.js', () => ({ logError: vi.fn() }));
-vi.mock('../shared/appEvents.js', () => ({ invalidateAppTopics: vi.fn(), publishAppEvent: vi.fn() }));
+vi.mock('../shared/appEvents.js', () => appEvents);
 
 import { TELEGRAM_GATEWAY_HOST_API_GLOBAL } from '../extensions/backendApi/gateways.js';
 import {
@@ -147,6 +151,48 @@ describe('gateway routes', () => {
     const contributed = response();
     handler({ body: { provider: 'discord' } }, contributed);
     expect(gatewayState.ensureGatewayConnection).toHaveBeenCalledWith({ stateRoot: '/state', profile: 'shared', provider: 'discord' });
+  });
+
+  it('invalidates sessions when extension gateway providers mutate through the host api', () => {
+    register();
+    const api = (globalThis as Record<string, unknown>)[TELEGRAM_GATEWAY_HOST_API_GLOBAL] as {
+      attachGatewayConversation(input: {
+        provider: string;
+        conversationId: string;
+        conversationTitle?: string;
+        externalChatId?: string;
+        externalChatLabel?: string;
+      }): unknown;
+      updateGatewayConnectionStatus(input: { provider: string; status: string; enabled?: boolean; statusMessage?: string }): unknown;
+    };
+
+    api.attachGatewayConversation({
+      provider: 'discord',
+      conversationId: 'conv-1',
+      conversationTitle: 'One',
+      externalChatId: 'channel-1',
+    });
+    api.updateGatewayConnectionStatus({ provider: 'discord', status: 'active', enabled: true });
+
+    expect(gatewayState.attachGatewayConversation).toHaveBeenCalledWith({
+      stateRoot: '/state',
+      profile: 'shared',
+      provider: 'discord',
+      conversationId: 'conv-1',
+      conversationTitle: 'One',
+      externalChatId: 'channel-1',
+      externalChatLabel: undefined,
+    });
+    expect(gatewayState.updateGatewayConnectionStatus).toHaveBeenCalledWith({
+      stateRoot: '/state',
+      profile: 'shared',
+      provider: 'discord',
+      status: 'active',
+      enabled: true,
+      statusMessage: undefined,
+    });
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledTimes(2);
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
   });
 
   it('updates connection status and starts or stops telegram runtime', () => {
