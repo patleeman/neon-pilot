@@ -13,6 +13,9 @@ const parseExtensionManifest = vi.fn((manifest) => manifest);
 const readInvalidRuntimeExtensionEntries = vi.fn(() => []);
 const removeExtensionFromRegistry = vi.fn();
 const clearExtensionFailureRecords = vi.fn();
+const stopExtensionServices = vi.fn();
+const unregisterBashProcessWrapper = vi.fn();
+const uninstallExtensionSubscriptions = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({
   clearExtensionFailureRecords,
@@ -23,6 +26,15 @@ vi.mock('./extensionRegistry.js', () => ({
   parseExtensionManifest,
   readInvalidRuntimeExtensionEntries,
   removeExtensionFromRegistry,
+}));
+vi.mock('./extensionServices.js', () => ({
+  stopExtensionServices,
+}));
+vi.mock('../conversations/processWrappers.js', () => ({
+  unregisterBashProcessWrapper,
+}));
+vi.mock('./extensionSubscriptions.js', () => ({
+  uninstallExtensionSubscriptions,
 }));
 
 type ExecFileSync = typeof import('node:child_process').execFileSync;
@@ -54,6 +66,9 @@ describe('extensionLifecycle', () => {
     readInvalidRuntimeExtensionEntries.mockReset().mockReturnValue([]);
     removeExtensionFromRegistry.mockReset();
     clearExtensionFailureRecords.mockReset();
+    stopExtensionServices.mockReset().mockResolvedValue(undefined);
+    unregisterBashProcessWrapper.mockReset();
+    uninstallExtensionSubscriptions.mockReset();
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
     execFileSync.mockImplementation((command, args) => {
@@ -250,7 +265,60 @@ describe('extensionLifecycle', () => {
       deleted: true,
     });
     expect(existsSync(packageRoot)).toBe(false);
+    expect(stopExtensionServices).toHaveBeenCalledWith('system-hermes-agent');
+    expect(unregisterBashProcessWrapper).toHaveBeenCalledWith('system-hermes-agent');
+    expect(uninstallExtensionSubscriptions).toHaveBeenCalledWith('system-hermes-agent');
     expect(removeExtensionFromRegistry).toHaveBeenCalledWith('system-hermes-agent', stateRoot);
+  });
+
+  it('continues deleting runtime extensions when cleanup steps fail', async () => {
+    const packageRoot = join(runtimeRoot, 'cleanup-fails');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(join(packageRoot, 'extension.json'), JSON.stringify({ id: 'cleanup-fails', name: 'Cleanup Fails' }));
+    findExtensionEntry.mockReturnValue({
+      manifest: { id: 'cleanup-fails', name: 'Cleanup Fails', packageType: 'user' },
+      packageRoot,
+    });
+    stopExtensionServices.mockRejectedValue(new Error('service stop failed'));
+    unregisterBashProcessWrapper.mockImplementation(() => {
+      throw new Error('wrapper cleanup failed');
+    });
+    uninstallExtensionSubscriptions.mockImplementation(() => {
+      throw new Error('subscription cleanup failed');
+    });
+    removeExtensionFromRegistry.mockImplementation(() => {
+      throw new Error('registry cleanup failed');
+    });
+
+    await expect(deleteRuntimeExtension('cleanup-fails', stateRoot)).resolves.toMatchObject({
+      ok: true,
+      extensionId: 'cleanup-fails',
+      deleted: true,
+      warnings: [
+        { operation: 'stop extension services', message: 'service stop failed' },
+        { operation: 'unregister process wrappers', message: 'wrapper cleanup failed' },
+        { operation: 'delete extension subscriptions', message: 'subscription cleanup failed' },
+        { operation: 'remove extension registry state', message: 'registry cleanup failed' },
+      ],
+    });
+    expect(existsSync(packageRoot)).toBe(false);
+    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('cleanup-fails', stateRoot);
+    expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot);
+  });
+
+  it('clears stale registry state instead of throwing when package root is unavailable', async () => {
+    findExtensionEntry.mockReturnValue({
+      manifest: { id: 'missing-root', name: 'Missing Root', packageType: 'user' },
+    });
+
+    await expect(deleteRuntimeExtension('missing-root', stateRoot)).resolves.toMatchObject({
+      ok: true,
+      extensionId: 'missing-root',
+      deleted: false,
+      warnings: [{ operation: 'delete extension package', message: 'Extension package root is unavailable.' }],
+    });
+    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('missing-root', stateRoot);
+    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('missing-root', stateRoot);
   });
 
   it('deletes invalid runtime extension packages by id', async () => {

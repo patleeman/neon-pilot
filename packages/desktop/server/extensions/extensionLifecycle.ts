@@ -23,6 +23,7 @@ export interface CreateRuntimeExtensionInput {
 }
 
 type RuntimeExtensionTemplate = 'main-page' | 'right-rail' | 'workbench-detail';
+type RuntimeExtensionDeleteWarning = { operation: string; message: string };
 
 function normalizeExtensionId(value: unknown): string {
   if (typeof value !== 'string') {
@@ -437,25 +438,31 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
 
 export async function deleteRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {
   const id = normalizeExtensionId(extensionId);
+  const warnings: RuntimeExtensionDeleteWarning[] = [];
   const entry = findExtensionEntry(id, stateRoot);
   if (!entry) {
     const { clearExtensionFailureRecords, readInvalidRuntimeExtensionEntries, removeExtensionFromRegistry } =
       await import('./extensionRegistry.js');
     const invalidEntry = readInvalidRuntimeExtensionEntries(stateRoot).find((candidate) => candidate.id === id);
-    removeExtensionFromRegistry(id, stateRoot);
-    clearExtensionFailureRecords(id, stateRoot);
+    await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot));
+    await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot));
     if (!invalidEntry?.packageRoot) {
       invalidateExtensionRegistryReadCaches(stateRoot);
-      return { ok: true as const, extensionId: id, deleted: false };
+      return buildDeleteRuntimeExtensionResult(id, false, warnings);
     }
     const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
     assertInside(runtimeRoot, invalidEntry.packageRoot);
-    rmSync(invalidEntry.packageRoot, { recursive: true, force: true });
+    const deleted = deleteExtensionPackageRootBestEffort(invalidEntry.packageRoot, warnings);
     invalidateExtensionRegistryReadCaches(stateRoot);
-    return { ok: true as const, extensionId: id, deleted: true };
+    return buildDeleteRuntimeExtensionResult(id, deleted, warnings);
   }
   if (!entry.packageRoot) {
-    throw new Error('Extension package root is unavailable.');
+    const { clearExtensionFailureRecords, removeExtensionFromRegistry } = await import('./extensionRegistry.js');
+    await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot));
+    await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot));
+    warnings.push({ operation: 'delete extension package', message: 'Extension package root is unavailable.' });
+    invalidateExtensionRegistryReadCaches(stateRoot);
+    return buildDeleteRuntimeExtensionResult(id, false, warnings);
   }
 
   const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
@@ -465,18 +472,55 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   }
   assertInside(runtimeRoot, entry.packageRoot);
 
-  const { stopExtensionServices } = await import('./extensionServices.js');
-  await stopExtensionServices(id);
-  const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
-  unregisterBashProcessWrapper(id);
-  const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
-  uninstallExtensionSubscriptions(id);
+  await runBestEffortDeleteStep(warnings, 'stop extension services', async () => {
+    const { stopExtensionServices } = await import('./extensionServices.js');
+    await stopExtensionServices(id);
+  });
+  await runBestEffortDeleteStep(warnings, 'unregister process wrappers', async () => {
+    const { unregisterBashProcessWrapper } = await import('../conversations/processWrappers.js');
+    unregisterBashProcessWrapper(id);
+  });
+  await runBestEffortDeleteStep(warnings, 'delete extension subscriptions', async () => {
+    const { uninstallExtensionSubscriptions } = await import('./extensionSubscriptions.js');
+    uninstallExtensionSubscriptions(id);
+  });
 
   const { removeExtensionFromRegistry, clearExtensionFailureRecords } = await import('./extensionRegistry.js');
-  removeExtensionFromRegistry(id, stateRoot);
-  clearExtensionFailureRecords(id, stateRoot);
+  await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot));
+  await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot));
 
-  rmSync(entry.packageRoot, { recursive: true, force: true });
+  const deleted = deleteExtensionPackageRootBestEffort(entry.packageRoot, warnings);
   invalidateExtensionRegistryReadCaches(stateRoot);
-  return { ok: true as const, extensionId: id, deleted: true };
+  return buildDeleteRuntimeExtensionResult(id, deleted, warnings);
+}
+
+async function runBestEffortDeleteStep(
+  warnings: RuntimeExtensionDeleteWarning[],
+  operation: string,
+  step: () => void | Promise<void>,
+): Promise<void> {
+  try {
+    await step();
+  } catch (error) {
+    warnings.push({ operation, message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+function deleteExtensionPackageRootBestEffort(packageRoot: string, warnings: RuntimeExtensionDeleteWarning[]): boolean {
+  try {
+    rmSync(packageRoot, { recursive: true, force: true });
+    return !existsSync(packageRoot);
+  } catch (error) {
+    warnings.push({ operation: 'delete extension package', message: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
+
+function buildDeleteRuntimeExtensionResult(extensionId: string, deleted: boolean, warnings: RuntimeExtensionDeleteWarning[]) {
+  return {
+    ok: true as const,
+    extensionId,
+    deleted,
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }

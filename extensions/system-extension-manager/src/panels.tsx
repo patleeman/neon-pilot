@@ -373,7 +373,7 @@ function ExtensionActionsMenu({
               ) : null}
               {canDelete ? (
                 <MenuItem tone="danger" disabled={busy} onClick={(event) => run(event, onDelete)}>
-                  Uninstall
+                  Delete
                 </MenuItem>
               ) : null}
             </MenuShell>,

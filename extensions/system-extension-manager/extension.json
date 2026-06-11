@@ -349,7 +349,7 @@
       {
         "id": "extensions-delete",
         "command": "extensions delete",
-        "description": "Delete/uninstall a runtime extension by id. System extensions cannot be deleted.",
+        "description": "Delete a runtime extension by id. System extensions cannot be deleted.",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "delete",

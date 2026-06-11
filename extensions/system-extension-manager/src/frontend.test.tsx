@@ -395,7 +395,7 @@ describe('ExtensionManagerPage', () => {
     expect(await screen.findByText('Agent Browser')).toBeTruthy();
   });
 
-  it('uninstalls runtime-installed system-declared extensions', async () => {
+  it('deletes runtime-installed system-declared extensions', async () => {
     mocks.extensionInstallations.mockResolvedValue([
       {
         ...createSystemExtension(),
@@ -412,7 +412,7 @@ describe('ExtensionManagerPage', () => {
 
     expect(await screen.findByText('Browser')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Uninstall'));
+    fireEvent.click(screen.getByText('Delete'));
 
     await waitFor(() => expect(mocks.deleteExtension).toHaveBeenCalledWith('system-browser'));
   });
@@ -453,7 +453,7 @@ describe('ExtensionManagerPage', () => {
 
     expect(await screen.findByText('Onboarding')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Uninstall'));
+    fireEvent.click(screen.getByText('Delete'));
 
     await screen.findByText('No extensions installed');
     expect(screen.queryByText('Onboarding')).toBeNull();
