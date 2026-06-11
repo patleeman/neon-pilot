@@ -350,6 +350,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - keybindings: open-thread-palette [mod+p]
 - transcriptRenderers: ask-user-question-tool-block for ask_user_question, terminal-bash-tool-block for bash
 - contextMenus: duplicate-conversation on conversationList, copy-working-directory on conversationList, copy-conversation-id on conversationList, copy-deeplink on conversationList
+- Host commands: `conversation.duplicate`, `conversation.copyWorkingDirectory`, `conversation.copyId`, `conversation.copyDeeplink`.
 - backend actions: conversationTool, duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink
 
 ### system-diffs — Checkpoints

@@ -7,9 +7,14 @@ import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../co
 import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
 import { COMPANION_CHAT_CLOSE_EVENT, COMPANION_CHAT_OPEN_EVENT, type CompanionChatOpenDetail } from '../companion/companionEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
-import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
+import {
+  buildConversationDeeplink,
+  buildConversationSurfacePath,
+  readConversationIdFromPathname,
+} from '../conversation/conversationRoutes';
 import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { startNewConversation } from '../conversation/newConversationNavigation';
+import { writeClipboardText } from '../desktop/clipboard';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
@@ -1956,6 +1961,7 @@ export function Layout() {
         route: location.pathname,
         'layout.mode': appLayoutMode,
         'conversation.hasActive': Boolean(activeConversationId),
+        'conversation.hasCwd': Boolean(activeSessionCwd?.trim()),
         'workbench.hasActiveTab': Boolean(activeWorkbenchTabId),
         'workbench.hasActiveFile': hasActiveWorkbenchFile,
         'workbench.canToggleExplorer': canToggleWorkbenchExplorer,
@@ -2057,6 +2063,52 @@ export function Layout() {
       renameConversation() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.renameConversation);
         return true;
+      },
+      async duplicateConversation() {
+        if (!activeConversationId) return false;
+        try {
+          const { newSessionId } = await api.duplicateConversation(activeConversationId);
+          navigate(buildConversationSurfacePath(newSessionId));
+          return true;
+        } catch (error) {
+          addNotification({
+            type: 'error',
+            message: `Duplicate failed: ${error instanceof Error ? error.message : String(error)}`,
+            source: 'conversation',
+          });
+          return false;
+        }
+      },
+      async copyConversationWorkingDirectory() {
+        const cwd = activeSessionCwd?.trim();
+        if (!cwd) return false;
+        try {
+          await writeClipboardText(cwd);
+          return true;
+        } catch {
+          addNotification({ type: 'error', message: 'Copy to clipboard failed.', source: 'conversation' });
+          return false;
+        }
+      },
+      async copyConversationId() {
+        if (!activeConversationId) return false;
+        try {
+          await writeClipboardText(activeConversationId);
+          return true;
+        } catch {
+          addNotification({ type: 'error', message: 'Copy to clipboard failed.', source: 'conversation' });
+          return false;
+        }
+      },
+      async copyConversationDeeplink() {
+        if (!activeConversationId || typeof window === 'undefined') return false;
+        try {
+          await writeClipboardText(buildConversationDeeplink(activeConversationId, window.location.href));
+          return true;
+        } catch {
+          addNotification({ type: 'error', message: 'Could not build a deeplink for this conversation.', source: 'conversation' });
+          return false;
+        }
       },
       saveConversationTitle() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationTitle);
@@ -2440,6 +2492,7 @@ export function Layout() {
     [
       activeRightRailControl,
       activeConversationId,
+      activeSessionCwd,
       activeWorkbenchArtifactId,
       activeWorkbenchKnowledgeFileId,
       activeWorkbenchRailSurface,

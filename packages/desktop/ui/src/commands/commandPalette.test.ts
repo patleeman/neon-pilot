@@ -105,6 +105,12 @@ describe('command palette search', () => {
   it('disables active-conversation host commands when no conversation is active', () => {
     expect(isHostCommandDisabledInPalette('conversation.close', { activeConversationId: null })).toBe(true);
     expect(isHostCommandDisabledInPalette('conversation.close', { activeConversationId: 'conversation-1' })).toBe(false);
+    expect(isHostCommandDisabledInPalette('conversation.duplicate', { activeConversationId: null })).toBe(true);
+    expect(isHostCommandDisabledInPalette('conversation.duplicate', { activeConversationId: 'conversation-1' })).toBe(false);
+    expect(isHostCommandDisabledInPalette('conversation.copyId', { activeConversationId: null })).toBe(true);
+    expect(isHostCommandDisabledInPalette('conversation.copyId', { activeConversationId: 'conversation-1' })).toBe(false);
+    expect(isHostCommandDisabledInPalette('conversation.copyDeeplink', { activeConversationId: null })).toBe(true);
+    expect(isHostCommandDisabledInPalette('conversation.copyDeeplink', { activeConversationId: 'conversation-1' })).toBe(false);
   });
 
   it('disables context-gated host commands when their prerequisites are unavailable', () => {
@@ -766,6 +772,18 @@ describe('command palette search', () => {
       isHostCommandDisabledInPalette('conversation.editCwd', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.canEditCwd': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.copyWorkingDirectory', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasCwd': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.copyWorkingDirectory', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasCwd': true },
       }),
     ).toBe(false);
     expect(

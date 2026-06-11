@@ -59,6 +59,10 @@ export interface ExtensionCommandExecutorOptions {
   toggleConversationPin?(): boolean;
   toggleConversationArchive?(): boolean;
   renameConversation?(): boolean;
+  duplicateConversation?(): boolean | Promise<boolean>;
+  copyConversationWorkingDirectory?(): boolean | Promise<boolean>;
+  copyConversationId?(): boolean | Promise<boolean>;
+  copyConversationDeeplink?(): boolean | Promise<boolean>;
   saveConversationTitle?(): boolean;
   cancelConversationTitleEdit?(): boolean;
   editConversationCwd?(): boolean;
@@ -243,6 +247,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.togglePinned', title: 'Pin or Unpin Conversation', category: 'Conversation' },
     { id: 'conversation.toggleArchived', title: 'Archive or Restore Conversation', category: 'Conversation' },
     { id: 'conversation.rename', title: 'Rename Conversation', category: 'Conversation' },
+    { id: 'conversation.duplicate', title: 'Duplicate Conversation', category: 'Conversation' },
+    { id: 'conversation.copyWorkingDirectory', title: 'Copy Conversation Working Directory', category: 'Conversation' },
+    { id: 'conversation.copyId', title: 'Copy Conversation ID', category: 'Conversation' },
+    { id: 'conversation.copyDeeplink', title: 'Copy Conversation Deeplink', category: 'Conversation' },
     { id: 'conversation.saveTitle', title: 'Save Conversation Title', category: 'Conversation' },
     { id: 'conversation.cancelTitleEdit', title: 'Cancel Title Edit', category: 'Conversation' },
     { id: 'conversation.editCwd', title: 'Edit Conversation Working Directory', category: 'Conversation' },
@@ -651,6 +659,54 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
           hasActiveConversation(options, context) &&
           readContextValue(context, 'conversation.canRename') === true
         );
+      },
+    },
+    {
+      id: 'conversation.duplicate',
+      title: 'Duplicate Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.duplicateConversation?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.duplicateConversation) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.copyWorkingDirectory',
+      title: 'Copy Conversation Working Directory',
+      category: 'Conversation',
+      execute() {
+        return options.copyConversationWorkingDirectory?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.copyConversationWorkingDirectory) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.hasCwd') === true
+        );
+      },
+    },
+    {
+      id: 'conversation.copyId',
+      title: 'Copy Conversation ID',
+      category: 'Conversation',
+      execute() {
+        return options.copyConversationId?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.copyConversationId) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.copyDeeplink',
+      title: 'Copy Conversation Deeplink',
+      category: 'Conversation',
+      execute() {
+        return options.copyConversationDeeplink?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.copyConversationDeeplink) && hasActiveConversation(options, context);
       },
     },
     {

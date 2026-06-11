@@ -312,6 +312,61 @@ describe('extension commands', () => {
     expect(restoreFirstQueuedPrompt).toHaveBeenCalledTimes(1);
   });
 
+  it('includes active conversation duplicate and copy commands', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining([
+        'conversation.duplicate',
+        'conversation.copyWorkingDirectory',
+        'conversation.copyId',
+        'conversation.copyDeeplink',
+      ]),
+    );
+
+    const duplicateConversation = vi.fn(() => true);
+    const copyConversationWorkingDirectory = vi.fn(() => true);
+    const copyConversationId = vi.fn(() => true);
+    const copyConversationDeeplink = vi.fn(() => true);
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      duplicateConversation,
+      copyConversationWorkingDirectory,
+      copyConversationId,
+      copyConversationDeeplink,
+    };
+
+    await expect(executeExtensionCommand('conversation.duplicate', undefined, baseOptions)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('conversation.duplicate', undefined, { ...baseOptions, activeConversationId: 'conv-1' }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.copyWorkingDirectory', undefined, {
+        ...baseOptions,
+        activeConversationId: 'conv-1',
+      }),
+    ).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('conversation.copyWorkingDirectory', undefined, {
+        ...baseOptions,
+        activeConversationId: 'conv-1',
+        context: { 'conversation.hasCwd': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.copyId', undefined, { ...baseOptions, activeConversationId: 'conv-1' }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.copyDeeplink', undefined, { ...baseOptions, activeConversationId: 'conv-1' }),
+    ).resolves.toBe(true);
+
+    expect(duplicateConversation).toHaveBeenCalledTimes(1);
+    expect(copyConversationWorkingDirectory).toHaveBeenCalledTimes(1);
+    expect(copyConversationId).toHaveBeenCalledTimes(1);
+    expect(copyConversationDeeplink).toHaveBeenCalledTimes(1);
+  });
+
   it('includes checkpoint rail commands gated by checkpoint availability', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining([
@@ -1452,6 +1507,10 @@ describe('extension commands', () => {
       'conversation.togglePinned',
       'conversation.toggleArchived',
       'conversation.rename',
+      'conversation.duplicate',
+      'conversation.copyWorkingDirectory',
+      'conversation.copyId',
+      'conversation.copyDeeplink',
       'conversation.saveTitle',
       'conversation.cancelTitleEdit',
       'conversation.editCwd',
