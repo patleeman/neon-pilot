@@ -197,7 +197,7 @@ Examples:
 Create or update a provider model definition.
 
 - Source: extension (system-neon-pilot-admin-cli)
-- Usage: `neon-pilot bootstrap provider model [--json]`
+- Usage: `neon-pilot bootstrap provider model <provider> <modelId> [--context-window <tokens>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -206,15 +206,15 @@ Create or update a provider model definition.
 - Output: text, json
 
 Examples:
-- `neon-pilot bootstrap provider model`
-- `neon-pilot bootstrap provider model --json`
+- `neon-pilot bootstrap provider model openai gpt-5.4 --context-window 200000`
+- `neon-pilot bootstrap provider model openai gpt-5.4 --context-window 200000 --json`
 
 ### bootstrap provider save
 
 Create or update a model provider definition.
 
 - Source: extension (system-neon-pilot-admin-cli)
-- Usage: `neon-pilot bootstrap provider save [--json]`
+- Usage: `neon-pilot bootstrap provider save <provider> [--base-url <url>] [--api <api>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: yes
@@ -223,15 +223,15 @@ Create or update a model provider definition.
 - Output: text, json
 
 Examples:
-- `neon-pilot bootstrap provider save`
-- `neon-pilot bootstrap provider save --json`
+- `neon-pilot bootstrap provider save openai --api openai`
+- `neon-pilot bootstrap provider save openai --api openai --json`
 
 ### bootstrap provider set-key
 
 Store a provider API key through the configured secrets backend. Use --stdin.
 
 - Source: extension (system-neon-pilot-admin-cli)
-- Usage: `neon-pilot bootstrap provider set-key [--json]`
+- Usage: `neon-pilot bootstrap provider set-key <provider> --stdin [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -240,8 +240,8 @@ Store a provider API key through the configured secrets backend. Use --stdin.
 - Output: text, json
 
 Examples:
-- `neon-pilot bootstrap provider set-key`
-- `neon-pilot bootstrap provider set-key --json`
+- `neon-pilot bootstrap provider set-key openai --stdin`
+- `neon-pilot bootstrap provider set-key openai --stdin --json`
 
 ### cli install
 

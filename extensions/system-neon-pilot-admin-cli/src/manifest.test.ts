@@ -30,4 +30,34 @@ describe('system-neon-pilot-admin-cli manifest', () => {
       },
     });
   });
+
+  it('keeps bootstrap CLI positional schemas aligned with agent backend normalization', () => {
+    const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
+
+    for (const command of [
+      'app-commands list',
+      'control-plane doctor',
+      'heartbeats list',
+      'bootstrap doctor',
+      'bootstrap configure',
+      'bootstrap defaults set',
+    ]) {
+      expect(commands.get(command)).toMatchObject({ argsSchema: { maxItems: 0 } });
+    }
+
+    expect(commands.get('bootstrap provider set-key')).toMatchObject({
+      usage: 'bootstrap provider set-key <provider> --stdin [--json]',
+      argsSchema: { minItems: 1, maxItems: 1, description: 'Positional args: provider.' },
+      flagsSchema: { properties: { stdin: { type: 'boolean' } } },
+    });
+    expect(commands.get('bootstrap provider save')).toMatchObject({
+      usage: 'bootstrap provider save <provider> [--base-url <url>] [--api <api>] [--json]',
+      argsSchema: { minItems: 1, maxItems: 1, description: 'Positional args: provider.' },
+    });
+    expect(commands.get('bootstrap provider model')).toMatchObject({
+      usage: 'bootstrap provider model <provider> <modelId> [--context-window <tokens>] [--json]',
+      argsSchema: { minItems: 2, maxItems: 2, description: 'Positional args: provider modelId.' },
+      flagsSchema: { properties: { 'context-window': { type: 'string' } } },
+    });
+  });
 });
