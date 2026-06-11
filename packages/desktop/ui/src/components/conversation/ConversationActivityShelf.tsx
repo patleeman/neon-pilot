@@ -5,7 +5,12 @@ import { setExtensionCommandContext } from '../../extensions/commands';
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { cx, MetaLabel, RowButton, ShelfHeader, ShelfSection, Spinner, TextButton } from '../ui';
-import { CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT } from './conversationActivityCommands';
+import {
+  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
+} from './conversationActivityCommands';
 
 function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
   if (task.scheduleType === 'cron' && task.cron) return task.cron;
@@ -90,11 +95,22 @@ export function ConversationActivityShelf({
   onOpenScheduledTask?: (taskId: string) => void;
 }) {
   const canContinueDeferredResumes = hasReadyDeferredResumes && !isLiveSession && !deferredResumesBusy;
+  const canToggleBackgroundRunDetails = backgroundExecutions.length > 0;
+  const canToggleDeferredResumeDetails = deferredResumes.length > 0;
+  const canToggleScheduledTaskDetails = scheduledTasks.length > 0 && Boolean(onToggleScheduledTaskDetails);
 
   useEffect(() => {
     setExtensionCommandContext('conversation.canContinueDeferredResumes', canContinueDeferredResumes);
-    return () => setExtensionCommandContext('conversation.canContinueDeferredResumes', null);
-  }, [canContinueDeferredResumes]);
+    setExtensionCommandContext('conversation.hasBackgroundRuns', canToggleBackgroundRunDetails);
+    setExtensionCommandContext('conversation.hasDeferredResumes', canToggleDeferredResumeDetails);
+    setExtensionCommandContext('conversation.hasScheduledTasks', canToggleScheduledTaskDetails);
+    return () => {
+      setExtensionCommandContext('conversation.canContinueDeferredResumes', null);
+      setExtensionCommandContext('conversation.hasBackgroundRuns', null);
+      setExtensionCommandContext('conversation.hasDeferredResumes', null);
+      setExtensionCommandContext('conversation.hasScheduledTasks', null);
+    };
+  }, [canContinueDeferredResumes, canToggleBackgroundRunDetails, canToggleDeferredResumeDetails, canToggleScheduledTaskDetails]);
 
   useEffect(() => {
     if (!canContinueDeferredResumes) return;
@@ -104,6 +120,24 @@ export function ConversationActivityShelf({
     window.addEventListener(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT, handleContinueDeferredResumesCommand);
     return () => window.removeEventListener(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT, handleContinueDeferredResumesCommand);
   }, [canContinueDeferredResumes, onContinueDeferredResumesNow]);
+
+  useEffect(() => {
+    if (!canToggleBackgroundRunDetails) return;
+    window.addEventListener(CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT, onToggleBackgroundRunDetails);
+    return () => window.removeEventListener(CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT, onToggleBackgroundRunDetails);
+  }, [canToggleBackgroundRunDetails, onToggleBackgroundRunDetails]);
+
+  useEffect(() => {
+    if (!canToggleDeferredResumeDetails) return;
+    window.addEventListener(CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT, onToggleDeferredResumeDetails);
+    return () => window.removeEventListener(CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT, onToggleDeferredResumeDetails);
+  }, [canToggleDeferredResumeDetails, onToggleDeferredResumeDetails]);
+
+  useEffect(() => {
+    if (!canToggleScheduledTaskDetails || !onToggleScheduledTaskDetails) return;
+    window.addEventListener(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT, onToggleScheduledTaskDetails);
+    return () => window.removeEventListener(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT, onToggleScheduledTaskDetails);
+  }, [canToggleScheduledTaskDetails, onToggleScheduledTaskDetails]);
 
   return (
     <>

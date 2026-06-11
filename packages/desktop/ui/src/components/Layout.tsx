@@ -44,7 +44,12 @@ import { ARTIFACT_MODAL_COMMAND_EVENT, type ArtifactModalCommand } from './artif
 import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
-import { CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT } from './conversation/conversationActivityCommands';
+import {
+  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
+} from './conversation/conversationActivityCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
 import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
@@ -1970,6 +1975,18 @@ export function Layout() {
       },
       continueDeferredResumes() {
         window.dispatchEvent(new CustomEvent(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT));
+        return true;
+      },
+      toggleBackgroundRunDetails() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT));
+        return true;
+      },
+      toggleDeferredResumeDetails() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT));
+        return true;
+      },
+      toggleScheduledTaskDetails() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT));
         return true;
       },
       newWorkbenchTab() {

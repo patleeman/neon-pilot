@@ -57,6 +57,9 @@ export interface ExtensionCommandExecutorOptions {
   cancelConversationCwdEdit?(): boolean;
   cancelConversationGoal?(): boolean;
   continueDeferredResumes?(): boolean;
+  toggleBackgroundRunDetails?(): boolean;
+  toggleDeferredResumeDetails?(): boolean;
+  toggleScheduledTaskDetails?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
@@ -209,6 +212,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.cancelCwdEdit', title: 'Cancel Working Directory Edit', category: 'Conversation' },
     { id: 'conversation.cancelGoal', title: 'Cancel Active Goal', category: 'Conversation' },
     { id: 'conversation.continueDeferredResumes', title: 'Continue Deferred Resumes', category: 'Conversation' },
+    { id: 'conversation.toggleBackgroundRunDetails', title: 'Toggle Background Work Details', category: 'Conversation' },
+    { id: 'conversation.toggleDeferredResumeDetails', title: 'Toggle Attention Details', category: 'Conversation' },
+    { id: 'conversation.toggleScheduledTaskDetails', title: 'Toggle Automation Details', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
@@ -650,6 +656,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.continueDeferredResumes) && readContextValue(context, 'conversation.canContinueDeferredResumes') === true;
+      },
+    },
+    {
+      id: 'conversation.toggleBackgroundRunDetails',
+      title: 'Toggle Background Work Details',
+      category: 'Conversation',
+      execute() {
+        return options.toggleBackgroundRunDetails?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleBackgroundRunDetails) && readContextValue(context, 'conversation.hasBackgroundRuns') === true;
+      },
+    },
+    {
+      id: 'conversation.toggleDeferredResumeDetails',
+      title: 'Toggle Attention Details',
+      category: 'Conversation',
+      execute() {
+        return options.toggleDeferredResumeDetails?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleDeferredResumeDetails) && readContextValue(context, 'conversation.hasDeferredResumes') === true;
+      },
+    },
+    {
+      id: 'conversation.toggleScheduledTaskDetails',
+      title: 'Toggle Automation Details',
+      category: 'Conversation',
+      execute() {
+        return options.toggleScheduledTaskDetails?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleScheduledTaskDetails) && readContextValue(context, 'conversation.hasScheduledTasks') === true;
       },
     },
     {

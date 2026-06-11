@@ -85,6 +85,9 @@ describe('extension commands', () => {
         'conversation.cancelCwdEdit',
         'conversation.cancelGoal',
         'conversation.continueDeferredResumes',
+        'conversation.toggleBackgroundRunDetails',
+        'conversation.toggleDeferredResumeDetails',
+        'conversation.toggleScheduledTaskDetails',
       ]),
     );
     const editConversationCwd = vi.fn(() => true);
@@ -92,6 +95,9 @@ describe('extension commands', () => {
     const cancelConversationCwdEdit = vi.fn(() => true);
     const cancelConversationGoal = vi.fn(() => true);
     const continueDeferredResumes = vi.fn(() => true);
+    const toggleBackgroundRunDetails = vi.fn(() => true);
+    const toggleDeferredResumeDetails = vi.fn(() => true);
+    const toggleScheduledTaskDetails = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
@@ -103,6 +109,9 @@ describe('extension commands', () => {
       cancelConversationCwdEdit,
       cancelConversationGoal,
       continueDeferredResumes,
+      toggleBackgroundRunDetails,
+      toggleDeferredResumeDetails,
+      toggleScheduledTaskDetails,
     };
 
     await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(true);
@@ -110,6 +119,9 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('conversation.cancelCwdEdit', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.cancelGoal', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.continueDeferredResumes', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.toggleBackgroundRunDetails', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.toggleDeferredResumeDetails', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.toggleScheduledTaskDetails', undefined, options)).resolves.toBe(false);
     await expect(
       executeExtensionCommand('conversation.saveCwd', undefined, {
         ...options,
@@ -135,6 +147,24 @@ describe('extension commands', () => {
       }),
     ).resolves.toBe(true);
     await expect(
+      executeExtensionCommand('conversation.toggleBackgroundRunDetails', undefined, {
+        ...options,
+        context: { 'conversation.hasBackgroundRuns': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.toggleDeferredResumeDetails', undefined, {
+        ...options,
+        context: { 'conversation.hasDeferredResumes': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.toggleScheduledTaskDetails', undefined, {
+        ...options,
+        context: { 'conversation.hasScheduledTasks': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
       executeExtensionCommand('conversation.saveCwd', undefined, {
         ...options,
         context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': true },
@@ -146,6 +176,9 @@ describe('extension commands', () => {
     expect(cancelConversationCwdEdit).toHaveBeenCalledTimes(1);
     expect(cancelConversationGoal).toHaveBeenCalledTimes(1);
     expect(continueDeferredResumes).toHaveBeenCalledTimes(1);
+    expect(toggleBackgroundRunDetails).toHaveBeenCalledTimes(1);
+    expect(toggleDeferredResumeDetails).toHaveBeenCalledTimes(1);
+    expect(toggleScheduledTaskDetails).toHaveBeenCalledTimes(1);
   });
 
   it('includes conversation title editor commands gated by editor state', async () => {

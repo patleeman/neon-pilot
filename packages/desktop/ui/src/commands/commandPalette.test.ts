@@ -383,6 +383,42 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.toggleBackgroundRunDetails', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasBackgroundRuns': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.toggleBackgroundRunDetails', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasBackgroundRuns': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.toggleDeferredResumeDetails', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasDeferredResumes': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.toggleDeferredResumeDetails', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasDeferredResumes': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.toggleScheduledTaskDetails', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasScheduledTasks': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.toggleScheduledTaskDetails', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.hasScheduledTasks': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.focusLocation', {
         activeConversationId: 'conversation-1',
         context: { 'browser.active': false },
