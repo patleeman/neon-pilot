@@ -260,14 +260,14 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 
-  it('shows required platform surfaces in the Platform tab', async () => {
+  it('keeps required platform surfaces out of the default list but visible in the Platform tab', async () => {
     mocks.extensionInstallations.mockResolvedValue([createRequiredSystemExtension(), createExtension()]);
     renderPage();
 
     expect((await screen.findAllByRole('heading', { name: 'Extensions' })).length).toBeGreaterThan(0);
-    expect(screen.getByText('Settings panels')).toBeTruthy();
     expect(screen.getByText('Menu Test')).toBeTruthy();
-    expect(screen.getByText('2 installed · 2 enabled · 1 platform')).toBeTruthy();
+    expect(screen.queryByText('Settings panels')).toBeNull();
+    expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
     expect(screen.getByLabelText('Disable Menu Test')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Platform' }));
@@ -303,7 +303,10 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect(await screen.findByText('Issue M')).toBeTruthy();
-    const rows = screen.getAllByRole('row').slice(1).map((row) => row.textContent ?? '');
+    const rows = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => row.textContent ?? '');
     expect(rows[0]).toContain('Issue M');
     expect(rows[1]).toContain('Disabled Z');
     expect(rows[2]).toContain('Enabled A');

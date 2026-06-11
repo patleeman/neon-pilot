@@ -1304,11 +1304,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogIds.has(extension.id);
       return Boolean(
         extension.status === 'invalid' ||
-          extension.healthError ||
-          extension.buildError ||
-          extension.diagnostics?.length ||
-          catalogItem?.updateAvailable ||
-          unavailableCatalogItem,
+        extension.healthError ||
+        extension.buildError ||
+        extension.diagnostics?.length ||
+        catalogItem?.updateAvailable ||
+        unavailableCatalogItem,
       );
     },
     [catalog, catalogById, catalogIds],
@@ -1319,6 +1319,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     return installedExtensions
       .filter((extension) => {
         if (activeFilter === 'platform' && !isLocked(extension)) return false;
+        if (activeFilter === 'all' && isLocked(extension)) return false;
         if (activeFilter === 'attention' && !extensionHasIssue(extension)) return false;
         if (!normalizedQuery) return true;
         return `${extension.name} ${extension.id} ${extension.description ?? ''} ${(extension.skills ?? [])
@@ -1348,11 +1349,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     });
   }, [catalog, extensions, query]);
 
-  const visiblePlatformExtensionCount = visibleExtensions.filter(isLocked).length;
+  const visiblePlatformExtensionCount = installedExtensions.filter(isLocked).length;
   const sectionSummary = [
     `${visibleExtensions.length} installed`,
     `${visibleExtensions.filter((extension) => extension.enabled).length} enabled`,
-    visiblePlatformExtensionCount ? `${visiblePlatformExtensionCount} platform` : null,
+    activeFilter === 'platform' && visiblePlatformExtensionCount ? `${visiblePlatformExtensionCount} platform` : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1542,7 +1543,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 {catalogItem.availableVersion ?? catalogItem.version}
               </div>
             ) : null}
-            <div className={cx('grid gap-3 sm:items-center', options.showEnablement ? 'sm:grid-cols-[minmax(0,1fr)_auto_auto]' : 'sm:grid-cols-[minmax(0,1fr)_auto]')}>
+            <div
+              className={cx(
+                'grid gap-3 sm:items-center',
+                options.showEnablement ? 'sm:grid-cols-[minmax(0,1fr)_auto_auto]' : 'sm:grid-cols-[minmax(0,1fr)_auto]',
+              )}
+            >
               <div className="min-w-0 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</div>
               {options.showEnablement ? (
                 <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
@@ -1857,7 +1863,9 @@ function InstallExtensionModal({
           </Button>
         </div>
         <p className="text-[12px] leading-5 text-dim">
-          Extensions are Neon Pilot app packages that can add UI, tools, settings, and backend actions. Agent plugins are portable Codex/Claude-style instruction packages; Neon Pilot imports compatible content as a managed wrapper, not as a native app extension.
+          Extensions are Neon Pilot app packages that can add UI, tools, settings, and backend actions. Agent plugins are portable
+          Codex/Claude-style instruction packages; Neon Pilot imports compatible content as a managed wrapper, not as a native app
+          extension.
         </p>
 
         <section className="space-y-2">
