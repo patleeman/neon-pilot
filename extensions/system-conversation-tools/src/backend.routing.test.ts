@@ -151,6 +151,58 @@ describe('system-conversation-tools backend routing', () => {
     await conversationTool({ cli: { command: 'conversations create', args: ['CLI', 'Thread'] } }, context);
     expect(conversations.create).toHaveBeenLastCalledWith({ title: 'CLI Thread' });
 
+    await conversationTool(
+      {
+        cli: {
+          command: 'conversations create',
+          rawArgv: [
+            '--title',
+            'Model Thread',
+            '--cwd',
+            '/workspace',
+            '--model',
+            'opencode-go/deepseek-v4-flash',
+            '--live',
+            '--initial-prompt',
+            'Start here',
+            '--thinking-level',
+            'medium',
+            '--service-tier',
+            'flex',
+            '--tool',
+            'bash',
+            '--tool',
+            'apply_patch',
+          ],
+        },
+      },
+      context,
+    );
+    expect(conversations.create).toHaveBeenLastCalledWith({
+      title: 'Model Thread',
+      cwd: '/workspace',
+      live: true,
+      initialPrompt: 'Start here',
+      model: 'opencode-go/deepseek-v4-flash',
+      thinkingLevel: 'medium',
+      serviceTier: 'flex',
+      allowedToolNames: ['bash', 'apply_patch'],
+    });
+
+    await conversationTool(
+      {
+        cli: {
+          command: 'conversations create',
+          rawArgv: ['--prompt', 'Prompt alias', '--tools', 'bash, apply_patch'],
+        },
+      },
+      context,
+    );
+    expect(conversations.create).toHaveBeenLastCalledWith({
+      initialPrompt: 'Prompt alias',
+      allowedToolNames: ['bash', 'apply_patch'],
+    });
+
     await conversationTool({ cli: { command: 'conversations title', args: ['conv-2', 'Renamed', 'Thread'] } }, context);
     const setTitleCallback = title.executeSetConversationTitle.mock.calls.at(-1)?.[2] as (nextTitle: string) => Promise<unknown>;
     await setTitleCallback('Renamed Thread');
