@@ -25,6 +25,12 @@ export interface DesktopAppPreferences {
     quit: string;
     conversationMode: string;
     workbenchMode: string;
+    newWorkbenchTab: string;
+    closeWorkbenchTab: string;
+    closeWorkbenchFile: string;
+    refreshWorkbenchFile: string;
+    toggleWorkbenchExplorer: string;
+    toggleWorkbenchDiff: string;
     toggleSidebar: string;
     toggleRightRail: string;
   };

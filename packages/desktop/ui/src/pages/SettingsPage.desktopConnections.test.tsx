@@ -30,6 +30,12 @@ const DEFAULT_KEYBOARD_SHORTCUTS = {
   quit: 'CommandOrControl+Q',
   conversationMode: 'F1',
   workbenchMode: 'F2',
+  newWorkbenchTab: 'CommandOrControl+T',
+  closeWorkbenchTab: 'CommandOrControl+Shift+W',
+  closeWorkbenchFile: 'CommandOrControl+Alt+W',
+  refreshWorkbenchFile: 'F5',
+  toggleWorkbenchExplorer: 'CommandOrControl+B',
+  toggleWorkbenchDiff: 'CommandOrControl+Shift+D',
   toggleSidebar: 'CommandOrControl+/',
   toggleRightRail: 'CommandOrControl+\\',
 };
@@ -211,6 +217,16 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     });
     expect(container.textContent).toContain('Show Neon Pilot');
     expect(container.textContent).toContain('Find on page');
+    expect(container.textContent).toContain('New workbench tab');
+    expect(container.textContent).toContain('⌘/Ctrl + T');
+    expect(container.textContent).toContain('Close workbench file');
+    expect(container.textContent).toContain('⌘/Ctrl + Alt + W');
+    expect(container.textContent).toContain('Refresh workbench file');
+    expect(container.textContent).toContain('F5');
+    expect(container.textContent).toContain('Toggle workbench explorer');
+    expect(container.textContent).toContain('⌘/Ctrl + B');
+    expect(container.textContent).toContain('Toggle workbench diff');
+    expect(container.textContent).toContain('⌘/Ctrl + Shift + D');
     expect(container.textContent).not.toContain('Built-in shortcuts');
     expect(container.textContent).not.toContain('Save shortcuts');
   });
