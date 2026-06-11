@@ -64,4 +64,19 @@ describe('system-extension-manager manifest', () => {
       },
     });
   });
+
+  it('keeps read and reload CLI positional schemas explicit', () => {
+    const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
+
+    for (const command of ['extensions list', 'extensions catalog', 'extensions paths', 'extensions sources']) {
+      expect(commands.get(command)).toMatchObject({
+        usage: `${command} [--json]`,
+        argsSchema: { maxItems: 0 },
+      });
+    }
+    expect(commands.get('extensions reload')).toMatchObject({
+      usage: 'extensions reload [extensionId] [--json]',
+      argsSchema: { maxItems: 1, description: 'Optional positional args: extensionId.' },
+    });
+  });
 });

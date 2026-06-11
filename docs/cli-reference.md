@@ -1051,7 +1051,7 @@ Examples:
 Reload an extension backend by id, or refresh registry state.
 
 - Source: extension (system-extension-manager)
-- Usage: `neon-pilot extensions reload [--json]`
+- Usage: `neon-pilot extensions reload [extensionId] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: yes
@@ -1061,6 +1061,7 @@ Reload an extension backend by id, or refresh registry state.
 
 Examples:
 - `neon-pilot extensions reload`
+- `neon-pilot extensions reload system-settings`
 - `neon-pilot extensions reload --json`
 
 ### extensions smoke

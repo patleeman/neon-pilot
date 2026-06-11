@@ -226,7 +226,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -410,7 +411,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -677,16 +679,19 @@
         "description": "Reload an extension backend by id, or refresh registry state.",
         "action": "manageExtension",
         "inputAction": "reload",
-        "usage": "extensions reload [--json]",
+        "usage": "extensions reload [extensionId] [--json]",
         "examples": [
           "neon-pilot extensions reload",
+          "neon-pilot extensions reload system-settings",
           "neon-pilot extensions reload --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 1,
+          "description": "Optional positional args: extensionId."
         },
         "flagsSchema": {
           "type": "object",
@@ -861,7 +866,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -907,7 +913,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
