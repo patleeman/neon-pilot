@@ -280,11 +280,13 @@ describe('CommandsSettingsSection', () => {
         keys: ['mod+shift+p'],
         command: 'palette.open',
         args: { scope: 'commands' },
+        when: 'workspace.open',
         scope: 'global',
         defaultKeys: ['mod+shift+p'],
         enabled: true,
       },
     ]);
+    vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
 
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -306,6 +308,22 @@ describe('CommandsSettingsSection', () => {
     expect(threadRow?.textContent).not.toContain('mod + shift + p');
     expect(commandRow?.textContent).toContain('mod + shift + p');
     expect(commandRow?.textContent).not.toContain('mod + k');
+
+    const clearButton = commandRow?.querySelector<HTMLButtonElement>('button[aria-label="Clear shortcut for Open command palette"]');
+    if (!(clearButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected command palette shortcut clear button');
+    }
+
+    act(() => {
+      clearButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    expect(api.updateExtensionKeybinding).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      'open-command-palette',
+      expect.objectContaining({ enabled: false, when: 'workspace.open' }),
+    );
   });
 
   it('shows host commands as read-only in the command shortcut catalog', async () => {
