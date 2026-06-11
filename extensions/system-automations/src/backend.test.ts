@@ -47,6 +47,7 @@ vi.mock('@neon-pilot/extensions/backend/runs', () => ({
 }));
 
 import { deferredResume } from './conversationQueueBackend.js';
+import { scheduledTask as scheduledTaskEntrypoint } from './backend.js';
 import { scheduledTask } from './scheduledTaskBackend.js';
 
 function createCtx(overrides?: Record<string, unknown>) {
@@ -78,6 +79,19 @@ describe('system-automations backend', () => {
       expect(backendAutomationMock.startScheduledTaskRun).toHaveBeenCalledWith('daily-check');
       expect(mocks.invalidateTopics).toHaveBeenCalledWith(['tasks', 'runs']);
       expect(invalidate).toHaveBeenCalledWith(['tasks', 'runs', 'sessions']);
+    });
+
+    it('maps CLI positional task ids before running a task', async () => {
+      backendAutomationMock.resolveScheduledTaskForProfile.mockResolvedValue({
+        task: { id: 'daily-check', title: 'Daily Check' },
+      });
+      backendAutomationMock.startScheduledTaskRun.mockResolvedValue({ accepted: true, runId: 'run-1' });
+
+      const result = await scheduledTaskEntrypoint({ action: 'run', cli: { args: ['daily-check'], flags: {} } }, createCtx());
+
+      expect(result.text).toContain('Started scheduled task @daily-check as run run-1');
+      expect(backendAutomationMock.resolveScheduledTaskForProfile).toHaveBeenCalledWith('shared', 'daily-check');
+      expect(backendAutomationMock.startScheduledTaskRun).toHaveBeenCalledWith('daily-check');
     });
 
     it('does not fail when UI invalidation is unavailable', async () => {

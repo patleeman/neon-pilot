@@ -179,7 +179,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -227,6 +228,7 @@
             "type": "string"
           },
           "minItems": 1,
+          "maxItems": 1,
           "description": "Positional args: id."
         },
         "flagsSchema": {
@@ -253,20 +255,23 @@
       {
         "id": "tasks-save",
         "command": "tasks save",
-        "description": "Create or update a scheduled task: tasks save [task-id] --title <title> --prompt <prompt> [--cron <expr>|--at <iso>]",
+        "description": "Create or update a scheduled task: tasks save <task-id> --title <title> --prompt <prompt> [--cron <expr>|--at <iso>]",
         "action": "scheduledTask",
         "inputAction": "save",
         "jsonDefault": true,
-        "usage": "tasks save [--json]",
+        "usage": "tasks save <id> [--json]",
         "examples": [
-          "neon-pilot tasks save",
-          "neon-pilot tasks save --json"
+          "neon-pilot tasks save daily-check --prompt \"Check status\" --cron \"0 9 * * *\"",
+          "neon-pilot tasks save daily-check --prompt \"Check status\" --cron \"0 9 * * *\" --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Positional args: id."
         },
         "flagsSchema": {
           "type": "object",
@@ -311,6 +316,7 @@
             "type": "string"
           },
           "minItems": 1,
+          "maxItems": 1,
           "description": "Positional args: id."
         },
         "flagsSchema": {
@@ -341,20 +347,23 @@
       {
         "id": "tasks-validate",
         "command": "tasks validate",
-        "description": "Validate a scheduled task payload: tasks validate [task-id] ...",
+        "description": "Validate scheduled tasks, or one scheduled task by id.",
         "action": "scheduledTask",
         "inputAction": "validate",
         "jsonDefault": true,
-        "usage": "tasks validate [--json]",
+        "usage": "tasks validate [id] [--json]",
         "examples": [
           "neon-pilot tasks validate",
+          "neon-pilot tasks validate daily-check",
           "neon-pilot tasks validate --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 1,
+          "description": "Optional positional args: id."
         },
         "flagsSchema": {
           "type": "object",
@@ -391,16 +400,19 @@
         "action": "scheduledTask",
         "inputAction": "run",
         "jsonDefault": true,
-        "usage": "tasks run [--json]",
+        "usage": "tasks run <id> [--json]",
         "examples": [
-          "neon-pilot tasks run",
-          "neon-pilot tasks run --json"
+          "neon-pilot tasks run daily-check",
+          "neon-pilot tasks run daily-check --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Positional args: id."
         },
         "flagsSchema": {
           "type": "object",

@@ -1528,7 +1528,7 @@ Examples:
 Run a scheduled task immediately: tasks run <task-id>.
 
 - Source: extension (system-automations)
-- Usage: `neon-pilot tasks run [--json]`
+- Usage: `neon-pilot tasks run <id> [--json]`
 - Mode: background
 - Requires app: no
 - Idempotent: no
@@ -1537,15 +1537,15 @@ Run a scheduled task immediately: tasks run <task-id>.
 - Output: text, json
 
 Examples:
-- `neon-pilot tasks run`
-- `neon-pilot tasks run --json`
+- `neon-pilot tasks run daily-check`
+- `neon-pilot tasks run daily-check --json`
 
 ### tasks save
 
-Create or update a scheduled task: tasks save [task-id] --title <title> --prompt <prompt> [--cron <expr>|--at <iso>]
+Create or update a scheduled task: tasks save <task-id> --title <title> --prompt <prompt> [--cron <expr>|--at <iso>]
 
 - Source: extension (system-automations)
-- Usage: `neon-pilot tasks save [--json]`
+- Usage: `neon-pilot tasks save <id> [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: yes
@@ -1554,15 +1554,15 @@ Create or update a scheduled task: tasks save [task-id] --title <title> --prompt
 - Output: text, json
 
 Examples:
-- `neon-pilot tasks save`
-- `neon-pilot tasks save --json`
+- `neon-pilot tasks save daily-check --prompt "Check status" --cron "0 9 * * *"`
+- `neon-pilot tasks save daily-check --prompt "Check status" --cron "0 9 * * *" --json`
 
 ### tasks validate
 
-Validate a scheduled task payload: tasks validate [task-id] ...
+Validate scheduled tasks, or one scheduled task by id.
 
 - Source: extension (system-automations)
-- Usage: `neon-pilot tasks validate [--json]`
+- Usage: `neon-pilot tasks validate [id] [--json]`
 - Mode: read
 - Requires app: no
 - Idempotent: yes
@@ -1572,6 +1572,7 @@ Validate a scheduled task payload: tasks validate [task-id] ...
 
 Examples:
 - `neon-pilot tasks validate`
+- `neon-pilot tasks validate daily-check`
 - `neon-pilot tasks validate --json`
 
 ### version
