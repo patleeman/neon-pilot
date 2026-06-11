@@ -1,48 +1,10 @@
 import { type RefObject, useEffect } from 'react';
 
-const DESKTOP_CONVERSATION_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
-
-type DesktopConversationShortcutAction =
-  | 'focus-composer'
-  | 'edit-working-directory'
-  | 'save-working-directory'
-  | 'cancel-working-directory-edit'
-  | 'save-conversation-title'
-  | 'cancel-conversation-title-edit'
-  | 'rename-conversation';
-
-function isDesktopConversationShortcutAction(value: unknown): value is DesktopConversationShortcutAction {
-  return (
-    value === 'focus-composer' ||
-    value === 'edit-working-directory' ||
-    value === 'save-working-directory' ||
-    value === 'cancel-working-directory-edit' ||
-    value === 'save-conversation-title' ||
-    value === 'cancel-conversation-title-edit' ||
-    value === 'rename-conversation'
-  );
-}
-
-function desktopConversationShortcutCommandAction(command: unknown): DesktopConversationShortcutAction | null {
-  switch (command) {
-    case 'composer.focus':
-      return 'focus-composer';
-    case 'conversation.editCwd':
-      return 'edit-working-directory';
-    case 'conversation.saveCwd':
-      return 'save-working-directory';
-    case 'conversation.cancelCwdEdit':
-      return 'cancel-working-directory-edit';
-    case 'conversation.rename':
-      return 'rename-conversation';
-    case 'conversation.saveTitle':
-      return 'save-conversation-title';
-    case 'conversation.cancelTitleEdit':
-      return 'cancel-conversation-title-edit';
-    default:
-      return null;
-  }
-}
+import {
+  conversationEditorShortcutCommandAction,
+  DESKTOP_CONVERSATION_SHORTCUT_EVENT,
+  isConversationEditorShortcutAction,
+} from './desktopConversationShortcutActions';
 
 interface UseDesktopConversationShortcutsOptions {
   draft: boolean;
@@ -76,9 +38,9 @@ export function useDesktopConversationShortcuts({
       }
 
       const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
-      const action = isDesktopConversationShortcutAction(detail?.action)
+      const action = isConversationEditorShortcutAction(detail?.action)
         ? detail.action
-        : desktopConversationShortcutCommandAction(detail?.command);
+        : conversationEditorShortcutCommandAction(detail?.command);
       if (!action) {
         return;
       }
