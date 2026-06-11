@@ -3,6 +3,7 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { api } from '../client/api';
 import { type BrowserTabItem, type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { WorkbenchBrowserTab } from './workbench/WorkbenchBrowserTab';
 
@@ -169,5 +170,53 @@ describe('WorkbenchBrowserTab', () => {
       url: 'https://second.example/',
       title: 'Second',
     });
+  });
+
+  it('ignores surface shortcuts another handler already consumed', async () => {
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-browser',
+        surfaceId: 'new-browser-tab',
+        packageType: 'system',
+        title: 'New browser tab',
+        keys: ['mod+t'],
+        command: 'browser.newTab',
+        scope: 'surface',
+        defaultKeys: ['mod+t'],
+        enabled: true,
+      },
+    ]);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    const onNewTab = vi.fn();
+    window.neonPilotDesktop = {
+      setWorkbenchBrowserBounds: vi.fn(async () => null),
+      navigateWorkbenchBrowser: vi.fn(async () => null),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={onNewTab}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    const event = new KeyboardEvent('keydown', { key: 't', metaKey: true, cancelable: true });
+    event.preventDefault();
+    window.dispatchEvent(event);
+
+    expect(onNewTab).not.toHaveBeenCalled();
   });
 });

@@ -243,6 +243,7 @@ export function WorkbenchBrowserTab({
   // Surface-scoped keyboard shortcuts from the browser extension manifest.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented) return;
       const match = findMatchingExtensionKeybinding(event, surfaceKeybindings);
       if (!match) return;
 
