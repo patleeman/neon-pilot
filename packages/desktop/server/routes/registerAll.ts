@@ -2,6 +2,7 @@ import { registerAppTelemetryRoutes } from './appTelemetry.js';
 import { registerCompanionProxyRoutes } from './companionProxy.js';
 import type { RegisterServerRoutesInput } from './context.js';
 import { registerConversationRoutes } from './conversations.js';
+import { registerConversationActivityRoutes } from './conversationActivity.js';
 import { registerConversationStateRoutes } from './conversationState.js';
 import { registerExecutionRoutes } from './executions.js';
 import { registerExtensionRoutes } from './extensions.js';
@@ -36,6 +37,8 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
   registerSystemRoutes(app, context);
 
   registerConversationRoutes(app, context);
+
+  registerConversationActivityRoutes(app, context);
 
   registerConversationStateRoutes(app, context);
 

@@ -40,3 +40,21 @@ Use executions for product UI freshness:
 The conversation background-work shelf is a backend-truth view. It must fetch scoped conversation executions with `active=true&visibility=primary` and use app-wide execution snapshots only as refresh hints. Do not derive shelf rows from the global renderer execution cache; stale cache entries can make completed background commands or subagents look live. The backend endpoint owns active-status filtering and durable-run reconciliation before returning rows as active.
 
 Use durable runs only inside low-level detail/log plumbing, daemon recovery, and agent-facing `background_bash`/`subagent` APIs. Any durable-run mutation that can affect visible background work must invalidate the `executions` topic; invalidating `runs` alone is not enough.
+
+## Conversation activity
+
+The conversation composer shelf is backed by a shared backend **conversation activity** projection at
+`/api/conversations/:id/activity`. It is the thread-level registry for connected work such as active executions, queued
+prompts, deferred resumes, and linked scheduled tasks.
+
+Use this projection when a frontend surface, CLI command, or extension needs to answer “what is attached to this
+conversation right now?” Do not reconstruct shelf state from raw durable runs, task files, live queue internals, or
+renderer stores in each consumer. Add new providers to the backend projection so every consumer gets the same item IDs,
+statuses, visibility, and actions.
+
+Conversation activity items use stable prefixed IDs:
+
+- `execution:<executionId>` for background commands, subagents, and execution-backed work
+- `queued-prompt:<queueType>:<promptId>` for live queued steer/follow-up prompts
+- `deferred-resume:<resumeId>` for deferred conversation wakeups
+- `scheduled-task:<taskId>` for automations linked to the conversation

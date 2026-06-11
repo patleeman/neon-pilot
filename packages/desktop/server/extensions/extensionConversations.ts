@@ -197,7 +197,19 @@ export function createExtensionConversationsCapability(
     // ── Read operations ──────────────────────────────────────────────────
 
     async list(): Promise<unknown> {
-      return readConversationSessionsCapability();
+      return readConversationSessionsCapability({ profile: serverContext?.getRuntimeScope?.() ?? 'shared' });
+    },
+
+    async activity(
+      conversationId: string,
+      options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
+    ): Promise<unknown> {
+      const { listConversationActivity } = await import('../conversations/conversationActivity.js');
+      return listConversationActivity(conversationId, {
+        ...options,
+        profile: serverContext?.getRuntimeScope?.() ?? 'shared',
+        tasks: serverContext?.listTasksForRuntimeScope?.(),
+      });
     },
 
     async getMeta(conversationId: string): Promise<unknown> {

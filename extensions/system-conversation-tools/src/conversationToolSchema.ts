@@ -87,6 +87,8 @@ const AdminConversationParams = {
     olderThanMs: { type: 'number', minimum: 1 },
     archivedOnly: { type: 'boolean' },
     dryRun: { type: 'boolean' },
+    active: { type: 'boolean', description: 'Only include currently active conversation activity items.' },
+    visibility: { type: 'string', enum: ['primary', 'system', 'hidden', 'visible', 'all'] },
   },
 } as const;
 
@@ -97,6 +99,7 @@ export const ConversationToolParams = {
       type: 'string',
       enum: [
         'ask',
+        'activity',
         'inspect',
         'set_title',
         'change_working_directory',
@@ -134,6 +137,7 @@ export const ConversationToolParams = {
 
 export const CONVERSATION_ACTIONS = [
   'ask',
+  'activity',
   'inspect',
   'set_title',
   'change_working_directory',

@@ -1423,6 +1423,7 @@ export interface ExtensionBackendContext {
   knowledge: Record<string, (...args: never[]) => Promise<unknown>>;
   conversations: Record<string, (...args: never[]) => Promise<unknown>> & {
     list(...args: never[]): Promise<unknown>;
+    activity(conversationId: string, options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' }): Promise<unknown>;
     getMeta(conversationId: string): Promise<unknown>;
     get(conversationId: string, options?: { tailBlocks?: number }): Promise<unknown>;
     getBlocks(conversationId: string, options?: { tailBlocks?: number }): Promise<unknown>;

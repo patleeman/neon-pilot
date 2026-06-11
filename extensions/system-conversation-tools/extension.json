@@ -291,6 +291,60 @@
         }
       },
       {
+        "id": "conversations-activity",
+        "command": "conversations activity",
+        "description": "List backend conversation activity shelf items for a thread.",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "activity",
+        "usage": "conversations activity <conversationId> [--active] [--visibility primary|system|hidden|visible|all] [--json]",
+        "examples": [
+          "neon-pilot conversations activity conversation-example --json",
+          "neon-pilot conversations activity conversation-example --active --visibility primary --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "active": {
+              "type": "boolean",
+              "description": "Only include currently active activity items."
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "primary",
+                "system",
+                "hidden",
+                "visible",
+                "all"
+              ]
+            },
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
+      },
+      {
         "id": "conversations-inspect",
         "command": "conversations inspect",
         "description": "Inspect a conversation by id; optional second arg is outline, query, diff, or read_window.",
@@ -1751,6 +1805,7 @@
         "worker": {
           "enabled": true,
           "inputActions": [
+            "activity",
             "inspect",
             "create",
             "create_and_run",

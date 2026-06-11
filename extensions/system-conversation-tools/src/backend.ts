@@ -328,6 +328,14 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
     return { ...baseInspect, inspectAction: 'list', query: flagString(flags, 'query') ?? (positionals.join(' ') || undefined) };
   if (command === 'conversations search')
     return { ...baseInspect, inspectAction: 'search', query: flagString(flags, 'query') ?? positionals.join(' ') };
+  if (command === 'conversations activity')
+    return {
+      ...body,
+      action: 'activity',
+      conversationId: positionals[0],
+      active: flagBoolean(flags, 'active'),
+      visibility: flagString(flags, 'visibility'),
+    };
   if (command === 'conversations inspect') {
     const inspectAction = positionals[1] ?? flagString(flags, 'action') ?? 'outline';
     return {
@@ -568,6 +576,17 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
   switch (action) {
     case 'ask':
       return executeAskUserQuestion(payload, sessionManagerCtx);
+
+    case 'activity':
+      return toolResult(
+        action,
+        await ctx.conversations.activity(requiredString(payload, 'conversationId'), {
+          ...(payload.active !== undefined ? { active: payload.active === true } : {}),
+          ...(optionalString(payload.visibility)
+            ? { visibility: optionalString(payload.visibility) as 'primary' | 'system' | 'hidden' | 'visible' | 'all' }
+            : {}),
+        }),
+      );
 
     case 'inspect':
       return executeConversationInspectTool(conversationInspectPayload(params), { ...sessionManagerCtx, conversations: ctx.conversations });
