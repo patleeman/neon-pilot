@@ -1889,6 +1889,10 @@ export function Layout() {
         window.dispatchEvent(new CustomEvent('neon-pilot:composer-submit'));
         return true;
       },
+      stopComposer() {
+        window.dispatchEvent(new CustomEvent('neon-pilot:composer-stop'));
+        return true;
+      },
       clearComposer() {
         window.dispatchEvent(new CustomEvent('neon-pilot:composer-clear'));
         return true;

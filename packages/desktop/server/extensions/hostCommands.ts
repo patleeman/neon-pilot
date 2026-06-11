@@ -19,6 +19,7 @@ export const HOST_COMMAND_IDS = [
   'conversation.editCwd',
   'composer.focus',
   'composer.submit',
+  'composer.stop',
   'composer.clear',
   'conversation.pageUp',
   'conversation.pageDown',

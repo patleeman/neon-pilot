@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
+import { setExtensionCommandContext } from '../extensions/commands';
 import { sessionStore } from '../store';
 import { APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
 import { Layout } from './Layout';
@@ -74,6 +75,7 @@ describe('Layout workbench toggle', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    setExtensionCommandContext('conversation.isStreaming', null);
     delete document.documentElement.dataset.neonPilotDesktop;
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
@@ -151,6 +153,20 @@ describe('Layout workbench toggle', () => {
 
     expect(diffListener).toHaveBeenCalledTimes(1);
     window.removeEventListener('pa:workbench-toggle-diff', diffListener);
+  });
+
+  it('accepts command-only desktop shortcut events for composer stop', () => {
+    const stopListener = vi.fn();
+    window.addEventListener('neon-pilot:composer-stop', stopListener);
+    setExtensionCommandContext('conversation.isStreaming', true);
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'composer.stop' } }));
+    });
+
+    expect(stopListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('neon-pilot:composer-stop', stopListener);
   });
 
   it('opens a side chat after reservation without waiting for live-session creation', async () => {

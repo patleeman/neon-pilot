@@ -37,6 +37,7 @@ import {
 } from '../components/ui';
 import type { ExcalidrawSceneData } from '../content/excalidrawUtils';
 import { parseExcalidrawSceneFromSourceData } from '../content/excalidrawUtils';
+import { setExtensionCommandContext } from '../extensions/commands';
 import {
   buildBrowserCommentContextMessages,
   buildBrowserCommentsStorageKey,
@@ -5394,6 +5395,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     }
   }
 
+  useEffect(() => {
+    setExtensionCommandContext('conversation.isStreaming', stream.isStreaming);
+    return () => setExtensionCommandContext('conversation.isStreaming', null);
+  }, [stream.isStreaming]);
+
   async function restoreQueuedPromptToComposer(
     behavior: 'steer' | 'followUp',
     queueIndex: number,
@@ -5663,6 +5669,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       textareaRef.current?.focus();
     };
 
+    const handleComposerStopCommand = () => {
+      if (!stream.isStreaming) return;
+      void stopStreamAndRestoreQueuedPrompts();
+    };
+
     const handleComposerAppendTextCommand = (event: Event) => {
       const text = event instanceof CustomEvent && typeof event.detail?.text === 'string' ? event.detail.text : '';
       if (!text.trim()) return;
@@ -5671,15 +5682,24 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     window.addEventListener('neon-pilot:composer-focus', handleComposerFocusCommand);
     window.addEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
+    window.addEventListener('neon-pilot:composer-stop', handleComposerStopCommand);
     window.addEventListener('neon-pilot:composer-clear', handleComposerClearCommand);
     window.addEventListener('neon-pilot:composer-append-text', handleComposerAppendTextCommand);
     return () => {
       window.removeEventListener('neon-pilot:composer-focus', handleComposerFocusCommand);
       window.removeEventListener('neon-pilot:composer-submit', handleComposerSubmitCommand);
+      window.removeEventListener('neon-pilot:composer-stop', handleComposerStopCommand);
       window.removeEventListener('neon-pilot:composer-clear', handleComposerClearCommand);
       window.removeEventListener('neon-pilot:composer-append-text', handleComposerAppendTextCommand);
     };
-  }, [composerController, composerShowsQuestionSubmit, submitComposerQuestionIfReady, submitComposerActionForModifiers]);
+  }, [
+    composerController,
+    composerShowsQuestionSubmit,
+    stopStreamAndRestoreQueuedPrompts,
+    stream.isStreaming,
+    submitComposerQuestionIfReady,
+    submitComposerActionForModifiers,
+  ]);
   const composerSubmit = resolveConversationComposerSubmitState(
     composerRunState.streamControlsActive,
     composerAltHeld,

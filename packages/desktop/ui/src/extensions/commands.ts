@@ -31,6 +31,7 @@ export interface ExtensionCommandExecutorOptions {
   focusPrevious?(): void;
   activateSelection?(): void;
   submitComposer?(): boolean;
+  stopComposer?(): boolean;
   clearComposer?(): boolean;
   pageConversation?(direction: 'up' | 'down'): boolean;
   closeConversation?(): boolean;
@@ -158,6 +159,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.editCwd', title: 'Edit Conversation Working Directory', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
+    { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
     { id: 'composer.clear', title: 'Clear Composer', category: 'Conversation' },
     { id: 'conversation.pageUp', title: 'Page Conversation Up', category: 'Conversation' },
     { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
@@ -415,6 +417,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute() {
         return Boolean(options.submitComposer);
+      },
+    },
+    {
+      id: 'composer.stop',
+      title: 'Stop Streaming',
+      category: 'Conversation',
+      execute() {
+        return options.stopComposer?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.stopComposer) && readContextValue(context, 'conversation.isStreaming') === true;
       },
     },
     {

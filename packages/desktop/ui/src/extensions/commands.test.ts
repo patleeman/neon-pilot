@@ -52,9 +52,12 @@ describe('extension commands', () => {
   });
 
   it('includes hardware-friendly composer and dictation commands', async () => {
-    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['composer.submit', 'dictation.toggle']));
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),
+    );
 
     const submitComposer = vi.fn(() => true);
+    const stopComposer = vi.fn(() => true);
     const toggleDictation = vi.fn(() => true);
     const commands = createHostCommands({
       navigate: vi.fn(),
@@ -62,13 +65,35 @@ describe('extension commands', () => {
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
       submitComposer,
+      stopComposer,
       toggleDictation,
+      context: { 'conversation.isStreaming': true },
     });
 
     await expect(Promise.resolve(commands.find((command) => command.id === 'composer.submit')?.execute(undefined))).resolves.toBe(true);
+    await expect(Promise.resolve(commands.find((command) => command.id === 'composer.stop')?.execute(undefined))).resolves.toBe(true);
     await expect(Promise.resolve(commands.find((command) => command.id === 'dictation.toggle')?.execute(undefined))).resolves.toBe(true);
     expect(submitComposer).toHaveBeenCalledTimes(1);
+    expect(stopComposer).toHaveBeenCalledTimes(1);
     expect(toggleDictation).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables composer stop unless a conversation is streaming', async () => {
+    const stopComposer = vi.fn(() => true);
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      stopComposer,
+    };
+
+    await expect(executeExtensionCommand('composer.stop', undefined, baseOptions)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('composer.stop', undefined, { ...baseOptions, context: { 'conversation.isStreaming': true } }),
+    ).resolves.toBe(true);
+
+    expect(stopComposer).toHaveBeenCalledTimes(1);
   });
 
   it('includes command-backed app chrome actions', async () => {
