@@ -120,6 +120,35 @@ describe('system-conversation-tools manifest', () => {
     });
   });
 
+  it('keeps write-side conversation CLI positional schemas aligned with backend normalization', () => {
+    const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
+
+    expect(commands.get('conversations create')).toMatchObject({
+      usage: 'conversations create [title...] [--json]',
+      argsSchema: { description: 'Optional positional args: title.' },
+      flagsSchema: { properties: { title: { type: 'string' }, cwd: { type: 'string' } } },
+    });
+    expect(commands.get('conversations open active')).toMatchObject({
+      usage: 'conversations open active [conversationId] [--json]',
+      argsSchema: { maxItems: 1 },
+    });
+    expect(commands.get('conversations retention prune')).toMatchObject({
+      usage: 'conversations retention prune [olderThan] [--older-than <duration>] [--archived-only] [--dry-run] [--json]',
+      argsSchema: { maxItems: 1 },
+      flagsSchema: { properties: { 'older-than': { type: 'string' }, 'archived-only': { type: 'boolean' } } },
+    });
+    expect(commands.get('conversations transcript append')).toMatchObject({
+      usage: 'conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--json]',
+      argsSchema: { minItems: 1, maxItems: 2 },
+      flagsSchema: { properties: { type: { type: 'string' }, data: { type: 'string' } } },
+    });
+    expect(commands.get('conversations transcript update')).toMatchObject({
+      usage: 'conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--json]',
+      argsSchema: { minItems: 2, maxItems: 3 },
+      flagsSchema: { properties: { type: { type: 'string' }, data: { type: 'string' }, 'block-id': { type: 'string' } } },
+    });
+  });
+
   it('does not use an agentExtension for conversation tools', () => {
     expect(manifest.backend.agentExtension).toBeUndefined();
   });

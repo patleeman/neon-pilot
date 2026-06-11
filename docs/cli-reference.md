@@ -384,7 +384,7 @@ Examples:
 Create a conversation with an optional title.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations create <conversationId> [--json]`
+- Usage: `neon-pilot conversations create [title...] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -393,8 +393,8 @@ Create a conversation with an optional title.
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations create conversation-example`
-- `neon-pilot conversations create conversation-example --json`
+- `neon-pilot conversations create Planning Thread`
+- `neon-pilot conversations create --title "Planning Thread" --json`
 
 ### conversations cwd
 
@@ -504,7 +504,7 @@ Examples:
 Set or clear the active sidebar conversation: conversations open active [id]
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations open active <conversationId> [--json]`
+- Usage: `neon-pilot conversations open active [conversationId] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -513,6 +513,7 @@ Set or clear the active sidebar conversation: conversations open active [id]
 - Output: text, json
 
 Examples:
+- `neon-pilot conversations open active`
 - `neon-pilot conversations open active conversation-example`
 - `neon-pilot conversations open active conversation-example --json`
 
@@ -606,7 +607,7 @@ Examples:
 Prune old persisted conversations: conversations retention prune --older-than 90d --archived-only --dry-run
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations retention prune <conversationId> [--json]`
+- Usage: `neon-pilot conversations retention prune [olderThan] [--older-than <duration>] [--archived-only] [--dry-run] [--json]`
 - Mode: destructive
 - Requires app: no
 - Idempotent: no
@@ -615,8 +616,8 @@ Prune old persisted conversations: conversations retention prune --older-than 90
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations retention prune conversation-example`
-- `neon-pilot conversations retention prune conversation-example --json`
+- `neon-pilot conversations retention prune 90d --dry-run`
+- `neon-pilot conversations retention prune --older-than 90d --archived-only --json`
 
 ### conversations rollback
 
@@ -776,7 +777,7 @@ Examples:
 Append a transcript block: conversations transcript append <id> --type <type> --data <json>
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations transcript append <conversationId> [--json]`
+- Usage: `neon-pilot conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -785,15 +786,15 @@ Append a transcript block: conversations transcript append <id> --type <type> --
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations transcript append conversation-example`
-- `neon-pilot conversations transcript append conversation-example --json`
+- `neon-pilot conversations transcript append conversation-example note --data '{"text":"Note"}'`
+- `neon-pilot conversations transcript append conversation-example --type note --data '{"text":"Note"}' --json`
 
 ### conversations transcript update
 
 Update a transcript block: conversations transcript update <id> <block-id> --type <type> --data <json>
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations transcript update <conversationId> [--json]`
+- Usage: `neon-pilot conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -802,8 +803,8 @@ Update a transcript block: conversations transcript update <id> <block-id> --typ
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations transcript update conversation-example`
-- `neon-pilot conversations transcript update conversation-example --json`
+- `neon-pilot conversations transcript update conversation-example block-1 note --data '{"text":"Updated"}'`
+- `neon-pilot conversations transcript update conversation-example block-1 --type note --data '{"text":"Updated"}' --json`
 
 ### conversations unarchive
 

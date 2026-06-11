@@ -338,18 +338,17 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "create",
-        "usage": "conversations create <conversationId> [--json]",
+        "usage": "conversations create [title...] [--json]",
         "examples": [
-          "neon-pilot conversations create conversation-example",
-          "neon-pilot conversations create conversation-example --json"
+          "neon-pilot conversations create Planning Thread",
+          "neon-pilot conversations create --title \"Planning Thread\" --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "minItems": 1,
-          "description": "Positional args: conversationId."
+          "description": "Optional positional args: title."
         },
         "flagsSchema": {
           "type": "object",
@@ -361,6 +360,14 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "title": {
+              "type": "string",
+              "description": "Conversation title."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Initial working directory."
             }
           },
           "additionalProperties": true
@@ -1177,8 +1184,9 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "workspace_open_update",
-        "usage": "conversations open active <conversationId> [--json]",
+        "usage": "conversations open active [conversationId] [--json]",
         "examples": [
+          "neon-pilot conversations open active",
           "neon-pilot conversations open active conversation-example",
           "neon-pilot conversations open active conversation-example --json"
         ],
@@ -1187,8 +1195,8 @@
           "items": {
             "type": "string"
           },
-          "minItems": 1,
-          "description": "Positional args: conversationId."
+          "maxItems": 1,
+          "description": "Optional positional args: conversationId."
         },
         "flagsSchema": {
           "type": "object",
@@ -1357,18 +1365,18 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "retention_prune",
-        "usage": "conversations retention prune <conversationId> [--json]",
+        "usage": "conversations retention prune [olderThan] [--older-than <duration>] [--archived-only] [--dry-run] [--json]",
         "examples": [
-          "neon-pilot conversations retention prune conversation-example",
-          "neon-pilot conversations retention prune conversation-example --json"
+          "neon-pilot conversations retention prune 90d --dry-run",
+          "neon-pilot conversations retention prune --older-than 90d --archived-only --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "minItems": 1,
-          "description": "Positional args: conversationId."
+          "maxItems": 1,
+          "description": "Optional positional args: older-than duration, such as 90d."
         },
         "flagsSchema": {
           "type": "object",
@@ -1380,6 +1388,14 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "older-than": {
+              "type": "string",
+              "description": "Prune conversations older than this duration, such as 90d."
+            },
+            "archived-only": {
+              "type": "boolean",
+              "description": "Only prune archived conversations."
             }
           },
           "additionalProperties": true
@@ -1402,10 +1418,10 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "append_transcript_block",
-        "usage": "conversations transcript append <conversationId> [--json]",
+        "usage": "conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--json]",
         "examples": [
-          "neon-pilot conversations transcript append conversation-example",
-          "neon-pilot conversations transcript append conversation-example --json"
+          "neon-pilot conversations transcript append conversation-example note --data '{\"text\":\"Note\"}'",
+          "neon-pilot conversations transcript append conversation-example --type note --data '{\"text\":\"Note\"}' --json"
         ],
         "argsSchema": {
           "type": "array",
@@ -1413,7 +1429,8 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: conversationId."
+          "maxItems": 2,
+          "description": "Positional args: conversationId and optional block type."
         },
         "flagsSchema": {
           "type": "object",
@@ -1425,6 +1442,22 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "type": {
+              "type": "string",
+              "description": "Transcript block type."
+            },
+            "data": {
+              "type": "string",
+              "description": "JSON payload for the transcript block."
+            },
+            "block-id": {
+              "type": "string",
+              "description": "Optional transcript block id."
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional transcript block title."
             }
           },
           "additionalProperties": true
@@ -1447,18 +1480,19 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "update_transcript_block",
-        "usage": "conversations transcript update <conversationId> [--json]",
+        "usage": "conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--json]",
         "examples": [
-          "neon-pilot conversations transcript update conversation-example",
-          "neon-pilot conversations transcript update conversation-example --json"
+          "neon-pilot conversations transcript update conversation-example block-1 note --data '{\"text\":\"Updated\"}'",
+          "neon-pilot conversations transcript update conversation-example block-1 --type note --data '{\"text\":\"Updated\"}' --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "minItems": 1,
-          "description": "Positional args: conversationId."
+          "minItems": 2,
+          "maxItems": 3,
+          "description": "Positional args: conversationId, blockId, and optional block type."
         },
         "flagsSchema": {
           "type": "object",
@@ -1470,6 +1504,22 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "type": {
+              "type": "string",
+              "description": "Transcript block type."
+            },
+            "data": {
+              "type": "string",
+              "description": "JSON payload for the transcript block."
+            },
+            "block-id": {
+              "type": "string",
+              "description": "Transcript block id."
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional transcript block title."
             }
           },
           "additionalProperties": true
