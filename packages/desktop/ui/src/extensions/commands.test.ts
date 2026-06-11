@@ -80,6 +80,21 @@ describe('extension commands', () => {
     expect(findOnPage).toHaveBeenCalledTimes(1);
   });
 
+  it('does not report unwired focus commands as handled', async () => {
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+    };
+
+    await expect(executeExtensionCommand('composer.focus', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('sidebar.focus', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('focus.next', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('focus.previous', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('selection.activate', undefined, options)).resolves.toBe(false);
+  });
+
   it('executes core shortcut aliases through host commands', async () => {
     const navigate = vi.fn();
     const toggleSidebar = vi.fn(() => true);

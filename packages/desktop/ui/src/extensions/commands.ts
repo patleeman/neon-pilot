@@ -373,7 +373,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Composer',
       category: 'Conversation',
       execute() {
-        options.focusComposer?.();
+        if (!options.focusComposer) return false;
+        options.focusComposer();
         return true;
       },
     },
@@ -500,7 +501,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Sidebar',
       category: 'Focus',
       execute() {
-        options.focusSidebar?.();
+        if (!options.focusSidebar) return false;
+        options.focusSidebar();
         return true;
       },
     },
@@ -509,7 +511,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Next',
       category: 'Focus',
       execute() {
-        options.focusNext?.();
+        if (!options.focusNext) return false;
+        options.focusNext();
         return true;
       },
     },
@@ -518,7 +521,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Previous',
       category: 'Focus',
       execute() {
-        options.focusPrevious?.();
+        if (!options.focusPrevious) return false;
+        options.focusPrevious();
         return true;
       },
     },
@@ -527,7 +531,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Activate Selection',
       category: 'Focus',
       execute() {
-        options.activateSelection?.();
+        if (!options.activateSelection) return false;
+        options.activateSelection();
         return true;
       },
     },
