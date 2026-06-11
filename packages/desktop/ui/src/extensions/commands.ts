@@ -60,6 +60,7 @@ export interface ExtensionCommandExecutorOptions {
   artifactToggleSource?(): boolean;
   artifactToggleFullscreen?(): boolean;
   artifactClose?(): boolean;
+  closeImagePreview?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: {
@@ -199,6 +200,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'artifact.toggleSource', title: 'Show or Hide Artifact Source', category: 'Artifact' },
     { id: 'artifact.toggleFullscreen', title: 'Toggle Artifact Fullscreen', category: 'Artifact' },
     { id: 'artifact.close', title: 'Close Artifact', category: 'Artifact' },
+    { id: 'imagePreview.close', title: 'Close Image Preview', category: 'Image Preview' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -711,6 +713,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.artifactClose) && readContextValue(context, 'artifact.active') === true;
+      },
+    },
+    {
+      id: 'imagePreview.close',
+      title: 'Close Image Preview',
+      category: 'Image Preview',
+      execute() {
+        return options.closeImagePreview?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeImagePreview) && readContextValue(context, 'imagePreview.active') === true;
       },
     },
     {

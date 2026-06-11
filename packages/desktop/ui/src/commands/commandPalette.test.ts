@@ -215,6 +215,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('imagePreview.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'imagePreview.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('imagePreview.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'imagePreview.active': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': false },

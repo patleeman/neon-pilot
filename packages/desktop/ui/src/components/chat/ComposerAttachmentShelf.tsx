@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { AttachmentChip, AttachmentChipButton, IconButton, TextButton } from '../ui';
+import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './imagePreviewCommands';
 
 interface ComposerAttachmentShelfDrawingAttachment {
   localId: string;
@@ -69,7 +71,12 @@ function ComposerImagePreviewModal({ image, onClose }: { image: ComposerPreviewI
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
+    setExtensionCommandContext('imagePreview.active', true);
+    return () => setExtensionCommandContext('imagePreview.active', null);
+  }, []);
+
+  useEffect(() => {
+    function closeFromKeyboard(event: KeyboardEvent) {
       if (event.key !== 'Escape') {
         return;
       }
@@ -78,8 +85,16 @@ function ComposerImagePreviewModal({ image, onClose }: { image: ComposerPreviewI
       onClose();
     }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    function closeFromCommand() {
+      onClose();
+    }
+
+    window.addEventListener('keydown', closeFromKeyboard);
+    window.addEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    return () => {
+      window.removeEventListener('keydown', closeFromKeyboard);
+      window.removeEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    };
   }, [onClose]);
 
   return (

@@ -68,6 +68,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['artifact.toggleSource', 'artifact.canShowSource'],
   ['artifact.toggleFullscreen', 'artifact.active'],
   ['artifact.close', 'artifact.active'],
+  ['imagePreview.close', 'imagePreview.active'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
   ['composer.openSettings', 'composer.settingsAvailable'],

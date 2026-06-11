@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ComposerAttachmentShelf } from './ComposerAttachmentShelf';
+import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './imagePreviewCommands';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -107,6 +108,19 @@ describe('ComposerAttachmentShelf', () => {
 
     expect(container.querySelector('[role="dialog"][aria-label="Wireframe (rev 3)"]')).not.toBeNull();
     expect(createObjectURLMock).not.toHaveBeenCalled();
+  });
+
+  it('closes the composer image preview from the shared command event', () => {
+    const { container } = renderShelf({ attachments: [imageAttachment] });
+
+    click(container.querySelector('button[aria-label="Preview Screenshot 2026-04-22.png"]'));
+    expect(container.querySelector('[role="dialog"][aria-label="Screenshot 2026-04-22.png"]')).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT));
+    });
+
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('keeps remove actions wired up', () => {

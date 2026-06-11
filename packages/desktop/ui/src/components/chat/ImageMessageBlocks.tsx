@@ -1,7 +1,9 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 
+import { setExtensionCommandContext } from '../../extensions/commands';
 import type { MessageBlock } from '../../shared/types';
 import { Button, IconButton, MediaPreviewButton, SurfacePanel } from '../ui';
+import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './imagePreviewCommands';
 
 export type InspectableImage = {
   alt: string;
@@ -13,6 +15,30 @@ export type InspectableImage = {
 
 export function ImageInspectModal({ image, onClose }: { image: InspectableImage; onClose: () => void }) {
   const label = image.caption?.trim() || image.alt.trim() || 'Conversation image';
+
+  useEffect(() => {
+    setExtensionCommandContext('imagePreview.active', true);
+    return () => setExtensionCommandContext('imagePreview.active', null);
+  }, []);
+
+  useEffect(() => {
+    function closeFromKeyboard(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose();
+    }
+
+    function closeFromCommand() {
+      onClose();
+    }
+
+    window.addEventListener('keydown', closeFromKeyboard);
+    window.addEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    return () => {
+      window.removeEventListener('keydown', closeFromKeyboard);
+      window.removeEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    };
+  }, [onClose]);
 
   return (
     <div

@@ -43,6 +43,7 @@ export const HOST_COMMAND_IDS = [
   'artifact.toggleSource',
   'artifact.toggleFullscreen',
   'artifact.close',
+  'imagePreview.close',
   'conversation.newAndFocus',
   'model.cycle',
   'thinking.cycle',

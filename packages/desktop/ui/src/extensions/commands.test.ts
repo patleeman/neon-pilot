@@ -193,6 +193,25 @@ describe('extension commands', () => {
     expect(artifactClose).toHaveBeenCalledTimes(1);
   });
 
+  it('includes image preview commands gated by preview state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['imagePreview.close']));
+    const closeImagePreview = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      closeImagePreview,
+    };
+
+    await expect(executeExtensionCommand('imagePreview.close', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('imagePreview.close', undefined, { ...options, context: { 'imagePreview.active': true } }),
+    ).resolves.toBe(true);
+
+    expect(closeImagePreview).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),

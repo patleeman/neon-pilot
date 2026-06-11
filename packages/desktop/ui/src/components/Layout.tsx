@@ -44,6 +44,7 @@ import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness'
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
 import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
+import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './chat/imagePreviewCommands';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -1974,6 +1975,10 @@ export function Layout() {
       },
       artifactClose() {
         window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'close' } }));
+        return true;
+      },
+      closeImagePreview() {
+        window.dispatchEvent(new CustomEvent(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT));
         return true;
       },
       focusComposer() {
