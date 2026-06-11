@@ -47,6 +47,7 @@ import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSet
 import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
 import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './chat/imagePreviewCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
+import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -2025,6 +2026,10 @@ export function Layout() {
       },
       closeDraftWorkspacePicker() {
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      closeWorkspaceQuickSelect() {
+        window.dispatchEvent(new CustomEvent(WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT));
         return true;
       },
       focusComposer() {

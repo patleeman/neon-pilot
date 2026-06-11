@@ -191,6 +191,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('workspaceQuickSelect.close', {
+        activeConversationId: null,
+        context: { 'workspaceQuickSelect.open': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('workspaceQuickSelect.close', {
+        activeConversationId: null,
+        context: { 'workspaceQuickSelect.open': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('notifications.markAllRead', {
         activeConversationId: 'conversation-1',
         context: { 'notifications.hasUnread': false },

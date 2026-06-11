@@ -362,6 +362,28 @@ describe('extension commands', () => {
     expect(closeDraftWorkspacePicker).toHaveBeenCalledTimes(1);
   });
 
+  it('includes workspace quick select commands gated by picker state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['workspaceQuickSelect.close']));
+    const closeWorkspaceQuickSelect = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      closeWorkspaceQuickSelect,
+    };
+
+    await expect(executeExtensionCommand('workspaceQuickSelect.close', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('workspaceQuickSelect.close', undefined, {
+        ...options,
+        context: { 'workspaceQuickSelect.open': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(closeWorkspaceQuickSelect).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),
