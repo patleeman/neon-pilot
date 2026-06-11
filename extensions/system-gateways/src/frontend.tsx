@@ -430,6 +430,7 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
 
   const telegramStatus = telegramConnection?.status ?? 'needs_config';
   const telegramReady = token.configured && telegramConnection?.enabled && telegramStatus !== 'paused' && telegramStatus !== 'needs_attention';
+  const telegramTone = token.configured ? (telegramReady ? 'success' : statusTone(telegramStatus)) : 'warning';
 
   if (loading) {
     return (
@@ -464,144 +465,228 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
         {error ? <Notice tone="danger">{error}</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
 
-        <AppPageSection title="Telegram" layout="stacked" bodyClassName="space-y-5">
-          <div className="flex flex-col gap-3 border-b border-border-subtle pb-4 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-[13px] font-medium text-primary">
-                <StatusDot tone={telegramReady ? 'success' : statusTone(telegramStatus)} />
-                <span>{telegramReady ? 'Ready' : token.configured ? formatStatus(telegramStatus) : 'Needs Bot Token'}</span>
-              </div>
-              <p className="mt-1 text-[12px] text-muted">
-                Bot {token.configured ? 'configured' : 'not configured'}; {telegramBindings.length} active{' '}
-                {telegramBindings.length === 1 ? 'route' : 'routes'}.
-              </p>
+        <div className="grid min-h-[34rem] border-y border-border-subtle lg:grid-cols-[15rem_minmax(0,1fr)]">
+          <aside className="border-b border-border-subtle py-4 lg:border-b-0 lg:border-r lg:pr-4">
+            <SectionLabel className="px-1">Channels</SectionLabel>
+            <div className="mt-3 space-y-1">
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-md bg-surface-muted px-3 py-2 text-left text-[13px] text-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-accent/15 text-[11px] font-semibold text-accent">T</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">Telegram</span>
+                  <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
+                    <StatusDot tone={telegramTone} />
+                    {token.configured ? `${telegramBindings.length} active ${telegramBindings.length === 1 ? 'route' : 'routes'}` : 'Needs Bot Token'}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled
+                className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] text-muted opacity-60"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-surface-subtle text-[11px] font-semibold">S</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">Slack MCP</span>
+                  <span className="block truncate text-[11px]">Not set up</span>
+                </span>
+              </button>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {telegramConnection ? (
-                <ToolbarButton disabled={!token.configured || busy === 'toggle-telegram'} onClick={() => toggleTelegram(!telegramConnection.enabled)}>
-                  {telegramConnection.enabled ? 'Pause Telegram' : 'Start Telegram'}
-                </ToolbarButton>
-              ) : null}
-              <ToolbarButton disabled={!token.configured || busy === 'remove-telegram-token'} onClick={removeTelegramToken}>
-                Remove Token
-              </ToolbarButton>
-            </div>
-          </div>
+          </aside>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
-            <form className="space-y-3" onSubmit={saveTelegramToken}>
-              <div>
-                <h3 className="text-[14px] font-semibold text-primary">Bot</h3>
-                <p className="mt-1 text-[12px] text-muted">Stored in extension secrets.</p>
+          <section aria-labelledby="telegram-heading" className="min-w-0 py-6 lg:pl-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-accent/15 text-[13px] font-semibold text-accent">T</span>
+                  <div className="min-w-0">
+                    <h2 id="telegram-heading" className="text-[18px] font-semibold text-primary">
+                      Telegram
+                    </h2>
+                    <p className="mt-1 text-[13px] leading-5 text-muted">Run Neon Pilot from Telegram DMs, groups, and topics.</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
+                  <span className="inline-flex items-center gap-1.5">
+                    <StatusDot tone={telegramTone} />
+                    {telegramReady ? 'Connected' : token.configured ? formatStatus(telegramStatus) : 'Needs Bot Token'}
+                  </span>
+                  <span>{token.configured ? 'Credentials saved' : 'Credentials missing'}</span>
+                  <span>
+                    {telegramBindings.length} active {telegramBindings.length === 1 ? 'route' : 'routes'}
+                  </span>
+                </div>
               </div>
-              <Field label="Telegram bot token">
-                <TextInput
-                  name="telegramBotToken"
-                  type="password"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={tokenDraft}
-                  placeholder={token.configured ? 'Configured' : '123456:ABC...'}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
-                />
-              </Field>
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" variant="action" disabled={busy === 'telegram-token'}>
-                  Save Token
-                </Button>
+                {telegramConnection ? (
+                  <ToolbarButton disabled={!token.configured || busy === 'toggle-telegram'} onClick={() => toggleTelegram(!telegramConnection.enabled)}>
+                    {telegramConnection.enabled ? 'Pause Telegram' : 'Start Telegram'}
+                  </ToolbarButton>
+                ) : null}
+                <ToolbarButton disabled={!token.configured || busy === 'remove-telegram-token'} onClick={removeTelegramToken}>
+                  Remove Token
+                </ToolbarButton>
               </div>
-            </form>
+            </div>
 
-            <form className="grid gap-3 md:grid-cols-2" onSubmit={attachConversation}>
-              <div className="md:col-span-2">
-                <h3 className="text-[14px] font-semibold text-primary">Route Messages</h3>
-                <p className="mt-1 text-[12px] text-muted">Choose the conversation that receives messages from a Telegram chat.</p>
-              </div>
-              <Field label="Conversation ID">
-                <TextInput
-                  name="conversationId"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={form.conversationId}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, conversationId: event.target.value }))}
-                />
-              </Field>
-              <Field label="Conversation Title">
-                <TextInput
-                  name="conversationTitle"
-                  autoComplete="off"
-                  value={form.conversationTitle}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setForm((current) => ({ ...current, conversationTitle: event.target.value }))
-                  }
-                />
-              </Field>
-              <Field label="Telegram Chat ID">
-                <TextInput
-                  name="telegramChatId"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={form.externalChatId}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, externalChatId: event.target.value }))}
-                />
-              </Field>
-              <Field label="Telegram Chat Label">
-                <TextInput
-                  name="telegramChatLabel"
-                  autoComplete="off"
-                  value={form.externalChatLabel}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setForm((current) => ({ ...current, externalChatLabel: event.target.value }))
-                  }
-                />
-              </Field>
-              <div className="md:col-span-2">
-                <Button type="submit" variant="action" disabled={!token.configured || busy === 'attach-telegram'}>
-                  Save Route
-                </Button>
-                {!token.configured ? <p className="mt-2 text-[12px] text-muted">Save a bot token before routing messages.</p> : null}
-              </div>
-            </form>
-          </div>
-        </AppPageSection>
+            <div className="mt-8 space-y-8">
+              <section className="space-y-4">
+                <SectionLabel>Get Your Credentials</SectionLabel>
+                <p className="max-w-3xl text-[13px] leading-6 text-secondary">
+                  In Telegram, talk to @BotFather, create a bot, then paste the token it gives you. Neon Pilot stores the token in
+                  extension secrets.
+                </p>
+                <a
+                  className="inline-flex items-center rounded-md border border-border-subtle bg-surface-muted px-3 py-1.5 text-[13px] text-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-accent"
+                  href="https://t.me/BotFather"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open BotFather
+                </a>
+              </section>
 
-        <AppPageSection title="Active Routes" layout="stacked">
-          {telegramBindings.length === 0 ? (
-            <EmptyState title="No Telegram routes" />
-          ) : (
-            <DataTable>
-              <DataTableHead>
-                <DataTableRow>
-                  <DataTableHeaderCell>Conversation</DataTableHeaderCell>
-                  <DataTableHeaderCell>Telegram Chat</DataTableHeaderCell>
-                  <DataTableHeaderCell>Replies</DataTableHeaderCell>
-                  <DataTableHeaderCell>Updated</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-                </DataTableRow>
-              </DataTableHead>
-              <DataTableBody>
-                {telegramBindings.map((binding) => (
-                  <DataTableRow key={binding.id}>
-                    <DataTableCell>
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-primary">{binding.conversationTitle || binding.conversationId}</div>
-                        <div className="truncate text-[11px] text-muted">{binding.conversationId}</div>
-                      </div>
-                    </DataTableCell>
-                    <DataTableCell>{binding.externalChatLabel || binding.externalChatId || 'Unassigned'}</DataTableCell>
-                    <DataTableCell>{binding.repliesEnabled ? 'On' : 'Off'}</DataTableCell>
-                    <DataTableCell>{formatDate(binding.updatedAt)}</DataTableCell>
-                    <DataTableCell align="right">
-                      <ToolbarButton disabled={busy === `detach-${binding.conversationId}`} onClick={() => detachConversation(binding.conversationId)}>
-                        Detach
-                      </ToolbarButton>
-                    </DataTableCell>
-                  </DataTableRow>
-                ))}
-              </DataTableBody>
-            </DataTable>
-          )}
-        </AppPageSection>
+              <form className="space-y-3 border-t border-border-subtle pt-5" onSubmit={saveTelegramToken}>
+                <div className="flex items-center justify-between gap-3">
+                  <SectionLabel>Required</SectionLabel>
+                  <span className="text-[11px] text-muted">Bot token {token.configured ? 'saved' : 'not saved'}</span>
+                </div>
+                <Field label="Bot Token">
+                  <TextInput
+                    name="telegramBotToken"
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={tokenDraft}
+                    placeholder={token.configured ? 'Configured' : '123456:ABC...'}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
+                  />
+                </Field>
+                <p className="text-[12px] leading-5 text-muted">Create a bot with @BotFather, then paste the token it gives you.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit" variant="action" disabled={busy === 'telegram-token'}>
+                    Save Bot Token
+                  </Button>
+                </div>
+              </form>
+
+              {token.configured ? (
+                <form className="space-y-4 border-t border-border-subtle pt-5" onSubmit={attachConversation}>
+                  <div>
+                    <SectionLabel>Route Messages</SectionLabel>
+                    <p className="mt-2 max-w-3xl text-[13px] leading-6 text-secondary">
+                      Connect one Telegram chat to one Neon Pilot conversation. Routed conversations also appear in the Gateways sidebar.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <h3 className="text-[13px] font-semibold text-primary">Conversation</h3>
+                      <Field label="Conversation ID">
+                        <TextInput
+                          name="conversationId"
+                          autoComplete="off"
+                          spellCheck={false}
+                          value={form.conversationId}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            setForm((current) => ({ ...current, conversationId: event.target.value }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Conversation Title">
+                        <TextInput
+                          name="conversationTitle"
+                          autoComplete="off"
+                          value={form.conversationTitle}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            setForm((current) => ({ ...current, conversationTitle: event.target.value }))
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <div className="space-y-3">
+                      <h3 className="text-[13px] font-semibold text-primary">Telegram Chat</h3>
+                      <Field label="Telegram Chat ID">
+                        <TextInput
+                          name="telegramChatId"
+                          autoComplete="off"
+                          spellCheck={false}
+                          value={form.externalChatId}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            setForm((current) => ({ ...current, externalChatId: event.target.value }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Telegram Chat Label">
+                        <TextInput
+                          name="telegramChatLabel"
+                          autoComplete="off"
+                          value={form.externalChatLabel}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            setForm((current) => ({ ...current, externalChatLabel: event.target.value }))
+                          }
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                  <Button type="submit" variant="action" disabled={busy === 'attach-telegram'}>
+                    Save Route
+                  </Button>
+                </form>
+              ) : (
+                <section className="border-t border-border-subtle pt-5">
+                  <SectionLabel>Route Messages</SectionLabel>
+                  <p className="mt-2 text-[13px] leading-6 text-muted">Save a bot token to route Telegram chats into conversations.</p>
+                </section>
+              )}
+
+              {token.configured || telegramBindings.length > 0 ? (
+                <section className="space-y-3 border-t border-border-subtle pt-5">
+                  <SectionLabel>Active Routes</SectionLabel>
+                  {telegramBindings.length === 0 ? (
+                    <EmptyState title="No Telegram routes" />
+                  ) : (
+                    <DataTable>
+                      <DataTableHead>
+                        <DataTableRow>
+                          <DataTableHeaderCell>Conversation</DataTableHeaderCell>
+                          <DataTableHeaderCell>Telegram Chat</DataTableHeaderCell>
+                          <DataTableHeaderCell>Replies</DataTableHeaderCell>
+                          <DataTableHeaderCell>Updated</DataTableHeaderCell>
+                          <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
+                        </DataTableRow>
+                      </DataTableHead>
+                      <DataTableBody>
+                        {telegramBindings.map((binding) => (
+                          <DataTableRow key={binding.id}>
+                            <DataTableCell>
+                              <div className="min-w-0">
+                                <div className="truncate font-medium text-primary">{binding.conversationTitle || binding.conversationId}</div>
+                                <div className="truncate text-[11px] text-muted">{binding.conversationId}</div>
+                              </div>
+                            </DataTableCell>
+                            <DataTableCell>{binding.externalChatLabel || binding.externalChatId || 'Unassigned'}</DataTableCell>
+                            <DataTableCell>{binding.repliesEnabled ? 'On' : 'Off'}</DataTableCell>
+                            <DataTableCell>{formatDate(binding.updatedAt)}</DataTableCell>
+                            <DataTableCell align="right">
+                              <ToolbarButton
+                                disabled={busy === `detach-${binding.conversationId}`}
+                                onClick={() => detachConversation(binding.conversationId)}
+                              >
+                                Detach
+                              </ToolbarButton>
+                            </DataTableCell>
+                          </DataTableRow>
+                        ))}
+                      </DataTableBody>
+                    </DataTable>
+                  )}
+                </section>
+              ) : null}
+            </div>
+          </section>
+        </div>
 
         {unassignedTelegramTargets.length > 0 ? (
           <AppPageSection title="Incoming Chats" layout="stacked">

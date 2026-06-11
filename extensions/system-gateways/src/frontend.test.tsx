@@ -157,14 +157,17 @@ function renderSidebar(pathname = '/gateways') {
   return { ...view, execute };
 }
 
+let tokenConfigured = true;
+
 describe('GatewaysPage', () => {
   beforeEach(() => {
+    tokenConfigured = true;
     vi.stubGlobal(
       'fetch',
       vi.fn((path: string, init?: RequestInit) => {
         const method = init?.method ?? 'GET';
         if (path === '/api/gateways' && method === 'GET') return Promise.resolve(jsonResponse(initialGatewayState));
-        if (path === '/api/gateways/telegram/token' && method === 'GET') return Promise.resolve(jsonResponse({ configured: true }));
+        if (path === '/api/gateways/telegram/token' && method === 'GET') return Promise.resolve(jsonResponse({ configured: tokenConfigured }));
         if (path === '/api/gateways/connections/telegram') {
           return Promise.resolve(
             jsonResponse({
@@ -209,9 +212,21 @@ describe('GatewaysPage', () => {
     expect(await screen.findByRole('heading', { name: 'Gateways' })).toBeTruthy();
     expect(screen.getAllByText('Chief of Threads').length).toBeGreaterThan(0);
     expect(screen.getByText('Telegram attached to Chief of Threads')).toBeTruthy();
-    expect(screen.getByText(/Bot\s*configured;\s*1\s*active\s*route/)).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Active Routes' })).toBeTruthy();
+    expect(screen.getByText('Credentials saved')).toBeTruthy();
+    expect(screen.getAllByText(/1\s*active\s*route/).length).toBeGreaterThan(0);
+    expect(screen.getByText('Active Routes')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Connections' })).toBeNull();
+  });
+
+  it('keeps routing hidden until Telegram credentials are saved', async () => {
+    tokenConfigured = false;
+    renderPage();
+
+    expect((await screen.findAllByText('Needs Bot Token')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Save a bot token to route Telegram chats into conversations.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save Bot Token' })).toBeTruthy();
+    expect(screen.queryByLabelText(/Conversation Title/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save Route' })).toBeNull();
   });
 
   it('toggles Telegram through the backend connection route', async () => {
