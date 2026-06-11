@@ -16,6 +16,7 @@ function runCli(args) {
     cwd: repoRoot,
     encoding: 'utf-8',
     timeout: 60_000,
+    maxBuffer: 8 * 1024 * 1024,
     env: { ...process.env, NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT || repoRoot, NEON_PILOT_FORCE_SOURCE_CLI: '1' },
   });
   if (result.status !== 0) {

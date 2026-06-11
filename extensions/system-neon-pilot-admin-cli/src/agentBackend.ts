@@ -696,7 +696,7 @@ function cliUsage(): string {
   neon-pilot protocol neon-pilot-agent runs logs <runId> [--tail 200]
   neon-pilot protocol neon-pilot-agent runs cancel <runId> [--json]
   neon-pilot protocol neon-pilot-agent runs rerun <runId> [--json]
-  neon-pilot protocol neon-pilot-agent subagents follow-up <runId> --prompt <text> [--json]
+  neon-pilot protocol neon-pilot-agent runs follow-up <runId> --prompt <text> [--json]
   neon-pilot protocol neon-pilot-agent conversation create [--title <text>] [--cwd <path>] [--tools none|default] [--json]
   neon-pilot protocol neon-pilot-agent conversation send <conversationId> --prompt <text> [--json]
   neon-pilot protocol neon-pilot-agent conversation close <conversationId> [--json]
@@ -726,9 +726,7 @@ function inputFromCli(args: string[]): { input: JsonRecord; json: boolean } {
     if (subcommand === 'logs') return { input: { ...common, action: 'runs_logs', runId: idOrAction }, json };
     if (subcommand === 'cancel') return { input: { ...common, action: 'runs_cancel', runId: idOrAction }, json };
     if (subcommand === 'rerun') return { input: { ...common, action: 'runs_rerun', runId: idOrAction }, json };
-  }
-  if (command === 'subagents' && subcommand === 'follow-up') {
-    return { input: { ...common, action: 'subagent_follow_up', runId: idOrAction }, json };
+    if (subcommand === 'follow-up') return { input: { ...common, action: 'subagent_follow_up', runId: idOrAction }, json };
   }
   if (command === 'bootstrap') {
     if (subcommand === 'doctor') return { input: { ...common, action: 'bootstrap_doctor' }, json };

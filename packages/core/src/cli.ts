@@ -521,8 +521,6 @@ function inferCliCommandMode(command: string): NonNullable<NeonPilotCliCommandDe
   if (command === 'conversations run-turn' || command === 'protocol') return 'streaming';
   if (
     command.startsWith('background-commands start') ||
-    command.startsWith('subagents start') ||
-    command.startsWith('subagents follow-up') ||
     command.startsWith('tasks run') ||
     command.startsWith('heartbeats start')
   ) {
@@ -544,7 +542,6 @@ function inferCliCommandUsage(command: string): string {
   if (command === 'settings set') args.push('<value>');
   if (command === 'conversations run-turn') args.push('--text <message> [--follow] [--format text|json|jsonl]');
   if (command === 'background-commands start') args.push('--command <shell> [--cwd <path>]');
-  if (command === 'subagents start') args.push('--task-slug <slug> --prompt <prompt> [--cwd <path>] [--model <provider/model>]');
   return [command, ...args, '[--json]'].join(' ');
 }
 
