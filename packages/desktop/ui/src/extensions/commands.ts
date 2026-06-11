@@ -80,6 +80,10 @@ function readContextValue(context: ExtensionCommandContext, key: string): Extens
   return Object.prototype.hasOwnProperty.call(context, key) ? context[key] : extensionCommandContext.get(key);
 }
 
+function hasActiveConversation(options: ExtensionCommandExecutorOptions, context: ExtensionCommandContext): boolean {
+  return Boolean(options.activeConversationId ?? readContextValue(context, 'conversation.hasActive'));
+}
+
 export function setExtensionCommandContext(key: string, value: ExtensionCommandContextValue): void {
   if (!key.trim()) return;
   if (value === undefined || value === null) extensionCommandContext.delete(key);
@@ -285,8 +289,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         options.navigate(`/conversations/${encodeURIComponent(conversationId)}`);
         return true;
       },
-      canExecute(args) {
-        return Boolean(readStringArg(args, 'conversationId') ?? options.activeConversationId);
+      canExecute(args, context) {
+        return Boolean(readStringArg(args, 'conversationId') ?? hasActiveConversation(options, context));
       },
     },
     {
@@ -296,8 +300,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.navigateConversation?.('next') ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -307,8 +311,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.navigateConversation?.('previous') ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -318,8 +322,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.closeConversation?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -337,8 +341,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleConversationPin?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -348,8 +352,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleConversationArchive?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -359,8 +363,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.renameConversation?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -370,8 +374,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.editConversationCwd?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -407,8 +411,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.pageConversation?.('up') ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {
@@ -418,8 +422,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.pageConversation?.('down') ?? false;
       },
-      canExecute() {
-        return Boolean(options.activeConversationId);
+      canExecute(_args, context) {
+        return hasActiveConversation(options, context);
       },
     },
     {

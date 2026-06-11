@@ -193,6 +193,25 @@ describe('extension commands', () => {
     expect(pageConversation).not.toHaveBeenCalled();
   });
 
+  it('uses command context for active-conversation enablement', async () => {
+    const closeConversation = vi.fn(() => true);
+    const pageConversation = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      context: { 'conversation.hasActive': true },
+      closeConversation,
+      pageConversation,
+    };
+
+    await expect(executeExtensionCommand('conversation.close', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.pageDown', undefined, options)).resolves.toBe(true);
+    expect(closeConversation).toHaveBeenCalledTimes(1);
+    expect(pageConversation).toHaveBeenCalledWith('down');
+  });
+
   it('includes command-backed workbench actions', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining([
