@@ -1455,10 +1455,10 @@ Examples:
 
 ### subagents start
 
-Start a durable subagent: subagents start --prompt <prompt> [--cwd <path>]
+Start a durable subagent: subagents start --task-slug <slug> --prompt <prompt> [--cwd <path>] [--model <provider/model>]
 
 - Source: extension (system-runs)
-- Usage: `neon-pilot subagents start --prompt <prompt> [--cwd <path>] [--json]`
+- Usage: `neon-pilot subagents start --task-slug <slug> --prompt <prompt> [--cwd <path>] [--model <provider/model>] [--json]`
 - Mode: background
 - Requires app: no
 - Idempotent: no
@@ -1467,8 +1467,8 @@ Start a durable subagent: subagents start --prompt <prompt> [--cwd <path>]
 - Output: text, json
 
 Examples:
-- `neon-pilot subagents start --prompt Summarize status`
-- `neon-pilot subagents start --prompt Summarize status --json`
+- `neon-pilot subagents start --task-slug status-summary --prompt Summarize status`
+- `neon-pilot subagents start --task-slug code-review --prompt "Review the diff" --cwd /repo --model opencode-go/deepseek-v4-flash --json`
 
 ### tasks delete
 

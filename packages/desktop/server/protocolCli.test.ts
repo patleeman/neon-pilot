@@ -47,6 +47,7 @@ describe('protocol CLI', () => {
     vi.clearAllMocks();
     delete process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL;
     delete process.env.NEON_PILOT_EXTENSION_HOST_TOKEN;
+    delete process.env.NEON_PILOT_FORCE_SOURCE_CLI;
     stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     process.exitCode = undefined;

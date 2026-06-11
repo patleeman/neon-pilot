@@ -59,6 +59,7 @@ describe('background runs', () => {
     const bundledRunner = join(repoRoot, 'packages/desktop/server/dist/daemon/background-agent-runner.js');
     const tscRunner = join(repoRoot, 'packages/desktop/dist/server/daemon/background-agent-runner.js');
 
+    writeFileSync(join(repoRoot, 'package.json'), '{}\n');
     mkdirSync(join(repoRoot, 'packages/desktop/server/dist/daemon'), { recursive: true });
     mkdirSync(join(repoRoot, 'packages/desktop/dist/server/daemon'), { recursive: true });
     writeFileSync(bundledRunner, '');

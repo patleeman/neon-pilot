@@ -21,20 +21,29 @@ export function looksLikeBackgroundAgentRunnerEntryPath(value: string | undefine
   return normalized.endsWith('/daemon/background-agent-runner.js');
 }
 
+function looksLikeRepoRoot(value: string | undefined): value is string {
+  if (!value) {
+    return false;
+  }
+  return existsSync(resolve(value, 'package.json')) && existsSync(resolve(value, 'packages', 'desktop'));
+}
+
 function resolveBackgroundAgentRunnerEntryPath(): string {
   const daemonModulePath = fileURLToPath(import.meta.url);
   const moduleDir = dirname(daemonModulePath);
   const devRepoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
+  const repoRoot = looksLikeRepoRoot(devRepoRoot) ? devRepoRoot : undefined;
   const appRoot = process.env.NEON_PILOT_APP_ROOT?.trim();
   const resourcesRoot = process.env.NEON_PILOT_RESOURCES_ROOT?.trim();
   const candidates = [
-    devRepoRoot ? resolve(devRepoRoot, 'packages/desktop/server/dist/daemon/background-agent-runner.js') : undefined,
+    repoRoot ? resolve(repoRoot, 'packages/desktop/server/dist/daemon/background-agent-runner.js') : undefined,
     appRoot ? resolve(appRoot, 'server/dist/daemon/background-agent-runner.js') : undefined,
     resourcesRoot ? resolve(resourcesRoot, 'app.asar/server/dist/daemon/background-agent-runner.js') : undefined,
+    resourcesRoot ? resolve(resourcesRoot, 'app.asar.unpacked/server/dist/daemon/background-agent-runner.js') : undefined,
     resourcesRoot ? resolve(resourcesRoot, 'app.asar.unpacked/packages/desktop/server/dist/daemon/background-agent-runner.js') : undefined,
     resolve(moduleDir, 'background-agent-runner.js'),
     resolve(moduleDir, '../server/daemon/background-agent-runner.js'),
-    devRepoRoot ? resolve(devRepoRoot, 'packages/desktop/dist/server/daemon/background-agent-runner.js') : undefined,
+    repoRoot ? resolve(repoRoot, 'packages/desktop/dist/server/daemon/background-agent-runner.js') : undefined,
   ].filter((candidate): candidate is string => Boolean(candidate));
 
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0]!;

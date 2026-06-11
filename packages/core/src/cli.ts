@@ -520,7 +520,7 @@ function inferCliCommandUsage(command: string): string {
   if (command === 'settings set') args.push('<value>');
   if (command === 'conversations run-turn') args.push('--text <message> [--follow] [--format text|json|jsonl]');
   if (command === 'background-commands start') args.push('--command <shell> [--cwd <path>]');
-  if (command === 'subagents start') args.push('--prompt <prompt> [--cwd <path>]');
+  if (command === 'subagents start') args.push('--task-slug <slug> --prompt <prompt> [--cwd <path>] [--model <provider/model>]');
   return [command, ...args, '[--json]'].join(' ');
 }
 

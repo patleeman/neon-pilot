@@ -23,6 +23,8 @@ describe('background run agent argv', () => {
 
   it('prefers dev repo runner path when present and includes optional flags', () => {
     process.env.NEON_PILOT_REPO_ROOT = '/repo';
+    fs.existing.add('/repo/package.json');
+    fs.existing.add('/repo/packages/desktop');
     fs.existing.add('/repo/packages/desktop/server/dist/daemon/background-agent-runner.js');
 
     expect(
@@ -54,8 +56,23 @@ describe('background run agent argv', () => {
     ]);
   });
 
+  it('ignores packaged Resources roots accidentally exposed as repo roots', () => {
+    process.env.NEON_PILOT_REPO_ROOT = '/Applications/Neon Pilot.app/Contents/Resources';
+    process.env.NEON_PILOT_APP_ROOT = '/Applications/Neon Pilot.app/Contents/Resources/app.asar';
+    process.env.NEON_PILOT_RESOURCES_ROOT = '/Applications/Neon Pilot.app/Contents/Resources';
+    fs.existing.add('/Applications/Neon Pilot.app/Contents/Resources/app.asar/server/dist/daemon/background-agent-runner.js');
+
+    expect(buildBackgroundAgentArgv({ prompt: 'do work' }).slice(1, 4)).toEqual([
+      '/Applications/Neon Pilot.app/Contents/Resources/app.asar/server/dist/daemon/background-agent-runner.js',
+      '--prompt',
+      'do work',
+    ]);
+  });
+
   it('uses the first candidate when no candidate exists', () => {
     process.env.NEON_PILOT_REPO_ROOT = '/repo';
+    fs.existing.add('/repo/package.json');
+    fs.existing.add('/repo/packages/desktop');
     expect(buildBackgroundAgentArgv({ prompt: 'do work' }).slice(1, 4)).toEqual([
       '/repo/packages/desktop/server/dist/daemon/background-agent-runner.js',
       '--prompt',

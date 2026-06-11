@@ -302,6 +302,9 @@ async function createExtensionHostClientFromControlPlane(): Promise<ExtensionHos
 }
 
 async function getCliExtensionHostClient(): Promise<ExtensionHostClient> {
+  if (process.env.NEON_PILOT_FORCE_SOURCE_CLI === '1') {
+    return createCliFallbackExtensionHostClient();
+  }
   const rpcClient = createExtensionHostClientFromEnv();
   if (rpcClient) return rpcClient;
   const controlPlaneClient = await createExtensionHostClientFromControlPlane();

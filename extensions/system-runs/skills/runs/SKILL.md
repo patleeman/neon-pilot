@@ -39,7 +39,7 @@ neon-pilot background-commands start --command "pnpm test" --cwd /repo --json
 neon-pilot background-commands logs <run-id> --tail 200 --json
 neon-pilot background-commands cancel <run-id> --json
 neon-pilot subagents list --json
-neon-pilot subagents start --prompt "Review the diff" --cwd /repo --json
+neon-pilot subagents start --task-slug code-review --prompt "Review the diff" --cwd /repo --json
 neon-pilot subagents follow-up <run-id> --prompt "Continue" --json
 ```
 
