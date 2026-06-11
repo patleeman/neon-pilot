@@ -309,6 +309,43 @@ describe('protocol CLI', () => {
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Expected at least 1 positional argument'));
   });
 
+  it('accepts subagent log tail flags before dispatch', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-runs',
+          surfaceId: 'subagents-logs',
+          command: 'subagents logs',
+          action: 'subagent',
+          argsSchema: { type: 'array', minItems: 1, items: { type: 'string' } },
+          flagsSchema: {
+            type: 'object',
+            properties: { json: { type: 'boolean' }, tail: { type: 'number', minimum: 1, maximum: 1000 } },
+            additionalProperties: true,
+          },
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['subagents', 'logs', 'run-agent', '--tail', '25', '--json'])).resolves.toBe(0);
+
+    expect(extensionHostClient.invokeAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensionId: 'system-runs',
+        actionId: 'subagent',
+        input: expect.objectContaining({
+          action: 'logs',
+          cli: expect.objectContaining({
+            command: 'subagents logs',
+            args: ['run-agent'],
+            flags: { tail: '25' },
+            json: true,
+          }),
+        }),
+      }),
+    );
+  });
+
   it('requires --yes for destructive contributed commands in non-interactive mode', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [

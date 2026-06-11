@@ -301,9 +301,10 @@
         "action": "background_bash",
         "inputAction": "logs",
         "jsonDefault": true,
-        "usage": "background-commands logs <id> [--json]",
+        "usage": "background-commands logs <id> [--tail <n>] [--json]",
         "examples": [
           "neon-pilot background-commands logs example-id",
+          "neon-pilot background-commands logs example-id --tail 200",
           "neon-pilot background-commands logs example-id --json"
         ],
         "argsSchema": {
@@ -320,6 +321,12 @@
             "json": {
               "type": "boolean",
               "description": "Print structured JSON output."
+            },
+            "tail": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Number of log lines to include."
             }
           },
           "additionalProperties": true
@@ -562,9 +569,10 @@
         "action": "subagent",
         "inputAction": "logs",
         "jsonDefault": true,
-        "usage": "subagents logs <id> [--json]",
+        "usage": "subagents logs <id> [--tail <n>] [--json]",
         "examples": [
           "neon-pilot subagents logs example-id",
+          "neon-pilot subagents logs example-id --tail 200",
           "neon-pilot subagents logs example-id --json"
         ],
         "argsSchema": {
@@ -581,6 +589,12 @@
             "json": {
               "type": "boolean",
               "description": "Print structured JSON output."
+            },
+            "tail": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Number of log lines to include."
             }
           },
           "additionalProperties": true

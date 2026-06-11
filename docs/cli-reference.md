@@ -94,7 +94,7 @@ Examples:
 Read background command logs: background-commands logs <run-id> [--tail <n>]
 
 - Source: extension (system-runs)
-- Usage: `neon-pilot background-commands logs <id> [--json]`
+- Usage: `neon-pilot background-commands logs <id> [--tail <n>] [--json]`
 - Mode: read
 - Requires app: yes
 - Idempotent: yes
@@ -104,6 +104,7 @@ Read background command logs: background-commands logs <run-id> [--tail <n>]
 
 Examples:
 - `neon-pilot background-commands logs example-id`
+- `neon-pilot background-commands logs example-id --tail 200`
 - `neon-pilot background-commands logs example-id --json`
 
 ### background-commands rerun
@@ -1424,7 +1425,7 @@ Examples:
 Read subagent logs: subagents logs <run-id> [--tail <n>]
 
 - Source: extension (system-runs)
-- Usage: `neon-pilot subagents logs <id> [--json]`
+- Usage: `neon-pilot subagents logs <id> [--tail <n>] [--json]`
 - Mode: read
 - Requires app: no
 - Idempotent: yes
@@ -1434,6 +1435,7 @@ Read subagent logs: subagents logs <run-id> [--tail <n>]
 
 Examples:
 - `neon-pilot subagents logs example-id`
+- `neon-pilot subagents logs example-id --tail 200`
 - `neon-pilot subagents logs example-id --json`
 
 ### subagents rerun
