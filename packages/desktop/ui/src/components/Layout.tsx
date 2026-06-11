@@ -47,7 +47,11 @@ import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
 import {
   CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
   CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
   CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
   CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
@@ -1997,6 +2001,22 @@ export function Layout() {
       },
       cancelLatestBackgroundRun() {
         window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT));
+        return true;
+      },
+      runFirstScheduledTask() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+        return true;
+      },
+      openFirstScheduledTask() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+        return true;
+      },
+      fireFirstDeferredResume() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
+        return true;
+      },
+      cancelFirstDeferredResume() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
         return true;
       },
       newWorkbenchTab() {

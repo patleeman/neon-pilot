@@ -443,6 +443,54 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.runFirstScheduledTask', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canRunFirstScheduledTask': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.runFirstScheduledTask', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canRunFirstScheduledTask': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.openFirstScheduledTask', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenFirstScheduledTask': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.openFirstScheduledTask', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenFirstScheduledTask': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.fireFirstDeferredResume', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canFireFirstDeferredResume': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.fireFirstDeferredResume', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canFireFirstDeferredResume': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelFirstDeferredResume', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canCancelFirstDeferredResume': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelFirstDeferredResume', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canCancelFirstDeferredResume': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.focusLocation', {
         activeConversationId: 'conversation-1',
         context: { 'browser.active': false },

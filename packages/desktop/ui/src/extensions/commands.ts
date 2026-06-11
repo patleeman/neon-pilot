@@ -62,6 +62,10 @@ export interface ExtensionCommandExecutorOptions {
   toggleScheduledTaskDetails?(): boolean;
   openLatestBackgroundRun?(): boolean;
   cancelLatestBackgroundRun?(): boolean;
+  runFirstScheduledTask?(): boolean;
+  openFirstScheduledTask?(): boolean;
+  fireFirstDeferredResume?(): boolean;
+  cancelFirstDeferredResume?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
@@ -219,6 +223,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.toggleScheduledTaskDetails', title: 'Toggle Automation Details', category: 'Conversation' },
     { id: 'conversation.openLatestBackgroundRun', title: 'Open Latest Background Run', category: 'Conversation' },
     { id: 'conversation.cancelLatestBackgroundRun', title: 'Cancel Latest Background Run', category: 'Conversation' },
+    { id: 'conversation.runFirstScheduledTask', title: 'Run First Automation', category: 'Conversation' },
+    { id: 'conversation.openFirstScheduledTask', title: 'Open First Automation', category: 'Conversation' },
+    { id: 'conversation.fireFirstDeferredResume', title: 'Fire First Attention Item', category: 'Conversation' },
+    { id: 'conversation.cancelFirstDeferredResume', title: 'Cancel First Attention Item', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
@@ -715,6 +723,50 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.cancelLatestBackgroundRun) && readContextValue(context, 'conversation.canCancelLatestBackgroundRun') === true;
+      },
+    },
+    {
+      id: 'conversation.runFirstScheduledTask',
+      title: 'Run First Automation',
+      category: 'Conversation',
+      execute() {
+        return options.runFirstScheduledTask?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.runFirstScheduledTask) && readContextValue(context, 'conversation.canRunFirstScheduledTask') === true;
+      },
+    },
+    {
+      id: 'conversation.openFirstScheduledTask',
+      title: 'Open First Automation',
+      category: 'Conversation',
+      execute() {
+        return options.openFirstScheduledTask?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openFirstScheduledTask) && readContextValue(context, 'conversation.canOpenFirstScheduledTask') === true;
+      },
+    },
+    {
+      id: 'conversation.fireFirstDeferredResume',
+      title: 'Fire First Attention Item',
+      category: 'Conversation',
+      execute() {
+        return options.fireFirstDeferredResume?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.fireFirstDeferredResume) && readContextValue(context, 'conversation.canFireFirstDeferredResume') === true;
+      },
+    },
+    {
+      id: 'conversation.cancelFirstDeferredResume',
+      title: 'Cancel First Attention Item',
+      category: 'Conversation',
+      execute() {
+        return options.cancelFirstDeferredResume?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelFirstDeferredResume) && readContextValue(context, 'conversation.canCancelFirstDeferredResume') === true;
       },
     },
     {

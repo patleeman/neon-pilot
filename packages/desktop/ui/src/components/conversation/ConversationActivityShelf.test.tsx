@@ -10,7 +10,11 @@ import { ConversationActivityShelf } from './ConversationActivityShelf';
 import {
   CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
   CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
   CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
   CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
@@ -313,5 +317,61 @@ describe('ConversationActivityShelf', () => {
 
     expect(onOpenBackgroundRun).toHaveBeenCalledWith('run-latest');
     expect(onCancelBackgroundRun).toHaveBeenCalledWith('run-cancellable');
+  });
+
+  it('handles shared first automation and attention item commands', () => {
+    const onRunScheduledTaskNow = vi.fn();
+    const onOpenScheduledTask = vi.fn();
+    const onFireDeferredResumeNow = vi.fn();
+    const onCancelDeferredResume = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationActivityShelf
+          backgroundExecutions={[]}
+          backgroundExecutionIndicatorText="none"
+          showBackgroundRunDetails={false}
+          onToggleBackgroundRunDetails={vi.fn()}
+          scheduledTasks={[
+            { ...scheduledTask, id: 'task-running', running: true, enabled: true },
+            { ...scheduledTask, id: 'task-runnable', running: false, enabled: true },
+          ]}
+          scheduledTaskIndicatorText="2 enabled"
+          showScheduledTaskDetails
+          onToggleScheduledTaskDetails={vi.fn()}
+          onRunScheduledTaskNow={onRunScheduledTaskNow}
+          onOpenScheduledTask={onOpenScheduledTask}
+          deferredResumes={[
+            { ...resume, id: 'resume-ready', status: 'ready' },
+            { ...resume, id: 'resume-scheduled', status: 'scheduled' },
+          ]}
+          deferredResumeIndicatorText="2 scheduled"
+          deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+          hasReadyDeferredResumes
+          isLiveSession={false}
+          deferredResumesBusy={false}
+          showDeferredResumeDetails
+          onContinueDeferredResumesNow={vi.fn()}
+          onToggleDeferredResumeDetails={vi.fn()}
+          onFireDeferredResumeNow={onFireDeferredResumeNow}
+          onCancelDeferredResume={onCancelDeferredResume}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
+    });
+
+    expect(onRunScheduledTaskNow).toHaveBeenCalledWith('task-runnable');
+    expect(onOpenScheduledTask).toHaveBeenCalledWith('task-running');
+    expect(onFireDeferredResumeNow).toHaveBeenCalledWith('resume-scheduled');
+    expect(onCancelDeferredResume).toHaveBeenCalledWith('resume-ready');
   });
 });
