@@ -3,9 +3,32 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GatewaysPage } from './frontend';
+import { GatewaysPage, GatewaysSidebar } from './frontend';
 
 vi.mock('@neon-pilot/extensions/ui', () => ({
+  ActivityTreeView: ({
+    items,
+    activeItemId,
+    onOpenItem,
+  }: {
+    items: Array<{ id: string; title: string; subtitle?: string; route?: string }>;
+    activeItemId?: string | null;
+    onOpenItem?: (item: { id: string; title: string; route?: string }) => void;
+  }) => (
+    <div role="tree">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          data-active={activeItemId === item.id ? 'true' : undefined}
+          onClick={() => onOpenItem?.(item)}
+        >
+          {item.title}
+          {item.subtitle ? <span>{item.subtitle}</span> : null}
+        </button>
+      ))}
+    </div>
+  ),
   AppPageIntro: ({ title, summary, actions }: { title: React.ReactNode; summary?: React.ReactNode; actions?: React.ReactNode }) => (
     <header>
       <h1>{title}</h1>
@@ -35,8 +58,15 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </label>
   ),
+  IconButton: ({
+    children,
+    compact: _compact,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }) => <button {...props}>{children}</button>,
   LoadingState: ({ label }: { label: React.ReactNode }) => <p>{label}</p>,
   Notice: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  PanelMessage: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  SectionLabel: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   StatusDot: ({ tone }: { tone: string }) => <span data-tone={tone} />,
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
@@ -112,6 +142,19 @@ function renderPage() {
       params={{}}
     />,
   );
+}
+
+function renderSidebar(pathname = '/gateways') {
+  const execute = vi.fn().mockResolvedValue(true);
+  const view = render(
+    <GatewaysSidebar
+      pa={{ commands: { execute } } as never}
+      context={{ extensionId: 'system-gateways', surfaceId: 'gateways-sidebar', pathname, search: '', hash: '' }}
+      surface={{} as never}
+      params={{}}
+    />,
+  );
+  return { ...view, execute };
 }
 
 describe('GatewaysPage', () => {
@@ -216,5 +259,39 @@ describe('GatewaysPage', () => {
       ),
     );
     expect(await screen.findByText('Telegram route saved.')).toBeTruthy();
+  });
+});
+
+describe('GatewaysSidebar', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((path: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET';
+        if (path === '/api/gateways' && method === 'GET') return Promise.resolve(jsonResponse(initialGatewayState));
+        return Promise.resolve(jsonResponse({ error: 'not found' }, false));
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('shows Telegram routes in the extension sidebar', async () => {
+    renderSidebar('/conversations/conv-1');
+
+    expect(await screen.findByText('Gateway Routes')).toBeTruthy();
+    expect(screen.getByText(/Telegram\s*·\s*1 active route/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Chief of Threads/ }).getAttribute('data-active')).toBe('true');
+    expect(screen.getByText('Patrick')).toBeTruthy();
+  });
+
+  it('opens a routed conversation from the sidebar', async () => {
+    const { execute } = renderSidebar();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Chief of Threads/ }));
+
+    expect(execute).toHaveBeenCalledWith('app.navigate', { to: '/conversations/conv-1?gateway=1' });
   });
 });

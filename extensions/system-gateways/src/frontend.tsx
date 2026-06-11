@@ -3,6 +3,7 @@ import {
   AppPageIntro,
   AppPageLayout,
   AppPageSection,
+  ActivityTreeView,
   Button,
   DataTable,
   DataTableBody,
@@ -13,11 +14,15 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  IconButton,
   LoadingState,
   Notice,
+  PanelMessage,
+  SectionLabel,
   StatusDot,
   TextInput,
   ToolbarButton,
+  type ActivityTreeItem,
 } from '@neon-pilot/extensions/ui';
 import React, { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -156,6 +161,128 @@ function normalizeForm(value: GatewayFormState): GatewayFormState {
     externalChatId: value.externalChatId.trim(),
     externalChatLabel: value.externalChatLabel.trim(),
   };
+}
+
+function buildConversationRoute(conversationId: string): string {
+  return `/conversations/${encodeURIComponent(conversationId)}?gateway=1`;
+}
+
+function buildGatewayRouteActivityId(binding: GatewayThreadBinding): string {
+  return `gateway-route:${binding.provider}:${binding.conversationId}`;
+}
+
+function selectedConversationIdFromPath(pathname: string): string | null {
+  const match = /^\/conversations\/([^/?#]+)/.exec(pathname);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+async function navigateTo(pa: ExtensionSurfaceProps['pa'], to: string) {
+  const handled = await pa.commands?.execute?.('app.navigate', { to });
+  if (!handled && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: to } }));
+  }
+}
+
+function SidebarSvgIcon({ path }: { path: string }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
+export function GatewaysSidebar({ pa, context }: ExtensionSurfaceProps) {
+  const [state, setState] = useState<GatewayState>(emptyGatewayState);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setState(await fetchJson<GatewayState>('/api/gateways'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const telegramConnection = useMemo(() => findProviderConnection(state, 'telegram'), [state]);
+  const telegramBindings = useMemo(() => state.bindings.filter((binding) => binding.provider === 'telegram'), [state.bindings]);
+  const activeConversationId = selectedConversationIdFromPath(context.pathname);
+  const activeItemId = telegramBindings.find((binding) => binding.conversationId === activeConversationId)
+    ? `gateway-route:telegram:${activeConversationId}`
+    : null;
+  const telegramStatus = telegramConnection?.status ?? 'needs_config';
+  const routesLabel = `${telegramBindings.length} active ${telegramBindings.length === 1 ? 'route' : 'routes'}`;
+  const treeItems: ActivityTreeItem[] = telegramBindings.map((binding) => ({
+    id: buildGatewayRouteActivityId(binding),
+    kind: 'conversation',
+    title: binding.conversationTitle || binding.conversationId,
+    subtitle: binding.externalChatLabel || binding.externalChatId || 'Telegram chat not assigned',
+    status: 'idle',
+    route: buildConversationRoute(binding.conversationId),
+    updatedAt: binding.updatedAt,
+    metadata: {
+      conversationId: binding.conversationId,
+      provider: binding.provider,
+      tooltip: `${binding.conversationTitle || binding.conversationId} · ${binding.externalChatLabel || binding.externalChatId || 'Telegram'}`,
+    },
+  }));
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-transparent">
+      <div className="px-4 pb-1 pt-1">
+        <div className="flex items-center gap-1">
+          <SectionLabel className="flex-1">Gateway Routes</SectionLabel>
+          <IconButton compact title="Refresh routes" aria-label="Refresh routes" disabled={loading} onClick={() => void load()}>
+            <SidebarSvgIcon path="M20 6v5h-5M4 18v-5h5M18.4 9A7 7 0 0 0 6.2 6.8L4 9m2 6a7 7 0 0 0 11.8 2.2L20 15" />
+          </IconButton>
+        </div>
+        <div className="mt-2 flex items-center gap-2 text-[11px] text-muted">
+          <StatusDot tone={statusTone(telegramStatus)} />
+          <span>Telegram · {routesLabel}</span>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto pb-3">
+        {loading && treeItems.length === 0 ? <LoadingState label="Loading routes..." className="h-24 justify-center" /> : null}
+        {error ? <p className="px-4 py-2 text-[12px] leading-5 text-danger">{error}</p> : null}
+        {!loading && treeItems.length === 0 && !error ? (
+          <PanelMessage className="px-4 py-3">No Telegram routes yet.</PanelMessage>
+        ) : null}
+        {treeItems.length > 0 ? (
+          <ActivityTreeView
+            items={treeItems}
+            activeItemId={activeItemId}
+            onOpenItem={(item) => {
+              if (item.route) void navigateTo(pa, item.route);
+            }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 export function GatewaysPage({ context }: ExtensionSurfaceProps) {

@@ -25,7 +25,8 @@
         "label": "Gateways",
         "route": "/gateways",
         "icon": "graph",
-        "section": "primary"
+        "section": "primary",
+        "sidebarView": "gateways-sidebar"
       }
     ],
     "views": [
@@ -35,6 +36,16 @@
         "location": "main",
         "route": "/gateways",
         "component": "GatewaysPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      },
+      {
+        "id": "gateways-sidebar",
+        "title": "Gateway Routes",
+        "location": "sidebar",
+        "component": "GatewaysSidebar",
+        "icon": "graph",
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"
