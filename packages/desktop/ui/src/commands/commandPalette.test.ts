@@ -58,6 +58,12 @@ describe('command palette search', () => {
     expect(isHostCommandDisabledInPalette('page.find', { activeConversationId: null })).toBe(false);
   });
 
+  it('disables host commands that require arguments the command palette cannot supply', () => {
+    expect(isHostCommandDisabledInPalette('app.navigate', { activeConversationId: 'conversation-1' })).toBe(true);
+    expect(isHostCommandDisabledInPalette('rail.open', { activeConversationId: 'conversation-1' })).toBe(true);
+    expect(isHostCommandDisabledInPalette('layout.set', { activeConversationId: 'conversation-1' })).toBe(true);
+  });
+
   it('disables active-conversation host commands when no conversation is active', () => {
     expect(isHostCommandDisabledInPalette('conversation.close', { activeConversationId: null })).toBe(true);
     expect(isHostCommandDisabledInPalette('conversation.close', { activeConversationId: 'conversation-1' })).toBe(false);

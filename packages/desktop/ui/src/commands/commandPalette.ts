@@ -52,7 +52,13 @@ const ACTIVE_CONVERSATION_HOST_COMMANDS = new Set([
   'conversation.pageDown',
 ]);
 
+const ARGUMENT_REQUIRED_HOST_COMMANDS = new Set(['app.navigate', 'rail.open', 'layout.set']);
+
 export function isHostCommandDisabledInPalette(commandId: string, options: { activeConversationId?: string | null }): boolean {
+  if (ARGUMENT_REQUIRED_HOST_COMMANDS.has(commandId)) {
+    return true;
+  }
+
   return ACTIVE_CONVERSATION_HOST_COMMANDS.has(commandId) && !options.activeConversationId;
 }
 
