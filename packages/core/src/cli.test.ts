@@ -126,6 +126,7 @@ describe('core CLI shell helpers', () => {
         properties: {
           yes: { type: 'boolean' },
           format: { enum: ['text', 'json'] },
+          tail: { type: 'number', minimum: 1, maximum: 1000 },
         },
         required: ['yes'],
         additionalProperties: false,
@@ -137,7 +138,7 @@ describe('core CLI shell helpers', () => {
         definition,
         rawArgv: [],
         args: [],
-        flags: { format: 'jsonl', extra: true },
+        flags: { format: 'jsonl', tail: 'many', extra: true },
         json: false,
         quiet: false,
         verbose: false,
@@ -149,6 +150,50 @@ describe('core CLI shell helpers', () => {
       'Unknown flag --extra.',
       'Missing required flag --yes.',
       '--format must be one of: text, json.',
+      '--tail must be a number.',
     ]);
+  });
+
+  it('validates numeric flag ranges', () => {
+    const definition: NeonPilotCliCommandDefinition = {
+      id: 'logs',
+      command: 'runs logs',
+      argsSchema: { type: 'array' },
+      flagsSchema: {
+        type: 'object',
+        properties: {
+          tail: { type: 'number', minimum: 1, maximum: 1000 },
+        },
+        additionalProperties: true,
+      },
+    };
+
+    expect(
+      validateCliInvocation({
+        definition,
+        rawArgv: [],
+        args: [],
+        flags: { tail: '0' },
+        json: false,
+        quiet: false,
+        verbose: false,
+        color: true,
+        cwd: '/repo',
+      }).errors,
+    ).toEqual(['--tail must be at least 1.']);
+
+    expect(
+      validateCliInvocation({
+        definition,
+        rawArgv: [],
+        args: [],
+        flags: { tail: '1001' },
+        json: false,
+        quiet: false,
+        verbose: false,
+        color: true,
+        cwd: '/repo',
+      }).errors,
+    ).toEqual(['--tail must be at most 1000.']);
   });
 });

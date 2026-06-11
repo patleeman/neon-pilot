@@ -443,6 +443,19 @@ function validatePrimitiveSchema(schema: unknown, value: unknown, label: string,
   if (record.type === 'string' && typeof value !== 'string') {
     errors.push(`${label} requires a value.`);
   }
+  if (record.type === 'number') {
+    const parsed = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+    if (!Number.isFinite(parsed)) {
+      errors.push(`${label} must be a number.`);
+      return;
+    }
+    if (typeof record.minimum === 'number' && parsed < record.minimum) {
+      errors.push(`${label} must be at least ${record.minimum}.`);
+    }
+    if (typeof record.maximum === 'number' && parsed > record.maximum) {
+      errors.push(`${label} must be at most ${record.maximum}.`);
+    }
+  }
   if (record.minLength === 1 && typeof value === 'string' && !value.trim()) {
     errors.push(`${label} must not be empty.`);
   }
