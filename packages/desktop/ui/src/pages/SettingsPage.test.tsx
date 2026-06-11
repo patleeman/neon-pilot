@@ -344,6 +344,9 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Knowledge base');
     expect(html).toContain('Sample manifest setting');
     expect(html).toContain('Pinned Tool Calls');
+    expect(html).toContain('href="#settings-extension-sample-extension"');
+    expect(html).toContain('>Sample Extension</span>');
+    expect(html).toContain('id="settings-extension-sample-extension"');
     expect(html).toContain('Injected by');
     expect(html).not.toContain('Injected by extension <span');
     expect(html).not.toContain('/Users/patrick/.local/state/neon-pilot/knowledge-base/repo');

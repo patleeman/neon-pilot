@@ -2,7 +2,6 @@ import {
   api,
   AppPageIntro,
   AppPageLayout,
-  AppPageToc,
   type AppTelemetryLogBundleExport,
   type AppTelemetryLogDiagnostics,
   Checkbox,
@@ -77,7 +76,7 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-desktop', label: 'Desktop', summary: 'App behavior, remotes, and keyboard shortcuts' },
 ] as const satisfies readonly { id: string; label: string; summary: string }[];
 
-type SettingsQuickLink = { id: string; label: string; summary: string };
+type SettingsQuickLink = { id: string; label: ReactNode; summary?: ReactNode; children?: readonly SettingsQuickLink[] };
 type SettingsQuickLinkId = string;
 const VisibleSettingsSectionsContext = createContext<ReadonlySet<SettingsQuickLinkId> | null>(null);
 type ModelOption = ModelState['models'][number];
@@ -484,6 +483,72 @@ function formatDesktopUpdateSummary(state: DesktopAppPreferencesState | null): s
     default:
       return `Current version: ${update.currentVersion}.`;
   }
+}
+
+function formatExtensionFallbackLabel(extensionId: string): string {
+  const words = extensionId
+    .replace(/^system-/, '')
+    .split(/[-_.]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (words.length === 0) return extensionId;
+  return words.map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ');
+}
+
+function settingsExtensionAnchorId(extensionId: string): SettingsQuickLinkId {
+  const suffix = extensionId
+    .trim()
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `settings-extension-${suffix || 'extension'}`;
+}
+
+function extensionDisplayName(
+  extensionId: string,
+  extensions: ReturnType<typeof useExtensionRegistry>['extensions'],
+): string {
+  return extensions.find((extension) => extension.id === extensionId)?.name || formatExtensionFallbackLabel(extensionId);
+}
+
+function flattenSettingsQuickLinks(items: readonly SettingsQuickLink[]): SettingsQuickLink[] {
+  return items.flatMap((item) => [item, ...(item.children ?? [])]);
+}
+
+function buildExtensionSettingsQuickLinks({
+  schema,
+  settingsComponents,
+  extensions,
+}: {
+  schema?: readonly UnifiedSettingsEntry[] | null;
+  settingsComponents: ReturnType<typeof useExtensionRegistry>['settingsComponents'];
+  extensions: ReturnType<typeof useExtensionRegistry>['extensions'];
+}): SettingsQuickLink[] {
+  const scalarExtensionIds = new Set<string>();
+  for (const entry of schema ?? []) {
+    if (entry.key === 'secrets.provider' || entry.extensionId === 'system-settings') continue;
+    scalarExtensionIds.add(entry.extensionId);
+  }
+
+  const componentByExtensionId = new Map<string, (typeof settingsComponents)[number]>();
+  for (const component of settingsComponents) {
+    if (!componentByExtensionId.has(component.extensionId)) {
+      componentByExtensionId.set(component.extensionId, component);
+    }
+  }
+
+  return [...new Set([...scalarExtensionIds, ...componentByExtensionId.keys()])]
+    .map((extensionId) => {
+      const component = componentByExtensionId.get(extensionId);
+      const hasScalarSettings = scalarExtensionIds.has(extensionId);
+      return {
+        id: hasScalarSettings ? settingsExtensionAnchorId(extensionId) : (component?.sectionId ?? settingsExtensionAnchorId(extensionId)),
+        label: extensionDisplayName(extensionId, extensions),
+        sortGroup: hasScalarSettings ? 0 : 1,
+        sortOrder: component?.order ?? 0,
+      };
+    })
+    .sort((a, b) => a.sortGroup - b.sortGroup || a.sortOrder - b.sortOrder || String(a.label).localeCompare(String(b.label)))
+    .map(({ id, label }) => ({ id, label }));
 }
 
 function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | null): string {
@@ -1089,7 +1154,44 @@ function SettingsTableOfContents({
   activeId: SettingsQuickLinkId;
   onNavigate: (sectionId: SettingsQuickLinkId) => void;
 }) {
-  return <AppPageToc items={items} activeId={activeId} onNavigate={onNavigate} ariaLabel="Settings sections" />;
+  const renderLink = (item: SettingsQuickLink, nested = false) => {
+    const active = item.id === activeId;
+    return (
+      <a
+        key={item.id}
+        href={`#${item.id}`}
+        onClick={(event) => {
+          event.preventDefault();
+          onNavigate(item.id);
+        }}
+        className={cx('ui-app-page-toc-link', nested && 'py-1.5 pl-3', active && 'ui-app-page-toc-link-active')}
+        aria-current={active ? 'location' : undefined}
+      >
+        <span className={cx('block font-medium', nested ? 'text-[12px]' : 'text-[13px]')}>{item.label}</span>
+        {item.summary ? (
+          <span className={cx('mt-0.5 block text-[11px] leading-5', active ? 'text-primary/75' : 'text-dim')}>{item.summary}</span>
+        ) : null}
+      </a>
+    );
+  };
+
+  return (
+    <aside>
+      <nav aria-label="Settings sections" className="space-y-3">
+        <div className="ui-app-page-toc-title">On this page</div>
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="space-y-1">
+              {renderLink(item)}
+              {item.children && item.children.length > 0 ? (
+                <div className="ml-3 space-y-1 border-l border-border-subtle/70 pl-2">{item.children.map((child) => renderLink(child, true))}</div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </nav>
+    </aside>
+  );
 }
 
 function unwrapExtensionActionResult<T>(response: { ok: true; result: unknown } | { ok: false; error: string }): T {
@@ -1333,11 +1435,15 @@ function ExtensionSettingsSection({
   excludeExtensionIds,
   includeGroups,
   separated = true,
+  groupByExtension = false,
+  extensionLabels,
 }: {
   includeExtensionIds?: readonly string[];
   excludeExtensionIds?: readonly string[];
   includeGroups?: readonly string[];
   separated?: boolean;
+  groupByExtension?: boolean;
+  extensionLabels?: ReadonlyMap<string, string>;
 } = {}) {
   const { data: values, loading, error } = useApi<Record<string, unknown>>(api.settings as never);
   const { data: schema, loading: schemaLoading, error: schemaError } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
@@ -1414,30 +1520,108 @@ function ExtensionSettingsSection({
     setSaveError(null);
   }, [savedValues]);
 
-  const grouped = useMemo(() => {
-    if (!schema) return new Map<string, UnifiedSettingsEntry[]>();
+  const filteredEntries = useMemo(() => {
+    if (!schema) return [];
     const includedExtensionIds = includeExtensionIds ? new Set(includeExtensionIds) : null;
     const excludedExtensionIds = excludeExtensionIds ? new Set(excludeExtensionIds) : null;
     const includedGroups = includeGroups ? new Set(includeGroups) : null;
-    const groups = new Map<string, UnifiedSettingsEntry[]>();
+    const entries: UnifiedSettingsEntry[] = [];
     for (const entry of schema) {
       if (entry.key === 'secrets.provider') continue;
       const group = entry.group || 'General';
       if (includedExtensionIds && !includedExtensionIds.has(entry.extensionId)) continue;
       if (excludedExtensionIds?.has(entry.extensionId)) continue;
       if (includedGroups && !includedGroups.has(group)) continue;
+      entries.push(entry);
+    }
+    entries.sort(
+      (a, b) =>
+        a.extensionId.localeCompare(b.extensionId) || (a.group || 'General').localeCompare(b.group || 'General') || a.order - b.order,
+    );
+    return entries;
+  }, [excludeExtensionIds, includeExtensionIds, includeGroups, schema]);
+
+  const grouped = useMemo(() => {
+    const groups = new Map<string, UnifiedSettingsEntry[]>();
+    for (const entry of filteredEntries) {
+      const group = entry.group || 'General';
       if (!groups.has(group)) groups.set(group, []);
       groups.get(group)!.push(entry);
     }
-    for (const [, entries] of groups) {
-      entries.sort((a, b) => a.order - b.order);
-    }
+    for (const [, entries] of groups) entries.sort((a, b) => a.order - b.order);
     return groups;
-  }, [excludeExtensionIds, includeExtensionIds, includeGroups, schema]);
+  }, [filteredEntries]);
+
+  const entriesByExtension = useMemo(() => {
+    const groups = new Map<string, UnifiedSettingsEntry[]>();
+    for (const entry of filteredEntries) {
+      if (!groups.has(entry.extensionId)) groups.set(entry.extensionId, []);
+      groups.get(entry.extensionId)!.push(entry);
+    }
+    return [...groups.entries()].sort(([leftId], [rightId]) => {
+      const leftLabel = extensionLabels?.get(leftId) ?? formatExtensionFallbackLabel(leftId);
+      const rightLabel = extensionLabels?.get(rightId) ?? formatExtensionFallbackLabel(rightId);
+      return leftLabel.localeCompare(rightLabel);
+    });
+  }, [extensionLabels, filteredEntries]);
 
   if (loading || schemaLoading) return null;
   if (error || schemaError) return null;
-  if (grouped.size === 0) return null;
+  if (filteredEntries.length === 0) return null;
+
+  if (groupByExtension) {
+    return (
+      <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
+        {entriesByExtension.map(([extensionId, entries]) => {
+          const entriesByGroup = new Map<string, UnifiedSettingsEntry[]>();
+          for (const entry of entries) {
+            const group = entry.group || 'General';
+            if (!entriesByGroup.has(group)) entriesByGroup.set(group, []);
+            entriesByGroup.get(group)!.push(entry);
+          }
+          const groupedEntries = [...entriesByGroup.entries()];
+          return (
+            <SettingsPanel
+              key={extensionId}
+              id={settingsExtensionAnchorId(extensionId)}
+              title={extensionLabels?.get(extensionId) ?? formatExtensionFallbackLabel(extensionId)}
+              description={formatInjectedExtensionDescription(entries)}
+            >
+              {groupedEntries.map(([group, groupEntries]) => (
+                <div key={group} className="space-y-3">
+                  {groupedEntries.length > 1 ? <h4 className="text-[13px] font-medium text-primary">{group}</h4> : null}
+                  {groupEntries.map((entry) => (
+                    <SettingsField
+                      key={entry.key}
+                      entry={entry}
+                      value={draft[entry.key]}
+                      onChange={(key, val) => {
+                        markEdited(key);
+                        setDraft((prev) => ({ ...prev, [key]: val }));
+                        setSaveNotice(null);
+                        setSaveError(null);
+                      }}
+                    />
+                  ))}
+                </div>
+              ))}
+              <div className="flex items-center gap-2 pt-2">
+                <ToolbarButton type="button" className="text-accent" disabled={!hasPendingChanges || saving} onClick={saveChanges}>
+                  {saving ? 'Saving…' : 'Save'}
+                </ToolbarButton>
+                <ToolbarButton type="button" disabled={!hasPendingChanges || saving} onClick={resetChanges}>
+                  Reset
+                </ToolbarButton>
+                {hasPendingChanges ? <p className="ui-card-meta">Unsaved changes.</p> : null}
+              </div>
+              {saveNotice && !hasPendingChanges ? <p className="text-[12px] text-accent">{saveNotice}</p> : null}
+              {saveError ? <p className="text-[12px] text-danger">{saveError}</p> : null}
+            </SettingsPanel>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className={separated ? 'space-y-0 border-t border-border-subtle/70 pt-6' : 'space-y-0'}>
@@ -1484,6 +1668,7 @@ function ExtensionSettingsComponentPanels({
       {registrations.map((registration) => (
         <SettingsPanel
           key={`${registration.extensionId}:${registration.id}`}
+          id={registration.sectionId}
           title={registration.label}
           description={registration.description}
         >
@@ -1757,6 +1942,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
     error: providerAuthError,
     refetch: refetchProviderAuth,
   } = useApi(api.providerAuth);
+  const { data: settingsSchemaForToc } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
   const [savingPreference, setSavingPreference] = useState<'model' | 'visionModel' | 'thinking' | 'serviceTier' | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
   const [defaultCwdDraft, setDefaultCwdDraft] = useState('');
@@ -1793,22 +1979,42 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(SETTINGS_QUICK_LINKS[0].id);
 
   const visibleSectionIds = useMemo(() => (sectionIds ? new Set(sectionIds) : null), [sectionIds]);
+  const extensionLabels = useMemo(() => {
+    return new Map(extensionRegistry.extensions.map((extension) => [extension.id, extension.name]));
+  }, [extensionRegistry.extensions]);
+  const extensionSettingsQuickLinks = useMemo(
+    () =>
+      buildExtensionSettingsQuickLinks({
+        schema: settingsSchemaForToc,
+        settingsComponents: extensionRegistry.settingsComponents,
+        extensions: extensionRegistry.extensions,
+      }),
+    [extensionRegistry.extensions, extensionRegistry.settingsComponents, settingsSchemaForToc],
+  );
+  const settingsQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
+    if (extensionSettingsQuickLinks.length === 0) {
+      return SETTINGS_QUICK_LINKS;
+    }
+    return SETTINGS_QUICK_LINKS.map((item) =>
+      item.id === 'settings-extensions' ? { ...item, children: extensionSettingsQuickLinks } : item,
+    );
+  }, [extensionSettingsQuickLinks]);
   const visibleQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
     const shellFiltered =
       desktopEnvironment?.isElectron || isDesktopShell()
-        ? SETTINGS_QUICK_LINKS
-        : SETTINGS_QUICK_LINKS.filter((item) => item.id !== 'settings-desktop');
+        ? settingsQuickLinks
+        : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
     return visibleSectionIds ? shellFiltered.filter((item) => visibleSectionIds.has(item.id)) : shellFiltered;
-  }, [desktopEnvironment?.isElectron, visibleSectionIds]);
+  }, [desktopEnvironment?.isElectron, settingsQuickLinks, visibleSectionIds]);
+  const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(visibleQuickLinks), [visibleQuickLinks]);
 
   useEffect(() => {
     const rawSectionId = readSettingsSectionIdFromHash(location.hash);
-    const extensionComponentIds = new Set(extensionRegistry.settingsComponents.map((component) => component.sectionId));
-    const sectionId = extensionComponentIds.has(rawSectionId) ? 'settings-extensions' : rawSectionId;
-    if (!sectionId || !visibleQuickLinks.some((item) => item.id === sectionId)) return;
+    const sectionId = visibleTocLinks.some((item) => item.id === rawSectionId) ? rawSectionId : '';
+    if (!sectionId) return;
     const frame = window.requestAnimationFrame(() => navigateToSection(sectionId));
     return () => window.cancelAnimationFrame(frame);
-  }, [extensionRegistry.settingsComponents, location.hash, visibleQuickLinks]);
+  }, [location.hash, visibleTocLinks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1831,21 +2037,21 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
   }, []);
 
   useEffect(() => {
-    if (visibleQuickLinks.some((item) => item.id === activeQuickLinkId)) {
+    if (visibleTocLinks.some((item) => item.id === activeQuickLinkId)) {
       return;
     }
 
     const nextId = visibleQuickLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id;
     setActiveQuickLinkId(nextId);
-  }, [activeQuickLinkId, visibleQuickLinks]);
+  }, [activeQuickLinkId, visibleQuickLinks, visibleTocLinks]);
 
   useEffect(() => {
     const container = settingsScrollRef.current;
-    if (!container || typeof window === 'undefined' || visibleQuickLinks.length === 0) {
+    if (!container || typeof window === 'undefined' || visibleTocLinks.length === 0) {
       return undefined;
     }
 
-    const sections = visibleQuickLinks
+    const sections = visibleTocLinks
       .map((item) => {
         const section = container.querySelector<HTMLElement>(`#${item.id}`);
         return section ? { id: item.id, section } : null;
@@ -1930,7 +2136,7 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
         window.cancelAnimationFrame(frame);
       }
     };
-  }, [visibleQuickLinks]);
+  }, [visibleTocLinks]);
 
   const groupedModels = useMemo(() => groupModelsByProvider(modelState?.models ?? []), [modelState?.models]);
 
@@ -3042,7 +3248,11 @@ export function SettingsPage({ sectionIds }: { sectionIds?: SettingsQuickLinkId[
             </SettingsSection>
 
             <SettingsSection id="settings-extensions" label="Extensions" description="Preferences declared by installed extensions.">
-              <ExtensionSettingsSection excludeExtensionIds={['system-settings']} />
+              <ExtensionSettingsSection
+                excludeExtensionIds={['system-settings']}
+                groupByExtension
+                extensionLabels={extensionLabels}
+              />
               <ExtensionSettingsComponentPanels registrations={extensionRegistry.settingsComponents} />
             </SettingsSection>
 
