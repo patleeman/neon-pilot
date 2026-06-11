@@ -55,6 +55,10 @@ export interface ExtensionCommandExecutorOptions {
   browserGoForward?(): boolean;
   browserReloadOrStop?(): boolean;
   browserFocusLocation?(): boolean;
+  artifactCopySource?(): boolean;
+  artifactToggleSource?(): boolean;
+  artifactToggleFullscreen?(): boolean;
+  artifactClose?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: {
@@ -189,6 +193,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'browser.goForward', title: 'Browser Go Forward', category: 'Browser' },
     { id: 'browser.reloadOrStop', title: 'Reload or Stop Browser', category: 'Browser' },
     { id: 'browser.focusLocation', title: 'Focus Browser Location', category: 'Browser' },
+    { id: 'artifact.copySource', title: 'Copy Artifact Source', category: 'Artifact' },
+    { id: 'artifact.toggleSource', title: 'Show or Hide Artifact Source', category: 'Artifact' },
+    { id: 'artifact.toggleFullscreen', title: 'Toggle Artifact Fullscreen', category: 'Artifact' },
+    { id: 'artifact.close', title: 'Close Artifact', category: 'Artifact' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -646,6 +654,50 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.browserFocusLocation) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'artifact.copySource',
+      title: 'Copy Artifact Source',
+      category: 'Artifact',
+      execute() {
+        return options.artifactCopySource?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactCopySource) && readContextValue(context, 'artifact.active') === true;
+      },
+    },
+    {
+      id: 'artifact.toggleSource',
+      title: 'Show or Hide Artifact Source',
+      category: 'Artifact',
+      execute() {
+        return options.artifactToggleSource?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactToggleSource) && readContextValue(context, 'artifact.canShowSource') === true;
+      },
+    },
+    {
+      id: 'artifact.toggleFullscreen',
+      title: 'Toggle Artifact Fullscreen',
+      category: 'Artifact',
+      execute() {
+        return options.artifactToggleFullscreen?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactToggleFullscreen) && readContextValue(context, 'artifact.active') === true;
+      },
+    },
+    {
+      id: 'artifact.close',
+      title: 'Close Artifact',
+      category: 'Artifact',
+      execute() {
+        return options.artifactClose?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactClose) && readContextValue(context, 'artifact.active') === true;
       },
     },
     {

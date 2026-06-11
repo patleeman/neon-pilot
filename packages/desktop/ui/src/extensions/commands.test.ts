@@ -151,6 +151,48 @@ describe('extension commands', () => {
     expect(browserFocusLocation).toHaveBeenCalledTimes(1);
   });
 
+  it('includes artifact modal commands gated by modal state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['artifact.copySource', 'artifact.toggleSource', 'artifact.toggleFullscreen', 'artifact.close']),
+    );
+    const artifactCopySource = vi.fn(() => true);
+    const artifactToggleSource = vi.fn(() => true);
+    const artifactToggleFullscreen = vi.fn(() => true);
+    const artifactClose = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      artifactCopySource,
+      artifactToggleSource,
+      artifactToggleFullscreen,
+      artifactClose,
+    };
+
+    await expect(executeExtensionCommand('artifact.copySource', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('artifact.toggleSource', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('artifact.toggleFullscreen', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('artifact.close', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('artifact.copySource', undefined, { ...options, context: { 'artifact.active': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('artifact.toggleSource', undefined, { ...options, context: { 'artifact.canShowSource': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('artifact.toggleFullscreen', undefined, { ...options, context: { 'artifact.active': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('artifact.close', undefined, { ...options, context: { 'artifact.active': true } }),
+    ).resolves.toBe(true);
+
+    expect(artifactCopySource).toHaveBeenCalledTimes(1);
+    expect(artifactToggleSource).toHaveBeenCalledTimes(1);
+    expect(artifactToggleFullscreen).toHaveBeenCalledTimes(1);
+    expect(artifactClose).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),

@@ -5,8 +5,10 @@ import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
 import { writeClipboardText } from '../desktop/clipboard';
+import { setExtensionCommandContext } from '../extensions/commands';
 import { useApi } from '../hooks/useApi';
 import { formatDate } from '../shared/utils';
+import { ARTIFACT_MODAL_COMMAND_EVENT, type ArtifactModalCommand } from './artifactModalCommands';
 import { ConversationArtifactViewer } from './ConversationArtifactViewer';
 import { addNotification } from './notifications/notificationStore';
 import { CodeBlock, ErrorState, IconButton, LoadingState, MetaLabel, RowButton, SectionLabel, TabButton } from './ui';
@@ -119,7 +121,7 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
   const artifacts = artifactListData?.artifacts ?? [];
   const artifactError = formatArtifactLoadError(error);
 
-  async function copySource() {
+  const copySource = useCallback(async () => {
     if (!artifact) {
       return;
     }
@@ -137,7 +139,40 @@ export function ConversationArtifactModal({ conversationId, artifactId }: { conv
 
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1200);
-  }
+  }, [artifact]);
+
+  useEffect(() => {
+    setExtensionCommandContext('artifact.active', Boolean(artifact));
+    setExtensionCommandContext('artifact.canShowSource', Boolean(artifact && artifact.kind !== 'latex'));
+    return () => {
+      setExtensionCommandContext('artifact.active', null);
+      setExtensionCommandContext('artifact.canShowSource', null);
+    };
+  }, [artifact]);
+
+  useEffect(() => {
+    function handleArtifactCommand(event: Event) {
+      const command = (event as CustomEvent<{ command?: ArtifactModalCommand }>).detail?.command;
+      if (command === 'copySource') {
+        void copySource();
+        return;
+      }
+      if (command === 'toggleSource' && artifact?.kind !== 'latex') {
+        setShowSource((current) => !current);
+        return;
+      }
+      if (command === 'toggleFullscreen') {
+        setExpanded((current) => !current);
+        return;
+      }
+      if (command === 'close') {
+        closeArtifact();
+      }
+    }
+
+    window.addEventListener(ARTIFACT_MODAL_COMMAND_EVENT, handleArtifactCommand);
+    return () => window.removeEventListener(ARTIFACT_MODAL_COMMAND_EVENT, handleArtifactCommand);
+  }, [artifact?.kind, closeArtifact, copySource]);
 
   const selectedArtifactId = getConversationArtifactIdFromSearch(location.search);
 

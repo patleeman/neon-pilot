@@ -167,6 +167,54 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('artifact.copySource', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('artifact.copySource', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.active': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('artifact.toggleSource', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.canShowSource': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('artifact.toggleSource', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.canShowSource': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('artifact.toggleFullscreen', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('artifact.toggleFullscreen', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.active': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('artifact.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('artifact.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'artifact.active': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': false },
