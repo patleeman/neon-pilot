@@ -1,8 +1,13 @@
 import type { FileDiffOptions } from '@pierre/diffs';
-import { type CSSProperties, lazy, Suspense, useMemo, useState } from 'react';
+import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
 import { type ColorTheme, useTheme } from '../../ui-state/theme';
 import { cx, MetaLabel, RowButton } from '../ui';
+import {
+  FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT,
+  registerFileChangeToggleCapability,
+  type FileChangeCommandDetail,
+} from './fileChangeCommands';
 
 interface FileChange {
   path: string;
@@ -184,6 +189,31 @@ export function FileChangesToolDiff({ fileChanges }: { fileChanges: FileChange[]
     }),
     [themeType],
   );
+
+  const firstFileChangeKey = fileChanges[0] ? displayPath(fileChanges[0]) : null;
+
+  useEffect(() => {
+    if (!firstFileChangeKey) return undefined;
+    return registerFileChangeToggleCapability();
+  }, [firstFileChangeKey]);
+
+  useEffect(() => {
+    function handleToggleFirstFileChange(event: Event) {
+      const detail = (event as CustomEvent<FileChangeCommandDetail>).detail;
+      if (detail?.handled || !firstFileChangeKey) return;
+      if (detail) detail.handled = true;
+
+      setExpanded((current) => {
+        const next = new Set(current);
+        if (next.has(firstFileChangeKey)) next.delete(firstFileChangeKey);
+        else next.add(firstFileChangeKey);
+        return next;
+      });
+    }
+
+    window.addEventListener(FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstFileChange);
+    return () => window.removeEventListener(FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstFileChange);
+  }, [firstFileChangeKey]);
 
   if (fileChanges.length === 0) return null;
 

@@ -98,6 +98,7 @@ export interface ExtensionCommandExecutorOptions {
   closeImagePreview?(): boolean;
   inspectFirstImagePreview?(): boolean;
   loadFirstImagePreview?(): boolean;
+  toggleFirstFileChange?(): boolean;
   copyFirstMessageAction?(): boolean;
   editFirstMessageAction?(): boolean;
   rewindFirstMessageAction?(): boolean;
@@ -287,6 +288,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'imagePreview.close', title: 'Close Image Preview', category: 'Image Preview' },
     { id: 'imagePreview.inspectFirst', title: 'Inspect First Image', category: 'Image Preview' },
     { id: 'imagePreview.loadFirst', title: 'Load First Deferred Image', category: 'Image Preview' },
+    { id: 'fileChange.toggleFirst', title: 'Toggle First File Change', category: 'Diff' },
     { id: 'messageAction.copyFirst', title: 'Copy First Message', category: 'Message Actions' },
     { id: 'messageAction.editFirst', title: 'Edit First Message', category: 'Message Actions' },
     { id: 'messageAction.rewindFirst', title: 'Rewind First Message', category: 'Message Actions' },
@@ -1249,6 +1251,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.loadFirstImagePreview) && readContextValue(context, 'imagePreview.canLoadFirst') === true;
+      },
+    },
+    {
+      id: 'fileChange.toggleFirst',
+      title: 'Toggle First File Change',
+      category: 'Diff',
+      execute() {
+        return options.toggleFirstFileChange?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstFileChange) && readContextValue(context, 'fileChange.canToggleFirst') === true;
       },
     },
     {

@@ -81,6 +81,7 @@ export const HOST_COMMAND_IDS = [
   'imagePreview.close',
   'imagePreview.inspectFirst',
   'imagePreview.loadFirst',
+  'fileChange.toggleFirst',
   'messageAction.copyFirst',
   'messageAction.editFirst',
   'messageAction.rewindFirst',
