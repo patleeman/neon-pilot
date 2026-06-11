@@ -8,6 +8,19 @@ function isDesktopConversationShortcutAction(value: unknown): value is DesktopCo
   return value === 'focus-composer' || value === 'edit-working-directory' || value === 'rename-conversation';
 }
 
+function desktopConversationShortcutCommandAction(command: unknown): DesktopConversationShortcutAction | null {
+  switch (command) {
+    case 'composer.focus':
+      return 'focus-composer';
+    case 'conversation.editCwd':
+      return 'edit-working-directory';
+    case 'conversation.rename':
+      return 'rename-conversation';
+    default:
+      return null;
+  }
+}
+
 interface UseDesktopConversationShortcutsOptions {
   draft: boolean;
   draftCwdPickBusy: boolean;
@@ -31,8 +44,11 @@ export function useDesktopConversationShortcuts({
         return;
       }
 
-      const action = (event as CustomEvent<{ action?: unknown }>).detail?.action;
-      if (!isDesktopConversationShortcutAction(action)) {
+      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
+      const action = isDesktopConversationShortcutAction(detail?.action)
+        ? detail.action
+        : desktopConversationShortcutCommandAction(detail?.command);
+      if (!action) {
         return;
       }
 

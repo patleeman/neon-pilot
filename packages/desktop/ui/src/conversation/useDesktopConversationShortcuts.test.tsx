@@ -49,6 +49,12 @@ function dispatchShortcut(action: string): void {
   });
 }
 
+function dispatchShortcutCommand(command: string): void {
+  act(() => {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command } }));
+  });
+}
+
 describe('useDesktopConversationShortcuts', () => {
   afterEach(() => {
     while (roots.length > 0) act(() => roots.pop()?.unmount());
@@ -74,6 +80,20 @@ describe('useDesktopConversationShortcuts', () => {
     dispatchShortcut('rename-conversation');
     dispatchShortcut('edit-working-directory');
 
+    expect(beginTitleEdit).toHaveBeenCalledTimes(1);
+    expect(beginConversationCwdEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts command-only desktop shortcut events for shared conversation commands', () => {
+    const beginTitleEdit = vi.fn();
+    const beginConversationCwdEdit = vi.fn();
+    const textarea = renderShortcutHarness({ beginTitleEdit, beginConversationCwdEdit });
+
+    dispatchShortcutCommand('composer.focus');
+    dispatchShortcutCommand('conversation.rename');
+    dispatchShortcutCommand('conversation.editCwd');
+
+    expect(document.activeElement).toBe(textarea);
     expect(beginTitleEdit).toHaveBeenCalledTimes(1);
     expect(beginConversationCwdEdit).toHaveBeenCalledTimes(1);
   });
