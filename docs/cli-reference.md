@@ -983,7 +983,7 @@ Examples:
 Install a marketplace behavior package as an extension: extensions install-marketplace <source> --type skill|instruction-pack|agent|template
 
 - Source: extension (system-extension-manager)
-- Usage: `neon-pilot extensions install-marketplace <extensionId> [--json]`
+- Usage: `neon-pilot extensions install-marketplace <source> --type <skill|instruction-pack|agent|template> [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -992,15 +992,15 @@ Install a marketplace behavior package as an extension: extensions install-marke
 - Output: text, json
 
 Examples:
-- `neon-pilot extensions install-marketplace system-settings`
-- `neon-pilot extensions install-marketplace system-settings --json`
+- `neon-pilot extensions install-marketplace /path/to/skill --type skill`
+- `neon-pilot extensions install-marketplace /path/to/skill --type skill --json`
 
 ### extensions install-url
 
 Install an extension bundle from URL: extensions install-url <url> [--expected-id <id>]
 
 - Source: extension (system-extension-manager)
-- Usage: `neon-pilot extensions install-url <extensionId> [--json]`
+- Usage: `neon-pilot extensions install-url <url> [--expected-id <id>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -1009,8 +1009,8 @@ Install an extension bundle from URL: extensions install-url <url> [--expected-i
 - Output: text, json
 
 Examples:
-- `neon-pilot extensions install-url system-settings`
-- `neon-pilot extensions install-url system-settings --json`
+- `neon-pilot extensions install-url https://example.com/system-example.neon-extension.zip`
+- `neon-pilot extensions install-url https://example.com/system-example.neon-extension.zip --expected-id system-example --json`
 
 ### extensions list
 

@@ -537,10 +537,10 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "installFromUrl",
-        "usage": "extensions install-url <extensionId> [--json]",
+        "usage": "extensions install-url <url> [--expected-id <id>] [--json]",
         "examples": [
-          "neon-pilot extensions install-url system-settings",
-          "neon-pilot extensions install-url system-settings --json"
+          "neon-pilot extensions install-url https://example.com/system-example.neon-extension.zip",
+          "neon-pilot extensions install-url https://example.com/system-example.neon-extension.zip --expected-id system-example --json"
         ],
         "argsSchema": {
           "type": "array",
@@ -548,7 +548,8 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "maxItems": 1,
+          "description": "Positional args: url."
         },
         "flagsSchema": {
           "type": "object",
@@ -560,6 +561,10 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "expected-id": {
+              "type": "string",
+              "description": "Expected extension id in the downloaded bundle."
             }
           },
           "additionalProperties": true
@@ -582,10 +587,10 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "installMarketplacePackage",
-        "usage": "extensions install-marketplace <extensionId> [--json]",
+        "usage": "extensions install-marketplace <source> --type <skill|instruction-pack|agent|template> [--json]",
         "examples": [
-          "neon-pilot extensions install-marketplace system-settings",
-          "neon-pilot extensions install-marketplace system-settings --json"
+          "neon-pilot extensions install-marketplace /path/to/skill --type skill",
+          "neon-pilot extensions install-marketplace /path/to/skill --type skill --json"
         ],
         "argsSchema": {
           "type": "array",
@@ -593,7 +598,8 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "maxItems": 1,
+          "description": "Positional args: source."
         },
         "flagsSchema": {
           "type": "object",
@@ -605,8 +611,13 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "type": {
+              "enum": ["skill", "instruction-pack", "agent", "template"],
+              "description": "Marketplace behavior package type."
             }
           },
+          "required": ["type"],
           "additionalProperties": true
         },
         "mode": "write",
