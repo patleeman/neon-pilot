@@ -299,6 +299,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('traceCluster.toggleFirstOverflow', {
+        activeConversationId: 'conversation-1',
+        context: { 'traceCluster.canToggleFirstOverflow': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('traceCluster.toggleFirstOverflow', {
+        activeConversationId: 'conversation-1',
+        context: { 'traceCluster.canToggleFirstOverflow': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('thinkingBlock.toggleFirst', {
         activeConversationId: 'conversation-1',
         context: { 'thinkingBlock.canToggleFirst': false },

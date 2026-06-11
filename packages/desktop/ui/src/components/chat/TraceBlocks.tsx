@@ -10,7 +10,9 @@ import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from
 import { buildSummaryPreview } from './summaryPreview.js';
 import { ToolBlock } from './ToolBlock.js';
 import {
+  registerTraceClusterOverflowToggleCapability,
   registerTraceClusterToggleCapability,
+  TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT,
   TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT,
   type TraceClusterCommandDetail,
 } from './traceClusterCommands.js';
@@ -376,6 +378,9 @@ export function TraceClusterBlock({
   const toggleTraceCluster = useCallback(() => {
     setPreference((current) => toggleDisclosurePreference(autoOpen, current));
   }, [autoOpen]);
+  const toggleTraceClusterOverflow = useCallback(() => {
+    setShowAllBlocks((current) => !current);
+  }, []);
   const hydrateDeferredBlocks = () => {
     if (!onHydrateMessage || deferredBlockIds.length === 0) {
       return;
@@ -421,7 +426,24 @@ export function TraceClusterBlock({
 
     return blocks.slice(-MAX_VISIBLE_TRACE_BLOCKS);
   }, [blocks, open, runningBlockIndex, showAllBlocks]);
-  const hiddenBlockCount = open ? Math.max(0, blocks.length - visibleBlocks.length) : 0;
+  const overflowBlockCount = Math.max(0, blocks.length - MAX_VISIBLE_TRACE_BLOCKS);
+  const hiddenBlockCount = open && !showAllBlocks ? overflowBlockCount : 0;
+  const canToggleTraceClusterOverflow = open && overflowBlockCount > 0;
+  useEffect(() => {
+    if (!canToggleTraceClusterOverflow) return undefined;
+    return registerTraceClusterOverflowToggleCapability();
+  }, [canToggleTraceClusterOverflow]);
+  useEffect(() => {
+    function handleToggleFirstTraceClusterOverflow(event: Event) {
+      const detail = (event as CustomEvent<TraceClusterCommandDetail>).detail;
+      if (detail?.handled || !canToggleTraceClusterOverflow) return;
+      if (detail) detail.handled = true;
+      toggleTraceClusterOverflow();
+    }
+
+    window.addEventListener(TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT, handleToggleFirstTraceClusterOverflow);
+    return () => window.removeEventListener(TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT, handleToggleFirstTraceClusterOverflow);
+  }, [canToggleTraceClusterOverflow, toggleTraceClusterOverflow]);
   const visibleStartIndex = blocks.length - visibleBlocks.length;
   return (
     <div className="space-y-1.5">
@@ -493,15 +515,15 @@ export function TraceClusterBlock({
 
       {open && (
         <div className="ml-2.5 space-y-1.5 border-l border-border-subtle pl-2.5">
-          {hiddenBlockCount > 0 && (
+          {overflowBlockCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 rounded-md bg-elevated/35 px-2.5 py-1.5 text-[11px] text-secondary">
               <span>
                 {showAllBlocks
                   ? `Showing all ${blocks.length} steps.`
-                  : `${hiddenBlockCount} earlier step${hiddenBlockCount === 1 ? '' : 's'} summarized above.`}
+                  : `${overflowBlockCount} earlier step${overflowBlockCount === 1 ? '' : 's'} summarized above.`}
               </span>
               <span className="flex-1" />
-              <Button variant="action" onClick={() => setShowAllBlocks((current) => !current)} className="text-[10px]">
+              <Button variant="action" onClick={toggleTraceClusterOverflow} className="text-[10px]">
                 {showAllBlocks ? `Show latest ${MAX_VISIBLE_TRACE_BLOCKS}` : 'Show all'}
               </Button>
             </div>

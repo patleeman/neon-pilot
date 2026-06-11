@@ -102,6 +102,7 @@ export interface ExtensionCommandExecutorOptions {
   toggleFirstToolBlock?(): boolean;
   toggleFirstToolBlockLinkedRuns?(): boolean;
   toggleFirstTraceCluster?(): boolean;
+  toggleFirstTraceClusterOverflow?(): boolean;
   toggleFirstThinkingBlock?(): boolean;
   toggleFirstSubagentBlock?(): boolean;
   copyFirstMessageAction?(): boolean;
@@ -297,6 +298,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'toolBlock.toggleFirst', title: 'Toggle First Tool Block', category: 'Transcript' },
     { id: 'toolBlock.toggleFirstLinkedRuns', title: 'Toggle First Tool Block Linked Runs', category: 'Transcript' },
     { id: 'traceCluster.toggleFirst', title: 'Toggle First Internal Work Cluster', category: 'Transcript' },
+    { id: 'traceCluster.toggleFirstOverflow', title: 'Toggle First Internal Work Overflow', category: 'Transcript' },
     { id: 'thinkingBlock.toggleFirst', title: 'Toggle First Thinking Block', category: 'Transcript' },
     { id: 'subagentBlock.toggleFirst', title: 'Toggle First Subagent Block', category: 'Transcript' },
     { id: 'messageAction.copyFirst', title: 'Copy First Message', category: 'Message Actions' },
@@ -1307,6 +1309,19 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.toggleFirstTraceCluster) && readContextValue(context, 'traceCluster.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'traceCluster.toggleFirstOverflow',
+      title: 'Toggle First Internal Work Overflow',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstTraceClusterOverflow?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.toggleFirstTraceClusterOverflow) && readContextValue(context, 'traceCluster.canToggleFirstOverflow') === true
+        );
       },
     },
     {

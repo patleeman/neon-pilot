@@ -94,7 +94,11 @@ import {
   TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
   type ToolBlockCommandDetail,
 } from './chat/toolBlockCommands';
-import { TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, type TraceClusterCommandDetail } from './chat/traceClusterCommands';
+import {
+  TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT,
+  TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT,
+  type TraceClusterCommandDetail,
+} from './chat/traceClusterCommands';
 import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 import {
   extensionToolPanelMode,
@@ -2175,6 +2179,10 @@ export function Layout() {
       },
       toggleFirstTraceCluster() {
         window.dispatchEvent(new CustomEvent<TraceClusterCommandDetail>(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstTraceClusterOverflow() {
+        window.dispatchEvent(new CustomEvent<TraceClusterCommandDetail>(TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT, { detail: {} }));
         return true;
       },
       toggleFirstThinkingBlock() {

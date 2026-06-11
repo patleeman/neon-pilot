@@ -85,6 +85,7 @@ export const HOST_COMMAND_IDS = [
   'toolBlock.toggleFirst',
   'toolBlock.toggleFirstLinkedRuns',
   'traceCluster.toggleFirst',
+  'traceCluster.toggleFirstOverflow',
   'thinkingBlock.toggleFirst',
   'subagentBlock.toggleFirst',
   'messageAction.copyFirst',
