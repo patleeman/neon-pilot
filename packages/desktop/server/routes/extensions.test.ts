@@ -626,8 +626,14 @@ describe('registerExtensionRoutes', () => {
     const res = createResponse();
     await harness.patchHandler('/api/extensions/keybindings/:extensionId/:keybindingId')(
       {
-        params: { extensionId: 'agent-board', keybindingId: 'plan' },
-        body: { command: 'agent-board.plan', keys: ['Meta+O'], enabled: true },
+        params: { extensionId: 'agent-board', keybindingId: 'command:plan' },
+        body: {
+          title: 'Plan board sprint',
+          command: 'agent-board.plan',
+          keys: ['Meta+O'],
+          when: 'board.focused',
+          enabled: true,
+        },
       },
       res,
     );
@@ -640,8 +646,9 @@ describe('registerExtensionRoutes', () => {
       expect.arrayContaining([
         expect.objectContaining({
           extensionId: 'agent-board',
-          surfaceId: 'plan',
+          surfaceId: 'command:plan',
           command: 'agent-board.plan',
+          when: 'board.focused',
           keys: ['Meta+O'],
           enabled: true,
         }),

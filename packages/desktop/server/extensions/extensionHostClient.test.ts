@@ -555,6 +555,7 @@ describe('extension host client', () => {
         extensionId: 'ext',
         keybindingId: 'open',
         command: 'ext.open',
+        when: 'workspace.open',
         keys: ['Meta+O'],
         enabled: true,
       }),
@@ -564,6 +565,7 @@ describe('extension host client', () => {
       extensionId: 'ext',
       keybindingId: 'open',
       command: 'ext.open',
+      when: 'workspace.open',
       keys: ['Meta+O'],
       enabled: true,
     });

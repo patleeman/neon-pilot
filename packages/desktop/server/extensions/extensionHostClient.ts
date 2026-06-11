@@ -534,6 +534,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         ...(request.title !== undefined ? { title: request.title } : {}),
         ...(request.command !== undefined ? { command: request.command } : {}),
         ...(request.args !== undefined ? { args: request.args } : {}),
+        ...(request.when !== undefined ? { when: request.when } : {}),
         ...(request.scope !== undefined ? { scope: request.scope } : {}),
         ...(request.packageType !== undefined ? { packageType: request.packageType } : {}),
         ...(request.keys !== undefined ? { keys: request.keys } : {}),
