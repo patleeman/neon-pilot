@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.14 — 2026-06-11
+
+### Highlights
+
+- Makes the `neon-pilot` CLI a first-class human-usable control plane with command discovery, aliases, schema validation, readable help, stable table output, and transcript-friendly quiet/verbose controls.
+- Adds CLI runtime introspection commands for doctor checks, paths, version, and command schema export so external agents can bootstrap and verify Neon Pilot without opening the app.
+- Hardens extension-backed CLI execution with offline discovery, real JSONL streaming updates, destructive-command confirmation, and repeat fixture coverage across the command surface.
+- Improves live conversation/session state handling so parallel work, title metadata, stopped-state authority, and stale send state behave more reliably across route switches and refreshes.
+- Keeps release-facing CLI docs and generated command references aligned with the current command registry.
+
+### Notes
+
+- 12 commits since the previous release.
+
 ## 0.11.13 — 2026-06-10
 
 ### Highlights

@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.12** — patch release.
+**v0.11.14** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.12
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.14
 
 Highlights in this train:
 
-- Consolidates Neon Pilot self-administration around the canonical `neon-pilot` CLI and internal `neon_pilot` tool.
-- Deprecates Neon Pilot MCP bootstrap/admin usage so MCP remains an external client surface, not a self-control plane.
-- Fixes conversation lifecycle seams for extension-created conversations, sidebar hydration, open/archive workspace state, and deferred-resume cleanup.
-- Hardens extension lifecycle behavior, including registry invalidation after enable changes and uninstall handling for runtime-installed catalog extensions.
-- Adds release reliability gates and required hands-on QA documentation for future releases.
+- Makes the `neon-pilot` CLI a first-class human-usable control plane with command discovery, aliases, schema validation, readable help, stable table output, and transcript-friendly output controls.
+- Adds CLI runtime introspection commands for doctor checks, paths, version, and command schema export so external agents can bootstrap and verify Neon Pilot without opening the app.
+- Hardens extension-backed CLI execution with offline discovery, real JSONL streaming updates, destructive-command confirmation, and repeat fixture coverage across the command surface.
+- Improves live conversation/session state handling around parallel work, title metadata, stopped-state authority, and stale send state.
+- Keeps release-facing CLI docs and generated command references aligned with the current command registry.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
