@@ -157,6 +157,8 @@ const DESKTOP_SHORTCUT_ACTIONS = {
   toggleConversationPin: 'toggle-conversation-pin',
   toggleConversationArchive: 'toggle-conversation-archive',
   renameConversation: 'rename-conversation',
+  saveConversationTitle: 'save-conversation-title',
+  cancelConversationTitleEdit: 'cancel-conversation-title-edit',
   editConversationCwd: 'edit-working-directory',
   saveConversationCwd: 'save-working-directory',
   cancelConversationCwdEdit: 'cancel-working-directory-edit',
@@ -1921,6 +1923,14 @@ export function Layout() {
       },
       renameConversation() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.renameConversation);
+        return true;
+      },
+      saveConversationTitle() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationTitle);
+        return true;
+      },
+      cancelConversationTitleEdit() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationTitleEdit);
         return true;
       },
       editConversationCwd() {

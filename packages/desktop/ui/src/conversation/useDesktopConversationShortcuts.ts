@@ -7,6 +7,8 @@ type DesktopConversationShortcutAction =
   | 'edit-working-directory'
   | 'save-working-directory'
   | 'cancel-working-directory-edit'
+  | 'save-conversation-title'
+  | 'cancel-conversation-title-edit'
   | 'rename-conversation';
 
 function isDesktopConversationShortcutAction(value: unknown): value is DesktopConversationShortcutAction {
@@ -15,6 +17,8 @@ function isDesktopConversationShortcutAction(value: unknown): value is DesktopCo
     value === 'edit-working-directory' ||
     value === 'save-working-directory' ||
     value === 'cancel-working-directory-edit' ||
+    value === 'save-conversation-title' ||
+    value === 'cancel-conversation-title-edit' ||
     value === 'rename-conversation'
   );
 }
@@ -31,6 +35,10 @@ function desktopConversationShortcutCommandAction(command: unknown): DesktopConv
       return 'cancel-working-directory-edit';
     case 'conversation.rename':
       return 'rename-conversation';
+    case 'conversation.saveTitle':
+      return 'save-conversation-title';
+    case 'conversation.cancelTitleEdit':
+      return 'cancel-conversation-title-edit';
     default:
       return null;
   }
@@ -41,6 +49,8 @@ interface UseDesktopConversationShortcutsOptions {
   draftCwdPickBusy: boolean;
   textareaRef: RefObject<HTMLTextAreaElement>;
   beginTitleEdit: () => void;
+  saveTitleEdit: () => Promise<void> | void;
+  cancelTitleEdit: () => void;
   beginConversationCwdEdit: () => void;
   saveConversationCwdEdit: () => Promise<void> | void;
   cancelConversationCwdEdit: () => void;
@@ -52,6 +62,8 @@ export function useDesktopConversationShortcuts({
   draftCwdPickBusy,
   textareaRef,
   beginTitleEdit,
+  saveTitleEdit,
+  cancelTitleEdit,
   beginConversationCwdEdit,
   saveConversationCwdEdit,
   cancelConversationCwdEdit,
@@ -89,6 +101,16 @@ export function useDesktopConversationShortcuts({
         return;
       }
 
+      if (action === 'save-conversation-title') {
+        void saveTitleEdit();
+        return;
+      }
+
+      if (action === 'cancel-conversation-title-edit') {
+        cancelTitleEdit();
+        return;
+      }
+
       if (action === 'save-working-directory') {
         void saveConversationCwdEdit();
         return;
@@ -116,11 +138,13 @@ export function useDesktopConversationShortcuts({
   }, [
     beginConversationCwdEdit,
     beginTitleEdit,
+    cancelTitleEdit,
     cancelConversationCwdEdit,
     draft,
     draftCwdPickBusy,
     pickDraftConversationCwd,
     saveConversationCwdEdit,
+    saveTitleEdit,
     textareaRef,
   ]);
 }

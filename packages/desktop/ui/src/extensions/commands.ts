@@ -48,6 +48,8 @@ export interface ExtensionCommandExecutorOptions {
   toggleConversationPin?(): boolean;
   toggleConversationArchive?(): boolean;
   renameConversation?(): boolean;
+  saveConversationTitle?(): boolean;
+  cancelConversationTitleEdit?(): boolean;
   editConversationCwd?(): boolean;
   saveConversationCwd?(): boolean;
   cancelConversationCwdEdit?(): boolean;
@@ -186,6 +188,8 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.togglePinned', title: 'Pin or Unpin Conversation', category: 'Conversation' },
     { id: 'conversation.toggleArchived', title: 'Archive or Restore Conversation', category: 'Conversation' },
     { id: 'conversation.rename', title: 'Rename Conversation', category: 'Conversation' },
+    { id: 'conversation.saveTitle', title: 'Save Conversation Title', category: 'Conversation' },
+    { id: 'conversation.cancelTitleEdit', title: 'Cancel Title Edit', category: 'Conversation' },
     { id: 'conversation.editCwd', title: 'Edit Conversation Working Directory', category: 'Conversation' },
     { id: 'conversation.saveCwd', title: 'Save Conversation Working Directory', category: 'Conversation' },
     { id: 'conversation.cancelCwdEdit', title: 'Cancel Working Directory Edit', category: 'Conversation' },
@@ -512,6 +516,38 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.renameConversation) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.saveTitle',
+      title: 'Save Conversation Title',
+      category: 'Conversation',
+      execute() {
+        return options.saveConversationTitle?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.saveConversationTitle) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.titleEditorOpen') === true &&
+          readContextValue(context, 'conversation.titleEditorBusy') !== true
+        );
+      },
+    },
+    {
+      id: 'conversation.cancelTitleEdit',
+      title: 'Cancel Title Edit',
+      category: 'Conversation',
+      execute() {
+        return options.cancelConversationTitleEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.cancelConversationTitleEdit) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.titleEditorOpen') === true &&
+          readContextValue(context, 'conversation.titleEditorBusy') !== true
+        );
       },
     },
     {

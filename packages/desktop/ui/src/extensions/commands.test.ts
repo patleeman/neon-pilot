@@ -122,6 +122,51 @@ describe('extension commands', () => {
     expect(cancelConversationCwdEdit).toHaveBeenCalledTimes(1);
   });
 
+  it('includes conversation title editor commands gated by editor state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['conversation.rename', 'conversation.saveTitle', 'conversation.cancelTitleEdit']),
+    );
+    const renameConversation = vi.fn(() => true);
+    const saveConversationTitle = vi.fn(() => true);
+    const cancelConversationTitleEdit = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      activeConversationId: 'conversation-1',
+      renameConversation,
+      saveConversationTitle,
+      cancelConversationTitleEdit,
+    };
+
+    await expect(executeExtensionCommand('conversation.rename', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.saveTitle', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.cancelTitleEdit', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('conversation.saveTitle', undefined, {
+        ...options,
+        context: { 'conversation.titleEditorOpen': true, 'conversation.titleEditorBusy': false },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.cancelTitleEdit', undefined, {
+        ...options,
+        context: { 'conversation.titleEditorOpen': true, 'conversation.titleEditorBusy': false },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.saveTitle', undefined, {
+        ...options,
+        context: { 'conversation.titleEditorOpen': true, 'conversation.titleEditorBusy': true },
+      }),
+    ).resolves.toBe(false);
+
+    expect(renameConversation).toHaveBeenCalledTimes(1);
+    expect(saveConversationTitle).toHaveBeenCalledTimes(1);
+    expect(cancelConversationTitleEdit).toHaveBeenCalledTimes(1);
+  });
+
   it('includes notification commands gated by notification state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['notifications.open', 'notifications.markAllRead', 'notifications.dismissAll']),
@@ -520,6 +565,8 @@ describe('extension commands', () => {
       'conversation.togglePinned',
       'conversation.toggleArchived',
       'conversation.rename',
+      'conversation.saveTitle',
+      'conversation.cancelTitleEdit',
       'conversation.editCwd',
       'composer.focus',
       'composer.submit',

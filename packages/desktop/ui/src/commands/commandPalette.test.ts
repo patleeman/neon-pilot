@@ -131,6 +131,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.saveTitle', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.titleEditorOpen': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.saveTitle', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.titleEditorOpen': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelTitleEdit', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.titleEditorOpen': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelTitleEdit', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.titleEditorOpen': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('notifications.markAllRead', {
         activeConversationId: 'conversation-1',
         context: { 'notifications.hasUnread': false },

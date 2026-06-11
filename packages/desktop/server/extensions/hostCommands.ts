@@ -24,6 +24,8 @@ export const HOST_COMMAND_IDS = [
   'conversation.togglePinned',
   'conversation.toggleArchived',
   'conversation.rename',
+  'conversation.saveTitle',
+  'conversation.cancelTitleEdit',
   'conversation.editCwd',
   'conversation.saveCwd',
   'conversation.cancelCwdEdit',
