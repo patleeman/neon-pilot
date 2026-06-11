@@ -213,11 +213,34 @@ interface CommandWithKeybindings extends CommandSettingsEntry {
 }
 
 function normalizeShortcutForConflict(shortcut: string): string {
-  return shortcut
+  const modifierOrder = ['mod', 'ctrl', 'meta', 'alt', 'shift'];
+  const modifierAliases: Record<string, string> = {
+    commandorcontrol: 'mod',
+    cmdorctrl: 'mod',
+    cmd: 'mod',
+    command: 'mod',
+    control: 'ctrl',
+    ctrl: 'ctrl',
+    meta: 'meta',
+    alt: 'alt',
+    option: 'alt',
+    shift: 'shift',
+    mod: 'mod',
+  };
+  const parts = shortcut
     .trim()
     .toLowerCase()
-    .replace(/commandorcontrol|cmdorctrl|cmd|command/g, 'mod')
-    .replace(/control/g, 'ctrl');
+    .split('+')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const modifiers = new Set<string>();
+  let key = '';
+  for (const part of parts) {
+    const modifier = modifierAliases[part];
+    if (modifier) modifiers.add(modifier);
+    else key = part;
+  }
+  return [...modifierOrder.filter((modifier) => modifiers.has(modifier)), key].filter(Boolean).join('+');
 }
 
 const MODEL_PROVIDER_API_OPTIONS: Array<{ value: ModelProviderApi; label: string }> = [
@@ -654,11 +677,12 @@ export function DesktopKeyboardShortcutsSettingsSection() {
     const shortcutValues = Object.values(nextShortcuts).filter((s): s is string => typeof s === 'string' && s.length > 0);
     const seenShortcuts = new Set<string>();
     for (const value of shortcutValues) {
-      if (seenShortcuts.has(value)) {
+      const normalizedValue = normalizeShortcutForConflict(value);
+      if (seenShortcuts.has(normalizedValue)) {
         setError(`Duplicate shortcut: ${value} is already assigned.`);
         return;
       }
-      seenShortcuts.add(value);
+      seenShortcuts.add(normalizedValue);
     }
 
     setSaving(true);

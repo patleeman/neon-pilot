@@ -520,6 +520,8 @@ describe('design-system primitives', () => {
 
   it('renders shortcut capture with formatted shortcut labels', () => {
     expect(formatKeyboardShortcutLabel('CommandOrControl+Shift+P')).toBe('⌘/Ctrl + Shift + P');
+    expect(formatKeyboardShortcutLabel('Alt+Mod+W')).toBe('Alt + ⌘/Ctrl + W');
+    expect(formatKeyboardShortcutLabel('cmdorctrl+option+k')).toBe('⌘/Ctrl + Alt + k');
     expect(
       renderToStaticMarkup(createElement(KeyboardShortcutCaptureInput, { value: 'CommandOrControl+Shift+P', onChange: () => undefined })),
     ).toContain('ui-shortcut-capture');

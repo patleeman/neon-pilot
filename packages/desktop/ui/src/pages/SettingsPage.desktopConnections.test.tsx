@@ -207,6 +207,36 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     expect(container.textContent).not.toContain('Built-in shortcuts');
     expect(container.textContent).not.toContain('Save shortcuts');
   });
+
+  it('detects shortcut conflicts even when modifiers are declared in a different order', async () => {
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-test',
+        surfaceId: 'close-file',
+        packageType: 'system',
+        title: 'Close file from extension',
+        keys: ['Alt+Mod+W'],
+        command: 'test.closeFile',
+        scope: 'global',
+        defaultKeys: ['Alt+Mod+W'],
+        enabled: true,
+      },
+    ]);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Close workbench file');
+    expect(container.textContent).toContain('Close file from extension');
+    expect(container.textContent).toContain('Alt + ⌘/Ctrl + W is assigned to both Close workbench file and Close file from extension.');
+  });
 });
 
 describe('CommandsSettingsSection', () => {
@@ -280,9 +310,9 @@ describe('CommandsSettingsSection', () => {
     const commandRow = rows.find((row) => row.textContent?.includes('Open command palette'));
     expect(hostComposerRow?.textContent).toContain('composer.focus');
     expect(hostComposerRow?.textContent).toContain('host');
-    expect(threadRow?.textContent).toContain('mod + p');
-    expect(threadRow?.textContent).not.toContain('mod + shift + p');
-    expect(commandRow?.textContent).toContain('mod + shift + p');
+    expect(threadRow?.textContent).toContain('⌘/Ctrl + p');
+    expect(threadRow?.textContent).not.toContain('⌘/Ctrl + Shift + p');
+    expect(commandRow?.textContent).toContain('⌘/Ctrl + Shift + p');
     expect(commandRow?.textContent).not.toContain('mod + k');
 
     const clearButton = commandRow?.querySelector<HTMLButtonElement>('button[aria-label="Clear shortcut for Open command palette"]');
