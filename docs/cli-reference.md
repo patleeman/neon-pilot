@@ -399,10 +399,10 @@ Examples:
 
 ### conversations create
 
-Create a conversation with an optional title.
+Create a conversation with optional title, cwd, model, and startup settings.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations create [title...] [--json]`
+- Usage: `neon-pilot conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -412,7 +412,7 @@ Create a conversation with an optional title.
 
 Examples:
 - `neon-pilot conversations create Planning Thread`
-- `neon-pilot conversations create --title "Planning Thread" --json`
+- `neon-pilot conversations create --title "Planning Thread" --cwd /repo --model opencode-go/deepseek-v4-flash --json`
 
 ### conversations cwd
 

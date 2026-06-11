@@ -334,14 +334,14 @@
       {
         "id": "conversations-create",
         "command": "conversations create",
-        "description": "Create a conversation with an optional title.",
+        "description": "Create a conversation with optional title, cwd, model, and startup settings.",
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "create",
-        "usage": "conversations create [title...] [--json]",
+        "usage": "conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--json]",
         "examples": [
           "neon-pilot conversations create Planning Thread",
-          "neon-pilot conversations create --title \"Planning Thread\" --json"
+          "neon-pilot conversations create --title \"Planning Thread\" --cwd /repo --model opencode-go/deepseek-v4-flash --json"
         ],
         "argsSchema": {
           "type": "array",
@@ -368,6 +368,38 @@
             "cwd": {
               "type": "string",
               "description": "Initial working directory."
+            },
+            "model": {
+              "type": "string",
+              "description": "Initial provider/model ref, for example opencode-go/deepseek-v4-flash."
+            },
+            "live": {
+              "type": "boolean",
+              "description": "Start a live session immediately."
+            },
+            "initial-prompt": {
+              "type": "string",
+              "description": "Initial prompt to send when creating the conversation."
+            },
+            "prompt": {
+              "type": "string",
+              "description": "Alias for --initial-prompt."
+            },
+            "thinking-level": {
+              "type": "string",
+              "description": "Initial thinking level preference."
+            },
+            "service-tier": {
+              "type": "string",
+              "description": "Initial service tier preference."
+            },
+            "tool": {
+              "type": "string",
+              "description": "Allow a tool by name. Repeat to allow multiple tools."
+            },
+            "tools": {
+              "type": "string",
+              "description": "Comma-separated tool names to allow."
             }
           },
           "additionalProperties": true

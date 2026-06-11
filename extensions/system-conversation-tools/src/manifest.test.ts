@@ -124,9 +124,23 @@ describe('system-conversation-tools manifest', () => {
     const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
 
     expect(commands.get('conversations create')).toMatchObject({
-      usage: 'conversations create [title...] [--json]',
+      usage:
+        'conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--json]',
       argsSchema: { description: 'Optional positional args: title.' },
-      flagsSchema: { properties: { title: { type: 'string' }, cwd: { type: 'string' } } },
+      flagsSchema: {
+        properties: {
+          title: { type: 'string' },
+          cwd: { type: 'string' },
+          model: { type: 'string' },
+          live: { type: 'boolean' },
+          'initial-prompt': { type: 'string' },
+          prompt: { type: 'string' },
+          'thinking-level': { type: 'string' },
+          'service-tier': { type: 'string' },
+          tool: { type: 'string' },
+          tools: { type: 'string' },
+        },
+      },
     });
     expect(commands.get('conversations open active')).toMatchObject({
       usage: 'conversations open active [conversationId] [--json]',
