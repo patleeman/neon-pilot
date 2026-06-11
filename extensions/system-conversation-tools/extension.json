@@ -338,7 +338,7 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "create",
-        "usage": "conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--json]",
+        "usage": "conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--json]",
         "examples": [
           "neon-pilot conversations create Planning Thread",
           "neon-pilot conversations create --title \"Planning Thread\" --cwd /repo --model opencode-go/deepseek-v4-flash --json"
@@ -422,7 +422,7 @@
         "action": "conversationTool",
         "jsonDefault": false,
         "inputAction": "create_and_run",
-        "usage": "ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]",
+        "usage": "ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]",
         "examples": [
           "neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo \"Summarize the diff\"",
           "neon-pilot ask --text \"Reply with ready\" --json"
@@ -706,7 +706,7 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "run_turn",
-        "usage": "conversations run-turn <conversationId> --text <message> [--follow] [--format text|json|jsonl] [--json]",
+        "usage": "conversations run-turn <conversationId> --text <message> [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]",
         "examples": [
           "neon-pilot conversations run-turn conversation-example --text Hello",
           "neon-pilot conversations run-turn conversation-example --text Hello --json"
@@ -1556,7 +1556,7 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "append_transcript_block",
-        "usage": "conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--json]",
+        "usage": "conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]",
         "examples": [
           "neon-pilot conversations transcript append conversation-example note --data '{\"text\":\"Note\"}'",
           "neon-pilot conversations transcript append conversation-example --type note --data '{\"text\":\"Note\"}' --json"
@@ -1618,7 +1618,7 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "update_transcript_block",
-        "usage": "conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--json]",
+        "usage": "conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]",
         "examples": [
           "neon-pilot conversations transcript update conversation-example block-1 note --data '{\"text\":\"Updated\"}'",
           "neon-pilot conversations transcript update conversation-example block-1 --type note --data '{\"text\":\"Updated\"}' --json"

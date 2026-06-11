@@ -130,7 +130,7 @@ describe('system-conversation-tools manifest', () => {
 
     expect(commands.get('conversations create')).toMatchObject({
       usage:
-        'conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--json]',
+        'conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--json]',
       argsSchema: { description: 'Optional positional args: title.' },
       flagsSchema: {
         properties: {
@@ -149,7 +149,7 @@ describe('system-conversation-tools manifest', () => {
     });
     expect(commands.get('ask')).toMatchObject({
       usage:
-        'ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]',
+        'ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]',
       requiresApp: true,
       outputModes: ['text', 'json', 'jsonl'],
       flagsSchema: {
@@ -177,13 +177,18 @@ describe('system-conversation-tools manifest', () => {
       argsSchema: { maxItems: 1 },
       flagsSchema: { properties: { 'older-than': { type: 'string' }, 'archived-only': { type: 'boolean' } } },
     });
+    expect(commands.get('conversations run-turn')).toMatchObject({
+      usage:
+        'conversations run-turn <conversationId> --text <message> [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]',
+    });
     expect(commands.get('conversations transcript append')).toMatchObject({
-      usage: 'conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--json]',
+      usage: 'conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]',
       argsSchema: { minItems: 1, maxItems: 2 },
       flagsSchema: { properties: { type: { type: 'string' }, data: { type: 'string' } } },
     });
     expect(commands.get('conversations transcript update')).toMatchObject({
-      usage: 'conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--json]',
+      usage:
+        'conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]',
       argsSchema: { minItems: 2, maxItems: 3 },
       flagsSchema: { properties: { type: { type: 'string' }, data: { type: 'string' }, 'block-id': { type: 'string' } } },
     });

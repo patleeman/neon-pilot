@@ -61,7 +61,7 @@ Examples:
 Create a conversation, run one turn, and print the result.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]`
+- Usage: `neon-pilot ask [prompt...] [--text <prompt>] [--prompt <prompt>] [--title <title>] [--cwd <path>] [--model <provider/model>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--timeout-ms <ms>] [--follow] [--format <text|json|jsonl>] [--cancel-on-interrupt] [--json]`
 - Mode: streaming
 - Requires app: yes
 - Idempotent: no
@@ -419,7 +419,7 @@ Examples:
 Create a conversation with optional title, cwd, model, and startup settings.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--json]`
+- Usage: `neon-pilot conversations create [title...] [--title <title>] [--cwd <path>] [--model <provider/model>] [--live] [--initial-prompt <text>] [--prompt <text>] [--thinking-level <level>] [--service-tier <tier>] [--tool <name>] [--tools <names>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -676,7 +676,7 @@ Examples:
 Run a conversation turn and wait for completion: conversations run-turn <id> --text <message> [--timeout-ms <ms>]
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations run-turn <conversationId> --text <message> [--follow] [--format text|json|jsonl] [--json]`
+- Usage: `neon-pilot conversations run-turn <conversationId> --text <message> [--timeout-ms <ms>] [--follow] [--format text|json|jsonl] [--cancel-on-interrupt] [--json]`
 - Mode: streaming
 - Requires app: yes
 - Idempotent: no
@@ -812,7 +812,7 @@ Examples:
 Append a transcript block: conversations transcript append <id> --type <type> --data <json>
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--json]`
+- Usage: `neon-pilot conversations transcript append <conversationId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -829,7 +829,7 @@ Examples:
 Update a transcript block: conversations transcript update <id> <block-id> --type <type> --data <json>
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--json]`
+- Usage: `neon-pilot conversations transcript update <conversationId> <blockId> [type] [--type <type>] [--data <json>] [--block-id <id>] [--title <title>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
