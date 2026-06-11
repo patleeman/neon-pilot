@@ -5,6 +5,23 @@ export interface TelegramGatewayHostApi {
   startTelegramGatewayRuntime: (...args: unknown[]) => unknown;
   stopTelegramGatewayRuntime: (...args: unknown[]) => unknown;
   readTelegramGatewayRuntimeStatus: (...args: unknown[]) => unknown;
+  readGatewayState: () => unknown;
+  ensureGatewayConnection: (input: { provider: string }) => unknown;
+  updateGatewayConnectionStatus: (input: {
+    provider: string;
+    status: string;
+    enabled?: boolean;
+    statusMessage?: string;
+  }) => unknown;
+  attachGatewayConversation: (input: {
+    provider: string;
+    conversationId: string;
+    conversationTitle?: string;
+    externalChatId?: string;
+    externalChatLabel?: string;
+  }) => unknown;
+  detachGatewayConversation: (input: { provider?: string; conversationId: string }) => unknown;
+  recordGatewayEvent: (input: { provider: string; conversationId?: string; kind: string; message: string }) => unknown;
 }
 
 declare global {
@@ -32,4 +49,39 @@ export async function stopTelegramGatewayService(...args: unknown[]) {
 
 export async function readTelegramGatewayServiceStatus(...args: unknown[]) {
   return readTelegramGatewayHostApi()?.readTelegramGatewayRuntimeStatus(...args) ?? { running: false };
+}
+
+export async function readGatewayState() {
+  return readTelegramGatewayHostApi()?.readGatewayState() ?? null;
+}
+
+export async function ensureGatewayConnection(input: { provider: string }) {
+  return readTelegramGatewayHostApi()?.ensureGatewayConnection(input) ?? null;
+}
+
+export async function updateGatewayConnectionStatus(input: {
+  provider: string;
+  status: string;
+  enabled?: boolean;
+  statusMessage?: string;
+}) {
+  return readTelegramGatewayHostApi()?.updateGatewayConnectionStatus(input) ?? null;
+}
+
+export async function attachGatewayConversation(input: {
+  provider: string;
+  conversationId: string;
+  conversationTitle?: string;
+  externalChatId?: string;
+  externalChatLabel?: string;
+}) {
+  return readTelegramGatewayHostApi()?.attachGatewayConversation(input) ?? null;
+}
+
+export async function detachGatewayConversation(input: { provider?: string; conversationId: string }) {
+  return readTelegramGatewayHostApi()?.detachGatewayConversation(input) ?? null;
+}
+
+export async function recordGatewayEvent(input: { provider: string; conversationId?: string; kind: string; message: string }) {
+  return readTelegramGatewayHostApi()?.recordGatewayEvent(input) ?? null;
 }

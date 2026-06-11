@@ -2,11 +2,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const gatewayState = vi.hoisted(() => ({
   attachGatewayConversation: vi.fn(),
+  defaultGatewayProviders: vi.fn(() => [
+    { id: 'telegram', label: 'Telegram', implemented: true, configurationLocation: 'gateways' },
+    { id: 'slack_mcp', label: 'Slack MCP', implemented: true, configurationLocation: 'gateways' },
+  ]),
   detachGatewayConversation: vi.fn(),
   ensureGatewayConnection: vi.fn(),
+  normalizeGatewayProviderId: vi.fn((value: unknown) =>
+    typeof value === 'string' && /^[a-z0-9][a-z0-9_.:-]{0,79}$/i.test(value.trim()) ? value.trim() : null,
+  ),
   readGatewayState: vi.fn(() => ({ connections: [] })),
+  recordGatewayEvent: vi.fn(() => ({ connections: [] })),
   updateGatewayConnectionStatus: vi.fn(() => ({ connections: [{ provider: 'telegram' }] })),
   upsertGatewayChatTarget: vi.fn(),
+}));
+const extensionRegistry = vi.hoisted(() => ({
+  listExtensionGatewayProviderRegistrations: vi.fn(() => [
+    {
+      extensionId: 'discord-gateway',
+      packageType: 'user',
+      id: 'discord',
+      label: 'Discord',
+      implemented: true,
+      configurationLocation: 'extension',
+    },
+  ]),
 }));
 const telegramAuth = vi.hoisted(() => ({
   readTelegramBotToken: vi.fn(() => null as string | null),
@@ -38,6 +58,7 @@ const capability = vi.hoisted(() => ({
 }));
 
 vi.mock('../gateways/gatewayState.js', () => gatewayState);
+vi.mock('../extensions/extensionRegistry.js', () => extensionRegistry);
 vi.mock('../gateways/telegramAuth.js', () => telegramAuth);
 vi.mock('../gateways/telegramGateway.js', () => ({ TelegramGatewayRuntime: runtime.TelegramGatewayRuntime }));
 vi.mock('../conversations/liveSessionLifecycle.js', () => lifecycle);
@@ -122,6 +143,10 @@ describe('gateway routes', () => {
     handler({ body: { provider: 'telegram' } }, ok);
     expect(gatewayState.ensureGatewayConnection).toHaveBeenCalledWith({ stateRoot: '/state', profile: 'shared', provider: 'telegram' });
     expect(ok.json).toHaveBeenCalledWith({ connections: [] });
+
+    const contributed = response();
+    handler({ body: { provider: 'discord' } }, contributed);
+    expect(gatewayState.ensureGatewayConnection).toHaveBeenCalledWith({ stateRoot: '/state', profile: 'shared', provider: 'discord' });
   });
 
   it('updates connection status and starts or stops telegram runtime', () => {
@@ -158,13 +183,13 @@ describe('gateway routes', () => {
     putToken({ body: { token: ' token ' } }, ok);
     expect(telegramAuth.writeTelegramBotToken).toHaveBeenCalledWith('/auth.json', '/state', 'token');
     expect(latestRuntime().start).toHaveBeenCalled();
-    expect(ok.json).toHaveBeenCalledWith({ configured: true, state: { connections: [{ provider: 'telegram' }] } });
+    expect(ok.json).toHaveBeenCalledWith({ configured: true, state: { connections: [] } });
 
     const removed = response();
     deleteToken({}, removed);
     expect(telegramAuth.removeTelegramBotToken).toHaveBeenCalledWith('/auth.json', '/state');
     expect(latestRuntime().stop).toHaveBeenCalled();
-    expect(removed.json).toHaveBeenCalledWith({ configured: false, state: { connections: [{ provider: 'telegram' }] } });
+    expect(removed.json).toHaveBeenCalledWith({ configured: false, state: { connections: [] } });
   });
 
   it('binds and detaches gateway conversations with trimmed optional fields', () => {

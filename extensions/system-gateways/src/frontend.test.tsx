@@ -76,6 +76,15 @@ const initialGatewayState = {
   providers: [
     { id: 'telegram', label: 'Telegram', implemented: true, configurationLocation: 'settings' },
     { id: 'slack_mcp', label: 'Slack MCP', implemented: true, configurationLocation: 'settings' },
+    {
+      id: 'discord',
+      label: 'Discord',
+      description: 'Route Discord messages into Neon Pilot.',
+      implemented: true,
+      configurationLocation: 'extension',
+      extensionId: 'discord-gateway',
+      setupRoute: '/extensions/discord-gateway',
+    },
   ],
   connections: [
     {
@@ -124,6 +133,11 @@ const initialGatewayState = {
   ],
 };
 
+const sessions = [
+  { id: 'conv-1', title: 'Chief of Threads', cwd: '/repo', timestamp: '2026-06-10T12:00:00.000Z' },
+  { id: 'conv-2', title: 'Gateway Thread', cwd: '/repo', timestamp: '2026-06-10T12:30:00.000Z' },
+];
+
 function jsonResponse(body: unknown, ok = true): Response {
   return {
     ok,
@@ -168,6 +182,7 @@ describe('GatewaysPage', () => {
         const method = init?.method ?? 'GET';
         if (path === '/api/gateways' && method === 'GET') return Promise.resolve(jsonResponse(initialGatewayState));
         if (path === '/api/gateways/telegram/token' && method === 'GET') return Promise.resolve(jsonResponse({ configured: tokenConfigured }));
+        if (path === '/api/sessions?limit=100' && method === 'GET') return Promise.resolve(jsonResponse(sessions));
         if (path === '/api/gateways/connections/telegram') {
           return Promise.resolve(
             jsonResponse({
@@ -215,6 +230,7 @@ describe('GatewaysPage', () => {
     expect(screen.getByText('Credentials saved')).toBeTruthy();
     expect(screen.getAllByText(/1\s*active\s*route/).length).toBeGreaterThan(0);
     expect(screen.getByText('Active Routes')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Discord/ })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Connections' })).toBeNull();
   });
 
@@ -253,7 +269,7 @@ describe('GatewaysPage', () => {
     await screen.findAllByText('Chief of Threads');
 
     const telegramSection = screen.getByRole('heading', { name: 'Telegram' }).closest('section')!;
-    fireEvent.change(within(telegramSection).getByLabelText(/Conversation Title/), { target: { value: 'Gateway Thread' } });
+    fireEvent.change(within(telegramSection).getByLabelText(/^Conversation$/), { target: { value: 'conv-2' } });
     fireEvent.change(within(telegramSection).getByLabelText(/Telegram Chat ID/), { target: { value: '43' } });
     fireEvent.change(within(telegramSection).getByLabelText(/Telegram Chat Label/), { target: { value: 'Test Chat' } });
     fireEvent.click(within(telegramSection).getByRole('button', { name: 'Save Route' }));
@@ -275,6 +291,18 @@ describe('GatewaysPage', () => {
     );
     expect(await screen.findByText('Telegram route saved.')).toBeTruthy();
   });
+
+  it('renders contributed gateway providers in the channel detail', async () => {
+    renderPage();
+    await screen.findAllByText('Chief of Threads');
+
+    fireEvent.click(screen.getByRole('button', { name: /Discord/ }));
+
+    expect(await screen.findByRole('heading', { name: 'Discord' })).toBeTruthy();
+    expect(screen.getByText('Route Discord messages into Neon Pilot.')).toBeTruthy();
+    expect(screen.getByText('Provided by discord-gateway')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Setup' })).toBeTruthy();
+  });
 });
 
 describe('GatewaysSidebar', () => {
@@ -284,6 +312,7 @@ describe('GatewaysSidebar', () => {
       vi.fn((path: string, init?: RequestInit) => {
         const method = init?.method ?? 'GET';
         if (path === '/api/gateways' && method === 'GET') return Promise.resolve(jsonResponse(initialGatewayState));
+        if (path === '/api/sessions?limit=100' && method === 'GET') return Promise.resolve(jsonResponse(sessions));
         return Promise.resolve(jsonResponse({ error: 'not found' }, false));
       }),
     );
@@ -297,9 +326,9 @@ describe('GatewaysSidebar', () => {
     renderSidebar('/conversations/conv-1');
 
     expect(await screen.findByText('Gateway Routes')).toBeTruthy();
-    expect(screen.getByText(/Telegram\s*·\s*1 active route/)).toBeTruthy();
+    expect(screen.getByText(/1 active route\s*·\s*Telegram/)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Chief of Threads/ }).getAttribute('data-active')).toBe('true');
-    expect(screen.getByText('Patrick')).toBeTruthy();
+    expect(screen.getByText(/Telegram\s*·\s*Patrick/)).toBeTruthy();
   });
 
   it('opens a routed conversation from the sidebar', async () => {

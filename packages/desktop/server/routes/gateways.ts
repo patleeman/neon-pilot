@@ -10,13 +10,18 @@ import { registerLiveSessionLifecycleHandler } from '../conversations/liveSessio
 import { getAvailableModelObjects, renameSession, updateLiveSessionModelPreferences } from '../conversations/liveSessions.js';
 import type { TelegramGatewayHostApi } from '../extensions/backendApi/gateways.js';
 import { TELEGRAM_GATEWAY_HOST_API_GLOBAL } from '../extensions/backendApi/gateways.js';
+import { listExtensionGatewayProviderRegistrations } from '../extensions/extensionRegistry.js';
 import {
   attachGatewayConversation,
+  defaultGatewayProviders,
   detachGatewayConversation,
   ensureGatewayConnection,
+  type GatewayProviderSummary,
   type GatewayProviderId,
   type GatewayStatus,
+  normalizeGatewayProviderId,
   readGatewayState,
+  recordGatewayEvent,
   updateGatewayConnectionStatus,
   upsertGatewayChatTarget,
 } from '../gateways/gatewayState.js';
@@ -46,6 +51,52 @@ function publishTelegramGatewayHostApi(): void {
     startTelegramGatewayRuntime,
     stopTelegramGatewayRuntime,
     readTelegramGatewayRuntimeStatus,
+    readGatewayState: readCurrentGatewayState,
+    ensureGatewayConnection: (input) => {
+      const provider = requireRegisteredGatewayProvider(input.provider);
+      ensureGatewayConnection({ ...currentGatewayContext(), provider });
+      return readCurrentGatewayState();
+    },
+    updateGatewayConnectionStatus: (input) => {
+      const provider = requireRegisteredGatewayProvider(input.provider);
+      const status = readStatus(input.status);
+      if (!status) throw new Error('Gateway status is invalid.');
+      updateGatewayConnectionStatus({
+        ...currentGatewayContext(),
+        provider,
+        status,
+        enabled: input.enabled,
+        statusMessage: input.statusMessage,
+      });
+      return readCurrentGatewayState();
+    },
+    attachGatewayConversation: (input) => {
+      const provider = requireRegisteredGatewayProvider(input.provider);
+      attachGatewayConversation({
+        ...currentGatewayContext(),
+        provider,
+        conversationId: input.conversationId,
+        conversationTitle: input.conversationTitle,
+        externalChatId: input.externalChatId,
+        externalChatLabel: input.externalChatLabel,
+      });
+      return readCurrentGatewayState();
+    },
+    detachGatewayConversation: (input) => {
+      const provider = input.provider === undefined ? undefined : requireRegisteredGatewayProvider(input.provider);
+      detachGatewayConversation({ ...currentGatewayContext(), provider, conversationId: input.conversationId });
+      return readCurrentGatewayState();
+    },
+    recordGatewayEvent: (input) => {
+      const provider = requireRegisteredGatewayProvider(input.provider);
+      const kind =
+        input.kind === 'inbound' || input.kind === 'outbound' || input.kind === 'routing' || input.kind === 'status' || input.kind === 'error'
+          ? input.kind
+          : null;
+      if (!kind) throw new Error('Gateway event kind is invalid.');
+      recordGatewayEvent({ ...currentGatewayContext(), provider, conversationId: input.conversationId, kind, message: input.message });
+      return readCurrentGatewayState();
+    },
   };
 }
 
@@ -74,6 +125,32 @@ export function registerTelegramGatewayLifecycleDelivery(): void {
 
 function currentGatewayContext(): { stateRoot: string; profile: string } {
   return { stateRoot: getStateRootFn(), profile: getRuntimeScopeFn() };
+}
+
+function currentGatewayReadContext(): { stateRoot: string; profile: string; providers: GatewayProviderSummary[] } {
+  return { ...currentGatewayContext(), providers: listGatewayProviderSummaries() };
+}
+
+function readCurrentGatewayState() {
+  return readGatewayState(currentGatewayReadContext());
+}
+
+function listGatewayProviderSummaries(): GatewayProviderSummary[] {
+  const contributed = listExtensionGatewayProviderRegistrations(getStateRootFn()).map(
+    (provider): GatewayProviderSummary => ({
+      id: provider.id,
+      label: provider.label,
+      ...(provider.description ? { description: provider.description } : {}),
+      ...(provider.icon ? { icon: provider.icon } : {}),
+      implemented: provider.implemented,
+      configurationLocation: provider.configurationLocation,
+      extensionId: provider.extensionId,
+      ...(provider.setupRoute ? { setupRoute: provider.setupRoute } : {}),
+      ...(provider.docsUrl ? { docsUrl: provider.docsUrl } : {}),
+      ...(provider.order !== undefined ? { order: provider.order } : {}),
+    }),
+  );
+  return [...contributed, ...defaultGatewayProviders()];
 }
 
 function liveSessionContext(context: ServerRouteContext) {
@@ -137,7 +214,19 @@ export function ensureTelegramRuntime(): TelegramGatewayRuntime {
 }
 
 function readProvider(value: unknown): GatewayProviderId | null {
-  return value === 'telegram' || value === 'slack_mcp' ? value : null;
+  return normalizeGatewayProviderId(value);
+}
+
+function hasRegisteredProvider(provider: GatewayProviderId): boolean {
+  return listGatewayProviderSummaries().some((candidate) => candidate.id === provider);
+}
+
+function requireRegisteredGatewayProvider(value: unknown): GatewayProviderId {
+  const provider = readProvider(value);
+  if (!provider || !hasRegisteredProvider(provider)) {
+    throw new Error('Gateway provider is not registered.');
+  }
+  return provider;
 }
 
 function readStatus(value: unknown): GatewayStatus | null {
@@ -151,7 +240,7 @@ function readOptionalString(value: unknown): string | undefined {
 }
 
 export function startTelegramGatewayRuntime(): { running: boolean } {
-  const initialTelegramState = readGatewayState(currentGatewayContext()).connections.find(
+  const initialTelegramState = readCurrentGatewayState().connections.find(
     (connection) => connection.provider === 'telegram',
   );
   if (initialTelegramState?.enabled && readTelegramBotToken(getAuthFileFn(), getStateRootFn())) {
@@ -196,7 +285,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
   }
   router.get('/api/gateways', (_req, res) => {
     try {
-      res.json(readGatewayState(currentGatewayContext()));
+      res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -205,13 +294,13 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
   router.post('/api/gateways/connections', (req: Request, res: Response) => {
     try {
       const provider = readProvider(req.body?.provider);
-      if (!provider) {
-        res.status(400).json({ error: 'provider must be telegram or slack_mcp' });
+      if (!provider || !hasRegisteredProvider(provider)) {
+        res.status(400).json({ error: 'provider must be a registered gateway provider' });
         return;
       }
       ensureGatewayConnection({ ...currentGatewayContext(), provider });
       invalidateAppTopics('sessions');
-      res.json(readGatewayState(currentGatewayContext()));
+      res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -221,13 +310,13 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
     try {
       const provider = readProvider(req.params.provider);
       const status = readStatus(req.body?.status);
-      if (!provider || !status) {
+      if (!provider || !hasRegisteredProvider(provider) || !status) {
         res.status(400).json({ error: 'provider and status are required' });
         return;
       }
       const enabled = typeof req.body?.enabled === 'boolean' ? req.body.enabled : undefined;
       const statusMessage = readOptionalString(req.body?.statusMessage);
-      const state = updateGatewayConnectionStatus({ ...currentGatewayContext(), provider, status, enabled, statusMessage });
+      updateGatewayConnectionStatus({ ...currentGatewayContext(), provider, status, enabled, statusMessage });
       if (provider === 'telegram') {
         if (enabled === false || status === 'paused' || status === 'needs_attention') {
           ensureTelegramRuntime().stop();
@@ -235,7 +324,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
           ensureTelegramRuntime().start();
         }
       }
-      res.json(state);
+      res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -258,9 +347,9 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
       }
       writeTelegramBotToken(getAuthFileFn(), getStateRootFn(), token);
       ensureGatewayConnection({ ...currentGatewayContext(), provider: 'telegram' });
-      const state = updateGatewayConnectionStatus({ ...currentGatewayContext(), provider: 'telegram', status: 'active', enabled: true });
+      updateGatewayConnectionStatus({ ...currentGatewayContext(), provider: 'telegram', status: 'active', enabled: true });
       ensureTelegramRuntime().start();
-      res.json({ configured: true, state });
+      res.json({ configured: true, state: readCurrentGatewayState() });
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -270,14 +359,14 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
     try {
       removeTelegramBotToken(getAuthFileFn(), getStateRootFn());
       ensureTelegramRuntime().stop();
-      const state = updateGatewayConnectionStatus({
+      updateGatewayConnectionStatus({
         ...currentGatewayContext(),
         provider: 'telegram',
         status: 'needs_config',
         enabled: false,
         statusMessage: 'Telegram bot token removed',
       });
-      res.json({ configured: false, state });
+      res.json({ configured: false, state: readCurrentGatewayState() });
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -300,7 +389,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         conversationTitle: '',
         repliesEnabled: false,
       });
-      res.json(readGatewayState(currentGatewayContext()));
+      res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -310,7 +399,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
     try {
       const provider = readProvider(req.body?.provider);
       const conversationId = readOptionalString(req.body?.conversationId);
-      if (!provider || !conversationId) {
+      if (!provider || !hasRegisteredProvider(provider) || !conversationId) {
         res.status(400).json({ error: 'provider and conversationId are required' });
         return;
       }
@@ -323,7 +412,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         externalChatLabel: readOptionalString(req.body?.externalChatLabel),
       });
       invalidateAppTopics('sessions');
-      res.json(readGatewayState(currentGatewayContext()));
+      res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
     }
@@ -338,7 +427,7 @@ export function registerGatewayRoutes(router: Pick<Express, 'get' | 'post' | 'pa
         conversationId: req.params.conversationId,
       });
       invalidateAppTopics('sessions');
-      res.json(readGatewayState(currentGatewayContext()));
+      res.json(readCurrentGatewayState());
     } catch (err) {
       handleGatewayError(res, err);
     }

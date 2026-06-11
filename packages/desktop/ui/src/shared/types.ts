@@ -535,14 +535,21 @@ export interface SessionMeta {
 
 // ── Gateways ─────────────────────────────────────────────────────────────────
 
-export type GatewayProviderId = 'telegram' | 'slack_mcp';
+export type GatewayProviderId = string;
 export type GatewayStatus = 'needs_config' | 'connected' | 'active' | 'paused' | 'needs_attention';
+export type GatewayConfigurationLocation = 'gateways' | 'settings' | 'extension' | 'external';
 
 interface GatewayProviderSummary {
   id: GatewayProviderId;
   label: string;
+  description?: string;
+  icon?: string;
   implemented: boolean;
-  configurationLocation: 'settings';
+  configurationLocation: GatewayConfigurationLocation;
+  extensionId?: string;
+  setupRoute?: string;
+  docsUrl?: string;
+  order?: number;
 }
 
 export interface GatewayConnection {

@@ -1,8 +1,22 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-export type GatewayProviderId = 'telegram' | 'slack_mcp';
+export type GatewayProviderId = string;
 export type GatewayStatus = 'needs_config' | 'connected' | 'active' | 'paused' | 'needs_attention';
+export type GatewayConfigurationLocation = 'gateways' | 'settings' | 'extension' | 'external';
+
+export interface GatewayProviderSummary {
+  id: GatewayProviderId;
+  label: string;
+  description?: string;
+  icon?: string;
+  implemented: boolean;
+  configurationLocation: GatewayConfigurationLocation;
+  extensionId?: string;
+  setupRoute?: string;
+  docsUrl?: string;
+  order?: number;
+}
 
 export interface GatewayConnection {
   id: string;
@@ -52,7 +66,7 @@ export interface GatewayEvent {
 }
 
 export interface GatewayState {
-  providers: Array<{ id: GatewayProviderId; label: string; implemented: boolean; configurationLocation: 'settings' }>;
+  providers: GatewayProviderSummary[];
   connections: GatewayConnection[];
   bindings: GatewayThreadBinding[];
   chatTargets: GatewayChatTarget[];
@@ -72,14 +86,32 @@ interface PersistedGatewayState {
 
 const TELEGRAM_PROVIDER: GatewayProviderId = 'telegram';
 const SLACK_MCP_PROVIDER: GatewayProviderId = 'slack_mcp';
+const DEFAULT_GATEWAY_PROVIDERS: GatewayProviderSummary[] = [
+  {
+    id: TELEGRAM_PROVIDER,
+    label: 'Telegram',
+    description: 'Run Neon Pilot from Telegram DMs, groups, and topics.',
+    implemented: true,
+    configurationLocation: 'gateways',
+    order: 10,
+  },
+  {
+    id: SLACK_MCP_PROVIDER,
+    label: 'Slack MCP',
+    description: 'Route Slack channel messages through the Slack MCP gateway.',
+    implemented: true,
+    configurationLocation: 'gateways',
+    order: 20,
+  },
+];
 
 export function resolveGatewayStateFile(stateRoot: string, profile: string): string {
   return join(stateRoot, 'gateways', `${sanitizeProfileName(profile)}.json`);
 }
 
-export function readGatewayState(input: { stateRoot: string; profile: string }): GatewayState {
+export function readGatewayState(input: { stateRoot: string; profile: string; providers?: GatewayProviderSummary[] }): GatewayState {
   const state = readPersistedGatewayState(resolveGatewayStateFile(input.stateRoot, input.profile));
-  return toPublicGatewayState(state);
+  return toPublicGatewayState(state, input.providers);
 }
 
 export function ensureGatewayConnection(input: { stateRoot: string; profile: string; provider: GatewayProviderId }): GatewayConnection {
@@ -422,27 +454,43 @@ function createDefaultGatewayState(): PersistedGatewayState {
   return { version: GATEWAY_STATE_VERSION, connections: [], bindings: [], chatTargets: [], events: [] };
 }
 
-function toPublicGatewayState(state: PersistedGatewayState): GatewayState {
+export function defaultGatewayProviders(): GatewayProviderSummary[] {
+  return [...DEFAULT_GATEWAY_PROVIDERS];
+}
+
+export function normalizeGatewayProviderId(value: unknown): GatewayProviderId | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return /^[a-z0-9][a-z0-9_.:-]{0,79}$/i.test(trimmed) ? trimmed : null;
+}
+
+function toPublicGatewayState(state: PersistedGatewayState, providers: GatewayProviderSummary[] = DEFAULT_GATEWAY_PROVIDERS): GatewayState {
   return {
-    providers: [
-      {
-        id: TELEGRAM_PROVIDER,
-        label: 'Telegram',
-        implemented: true,
-        configurationLocation: 'settings',
-      },
-      {
-        id: SLACK_MCP_PROVIDER,
-        label: 'Slack MCP',
-        implemented: true,
-        configurationLocation: 'settings',
-      },
-    ],
+    providers: providers.length > 0 ? sortGatewayProviders(dedupeGatewayProviders(providers)) : defaultGatewayProviders(),
     connections: state.connections,
     bindings: state.bindings,
     chatTargets: state.chatTargets,
     events: state.events.slice(-MAX_GATEWAY_EVENTS).reverse(),
   };
+}
+
+function dedupeGatewayProviders(providers: GatewayProviderSummary[]): GatewayProviderSummary[] {
+  const seen = new Set<string>();
+  const result: GatewayProviderSummary[] = [];
+  for (const provider of providers) {
+    const id = normalizeGatewayProviderId(provider.id);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    result.push({ ...provider, id });
+  }
+  return result;
+}
+
+function sortGatewayProviders(providers: GatewayProviderSummary[]): GatewayProviderSummary[] {
+  return [...providers].sort((a, b) => {
+    const order = (a.order ?? 0) - (b.order ?? 0);
+    return order === 0 ? a.label.localeCompare(b.label) : order;
+  });
 }
 
 function ensureConnectionInState(state: PersistedGatewayState, provider: GatewayProviderId): GatewayConnection {
@@ -480,7 +528,7 @@ function providerLabel(provider: GatewayProviderId): string {
 }
 
 function isGatewayProviderId(value: unknown): value is GatewayProviderId {
-  return value === 'telegram' || value === 'slack_mcp';
+  return normalizeGatewayProviderId(value) !== null;
 }
 
 function sanitizeProfileName(profile: string): string {

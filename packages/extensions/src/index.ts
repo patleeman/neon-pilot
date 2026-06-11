@@ -824,6 +824,8 @@ export interface ExtensionContributions {
   turnContextProviders?: ExtensionTurnContextProviderContribution[];
   /** Remote/local runtime providers that can advertise conversation execution targets. */
   runtimeProviders?: ExtensionRuntimeProviderContribution[];
+  /** External message gateway providers rendered in the Gateways system extension. */
+  gatewayProviders?: ExtensionGatewayProviderContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];
   searchProviders?: ExtensionSearchProviderContribution[];
   themes?: ExtensionThemeContribution[];
@@ -859,6 +861,26 @@ export interface ExtensionDependencyContribution {
   id: string;
   optional?: boolean;
   version?: string;
+}
+
+export interface ExtensionGatewayProviderContribution {
+  /** Stable provider id used in gateway state, routes, and events. */
+  id: string;
+  /** Human-readable provider name rendered in Gateways. */
+  label: string;
+  /** Short setup/runtime description rendered under the provider name. */
+  description?: string;
+  icon?: ExtensionIconName | string;
+  /** Whether this provider has an implemented runtime or backend action yet. Default true. */
+  implemented?: boolean;
+  /** Where users complete provider-specific setup. Default "extension". */
+  configurationLocation?: 'gateways' | 'settings' | 'extension' | 'external';
+  /** Optional in-app route for provider-specific setup. */
+  setupRoute?: string;
+  /** Optional external setup documentation URL. */
+  docsUrl?: string;
+  /** Sort order in the Gateways provider list. Lower renders first. Default 0. */
+  order?: number;
 }
 
 export interface ExtensionManifest {

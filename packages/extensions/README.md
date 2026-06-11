@@ -114,7 +114,7 @@ Supported top-level fields:
 - `id`, `name`, `description`, `version`. Runtime derives `packageType` from install location: repo/app-bundled packages are system extensions; runtime-installed packages are user extensions.
 - `frontend`: native React bundle entry and optional styles.
 - `backend`: backend module entry, backend actions, backend protocol entrypoints, and optional agent lifecycle factory.
-- `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, sidebar views, secrets, and settings metadata.
+- `contributes`: views, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, gateway providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, sidebar views, secrets, and settings metadata.
 - `dependsOn`: required or optional extension dependencies surfaced by diagnostics and available for runtime discovery.
 - `permissions`: declared capability intent.
 
@@ -603,6 +603,26 @@ Use `backend.services` for long-lived backend work. The host starts enabled serv
 Use `contributes.turnContextProviders` when an extension needs per-turn hidden context without mutating the system prompt. Providers run during prompt preparation and can return `{ contextMessages }` or `{ blocks }`.
 
 Use `contributes.runtimeProviders` to advertise local or remote runtime targets such as SSH hosts. The first API surface is discovery/health via `ctx.runtimes`; actual non-local conversation execution must go through host-owned runtime routing.
+
+Use `contributes.gatewayProviders` to make an external messaging gateway appear in the system Gateways page. Declaring a provider renders it in the channel list and registers its provider ID for shared gateway state; the extension runtime still owns credentials, transport, and provider-specific setup. Gateway runtimes should use `@neon-pilot/extensions/backend/gateways` to create/update connections, attach conversations, detach conversations, and record events.
+
+```json
+{
+  "contributes": {
+    "gatewayProviders": [
+      {
+        "id": "discord",
+        "label": "Discord",
+        "description": "Route Discord messages into Neon Pilot.",
+        "configurationLocation": "extension",
+        "setupRoute": "/ext/discord-gateway",
+        "docsUrl": "https://discord.com/developers/docs/intro",
+        "order": 30
+      }
+    ]
+  }
+}
+```
 
 Use `contributes.subscriptions` for host-owned event sources. Current built-in producers include `workspaceFiles` (`host:workspaceFiles`), `settings` (`host:settings`), and shared selection changes (`host:selection`). Subscription handlers run in the backend through the extension event bus.
 

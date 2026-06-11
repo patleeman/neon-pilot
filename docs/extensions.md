@@ -198,6 +198,7 @@ The manifest declares what your extension contributes:
 | `quickOpen`                   | Command palette surfaces/tabs backed by extension providers                                   | [See below](#quick-open-surfaces-quickopen)                                               |
 | `searchProviders`             | Backend-powered global search providers                                                       | [See below](#global-search-providers-searchproviders)                                     |
 | `runtimeProviders`            | Extension-advertised local/remote runtime targets                                             | [See below](#runtime-providers-runtimeproviders)                                          |
+| `gatewayProviders`            | External messaging gateway providers rendered by the Gateways page                            | [See below](#gateway-providers-gatewayproviders)                                          |
 | `settings`                    | Settings schema contributions                                                                 | [See below](#settings)                                                                    |
 | `settingsComponent`           | Component panel in Settings                                                                   | [See below](#settings-component-settingscomponent)                                        |
 | `topBarElements`              | Top bar indicator icons                                                                       | [See below](#top-bar-elements-topbarelements)                                             |
@@ -463,6 +464,41 @@ Runtime providers advertise conversation execution targets such as SSH remotes. 
 ```
 
 Handlers return `{ runtimes: [...] }`, where each runtime includes `id`, `title`, `kind`, `status`, optional `version`, `workspaceRoots`, `capabilities`, and `metadata`. Backend actions can inspect providers through `ctx.runtimes.list()`, `ctx.runtimes.get(id)`, and `ctx.runtimes.healthCheck(id)`.
+
+### Gateway Providers (`gatewayProviders`)
+
+Gateway providers advertise external messaging channels that can route messages into Neon Pilot conversations. Declaring a provider makes it appear in the system Gateways page and registers its provider ID for shared gateway state. The extension runtime still owns credentials, transport, and provider-specific setup UI.
+
+```json
+{
+  "contributes": {
+    "gatewayProviders": [
+      {
+        "id": "discord",
+        "label": "Discord",
+        "description": "Route Discord messages into Neon Pilot.",
+        "configurationLocation": "extension",
+        "setupRoute": "/ext/discord-gateway",
+        "docsUrl": "https://discord.com/developers/docs/intro",
+        "order": 30
+      }
+    ]
+  }
+}
+```
+
+Gateway runtime code should import the focused backend seam:
+
+```ts
+import {
+  attachGatewayConversation,
+  ensureGatewayConnection,
+  recordGatewayEvent,
+  updateGatewayConnectionStatus,
+} from '@neon-pilot/extensions/backend/gateways';
+```
+
+Use `ensureGatewayConnection({ provider })` when the runtime is created, `updateGatewayConnectionStatus(...)` when credentials or transport state changes, `attachGatewayConversation(...)` when an external chat is bound to a conversation, `detachGatewayConversation(...)` when a binding is removed, and `recordGatewayEvent(...)` for user-visible gateway activity. Extension code must not import `packages/desktop/server/gateways/*` directly.
 
 ### Composer Attachments
 

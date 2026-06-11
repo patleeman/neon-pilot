@@ -115,15 +115,32 @@ function MoreActionsIcon({ size = 12 }: { size?: number }) {
   );
 }
 
-function GatewayRailIcon({ provider }: { provider: 'telegram' | 'slack_mcp' }) {
-  const label = provider === 'telegram' ? 'Telegram gateway attached' : 'Slack gateway attached';
+function formatGatewayProviderLabel(provider: string): string {
+  if (provider === 'telegram') return 'Telegram';
+  if (provider === 'slack_mcp') return 'Slack MCP';
+  return provider
+    .replace(/[_:-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function GatewayRailIcon({ provider }: { provider: string }) {
+  const providerLabel = formatGatewayProviderLabel(provider);
+  const label = `${providerLabel} gateway attached`;
+  const abbreviation = providerLabel
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <span
       className="grid h-3.5 min-w-3.5 shrink-0 place-items-center rounded-sm bg-accent/15 px-0.5 text-[8px] font-semibold text-accent"
       title={label}
       aria-label={label}
     >
-      {provider === 'telegram' ? 'TG' : 'SL'}
+      {abbreviation || 'GW'}
     </span>
   );
 }
@@ -1309,7 +1326,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
   onCopyId?: () => boolean | Promise<boolean>;
   onCopyDeeplink?: () => boolean | Promise<boolean>;
   onPrefetch?: () => void;
-  gatewayProviders?: Array<'telegram' | 'slack_mcp'>;
+  gatewayProviders?: string[];
   isAutomation?: boolean;
   automationTitle?: string;
   hasPendingRuns?: boolean;
@@ -1869,7 +1886,7 @@ const SessionRow = memo(function SessionRow({
   automationTitle?: string;
   hasPendingRuns?: boolean;
   backgroundWorkKind?: ConversationBackgroundWorkKind | null;
-  gatewayProviders?: Array<'telegram' | 'slack_mcp'>;
+  gatewayProviders?: string[];
   onPin?: () => void;
   onUnpin?: () => void;
   onClose?: () => void;

@@ -35,6 +35,29 @@ describe('gatewayState', () => {
     expect(state.connections).toMatchObject([{ provider: 'telegram', label: 'Telegram', status: 'needs_config' }]);
   });
 
+  it('keeps extension gateway providers in persisted state and public provider summaries', () => {
+    const stateRoot = makeStateRoot();
+
+    ensureGatewayConnection({ stateRoot, profile: 'shared', provider: 'discord' });
+    const state = readGatewayState({
+      stateRoot,
+      profile: 'shared',
+      providers: [
+        {
+          id: 'discord',
+          label: 'Discord',
+          description: 'Route Discord messages into Neon Pilot.',
+          implemented: true,
+          configurationLocation: 'extension',
+          extensionId: 'discord-gateway',
+        },
+      ],
+    });
+
+    expect(state.providers).toMatchObject([{ id: 'discord', label: 'Discord', extensionId: 'discord-gateway' }]);
+    expect(state.connections).toMatchObject([{ provider: 'discord', label: 'discord', status: 'needs_config' }]);
+  });
+
   it('allows only one attached telegram conversation per connection', () => {
     const stateRoot = makeStateRoot();
 
