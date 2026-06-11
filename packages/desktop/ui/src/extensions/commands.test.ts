@@ -521,6 +521,29 @@ describe('extension commands', () => {
     expect(toggleFirstTraceCluster).toHaveBeenCalledTimes(1);
   });
 
+  it('includes thinking block commands gated by transcript thinking state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['thinkingBlock.toggleFirst']));
+
+    const toggleFirstThinkingBlock = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      toggleFirstThinkingBlock,
+    };
+
+    await expect(executeExtensionCommand('thinkingBlock.toggleFirst', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('thinkingBlock.toggleFirst', undefined, {
+        ...options,
+        context: { 'thinkingBlock.canToggleFirst': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(toggleFirstThinkingBlock).toHaveBeenCalledTimes(1);
+  });
+
   it('includes conversation title editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['conversation.rename', 'conversation.saveTitle', 'conversation.cancelTitleEdit']),

@@ -15,6 +15,11 @@ import {
   type TraceClusterCommandDetail,
 } from './traceClusterCommands.js';
 import {
+  registerThinkingBlockToggleCapability,
+  THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  type ThinkingBlockCommandDetail,
+} from './thinkingBlockCommands.js';
+import {
   type ConversationDiffDisclosureMode,
   type ConversationTranscriptDisclosureMode,
   type DisclosurePreference,
@@ -36,10 +41,26 @@ export const ThinkingBlock = memo(function ThinkingBlock({
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const open = resolveDisclosureOpen(autoOpen, preference);
   const preview = useMemo(() => buildSummaryPreview(block.text, 1), [block.text]);
+  const toggleThinkingBlock = useCallback(() => {
+    setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+  }, [autoOpen]);
+
+  useEffect(() => registerThinkingBlockToggleCapability(), []);
+  useEffect(() => {
+    function handleToggleFirstThinkingBlock(event: Event) {
+      const detail = (event as CustomEvent<ThinkingBlockCommandDetail>).detail;
+      if (detail?.handled) return;
+      if (detail) detail.handled = true;
+      toggleThinkingBlock();
+    }
+
+    window.addEventListener(THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstThinkingBlock);
+    return () => window.removeEventListener(THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstThinkingBlock);
+  }, [toggleThinkingBlock]);
 
   return (
     <SurfacePanel muted className="overflow-hidden border-transparent bg-elevated/35 text-[12px] shadow-none">
-      <RowButton onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))} className="px-2.5 py-2">
+      <RowButton onClick={toggleThinkingBlock} className="px-2.5 py-2">
         <Pill tone="muted">Thinking</Pill>
         {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
         {autoOpen && <MetaLabel tone="muted">live</MetaLabel>}

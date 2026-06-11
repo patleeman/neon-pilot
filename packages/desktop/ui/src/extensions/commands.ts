@@ -101,6 +101,7 @@ export interface ExtensionCommandExecutorOptions {
   toggleFirstFileChange?(): boolean;
   toggleFirstToolBlock?(): boolean;
   toggleFirstTraceCluster?(): boolean;
+  toggleFirstThinkingBlock?(): boolean;
   copyFirstMessageAction?(): boolean;
   editFirstMessageAction?(): boolean;
   rewindFirstMessageAction?(): boolean;
@@ -293,6 +294,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'fileChange.toggleFirst', title: 'Toggle First File Change', category: 'Diff' },
     { id: 'toolBlock.toggleFirst', title: 'Toggle First Tool Block', category: 'Transcript' },
     { id: 'traceCluster.toggleFirst', title: 'Toggle First Internal Work Cluster', category: 'Transcript' },
+    { id: 'thinkingBlock.toggleFirst', title: 'Toggle First Thinking Block', category: 'Transcript' },
     { id: 'messageAction.copyFirst', title: 'Copy First Message', category: 'Message Actions' },
     { id: 'messageAction.editFirst', title: 'Edit First Message', category: 'Message Actions' },
     { id: 'messageAction.rewindFirst', title: 'Rewind First Message', category: 'Message Actions' },
@@ -1288,6 +1290,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.toggleFirstTraceCluster) && readContextValue(context, 'traceCluster.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'thinkingBlock.toggleFirst',
+      title: 'Toggle First Thinking Block',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstThinkingBlock?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstThinkingBlock) && readContextValue(context, 'thinkingBlock.canToggleFirst') === true;
       },
     },
     {

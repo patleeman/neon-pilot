@@ -84,6 +84,7 @@ export const HOST_COMMAND_IDS = [
   'fileChange.toggleFirst',
   'toolBlock.toggleFirst',
   'traceCluster.toggleFirst',
+  'thinkingBlock.toggleFirst',
   'messageAction.copyFirst',
   'messageAction.editFirst',
   'messageAction.rewindFirst',

@@ -87,6 +87,7 @@ import {
 import { FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, type FileChangeCommandDetail } from './chat/fileChangeCommands';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './chat/messageActionCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
+import { THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ThinkingBlockCommandDetail } from './chat/thinkingBlockCommands';
 import { TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ToolBlockCommandDetail } from './chat/toolBlockCommands';
 import { TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, type TraceClusterCommandDetail } from './chat/traceClusterCommands';
 import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
@@ -2165,6 +2166,10 @@ export function Layout() {
       },
       toggleFirstTraceCluster() {
         window.dispatchEvent(new CustomEvent<TraceClusterCommandDetail>(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstThinkingBlock() {
+        window.dispatchEvent(new CustomEvent<ThinkingBlockCommandDetail>(THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
         return true;
       },
       copyFirstMessageAction() {
