@@ -67,6 +67,7 @@ type TreeNodeState = {
 const WORKSPACE_EXPLORER_OPEN_KEY = 'pa:workspace-explorer-open';
 const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
 export const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
+export const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
 const WATCH_DEBOUNCE_MS = 180;
 const GIT_REFRESH_DEBOUNCE_MS = 450;
 const STATUS_LABELS: Record<WorkspaceGitStatusChange, string> = {
@@ -559,6 +560,16 @@ export function WorkspaceExplorer({
     window.addEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshTree);
     return () => window.removeEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshTree);
   }, [loadRoot, railOnly]);
+
+  useEffect(() => {
+    if (railOnly) return;
+    function toggleDiff() {
+      setShowDiff((value) => !value);
+    }
+
+    window.addEventListener(WORKBENCH_TOGGLE_DIFF_EVENT, toggleDiff);
+    return () => window.removeEventListener(WORKBENCH_TOGGLE_DIFF_EVENT, toggleDiff);
+  }, [railOnly]);
 
   useEffect(() => {
     if (!cwd || !activeFilePath) return;
@@ -1130,6 +1141,15 @@ export function WorkspaceFileDocument({
     window.addEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshFile);
     return () => window.removeEventListener(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT, refreshFile);
   }, [loadFile]);
+
+  useEffect(() => {
+    function toggleDiff() {
+      setShowDiff((value) => !value);
+    }
+
+    window.addEventListener(WORKBENCH_TOGGLE_DIFF_EVENT, toggleDiff);
+    return () => window.removeEventListener(WORKBENCH_TOGGLE_DIFF_EVENT, toggleDiff);
+  }, []);
 
   // Debounced auto-save
   useEffect(() => {

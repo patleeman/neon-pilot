@@ -172,6 +172,8 @@ describe('extension commands', () => {
         'workbench.closeActiveTab',
         'workbench.closeActiveFile',
         'workbench.refreshActiveFile',
+        'workbench.toggleExplorer',
+        'workbench.toggleDiff',
       ]),
     );
 
@@ -179,6 +181,8 @@ describe('extension commands', () => {
     const closeActiveWorkbenchTab = vi.fn(() => true);
     const closeActiveWorkbenchFile = vi.fn(() => true);
     const refreshActiveWorkbenchFile = vi.fn(() => true);
+    const toggleWorkbenchExplorer = vi.fn(() => true);
+    const toggleWorkbenchDiff = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
@@ -188,16 +192,22 @@ describe('extension commands', () => {
       closeActiveWorkbenchTab,
       closeActiveWorkbenchFile,
       refreshActiveWorkbenchFile,
+      toggleWorkbenchExplorer,
+      toggleWorkbenchDiff,
     };
 
     await expect(executeExtensionCommand('workbench.newTab', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('workbench.closeActiveTab', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('workbench.closeActiveFile', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('workbench.refreshActiveFile', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.toggleExplorer', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.toggleDiff', undefined, options)).resolves.toBe(true);
 
     expect(newWorkbenchTab).toHaveBeenCalledTimes(1);
     expect(closeActiveWorkbenchTab).toHaveBeenCalledTimes(1);
     expect(closeActiveWorkbenchFile).toHaveBeenCalledTimes(1);
     expect(refreshActiveWorkbenchFile).toHaveBeenCalledTimes(1);
+    expect(toggleWorkbenchExplorer).toHaveBeenCalledTimes(1);
+    expect(toggleWorkbenchDiff).toHaveBeenCalledTimes(1);
   });
 });

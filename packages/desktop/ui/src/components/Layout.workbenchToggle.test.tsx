@@ -139,6 +139,20 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
   });
 
+  it('accepts command-only desktop shortcut events for workbench diff toggle', () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    const diffListener = vi.fn();
+    window.addEventListener('pa:workbench-toggle-diff', diffListener);
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'workbench.toggleDiff' } }));
+    });
+
+    expect(diffListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('pa:workbench-toggle-diff', diffListener);
+  });
+
   it('opens a side chat after reservation without waiting for live-session creation', async () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const reserveConversation = vi.spyOn(api, 'reserveConversation').mockResolvedValue({

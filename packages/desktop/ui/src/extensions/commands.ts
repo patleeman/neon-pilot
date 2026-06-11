@@ -43,10 +43,20 @@ export interface ExtensionCommandExecutorOptions {
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
   refreshActiveWorkbenchFile?(): boolean;
+  toggleWorkbenchExplorer?(): boolean;
+  toggleWorkbenchDiff?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
-  newConversation?(args?: { initialComposerText?: string | null; cwd?: string | null }): boolean | Promise<boolean>;
-  newConversationAndFocus?(args?: { initialComposerText?: string | null; cwd?: string | null }): boolean | Promise<boolean>;
+  newConversation?(args?: {
+    initialComposerText?: string | null;
+    initialPromptText?: string | null;
+    cwd?: string | null;
+  }): boolean | Promise<boolean>;
+  newConversationAndFocus?(args?: {
+    initialComposerText?: string | null;
+    initialPromptText?: string | null;
+    cwd?: string | null;
+  }): boolean | Promise<boolean>;
   toggleDictation?(): boolean;
   navigateConversation?(direction: 'next' | 'previous'): boolean;
   activeConversationId?: string | null;
@@ -123,7 +133,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
       id: 'conversation.new',
       title: 'New Conversation',
       category: 'Conversation',
-      argsSchema: { type: 'object', properties: { initialComposerText: { type: 'string' }, cwd: { type: 'string' } } },
+      argsSchema: {
+        type: 'object',
+        properties: { initialComposerText: { type: 'string' }, initialPromptText: { type: 'string' }, cwd: { type: 'string' } },
+      },
     },
     {
       id: 'conversation.open',
@@ -148,11 +161,16 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'workbench.closeActiveTab', title: 'Close Active Workbench Tab', category: 'Workbench' },
     { id: 'workbench.closeActiveFile', title: 'Close Active Workbench File', category: 'Workbench' },
     { id: 'workbench.refreshActiveFile', title: 'Refresh Active Workbench File', category: 'Workbench' },
+    { id: 'workbench.toggleExplorer', title: 'Toggle Workbench Explorer', category: 'Workbench' },
+    { id: 'workbench.toggleDiff', title: 'Toggle Workbench Diff Overlay', category: 'Workbench' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
       category: 'Conversation',
-      argsSchema: { type: 'object', properties: { initialComposerText: { type: 'string' }, cwd: { type: 'string' } } },
+      argsSchema: {
+        type: 'object',
+        properties: { initialComposerText: { type: 'string' }, initialPromptText: { type: 'string' }, cwd: { type: 'string' } },
+      },
     },
     { id: 'model.cycle', title: 'Cycle Model', category: 'Model' },
     { id: 'thinking.cycle', title: 'Cycle Thinking Level', category: 'Model' },
@@ -249,6 +267,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         if (options.newConversation) {
           return options.newConversation({
             initialComposerText: readStringArg(args, 'initialComposerText'),
+            initialPromptText: readStringArg(args, 'initialPromptText'),
             cwd: readStringArg(args, 'cwd'),
           });
         }
@@ -423,6 +442,22 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
     },
     {
+      id: 'workbench.toggleExplorer',
+      title: 'Toggle Workbench Explorer',
+      category: 'Workbench',
+      execute() {
+        return options.toggleWorkbenchExplorer?.() ?? false;
+      },
+    },
+    {
+      id: 'workbench.toggleDiff',
+      title: 'Toggle Workbench Diff Overlay',
+      category: 'Workbench',
+      execute() {
+        return options.toggleWorkbenchDiff?.() ?? false;
+      },
+    },
+    {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
       category: 'Conversation',
@@ -430,6 +465,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return (
           options.newConversationAndFocus?.({
             initialComposerText: readStringArg(args, 'initialComposerText'),
+            initialPromptText: readStringArg(args, 'initialPromptText'),
             cwd: readStringArg(args, 'cwd'),
           }) ?? false
         );

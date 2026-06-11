@@ -810,7 +810,7 @@ Built-in host commands include:
 - `conversation.open` with `{ "conversationId": "..." }`
 - `conversation.next` / `conversation.previous`
 - `conversation.close`, `conversation.reopenClosed`, `conversation.togglePinned`, `conversation.toggleArchived`, `conversation.rename`, and `conversation.editCwd`
-- `workbench.newTab`, `workbench.closeActiveTab`, `workbench.closeActiveFile`, and `workbench.refreshActiveFile`
+- `workbench.newTab`, `workbench.closeActiveTab`, `workbench.closeActiveFile`, `workbench.refreshActiveFile`, `workbench.toggleExplorer`, and `workbench.toggleDiff`
 - `composer.focus` / `composer.submit`
 - `dictation.toggle`
 - `sidebar.focus`

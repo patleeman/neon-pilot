@@ -75,6 +75,7 @@ const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
 );
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
+const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -1632,6 +1633,7 @@ export function Layout() {
       focusComposer = false,
       draft?: {
         initialComposerText?: string | null;
+        initialPromptText?: string | null;
         cwd?: string | null;
       },
     ) => {
@@ -1646,6 +1648,7 @@ export function Layout() {
           focusComposer,
           cwd: draft?.cwd,
           initialComposerText: draft?.initialComposerText,
+          initialPromptText: draft?.initialPromptText,
           replace: location.pathname === DRAFT_CONVERSATION_ROUTE,
         });
         return true;
@@ -1665,7 +1668,7 @@ export function Layout() {
 
   const lastWorkbenchRouteRef = useRef<{ pathname: string; search: string }>({ pathname: '/conversations/new', search: '' });
 
-  const toggleWorkbenchExplorer = useCallback(() => {
+  const handleToggleWorkbenchExplorer = useCallback(() => {
     setWorkbenchExplorerOpen((current) => {
       const next = !current;
       writeStoredWorkbenchExplorerOpen(next);
@@ -1677,7 +1680,7 @@ export function Layout() {
     ? activeWorkbenchRailSurface
       ? {
           railOpen: workbenchExplorerOpen,
-          toggleRail: toggleWorkbenchExplorer,
+          toggleRail: handleToggleWorkbenchExplorer,
         }
       : null
     : routePrimaryRailSurface
@@ -1845,6 +1848,15 @@ export function Layout() {
         window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT));
         return true;
       },
+      toggleWorkbenchExplorer() {
+        if (!activeWorkbenchRailSurface) return false;
+        handleToggleWorkbenchExplorer();
+        return true;
+      },
+      toggleWorkbenchDiff() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_TOGGLE_DIFF_EVENT));
+        return true;
+      },
       focusComposer() {
         const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
         textarea?.focus();
@@ -1869,10 +1881,10 @@ export function Layout() {
       cycleThinking() {
         return cycleSelectByLabel('Conversation thinking level');
       },
-      newConversation(args?: { initialComposerText?: string | null; cwd?: string | null }) {
+      newConversation(args?: { initialComposerText?: string | null; initialPromptText?: string | null; cwd?: string | null }) {
         return startNewConversationFromLayout(false, args);
       },
-      newConversationAndFocus(args?: { initialComposerText?: string | null; cwd?: string | null }) {
+      newConversationAndFocus(args?: { initialComposerText?: string | null; initialPromptText?: string | null; cwd?: string | null }) {
         return startNewConversationFromLayout(true, args);
       },
       toggleDictation() {
@@ -1913,6 +1925,7 @@ export function Layout() {
       activeConversationId,
       activeWorkbenchArtifactId,
       activeWorkbenchKnowledgeFileId,
+      activeWorkbenchRailSurface,
       activeWorkbenchTabId,
       activeWorkbenchWorkspaceFileId,
       appLayoutMode,
@@ -1929,6 +1942,7 @@ export function Layout() {
       openWorkbenchToolTab,
       setActiveConversationTool,
       startNewConversationFromLayout,
+      handleToggleWorkbenchExplorer,
     ],
   );
 
