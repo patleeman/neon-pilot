@@ -33,6 +33,12 @@ export interface ExtensionCommandExecutorOptions {
   submitComposer?(): boolean;
   clearComposer?(): boolean;
   pageConversation?(direction: 'up' | 'down'): boolean;
+  closeConversation?(): boolean;
+  reopenClosedConversation?(): boolean;
+  toggleConversationPin?(): boolean;
+  toggleConversationArchive?(): boolean;
+  renameConversation?(): boolean;
+  editConversationCwd?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: { initialComposerText?: string | null; cwd?: string | null }): boolean | Promise<boolean>;
@@ -123,6 +129,12 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     },
     { id: 'conversation.next', title: 'Next Conversation', category: 'Conversation' },
     { id: 'conversation.previous', title: 'Previous Conversation', category: 'Conversation' },
+    { id: 'conversation.close', title: 'Close Conversation', category: 'Conversation' },
+    { id: 'conversation.reopenClosed', title: 'Reopen Closed Conversation', category: 'Conversation' },
+    { id: 'conversation.togglePinned', title: 'Pin or Unpin Conversation', category: 'Conversation' },
+    { id: 'conversation.toggleArchived', title: 'Archive or Restore Conversation', category: 'Conversation' },
+    { id: 'conversation.rename', title: 'Rename Conversation', category: 'Conversation' },
+    { id: 'conversation.editCwd', title: 'Edit Conversation Working Directory', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.clear', title: 'Clear Composer', category: 'Conversation' },
@@ -273,6 +285,63 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
     },
     {
+      id: 'conversation.close',
+      title: 'Close Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.closeConversation?.() ?? false;
+      },
+    },
+    {
+      id: 'conversation.reopenClosed',
+      title: 'Reopen Closed Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.reopenClosedConversation?.() ?? false;
+      },
+    },
+    {
+      id: 'conversation.togglePinned',
+      title: 'Pin or Unpin Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.toggleConversationPin?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.activeConversationId);
+      },
+    },
+    {
+      id: 'conversation.toggleArchived',
+      title: 'Archive or Restore Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.toggleConversationArchive?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.activeConversationId);
+      },
+    },
+    {
+      id: 'conversation.rename',
+      title: 'Rename Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.renameConversation?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.activeConversationId);
+      },
+    },
+    {
+      id: 'conversation.editCwd',
+      title: 'Edit Conversation Working Directory',
+      category: 'Conversation',
+      execute() {
+        return options.editConversationCwd?.() ?? false;
+      },
+    },
+    {
       id: 'composer.focus',
       title: 'Focus Composer',
       category: 'Conversation',
@@ -391,9 +460,15 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
 
 export function normalizeLegacyCommand(command: string): { command: string; args?: Record<string, unknown> } {
   if (command === 'core.newConversation') return { command: 'conversation.new' };
+  if (command === 'core.closeTab') return { command: 'conversation.close' };
+  if (command === 'core.reopenClosedTab') return { command: 'conversation.reopenClosed' };
   if (command === 'core.previousConversation') return { command: 'conversation.previous' };
   if (command === 'core.nextConversation') return { command: 'conversation.next' };
+  if (command === 'core.togglePinned') return { command: 'conversation.togglePinned' };
+  if (command === 'core.archiveRestoreConversation') return { command: 'conversation.toggleArchived' };
+  if (command === 'core.renameConversation') return { command: 'conversation.rename' };
   if (command === 'core.focusComposer') return { command: 'composer.focus' };
+  if (command === 'core.editWorkingDirectory') return { command: 'conversation.editCwd' };
   if (command === 'core.findOnPage') return { command: 'page.find' };
   if (command === 'core.settings') return { command: 'app.navigate', args: { to: '/settings' } };
   if (command === 'core.toggleSidebar') return { command: 'layout.toggleSidebar' };

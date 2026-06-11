@@ -111,6 +111,14 @@ const WORKBENCH_OPEN_ARTIFACT_TAB_EVENT = 'pa:workbench-open-artifact-tab';
 const WORKBENCH_OPEN_WORKSPACE_FILE_EVENT = 'pa:workbench-open-workspace-file';
 const WORKBENCH_CLOSE_TAB_EVENT = 'pa:workbench-close-tab';
 const BROWSER_TABS_CHANGED_EVENT = 'pa:system-browser-tabs-changed';
+const DESKTOP_SHORTCUT_ACTIONS = {
+  closeConversation: 'close-conversation',
+  reopenClosedConversation: 'reopen-closed-conversation',
+  toggleConversationPin: 'toggle-conversation-pin',
+  toggleConversationArchive: 'toggle-conversation-archive',
+  renameConversation: 'rename-conversation',
+  editConversationCwd: 'edit-working-directory',
+} as const;
 
 interface WorkbenchTabInstance {
   id: string;
@@ -244,6 +252,10 @@ function desktopLayoutShortcutCommand(action: DesktopLayoutShortcutAction): { co
     case 'show-workbench-mode':
       return { command: 'layout.set', args: { mode: 'workbench' } };
   }
+}
+
+function dispatchDesktopShortcutAction(action: string): void {
+  window.dispatchEvent(new CustomEvent(DESKTOP_SHORTCUT_EVENT, { detail: { action } }));
 }
 
 function isDesktopNavigateDetail(value: unknown): value is { route: string; replace?: boolean } {
@@ -1785,7 +1797,31 @@ export function Layout() {
         return activeRightRailControl !== null;
       },
       findOnPage() {
-        window.dispatchEvent(new CustomEvent(DESKTOP_SHORTCUT_EVENT, { detail: { action: 'find-in-page' } }));
+        dispatchDesktopShortcutAction('find-in-page');
+        return true;
+      },
+      closeConversation() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.closeConversation);
+        return true;
+      },
+      reopenClosedConversation() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.reopenClosedConversation);
+        return true;
+      },
+      toggleConversationPin() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationPin);
+        return true;
+      },
+      toggleConversationArchive() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationArchive);
+        return true;
+      },
+      renameConversation() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.renameConversation);
+        return true;
+      },
+      editConversationCwd() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.editConversationCwd);
         return true;
       },
       focusComposer() {

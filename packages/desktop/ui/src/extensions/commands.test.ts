@@ -10,6 +10,9 @@ describe('extension commands', () => {
     expect(normalizeLegacyCommand('core.settings')).toEqual({ command: 'app.navigate', args: { to: '/settings' } });
     expect(normalizeLegacyCommand('core.toggleSidebar')).toEqual({ command: 'layout.toggleSidebar' });
     expect(normalizeLegacyCommand('core.findOnPage')).toEqual({ command: 'page.find' });
+    expect(normalizeLegacyCommand('core.closeTab')).toEqual({ command: 'conversation.close' });
+    expect(normalizeLegacyCommand('core.archiveRestoreConversation')).toEqual({ command: 'conversation.toggleArchived' });
+    expect(normalizeLegacyCommand('core.renameConversation')).toEqual({ command: 'conversation.rename' });
     expect(normalizeLegacyCommand('rightRail:system-browser/browser-tabs')).toEqual({
       command: 'rail.open',
       args: { extensionId: 'system-browser', surfaceId: 'browser-tabs' },
@@ -97,5 +100,68 @@ describe('extension commands', () => {
     expect(navigate).toHaveBeenCalledWith('/settings');
     expect(toggleSidebar).toHaveBeenCalledTimes(1);
     expect(findOnPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes command-backed conversation lifecycle actions', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining([
+        'conversation.close',
+        'conversation.reopenClosed',
+        'conversation.togglePinned',
+        'conversation.toggleArchived',
+        'conversation.rename',
+        'conversation.editCwd',
+      ]),
+    );
+
+    const closeConversation = vi.fn(() => true);
+    const reopenClosedConversation = vi.fn(() => true);
+    const toggleConversationPin = vi.fn(() => true);
+    const toggleConversationArchive = vi.fn(() => true);
+    const renameConversation = vi.fn(() => true);
+    const editConversationCwd = vi.fn(() => true);
+
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      activeConversationId: 'conversation-1',
+      closeConversation,
+      reopenClosedConversation,
+      toggleConversationPin,
+      toggleConversationArchive,
+      renameConversation,
+      editConversationCwd,
+    };
+
+    await expect(executeExtensionCommand('conversation.close', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.reopenClosed', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.toggleArchived', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.rename', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(true);
+
+    expect(closeConversation).toHaveBeenCalledTimes(1);
+    expect(reopenClosedConversation).toHaveBeenCalledTimes(1);
+    expect(toggleConversationPin).toHaveBeenCalledTimes(1);
+    expect(toggleConversationArchive).toHaveBeenCalledTimes(1);
+    expect(renameConversation).toHaveBeenCalledTimes(1);
+    expect(editConversationCwd).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks active-conversation commands when no conversation is active', async () => {
+    const toggleConversationPin = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      activeConversationId: null,
+      toggleConversationPin,
+    };
+
+    await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(false);
+    expect(toggleConversationPin).not.toHaveBeenCalled();
   });
 });
