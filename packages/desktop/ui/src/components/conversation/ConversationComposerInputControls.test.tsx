@@ -6,7 +6,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ModelInfo } from '../../shared/types';
-import { ConversationComposerInputControls } from './ConversationComposerInputControls';
+import { ConversationComposerInputControls, setComposerFocusedCommandContext } from './ConversationComposerInputControls';
 import { ConversationRunModePanel } from './ConversationRunModePanel';
 
 const extensionRegistryState = vi.hoisted(() => ({
@@ -34,6 +34,14 @@ const extensionRegistryState = vi.hoisted(() => ({
     priority?: number;
   }>,
   toolbarActions: [],
+}));
+
+const commandContextMock = vi.hoisted(() => ({
+  setExtensionCommandContext: vi.fn(),
+}));
+
+vi.mock('../../extensions/commands', () => ({
+  setExtensionCommandContext: commandContextMock.setExtensionCommandContext,
 }));
 
 vi.mock('../../extensions/ComposerButtonHost', () => ({
@@ -161,6 +169,7 @@ function renderControls(overrides: Partial<React.ComponentProps<typeof Conversat
 
 describe('ConversationComposerInputControls', () => {
   beforeEach(() => {
+    commandContextMock.setExtensionCommandContext.mockClear();
     extensionRegistryState.composerControls = [
       {
         extensionId: 'system-composer-attachments',
@@ -375,6 +384,72 @@ describe('ConversationComposerInputControls', () => {
       expect(textarea!.value).toBe('');
     } finally {
       rendered.unmount();
+    }
+  });
+
+  it('publishes composer focus command context for scoped keybindings', () => {
+    const textareaRef: React.RefObject<HTMLTextAreaElement> = { current: null };
+    const rendered = renderInteractive(
+      <ConversationComposerInputControls
+        fileInputRef={{ current: null }}
+        textareaRef={textareaRef}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={800}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={vi.fn()}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    try {
+      const textarea = rendered.container.querySelector<HTMLTextAreaElement>('textarea');
+      expect(textarea).toBeTruthy();
+
+      act(() => {
+        textarea!.focus();
+      });
+      expect(commandContextMock.setExtensionCommandContext).toHaveBeenLastCalledWith('composer.focused', true);
+
+      act(() => {
+        textarea!.blur();
+      });
+      expect(commandContextMock.setExtensionCommandContext).toHaveBeenLastCalledWith('composer.focused', false);
+
+      act(() => {
+        setComposerFocusedCommandContext(true);
+      });
+      rendered.unmount();
+      expect(commandContextMock.setExtensionCommandContext).toHaveBeenLastCalledWith('composer.focused', null);
+    } finally {
+      if (document.body.contains(rendered.container)) {
+        rendered.unmount();
+      }
     }
   });
 

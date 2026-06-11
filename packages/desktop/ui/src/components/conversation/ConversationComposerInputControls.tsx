@@ -21,6 +21,7 @@ import {
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import {
   getModelSelectionValue,
@@ -48,6 +49,10 @@ const CORE_COMPOSER_INPUT_TOOL_KEYS = new Set(['system-excalidraw-input:excalidr
 
 function composerRegistrationKey(registration: { extensionId: string; id: string }): string {
   return `${registration.extensionId}:${registration.id}`;
+}
+
+export function setComposerFocusedCommandContext(focused: boolean | null): void {
+  setExtensionCommandContext('composer.focused', focused);
 }
 
 function modelOptionLabel(model: ModelInfo): string {
@@ -461,6 +466,8 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     setLocalInput(input);
   }, [input, textareaRef]);
 
+  useEffect(() => () => setComposerFocusedCommandContext(null), []);
+
   const visibleComposerInputTools = useMemo(
     () =>
       extensionComposerInputTools.filter((tool) => {
@@ -555,7 +562,11 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               onRememberComposerSelection(event.currentTarget);
             }}
             onFocus={(event) => {
+              setComposerFocusedCommandContext(true);
               onRememberComposerSelection(event.currentTarget);
+            }}
+            onBlur={() => {
+              setComposerFocusedCommandContext(false);
             }}
             onKeyDown={onKeyDown}
             onPaste={onPaste}
