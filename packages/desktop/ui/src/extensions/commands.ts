@@ -352,6 +352,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         options.navigate(to);
         return true;
       },
+      canExecute(args) {
+        return readStringArg(args, 'to') !== null;
+      },
     },
     {
       id: 'app.goBack',
@@ -439,6 +442,11 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         const surfaceId = readStringArg(args, 'surfaceId');
         return extensionId && surfaceId ? options.openRightRail(`${extensionId}/${surfaceId}`) : false;
       },
+      canExecute(args) {
+        const target = readStringArg(args, 'target');
+        if (target) return true;
+        return readStringArg(args, 'extensionId') !== null && readStringArg(args, 'surfaceId') !== null;
+      },
     },
     {
       id: 'layout.set',
@@ -449,6 +457,10 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         if (mode !== 'compact' && mode !== 'workbench') return false;
         options.setLayout(mode);
         return true;
+      },
+      canExecute(args) {
+        const mode = readStringArg(args, 'mode');
+        return mode === 'compact' || mode === 'workbench';
       },
     },
     {

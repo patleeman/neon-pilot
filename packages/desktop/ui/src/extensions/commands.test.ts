@@ -77,6 +77,35 @@ describe('extension commands', () => {
     expect(goForward).toHaveBeenCalledTimes(1);
   });
 
+  it('gates argument-required host commands on usable arguments', async () => {
+    const navigate = vi.fn();
+    const openRightRail = vi.fn(() => true);
+    const setLayout = vi.fn();
+    const options = {
+      navigate,
+      openCommandPalette: vi.fn(),
+      openRightRail,
+      setLayout,
+    };
+
+    expect(canExecuteExtensionCommand('app.navigate', undefined, options)).toBe(false);
+    expect(canExecuteExtensionCommand('app.navigate', { to: '/settings' }, options)).toBe(true);
+    expect(canExecuteExtensionCommand('rail.open', undefined, options)).toBe(false);
+    expect(canExecuteExtensionCommand('rail.open', { target: 'system-browser/browser-tabs' }, options)).toBe(true);
+    expect(canExecuteExtensionCommand('rail.open', { extensionId: 'system-browser', surfaceId: 'browser-tabs' }, options)).toBe(true);
+    expect(canExecuteExtensionCommand('layout.set', undefined, options)).toBe(false);
+    expect(canExecuteExtensionCommand('layout.set', { mode: 'split' }, options)).toBe(false);
+    expect(canExecuteExtensionCommand('layout.set', { mode: 'workbench' }, options)).toBe(true);
+
+    await expect(executeExtensionCommand('app.navigate', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('rail.open', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('layout.set', { mode: 'split' }, options)).resolves.toBe(false);
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(openRightRail).not.toHaveBeenCalled();
+    expect(setLayout).not.toHaveBeenCalled();
+  });
+
   it('includes conversation cwd editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining([
