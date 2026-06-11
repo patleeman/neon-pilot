@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import type { ExtensionRegistrySnapshot } from './extensionRegistry.js';
 import {
   listExtensionCommandRegistrations,
+  listExtensionCliCommandRegistrations,
   listExtensionComposerButtonRegistrations,
   listExtensionComposerInputToolRegistrations,
   listExtensionComposerShelfRegistrations,
@@ -36,6 +37,11 @@ import {
 } from './extensionRegistry.js';
 
 const HOST_BACKED_EXTENSION_IDS = new Set(['system-prompt-assembly', 'system-skills']);
+const CLI_USAGE_HIDDEN_SCHEMA_FLAGS = new Map<string, Set<string>>([
+  ['ask', new Set(['timeout'])],
+  ['background-commands start', new Set(['task-slug'])],
+]);
+const CLI_USAGE_GLOBAL_FLAGS = new Set(['json', 'quiet', 'verbose', 'no-color', 'dry-run']);
 
 function isMissingHostDaemonImport(error: unknown): boolean {
   const output = error && typeof error === 'object' && 'stderr' in error ? String(error.stderr) : String(error);
@@ -720,6 +726,21 @@ describe('extension manifests - cross-extension conflict detection', () => {
       [...conflicts].map(([id, sources]) => `${id}: ${sources.join(', ')}`),
       'Duplicate command ids',
     ).toEqual([]);
+  });
+
+  it('documents extension CLI schema flags in usage strings', () => {
+    const commands = listExtensionCliCommandRegistrations();
+    const missingFlags = commands.flatMap((command) => {
+      const properties = command.flagsSchema?.properties;
+      if (!properties || typeof properties !== 'object' || Array.isArray(properties)) return [];
+      const hiddenFlags = CLI_USAGE_HIDDEN_SCHEMA_FLAGS.get(command.command) ?? new Set<string>();
+      return Object.keys(properties)
+        .filter((flag) => !CLI_USAGE_GLOBAL_FLAGS.has(flag) && !hiddenFlags.has(flag))
+        .filter((flag) => !command.usage.includes(`--${flag}`))
+        .map((flag) => `${command.extensionId} ${command.command}: --${flag} missing from usage`);
+    });
+
+    expect(missingFlags).toEqual([]);
   });
 
   it('no duplicate keybinding ids', () => {
