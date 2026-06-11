@@ -9,7 +9,7 @@ Generated from `neon-pilot commands --json` with 94 commands.
 Update the packaged Neon Pilot app from the signed GitHub release installer.
 
 - Source: extension (system-neon-pilot-admin-cli)
-- Usage: `neon-pilot app update [--channel stable|rc] [--app-dir /Applications] [--repo owner/name] [--json]`
+- Usage: `neon-pilot app update [--channel stable|rc] [--app-dir /Applications] [--repo owner/name] [--dry-run] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: yes

@@ -12,6 +12,12 @@ describe('system-neon-pilot-admin-cli manifest', () => {
   it('keeps admin CLI positional and required flag schemas aligned with backend normalization', () => {
     const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
 
+    expect(commands.get('app update')).toMatchObject({
+      usage: 'app update [--channel stable|rc] [--app-dir /Applications] [--repo owner/name] [--dry-run] [--json]',
+      argsSchema: { maxItems: 0 },
+      flagsSchema: { properties: { 'dry-run': { type: 'boolean' } } },
+      supportsDryRun: true,
+    });
     expect(commands.get('app-commands run')).toMatchObject({
       usage: 'app-commands run <commandId> [args...] [--args <json>] [--json]',
       argsSchema: { minItems: 1 },

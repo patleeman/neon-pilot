@@ -103,7 +103,7 @@
         "action": "neonPilotAdmin",
         "jsonDefault": true,
         "inputAction": "app_update",
-        "usage": "app update [--channel stable|rc] [--app-dir /Applications] [--repo owner/name] [--json]",
+        "usage": "app update [--channel stable|rc] [--app-dir /Applications] [--repo owner/name] [--dry-run] [--json]",
         "examples": [
           "neon-pilot app update --json",
           "neon-pilot app update --channel rc --json",

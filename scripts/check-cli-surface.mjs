@@ -185,7 +185,12 @@ function runContractSmoke(command, iteration) {
 function runDryRunSmoke(command, iteration) {
   if (!command.supportsDryRun) return;
   const label = `iteration ${iteration}: dry-run ${command.command}`;
-  const argv = [...command.command.split(/\s+/), ...(sampleArgs(command.argsSchema) ?? []), '--dry-run'];
+  const argv = [
+    ...command.command.split(/\s+/),
+    ...(sampleArgs(command.argsSchema) ?? []),
+    ...(sampleRequiredFlags(command.flagsSchema) ?? []),
+    '--dry-run',
+  ];
   const human = runCli(argv);
   assertCliOk(human, label);
   assert(human.stdout.includes('Dry run:'), `${label} did not print dry-run human output.`);
@@ -199,6 +204,28 @@ function sampleArgs(argsSchema) {
   const minItems = Number.isInteger(argsSchema?.minItems) ? argsSchema.minItems : 0;
   if (minItems <= 0) return [];
   return Array.from({ length: minItems }, (_, index) => `sample-${index + 1}`);
+}
+
+function sampleRequiredFlags(flagsSchema) {
+  if (!Array.isArray(flagsSchema?.required) || flagsSchema.required.length === 0) return [];
+  const properties = isRecord(flagsSchema.properties) ? flagsSchema.properties : {};
+  return flagsSchema.required.flatMap((flag) => {
+    if (typeof flag !== 'string' || flag === 'dry-run' || flag === 'json') return [];
+    const value = sampleFlagValue(flag, properties[flag]);
+    return value === true ? [`--${flag}`] : [`--${flag}`, value];
+  });
+}
+
+function sampleFlagValue(flag, schema) {
+  if (isRecord(schema) && Array.isArray(schema.enum) && schema.enum.length > 0) return String(schema.enum[0]);
+  if (isRecord(schema) && schema.type === 'boolean') return true;
+  if (flag === 'command') return 'printf neon-pilot-cli-surface';
+  if (flag === 'interval-minutes') return '5';
+  if (flag === 'conversation-id') return 'sample-conversation';
+  if (flag === 'prompt') return 'Check work.';
+  if (flag.endsWith('slug')) return 'sample-slug';
+  if (flag.endsWith('id')) return 'sample-id';
+  return 'sample-value';
 }
 
 function smokeCli(iteration) {
