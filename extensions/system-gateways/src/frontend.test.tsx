@@ -1,0 +1,219 @@
+/** @vitest-environment jsdom */
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import React from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { GatewaysPage } from './frontend';
+
+vi.mock('@neon-pilot/extensions/ui', () => ({
+  AppPageIntro: ({ title, summary, actions }: { title: React.ReactNode; summary?: React.ReactNode; actions?: React.ReactNode }) => (
+    <header>
+      <h1>{title}</h1>
+      {summary ? <p>{summary}</p> : null}
+      {actions}
+    </header>
+  ),
+  AppPageLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+  AppPageSection: ({ title, children }: { title: React.ReactNode; children: React.ReactNode }) => (
+    <section>
+      <h2>{title}</h2>
+      {children}
+    </section>
+  ),
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  DataTable: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
+  DataTableActionGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DataTableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
+  DataTableCell: ({ children, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) => <td {...props}>{children}</td>,
+  DataTableHead: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
+  DataTableHeaderCell: ({ children, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) => <th {...props}>{children}</th>,
+  DataTableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
+  EmptyState: ({ title }: { title: React.ReactNode }) => <p>{title}</p>,
+  ErrorState: ({ message }: { message: React.ReactNode }) => <p>{message}</p>,
+  Field: ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
+    <label>
+      <span>{label}</span>
+      {children}
+    </label>
+  ),
+  LoadingState: ({ label }: { label: React.ReactNode }) => <p>{label}</p>,
+  Notice: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  StatusDot: ({ tone }: { tone: string }) => <span data-tone={tone} />,
+  TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+  ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+}));
+
+const initialGatewayState = {
+  providers: [
+    { id: 'telegram', label: 'Telegram', implemented: true, configurationLocation: 'settings' },
+    { id: 'slack_mcp', label: 'Slack MCP', implemented: true, configurationLocation: 'settings' },
+  ],
+  connections: [
+    {
+      id: 'telegram-default',
+      provider: 'telegram',
+      label: 'Telegram',
+      status: 'active',
+      enabled: true,
+      updatedAt: '2026-06-10T12:00:00.000Z',
+    },
+  ],
+  bindings: [
+    {
+      id: 'telegram-default:conv-1',
+      provider: 'telegram',
+      connectionId: 'telegram-default',
+      conversationId: 'conv-1',
+      conversationTitle: 'Chief of Threads',
+      externalChatId: '42',
+      externalChatLabel: 'Patrick',
+      repliesEnabled: true,
+      updatedAt: '2026-06-10T12:00:00.000Z',
+    },
+  ],
+  chatTargets: [
+    {
+      id: 'telegram-default:chat:42',
+      provider: 'telegram',
+      connectionId: 'telegram-default',
+      externalChatId: '42',
+      externalChatLabel: 'Patrick',
+      conversationId: 'conv-1',
+      conversationTitle: 'Chief of Threads',
+      repliesEnabled: true,
+      updatedAt: '2026-06-10T12:00:00.000Z',
+    },
+  ],
+  events: [
+    {
+      id: 'event-1',
+      provider: 'telegram',
+      kind: 'routing',
+      message: 'Telegram attached to Chief of Threads',
+      createdAt: '2026-06-10T12:00:00.000Z',
+    },
+  ],
+};
+
+function jsonResponse(body: unknown, ok = true): Response {
+  return {
+    ok,
+    status: ok ? 200 : 500,
+    statusText: ok ? 'OK' : 'Internal Server Error',
+    json: vi.fn().mockResolvedValue(body),
+  } as unknown as Response;
+}
+
+function renderPage() {
+  return render(
+    <GatewaysPage
+      pa={{} as never}
+      context={{ extensionId: 'system-gateways', surfaceId: 'page', pathname: '/gateways', search: '', hash: '', conversationId: 'conv-2' }}
+      surface={{} as never}
+      params={{}}
+    />,
+  );
+}
+
+describe('GatewaysPage', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((path: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET';
+        if (path === '/api/gateways' && method === 'GET') return Promise.resolve(jsonResponse(initialGatewayState));
+        if (path === '/api/gateways/telegram/token' && method === 'GET') return Promise.resolve(jsonResponse({ configured: true }));
+        if (path === '/api/gateways/connections/telegram') {
+          return Promise.resolve(
+            jsonResponse({
+              ...initialGatewayState,
+              connections: [{ ...initialGatewayState.connections[0], enabled: false, status: 'paused' }],
+            }),
+          );
+        }
+        if (path === '/api/gateways/bindings') {
+          return Promise.resolve(
+            jsonResponse({
+              ...initialGatewayState,
+              bindings: [
+                ...initialGatewayState.bindings,
+                {
+                  id: 'telegram-default:conv-2',
+                  provider: 'telegram',
+                  connectionId: 'telegram-default',
+                  conversationId: 'conv-2',
+                  conversationTitle: 'Gateway Thread',
+                  externalChatId: '43',
+                  externalChatLabel: 'Test Chat',
+                  repliesEnabled: true,
+                  updatedAt: '2026-06-10T12:30:00.000Z',
+                },
+              ],
+            }),
+          );
+        }
+        return Promise.resolve(jsonResponse({ configured: true, state: initialGatewayState }));
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('renders backend gateway state and token status', async () => {
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Gateways' })).toBeTruthy();
+    expect(screen.getAllByText('Chief of Threads').length).toBeGreaterThan(0);
+    expect(screen.getByText('Telegram attached to Chief of Threads')).toBeTruthy();
+    expect(screen.getByText(/Token:\s*configured/)).toBeTruthy();
+  });
+
+  it('toggles Telegram through the backend connection route', async () => {
+    renderPage();
+    await screen.findAllByText('Chief of Threads');
+
+    const connectionsSection = screen.getByRole('heading', { name: 'Connections' }).closest('section')!;
+    fireEvent.click(within(connectionsSection).getByRole('button', { name: 'Pause' }));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/gateways/connections/telegram',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'paused', enabled: false }),
+        }),
+      ),
+    );
+    expect(await screen.findByText('Telegram gateway paused.')).toBeTruthy();
+  });
+
+  it('attaches a conversation through the backend bindings route', async () => {
+    renderPage();
+    await screen.findAllByText('Chief of Threads');
+
+    const telegramSection = screen.getByRole('heading', { name: 'Telegram' }).closest('section')!;
+    fireEvent.change(within(telegramSection).getByLabelText(/Conversation title/), { target: { value: 'Gateway Thread' } });
+    fireEvent.change(within(telegramSection).getByLabelText(/Telegram chat id/), { target: { value: '43' } });
+    fireEvent.change(within(telegramSection).getByLabelText(/Telegram chat label/), { target: { value: 'Test Chat' } });
+    fireEvent.click(within(telegramSection).getByRole('button', { name: 'Attach thread' }));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/gateways/bindings',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            provider: 'telegram',
+            conversationId: 'conv-2',
+            conversationTitle: 'Gateway Thread',
+            externalChatId: '43',
+            externalChatLabel: 'Test Chat',
+          }),
+        }),
+      ),
+    );
+    expect(await screen.findByText('Telegram gateway attached to thread.')).toBeTruthy();
+  });
+});

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "id": "system-gateways",
+  "name": "Gateways",
+  "packageType": "system",
+  "description": "Attach external messaging gateways to Neon Pilot threads.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "contributes": {
+    "secrets": {
+      "telegramBotToken": {
+        "label": "Telegram bot token",
+        "description": "Bot token used by the Telegram gateway runtime.",
+        "env": "TELEGRAM_BOT_TOKEN",
+        "placeholder": "123456:ABC...",
+        "order": 10
+      }
+    },
+    "nav": [
+      {
+        "id": "gateways-nav",
+        "label": "Gateways",
+        "route": "/gateways",
+        "icon": "graph",
+        "section": "primary"
+      }
+    ],
+    "views": [
+      {
+        "id": "page",
+        "title": "Gateways",
+        "location": "main",
+        "route": "/gateways",
+        "component": "GatewaysPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ]
+  }
+}

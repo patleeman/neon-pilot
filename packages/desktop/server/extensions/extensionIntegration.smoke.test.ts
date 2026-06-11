@@ -873,6 +873,17 @@ describe('extension manifests - cross-extension conflict detection', () => {
     ).toEqual([]);
   });
 
+  it('registers the Gateways Telegram token secret', () => {
+    expect(listExtensionSecretRegistrations()).toContainEqual(
+      expect.objectContaining({
+        extensionId: 'system-gateways',
+        id: 'telegramBotToken',
+        label: 'Telegram bot token',
+        env: 'TELEGRAM_BOT_TOKEN',
+      }),
+    );
+  });
+
   it('no duplicate secret backend ids', () => {
     const backends = listExtensionSecretBackendRegistrations();
     const conflicts = findAllStringConflicts(backends.map((b) => [b.id, b.extensionId]));
