@@ -203,9 +203,10 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "inspect",
-        "usage": "conversations list [--json]",
+        "usage": "conversations list [query...] [--json]",
         "examples": [
           "neon-pilot conversations list",
+          "neon-pilot conversations list planning",
           "neon-pilot conversations list --json"
         ],
         "argsSchema": {
@@ -249,9 +250,9 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "inspect",
-        "usage": "conversations search [--json]",
+        "usage": "conversations search [query...] [--json]",
         "examples": [
-          "neon-pilot conversations search",
+          "neon-pilot conversations search planning notes",
           "neon-pilot conversations search --json"
         ],
         "argsSchema": {
@@ -865,7 +866,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -956,7 +958,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",

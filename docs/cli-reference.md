@@ -486,7 +486,7 @@ Examples:
 List conversations, optionally filtered by query.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations list [--json]`
+- Usage: `neon-pilot conversations list [query...] [--json]`
 - Mode: read
 - Requires app: no
 - Idempotent: yes
@@ -496,6 +496,7 @@ List conversations, optionally filtered by query.
 
 Examples:
 - `neon-pilot conversations list`
+- `neon-pilot conversations list planning`
 - `neon-pilot conversations list --json`
 
 ### conversations open active
@@ -707,7 +708,7 @@ Examples:
 Search visible conversation transcript text.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations search [--json]`
+- Usage: `neon-pilot conversations search [query...] [--json]`
 - Mode: read
 - Requires app: no
 - Idempotent: yes
@@ -716,7 +717,7 @@ Search visible conversation transcript text.
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations search`
+- `neon-pilot conversations search planning notes`
 - `neon-pilot conversations search --json`
 
 ### conversations send

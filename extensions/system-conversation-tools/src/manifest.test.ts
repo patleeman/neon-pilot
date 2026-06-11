@@ -99,6 +99,27 @@ describe('system-conversation-tools manifest', () => {
     );
   });
 
+  it('keeps query and workspace CLI positional schemas explicit', () => {
+    const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
+
+    expect(commands.get('conversations list')).toMatchObject({
+      usage: 'conversations list [query...] [--json]',
+      argsSchema: { items: { type: 'string' } },
+    });
+    expect(commands.get('conversations search')).toMatchObject({
+      usage: 'conversations search [query...] [--json]',
+      argsSchema: { items: { type: 'string' } },
+    });
+    expect(commands.get('conversations workspace')).toMatchObject({
+      usage: 'conversations workspace [--json]',
+      argsSchema: { maxItems: 0 },
+    });
+    expect(commands.get('conversations open list')).toMatchObject({
+      usage: 'conversations open list [--json]',
+      argsSchema: { maxItems: 0 },
+    });
+  });
+
   it('does not use an agentExtension for conversation tools', () => {
     expect(manifest.backend.agentExtension).toBeUndefined();
   });
