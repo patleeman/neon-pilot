@@ -13,7 +13,7 @@ import {
 } from '../local/localSettings.js';
 import type { DurableRunListResult, ExecutionListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
 import { executionStore, runStore, sessionStore, taskStore } from '../store';
-import { Sidebar } from './Sidebar.js';
+import { buildGatewayConversationAttachRoute, Sidebar } from './Sidebar.js';
 
 const extensionRegistryMock = vi.hoisted(() => ({
   state: {
@@ -105,6 +105,10 @@ describe('Sidebar', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   const originalConsoleError = console.error;
   const storage = new MemoryStorage();
+
+  it('builds gateway attach routes for the selected conversation', () => {
+    expect(buildGatewayConversationAttachRoute('conv 1/slash')).toBe('/gateways?conversationId=conv%201%2Fslash');
+  });
 
   beforeEach(() => {
     vi.useFakeTimers();

@@ -227,6 +227,12 @@ function selectedConversationIdFromPath(pathname: string): string | null {
   }
 }
 
+function selectedConversationIdFromContext(context: ExtensionSurfaceProps['context']): string {
+  if (context.conversationId) return context.conversationId;
+  const search = context.search.startsWith('?') ? context.search.slice(1) : context.search;
+  return new URLSearchParams(search).get('conversationId') ?? '';
+}
+
 async function navigateTo(pa: ExtensionSurfaceProps['pa'], to: string) {
   const handled = await pa.commands?.execute?.('app.navigate', { to });
   if (!handled && typeof window !== 'undefined') {
@@ -341,6 +347,7 @@ export function GatewaysSidebar({ pa, context }: ExtensionSurfaceProps) {
 }
 
 export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
+  const selectedContextConversationId = selectedConversationIdFromContext(context);
   const [state, setState] = useState<GatewayState>(emptyGatewayState);
   const [token, setToken] = useState<TelegramTokenState>({ configured: false });
   const [conversations, setConversations] = useState<SessionSummary[]>([]);
@@ -348,7 +355,7 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
   const [tokenDraft, setTokenDraft] = useState('');
   const [form, setForm] = useState<GatewayFormState>(() => ({
     ...emptyForm,
-    conversationId: context.conversationId ?? '',
+    conversationId: selectedContextConversationId,
   }));
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -386,15 +393,15 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
   }, [refresh]);
 
   useEffect(() => {
-    if (context.conversationId) {
-      const matched = conversations.find((conversation) => conversation.id === context.conversationId);
+    if (selectedContextConversationId) {
+      const matched = conversations.find((conversation) => conversation.id === selectedContextConversationId);
       setForm((current) => ({
         ...current,
-        conversationId: current.conversationId || context.conversationId || '',
+        conversationId: current.conversationId || selectedContextConversationId,
         conversationTitle: current.conversationTitle || matched?.title || '',
       }));
     }
-  }, [context.conversationId, conversations]);
+  }, [selectedContextConversationId, conversations]);
 
   const selectedProvider = state.providers.find((provider) => provider.id === selectedProviderId) ?? state.providers[0] ?? null;
   const telegramConnection = useMemo(() => findProviderConnection(state, 'telegram'), [state]);
@@ -491,7 +498,7 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
           }),
         }),
       );
-      setForm({ ...emptyForm, conversationId: context.conversationId ?? '' });
+      setForm({ ...emptyForm, conversationId: selectedContextConversationId });
       setMessage('Telegram route saved.');
     });
   }

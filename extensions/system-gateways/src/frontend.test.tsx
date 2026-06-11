@@ -147,11 +147,19 @@ function jsonResponse(body: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
-function renderPage() {
+function renderPage(contextOverrides: Partial<React.ComponentProps<typeof GatewaysPage>['context']> = {}) {
   return render(
     <GatewaysPage
       pa={{} as never}
-      context={{ extensionId: 'system-gateways', surfaceId: 'page', pathname: '/gateways', search: '', hash: '', conversationId: 'conv-2' }}
+      context={{
+        extensionId: 'system-gateways',
+        surfaceId: 'page',
+        pathname: '/gateways',
+        search: '',
+        hash: '',
+        conversationId: 'conv-2',
+        ...contextOverrides,
+      }}
       surface={{} as never}
       params={{}}
     />,
@@ -290,6 +298,14 @@ describe('GatewaysPage', () => {
       ),
     );
     expect(await screen.findByText('Telegram route saved.')).toBeTruthy();
+  });
+
+  it('preselects the conversation from the route query when opened from a conversation menu', async () => {
+    renderPage({ search: '?conversationId=conv-2', conversationId: undefined });
+    await screen.findAllByText('Chief of Threads');
+
+    const telegramSection = screen.getByRole('heading', { name: 'Telegram' }).closest('section')!;
+    expect((within(telegramSection).getByLabelText(/^Conversation$/) as HTMLSelectElement).value).toBe('conv-2');
   });
 
   it('renders contributed gateway providers in the channel detail', async () => {

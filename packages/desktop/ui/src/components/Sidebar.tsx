@@ -145,6 +145,10 @@ function GatewayRailIcon({ provider }: { provider: string }) {
   );
 }
 
+export function buildGatewayConversationAttachRoute(conversationId: string): string {
+  return `/gateways?conversationId=${encodeURIComponent(conversationId)}`;
+}
+
 const PATH = {
   conversations:
     'M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25H13.5l-3 3v-3H6.75A2.25 2.25 0 0 1 4.5 14.25v-7.5Z',
@@ -1583,7 +1587,7 @@ const OpenConversationRow = memo(function OpenConversationRow({
     try {
       switch (menu.action) {
         case 'attachConversation': {
-          navigate(`/conversations/${encodeURIComponent(session.id)}?gateway=1`);
+          navigate(buildGatewayConversationAttachRoute(session.id));
           return;
         }
         case 'duplicateConversation': {
@@ -2638,7 +2642,7 @@ export function Sidebar() {
     ) => {
       try {
         if (menu.action === 'attachConversation') {
-          navigate(`/conversations/${encodeURIComponent(input.conversationId)}?gateway=1`);
+          navigate(buildGatewayConversationAttachRoute(input.conversationId));
           return;
         }
 
