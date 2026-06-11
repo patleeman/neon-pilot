@@ -68,6 +68,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.rename', 'conversation.canRename'],
   ['conversation.saveTitle', 'conversation.titleEditorOpen'],
   ['conversation.cancelTitleEdit', 'conversation.titleEditorOpen'],
+  ['layout.toggleRightRail', 'layout.canToggleRightRail'],
   ['conversation.editCwd', 'conversation.canEditCwd'],
   ['notifications.close', 'notifications.open'],
   ['notifications.markAllRead', 'notifications.hasUnread'],

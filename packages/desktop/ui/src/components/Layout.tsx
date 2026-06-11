@@ -1846,6 +1846,12 @@ export function Layout() {
           toggleRail: () => setRailOpen((current) => !current),
         }
       : registeredRightRailControl;
+  const canToggleRightRail = canToggleWorkbench || activeRightRailControl !== null;
+
+  useEffect(() => {
+    setExtensionCommandContext('layout.canToggleRightRail', canToggleRightRail);
+    return () => setExtensionCommandContext('layout.canToggleRightRail', null);
+  }, [canToggleRightRail]);
 
   const handleAppLayoutModeChange = useCallback(
     (mode: AppLayoutMode) => {
@@ -1978,7 +1984,7 @@ export function Layout() {
           return true;
         }
         activeRightRailControl?.toggleRail();
-        return activeRightRailControl !== null;
+        return canToggleRightRail;
       },
       findOnPage() {
         dispatchDesktopShortcutAction('find-in-page');
@@ -2401,6 +2407,7 @@ export function Layout() {
       activeWorkbenchTabId,
       activeWorkbenchWorkspaceFileId,
       appLayoutMode,
+      canToggleRightRail,
       canToggleWorkbenchExplorer,
       canToggleWorkbench,
       closeWorkbenchTab,

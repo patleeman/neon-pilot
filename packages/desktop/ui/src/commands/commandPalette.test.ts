@@ -95,6 +95,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('layout.toggleRightRail', {
+        activeConversationId: 'conversation-1',
+        context: { 'layout.canToggleRightRail': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('layout.toggleRightRail', {
+        activeConversationId: 'conversation-1',
+        context: { 'layout.canToggleRightRail': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('page.findNext', {
         activeConversationId: 'conversation-1',
         context: { 'pageSearch.hasMatches': false },

@@ -1214,7 +1214,19 @@ describe('extension commands', () => {
 
     await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggle')?.execute(undefined))).resolves.toBe(true);
     await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleSidebar')?.execute(undefined))).resolves.toBe(true);
-    await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleRightRail')?.execute(undefined))).resolves.toBe(true);
+    await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleRightRail')?.execute(undefined))).resolves.toBe(
+      true,
+    );
+    await expect(executeExtensionCommand('layout.toggleRightRail', undefined, { ...baseOptions, toggleRightRail })).resolves.toBe(
+      false,
+    );
+    await expect(
+      executeExtensionCommand('layout.toggleRightRail', undefined, {
+        ...baseOptions,
+        toggleRightRail,
+        context: { 'layout.canToggleRightRail': true },
+      }),
+    ).resolves.toBe(true);
     await expect(Promise.resolve(commands.find((command) => command.id === 'page.find')?.execute(undefined))).resolves.toBe(true);
     await expect(executeExtensionCommand('page.findNext', undefined, { ...baseOptions, findNextOnPage })).resolves.toBe(false);
     await expect(
@@ -1241,7 +1253,7 @@ describe('extension commands', () => {
 
     expect(toggleLayout).toHaveBeenCalledTimes(1);
     expect(toggleSidebar).toHaveBeenCalledTimes(1);
-    expect(toggleRightRail).toHaveBeenCalledTimes(1);
+    expect(toggleRightRail).toHaveBeenCalledTimes(2);
     expect(findOnPage).toHaveBeenCalledTimes(1);
     expect(findNextOnPage).toHaveBeenCalledTimes(1);
     expect(findPreviousOnPage).toHaveBeenCalledTimes(1);

@@ -480,8 +480,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleRightRail?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleRightRail);
+      canExecute(_args, context) {
+        return Boolean(options.toggleRightRail) && readContextValue(context, 'layout.canToggleRightRail') === true;
       },
     },
     {
