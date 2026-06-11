@@ -355,6 +355,67 @@ describe('extension commands', () => {
     expect(toggleFirstDrawingHistory).toHaveBeenCalledTimes(1);
   });
 
+  it('includes message action commands gated by available transcript actions', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining([
+        'messageAction.copyFirst',
+        'messageAction.editFirst',
+        'messageAction.rewindFirst',
+        'messageAction.forkFirst',
+      ]),
+    );
+
+    const copyFirstMessageAction = vi.fn(() => true);
+    const editFirstMessageAction = vi.fn(() => true);
+    const rewindFirstMessageAction = vi.fn(() => true);
+    const forkFirstMessageAction = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      copyFirstMessageAction,
+      editFirstMessageAction,
+      rewindFirstMessageAction,
+      forkFirstMessageAction,
+    };
+
+    await expect(executeExtensionCommand('messageAction.copyFirst', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('messageAction.editFirst', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('messageAction.rewindFirst', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('messageAction.forkFirst', undefined, options)).resolves.toBe(false);
+
+    await expect(
+      executeExtensionCommand('messageAction.copyFirst', undefined, {
+        ...options,
+        context: { 'messageAction.canCopyFirst': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('messageAction.editFirst', undefined, {
+        ...options,
+        context: { 'messageAction.canEditFirst': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('messageAction.rewindFirst', undefined, {
+        ...options,
+        context: { 'messageAction.canRewindFirst': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('messageAction.forkFirst', undefined, {
+        ...options,
+        context: { 'messageAction.canForkFirst': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(copyFirstMessageAction).toHaveBeenCalledTimes(1);
+    expect(editFirstMessageAction).toHaveBeenCalledTimes(1);
+    expect(rewindFirstMessageAction).toHaveBeenCalledTimes(1);
+    expect(forkFirstMessageAction).toHaveBeenCalledTimes(1);
+  });
+
   it('includes conversation title editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['conversation.rename', 'conversation.saveTitle', 'conversation.cancelTitleEdit']),

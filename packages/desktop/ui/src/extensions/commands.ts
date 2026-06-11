@@ -96,6 +96,10 @@ export interface ExtensionCommandExecutorOptions {
   artifactToggleFullscreen?(): boolean;
   artifactClose?(): boolean;
   closeImagePreview?(): boolean;
+  copyFirstMessageAction?(): boolean;
+  editFirstMessageAction?(): boolean;
+  rewindFirstMessageAction?(): boolean;
+  forkFirstMessageAction?(): boolean;
   saveMessageEdit?(): boolean;
   cancelMessageEdit?(): boolean;
   closeDrawingPicker?(): boolean;
@@ -279,6 +283,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'artifact.toggleFullscreen', title: 'Toggle Artifact Fullscreen', category: 'Artifact' },
     { id: 'artifact.close', title: 'Close Artifact', category: 'Artifact' },
     { id: 'imagePreview.close', title: 'Close Image Preview', category: 'Image Preview' },
+    { id: 'messageAction.copyFirst', title: 'Copy First Message', category: 'Message Actions' },
+    { id: 'messageAction.editFirst', title: 'Edit First Message', category: 'Message Actions' },
+    { id: 'messageAction.rewindFirst', title: 'Rewind First Message', category: 'Message Actions' },
+    { id: 'messageAction.forkFirst', title: 'Fork First Message', category: 'Message Actions' },
     { id: 'messageEdit.save', title: 'Save Message Edit', category: 'Message Edit' },
     { id: 'messageEdit.cancel', title: 'Cancel Message Edit', category: 'Message Edit' },
     { id: 'drawingPicker.close', title: 'Close Drawing Picker', category: 'Conversation' },
@@ -1215,6 +1223,50 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.closeImagePreview) && readContextValue(context, 'imagePreview.active') === true;
+      },
+    },
+    {
+      id: 'messageAction.copyFirst',
+      title: 'Copy First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.copyFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.copyFirstMessageAction) && readContextValue(context, 'messageAction.canCopyFirst') === true;
+      },
+    },
+    {
+      id: 'messageAction.editFirst',
+      title: 'Edit First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.editFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.editFirstMessageAction) && readContextValue(context, 'messageAction.canEditFirst') === true;
+      },
+    },
+    {
+      id: 'messageAction.rewindFirst',
+      title: 'Rewind First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.rewindFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.rewindFirstMessageAction) && readContextValue(context, 'messageAction.canRewindFirst') === true;
+      },
+    },
+    {
+      id: 'messageAction.forkFirst',
+      title: 'Fork First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.forkFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.forkFirstMessageAction) && readContextValue(context, 'messageAction.canForkFirst') === true;
       },
     },
     {

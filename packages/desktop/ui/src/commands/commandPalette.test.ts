@@ -179,6 +179,54 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('messageAction.copyFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canCopyFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('messageAction.copyFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canCopyFirst': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('messageAction.editFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canEditFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('messageAction.editFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canEditFirst': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('messageAction.rewindFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canRewindFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('messageAction.rewindFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canRewindFirst': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('messageAction.forkFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canForkFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('messageAction.forkFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageAction.canForkFirst': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.openActiveCheckpoint', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.canOpenActiveCheckpoint': false },

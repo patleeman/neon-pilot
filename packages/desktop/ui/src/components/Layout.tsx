@@ -79,6 +79,7 @@ import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversat
 import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversation/conversationQueueCommands';
 import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
 import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './chat/imagePreviewCommands';
+import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './chat/messageActionCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
 import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 import {
@@ -2136,6 +2137,22 @@ export function Layout() {
       },
       closeImagePreview() {
         window.dispatchEvent(new CustomEvent(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      copyFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'copyFirst' } }));
+        return true;
+      },
+      editFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'editFirst' } }));
+        return true;
+      },
+      rewindFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'rewindFirst' } }));
+        return true;
+      },
+      forkFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'forkFirst' } }));
         return true;
       },
       saveMessageEdit() {

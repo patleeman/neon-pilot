@@ -5,6 +5,11 @@ import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { MessageActionButton } from '../ui';
+import {
+  MESSAGE_ACTION_COMMAND_EVENT,
+  registerMessageActionCapability,
+  type MessageActionCommandDetail,
+} from './messageActionCommands';
 
 /**
  * Simple `when` expression evaluator for message actions.
@@ -84,6 +89,50 @@ export function MessageActions({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!canCopy) return undefined;
+    return registerMessageActionCapability('copy');
+  }, [canCopy]);
+
+  useEffect(() => {
+    if (!onEdit) return undefined;
+    return registerMessageActionCapability('edit');
+  }, [onEdit]);
+
+  useEffect(() => {
+    if (!onRewind) return undefined;
+    return registerMessageActionCapability('rewind');
+  }, [onRewind]);
+
+  useEffect(() => {
+    if (!onFork) return undefined;
+    return registerMessageActionCapability('fork');
+  }, [onFork]);
+
+  useEffect(() => {
+    function handleMessageActionCommand(event: Event) {
+      const detail = (event as CustomEvent<MessageActionCommandDetail>).detail;
+      if (!detail || detail.handled) return;
+
+      if (detail.command === 'copyFirst' && canCopy) {
+        detail.handled = true;
+        void handleCopy();
+      } else if (detail.command === 'editFirst' && onEdit) {
+        detail.handled = true;
+        onEdit();
+      } else if (detail.command === 'rewindFirst' && onRewind && !isRewinding) {
+        detail.handled = true;
+        void handleRewind();
+      } else if (detail.command === 'forkFirst' && onFork && !isForking) {
+        detail.handled = true;
+        void handleFork();
+      }
+    }
+
+    window.addEventListener(MESSAGE_ACTION_COMMAND_EVENT, handleMessageActionCommand);
+    return () => window.removeEventListener(MESSAGE_ACTION_COMMAND_EVENT, handleMessageActionCommand);
+  }, [canCopy, isForking, isRewinding, onEdit, onFork, onRewind, copyText]);
 
   function setTransientCopyState(nextState: 'copied' | 'failed') {
     if (copyResetTimeoutRef.current !== null) {
