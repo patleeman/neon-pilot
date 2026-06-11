@@ -34,7 +34,7 @@ export interface ExtensionCommandExecutorOptions {
   findNextOnPage?(): boolean;
   findPreviousOnPage?(): boolean;
   closePageSearch?(): boolean;
-  focusComposer?(): void;
+  focusComposer?(): boolean;
   focusSidebar?(): boolean;
   focusNext?(): boolean;
   focusPrevious?(): boolean;
@@ -900,9 +900,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Composer',
       category: 'Conversation',
       execute() {
-        if (!options.focusComposer) return false;
-        options.focusComposer();
-        return true;
+        return options.focusComposer?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusComposer);

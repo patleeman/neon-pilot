@@ -514,6 +514,13 @@ export function focusFirstSidebarControl(): boolean {
   return document.activeElement === target;
 }
 
+export function focusComposerTextarea(): boolean {
+  const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
+  if (!textarea) return false;
+  textarea.focus();
+  return document.activeElement === textarea;
+}
+
 function cycleSelectByLabel(label: string): boolean {
   const select = document.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`);
   if (!select || select.disabled || select.options.length === 0) return false;
@@ -2306,8 +2313,7 @@ export function Layout() {
         return true;
       },
       focusComposer() {
-        const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
-        textarea?.focus();
+        return focusComposerTextarea();
       },
       submitComposer() {
         window.dispatchEvent(new CustomEvent('neon-pilot:composer-submit'));

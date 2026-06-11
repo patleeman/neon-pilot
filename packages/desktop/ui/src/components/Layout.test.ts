@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { SessionMeta } from '../shared/types';
 import {
   clearWorkbenchOnlySearchParamsForCompact,
+  focusComposerTextarea,
   focusFirstSidebarControl,
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
@@ -37,6 +38,18 @@ describe('Layout workspace selection', () => {
 });
 
 describe('Layout focus commands', () => {
+  it('reports whether the composer focus command moved focus', () => {
+    document.body.innerHTML = '<main><button type="button">Main</button></main>';
+
+    expect(focusComposerTextarea()).toBe(false);
+
+    document.body.innerHTML = '<textarea placeholder="Message Codex"></textarea>';
+    const composer = document.querySelector('textarea');
+
+    expect(focusComposerTextarea()).toBe(true);
+    expect(document.activeElement).toBe(composer);
+  });
+
   it('reports whether the sidebar focus command moved focus', () => {
     document.body.innerHTML = '<main><button type="button">Main</button></main>';
 
