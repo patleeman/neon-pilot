@@ -248,6 +248,20 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('neon-pilot:dictation-toggle', dictationListener);
   });
 
+  it('accepts command-only desktop shortcut events for available composer drawing creation', () => {
+    const createDrawingListener = vi.fn();
+    window.addEventListener('neon-pilot-composer-create-drawing-command', createDrawingListener);
+    setExtensionCommandContext('composer.canCreateDrawing', true);
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'composer.createDrawing' } }));
+    });
+
+    expect(createDrawingListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('neon-pilot-composer-create-drawing-command', createDrawingListener);
+  });
+
   it('accepts command-only desktop shortcut events for focus traversal', () => {
     const offsetParentDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent');
     Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
@@ -257,9 +271,9 @@ describe('Layout workbench toggle', () => {
       },
     });
     renderLayout('/conversations/conv-1');
-    const focusable = [...document.querySelectorAll<HTMLElement>('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])')].filter(
-      (element) => !element.hasAttribute('disabled') && element.tabIndex >= 0,
-    );
+    const focusable = [
+      ...document.querySelectorAll<HTMLElement>('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])'),
+    ].filter((element) => !element.hasAttribute('disabled') && element.tabIndex >= 0);
     expect(focusable.length).toBeGreaterThan(0);
     expect(document.activeElement).not.toBe(focusable[0]);
 

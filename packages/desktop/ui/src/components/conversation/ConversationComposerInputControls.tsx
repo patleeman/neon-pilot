@@ -32,6 +32,7 @@ import {
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
+import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './composerInputCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
@@ -122,6 +123,7 @@ function CoreDrawingControl({
   onUpsertDrawingAttachment: (payload: Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>) => void;
 }) {
   const openDrawingModal = useCallback(async () => {
+    if (disabled) return;
     const result = await new Promise<unknown>((resolve, reject) => {
       window.dispatchEvent(
         new CustomEvent('neon-pilot-extension-modal', {
@@ -139,7 +141,16 @@ function CoreDrawingControl({
     if (result && typeof result === 'object') {
       onUpsertDrawingAttachment(result as Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>);
     }
-  }, [conversationId, onUpsertDrawingAttachment]);
+  }, [conversationId, disabled, onUpsertDrawingAttachment]);
+
+  useEffect(() => {
+    const handleCreateDrawingCommand = () => {
+      void openDrawingModal();
+    };
+
+    window.addEventListener(COMPOSER_CREATE_DRAWING_COMMAND_EVENT, handleCreateDrawingCommand);
+    return () => window.removeEventListener(COMPOSER_CREATE_DRAWING_COMMAND_EVENT, handleCreateDrawingCommand);
+  }, [openDrawingModal]);
 
   return (
     <IconButton
@@ -505,6 +516,11 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   }, [input, textareaRef]);
 
   useEffect(() => () => setComposerFocusedCommandContext(null), []);
+
+  useEffect(() => {
+    setExtensionCommandContext('composer.canCreateDrawing', !composerDisabled);
+    return () => setExtensionCommandContext('composer.canCreateDrawing', null);
+  }, [composerDisabled]);
 
   const visibleComposerInputTools = useMemo(
     () =>

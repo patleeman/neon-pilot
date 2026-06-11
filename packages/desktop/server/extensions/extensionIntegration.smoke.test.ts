@@ -557,6 +557,20 @@ describe('extension manifests - structural validation', () => {
     });
   });
 
+  it('exposes Excalidraw composer drawing as a default host-command hotkey', () => {
+    const excalidrawKeybinding = listExtensionKeybindingRegistrations().find(
+      (keybinding) => keybinding.extensionId === 'system-excalidraw-input' && keybinding.surfaceId === 'excalidraw.createDrawing',
+    );
+
+    expect(excalidrawKeybinding).toMatchObject({
+      title: 'Create Drawing',
+      keys: ['mod+shift+x'],
+      command: 'composer.createDrawing',
+      when: 'composer.canCreateDrawing',
+      scope: 'global',
+    });
+  });
+
   it('settings contributions have type-consistent values', () => {
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;
@@ -733,13 +747,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
 
   it('exposes valid default agent tool names', () => {
     const toolNames = new Set(listExtensionToolRegistrations().map((tool) => tool.name));
-    for (const expected of [
-      'web_fetch',
-      'background_bash',
-      'subagent',
-      'ask_user',
-      'neon_pilot',
-    ]) {
+    for (const expected of ['web_fetch', 'background_bash', 'subagent', 'ask_user', 'neon_pilot']) {
       expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
     expect(toolNames.has('apply_patch'), 'missing tool apply_patch').toBe(true);

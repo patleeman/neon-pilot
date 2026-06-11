@@ -13,7 +13,11 @@ import {
 
 describe('extension commands', () => {
   it('keeps the renderer host command catalog aligned with the server allowlist', () => {
-    expect(listHostCommands().map((command) => command.id).sort()).toEqual([...HOST_COMMAND_IDS].sort());
+    expect(
+      listHostCommands()
+        .map((command) => command.id)
+        .sort(),
+    ).toEqual([...HOST_COMMAND_IDS].sort());
   });
 
   it('keeps every listed host command backed by a renderer executor', () => {
@@ -26,7 +30,11 @@ describe('extension commands', () => {
       }).map((command) => command.id),
     );
 
-    expect(listHostCommands().map((command) => command.id).sort()).toEqual([...executorIds].sort());
+    expect(
+      listHostCommands()
+        .map((command) => command.id)
+        .sort(),
+    ).toEqual([...executorIds].sort());
   });
 
   it('keeps desktop shortcut commands backed by executable host commands', () => {
@@ -78,13 +86,11 @@ describe('extension commands', () => {
     };
 
     await expect(executeExtensionCommand('app.goBack', undefined, options)).resolves.toBe(false);
-    await expect(
-      executeExtensionCommand('app.goBack', undefined, { ...options, context: { 'app.canGoBack': true } }),
-    ).resolves.toBe(true);
+    await expect(executeExtensionCommand('app.goBack', undefined, { ...options, context: { 'app.canGoBack': true } })).resolves.toBe(true);
     await expect(executeExtensionCommand('app.goForward', undefined, options)).resolves.toBe(false);
-    await expect(
-      executeExtensionCommand('app.goForward', undefined, { ...options, context: { 'app.canGoForward': true } }),
-    ).resolves.toBe(true);
+    await expect(executeExtensionCommand('app.goForward', undefined, { ...options, context: { 'app.canGoForward': true } })).resolves.toBe(
+      true,
+    );
 
     expect(goBack).toHaveBeenCalledTimes(1);
     expect(goForward).toHaveBeenCalledTimes(1);
@@ -788,15 +794,15 @@ describe('extension commands', () => {
     await expect(
       executeExtensionCommand('browser.goBack', undefined, { ...options, context: { 'browser.canGoBack': true } }),
     ).resolves.toBe(true);
-    await expect(
-      executeExtensionCommand('browser.newTab', undefined, { ...options, context: { 'browser.active': true } }),
-    ).resolves.toBe(true);
+    await expect(executeExtensionCommand('browser.newTab', undefined, { ...options, context: { 'browser.active': true } })).resolves.toBe(
+      true,
+    );
     await expect(
       executeExtensionCommand('browser.reopenTab', undefined, { ...options, context: { 'browser.active': true } }),
     ).resolves.toBe(true);
-    await expect(
-      executeExtensionCommand('browser.closeTab', undefined, { ...options, context: { 'browser.active': true } }),
-    ).resolves.toBe(true);
+    await expect(executeExtensionCommand('browser.closeTab', undefined, { ...options, context: { 'browser.active': true } })).resolves.toBe(
+      true,
+    );
     await expect(
       executeExtensionCommand('browser.goForward', undefined, { ...options, context: { 'browser.canGoForward': true } }),
     ).resolves.toBe(true);
@@ -806,9 +812,9 @@ describe('extension commands', () => {
     await expect(
       executeExtensionCommand('browser.focusLocation', undefined, { ...options, context: { 'browser.active': true } }),
     ).resolves.toBe(true);
-    await expect(
-      executeExtensionCommand('browser.close', undefined, { ...options, context: { 'browser.active': true } }),
-    ).resolves.toBe(true);
+    await expect(executeExtensionCommand('browser.close', undefined, { ...options, context: { 'browser.active': true } })).resolves.toBe(
+      true,
+    );
 
     expect(browserGoBack).toHaveBeenCalledTimes(1);
     expect(browserNewTab).toHaveBeenCalledTimes(1);
@@ -852,9 +858,9 @@ describe('extension commands', () => {
     await expect(
       executeExtensionCommand('artifact.toggleFullscreen', undefined, { ...options, context: { 'artifact.active': true } }),
     ).resolves.toBe(true);
-    await expect(
-      executeExtensionCommand('artifact.close', undefined, { ...options, context: { 'artifact.active': true } }),
-    ).resolves.toBe(true);
+    await expect(executeExtensionCommand('artifact.close', undefined, { ...options, context: { 'artifact.active': true } })).resolves.toBe(
+      true,
+    );
 
     expect(artifactCopySource).toHaveBeenCalledTimes(1);
     expect(artifactToggleSource).toHaveBeenCalledTimes(1);
@@ -1009,11 +1015,12 @@ describe('extension commands', () => {
 
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),
+      expect.arrayContaining(['composer.submit', 'composer.stop', 'composer.createDrawing', 'dictation.toggle']),
     );
 
     const submitComposer = vi.fn(() => true);
     const stopComposer = vi.fn(() => true);
+    const createComposerDrawing = vi.fn(() => true);
     const toggleDictation = vi.fn(() => true);
     const commands = createHostCommands({
       navigate: vi.fn(),
@@ -1022,16 +1029,42 @@ describe('extension commands', () => {
       setLayout: vi.fn(),
       submitComposer,
       stopComposer,
+      createComposerDrawing,
       toggleDictation,
-      context: { 'conversation.isStreaming': true, 'system-local-dictation.toggleAvailable': true },
+      context: { 'conversation.isStreaming': true, 'composer.canCreateDrawing': true, 'system-local-dictation.toggleAvailable': true },
     });
 
     await expect(Promise.resolve(commands.find((command) => command.id === 'composer.submit')?.execute(undefined))).resolves.toBe(true);
     await expect(Promise.resolve(commands.find((command) => command.id === 'composer.stop')?.execute(undefined))).resolves.toBe(true);
+    await expect(Promise.resolve(commands.find((command) => command.id === 'composer.createDrawing')?.execute(undefined))).resolves.toBe(
+      true,
+    );
     await expect(Promise.resolve(commands.find((command) => command.id === 'dictation.toggle')?.execute(undefined))).resolves.toBe(true);
     expect(submitComposer).toHaveBeenCalledTimes(1);
     expect(stopComposer).toHaveBeenCalledTimes(1);
+    expect(createComposerDrawing).toHaveBeenCalledTimes(1);
     expect(toggleDictation).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables composer drawing creation unless the composer can accept drawings', async () => {
+    const createComposerDrawing = vi.fn(() => true);
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      createComposerDrawing,
+    };
+
+    await expect(executeExtensionCommand('composer.createDrawing', undefined, baseOptions)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('composer.createDrawing', undefined, {
+        ...baseOptions,
+        context: { 'composer.canCreateDrawing': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(createComposerDrawing).toHaveBeenCalledTimes(1);
   });
 
   it('disables dictation toggle unless the dictation extension publishes availability', async () => {
@@ -1273,13 +1306,13 @@ describe('extension commands', () => {
     });
 
     await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggle')?.execute(undefined))).resolves.toBe(true);
-    await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleSidebar')?.execute(undefined))).resolves.toBe(true);
+    await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleSidebar')?.execute(undefined))).resolves.toBe(
+      true,
+    );
     await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleRightRail')?.execute(undefined))).resolves.toBe(
       true,
     );
-    await expect(executeExtensionCommand('layout.toggleRightRail', undefined, { ...baseOptions, toggleRightRail })).resolves.toBe(
-      false,
-    );
+    await expect(executeExtensionCommand('layout.toggleRightRail', undefined, { ...baseOptions, toggleRightRail })).resolves.toBe(false);
     await expect(
       executeExtensionCommand('layout.toggleRightRail', undefined, {
         ...baseOptions,
@@ -1425,6 +1458,7 @@ describe('extension commands', () => {
       'composer.focus',
       'composer.submit',
       'composer.clear',
+      'composer.createDrawing',
       'conversation.pageUp',
       'conversation.pageDown',
       'workbench.newTab',

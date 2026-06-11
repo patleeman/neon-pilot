@@ -142,6 +142,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['composer.closePreferences', 'composer.preferencesOpen'],
   ['composer.previewFirstAttachment', 'composer.canPreviewFirstAttachment'],
   ['composer.removeFirstAttachment', 'composer.canRemoveFirstAttachment'],
+  ['composer.createDrawing', 'composer.canCreateDrawing'],
   ['composer.previewFirstDrawing', 'composer.canPreviewFirstDrawing'],
   ['composer.editFirstDrawing', 'composer.canEditFirstDrawing'],
   ['composer.removeFirstDrawing', 'composer.canRemoveFirstDrawing'],

@@ -75,6 +75,7 @@ import {
   DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
 } from './conversation/drawingPickerCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
+import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './conversation/composerInputCommands';
 import {
   COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
   COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
@@ -2356,6 +2357,10 @@ export function Layout() {
       },
       removeFirstComposerAttachment() {
         window.dispatchEvent(new CustomEvent(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT));
+        return true;
+      },
+      createComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CREATE_DRAWING_COMMAND_EVENT));
         return true;
       },
       previewFirstComposerDrawing() {

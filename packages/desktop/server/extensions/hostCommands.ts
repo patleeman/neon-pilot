@@ -56,6 +56,7 @@ export const HOST_COMMAND_IDS = [
   'composer.closePreferences',
   'composer.previewFirstAttachment',
   'composer.removeFirstAttachment',
+  'composer.createDrawing',
   'composer.previewFirstDrawing',
   'composer.editFirstDrawing',
   'composer.removeFirstDrawing',

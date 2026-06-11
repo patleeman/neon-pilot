@@ -199,6 +199,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Excalidraw input (`system-excalidraw-input`)
 
 - Composer action: Excalidraw.
+- Command/hotkey: `composer.createDrawing` (`Cmd/Ctrl+Shift+X` default when available).
 - Test open editor modal, draw/save/cancel, insert into composer, image/reference handling, reload after draft if supported.
 
 ### Local Dictation (`system-local-dictation`)
@@ -370,6 +371,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-excalidraw-input — Excalidraw input
 
+- keybindings: excalidraw.createDrawing
 - composerInputTools: excalidraw
 
 ### system-extension-manager — Extension Manager
