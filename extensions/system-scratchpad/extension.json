@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 2,
+  "id": "system-scratchpad",
+  "name": "Scratchpad",
+  "packageType": "system",
+  "defaultEnabled": true,
+  "description": "Conversation-scoped markdown scratchpad for agents and users.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      {
+        "id": "getScratchpad",
+        "handler": "getScratchpad",
+        "title": "Get Scratchpad",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "setScratchpad",
+        "handler": "setScratchpad",
+        "title": "Set Scratchpad",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "patchScratchpad",
+        "handler": "patchScratchpad",
+        "title": "Patch Scratchpad",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "scratchpadTool",
+        "handler": "scratchpadTool",
+        "title": "Scratchpad tool",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "provideTurnContext",
+        "handler": "provideTurnContext",
+        "title": "Scratchpad turn context",
+        "worker": {
+          "enabled": true
+        }
+      }
+    ]
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "scratchpad",
+        "title": "Scratchpad",
+        "location": "rightRail",
+        "scope": "conversation",
+        "component": "ScratchpadPanel",
+        "icon": "notebook",
+        "placement": "workbench-tool",
+        "activation": "on-open",
+        "persistOpen": true,
+        "toolSlot": "scratchpad"
+      }
+    ],
+    "commands": [
+      {
+        "id": "scratchpad.open",
+        "title": "Open Scratchpad",
+        "category": "Scratchpad",
+        "action": "rail.open",
+        "args": {
+          "extensionId": "system-scratchpad",
+          "surfaceId": "scratchpad"
+        }
+      }
+    ],
+    "tools": [
+      {
+        "id": "scratchpad",
+        "name": "scratchpad",
+        "title": "Manage Scratchpad",
+        "description": "Read or update the current conversation scratchpad. Use for durable per-thread working notes, assumptions, decisions, and handoff state; do not store secrets.",
+        "action": "scratchpadTool",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["get", "set", "append", "prepend", "clear"]
+            },
+            "conversationId": {
+              "type": "string",
+              "description": "Optional. Defaults to the current conversation."
+            },
+            "content": {
+              "type": "string",
+              "description": "Markdown content for set, append, or prepend."
+            }
+          },
+          "required": ["action"],
+          "additionalProperties": false
+        },
+        "promptGuidelines": [
+          "Use scratchpad to keep concise durable working notes for the current conversation: assumptions, decisions, current plan, open questions, and handoff state.",
+          "Read the scratchpad before relying on memory across compaction, restarts, or long-running work.",
+          "Update the scratchpad when important thread-local state changes. Prefer append/prepend for incremental notes and set when replacing stale content.",
+          "Do not store secrets, credentials, private keys, tokens, or unrelated long-term knowledge in the scratchpad."
+        ]
+      }
+    ],
+    "turnContextProviders": [
+      {
+        "id": "scratchpad",
+        "handler": "provideTurnContext",
+        "title": "Scratchpad",
+        "priority": 60,
+        "scope": ["conversation"]
+      }
+    ],
+    "cliCommands": [
+      {
+        "id": "conversations-scratchpad-get",
+        "command": "conversations scratchpad get",
+        "description": "Get a conversation scratchpad: conversations scratchpad get <id>",
+        "action": "scratchpadTool",
+        "jsonDefault": true,
+        "inputAction": "get",
+        "usage": "conversations scratchpad get <id> [--json]",
+        "examples": ["neon-pilot conversations scratchpad get example-id", "neon-pilot conversations scratchpad get example-id --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Positional args: id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "idempotent": true,
+        "destructive": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "conversations-scratchpad-set",
+        "command": "conversations scratchpad set",
+        "description": "Replace a conversation scratchpad: conversations scratchpad set <id> --content <markdown>",
+        "action": "scratchpadTool",
+        "jsonDefault": true,
+        "inputAction": "set",
+        "usage": "conversations scratchpad set <conversationId> [--content <markdown>] [--json]",
+        "examples": ["neon-pilot conversations scratchpad set conversation-example --content \"## Plan\"", "neon-pilot conversations scratchpad set conversation-example --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "content": { "type": "string", "description": "Markdown content." },
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing runtime state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "idempotent": true,
+        "destructive": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "conversations-scratchpad-patch",
+        "command": "conversations scratchpad patch",
+        "description": "Append/prepend to a scratchpad: conversations scratchpad patch <id> --operation append --content <markdown>",
+        "action": "scratchpadTool",
+        "jsonDefault": true,
+        "inputAction": "append",
+        "usage": "conversations scratchpad patch <conversationId> [--operation append|prepend] [--content <markdown>] [--json]",
+        "examples": ["neon-pilot conversations scratchpad patch conversation-example --operation append --content \"Validation passed\"", "neon-pilot conversations scratchpad patch conversation-example --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "operation": { "type": "string", "enum": ["append", "prepend"], "description": "Patch operation." },
+            "content": { "type": "string", "description": "Markdown content." },
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "dry-run": { "type": "boolean", "description": "Validate and describe the operation without changing runtime state." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "idempotent": false,
+        "destructive": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      }
+    ]
+  },
+  "permissions": ["conversations:readwrite"]
+}

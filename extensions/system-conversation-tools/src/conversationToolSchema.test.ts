@@ -24,7 +24,6 @@ describe('conversationToolSchema', () => {
       'workspace_open_update',
       'delete',
       'retention_prune',
-      'scratchpad',
       'append_transcript_block',
       'update_transcript_block',
       'rollback',
@@ -57,8 +56,6 @@ describe('conversationToolSchema', () => {
         'blockType',
         'blockId',
         'count',
-        'scratchpadOperation',
-        'content',
       ]),
     );
     expect(ConversationToolParams.required).toEqual(['action']);
@@ -73,7 +70,6 @@ describe('conversationToolSchema', () => {
   it('includes key conversation admin actions and parameters', () => {
     expect(JSON.stringify(ConversationToolParams.properties.action)).toContain('run_turn');
     expect(JSON.stringify(ConversationToolParams.properties.action)).toContain('workspace_update');
-    expect(JSON.stringify(ConversationToolParams.properties.action)).toContain('scratchpad');
     expect(JSON.stringify(ConversationToolParams.properties.images)).toContain('mimeType');
     expect(JSON.stringify(ConversationToolParams.properties.toolNames)).toContain('Active tool names');
   });

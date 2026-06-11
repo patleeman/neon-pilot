@@ -88,6 +88,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Runs](../extensions/system-runs/README.md)
 - [Self Preservation](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation)
 - [Settings](../extensions/system-settings/README.md)
+- [Scratchpad](../extensions/system-scratchpad/README.md)
 - [Skills](../extensions/system-skills/README.md)
 - [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context)
 - [Telemetry extension](../extensions/system-telemetry/README.md)

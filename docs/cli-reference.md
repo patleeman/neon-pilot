@@ -692,7 +692,7 @@ Examples:
 
 Get a conversation scratchpad: conversations scratchpad get <id>
 
-- Source: extension (system-conversation-tools)
+- Source: extension (system-scratchpad)
 - Usage: `neon-pilot conversations scratchpad get <id> [--json]`
 - Mode: read
 - Requires app: no
@@ -709,8 +709,8 @@ Examples:
 
 Append/prepend to a scratchpad: conversations scratchpad patch <id> --operation append --content <markdown>
 
-- Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations scratchpad patch <conversationId> [--json]`
+- Source: extension (system-scratchpad)
+- Usage: `neon-pilot conversations scratchpad patch <conversationId> [--operation append|prepend] [--content <markdown>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -719,15 +719,15 @@ Append/prepend to a scratchpad: conversations scratchpad patch <id> --operation 
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations scratchpad patch conversation-example`
+- `neon-pilot conversations scratchpad patch conversation-example --operation append --content "Validation passed"`
 - `neon-pilot conversations scratchpad patch conversation-example --json`
 
 ### conversations scratchpad set
 
 Replace a conversation scratchpad: conversations scratchpad set <id> --content <markdown>
 
-- Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations scratchpad set <conversationId> [--json]`
+- Source: extension (system-scratchpad)
+- Usage: `neon-pilot conversations scratchpad set <conversationId> [--content <markdown>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: yes
@@ -736,7 +736,7 @@ Replace a conversation scratchpad: conversations scratchpad set <id> --content <
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations scratchpad set conversation-example`
+- `neon-pilot conversations scratchpad set conversation-example --content "## Plan"`
 - `neon-pilot conversations scratchpad set conversation-example --json`
 
 ### conversations search
