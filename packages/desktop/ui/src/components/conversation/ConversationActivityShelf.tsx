@@ -1,7 +1,11 @@
+import { useEffect } from 'react';
+
 import { describeDeferredResumeStatus, formatDeferredResumeWhen } from '../../deferred-resume/deferredResumeIndicator';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { cx, MetaLabel, RowButton, ShelfHeader, ShelfSection, Spinner, TextButton } from '../ui';
+import { CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT } from './conversationActivityCommands';
 
 function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
   if (task.scheduleType === 'cron' && task.cron) return task.cron;
@@ -85,6 +89,22 @@ export function ConversationActivityShelf({
   onRunScheduledTaskNow?: (taskId: string) => void;
   onOpenScheduledTask?: (taskId: string) => void;
 }) {
+  const canContinueDeferredResumes = hasReadyDeferredResumes && !isLiveSession && !deferredResumesBusy;
+
+  useEffect(() => {
+    setExtensionCommandContext('conversation.canContinueDeferredResumes', canContinueDeferredResumes);
+    return () => setExtensionCommandContext('conversation.canContinueDeferredResumes', null);
+  }, [canContinueDeferredResumes]);
+
+  useEffect(() => {
+    if (!canContinueDeferredResumes) return;
+    function handleContinueDeferredResumesCommand() {
+      onContinueDeferredResumesNow();
+    }
+    window.addEventListener(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT, handleContinueDeferredResumesCommand);
+    return () => window.removeEventListener(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT, handleContinueDeferredResumesCommand);
+  }, [canContinueDeferredResumes, onContinueDeferredResumesNow]);
+
   return (
     <>
       {scheduledTasks.length > 0 && (

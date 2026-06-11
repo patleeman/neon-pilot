@@ -1,11 +1,16 @@
+// @vitest-environment jsdom
 import React from 'react';
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { ConversationActivityShelf } from './ConversationActivityShelf';
+import { CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT } from './conversationActivityCommands';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const execution: ExecutionRecord = {
   id: 'run-1',
@@ -43,6 +48,16 @@ const scheduledTask: ScheduledTaskSummary = {
 };
 
 describe('ConversationActivityShelf', () => {
+  let root: Root | null = null;
+
+  afterEach(() => {
+    if (root) {
+      act(() => root?.unmount());
+      root = null;
+    }
+    vi.restoreAllMocks();
+  });
+
   it('renders background execution summary and expanded details', () => {
     const html = renderToString(
       <ConversationActivityShelf
@@ -168,5 +183,40 @@ describe('ConversationActivityShelf', () => {
     expect(html).toContain('*/15 * * * *');
     expect(html).toContain('run now');
     expect(html).toContain('open');
+  });
+
+  it('handles the shared continue deferred resumes command when ready', () => {
+    const onContinueDeferredResumesNow = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationActivityShelf
+          backgroundExecutions={[]}
+          backgroundExecutionIndicatorText=""
+          showBackgroundRunDetails={false}
+          onToggleBackgroundRunDetails={vi.fn()}
+          deferredResumes={[{ ...resume, status: 'ready' }]}
+          deferredResumeIndicatorText="1 ready"
+          deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+          hasReadyDeferredResumes
+          isLiveSession={false}
+          deferredResumesBusy={false}
+          showDeferredResumeDetails={false}
+          onContinueDeferredResumesNow={onContinueDeferredResumesNow}
+          onToggleDeferredResumeDetails={vi.fn()}
+          onFireDeferredResumeNow={vi.fn()}
+          onCancelDeferredResume={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT));
+    });
+
+    expect(onContinueDeferredResumesNow).toHaveBeenCalledTimes(1);
   });
 });

@@ -371,6 +371,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.continueDeferredResumes', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canContinueDeferredResumes': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.continueDeferredResumes', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canContinueDeferredResumes': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.focusLocation', {
         activeConversationId: 'conversation-1',
         context: { 'browser.active': false },

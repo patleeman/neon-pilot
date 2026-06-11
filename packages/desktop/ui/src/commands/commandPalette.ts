@@ -91,6 +91,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.saveCwd', 'conversation.cwdEditorOpen'],
   ['conversation.cancelCwdEdit', 'conversation.cwdEditorOpen'],
   ['conversation.cancelGoal', 'conversation.goalActive'],
+  ['conversation.continueDeferredResumes', 'conversation.canContinueDeferredResumes'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
   ['composer.openSettings', 'composer.settingsAvailable'],
