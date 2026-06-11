@@ -23,6 +23,16 @@ type ModelDefinitionsCacheEntry = {
 let modelDefinitionsCache: ModelDefinitionsCacheEntry | null = null;
 let modelDefinitionsInFlight: Promise<readonly ModelDefinition[]> | null = null;
 
+function modelDefinitionCacheKey(models: readonly ModelDefinition[]): string {
+  return models.map((model) => `${model.provider}:${model.id}`).join('\n');
+}
+
+function invalidateModelTopicInBackground(): void {
+  void import('../shared/appEvents.js')
+    .then(({ invalidateAppTopics }) => invalidateAppTopics('models'))
+    .catch(() => {});
+}
+
 export function invalidateModelDefinitionsCache() {
   modelDefinitionsCache = null;
   modelDefinitionsInFlight = null;
@@ -41,56 +51,10 @@ function readModelReasoning(model: unknown): boolean | undefined {
   return typeof reasoning === 'boolean' ? reasoning : undefined;
 }
 
-function refreshModelDefinitionsInBackground() {
-  if (modelDefinitionsInFlight) {
-    return modelDefinitionsInFlight;
-  }
-
-  if (!modelDefinitionsCache) {
-    modelDefinitionsCache = { models: [], expiresAt: Date.now() + MODEL_DEFINITIONS_CACHE_TTL_MS };
-  }
-
-  const request = loadModelDefinitions().then((models) => {
-    modelDefinitionsCache = { models, expiresAt: Date.now() + MODEL_DEFINITIONS_CACHE_TTL_MS };
-    return models;
-  });
-
-  modelDefinitionsInFlight = request.finally(() => {
-    modelDefinitionsInFlight = null;
-  });
-  return modelDefinitionsInFlight;
-}
-
-async function loadModelDefinitions(): Promise<readonly ModelDefinition[]> {
-  let registryModels: Awaited<ReturnType<typeof getAvailableModels>>;
-  try {
-    registryModels = await getAvailableModels();
-  } catch {
-    // No built-in model definitions: if the live registry cannot be materialized,
-    // keep the picker empty rather than presenting unavailable providers.
-    return [];
-  }
-
-  const base = registryModels.map((model) => ({
-    id: model.id,
-    provider: model.provider,
-    name: model.name,
-    context: model.contextWindow ?? model.context ?? 128_000,
-    input: readModelInput(model),
-    reasoning: readModelReasoning(model),
-    supportedServiceTiers: getSupportedServiceTiersForModel(model),
-  }));
-
-  // Merge in models discovered from extensions (e.g. local MLX/GGUF runtimes).
-  // Discovery is best-effort — failures are swallowed so a broken extension
-  // never prevents the picker from loading.
-  let discovered: Awaited<ReturnType<typeof runModelDiscovery>> = [];
-  try {
-    discovered = await runModelDiscovery();
-  } catch {
-    // ignore
-  }
-
+function mergeDiscoveredModels(
+  base: readonly ModelDefinition[],
+  discovered: Awaited<ReturnType<typeof runModelDiscovery>>,
+): readonly ModelDefinition[] {
   const discoveredModels = discovered.flatMap((p) =>
     p.models.map((m) => ({
       id: m.id,
@@ -106,6 +70,69 @@ async function loadModelDefinitions(): Promise<readonly ModelDefinition[]> {
   // Discovered models are appended; registry models take precedence on id collisions.
   const registryIds = new Set(base.map((m) => `${m.provider}:${m.id}`));
   return [...base, ...discoveredModels.filter((m) => !registryIds.has(`${m.provider}:${m.id}`))];
+}
+
+function refreshModelDefinitionsInBackground(baseModels?: readonly ModelDefinition[]) {
+  if (modelDefinitionsInFlight) {
+    return modelDefinitionsInFlight;
+  }
+
+  if (!modelDefinitionsCache) {
+    modelDefinitionsCache = { models: baseModels ?? [], expiresAt: Date.now() + MODEL_DEFINITIONS_CACHE_TTL_MS };
+  }
+
+  const previousModels = modelDefinitionsCache.models;
+  const request = loadModelDefinitions(baseModels).then((models) => {
+    modelDefinitionsCache = { models, expiresAt: Date.now() + MODEL_DEFINITIONS_CACHE_TTL_MS };
+    if (modelDefinitionCacheKey(previousModels) !== modelDefinitionCacheKey(models)) {
+      invalidateModelTopicInBackground();
+    }
+    return models;
+  });
+
+  modelDefinitionsInFlight = request.finally(() => {
+    modelDefinitionsInFlight = null;
+  });
+  return modelDefinitionsInFlight;
+}
+
+async function loadRegistryModelDefinitions(): Promise<readonly ModelDefinition[] | null> {
+  let registryModels: Awaited<ReturnType<typeof getAvailableModels>>;
+  try {
+    registryModels = await getAvailableModels();
+  } catch {
+    // No built-in model definitions: if the live registry cannot be materialized,
+    // keep the picker empty rather than presenting unavailable providers.
+    return null;
+  }
+
+  return registryModels.map((model) => ({
+    id: model.id,
+    provider: model.provider,
+    name: model.name,
+    context: model.contextWindow ?? model.context ?? 128_000,
+    input: readModelInput(model),
+    reasoning: readModelReasoning(model),
+    supportedServiceTiers: getSupportedServiceTiersForModel(model),
+  }));
+}
+
+async function loadModelDefinitions(baseModels?: readonly ModelDefinition[]): Promise<readonly ModelDefinition[]> {
+  const base = baseModels ?? (await loadRegistryModelDefinitions());
+  if (!base) {
+    return [];
+  }
+  // Merge in models discovered from extensions (e.g. local MLX/GGUF runtimes).
+  // Discovery is best-effort — failures are swallowed so a broken extension
+  // never prevents the picker from loading.
+  let discovered: Awaited<ReturnType<typeof runModelDiscovery>> = [];
+  try {
+    discovered = await runModelDiscovery();
+  } catch {
+    // ignore
+  }
+
+  return mergeDiscoveredModels(base, discovered);
 }
 
 export interface ModelState {
@@ -163,11 +190,15 @@ export async function listModelDefinitions(): Promise<readonly ModelDefinition[]
     return modelDefinitionsCache.models;
   }
 
-  if (modelDefinitionsInFlight) {
-    return modelDefinitionsInFlight;
+  const registryModels = await loadRegistryModelDefinitions();
+  if (!registryModels) {
+    modelDefinitionsCache = { models: [], expiresAt: now + MODEL_DEFINITIONS_CACHE_TTL_MS };
+    return [];
   }
 
-  return await refreshModelDefinitionsInBackground();
+  modelDefinitionsCache = { models: registryModels, expiresAt: now + MODEL_DEFINITIONS_CACHE_TTL_MS };
+  void refreshModelDefinitionsInBackground(registryModels);
+  return registryModels;
 }
 
 export async function readModelState(settingsFile: string): Promise<ModelState> {

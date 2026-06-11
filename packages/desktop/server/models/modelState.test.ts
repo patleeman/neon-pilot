@@ -6,11 +6,13 @@ const normalizeSavedModelPreferences = vi.fn();
 const readSavedModelRef = vi.fn();
 const getSupportedServiceTiersForModel = vi.fn();
 const modelSupportsServiceTier = vi.fn();
+const invalidateAppTopics = vi.fn();
 
 vi.mock('../conversations/liveSessions.js', () => ({ getAvailableModels }));
 vi.mock('./modelDiscovery.js', () => ({ runModelDiscovery }));
 vi.mock('./modelPreferences.js', () => ({ normalizeSavedModelPreferences, readSavedModelRef }));
 vi.mock('./modelServiceTiers.js', () => ({ getSupportedServiceTiersForModel, modelSupportsServiceTier }));
+vi.mock('../shared/appEvents.js', () => ({ invalidateAppTopics }));
 
 const { invalidateModelDefinitionsCache, listModelDefinitions, readModelState } = await import('./modelState.js');
 
@@ -24,6 +26,7 @@ describe('modelState', () => {
     readSavedModelRef.mockReset().mockReturnValue('');
     getSupportedServiceTiersForModel.mockReset().mockReturnValue(['auto']);
     modelSupportsServiceTier.mockReset().mockReturnValue(false);
+    invalidateAppTopics.mockReset();
     invalidateModelDefinitionsCache();
   });
 
@@ -61,7 +64,7 @@ describe('modelState', () => {
     expect(getAvailableModels).toHaveBeenCalledTimes(1);
   });
 
-  it('returns registry and discovered models on first load', async () => {
+  it('returns registry models first and merges discovered models in the background', async () => {
     getAvailableModels.mockResolvedValue([{ id: 'same', provider: 'local', name: 'Registry', contextWindow: 100, input: ['text'] }]);
     runModelDiscovery.mockResolvedValue([
       {
@@ -78,8 +81,15 @@ describe('modelState', () => {
 
     const models = await listModelDefinitions();
 
-    expect(models.map((model) => `${model.provider}/${model.id}`)).toEqual(['local/same', 'local/new']);
+    expect(models.map((model) => `${model.provider}/${model.id}`)).toEqual(['local/same']);
     expect(getAvailableModels).toHaveBeenCalledTimes(1);
+    await vi.waitFor(async () => {
+      await expect(listModelDefinitions()).resolves.toMatchObject([
+        { id: 'same', provider: 'local' },
+        { id: 'new', provider: 'local' },
+      ]);
+    });
+    expect(invalidateAppTopics).toHaveBeenCalledWith('models');
   });
 
   it('ignores model discovery failures during the background refresh', async () => {
@@ -124,7 +134,7 @@ describe('modelState', () => {
     await expect(readModelState('/settings.json')).resolves.toMatchObject({ currentModel: 'available', currentServiceTier: 'flex' });
   });
 
-  it('returns provider-qualified current model refs when model ids collide', async () => {
+  it('returns provider-qualified current model refs after discovery when model ids collide', async () => {
     getAvailableModels.mockResolvedValue([
       {
         id: 'deepseek-v4-flash',
@@ -145,6 +155,11 @@ describe('modelState', () => {
       },
     ]);
     readSavedModelRef.mockReturnValue('ds4/deepseek-v4-flash');
+
+    await listModelDefinitions();
+    await vi.waitFor(async () => {
+      await expect(listModelDefinitions()).resolves.toHaveLength(2);
+    });
 
     const state = await readModelState('/settings.json');
 
