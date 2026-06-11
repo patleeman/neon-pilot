@@ -102,6 +102,7 @@ describe('core CLI shell helpers', () => {
 
   it('formats human output without forcing JSON when text is available', () => {
     expect(formatCliResult({ text: 'Done.', ok: true }, false)).toBe('Done.\n');
+    expect(formatCliResult({ content: [{ type: 'text', text: 'Tool text.' }], details: { ok: true } }, false)).toBe('Tool text.\n');
     expect(formatCliResult({ ok: true }, false)).toBe('{\n  "ok": true\n}\n');
     expect(formatCliResult({ text: 'Done.', ok: true }, true)).toContain('"ok": true');
   });

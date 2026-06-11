@@ -416,6 +416,112 @@
         ]
       },
       {
+        "id": "ask",
+        "command": "ask",
+        "description": "Create a conversation, run one turn, and print the result.",
+        "action": "conversationTool",
+        "jsonDefault": false,
+        "inputAction": "create_and_run",
+        "usage": "ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--timeout-ms <ms>] [--follow] [--json]",
+        "examples": [
+          "neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo \"Summarize the diff\"",
+          "neon-pilot ask --text \"Reply with ready\" --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional positional args: prompt text."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "text": {
+              "type": "string",
+              "description": "Prompt text."
+            },
+            "prompt": {
+              "type": "string",
+              "description": "Alias for --text."
+            },
+            "title": {
+              "type": "string",
+              "description": "Conversation title."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Initial working directory."
+            },
+            "model": {
+              "type": "string",
+              "description": "Initial provider/model ref, for example opencode-go/deepseek-v4-flash."
+            },
+            "timeout-ms": {
+              "type": "number",
+              "description": "Maximum time to wait for completion."
+            },
+            "timeout": {
+              "type": "number",
+              "description": "Alias for --timeout-ms."
+            },
+            "follow": {
+              "type": "boolean",
+              "description": "Stream text deltas while waiting."
+            },
+            "format": {
+              "type": "string",
+              "description": "Output format: text, json, or jsonl."
+            },
+            "thinking-level": {
+              "type": "string",
+              "description": "Initial thinking level preference."
+            },
+            "service-tier": {
+              "type": "string",
+              "description": "Initial service tier preference."
+            },
+            "tool": {
+              "type": "string",
+              "description": "Allow a tool by name. Repeat to allow multiple tools."
+            },
+            "tools": {
+              "type": "string",
+              "description": "Comma-separated tool names to allow."
+            },
+            "cancel-on-interrupt": {
+              "type": "boolean",
+              "description": "Cancel the remote work on Ctrl-C when supported."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without creating a conversation."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "streaming",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": [
+          "text",
+          "json",
+          "jsonl"
+        ],
+        "streaming": {
+          "supportsFollow": true,
+          "supportsJsonl": true,
+          "cancelOnInterruptDefault": false
+        }
+      },
+      {
         "id": "conversations-title",
         "command": "conversations title",
         "description": "Set a conversation title: conversations title <id> <title>.",
@@ -1712,6 +1818,7 @@
           "inputActions": [
             "inspect",
             "create",
+            "create_and_run",
             "set_title",
             "change_working_directory",
             "deferred_resume",

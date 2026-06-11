@@ -361,6 +361,7 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
   const { positionals, flags } = parseCliArgs(cliArgs(body));
   if (!command) return body;
   const text = flagString(flags, 'text') ?? flagString(flags, 'prompt') ?? positionals.slice(1).join(' ');
+  const promptText = flagString(flags, 'text') ?? flagString(flags, 'prompt') ?? positionals.join(' ');
   const baseInspect = {
     ...body,
     action: 'inspect',
@@ -388,6 +389,22 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
       thinkingLevel: flagString(flags, 'thinking-level'),
       serviceTier: flagString(flags, 'service-tier'),
       allowedToolNames: flagStringArray(flags, 'tool') ?? flagStringArray(flags, 'tools'),
+    };
+  if (command === 'ask')
+    return {
+      ...body,
+      action: 'create_and_run',
+      title: flagString(flags, 'title'),
+      cwd: flagString(flags, 'cwd'),
+      text: promptText,
+      model: flagString(flags, 'model'),
+      thinkingLevel: flagString(flags, 'thinking-level'),
+      serviceTier: flagString(flags, 'service-tier'),
+      allowedToolNames: flagStringArray(flags, 'tool') ?? flagStringArray(flags, 'tools'),
+      timeoutMs: flagNumber(flags, 'timeout-ms') ?? flagNumber(flags, 'timeout'),
+      follow: flagBoolean(flags, 'follow'),
+      format: flagString(flags, 'format'),
+      cancelOnInterrupt: flagBoolean(flags, 'cancel-on-interrupt'),
     };
   if (command === 'conversations title')
     return {
@@ -561,6 +578,28 @@ function emitConversationRunTurnCliEvent(ctx: ExtensionBackendContext, event: un
   });
 }
 
+async function createAndRunConversation(ctx: ExtensionBackendContext, payload: Record<string, unknown>) {
+  const createResult = (await ctx.conversations.create({
+    ...conversationCreateInput({ ...payload, live: true }),
+  })) as Record<string, unknown>;
+  const conversationId = optionalString(createResult.conversationId) ?? optionalString(createResult.id);
+  if (!conversationId) throw new Error('Created conversation did not return a conversation id.');
+  const turnResult = await ctx.conversations.runTurn(conversationId, requiredString(payload, 'text'), {
+    ...conversationSendOptions(payload),
+    ...(optionalString(payload.cwd) ? { cwd: optionalString(payload.cwd) } : {}),
+    ...(optionalPositiveNumber(payload.timeoutMs) ? { timeoutMs: optionalPositiveNumber(payload.timeoutMs) } : {}),
+    ...(payload.follow === true || optionalString(payload.format) === 'jsonl'
+      ? { onEvent: (event: unknown) => emitConversationRunTurnCliEvent(ctx, event) }
+      : {}),
+  });
+  return {
+    ...createResult,
+    conversationId,
+    turn: turnResult,
+    text: typeof (turnResult as { text?: unknown }).text === 'string' ? (turnResult as { text: string }).text : undefined,
+  };
+}
+
 export async function conversationTool(input: unknown, ctx: ExtensionBackendContext) {
   input = normalizeConversationCliInput(input);
   const toolCtx = ctx.toolContext;
@@ -620,6 +659,14 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
 
     case 'create':
       return toolResult(action, await ctx.conversations.create(conversationCreateInput(payload)));
+
+    case 'create_and_run': {
+      const result = await createAndRunConversation(ctx, payload);
+      return {
+        content: [{ type: 'text' as const, text: optionalString(result.text) ?? 'ask complete.' }],
+        details: result,
+      };
+    }
 
     case 'ensure_live':
       return toolResult(

@@ -221,6 +221,17 @@ export function formatCliResult(result: unknown, json: boolean): string {
     const record = result as Record<string, unknown>;
     if (typeof record.text === 'string') return `${record.text}\n`;
     if (typeof record.message === 'string') return `${record.message}\n`;
+    if (Array.isArray(record.content)) {
+      const text = record.content
+        .map((item) => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return '';
+          const entry = item as Record<string, unknown>;
+          return entry.type === 'text' && typeof entry.text === 'string' ? entry.text : '';
+        })
+        .filter(Boolean)
+        .join('\n');
+      if (text) return `${text}\n`;
+    }
   }
   return `${JSON.stringify(result, null, 2)}\n`;
 }

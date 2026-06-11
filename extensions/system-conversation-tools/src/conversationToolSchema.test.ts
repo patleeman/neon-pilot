@@ -11,6 +11,7 @@ describe('conversationToolSchema', () => {
       'change_working_directory',
       'deferred_resume',
       'create',
+      'create_and_run',
       'ensure_live',
       'send_message',
       'run_turn',

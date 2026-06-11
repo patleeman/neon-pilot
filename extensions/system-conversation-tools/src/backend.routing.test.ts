@@ -55,7 +55,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
     create: vi.fn().mockResolvedValue({ conversationId: 'created-1' }),
     ensureLive: vi.fn().mockResolvedValue({ conversationId: 'conv-2' }),
     sendMessage: vi.fn().mockResolvedValue({ accepted: true }),
-    runTurn: vi.fn().mockResolvedValue({ accepted: true }),
+    runTurn: vi.fn().mockResolvedValue({ accepted: true, text: 'done' }),
     abort: vi.fn().mockResolvedValue({ ok: true }),
     compact: vi.fn().mockResolvedValue({ ok: true }),
     fork: vi.fn().mockResolvedValue({ conversationId: 'fork-1' }),
@@ -216,6 +216,23 @@ describe('system-conversation-tools backend routing', () => {
       context,
     );
     expect(conversations.runTurn).toHaveBeenLastCalledWith('conv-2', 'Finish', { timeoutMs: 123 });
+
+    const askResult = await conversationTool(
+      {
+        cli: {
+          command: 'ask',
+          args: ['--model', 'opencode-go/deepseek-v4-flash', '--cwd', '/repo', '--timeout-ms', '456', 'Do', 'the', 'thing'],
+        },
+      },
+      context,
+    );
+    expect(conversations.create).toHaveBeenLastCalledWith({
+      cwd: '/repo',
+      live: true,
+      model: 'opencode-go/deepseek-v4-flash',
+    });
+    expect(conversations.runTurn).toHaveBeenLastCalledWith('created-1', 'Do the thing', { cwd: '/repo', timeoutMs: 456 });
+    expect(askResult).toMatchObject({ content: [{ type: 'text', text: 'done' }], details: { conversationId: 'created-1', text: 'done' } });
 
     await conversationTool(
       { cli: { command: 'conversations workspace update', args: ['--open', 'conv-1,conv-2', '--active', 'conv-2'] } },

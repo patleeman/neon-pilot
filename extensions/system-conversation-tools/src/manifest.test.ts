@@ -81,6 +81,10 @@ describe('system-conversation-tools manifest', () => {
         'deferredResume',
       ]),
     );
+    const conversationTool = (manifest.backend.actions ?? []).find((action: { id: string }) => action.id === 'conversationTool') as
+      | { worker?: { inputActions?: string[] } }
+      | undefined;
+    expect(conversationTool?.worker?.inputActions).toEqual(expect.arrayContaining(['inspect', 'create', 'create_and_run', 'run_turn']));
   });
 
   it('declares conversation CLI commands on the conversation tool action', () => {
@@ -90,6 +94,7 @@ describe('system-conversation-tools manifest', () => {
         expect.objectContaining({ command: 'conversations search', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations inspect', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations create', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'ask', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations title', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations cwd', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations abort', action: 'conversationTool' }),
@@ -141,6 +146,12 @@ describe('system-conversation-tools manifest', () => {
           tools: { type: 'string' },
         },
       },
+    });
+    expect(commands.get('ask')).toMatchObject({
+      usage: 'ask [prompt...] [--text <prompt>] [--cwd <path>] [--model <provider/model>] [--timeout-ms <ms>] [--follow] [--json]',
+      requiresApp: true,
+      outputModes: ['text', 'json', 'jsonl'],
+      flagsSchema: { properties: { text: { type: 'string' }, cwd: { type: 'string' }, model: { type: 'string' } } },
     });
     expect(commands.get('conversations open active')).toMatchObject({
       usage: 'conversations open active [conversationId] [--json]',

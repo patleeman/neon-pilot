@@ -329,7 +329,7 @@ Before targeting an unclear conversation, use `action: "inspect"` with `inspectA
 | `scratchpad`              | `conversationId`, `scratchpadOperation`          | Gets, replaces, appends, or prepends a durable per-conversation markdown scratchpad. Use only for non-secret operational state.                       |
 | `rollback`                | `conversationId`                                 | Rolls back a live conversation by `count` turns. Defaults to `1`.                                                                                    |
 
-Use `run_turn`/`neon-pilot conversations run-turn` when the caller needs to wait for the remote conversation to finish. Use `send_message` for fire-and-forget steering or follow-up delivery. Use the unified deferred-resume admin command for time-based continuation; do not run sleeping shell commands as timers.
+Use `neon-pilot ask` for one-shot external delegation: it creates a normal conversation, runs one turn, and returns the answer plus conversation id. Use `run_turn`/`neon-pilot conversations run-turn` when the caller already has a conversation id and needs to wait for the remote conversation to finish. Use `send_message` for fire-and-forget steering or follow-up delivery. Use the unified deferred-resume admin command for time-based continuation; do not run sleeping shell commands as timers.
 
 ## Examples
 
@@ -370,6 +370,7 @@ neon-pilot conversations inspect <id> outline --json
 neon-pilot conversations ensure-live <id> --json
 neon-pilot conversations send <id> --text "message" --json
 neon-pilot conversations run-turn <id> --text "prompt" --timeout-ms 120000 --json
+neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo "prompt"
 neon-pilot conversations workspace --json
 neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json
 neon-pilot conversations open list --json

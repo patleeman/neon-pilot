@@ -71,6 +71,7 @@ neon-pilot conversations open list --json
 neon-pilot conversations list --scope all --json
 neon-pilot conversations search "query" --json
 neon-pilot conversations inspect <id> outline --json
+neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd /repo "prompt"
 neon-pilot conversations create --title "Thread" --cwd /repo --json
 neon-pilot conversations ensure-live <id> --json
 neon-pilot conversations send <id> --text "message" --json
@@ -179,12 +180,13 @@ neon-pilot heartbeats stop <heartbeat-id> --json
 
 ## Delegated agent control
 
-The same CLI surface also controls Neon Pilot as a delegated agent runtime:
+The same CLI surface also controls Neon Pilot as a delegated agent runtime. For a one-shot external delegation, prefer `neon-pilot ask`; it creates a normal conversation, runs one turn, and returns the answer plus conversation id. Use `subagents` only for durable background/offshoot runs that need lifecycle operations such as logs, follow-up, rerun, or cancel.
 
 ```sh
 neon-pilot bootstrap doctor --json
 neon-pilot bootstrap configure --provider openai-codex --model gpt-5.4 --json
 neon-pilot bootstrap defaults set --provider openai-codex --model gpt-5.4 --cwd "$PWD" --json
+neon-pilot ask --model opencode-go/deepseek-v4-flash --cwd "$PWD" "Reply with ready."
 neon-pilot protocol neon-pilot-agent capabilities --json
 neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
 neon-pilot protocol neon-pilot-agent start --prompt "Investigate this issue." --cwd "$PWD" --json
