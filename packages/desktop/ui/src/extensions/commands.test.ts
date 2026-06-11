@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { HOST_COMMAND_IDS } from '../../../server/extensions/hostCommands';
 import {
   canExecuteExtensionCommand,
   createHostCommands,
@@ -10,6 +11,10 @@ import {
 } from './commands';
 
 describe('extension commands', () => {
+  it('keeps the renderer host command catalog aligned with the server allowlist', () => {
+    expect(listHostCommands().map((command) => command.id).sort()).toEqual([...HOST_COMMAND_IDS].sort());
+  });
+
   it('normalizes legacy host command strings', () => {
     expect(normalizeLegacyCommand('navigate:/settings')).toEqual({ command: 'app.navigate', args: { to: '/settings' } });
     expect(normalizeLegacyCommand('commandPalette:threads')).toEqual({ command: 'palette.open', args: { scope: 'threads' } });
