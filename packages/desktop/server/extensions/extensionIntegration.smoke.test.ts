@@ -523,6 +523,26 @@ describe('extension manifests - structural validation', () => {
     });
   });
 
+  it('exposes caffeinate as a command-backed hotkey', () => {
+    const caffeinateCommand = listExtensionCommandRegistrations().find(
+      (command) => command.extensionId === 'system-caffeinate' && command.surfaceId === 'caffeinate.toggle',
+    );
+    const caffeinateKeybinding = listExtensionKeybindingRegistrations().find(
+      (keybinding) => keybinding.extensionId === 'system-caffeinate' && keybinding.surfaceId === 'caffeinate.toggle',
+    );
+
+    expect(caffeinateCommand).toMatchObject({
+      title: 'Toggle Caffeinate',
+      action: 'caffeinateToggle',
+    });
+    expect(caffeinateKeybinding).toMatchObject({
+      title: 'Toggle Caffeinate',
+      keys: ['mod+shift+c'],
+      command: 'system-caffeinate.caffeinate.toggle',
+      scope: 'global',
+    });
+  });
+
   it('settings contributions have type-consistent values', () => {
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;
