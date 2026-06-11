@@ -94,6 +94,7 @@ describe('extension commands', () => {
         'conversation.openFirstScheduledTask',
         'conversation.fireFirstDeferredResume',
         'conversation.cancelFirstDeferredResume',
+        'conversation.restoreFirstQueuedPrompt',
       ]),
     );
     const editConversationCwd = vi.fn(() => true);
@@ -110,6 +111,7 @@ describe('extension commands', () => {
     const openFirstScheduledTask = vi.fn(() => true);
     const fireFirstDeferredResume = vi.fn(() => true);
     const cancelFirstDeferredResume = vi.fn(() => true);
+    const restoreFirstQueuedPrompt = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
@@ -130,6 +132,7 @@ describe('extension commands', () => {
       openFirstScheduledTask,
       fireFirstDeferredResume,
       cancelFirstDeferredResume,
+      restoreFirstQueuedPrompt,
     };
 
     await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(true);
@@ -146,6 +149,7 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('conversation.openFirstScheduledTask', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.fireFirstDeferredResume', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.cancelFirstDeferredResume', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.restoreFirstQueuedPrompt', undefined, options)).resolves.toBe(false);
     await expect(
       executeExtensionCommand('conversation.saveCwd', undefined, {
         ...options,
@@ -225,6 +229,12 @@ describe('extension commands', () => {
       }),
     ).resolves.toBe(true);
     await expect(
+      executeExtensionCommand('conversation.restoreFirstQueuedPrompt', undefined, {
+        ...options,
+        context: { 'conversation.canRestoreFirstQueuedPrompt': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
       executeExtensionCommand('conversation.saveCwd', undefined, {
         ...options,
         context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': true },
@@ -245,6 +255,7 @@ describe('extension commands', () => {
     expect(openFirstScheduledTask).toHaveBeenCalledTimes(1);
     expect(fireFirstDeferredResume).toHaveBeenCalledTimes(1);
     expect(cancelFirstDeferredResume).toHaveBeenCalledTimes(1);
+    expect(restoreFirstQueuedPrompt).toHaveBeenCalledTimes(1);
   });
 
   it('includes conversation title editor commands gated by editor state', async () => {

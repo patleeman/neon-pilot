@@ -41,6 +41,7 @@ export const HOST_COMMAND_IDS = [
   'conversation.openFirstScheduledTask',
   'conversation.fireFirstDeferredResume',
   'conversation.cancelFirstDeferredResume',
+  'conversation.restoreFirstQueuedPrompt',
   'composer.focus',
   'composer.submit',
   'composer.stop',

@@ -66,6 +66,7 @@ export interface ExtensionCommandExecutorOptions {
   openFirstScheduledTask?(): boolean;
   fireFirstDeferredResume?(): boolean;
   cancelFirstDeferredResume?(): boolean;
+  restoreFirstQueuedPrompt?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
@@ -227,6 +228,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.openFirstScheduledTask', title: 'Open First Automation', category: 'Conversation' },
     { id: 'conversation.fireFirstDeferredResume', title: 'Fire First Attention Item', category: 'Conversation' },
     { id: 'conversation.cancelFirstDeferredResume', title: 'Cancel First Attention Item', category: 'Conversation' },
+    { id: 'conversation.restoreFirstQueuedPrompt', title: 'Restore First Queued Prompt', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
@@ -767,6 +769,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.cancelFirstDeferredResume) && readContextValue(context, 'conversation.canCancelFirstDeferredResume') === true;
+      },
+    },
+    {
+      id: 'conversation.restoreFirstQueuedPrompt',
+      title: 'Restore First Queued Prompt',
+      category: 'Conversation',
+      execute() {
+        return options.restoreFirstQueuedPrompt?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.restoreFirstQueuedPrompt) && readContextValue(context, 'conversation.canRestoreFirstQueuedPrompt') === true;
       },
     },
     {

@@ -101,6 +101,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.openFirstScheduledTask', 'conversation.canOpenFirstScheduledTask'],
   ['conversation.fireFirstDeferredResume', 'conversation.canFireFirstDeferredResume'],
   ['conversation.cancelFirstDeferredResume', 'conversation.canCancelFirstDeferredResume'],
+  ['conversation.restoreFirstQueuedPrompt', 'conversation.canRestoreFirstQueuedPrompt'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
   ['composer.openSettings', 'composer.settingsAvailable'],

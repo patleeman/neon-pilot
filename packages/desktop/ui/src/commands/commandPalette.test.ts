@@ -491,6 +491,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.restoreFirstQueuedPrompt', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canRestoreFirstQueuedPrompt': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.restoreFirstQueuedPrompt', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canRestoreFirstQueuedPrompt': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.focusLocation', {
         activeConversationId: 'conversation-1',
         context: { 'browser.active': false },
