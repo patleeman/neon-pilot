@@ -4,10 +4,12 @@ import {
   type CommandPaletteItem,
   isCommandPaletteThreadDataLoading,
   isHostCommandDisabledInPalette,
+  listCommandPaletteGatedHostCommandIds,
   searchCommandPaletteItems,
   selectCommandPaletteScopedItems,
   shouldBootstrapCommandPaletteThreads,
 } from './commandPalette';
+import { listHostCommands } from '../extensions/commands';
 
 interface TestAction {
   kind: string;
@@ -53,6 +55,13 @@ const ITEMS: CommandPaletteItem<TestAction>[] = [
 ];
 
 describe('command palette search', () => {
+  it('keeps command palette host command gates pointed at real host commands', () => {
+    const hostCommandIds = new Set(listHostCommands().map((command) => command.id));
+    const unknownGatedCommands = listCommandPaletteGatedHostCommandIds().filter((commandId) => !hostCommandIds.has(commandId));
+
+    expect(unknownGatedCommands).toEqual([]);
+  });
+
   it('keeps bridge-handled app chrome host commands selectable in the command palette', () => {
     expect(isHostCommandDisabledInPalette('layout.toggleSidebar', { activeConversationId: null })).toBe(false);
     expect(isHostCommandDisabledInPalette('page.find', { activeConversationId: null })).toBe(false);

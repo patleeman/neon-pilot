@@ -155,6 +155,17 @@ const CONTEXT_BLOCKED_HOST_COMMANDS = new Map([
   ['conversation.cancelCwdEdit', 'conversation.cwdEditorBusy'],
 ]);
 
+export function listCommandPaletteGatedHostCommandIds(): string[] {
+  return [
+    ...new Set([
+      ...ACTIVE_CONVERSATION_HOST_COMMANDS,
+      ...ARGUMENT_REQUIRED_HOST_COMMANDS,
+      ...CONTEXT_REQUIRED_HOST_COMMANDS.keys(),
+      ...CONTEXT_BLOCKED_HOST_COMMANDS.keys(),
+    ]),
+  ];
+}
+
 export function isHostCommandDisabledInPalette(
   commandId: string,
   options: { activeConversationId?: string | null; context?: ExtensionCommandContext },
