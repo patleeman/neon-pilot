@@ -164,4 +164,40 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(false);
     expect(toggleConversationPin).not.toHaveBeenCalled();
   });
+
+  it('includes command-backed workbench actions', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining([
+        'workbench.newTab',
+        'workbench.closeActiveTab',
+        'workbench.closeActiveFile',
+        'workbench.refreshActiveFile',
+      ]),
+    );
+
+    const newWorkbenchTab = vi.fn(() => true);
+    const closeActiveWorkbenchTab = vi.fn(() => true);
+    const closeActiveWorkbenchFile = vi.fn(() => true);
+    const refreshActiveWorkbenchFile = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      newWorkbenchTab,
+      closeActiveWorkbenchTab,
+      closeActiveWorkbenchFile,
+      refreshActiveWorkbenchFile,
+    };
+
+    await expect(executeExtensionCommand('workbench.newTab', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.closeActiveTab', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.closeActiveFile', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.refreshActiveFile', undefined, options)).resolves.toBe(true);
+
+    expect(newWorkbenchTab).toHaveBeenCalledTimes(1);
+    expect(closeActiveWorkbenchTab).toHaveBeenCalledTimes(1);
+    expect(closeActiveWorkbenchFile).toHaveBeenCalledTimes(1);
+    expect(refreshActiveWorkbenchFile).toHaveBeenCalledTimes(1);
+  });
 });

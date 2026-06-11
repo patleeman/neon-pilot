@@ -1824,6 +1824,27 @@ export function Layout() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.editConversationCwd);
         return true;
       },
+      newWorkbenchTab() {
+        openWorkbenchNewTab();
+        return true;
+      },
+      closeActiveWorkbenchTab() {
+        if (!activeWorkbenchTabId) return false;
+        closeWorkbenchTab(activeWorkbenchTabId);
+        return true;
+      },
+      closeActiveWorkbenchFile() {
+        const hasActiveFile = Boolean(
+          activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId,
+        );
+        if (!hasActiveFile) return false;
+        window.dispatchEvent(new CustomEvent(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT));
+        return true;
+      },
+      refreshActiveWorkbenchFile() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT));
+        return true;
+      },
       focusComposer() {
         const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
         textarea?.focus();
@@ -1890,8 +1911,13 @@ export function Layout() {
     [
       activeRightRailControl,
       activeConversationId,
+      activeWorkbenchArtifactId,
+      activeWorkbenchKnowledgeFileId,
+      activeWorkbenchTabId,
+      activeWorkbenchWorkspaceFileId,
       appLayoutMode,
       canToggleWorkbench,
+      closeWorkbenchTab,
       extensionCommands,
       extensionRightToolPanels,
       handleAppLayoutModeChange,
@@ -1899,6 +1925,7 @@ export function Layout() {
       handleWorkbenchToggle,
       location.pathname,
       navigate,
+      openWorkbenchNewTab,
       openWorkbenchToolTab,
       setActiveConversationTool,
       startNewConversationFromLayout,

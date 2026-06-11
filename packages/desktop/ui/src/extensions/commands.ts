@@ -39,6 +39,10 @@ export interface ExtensionCommandExecutorOptions {
   toggleConversationArchive?(): boolean;
   renameConversation?(): boolean;
   editConversationCwd?(): boolean;
+  newWorkbenchTab?(): boolean;
+  closeActiveWorkbenchTab?(): boolean;
+  closeActiveWorkbenchFile?(): boolean;
+  refreshActiveWorkbenchFile?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: { initialComposerText?: string | null; cwd?: string | null }): boolean | Promise<boolean>;
@@ -140,6 +144,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'composer.clear', title: 'Clear Composer', category: 'Conversation' },
     { id: 'conversation.pageUp', title: 'Page Conversation Up', category: 'Conversation' },
     { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
+    { id: 'workbench.newTab', title: 'New Workbench Tab', category: 'Workbench' },
+    { id: 'workbench.closeActiveTab', title: 'Close Active Workbench Tab', category: 'Workbench' },
+    { id: 'workbench.closeActiveFile', title: 'Close Active Workbench File', category: 'Workbench' },
+    { id: 'workbench.refreshActiveFile', title: 'Refresh Active Workbench File', category: 'Workbench' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -380,6 +388,38 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Conversation',
       execute() {
         return options.pageConversation?.('down') ?? false;
+      },
+    },
+    {
+      id: 'workbench.newTab',
+      title: 'New Workbench Tab',
+      category: 'Workbench',
+      execute() {
+        return options.newWorkbenchTab?.() ?? false;
+      },
+    },
+    {
+      id: 'workbench.closeActiveTab',
+      title: 'Close Active Workbench Tab',
+      category: 'Workbench',
+      execute() {
+        return options.closeActiveWorkbenchTab?.() ?? false;
+      },
+    },
+    {
+      id: 'workbench.closeActiveFile',
+      title: 'Close Active Workbench File',
+      category: 'Workbench',
+      execute() {
+        return options.closeActiveWorkbenchFile?.() ?? false;
+      },
+    },
+    {
+      id: 'workbench.refreshActiveFile',
+      title: 'Refresh Active Workbench File',
+      category: 'Workbench',
+      execute() {
+        return options.refreshActiveWorkbenchFile?.() ?? false;
       },
     },
     {
