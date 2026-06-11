@@ -816,6 +816,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
 export function CommandsSettingsSection() {
   const [commands, setCommands] = useState<CommandSettingsEntry[]>([]);
   const [keybindings, setKeybindings] = useState<CommandKeybindingSettingsEntry[]>([]);
+  const [desktopShortcuts, setDesktopShortcuts] = useState<DesktopAppPreferencesState['keyboardShortcuts'] | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -829,6 +830,17 @@ export function CommandsSettingsSection() {
       const [nextCommands, nextKeybindings] = await Promise.all([api.extensionCommands(), api.extensionKeybindings()]);
       setCommands(nextCommands as CommandSettingsEntry[]);
       setKeybindings(nextKeybindings as CommandKeybindingSettingsEntry[]);
+      const bridge = getDesktopBridge();
+      if (bridge) {
+        try {
+          const state = await bridge.readDesktopAppPreferences();
+          setDesktopShortcuts(state.keyboardShortcuts);
+        } catch {
+          setDesktopShortcuts(null);
+        }
+      } else {
+        setDesktopShortcuts(null);
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
@@ -851,9 +863,9 @@ export function CommandsSettingsSection() {
     );
     return [...hostCommands, ...commands].map((command) => {
       const matches = keybindings.filter((keybinding) => keybindingMatchesCommandSetting(keybinding, command));
-      return { ...command, keybindings: matches.length ? matches : [emptyKeybindingForCommand(command)] };
+      return { ...command, keybindings: matches.length ? matches : [emptyKeybindingForCommand(command, desktopShortcuts)] };
     });
-  }, [commands, keybindings]);
+  }, [commands, desktopShortcuts, keybindings]);
 
   const visibleRows = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -1026,20 +1038,52 @@ function stableSettingsArgsString(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function emptyKeybindingForCommand(command: CommandSettingsEntry): CommandKeybindingSettingsEntry {
+function emptyKeybindingForCommand(
+  command: CommandSettingsEntry,
+  desktopShortcuts: DesktopAppPreferencesState['keyboardShortcuts'] | null = null,
+): CommandKeybindingSettingsEntry {
   const commandId = commandDisplayId(command);
+  const desktopShortcutId = desktopShortcutIdForHostCommand(command);
+  const desktopShortcut = desktopShortcutId ? (desktopShortcuts?.[desktopShortcutId] ?? DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS[desktopShortcutId]) : '';
   return {
     extensionId: command.extensionId ?? 'host',
     surfaceId: `command:${commandId}`,
     packageType: command.extensionId ? (command.packageType ?? 'user') : 'system',
     title: command.title ?? commandId,
-    keys: [],
+    keys: desktopShortcut ? [desktopShortcut] : [],
     command: commandId,
     args: command.args,
     scope: 'global',
-    defaultKeys: [],
+    defaultKeys: desktopShortcutId ? [DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS[desktopShortcutId]] : [],
     enabled: true,
   };
+}
+
+function desktopShortcutIdForHostCommand(command: CommandSettingsEntry): DesktopKeyboardShortcutId | null {
+  if (command.extensionId !== 'host') return null;
+  const commandId = command.id ?? command.surfaceId ?? '';
+  if (commandId === 'conversation.new') return 'newConversation';
+  if (commandId === 'conversation.close') return 'closeTab';
+  if (commandId === 'conversation.reopenClosed') return 'reopenClosedTab';
+  if (commandId === 'conversation.previous') return 'previousConversation';
+  if (commandId === 'conversation.next') return 'nextConversation';
+  if (commandId === 'conversation.togglePinned') return 'togglePinned';
+  if (commandId === 'conversation.toggleArchived') return 'archiveRestoreConversation';
+  if (commandId === 'conversation.rename') return 'renameConversation';
+  if (commandId === 'conversation.editCwd') return 'editWorkingDirectory';
+  if (commandId === 'composer.focus') return 'focusComposer';
+  if (commandId === 'page.find') return 'findOnPage';
+  if (commandId === 'layout.toggleSidebar') return 'toggleSidebar';
+  if (commandId === 'layout.toggleRightRail') return 'toggleRightRail';
+  if (commandId === 'workbench.newTab') return 'newWorkbenchTab';
+  if (commandId === 'workbench.closeActiveTab') return 'closeWorkbenchTab';
+  if (commandId === 'workbench.closeActiveFile') return 'closeWorkbenchFile';
+  if (commandId === 'workbench.refreshActiveFile') return 'refreshWorkbenchFile';
+  if (commandId === 'workbench.toggleExplorer') return 'toggleWorkbenchExplorer';
+  if (commandId === 'workbench.toggleDiff') return 'toggleWorkbenchDiff';
+  if (commandId === 'layout.set' && settingsArgsMatch(command.args, { mode: 'compact' })) return 'conversationMode';
+  if (commandId === 'layout.set' && settingsArgsMatch(command.args, { mode: 'workbench' })) return 'workbenchMode';
+  return null;
 }
 
 function formatTelemetryLogBytes(bytes: number): string {

@@ -309,6 +309,13 @@ describe('CommandsSettingsSection', () => {
   });
 
   it('shows host commands as read-only in the command shortcut catalog', async () => {
+    installDesktopBridge();
+    mocks.readDesktopAppPreferences.mockResolvedValue({
+      available: true,
+      startOnSystemStart: false,
+      supportsStartOnSystemStart: true,
+      keyboardShortcuts: { ...DEFAULT_KEYBOARD_SHORTCUTS, focusComposer: 'CommandOrControl+Alt+L' },
+    });
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
     const keybindingsSpy = vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([]);
     const updateSpy = vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
@@ -332,7 +339,7 @@ describe('CommandsSettingsSection', () => {
     const shortcutCapture = focusComposerRow?.querySelector<HTMLButtonElement>('.ui-shortcut-capture');
     expect(shortcutCapture).toBeInstanceOf(HTMLButtonElement);
     expect(shortcutCapture?.disabled).toBe(true);
-    expect(shortcutCapture?.textContent).toContain('Configured in Desktop shortcuts');
+    expect(shortcutCapture?.textContent).toContain('⌘/Ctrl + Alt + L');
     expect(focusComposerRow?.querySelector('button[aria-label^="Clear shortcut"]')).toBeNull();
     expect(focusComposerRow?.querySelector('button[aria-label^="Enable shortcut"]')).toBeNull();
 
