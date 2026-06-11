@@ -119,6 +119,21 @@ describe('system-conversation-tools manifest', () => {
       usage: 'conversations workspace [--json]',
       argsSchema: { maxItems: 0 },
     });
+    expect(commands.get('conversations workspace update')).toMatchObject({
+      usage:
+        'conversations workspace update [--open <ids>] [--pinned <ids>] [--archived <ids>] [--active <id>] [--workspace-path <path>] [--remote-controlled <ids>] [--json]',
+      argsSchema: { maxItems: 0 },
+      flagsSchema: {
+        properties: {
+          open: { type: 'string' },
+          pinned: { type: 'string' },
+          archived: { type: 'string' },
+          active: { type: 'string' },
+          'workspace-path': { type: 'string' },
+          'remote-controlled': { type: 'string' },
+        },
+      },
+    });
     expect(commands.get('conversations open list')).toMatchObject({
       usage: 'conversations open list [--json]',
       argsSchema: { maxItems: 0 },

@@ -880,7 +880,7 @@ Examples:
 Update open/sidebar workspace state with --open, --pinned, --archived, --active, --workspace-path, or --remote-controlled.
 
 - Source: extension (system-conversation-tools)
-- Usage: `neon-pilot conversations workspace update <conversationId> [--json]`
+- Usage: `neon-pilot conversations workspace update [--open <ids>] [--pinned <ids>] [--archived <ids>] [--active <id>] [--workspace-path <path>] [--remote-controlled <ids>] [--json]`
 - Mode: write
 - Requires app: no
 - Idempotent: no
@@ -889,8 +889,8 @@ Update open/sidebar workspace state with --open, --pinned, --archived, --active,
 - Output: text, json
 
 Examples:
-- `neon-pilot conversations workspace update conversation-example`
-- `neon-pilot conversations workspace update conversation-example --json`
+- `neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b`
+- `neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json`
 
 ### doctor
 

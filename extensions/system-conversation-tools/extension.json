@@ -1049,18 +1049,17 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "workspace_update",
-        "usage": "conversations workspace update <conversationId> [--json]",
+        "usage": "conversations workspace update [--open <ids>] [--pinned <ids>] [--archived <ids>] [--active <id>] [--workspace-path <path>] [--remote-controlled <ids>] [--json]",
         "examples": [
-          "neon-pilot conversations workspace update conversation-example",
-          "neon-pilot conversations workspace update conversation-example --json"
+          "neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b",
+          "neon-pilot conversations workspace update --open conv-a,conv-b --active conv-b --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "minItems": 1,
-          "description": "Positional args: conversationId."
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -1072,6 +1071,30 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "open": {
+              "type": "string",
+              "description": "Comma-separated open/sidebar conversation ids."
+            },
+            "pinned": {
+              "type": "string",
+              "description": "Comma-separated pinned conversation ids."
+            },
+            "archived": {
+              "type": "string",
+              "description": "Comma-separated archived conversation ids."
+            },
+            "active": {
+              "type": "string",
+              "description": "Active sidebar conversation id."
+            },
+            "workspace-path": {
+              "type": "string",
+              "description": "Workspace path to include. Repeat or pass comma-separated values."
+            },
+            "remote-controlled": {
+              "type": "string",
+              "description": "Comma-separated remotely controlled conversation ids."
             }
           },
           "additionalProperties": true
