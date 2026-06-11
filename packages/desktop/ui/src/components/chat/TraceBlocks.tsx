@@ -20,6 +20,11 @@ import {
   type ThinkingBlockCommandDetail,
 } from './thinkingBlockCommands.js';
 import {
+  registerSubagentBlockToggleCapability,
+  SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  type SubagentBlockCommandDetail,
+} from './subagentBlockCommands.js';
+import {
   type ConversationDiffDisclosureMode,
   type ConversationTranscriptDisclosureMode,
   type DisclosurePreference,
@@ -83,15 +88,32 @@ export const ThinkingBlock = memo(function ThinkingBlock({
 
 export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Extract<MessageBlock, { type: 'subagent' }> }) {
   const [open, setOpen] = useState(false);
+  const toggleSubagentBlock = useCallback(() => {
+    setOpen((current) => !current);
+  }, []);
   const clr = {
     running: 'text-steel bg-steel/8 border-steel/20',
     complete: 'text-success bg-success/8 border-success/20',
     failed: 'text-danger bg-danger/8 border-danger/20',
   }[block.status];
   const tone = { running: 'steel', complete: 'success', failed: 'danger' }[block.status] as 'steel' | 'success' | 'danger';
+
+  useEffect(() => registerSubagentBlockToggleCapability(), []);
+  useEffect(() => {
+    function handleToggleFirstSubagentBlock(event: Event) {
+      const detail = (event as CustomEvent<SubagentBlockCommandDetail>).detail;
+      if (detail?.handled) return;
+      if (detail) detail.handled = true;
+      toggleSubagentBlock();
+    }
+
+    window.addEventListener(SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstSubagentBlock);
+    return () => window.removeEventListener(SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstSubagentBlock);
+  }, [toggleSubagentBlock]);
+
   return (
     <div className={`rounded-lg overflow-hidden text-[12px] ${clr}`}>
-      <RowButton onClick={() => setOpen((o) => !o)} className="px-2.5 py-2 hover:bg-black/5">
+      <RowButton onClick={toggleSubagentBlock} className="px-2.5 py-2 hover:bg-black/5">
         <Pill tone={tone} mono>
           subagent
         </Pill>

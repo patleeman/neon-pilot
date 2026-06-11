@@ -89,6 +89,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['toolBlock.toggleFirst', 'toolBlock.canToggleFirst'],
   ['traceCluster.toggleFirst', 'traceCluster.canToggleFirst'],
   ['thinkingBlock.toggleFirst', 'thinkingBlock.canToggleFirst'],
+  ['subagentBlock.toggleFirst', 'subagentBlock.canToggleFirst'],
   ['messageAction.copyFirst', 'messageAction.canCopyFirst'],
   ['messageAction.editFirst', 'messageAction.canEditFirst'],
   ['messageAction.rewindFirst', 'messageAction.canRewindFirst'],
