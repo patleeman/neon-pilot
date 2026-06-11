@@ -28,7 +28,7 @@ const inputRoot = process.argv[2] ? resolve(process.argv[2]) : repoRoot;
 const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'Contents', 'Resources') : null;
 const directExtensionRoot = !packagedAppResourcesRoot && existsSync(join(inputRoot, 'extension.json')) ? inputRoot : null;
 const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
-const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
+const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows', 'system-knowledge']);
 
 if (packagedAppResourcesRoot) {
   Object.defineProperty(process, 'resourcesPath', {

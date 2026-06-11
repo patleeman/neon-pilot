@@ -72,9 +72,9 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - States: bundled system extension, installed user extension, invalid manifest, missing build artifact, action failure.
 - Skills: `skills-and-capabilities`, `local-extension-development`.
 
-### `/knowledge` and knowledge rail/detail (`system-knowledge`)
+### `/knowledge` and knowledge rail/detail (`system-knowledge`, installable)
 
-- Nav item: Knowledge.
+- Nav item: Knowledge after installation.
 - Views: Knowledge page, Knowledge left-sidebar file browser, Knowledge tree tab-local rail, Knowledge file workbench detail.
 - Actions: `readState`, `updateState`, `sync`, `knowledgeListFiles`, `knowledgeTree`, `knowledgeReadFile`, `knowledgeWriteFile`, `knowledgeCreateFolder`, `knowledgeDeleteFile`, `knowledgeRename`, `knowledgeMove`, `knowledgeBacklinks`, `knowledgeSearch`, `knowledgeUploadImage`, `knowledgeImportUrl`, `resolvePromptReferences`.
 - Prompt reference provider: `knowledge-files`.

@@ -4,7 +4,6 @@
   "requiredExtensions": [
     "system-extension-manager",
     "system-artifacts",
-    "system-knowledge",
     "system-settings",
     "system-automations",
     "system-conversation-tools",
@@ -29,8 +28,8 @@
     }
   ],
   "registryMinimums": {
-    "routes": 7,
-    "surfaces": 10,
+    "routes": 6,
+    "surfaces": 6,
     "composerShelves": 2,
     "composerControls": 2,
     "composerInputTools": 1,
@@ -43,11 +42,6 @@
       "extensionId": "system-extension-manager",
       "path": "/extensions",
       "text": ["Extensions"]
-    },
-    {
-      "extensionId": "system-knowledge",
-      "path": "/knowledge",
-      "text": ["Knowledge"]
     },
     {
       "extensionId": "system-settings",
@@ -75,7 +69,7 @@
       "extensionId": "system-extension-manager",
       "actionId": "listExtensions",
       "input": {},
-      "text": ["system-extension-manager", "system-knowledge"]
+      "text": ["system-extension-manager"]
     },
     {
       "extensionId": "system-extension-manager",
@@ -88,12 +82,6 @@
       "actionId": "getState",
       "input": { "conversationId": "release-golden-smoke" },
       "text": ["items"]
-    },
-    {
-      "extensionId": "system-knowledge",
-      "actionId": "knowledgeListFiles",
-      "input": {},
-      "text": ["ok"]
     },
     {
       "extensionId": "system-dynamic-workflows",

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "system-knowledge",
   "name": "Knowledge",
-  "packageType": "system",
+  "packageType": "user",
   "description": "Browse and edit knowledge base files beside the active conversation.",
   "version": "0.1.0",
   "frontend": {

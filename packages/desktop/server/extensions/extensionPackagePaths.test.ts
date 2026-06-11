@@ -54,6 +54,7 @@ describe('extension package paths', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const bundledRoot = join(tempRoot, 'extensions');
     const installablePackageRoot = writeExtension(bundledRoot, 'system-dynamic-workflows');
+    const knowledgePackageRoot = writeExtension(bundledRoot, 'system-knowledge');
     const bundledPackageRoot = writeExtension(bundledRoot, 'system-settings');
 
     Object.defineProperty(process, 'resourcesPath', {
@@ -65,6 +66,7 @@ describe('extension package paths', () => {
     try {
       const paths = listExtensionPackagePaths();
       expect(paths).not.toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: installablePackageRoot })]));
+      expect(paths).not.toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: knowledgePackageRoot })]));
       expect(paths).toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: bundledPackageRoot, source: 'bundled' })]));
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });

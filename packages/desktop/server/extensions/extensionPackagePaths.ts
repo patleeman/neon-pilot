@@ -9,7 +9,7 @@ export interface ExtensionPackagePath {
   source: 'bundled' | 'external';
 }
 
-const DEFAULT_INSTALLABLE_EXTENSION_IDS = new Set(['system-dynamic-workflows']);
+const DEFAULT_INSTALLABLE_EXTENSION_IDS = new Set(['system-dynamic-workflows', 'system-knowledge']);
 
 function resolveExplicitRepoRoot(): string | null {
   const repoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
