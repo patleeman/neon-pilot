@@ -12,7 +12,7 @@ const outputPath = resolve(repoRoot, 'docs/cli-reference.md');
 const check = process.argv.includes('--check');
 
 function runCli(args) {
-  const result = spawnSync(tsxBin, ['--eval', `import(${JSON.stringify(cliSource)}).then((module) => module.main(${JSON.stringify(args)}))`], {
+  const result = spawnSync(tsxBin, ['--eval', oneShotCliEval(args)], {
     cwd: repoRoot,
     encoding: 'utf-8',
     timeout: 60_000,
@@ -22,6 +22,20 @@ function runCli(args) {
     throw new Error(result.stderr || result.stdout || `neon-pilot ${args.join(' ')} exited with ${result.status}`);
   }
   return result.stdout;
+}
+
+function oneShotCliEval(args) {
+  return [
+    `import(${JSON.stringify(cliSource)})`,
+    `  .then(async (module) => {`,
+    `    await module.main(${JSON.stringify(args)});`,
+    `    process.exit(process.exitCode ?? 0);`,
+    `  })`,
+    `  .catch((error) => {`,
+    `    console.error(error instanceof Error ? error.stack || error.message : String(error));`,
+    `    process.exit(1);`,
+    `  });`,
+  ].join('\n');
 }
 
 function renderCommand(command) {

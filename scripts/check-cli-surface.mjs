@@ -1,15 +1,16 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S tsx
 
-import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const repoRoot = resolve(new URL('..', import.meta.url).pathname);
-const tsxBin = resolve(repoRoot, 'node_modules/.bin/tsx');
 const cliSource = pathToFileURL(resolve(repoRoot, 'packages/desktop/server/protocolCli.ts')).href;
+const tempRoot = mkdtempSync('/tmp/np-cli-');
 const repeat = readRepeat(process.argv.slice(2));
 const failures = [];
+const { runProtocolCli } = await import(cliSource);
+const { disposeExtensionBackendWorkers } = await import(pathToFileURL(resolve(repoRoot, 'packages/desktop/server/extensions/extensionBackend.ts')).href);
 
 function readRepeat(args) {
   const index = args.findIndex((arg) => arg === '--repeat' || arg.startsWith('--repeat='));
@@ -19,20 +20,66 @@ function readRepeat(args) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
-function runCli(args, options = {}) {
-  const result = spawnSync(tsxBin, ['--eval', `import(${JSON.stringify(cliSource)}).then((module) => module.main(${JSON.stringify(args)}))`], {
-    cwd: repoRoot,
-    encoding: 'utf-8',
-    timeout: options.timeoutMs ?? 30_000,
-    env: { ...process.env, NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT || repoRoot, NEON_PILOT_FORCE_SOURCE_CLI: '1' },
+async function runCli(args) {
+  const previousCwd = process.cwd();
+  const previousEnv = {
+    NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT,
+    NEON_PILOT_STATE_ROOT: process.env.NEON_PILOT_STATE_ROOT,
+    NEON_PILOT_CONFIG_ROOT: process.env.NEON_PILOT_CONFIG_ROOT,
+    NEON_PILOT_RUNTIME_CHANNEL: process.env.NEON_PILOT_RUNTIME_CHANNEL,
+    NEON_PILOT_FORCE_SOURCE_CLI: process.env.NEON_PILOT_FORCE_SOURCE_CLI,
+  };
+  const stdoutWrite = process.stdout.write;
+  const stderrWrite = process.stderr.write;
+  let stdout = '';
+  let stderr = '';
+  process.chdir(repoRoot);
+  process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+  process.env.NEON_PILOT_STATE_ROOT = join(tempRoot, 'state');
+  process.env.NEON_PILOT_CONFIG_ROOT = join(tempRoot, 'config');
+  process.env.NEON_PILOT_RUNTIME_CHANNEL = 'test';
+  process.env.NEON_PILOT_FORCE_SOURCE_CLI = '1';
+  process.stdout.write = ((chunk, encoding, callback) => {
+    stdout += typeof chunk === 'string' ? chunk : chunk.toString(typeof encoding === 'string' ? encoding : 'utf8');
+    if (typeof encoding === 'function') encoding();
+    if (typeof callback === 'function') callback();
+    return true;
   });
+  process.stderr.write = ((chunk, encoding, callback) => {
+    stderr += typeof chunk === 'string' ? chunk : chunk.toString(typeof encoding === 'string' ? encoding : 'utf8');
+    if (typeof encoding === 'function') encoding();
+    if (typeof callback === 'function') callback();
+    return true;
+  });
+  let status = 1;
+  let error;
+  try {
+    status = await runProtocolCli(args);
+  } catch (caught) {
+    error = caught;
+  } finally {
+    process.stdout.write = stdoutWrite;
+    process.stderr.write = stderrWrite;
+    process.chdir(previousCwd);
+    restoreEnv(previousEnv);
+  }
   return {
     args,
-    status: result.status ?? 1,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-    error: result.error,
+    status,
+    stdout,
+    stderr,
+    error,
   };
+}
+
+function restoreEnv(previousEnv) {
+  for (const [key, value] of Object.entries(previousEnv)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
 }
 
 function assert(condition, message) {
@@ -163,18 +210,18 @@ function hasField(value, field) {
   return true;
 }
 
-function runContractSmoke(command, iteration) {
+async function runContractSmoke(command, iteration) {
   if (command.requiresApp === true) return;
   const smoke = command.smoke;
   if (!isRecord(smoke) || !Array.isArray(smoke.argv) || smoke.argv.length === 0) return;
   const label = `iteration ${iteration}: smoke ${command.command}`;
-  const human = runCli(smoke.argv);
+  const human = await runCli(smoke.argv);
   assertCliOk(human, label);
   for (const expected of smoke.expectHumanIncludes ?? []) {
     assert(human.stdout.includes(expected), `${label} human output did not include ${JSON.stringify(expected)}.`);
   }
   if (!(command.outputModes ?? []).includes('json')) return;
-  const json = runCli([...smoke.argv, '--json']);
+  const json = await runCli([...smoke.argv, '--json']);
   assertCliOk(json, `${label} --json`);
   const parsed = parseJson(json.stdout, `${label} --json`);
   for (const field of smoke.expectJsonFields ?? []) {
@@ -182,7 +229,7 @@ function runContractSmoke(command, iteration) {
   }
 }
 
-function runDryRunSmoke(command, iteration) {
+async function runDryRunSmoke(command, iteration) {
   if (!command.supportsDryRun) return;
   const label = `iteration ${iteration}: dry-run ${command.command}`;
   const argv = [
@@ -191,10 +238,10 @@ function runDryRunSmoke(command, iteration) {
     ...(sampleRequiredFlags(command.flagsSchema) ?? []),
     '--dry-run',
   ];
-  const human = runCli(argv);
+  const human = await runCli(argv);
   assertCliOk(human, label);
   assert(human.stdout.includes('Dry run:'), `${label} did not print dry-run human output.`);
-  const json = runCli([...argv, '--json']);
+  const json = await runCli([...argv, '--json']);
   assertCliOk(json, `${label} --json`);
   const parsed = parseJson(json.stdout, `${label} --json`);
   assert(parsed?.dryRun === true, `${label} --json did not set dryRun=true.`);
@@ -228,53 +275,59 @@ function sampleFlagValue(flag, schema) {
   return 'sample-value';
 }
 
-function smokeCli(iteration) {
+async function smokeCli(iteration) {
   const label = `iteration ${iteration}`;
-  const help = runCli(['--help']);
+  const help = await runCli(['--help']);
   assertCliOk(help, `${label}: neon-pilot --help`);
   assert(help.stdout.includes('Usage: neon-pilot <command> [args]'), `${label}: --help did not print usage.`);
 
-  const commandList = runCli(['commands']);
+  const commandList = await runCli(['commands']);
   assertCliOk(commandList, `${label}: neon-pilot commands`);
   assert(commandList.stdout.startsWith('Neon Pilot commands:'), `${label}: commands did not print human output.`);
 
-  const commandsJson = runCli(['commands', '--json']);
+  const commandsJson = await runCli(['commands', '--json']);
   assertCliOk(commandsJson, `${label}: neon-pilot commands --json`);
   const parsed = parseJson(commandsJson.stdout, `${label}: commands --json`);
   const commands = Array.isArray(parsed?.commands) ? parsed.commands : [];
   assert(commands.length > 0, `${label}: commands --json returned no commands.`);
 
-  const cliStatus = runCli(['cli', 'status']);
+  const cliStatus = await runCli(['cli', 'status']);
   assertCliOk(cliStatus, `${label}: neon-pilot cli status`);
   assert(cliStatus.stdout.includes('Neon Pilot CLI:'), `${label}: cli status did not print human output.`);
 
-  const cliStatusJson = runCli(['cli', 'status', '--json']);
+  const cliStatusJson = await runCli(['cli', 'status', '--json']);
   assertCliOk(cliStatusJson, `${label}: neon-pilot cli status --json`);
   parseJson(cliStatusJson.stdout, `${label}: cli status --json`);
 
   for (const command of commands) {
     const commandPath = typeof command.command === 'string' ? command.command : '';
     if (!commandPath) continue;
-    const commandHelp = runCli(['help', ...commandPath.split(/\s+/)]);
+    const commandHelp = await runCli(['help', ...commandPath.split(/\s+/)]);
     assertCliOk(commandHelp, `${label}: neon-pilot help ${commandPath}`);
     assert(commandHelp.stdout.includes('Usage: neon-pilot '), `${label}: help for "${commandPath}" did not include usage.`);
     if (commandHelp.stdout.includes('Contract:')) {
       assert(commandHelp.stdout.includes('output='), `${label}: help for "${commandPath}" contract did not include output modes.`);
     }
-    runContractSmoke(command, iteration);
-    runDryRunSmoke(command, iteration);
+    await runContractSmoke(command, iteration);
+    await runDryRunSmoke(command, iteration);
   }
 
   return commands;
 }
 
-const manifestCommands = collectManifestCliCommands();
-validateManifestCliCommands(manifestCommands);
 let lastRuntimeCommands = [];
-for (let iteration = 1; iteration <= repeat; iteration += 1) {
-  lastRuntimeCommands = smokeCli(iteration);
+let manifestCommands = [];
+try {
+  manifestCommands = collectManifestCliCommands();
+  validateManifestCliCommands(manifestCommands);
+  for (let iteration = 1; iteration <= repeat; iteration += 1) {
+    lastRuntimeCommands = await smokeCli(iteration);
+  }
+  validateRuntimeCommands(lastRuntimeCommands, manifestCommands);
+} finally {
+  await disposeExtensionBackendWorkers();
+  rmSync(tempRoot, { recursive: true, force: true });
 }
-validateRuntimeCommands(lastRuntimeCommands, manifestCommands);
 
 if (failures.length > 0) {
   console.error(`CLI surface check failed (${failures.length} issue${failures.length === 1 ? '' : 's'}):`);

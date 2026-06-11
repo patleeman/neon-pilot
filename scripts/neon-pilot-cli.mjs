@@ -30,7 +30,22 @@ const cliArgs = process.argv.slice(2);
 const command = canUseBuiltCli() ? process.execPath : tsxPath;
 const args = canUseBuiltCli()
   ? [cliDistPath, ...cliArgs]
-  : ['--eval', `import(${JSON.stringify(pathToFileURL(cliSourcePath).href)}).then((module) => module.main(${JSON.stringify(cliArgs)}))`];
+  : ['--eval', oneShotSourceCliEval(cliArgs)];
+
+function oneShotSourceCliEval(args) {
+  const cliSourceUrl = pathToFileURL(cliSourcePath).href;
+  return [
+    `import(${JSON.stringify(cliSourceUrl)})`,
+    `  .then(async (module) => {`,
+    `    await module.main(${JSON.stringify(args)});`,
+    `    process.exit(process.exitCode ?? 0);`,
+    `  })`,
+    `  .catch((error) => {`,
+    `    console.error(error instanceof Error ? error.stack || error.message : String(error));`,
+    `    process.exit(1);`,
+    `  });`,
+  ].join('\n');
+}
 
 const child = spawn(command, args, {
   stdio: 'inherit',

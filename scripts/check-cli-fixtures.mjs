@@ -13,7 +13,7 @@ const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-cli-fixtures-'));
 const failures = [];
 
 function runCli(args, options = {}) {
-  const result = spawnSync(tsxBin, ['--eval', `import(${JSON.stringify(cliSource)}).then((module) => module.main(${JSON.stringify(args)}))`], {
+  const result = spawnSync(tsxBin, ['--eval', oneShotCliEval(args)], {
     cwd: repoRoot,
     encoding: 'utf-8',
     timeout: options.timeoutMs ?? 30_000,
@@ -33,6 +33,20 @@ function runCli(args, options = {}) {
     stderr: result.stderr ?? '',
     error: result.error,
   };
+}
+
+function oneShotCliEval(args) {
+  return [
+    `import(${JSON.stringify(cliSource)})`,
+    `  .then(async (module) => {`,
+    `    await module.main(${JSON.stringify(args)});`,
+    `    process.exit(process.exitCode ?? 0);`,
+    `  })`,
+    `  .catch((error) => {`,
+    `    console.error(error instanceof Error ? error.stack || error.message : String(error));`,
+    `    process.exit(1);`,
+    `  });`,
+  ].join('\n');
 }
 
 function assert(condition, message) {
