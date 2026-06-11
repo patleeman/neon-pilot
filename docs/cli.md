@@ -17,6 +17,14 @@ neon-pilot help conversations run-turn
 ```
 
 CLI output is human-first. Commands should return `{ text }` or `{ message }` when they can explain the result directly, and callers use `--json` when they need structured output for automation.
+Global flags are shell-owned and work across core and extension commands:
+
+```bash
+neon-pilot commands --quiet
+neon-pilot doctor --verbose
+neon-pilot paths --json --no-color
+```
+
 Errors are human-readable by default and structured under `--json`:
 
 ```json
@@ -60,6 +68,22 @@ NEON_PILOT_EXTENSION_HOST_TOKEN
 
 If no running app is discoverable, built-in commands such as `neon-pilot cli status` still work; extension-contributed commands need the live extension host.
 
+## Core Commands
+
+Core owns the CLI shell and offline runtime inspection commands:
+
+```bash
+neon-pilot help
+neon-pilot commands
+neon-pilot schema --json
+neon-pilot doctor
+neon-pilot paths --json
+neon-pilot version
+neon-pilot cli status
+```
+
+Aliases are part of the command contract. Current core aliases include `ls` for `commands`, `commands schema` for `schema`, `runtime doctor`, `runtime paths`, and `-v`/`--version` for `version`.
+
 ## First-Party Commands
 
 ```bash
@@ -95,8 +119,17 @@ The CLI shell is core-owned: parsing, command matching, help, command discovery,
 - `streaming` and `smoke` metadata when applicable
 
 Mutating extension commands must support `--dry-run`. The core shell handles declared dry-runs before invoking the backend action, so dry-run checks are no-side-effect by construction.
+The shell validates declared `argsSchema` and `flagsSchema` before dispatch. Unknown flags, missing required positionals, unsupported `--format` values, and unsupported `--dry-run` fail before the extension action runs.
+
+Destructive commands require confirmation. In interactive terminals the shell prompts the user; in non-interactive use callers must pass `--yes`. Use `--dry-run` first when a destructive command supports it.
 
 Streaming commands should document `--follow`, `--format text|json|jsonl`, and interrupt behavior. The shell accepts `--format json` and `--format jsonl` only when the command contract declares those output modes.
+For `jsonl`, each line is an event object:
+
+```json
+{"event":"update","data":{"content":[{"type":"text","text":"partial"}]}}
+{"event":"result","data":{"accepted":true}}
+```
 
 ## Agent Bootstrap
 
@@ -115,9 +148,12 @@ Run the CLI surface audit after changing command parsing, command metadata, exte
 ```bash
 pnpm run check:cli:surface
 pnpm run check:cli:surface -- --repeat 3
+pnpm run check:cli:fixtures
 pnpm run docs:cli
 pnpm run check:cli:docs
+pnpm run check:cli
 ```
 
 The audit invokes the real `neon-pilot` command, validates human help for every discovered command, checks JSON mode for discovery/status, and confirms system extension CLI contributions are discoverable.
+The fixture check runs the source CLI with a temporary state/config root and verifies offline built-ins, quiet output, and structured JSON errors without depending on the user's live app state.
 The generated [CLI reference](cli-reference.md) is derived from `neon-pilot commands --json`; update it with `pnpm run docs:cli` whenever command contracts change.

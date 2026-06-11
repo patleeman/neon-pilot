@@ -66,6 +66,7 @@ interface ExtensionBackendWorkerImportClient {
     args: unknown[],
     options?: ExtensionBackendWorkerExportOptions,
   ): Promise<unknown>;
+  dispose?(): Promise<void>;
 }
 
 type ExtensionBackendWorkerExportOptions = {
@@ -95,6 +96,7 @@ export interface ExtensionBackendWorkerExportRunner extends ExtensionBackendRunn
     args: unknown[],
     options?: ExtensionBackendWorkerExportOptions,
   ): Promise<T>;
+  dispose?(): Promise<void>;
 }
 
 export function extensionBackendOperation(
@@ -263,6 +265,9 @@ export function createWorkerImportExtensionBackendRunner(
         { ...operation, exportName: operation.exportName ?? exportName },
         () => client.runExport(extensionId, compiled, exportName, args, options) as Promise<unknown>,
       ) as Promise<T>;
+    },
+    dispose() {
+      return client.dispose?.() ?? Promise.resolve();
     },
   };
 }

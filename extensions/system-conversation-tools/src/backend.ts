@@ -542,6 +542,25 @@ function toolResult(action: string, details: unknown) {
   };
 }
 
+function conversationRunTurnEventText(event: unknown): string {
+  const record = event && typeof event === 'object' && !Array.isArray(event) ? (event as Record<string, unknown>) : {};
+  if (record.type === 'text_delta' && typeof record.delta === 'string') return record.delta;
+  const assistantMessageEvent =
+    record.assistantMessageEvent && typeof record.assistantMessageEvent === 'object' && !Array.isArray(record.assistantMessageEvent)
+      ? (record.assistantMessageEvent as Record<string, unknown>)
+      : {};
+  if (assistantMessageEvent.type === 'text_delta' && typeof assistantMessageEvent.delta === 'string') return assistantMessageEvent.delta;
+  return '';
+}
+
+function emitConversationRunTurnCliEvent(ctx: ExtensionBackendContext, event: unknown): void {
+  const text = conversationRunTurnEventText(event);
+  ctx.toolContext?.onUpdate?.({
+    content: text ? [{ type: 'text', text }] : [],
+    details: { event },
+  });
+}
+
 export async function conversationTool(input: unknown, ctx: ExtensionBackendContext) {
   input = normalizeConversationCliInput(input);
   const toolCtx = ctx.toolContext;
@@ -628,6 +647,9 @@ export async function conversationTool(input: unknown, ctx: ExtensionBackendCont
           ...conversationSendOptions(payload),
           ...(optionalString(payload.cwd) ? { cwd: optionalString(payload.cwd) } : {}),
           ...(optionalPositiveNumber(payload.timeoutMs) ? { timeoutMs: optionalPositiveNumber(payload.timeoutMs) } : {}),
+          ...(payload.follow === true || optionalString(payload.format) === 'jsonl'
+            ? { onEvent: (event: unknown) => emitConversationRunTurnCliEvent(ctx, event) }
+            : {}),
         }),
       );
 

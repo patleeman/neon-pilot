@@ -1,7 +1,10 @@
-import { resolve as resolvePath, sep } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join, resolve as resolvePath, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { extractMentionIds } from '../knowledge/promptReferences.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
+import { setDefaultExtensionBackendWorkerUrl } from './extensionBackendWorkerClient.js';
 import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
 import type {
   ExtensionHostActionInvokeResult,
@@ -168,6 +171,14 @@ export function getExtensionHostClient(): ExtensionHostClient {
     throw new Error('Extension host client is not configured. Product runtime must connect to the extension host RPC process.');
   }
   return configuredExtensionHostClient;
+}
+
+export function createCliFallbackExtensionHostClient(): ExtensionHostClient {
+  const builtWorkerPath = join(process.cwd(), 'packages/desktop/server/dist/extensions/extensionBackendWorker.js');
+  if (existsSync(builtWorkerPath)) {
+    setDefaultExtensionBackendWorkerUrl(pathToFileURL(builtWorkerPath));
+  }
+  return createInProcessExtensionHostClient();
 }
 
 export function createInProcessExtensionHostClient(): ExtensionHostClient {

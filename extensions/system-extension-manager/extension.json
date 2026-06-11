@@ -839,6 +839,7 @@
         "command": "extensions paths",
         "description": "Read extension search paths.",
         "action": "manageExtension",
+        "inputAction": "readSearchPaths",
         "jsonDefault": true,
         "usage": "extensions paths [--json]",
         "examples": [
@@ -884,6 +885,7 @@
         "command": "extensions sources",
         "description": "Read extension catalog sources.",
         "action": "manageExtension",
+        "inputAction": "readExtensionSources",
         "jsonDefault": true,
         "usage": "extensions sources [--json]",
         "examples": [

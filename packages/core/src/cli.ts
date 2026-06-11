@@ -56,6 +56,9 @@ export interface NeonPilotCliInvocation<T extends NeonPilotCliCommandDefinition 
   args: string[];
   flags: Record<string, string | boolean>;
   json: boolean;
+  quiet: boolean;
+  verbose: boolean;
+  color: boolean;
   cwd: string;
   stdinText?: string;
 }
@@ -79,12 +82,37 @@ export interface NeonPilotCliErrorResult {
   };
 }
 
+export interface NeonPilotCliValidationResult {
+  ok: boolean;
+  errors: string[];
+}
+
+export interface NeonPilotCliGlobalOptions {
+  json: boolean;
+  quiet: boolean;
+  verbose: boolean;
+  color: boolean;
+}
+
 export function wantsJson(args: string[]): boolean {
   return args.includes('--json');
 }
 
 export function stripJsonFlag(args: string[]): string[] {
   return args.filter((arg) => arg !== '--json');
+}
+
+export function stripCliGlobalFlags(args: string[]): string[] {
+  return args.filter((arg) => !['--json', '--quiet', '--verbose', '--no-color'].includes(arg));
+}
+
+export function readCliGlobalOptions(args: string[]): NeonPilotCliGlobalOptions {
+  return {
+    json: args.includes('--json'),
+    quiet: args.includes('--quiet'),
+    verbose: args.includes('--verbose'),
+    color: !args.includes('--no-color'),
+  };
 }
 
 export function parseCliFlags(args: string[]): NeonPilotCliParsedArgs {
@@ -169,8 +197,8 @@ export async function buildCliInvocation<T extends NeonPilotCliCommandDefinition
   rawArgs: string[],
   options?: { cwd?: string; stdin?: AsyncIterable<Buffer | string> },
 ): Promise<NeonPilotCliInvocation<T>> {
-  const json = wantsJson(rawArgs);
-  const cleanArgs = stripJsonFlag(rawArgs);
+  const globals = readCliGlobalOptions(rawArgs);
+  const cleanArgs = stripCliGlobalFlags(rawArgs);
   const parsed = parseCliFlags(cleanArgs);
   const stdinText = await readCliStdinIfRequested(parsed.flags, options?.stdin);
   return {
@@ -178,7 +206,10 @@ export async function buildCliInvocation<T extends NeonPilotCliCommandDefinition
     rawArgv: cleanArgs,
     args: parsed.positional,
     flags: parsed.flags,
-    json,
+    json: globals.json,
+    quiet: globals.quiet,
+    verbose: globals.verbose,
+    color: globals.color,
     cwd: options?.cwd ?? process.cwd(),
     ...(stdinText !== undefined ? { stdinText } : {}),
   };
@@ -192,6 +223,30 @@ export function formatCliResult(result: unknown, json: boolean): string {
     if (typeof record.message === 'string') return `${record.message}\n`;
   }
   return `${JSON.stringify(result, null, 2)}\n`;
+}
+
+export function formatCliTable(rows: Array<Record<string, unknown>>, columns: string[]): string {
+  if (rows.length === 0) return '(none)\n';
+  const widths = columns.map((column) =>
+    Math.max(
+      column.length,
+      ...rows.map((row) => {
+        const value = row[column];
+        return value === undefined || value === null ? 0 : String(value).length;
+      }),
+    ),
+  );
+  const renderRow = (row: Record<string, unknown>) =>
+    columns
+      .map((column, index) => {
+        const value = row[column];
+        return String(value === undefined || value === null ? '' : value).padEnd(widths[index] ?? column.length);
+      })
+      .join('  ')
+      .trimEnd();
+  return [`${columns.map((column, index) => column.padEnd(widths[index] ?? column.length)).join('  ').trimEnd()}`, ...rows.map(renderRow)].join(
+    '\n',
+  ) + '\n';
 }
 
 export function formatCliError(
@@ -238,6 +293,12 @@ export function renderCliUsage(options: NeonPilotCliHelpOptions = {}): string {
     '',
     'Examples:',
     ...examples.map((example) => `  ${example}`),
+    '',
+    'Global flags:',
+    '  --json       Print structured JSON when supported',
+    '  --quiet      Suppress non-essential human output',
+    '  --verbose    Include diagnostic detail in human output',
+    '  --no-color   Disable ANSI color output',
   ].join('\n');
 }
 
@@ -288,6 +349,105 @@ export function actionFromCliCommand(command: string): string | undefined {
   return commandTokens(command).at(-1);
 }
 
+export function buildCliCommandSchema(definitions: NeonPilotCliCommandDefinition[]): Record<string, unknown> {
+  return {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    title: 'Neon Pilot CLI command contracts',
+    type: 'object',
+    commands: [...definitions]
+      .sort((a, b) => a.command.localeCompare(b.command))
+      .map((definition) => ({
+        id: definition.id,
+        command: definition.command,
+        aliases: definition.aliases ?? [],
+        source: definition.source ?? 'extension',
+        extensionId: definition.extensionId,
+        description: definition.description ?? definition.title ?? '',
+        usage: definition.usage ?? definition.command,
+        mode: definition.mode ?? 'write',
+        requiresApp: definition.requiresApp !== false,
+        destructive: definition.destructive === true,
+        idempotent: definition.idempotent === true,
+        startsBackgroundWork: definition.startsBackgroundWork === true,
+        supportsDryRun: definition.supportsDryRun === true,
+        outputModes: definition.outputModes ?? ['text'],
+        argsSchema: definition.argsSchema ?? {},
+        flagsSchema: definition.flagsSchema ?? {},
+        streaming: definition.streaming,
+      })),
+  };
+}
+
+export function validateCliInvocation(invocation: NeonPilotCliInvocation): NeonPilotCliValidationResult {
+  const errors: string[] = [];
+  const argsSchema = invocation.definition.argsSchema;
+  const flagsSchema = invocation.definition.flagsSchema;
+  validateArgsSchema(argsSchema, invocation.args, errors);
+  validateFlagsSchema(flagsSchema, invocation.flags, errors);
+  return { ok: errors.length === 0, errors };
+}
+
+function validateArgsSchema(schema: unknown, args: string[], errors: string[]): void {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return;
+  const record = schema as Record<string, unknown>;
+  if (typeof record.minItems === 'number' && args.length < record.minItems) {
+    errors.push(`Expected at least ${record.minItems} positional argument${record.minItems === 1 ? '' : 's'}.`);
+  }
+  if (typeof record.maxItems === 'number' && args.length > record.maxItems) {
+    errors.push(`Expected at most ${record.maxItems} positional argument${record.maxItems === 1 ? '' : 's'}.`);
+  }
+  if (record.items === false && args.length > 0) {
+    errors.push('This command does not accept positional arguments.');
+  }
+  const prefixItems = Array.isArray(record.prefixItems) ? record.prefixItems : [];
+  for (let index = 0; index < Math.min(prefixItems.length, args.length); index += 1) {
+    validatePrimitiveSchema(prefixItems[index], args[index], `argument ${index + 1}`, errors);
+  }
+  if (record.items && typeof record.items === 'object' && !Array.isArray(record.items)) {
+    for (let index = prefixItems.length; index < args.length; index += 1) {
+      validatePrimitiveSchema(record.items, args[index], `argument ${index + 1}`, errors);
+    }
+  }
+}
+
+function validateFlagsSchema(schema: unknown, flags: Record<string, string | boolean>, errors: string[]): void {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return;
+  const record = schema as Record<string, unknown>;
+  const properties =
+    record.properties && typeof record.properties === 'object' && !Array.isArray(record.properties)
+      ? (record.properties as Record<string, unknown>)
+      : {};
+  if (record.additionalProperties === false) {
+    for (const key of Object.keys(flags)) {
+      if (!(key in properties)) errors.push(`Unknown flag --${key}.`);
+    }
+  }
+  const required = Array.isArray(record.required) ? record.required.filter((item): item is string => typeof item === 'string') : [];
+  for (const key of required) {
+    if (!(key in flags)) errors.push(`Missing required flag --${key}.`);
+  }
+  for (const [key, value] of Object.entries(flags)) {
+    validatePrimitiveSchema(properties[key], value, `--${key}`, errors);
+  }
+}
+
+function validatePrimitiveSchema(schema: unknown, value: unknown, label: string, errors: string[]): void {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return;
+  const record = schema as Record<string, unknown>;
+  if (Array.isArray(record.enum) && !record.enum.includes(value)) {
+    errors.push(`${label} must be one of: ${record.enum.map(String).join(', ')}.`);
+  }
+  if (record.type === 'boolean' && typeof value !== 'boolean') {
+    errors.push(`${label} must be a boolean flag.`);
+  }
+  if (record.type === 'string' && typeof value !== 'string') {
+    errors.push(`${label} requires a value.`);
+  }
+  if (record.minLength === 1 && typeof value === 'string' && !value.trim()) {
+    errors.push(`${label} must not be empty.`);
+  }
+}
+
 export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefinition>(definition: T): T {
   const mode = definition.mode ?? inferCliCommandMode(definition.command);
   const requiresApp = definition.requiresApp ?? inferCliCommandRequiresApp(definition.command);
@@ -296,15 +456,19 @@ export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefin
     (mode === 'write' || mode === 'destructive' || mode === 'background' || definition.command === 'conversations run-turn');
   const usage = definition.usage ?? inferCliCommandUsage(definition.command);
   const outputModes = definition.outputModes ?? (mode === 'streaming' ? ['text', 'json', 'jsonl'] : ['text', 'json']);
+  const destructive = definition.destructive ?? mode === 'destructive';
+  const flagsSchema = withCliShellFlags(definition.flagsSchema ?? inferCliFlagsSchema(definition.command, { supportsDryRun, mode }), {
+    destructive,
+  });
   return {
     ...definition,
     usage,
     examples: definition.examples ?? [exampleFromCliUsage(usage), `${exampleFromCliUsage(usage)} --json`],
     argsSchema: definition.argsSchema ?? inferCliArgsSchema(definition.command),
-    flagsSchema: definition.flagsSchema ?? inferCliFlagsSchema(definition.command, { supportsDryRun, mode }),
+    flagsSchema,
     mode,
     requiresApp,
-    destructive: definition.destructive ?? mode === 'destructive',
+    destructive,
     idempotent: definition.idempotent ?? mode === 'read',
     startsBackgroundWork: definition.startsBackgroundWork ?? mode === 'background',
     supportsDryRun,
@@ -313,6 +477,20 @@ export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefin
       ? { streaming: definition.streaming ?? { supportsFollow: true, supportsJsonl: outputModes.includes('jsonl'), cancelOnInterruptDefault: false } }
       : {}),
   };
+}
+
+function withCliShellFlags(
+  schema: Record<string, unknown>,
+  options: { destructive: boolean },
+): Record<string, unknown> {
+  const properties =
+    schema.properties && typeof schema.properties === 'object' && !Array.isArray(schema.properties)
+      ? { ...(schema.properties as Record<string, unknown>) }
+      : {};
+  if (options.destructive) {
+    properties.yes = { type: 'boolean', description: 'Confirm a destructive command without an interactive prompt.' };
+  }
+  return { ...schema, properties };
 }
 
 function inferCliCommandMode(command: string): NonNullable<NeonPilotCliCommandDefinition['mode']> {

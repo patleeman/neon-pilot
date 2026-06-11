@@ -13,6 +13,7 @@ import {
   renderCliCommandList,
   renderCliUsage,
   selectCliCommandMatch,
+  validateCliInvocation,
   type NeonPilotCliCommandDefinition,
 } from './cli.js';
 
@@ -82,6 +83,9 @@ describe('core CLI shell helpers', () => {
       args: [],
       flags: { stdin: true, target: 'dev' },
       json: true,
+      quiet: false,
+      verbose: false,
+      color: true,
       cwd: '/repo',
       stdinText: 'secret\n',
     });
@@ -110,5 +114,41 @@ describe('core CLI shell helpers', () => {
       ),
     ).toContain('"recoverable": true');
     expect(formatCliError({ code: 'runtime_error', category: 'runtime_failure', message: 'Boom' }, false)).toBe('Boom\n');
+  });
+
+  it('validates positional and flag schemas before dispatch', () => {
+    const definition: NeonPilotCliCommandDefinition = {
+      id: 'delete',
+      command: 'items delete',
+      argsSchema: { type: 'array', minItems: 1, maxItems: 1, items: { type: 'string', minLength: 1 } },
+      flagsSchema: {
+        type: 'object',
+        properties: {
+          yes: { type: 'boolean' },
+          format: { enum: ['text', 'json'] },
+        },
+        required: ['yes'],
+        additionalProperties: false,
+      },
+    };
+
+    expect(
+      validateCliInvocation({
+        definition,
+        rawArgv: [],
+        args: [],
+        flags: { format: 'jsonl', extra: true },
+        json: false,
+        quiet: false,
+        verbose: false,
+        color: true,
+        cwd: '/repo',
+      }).errors,
+    ).toEqual([
+      'Expected at least 1 positional argument.',
+      'Unknown flag --extra.',
+      'Missing required flag --yes.',
+      '--format must be one of: text, json.',
+    ]);
   });
 });

@@ -28,8 +28,10 @@ const shellHandleCallbacks = new Map<
     onExit?: (event: { code: number | null; signal: string | null }) => void;
   }
 >();
+const conversationRunTurnEventCallbacks = new Map<string, (event: unknown) => void>();
 let nextCapabilityRequestId = 0;
 let nextShellHandleId = 0;
+let nextConversationRunTurnHandleId = 0;
 let nextRouteStreamHandleId = 0;
 const extensionCapabilityScope = new AsyncLocalStorage<{
   extensionId: string;
@@ -105,6 +107,15 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
 function handleCapabilityEvent(event: ExtensionBackendWorkerCapabilityEvent): void {
   for (const handler of (globalThis as ExtensionBackendWorkerGlobal)[EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS] ?? []) {
     handler(event);
+  }
+
+  if (event.capability === 'conversations' && event.operation === 'runTurnEvent') {
+    const input =
+      event.input && typeof event.input === 'object' && !Array.isArray(event.input) ? (event.input as Record<string, unknown>) : null;
+    const handleId = typeof input?.handleId === 'string' ? input.handleId : '';
+    const callback = conversationRunTurnEventCallbacks.get(handleId);
+    if (callback) callback(input?.event);
+    return;
   }
 
   if (event.capability !== 'shell') return;
@@ -268,8 +279,22 @@ function createWorkerBackendContext(
           steer?: boolean;
           images?: Array<{ data: string; mimeType: string; name?: string }>;
           timeoutMs?: number;
+          onEvent?: (event: unknown) => void;
         },
-      ) => callHostCapability(extensionId, 'conversations', 'runTurn', { conversationId, text, ...(options ?? {}) }),
+      ) => {
+        const handleId = options?.onEvent ? `worker-conversation-run-turn-${++nextConversationRunTurnHandleId}` : undefined;
+        if (handleId && options?.onEvent) conversationRunTurnEventCallbacks.set(handleId, options.onEvent);
+        const serializableOptions = { ...(options ?? {}) } as Record<string, unknown>;
+        delete serializableOptions.onEvent;
+        return callHostCapability(extensionId, 'conversations', 'runTurn', {
+          conversationId,
+          text,
+          ...serializableOptions,
+          ...(handleId ? { runTurnEventHandleId: handleId } : {}),
+        }).finally(() => {
+          if (handleId) conversationRunTurnEventCallbacks.delete(handleId);
+        });
+      },
       abort: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'abort', { conversationId }),
       compact: (conversationId: string, customInstructions?: string) =>
         callHostCapability(extensionId, 'conversations', 'compact', {

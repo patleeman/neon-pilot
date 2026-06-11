@@ -164,6 +164,7 @@ function hasField(value, field) {
 }
 
 function runContractSmoke(command, iteration) {
+  if (command.requiresApp === true) return;
   const smoke = command.smoke;
   if (!isRecord(smoke) || !Array.isArray(smoke.argv) || smoke.argv.length === 0) return;
   const label = `iteration ${iteration}: smoke ${command.command}`;

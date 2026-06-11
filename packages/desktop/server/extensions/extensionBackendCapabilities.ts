@@ -379,6 +379,7 @@ function optionalConversationMetadataWhere(
 function dispatchConversationsCapability(
   conversations: ExtensionBackendCapabilityConversations,
   request: ExtensionBackendWorkerCapabilityRequest,
+  emit?: (event: ExtensionBackendWorkerCapabilityEvent) => void,
 ): unknown {
   const input = normalizeRecordInput(request.input, 'Conversations');
 
@@ -546,6 +547,7 @@ function dispatchConversationsCapability(
       throw new Error('Conversation runTurn capability is unavailable.');
     }
     const textDeltas: string[] = [];
+    const eventHandleId = typeof input.runTurnEventHandleId === 'string' ? input.runTurnEventHandleId : '';
     return Promise.resolve(
       conversations.runTurn(
         request.extensionId,
@@ -556,6 +558,15 @@ function dispatchConversationsCapability(
           ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Conversation cwd') } : {}),
           ...(input.timeoutMs !== undefined ? { timeoutMs: requireNumber(input.timeoutMs, 'Conversation runTurn timeoutMs') } : {}),
           onEvent(event: unknown) {
+            if (eventHandleId) {
+              emit?.({
+                kind: 'capabilityEvent',
+                extensionId: request.extensionId,
+                capability: 'conversations',
+                operation: 'runTurnEvent',
+                input: { handleId: eventHandleId, event },
+              });
+            }
             const record = typeof event === 'object' && event !== null ? (event as Record<string, unknown>) : undefined;
             if (!record) return;
             if (record.type === 'text_delta' && typeof record.delta === 'string') {
@@ -1719,7 +1730,7 @@ export function createExtensionBackendCapabilityDispatcher(
       return dispatchBrowserCapability(request);
     }
     if (request.capability === 'conversations') {
-      return dispatchConversationsCapability(conversations, request);
+      return dispatchConversationsCapability(conversations, request, emit);
     }
     if (request.capability === 'events') {
       return dispatchEventsCapability(events, request);

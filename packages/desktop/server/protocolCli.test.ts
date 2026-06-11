@@ -143,22 +143,41 @@ describe('protocol CLI', () => {
   it('prints stable human help for the core shell', async () => {
     await expect(runProtocolCli(['help'])).resolves.toBe(0);
 
-    expect(stdoutWrite).toHaveBeenCalledWith(`Usage: neon-pilot <command> [args]
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('schema [--json]               Export CLI command contracts'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('doctor [--json]               Check CLI/runtime readiness'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('--quiet      Suppress non-essential human output'));
+  });
 
-Neon Pilot command line administration for the local runtime and enabled extensions.
+  it('supports built-in aliases and runtime introspection commands', async () => {
+    await expect(runProtocolCli(['ls', '--json'])).resolves.toBe(0);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"command": "commands"'));
 
-Built-in commands:
-  commands [--json]             List core and extension CLI commands
-  cli status|install|uninstall  Manage the optional user-shell CLI symlink
-  help [command]                Show help
-  protocol <protocol-id> ...    Invoke a raw extension protocol entrypoint
+    stdoutWrite.mockClear();
+    await expect(runProtocolCli(['runtime', 'paths', '--json'])).resolves.toBe(0);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"stateRoot"'));
 
-Examples:
-  neon-pilot commands
-  neon-pilot help extensions list
-  neon-pilot extensions list
-  neon-pilot protocol acp
-`);
+    stdoutWrite.mockClear();
+    await expect(runProtocolCli(['-v', '--json'])).resolves.toBe(0);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"version"'));
+  });
+
+  it('exports CLI command schemas as JSON', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-settings',
+          surfaceId: 'settings-list',
+          command: 'settings list',
+          action: 'manageSettings',
+          description: 'List settings.',
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['schema', '--json'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"title": "Neon Pilot CLI command contracts"'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('"command": "settings list"'));
   });
 
   it('prints stable human command lists with source ownership', async () => {
@@ -210,6 +229,83 @@ Examples:
 
     expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Dry run: settings set would run'));
+  });
+
+  it('validates contributed command schemas before dispatch', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-settings',
+          surfaceId: 'settings-set',
+          command: 'settings set',
+          action: 'manageSettings',
+          argsSchema: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'string' } },
+          flagsSchema: { type: 'object', properties: {}, additionalProperties: false },
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['settings', 'set', 'conversation.pinnedToolCalls', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"code": "usage_error"'));
+  });
+
+  it('requires --yes for destructive contributed commands in non-interactive mode', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-conversation-tools',
+          surfaceId: 'conversations-delete',
+          command: 'conversations delete',
+          action: 'conversationTool',
+          mode: 'destructive',
+          destructive: true,
+          supportsDryRun: true,
+          argsSchema: { type: 'array', minItems: 1, items: { type: 'string' } },
+          flagsSchema: {
+            type: 'object',
+            properties: { yes: { type: 'boolean' }, 'dry-run': { type: 'boolean' } },
+            additionalProperties: false,
+          },
+        },
+      ],
+    });
+
+    await expect(runProtocolCli(['conversations', 'delete', 'conv-1', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+
+    expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"code": "confirmation_required"'));
+  });
+
+  it('streams contributed command updates as JSONL', async () => {
+    extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
+      cliCommandRegistrations: [
+        {
+          extensionId: 'system-conversation-tools',
+          surfaceId: 'conversations-run-turn',
+          command: 'conversations run-turn',
+          action: 'conversationTool',
+          mode: 'streaming',
+          outputModes: ['text', 'json', 'jsonl'],
+          argsSchema: { type: 'array', minItems: 1, items: { type: 'string' } },
+          flagsSchema: {
+            type: 'object',
+            properties: { text: { type: 'string' }, format: { enum: ['text', 'json', 'jsonl'] }, follow: { type: 'boolean' } },
+            additionalProperties: false,
+          },
+        },
+      ],
+    });
+    extensionHostClient.invokeAction.mockImplementationOnce(async (input) => {
+      input.toolContext?.onUpdate?.({ content: [{ type: 'text', text: 'Hello' }], details: { event: { type: 'text_delta', delta: 'Hello' } } });
+      return { ok: true, result: { accepted: true } };
+    });
+
+    await expect(runProtocolCli(['conversations', 'run-turn', 'conv-1', '--text', 'Go', '--format', 'jsonl', '--follow'])).resolves.toBe(0);
+
+    expect(stdoutWrite).toHaveBeenNthCalledWith(1, expect.stringContaining('"event":"update"'));
+    expect(stdoutWrite).toHaveBeenLastCalledWith(expect.stringContaining('"event":"result"'));
   });
 
   it('dispatches extension-contributed CLI commands through extension actions', async () => {

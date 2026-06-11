@@ -644,6 +644,12 @@ function getWorkerImportBackendRunner(): ReturnType<typeof createWorkerImportExt
   return workerImportBackendRunner;
 }
 
+export async function disposeExtensionBackendWorkers(): Promise<void> {
+  const runner = workerImportBackendRunner;
+  workerImportBackendRunner = undefined;
+  await runner?.dispose?.();
+}
+
 function loadExtensionBackendForHealthCheck(extensionId: string): Promise<ExtensionBackendModule> {
   return getWorkerImportBackendRunner().loadModule(extensionId, resolveInstalledExtensionBackendLoadTarget(extensionId));
 }

@@ -283,7 +283,8 @@
         "smoke": {
           "argv": [
             "conversations",
-            "search"
+            "search",
+            "example"
           ],
           "expectJsonFields": []
         }

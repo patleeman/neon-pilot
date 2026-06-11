@@ -235,7 +235,7 @@
           "additionalProperties": true
         },
         "mode": "read",
-        "requiresApp": false,
+        "requiresApp": true,
         "destructive": false,
         "idempotent": true,
         "startsBackgroundWork": false,
@@ -283,7 +283,7 @@
           "additionalProperties": true
         },
         "mode": "read",
-        "requiresApp": false,
+        "requiresApp": true,
         "destructive": false,
         "idempotent": true,
         "startsBackgroundWork": false,
@@ -324,7 +324,7 @@
           "additionalProperties": true
         },
         "mode": "read",
-        "requiresApp": false,
+        "requiresApp": true,
         "destructive": false,
         "idempotent": true,
         "startsBackgroundWork": false,
@@ -496,7 +496,7 @@
           "additionalProperties": true
         },
         "mode": "read",
-        "requiresApp": false,
+        "requiresApp": true,
         "destructive": false,
         "idempotent": true,
         "startsBackgroundWork": false,
