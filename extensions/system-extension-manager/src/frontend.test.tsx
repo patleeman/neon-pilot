@@ -99,6 +99,16 @@ function createSystemExtension() {
   } as never;
 }
 
+function createRequiredSystemExtension() {
+  return {
+    ...createSystemExtension(),
+    id: 'system-settings',
+    name: 'Settings panels',
+    description: 'Native extension routes for first-party settings panels.',
+    required: true,
+  } as never;
+}
+
 function createSystemExtensionWithoutRowActions() {
   return {
     ...createSystemExtension(),
@@ -246,6 +256,19 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
+  });
+
+  it('separates required platform surfaces from disableable extensions', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createRequiredSystemExtension(), createExtension()]);
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Platform' })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: 'Extensions' }).length).toBeGreaterThan(0);
+    expect(screen.getByText('Settings panels')).toBeTruthy();
+    expect(screen.getByText('Menu Test')).toBeTruthy();
+    expect(screen.getByText('2 installed · 1 enabled · 1 platform')).toBeTruthy();
+    expect(screen.queryByLabelText('Disable Settings panels')).toBeNull();
+    expect(screen.getByLabelText('Disable Menu Test')).toBeTruthy();
   });
 
   it('keeps the extensions table visible when enabling an extension fails', async () => {

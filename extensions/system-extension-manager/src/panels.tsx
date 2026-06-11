@@ -1331,7 +1331,15 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     });
   }, [catalog, extensions, query]);
 
-  const sectionSummary = `${visibleExtensions.length} installed · ${visibleExtensions.filter((extension) => extension.enabled).length} enabled`;
+  const visiblePlatformExtensions = useMemo(() => visibleExtensions.filter(isLocked), [visibleExtensions]);
+  const visibleRegularExtensions = useMemo(() => visibleExtensions.filter((extension) => !isLocked(extension)), [visibleExtensions]);
+  const sectionSummary = [
+    `${visibleExtensions.length} installed`,
+    `${visibleRegularExtensions.filter((extension) => extension.enabled).length} enabled`,
+    visiblePlatformExtensions.length ? `${visiblePlatformExtensions.length} platform` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const renderExtensionActions = (
     extension: ExtensionInstallSummary,
@@ -1396,7 +1404,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     </DataTableActionGroup>
   );
 
-  const renderExtensionRows = (items: ExtensionInstallSummary[]) =>
+  const renderExtensionRows = (items: ExtensionInstallSummary[], options: { showEnablement: boolean }) =>
     items.map((extension) => {
       const route = firstRoute(extension);
       const busy = busyId === extension.id;
@@ -1446,13 +1454,15 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             </span>
           </DataTableCell>
           <DataTableCell className="py-4 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</DataTableCell>
-          <DataTableCell className="whitespace-nowrap py-4">
-            {extension.status === 'invalid' ? (
-              <span className="text-[12px] text-danger">Invalid</span>
-            ) : (
-              <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
-            )}
-          </DataTableCell>
+          {options.showEnablement ? (
+            <DataTableCell className="whitespace-nowrap py-4">
+              {extension.status === 'invalid' ? (
+                <span className="text-[12px] text-danger">Invalid</span>
+              ) : (
+                <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
+              )}
+            </DataTableCell>
+          ) : null}
           <DataTableCell className="w-40 min-w-40 py-4 pr-0 text-right">
             {renderExtensionActions(extension, busy, catalogItem, route)}
           </DataTableCell>
@@ -1460,7 +1470,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       );
     });
 
-  const renderExtensionCards = (items: ExtensionInstallSummary[]) => (
+  const renderExtensionCards = (items: ExtensionInstallSummary[], options: { showEnablement: boolean }) => (
     <div className="divide-y divide-border-subtle border-y border-border-subtle lg:hidden">
       {items.map((extension) => {
         const route = firstRoute(extension);
@@ -1508,15 +1518,17 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
                 {catalogItem.availableVersion ?? catalogItem.version}
               </div>
             ) : null}
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+            <div className={cx('grid gap-3 sm:items-center', options.showEnablement ? 'sm:grid-cols-[minmax(0,1fr)_auto_auto]' : 'sm:grid-cols-[minmax(0,1fr)_auto]')}>
               <div className="min-w-0 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</div>
-              <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-                {extension.status === 'invalid' ? (
-                  <span className="text-[12px] text-danger">Invalid</span>
-                ) : (
-                  <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
-                )}
-              </div>
+              {options.showEnablement ? (
+                <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
+                  {extension.status === 'invalid' ? (
+                    <span className="text-[12px] text-danger">Invalid</span>
+                  ) : (
+                    <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
+                  )}
+                </div>
+              ) : null}
               <div className="flex justify-start sm:justify-end" onClick={(event) => event.stopPropagation()}>
                 {renderExtensionActions(extension, busy, catalogItem, route)}
               </div>
@@ -1527,16 +1539,17 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     </div>
   );
 
-  const renderExtensionTable = (items: ExtensionInstallSummary[]) =>
-    compactExtensionsLayout ? (
-      renderExtensionCards(items)
+  const renderExtensionTable = (items: ExtensionInstallSummary[], options: { showEnablement?: boolean } = {}) => {
+    const showEnablement = options.showEnablement !== false;
+    return compactExtensionsLayout ? (
+      renderExtensionCards(items, { showEnablement })
     ) : (
       <DataTable className="overflow-auto" tableClassName="min-w-[58rem] table-fixed">
         <colgroup>
           <col className="w-[44%]" />
           <col className="w-[9rem]" />
           <col />
-          <col className="w-[8rem]" />
+          {showEnablement ? <col className="w-[8rem]" /> : null}
           <col className="w-40" />
         </colgroup>
         <DataTableHead>
@@ -1544,13 +1557,30 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
             <DataTableHeaderCell>Status</DataTableHeaderCell>
             <DataTableHeaderCell>Appears in</DataTableHeaderCell>
-            <DataTableHeaderCell>Enabled</DataTableHeaderCell>
+            {showEnablement ? <DataTableHeaderCell>Enabled</DataTableHeaderCell> : null}
             <DataTableHeaderCell className="pr-0 text-right">Actions</DataTableHeaderCell>
           </DataTableRow>
         </DataTableHead>
-        <DataTableBody>{renderExtensionRows(items)}</DataTableBody>
+        <DataTableBody>{renderExtensionRows(items, { showEnablement })}</DataTableBody>
       </DataTable>
     );
+  };
+
+  const renderInstalledSection = (input: {
+    title: string;
+    summary: string;
+    items: ExtensionInstallSummary[];
+    showEnablement?: boolean;
+  }) =>
+    input.items.length ? (
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-[15px] font-semibold leading-tight text-primary">{input.title}</h3>
+          <p className="mt-1 text-[12px] text-secondary">{input.summary}</p>
+        </div>
+        {renderExtensionTable(input.items, { showEnablement: input.showEnablement })}
+      </section>
+    ) : null;
 
   if (loading) {
     return <LoadingState label="Loading extensions…" />;
@@ -1693,7 +1723,19 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               ) : visibleExtensions.length === 0 ? (
                 <EmptyState title="No matching extensions" body="Clear search to show all installed extensions." />
               ) : (
-                renderExtensionTable(visibleExtensions)
+                <div className="space-y-6">
+                  {renderInstalledSection({
+                    title: 'Platform',
+                    summary: 'Required system surfaces that keep Neon Pilot configurable, diagnosable, and repairable.',
+                    items: visiblePlatformExtensions,
+                    showEnablement: false,
+                  })}
+                  {renderInstalledSection({
+                    title: 'Extensions',
+                    summary: 'Installable and optional capabilities with normal enablement controls.',
+                    items: visibleRegularExtensions,
+                  })}
+                </div>
               )}
             </section>
           </AppPageLayout>
