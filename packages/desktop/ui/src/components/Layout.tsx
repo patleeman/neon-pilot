@@ -381,11 +381,14 @@ function getFocusableElements(): HTMLElement[] {
   );
 }
 
-function moveDocumentFocus(delta: 1 | -1): void {
+function moveDocumentFocus(delta: 1 | -1): boolean {
   const elements = getFocusableElements();
-  if (elements.length === 0) return;
+  if (elements.length === 0) return false;
   const currentIndex = document.activeElement instanceof HTMLElement ? elements.indexOf(document.activeElement) : -1;
-  elements[(currentIndex + delta + elements.length) % elements.length]?.focus();
+  const next = elements[(currentIndex + delta + elements.length) % elements.length];
+  if (!next) return false;
+  next.focus();
+  return document.activeElement === next;
 }
 
 function cycleSelectByLabel(label: string): boolean {
@@ -1923,14 +1926,25 @@ export function Layout() {
         document.querySelector<HTMLElement>('aside a, aside button, nav a, nav button')?.focus();
       },
       focusNext() {
-        moveDocumentFocus(1);
+        return moveDocumentFocus(1);
       },
       focusPrevious() {
-        moveDocumentFocus(-1);
+        return moveDocumentFocus(-1);
       },
       activateSelection() {
         const active = document.activeElement;
-        if (active instanceof HTMLElement) active.click();
+        if (
+          active instanceof HTMLButtonElement ||
+          active instanceof HTMLAnchorElement ||
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          active instanceof HTMLSelectElement ||
+          (active instanceof HTMLElement && active.tabIndex >= 0)
+        ) {
+          active.click();
+          return true;
+        }
+        return false;
       },
       navigateConversation(direction: 'next' | 'previous') {
         if (!activeConversationId) return false;

@@ -27,9 +27,9 @@ export interface ExtensionCommandExecutorOptions {
   findOnPage?(): boolean;
   focusComposer?(): void;
   focusSidebar?(): void;
-  focusNext?(): void;
-  focusPrevious?(): void;
-  activateSelection?(): void;
+  focusNext?(): boolean;
+  focusPrevious?(): boolean;
+  activateSelection?(): boolean;
   submitComposer?(): boolean;
   stopComposer?(): boolean;
   clearComposer?(): boolean;
@@ -597,9 +597,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Next',
       category: 'Focus',
       execute() {
-        if (!options.focusNext) return false;
-        options.focusNext();
-        return true;
+        return options.focusNext?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusNext);
@@ -610,9 +608,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Previous',
       category: 'Focus',
       execute() {
-        if (!options.focusPrevious) return false;
-        options.focusPrevious();
-        return true;
+        return options.focusPrevious?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusPrevious);
@@ -623,9 +619,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Activate Selection',
       category: 'Focus',
       execute() {
-        if (!options.activateSelection) return false;
-        options.activateSelection();
-        return true;
+        return options.activateSelection?.() ?? false;
       },
       canExecute() {
         return Boolean(options.activateSelection);

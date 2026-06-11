@@ -164,6 +164,52 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('selection.activate', undefined, options)).resolves.toBe(false);
   });
 
+  it('reports focus commands as unhandled when focus handlers cannot perform the action', async () => {
+    const focusNext = vi.fn(() => false);
+    const focusPrevious = vi.fn(() => false);
+    const activateSelection = vi.fn(() => false);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      focusNext,
+      focusPrevious,
+      activateSelection,
+    };
+
+    await expect(executeExtensionCommand('focus.next', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('focus.previous', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('selection.activate', undefined, options)).resolves.toBe(false);
+
+    expect(focusNext).toHaveBeenCalledTimes(1);
+    expect(focusPrevious).toHaveBeenCalledTimes(1);
+    expect(activateSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports focus commands as handled when focus handlers perform the action', async () => {
+    const focusNext = vi.fn(() => true);
+    const focusPrevious = vi.fn(() => true);
+    const activateSelection = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      focusNext,
+      focusPrevious,
+      activateSelection,
+    };
+
+    await expect(executeExtensionCommand('focus.next', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('focus.previous', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('selection.activate', undefined, options)).resolves.toBe(true);
+
+    expect(focusNext).toHaveBeenCalledTimes(1);
+    expect(focusPrevious).toHaveBeenCalledTimes(1);
+    expect(activateSelection).toHaveBeenCalledTimes(1);
+  });
+
   it('reports optional host commands as disabled when their handlers are missing', () => {
     const commands = createHostCommands({
       navigate: vi.fn(),

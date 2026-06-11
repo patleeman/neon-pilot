@@ -184,6 +184,33 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('neon-pilot:dictation-toggle', dictationListener);
   });
 
+  it('accepts command-only desktop shortcut events for focus traversal', () => {
+    const offsetParentDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent');
+    Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+      configurable: true,
+      get() {
+        return document.body;
+      },
+    });
+    renderLayout('/conversations/conv-1');
+    const focusable = [...document.querySelectorAll<HTMLElement>('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])')].filter(
+      (element) => !element.hasAttribute('disabled') && element.tabIndex >= 0,
+    );
+    expect(focusable.length).toBeGreaterThan(0);
+    expect(document.activeElement).not.toBe(focusable[0]);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'focus.next' } }));
+    });
+
+    expect(document.activeElement).toBe(focusable[0]);
+    if (offsetParentDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'offsetParent', offsetParentDescriptor);
+    } else {
+      delete (HTMLElement.prototype as { offsetParent?: unknown }).offsetParent;
+    }
+  });
+
   it('opens a side chat after reservation without waiting for live-session creation', async () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const reserveConversation = vi.spyOn(api, 'reserveConversation').mockResolvedValue({
