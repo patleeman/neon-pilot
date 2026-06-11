@@ -238,6 +238,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleLayout?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.toggleLayout);
+      },
     },
     {
       id: 'layout.toggleSidebar',
@@ -245,6 +248,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'App',
       execute() {
         return options.toggleSidebar?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.toggleSidebar);
       },
     },
     {
@@ -254,6 +260,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleRightRail?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.toggleRightRail);
+      },
     },
     {
       id: 'page.find',
@@ -261,6 +270,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'App',
       execute() {
         return options.findOnPage?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.findOnPage);
       },
     },
     {
@@ -301,7 +313,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.navigateConversation?.('next') ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.navigateConversation) && hasActiveConversation(options, context);
       },
     },
     {
@@ -312,7 +324,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.navigateConversation?.('previous') ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.navigateConversation) && hasActiveConversation(options, context);
       },
     },
     {
@@ -323,7 +335,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.closeConversation?.() ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.closeConversation) && hasActiveConversation(options, context);
       },
     },
     {
@@ -332,6 +344,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Conversation',
       execute() {
         return options.reopenClosedConversation?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.reopenClosedConversation);
       },
     },
     {
@@ -342,7 +357,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.toggleConversationPin?.() ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.toggleConversationPin) && hasActiveConversation(options, context);
       },
     },
     {
@@ -353,7 +368,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.toggleConversationArchive?.() ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.toggleConversationArchive) && hasActiveConversation(options, context);
       },
     },
     {
@@ -364,7 +379,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.renameConversation?.() ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.renameConversation) && hasActiveConversation(options, context);
       },
     },
     {
@@ -375,7 +390,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.editConversationCwd?.() ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.editConversationCwd) && hasActiveConversation(options, context);
       },
     },
     {
@@ -387,6 +402,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         options.focusComposer();
         return true;
       },
+      canExecute() {
+        return Boolean(options.focusComposer);
+      },
     },
     {
       id: 'composer.submit',
@@ -395,6 +413,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.submitComposer?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.submitComposer);
+      },
     },
     {
       id: 'composer.clear',
@@ -402,6 +423,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Conversation',
       execute() {
         return options.clearComposer?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.clearComposer);
       },
     },
     {
@@ -412,7 +436,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.pageConversation?.('up') ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.pageConversation) && hasActiveConversation(options, context);
       },
     },
     {
@@ -423,7 +447,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.pageConversation?.('down') ?? false;
       },
       canExecute(_args, context) {
-        return hasActiveConversation(options, context);
+        return Boolean(options.pageConversation) && hasActiveConversation(options, context);
       },
     },
     {
@@ -433,6 +457,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.newWorkbenchTab?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.newWorkbenchTab);
+      },
     },
     {
       id: 'workbench.closeActiveTab',
@@ -440,6 +467,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Workbench',
       execute() {
         return options.closeActiveWorkbenchTab?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.closeActiveWorkbenchTab);
       },
     },
     {
@@ -449,6 +479,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.closeActiveWorkbenchFile?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.closeActiveWorkbenchFile);
+      },
     },
     {
       id: 'workbench.refreshActiveFile',
@@ -456,6 +489,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Workbench',
       execute() {
         return options.refreshActiveWorkbenchFile?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.refreshActiveWorkbenchFile);
       },
     },
     {
@@ -465,6 +501,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleWorkbenchExplorer?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.toggleWorkbenchExplorer);
+      },
     },
     {
       id: 'workbench.toggleDiff',
@@ -472,6 +511,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Workbench',
       execute() {
         return options.toggleWorkbenchDiff?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.toggleWorkbenchDiff);
       },
     },
     {
@@ -487,6 +529,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
           }) ?? false
         );
       },
+      canExecute() {
+        return Boolean(options.newConversationAndFocus);
+      },
     },
     {
       id: 'model.cycle',
@@ -494,6 +539,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Model',
       execute() {
         return options.cycleModel?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.cycleModel);
       },
     },
     {
@@ -503,6 +551,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.cycleThinking?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.cycleThinking);
+      },
     },
     {
       id: 'dictation.toggle',
@@ -510,6 +561,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Dictation',
       execute() {
         return options.toggleDictation?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.toggleDictation);
       },
     },
     {
@@ -521,6 +575,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         options.focusSidebar();
         return true;
       },
+      canExecute() {
+        return Boolean(options.focusSidebar);
+      },
     },
     {
       id: 'focus.next',
@@ -530,6 +587,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         if (!options.focusNext) return false;
         options.focusNext();
         return true;
+      },
+      canExecute() {
+        return Boolean(options.focusNext);
       },
     },
     {
@@ -541,6 +601,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         options.focusPrevious();
         return true;
       },
+      canExecute() {
+        return Boolean(options.focusPrevious);
+      },
     },
     {
       id: 'selection.activate',
@@ -550,6 +613,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         if (!options.activateSelection) return false;
         options.activateSelection();
         return true;
+      },
+      canExecute() {
+        return Boolean(options.activateSelection);
       },
     },
   ];

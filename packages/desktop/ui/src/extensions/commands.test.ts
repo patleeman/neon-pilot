@@ -95,6 +95,54 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('selection.activate', undefined, options)).resolves.toBe(false);
   });
 
+  it('reports optional host commands as disabled when their handlers are missing', () => {
+    const commands = createHostCommands({
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      activeConversationId: 'conversation-1',
+    });
+    const commandById = new Map(commands.map((command) => [command.id, command]));
+
+    for (const commandId of [
+      'layout.toggle',
+      'layout.toggleSidebar',
+      'layout.toggleRightRail',
+      'page.find',
+      'conversation.next',
+      'conversation.previous',
+      'conversation.close',
+      'conversation.reopenClosed',
+      'conversation.togglePinned',
+      'conversation.toggleArchived',
+      'conversation.rename',
+      'conversation.editCwd',
+      'composer.focus',
+      'composer.submit',
+      'composer.clear',
+      'conversation.pageUp',
+      'conversation.pageDown',
+      'workbench.newTab',
+      'workbench.closeActiveTab',
+      'workbench.closeActiveFile',
+      'workbench.refreshActiveFile',
+      'workbench.toggleExplorer',
+      'workbench.toggleDiff',
+      'conversation.newAndFocus',
+      'model.cycle',
+      'thinking.cycle',
+      'dictation.toggle',
+      'sidebar.focus',
+      'focus.next',
+      'focus.previous',
+      'selection.activate',
+    ]) {
+      const command = commandById.get(commandId);
+      expect(command?.canExecute?.(undefined, {}), commandId).toBe(false);
+    }
+  });
+
   it('executes core shortcut aliases through host commands', async () => {
     const navigate = vi.fn();
     const toggleSidebar = vi.fn(() => true);
