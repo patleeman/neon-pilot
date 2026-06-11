@@ -407,6 +407,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.pageConversation?.('up') ?? false;
       },
+      canExecute() {
+        return Boolean(options.activeConversationId);
+      },
     },
     {
       id: 'conversation.pageDown',
@@ -414,6 +417,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Conversation',
       execute() {
         return options.pageConversation?.('down') ?? false;
+      },
+      canExecute() {
+        return Boolean(options.activeConversationId);
       },
     },
     {

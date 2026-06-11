@@ -169,6 +169,7 @@ describe('extension commands', () => {
     const closeConversation = vi.fn(() => true);
     const toggleConversationPin = vi.fn(() => true);
     const editConversationCwd = vi.fn(() => true);
+    const pageConversation = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
@@ -178,14 +179,18 @@ describe('extension commands', () => {
       closeConversation,
       toggleConversationPin,
       editConversationCwd,
+      pageConversation,
     };
 
     await expect(executeExtensionCommand('conversation.close', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.pageUp', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.pageDown', undefined, options)).resolves.toBe(false);
     expect(closeConversation).not.toHaveBeenCalled();
     expect(toggleConversationPin).not.toHaveBeenCalled();
     expect(editConversationCwd).not.toHaveBeenCalled();
+    expect(pageConversation).not.toHaveBeenCalled();
   });
 
   it('includes command-backed workbench actions', async () => {
