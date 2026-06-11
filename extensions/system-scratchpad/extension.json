@@ -62,24 +62,12 @@
         "title": "Scratchpad",
         "location": "rightRail",
         "scope": "conversation",
-        "component": "ScratchpadToolPanel",
-        "icon": "file",
-        "detailView": "scratchpad-detail",
-        "placement": "workbench-tool",
-        "activation": "on-open",
-        "persistOpen": true,
-        "toolSlot": "scratchpad"
-      },
-      {
-        "id": "scratchpad-detail",
-        "title": "Scratchpad",
-        "location": "workbench",
-        "scope": "conversation",
         "component": "ScratchpadPanel",
         "icon": "file",
         "placement": "workbench-tool",
         "activation": "on-open",
-        "persistOpen": true
+        "persistOpen": true,
+        "toolSlot": "scratchpad"
       }
     ],
     "commands": [

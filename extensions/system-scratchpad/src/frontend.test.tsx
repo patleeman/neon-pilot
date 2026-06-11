@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ScratchpadPanel, ScratchpadToolPanel } from './frontend';
+import { ScratchpadPanel } from './frontend';
 
 function renderPanel({
   conversationId = 'conv-1',
@@ -46,20 +46,5 @@ describe('ScratchpadPanel', () => {
     renderPanel({ conversationId: '' });
 
     expect(screen.getByText('Open a conversation')).toBeTruthy();
-  });
-});
-
-describe('ScratchpadToolPanel', () => {
-  it('renders the launcher panel for conversation-scoped scratchpads', () => {
-    render(
-      <ScratchpadToolPanel
-        pa={{ extension: { invoke: vi.fn() } } as never}
-        context={{ conversationId: 'conv-1', cwd: '/repo', pathname: '', search: '', hash: '' }}
-        surface={{ id: 'scratchpad', extensionId: 'system-scratchpad', title: 'Scratchpad', location: 'rightRail', component: 'ScratchpadToolPanel' } as never}
-        params={{}}
-      />,
-    );
-
-    expect(screen.getByText('Scratchpad pane')).toBeTruthy();
   });
 });

@@ -47,6 +47,6 @@ pnpm run extension:build -- extensions/system-scratchpad
 Focused checks:
 
 ```sh
-pnpm --dir extensions/system-scratchpad test
+pnpm vitest run extensions/system-scratchpad/src/backend.test.ts extensions/system-scratchpad/src/frontend.test.tsx
 pnpm run check:extensions:static
 ```
