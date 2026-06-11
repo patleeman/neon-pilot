@@ -507,6 +507,13 @@ function moveDocumentFocus(delta: 1 | -1): boolean {
   return document.activeElement === next;
 }
 
+export function focusFirstSidebarControl(): boolean {
+  const target = document.querySelector<HTMLElement>('aside a, aside button, nav a, nav button');
+  if (!target) return false;
+  target.focus();
+  return document.activeElement === target;
+}
+
 function cycleSelectByLabel(label: string): boolean {
   const select = document.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`);
   if (!select || select.disabled || select.options.length === 0) return false;
@@ -2377,7 +2384,7 @@ export function Layout() {
         return true;
       },
       focusSidebar() {
-        document.querySelector<HTMLElement>('aside a, aside button, nav a, nav button')?.focus();
+        return focusFirstSidebarControl();
       },
       focusNext() {
         return moveDocumentFocus(1);

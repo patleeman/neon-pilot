@@ -35,7 +35,7 @@ export interface ExtensionCommandExecutorOptions {
   findPreviousOnPage?(): boolean;
   closePageSearch?(): boolean;
   focusComposer?(): void;
-  focusSidebar?(): void;
+  focusSidebar?(): boolean;
   focusNext?(): boolean;
   focusPrevious?(): boolean;
   activateSelection?(): boolean;
@@ -1609,9 +1609,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Sidebar',
       category: 'Focus',
       execute() {
-        if (!options.focusSidebar) return false;
-        options.focusSidebar();
-        return true;
+        return options.focusSidebar?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusSidebar);

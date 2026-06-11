@@ -1,8 +1,11 @@
+/* @vitest-environment jsdom */
+
 import { describe, expect, it } from 'vitest';
 
 import type { SessionMeta } from '../shared/types';
 import {
   clearWorkbenchOnlySearchParamsForCompact,
+  focusFirstSidebarControl,
   readStoredPanelWidth,
   readStoredWorkbenchExplorerOpen,
   resolveActiveWorkspaceCwd,
@@ -30,6 +33,20 @@ describe('Layout workspace selection', () => {
   it('uses the active conversation cwd for the workbench workspace', () => {
     expect(resolveActiveWorkspaceCwd([createSession({ id: 'local', cwd: '/tmp/local' })], 'local')).toBe('/tmp/local');
     expect(resolveActiveWorkspaceCwd([createSession({ id: 'other', cwd: '/tmp/other' })], 'missing')).toBeNull();
+  });
+});
+
+describe('Layout focus commands', () => {
+  it('reports whether the sidebar focus command moved focus', () => {
+    document.body.innerHTML = '<main><button type="button">Main</button></main>';
+
+    expect(focusFirstSidebarControl()).toBe(false);
+
+    document.body.innerHTML = '<main><button type="button">Main</button></main><aside><button type="button">Chat</button></aside>';
+    const sidebarButton = document.querySelector('aside button');
+
+    expect(focusFirstSidebarControl()).toBe(true);
+    expect(document.activeElement).toBe(sidebarButton);
   });
 });
 
