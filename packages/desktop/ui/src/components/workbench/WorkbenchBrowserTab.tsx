@@ -14,6 +14,12 @@ import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '..
 import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
+const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set([
+  'browser.newTab',
+  'browser.reopenTab',
+  'browser.closeTab',
+  'browser.focusLocation',
+]);
 
 function hasBlockingHtmlModal(): boolean {
   if (typeof document === 'undefined') {
@@ -225,7 +231,12 @@ export function WorkbenchBrowserTab({
         .extensionKeybindings()
         .then((keybindings) => {
           if (!cancelled) {
-            setSurfaceKeybindings(keybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'surface'));
+            setSurfaceKeybindings(
+              keybindings.filter(
+                (keybinding) =>
+                  keybinding.enabled && keybinding.scope === 'surface' && WORKBENCH_BROWSER_SHORTCUT_COMMANDS.has(keybinding.command),
+              ),
+            );
           }
         })
         .catch(() => {

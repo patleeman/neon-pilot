@@ -219,4 +219,61 @@ describe('WorkbenchBrowserTab', () => {
 
     expect(onNewTab).not.toHaveBeenCalled();
   });
+
+  it('ignores unrelated surface shortcuts that collide with browser shortcuts', async () => {
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-other',
+        surfaceId: 'foreign-new-tab',
+        packageType: 'system',
+        title: 'Foreign new tab',
+        keys: ['mod+t'],
+        command: 'other.newTab',
+        scope: 'surface',
+        defaultKeys: ['mod+t'],
+        enabled: true,
+      },
+      {
+        extensionId: 'system-browser',
+        surfaceId: 'new-browser-tab',
+        packageType: 'system',
+        title: 'New browser tab',
+        keys: ['mod+t'],
+        command: 'browser.newTab',
+        scope: 'surface',
+        defaultKeys: ['mod+t'],
+        enabled: true,
+      },
+    ]);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    const onNewTab = vi.fn();
+    window.neonPilotDesktop = {
+      setWorkbenchBrowserBounds: vi.fn(async () => null),
+      navigateWorkbenchBrowser: vi.fn(async () => null),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={onNewTab}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 't', metaKey: true }));
+
+    expect(onNewTab).toHaveBeenCalledOnce();
+  });
 });
