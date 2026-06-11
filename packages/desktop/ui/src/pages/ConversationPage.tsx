@@ -5772,7 +5772,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     liveSessionHasStaleTurnState,
   );
   const showScrollToBottomControl = shouldShowScrollToBottomControl(messageCount, atBottom);
-  const renameConversationDisabled = conversationNeedsTakeover || conversationCwdEditorOpen || conversationCwdBusy;
+  const renameConversationDisabled =
+    conversationNeedsTakeover || isEditingTitle || titleSaving || conversationCwdEditorOpen || conversationCwdBusy || conversationCwdPickBusy;
   const { composerShelves, conversationHeaderElements, newConversationPanels } = extensionRegistry;
   const lifecycleEvent = resolveConversationLifecycleEvent({
     hasSessionError: Boolean(sessionError),
