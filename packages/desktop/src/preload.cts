@@ -10,6 +10,55 @@ const WORKBENCH_BROWSER_COMMENT_EVENT = 'neon-pilot-desktop-workbench-browser-co
 const SHOW_WORKBENCH_BROWSER_CHANNEL = `${CHANNEL_PREFIX}:show-workbench-browser`;
 const SHOW_WORKBENCH_BROWSER_EVENT = 'neon-pilot-desktop-show-workbench-browser';
 
+function resolveDesktopShortcutCommand(action: unknown): { command: string; args?: Record<string, unknown> } | undefined {
+  switch (action) {
+    case 'close-conversation':
+      return { command: 'conversation.close' };
+    case 'reopen-closed-conversation':
+      return { command: 'conversation.reopenClosed' };
+    case 'previous-conversation':
+      return { command: 'conversation.previous' };
+    case 'next-conversation':
+      return { command: 'conversation.next' };
+    case 'toggle-conversation-pin':
+      return { command: 'conversation.togglePinned' };
+    case 'toggle-conversation-archive':
+      return { command: 'conversation.toggleArchived' };
+    case 'rename-conversation':
+      return { command: 'conversation.rename' };
+    case 'focus-composer':
+      return { command: 'composer.focus' };
+    case 'edit-working-directory':
+      return { command: 'conversation.editCwd' };
+    case 'find-in-page':
+      return { command: 'page.find' };
+    case 'toggle-sidebar':
+      return { command: 'layout.toggleSidebar' };
+    case 'toggle-right-rail':
+      return { command: 'layout.toggleRightRail' };
+    case 'toggle-layout-mode':
+      return { command: 'layout.toggle' };
+    case 'show-conversation-mode':
+      return { command: 'layout.set', args: { mode: 'compact' } };
+    case 'show-workbench-mode':
+      return { command: 'layout.set', args: { mode: 'workbench' } };
+    case 'new-workbench-tab':
+      return { command: 'workbench.newTab' };
+    case 'close-workbench-tab':
+      return { command: 'workbench.closeActiveTab' };
+    case 'close-workbench-file':
+      return { command: 'workbench.closeActiveFile' };
+    case 'refresh-workbench-file':
+      return { command: 'workbench.refreshActiveFile' };
+    case 'toggle-workbench-explorer':
+      return { command: 'workbench.toggleExplorer' };
+    case 'toggle-workbench-diff':
+      return { command: 'workbench.toggleDiff' };
+    default:
+      return undefined;
+  }
+}
+
 const domGlobals = globalThis as typeof globalThis & {
   document?: {
     documentElement?: {
@@ -81,7 +130,7 @@ function dispatchDesktopEvent<T>(type: string, detail: T): void {
 }
 
 ipcRenderer.on(SHORTCUT_CHANNEL, (_event, action: unknown) => {
-  dispatchDesktopEvent(SHORTCUT_EVENT, { action });
+  dispatchDesktopEvent(SHORTCUT_EVENT, { action, ...resolveDesktopShortcutCommand(action) });
 });
 
 ipcRenderer.on(NAVIGATE_CHANNEL, (_event, payload: unknown) => {
