@@ -1432,7 +1432,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [nonCriticalComposerMetadataReady, setNonCriticalComposerMetadataReady] = useState(false);
   useEffect(() => {
     setNonCriticalComposerMetadataReady(false);
-    const timeout = window.setTimeout(() => setNonCriticalComposerMetadataReady(true), 1_500);
+    const timeout = window.setTimeout(() => setNonCriticalComposerMetadataReady(true), 10_000);
     return () => window.clearTimeout(timeout);
   }, [draft, id]);
 

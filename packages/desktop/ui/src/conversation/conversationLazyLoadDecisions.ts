@@ -11,7 +11,7 @@ export function shouldLoadConversationModelsAfterMetadataReady(input: {
   hasPendingInitialPromptInFlight: boolean;
 }): boolean {
   if (input.draft) {
-    return true;
+    return input.metadataReady && !input.hasPendingInitialPrompt && !input.hasPendingInitialPromptInFlight;
   }
 
   return shouldLoadConversationModels(input);

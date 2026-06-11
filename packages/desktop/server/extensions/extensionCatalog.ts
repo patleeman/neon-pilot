@@ -494,9 +494,9 @@ export async function installCatalogExtension(input: { id?: unknown }, stateRoot
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
   if (findExtensionEntry(id, stateRoot)) throw new Error(`Extension ${id} is already installed.`);
-  if (item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
   const localBundlePath = localBundlePathFor(id);
   if (localBundlePath) return installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot);
+  if (item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
   return installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
 }
 
@@ -506,7 +506,6 @@ export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?
   const catalog = await listInstallableExtensionCatalog(stateRoot);
   const item = catalog.extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
-  if (item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
   const installed = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
   if (!installed) throw new Error(`Extension ${id} is not installed.`);
@@ -515,6 +514,7 @@ export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?
 
   await deleteRuntimeExtension(id, stateRoot);
   const localBundlePath = localBundlePathFor(id);
+  if (!localBundlePath && item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
   const result = localBundlePath
     ? installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot)
     : await installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);

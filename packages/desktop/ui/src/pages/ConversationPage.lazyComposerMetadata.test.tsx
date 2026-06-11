@@ -364,7 +364,7 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(apiMock.models).not.toHaveBeenCalled();
 
     await act(async () => {
-      vi.advanceTimersByTime(1_200);
+      vi.advanceTimersByTime(9_600);
     });
 
     await act(async () => {

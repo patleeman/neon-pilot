@@ -1405,7 +1405,7 @@ export function Layout() {
       void api.prewarmLiveSession(workspaceCwd).catch(() => {
         prewarmedLiveSessionWorkspaceCwdsRef.current.delete(workspaceCwd);
       });
-    }, 1_500);
+    }, 12_000);
 
     return () => {
       window.clearTimeout(timeout);

@@ -567,22 +567,30 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   };
   localLiveSessionCapabilityContext = liveSessionCapabilityContext;
 
-  // Warm the resource options cache synchronously (fast — ~100ms, reads
-  // SKILL.md/template files from disk) so the first createLiveSession
-  // doesn't pay that cost even if the extension factory load is deferred.
-  context.buildLiveSessionResourceOptionsAsync?.(context.getRuntimeScope())?.catch(() => {});
-  prewarmDesktopModelDefinitions();
-
-  // Extension factory loading is slow (~9s, dynamic imports of extension
-  // backend modules). Don't block startup — run in background so the
-  // first API calls are fast. If the user creates a chat before this
-  // finishes, only the first one pays the cold-build penalty.
-  void prewarmLiveSessionCapability({}, localLiveSessionCapabilityContext).catch((error) => {
-    logWarn('default live session prewarm failed', {
+  // Warm the local resource cache synchronously so first chat creation can
+  // reuse materialized runtime resources without queuing a renderer prewarm.
+  try {
+    context.buildLiveSessionResourceOptions();
+  } catch (error) {
+    logWarn('live session resource options prewarm failed', {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
-  });
+  }
+  prewarmDesktopModelDefinitions();
+
+  // Extension factory and loader prewarm can do substantial synchronous work
+  // before their first await. Queue it so context construction stays on the
+  // fast path and the work runs before normal user interaction.
+  const liveSessionPrewarmTimer = setTimeout(() => {
+    void prewarmLiveSessionCapability({}, liveSessionCapabilityContext).catch((error) => {
+      logWarn('default live session prewarm failed', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    });
+  }, 0);
+  liveSessionPrewarmTimer.unref?.();
 
   localProviderDesktopCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,
@@ -605,26 +613,27 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     } catch (error) {
       logError('extension startup guard unavailable', { message: error instanceof Error ? error.message : String(error) });
     }
-    const startupGuard = await extensionHostClient?.beginStartupGuard();
-    if (startupGuard?.safeMode) {
-      publishAppEvent({
-        type: 'notification',
-        extensionId: 'core',
-        message:
-          startupGuard.disabledIds.length > 0
-            ? `Extension safe mode disabled ${startupGuard.disabledIds.length} runtime extension(s) after an unclean startup.`
-            : 'Extension safe mode detected an unclean startup; no runtime extensions were enabled.',
-        severity: 'warning',
-      });
-    }
-
     // Runtime extension services are useful, but they are not chat-critical.
     // Keep their cold imports and service startup out of the initial conversation
     // creation and transcript navigation window.
     const startupActionsTimer = setTimeout(() => {
       if (!extensionHostClient) return;
       void extensionHostClient
-        .startStartupActions({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) })
+        .beginStartupGuard()
+        .then((startupGuard) => {
+          if (startupGuard?.safeMode) {
+            publishAppEvent({
+              type: 'notification',
+              extensionId: 'core',
+              message:
+                startupGuard.disabledIds.length > 0
+                  ? `Extension safe mode disabled ${startupGuard.disabledIds.length} runtime extension(s) after an unclean startup.`
+                  : 'Extension safe mode detected an unclean startup; no runtime extensions were enabled.',
+              severity: 'warning',
+            });
+          }
+        })
+        .then(() => extensionHostClient.startStartupActions({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) }))
         .then(async () => {
           await extensionHostClient?.checkBackendHealth();
         })
@@ -1129,9 +1138,6 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         await getLocalLiveSessionCapabilityContext(),
       ),
     );
-  }
-  if (method === 'POST' && path === '/api/live-sessions/prewarm-options') {
-    return createDesktopLocalApiJsonResponse(await prewarmDesktopLiveSessionOptions());
   }
 
   if (method === 'POST' && path === '/api/conversations/reserve') {
@@ -2354,10 +2360,6 @@ export async function invokeDesktopTool(input: {
     },
     { getRuntimeScope: context.getRuntimeScope, getRepoRoot: context.getRepoRoot },
   );
-}
-
-export async function prewarmDesktopLiveSessionOptions(): Promise<{ ok: true }> {
-  return prewarmLiveSessionCapability({}, await getLocalLiveSessionCapabilityContext());
 }
 
 export async function readDesktopLiveSessionForkEntries(conversationId: string): Promise<Array<{ entryId: string; text: string }>> {

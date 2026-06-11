@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.15 — 2026-06-11
+
+### Highlights
+
+- Adds the Gateways surface and Telegram setup flow, including route sidebar support, extension-contributed gateway providers, and safer gateway conversation preselection.
+- Makes the unified `neon-pilot` CLI more reliable for agents and humans by tightening positional/required argument validation across runs, subagents, automations, settings, conversations, bootstrap, admin, and extension-management commands.
+- Hardens packaged desktop and extension discovery so child processes preserve their runtime roots and duplicate symlinked extension roots are ignored.
+- Improves Extension Manager by separating required platform surfaces from normal add-ons, clarifying empty filter states, and keeping required system extensions always on.
+- Adds Settings subnav and command-list improvements so first-party extension settings and host commands are easier to find without duplicating controls.
+- Keeps release-facing CLI documentation, generated references, and installable Dynamic Workflows packaging aligned with the current app.
+
+### Notes
+
+- 39 commits since the previous release.
+
 ## 0.11.14 — 2026-06-11
 
 ### Highlights

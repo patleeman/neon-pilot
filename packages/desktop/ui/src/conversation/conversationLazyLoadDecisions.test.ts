@@ -7,7 +7,7 @@ import {
 } from './conversationLazyLoadDecisions';
 
 describe('conversationLazyLoadDecisions', () => {
-  it('loads models immediately for draft mode', () => {
+  it('waits for metadata readiness before loading models for idle draft mode', () => {
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
         metadataReady: false,
@@ -15,7 +15,7 @@ describe('conversationLazyLoadDecisions', () => {
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
         metadataReady: true,
@@ -24,6 +24,25 @@ describe('conversationLazyLoadDecisions', () => {
         hasPendingInitialPromptInFlight: false,
       }),
     ).toBe(true);
+  });
+
+  it('defers draft models while the initial prompt is being created', () => {
+    expect(
+      shouldLoadConversationModelsAfterMetadataReady({
+        metadataReady: true,
+        draft: true,
+        hasPendingInitialPrompt: true,
+        hasPendingInitialPromptInFlight: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldLoadConversationModelsAfterMetadataReady({
+        metadataReady: true,
+        draft: true,
+        hasPendingInitialPrompt: false,
+        hasPendingInitialPromptInFlight: true,
+      }),
+    ).toBe(false);
   });
 
   it('defers models for existing conversations until metadata is ready', () => {

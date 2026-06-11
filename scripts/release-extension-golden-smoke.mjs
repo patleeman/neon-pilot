@@ -279,6 +279,23 @@ async function waitForLoadedBody(cdp, child, label, timeoutMs = 30_000) {
   throw new Error(`Timed out waiting for ${label} to render. Last body text:\n${lastBody}`);
 }
 
+async function waitForBodyText(cdp, child, label, expectedText, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastBody = '';
+  let lastMissing = expectedText;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`App exited while waiting for ${label}.`);
+    const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
+    lastBody = body;
+    lastMissing = evaluateTextExpectations(body, expectedText);
+    if (lastMissing.length === 0) return body;
+    await sleep(500);
+  }
+  throw new Error(
+    `${label} did not render expected text: ${lastMissing.join(', ')}. Last body text tail:\n${lastBody.slice(-1200)}`,
+  );
+}
+
 async function assertRequiredExtensions(cdp, matrix) {
   const registry = await fetchFromRenderer(cdp, '/api/extensions/registry');
   if (!registry.ok) throw new Error(`/api/extensions/registry returned ${registry.status}: ${JSON.stringify(registry.body)}`);
@@ -381,7 +398,7 @@ async function assertActions(cdp, matrix) {
   }
 }
 
-async function assertAgentTools(cdp, matrix) {
+async function assertAgentTools(cdp, child, matrix) {
   const inventory = await fetchFromRenderer(cdp, '/api/tools');
   if (!inventory.ok) throw new Error(`/api/tools returned ${inventory.status}: ${JSON.stringify(inventory.body)}`);
   const missing = evaluateTextExpectations(inventory.body, matrix.agentTools.expectedNames);
@@ -420,9 +437,7 @@ async function assertAgentTools(cdp, matrix) {
     }
 
     await cdp.send('Page.navigate', { url: `neon-pilot://app/conversations/${encodeURIComponent(conversationId)}` });
-    const body = await waitForLoadedBody(cdp, { exitCode: null }, `context tool conversation ${conversationId}`);
-    const missingText = evaluateTextExpectations(body, ['Release smoke context todo']);
-    if (missingText.length > 0) throw new Error(`context tool conversation did not render expected text: ${missingText.join(', ')}`);
+    await waitForBodyText(cdp, child, `context tool conversation ${conversationId}`, ['Release smoke context todo']);
     console.log(`  context agent tool conversation ok: ${conversationId}`);
   }
 }
@@ -494,7 +509,7 @@ export async function runGoldenSmoke({ appPath, matrixPath = defaultMatrixPath, 
     await assertRequiredExtensions(cdp, matrix);
     await assertRoutes(cdp, child, matrix);
     await assertActions(cdp, matrix);
-    await assertAgentTools(cdp, matrix);
+    await assertAgentTools(cdp, child, matrix);
 
     console.log(`Release extension golden smoke passed with isolated state root: ${stateRoot}`);
   } catch (error) {

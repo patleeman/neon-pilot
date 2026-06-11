@@ -28,6 +28,7 @@ const inputRoot = process.argv[2] ? resolve(process.argv[2]) : repoRoot;
 const packagedAppResourcesRoot = inputRoot.endsWith('.app') ? join(inputRoot, 'Contents', 'Resources') : null;
 const directExtensionRoot = !packagedAppResourcesRoot && existsSync(join(inputRoot, 'extension.json')) ? inputRoot : null;
 const extensionsRoot = packagedAppResourcesRoot ? join(packagedAppResourcesRoot, 'extensions') : join(inputRoot, 'extensions');
+const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
 
 if (packagedAppResourcesRoot) {
   Object.defineProperty(process, 'resourcesPath', {
@@ -300,6 +301,11 @@ function assertPackagedAppContainsEveryExtensionBundle() {
     const id = sourceManifest.id ?? sourceDir;
     const packagedDir = packagedById.get(id);
     if (!packagedDir) {
+      if (defaultInstallableExtensionIds.has(id)) {
+        const bundlePath = join(packagedAppResourcesRoot, 'installable-extension-bundles', `${id}.neon-extension.zip`);
+        if (!existsSync(bundlePath)) failures.push(`${id}: default installable extension is missing packaged bundle ${bundlePath}`);
+        continue;
+      }
       failures.push(`${id}: extension exists in source tree but is missing from packaged app resources`);
       continue;
     }

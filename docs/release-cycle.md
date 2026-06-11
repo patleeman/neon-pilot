@@ -4,17 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.14** — patch release.
+**v0.11.15** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.14
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.15
 
 Highlights in this train:
 
-- Makes the `neon-pilot` CLI a first-class human-usable control plane with command discovery, aliases, schema validation, readable help, stable table output, and transcript-friendly output controls.
-- Adds CLI runtime introspection commands for doctor checks, paths, version, and command schema export so external agents can bootstrap and verify Neon Pilot without opening the app.
-- Hardens extension-backed CLI execution with offline discovery, real JSONL streaming updates, destructive-command confirmation, and repeat fixture coverage across the command surface.
-- Improves live conversation/session state handling around parallel work, title metadata, stopped-state authority, and stale send state.
-- Keeps release-facing CLI docs and generated command references aligned with the current command registry.
+- Adds the Gateways surface and Telegram setup flow, including route sidebar support, extension-contributed gateway providers, and safer gateway conversation preselection.
+- Makes the unified `neon-pilot` CLI more reliable for agents and humans by tightening positional/required argument validation across runs, subagents, automations, settings, conversations, bootstrap, admin, and extension-management commands.
+- Hardens packaged desktop and extension discovery so child processes preserve their runtime roots and duplicate symlinked extension roots are ignored.
+- Improves Extension Manager by separating required platform surfaces from normal add-ons, clarifying empty filter states, and keeping required system extensions always on.
+- Adds Settings subnav and command-list improvements so first-party extension settings and host commands are easier to find without duplicating controls.
+- Keeps release-facing CLI documentation, generated references, and installable Dynamic Workflows packaging aligned with the current app.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

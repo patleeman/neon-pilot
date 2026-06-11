@@ -44,13 +44,14 @@ export interface RuntimeState {
 }
 
 const DEFAULT_RUNTIME_SCOPE = 'shared';
+const LIVE_SESSION_HOT_CACHE_TTL_MS = 15_000;
 
 export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeState {
   const { repoRoot, agentDir, settingsFile, stateRoot, logger } = options;
   const runtimeScope = DEFAULT_RUNTIME_SCOPE;
   const mcpConfigWatchers: FSWatcher[] = [];
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
-  let liveSessionResourceOptionsCache: { key: string; value: LiveSessionResourceOptions } | null = null;
+  let liveSessionResourceOptionsCache: { key: string; value: LiveSessionResourceOptions; updatedAtMs: number } | null = null;
   let liveSessionResourceOptionsPromiseCache: { key: string; promise: Promise<LiveSessionResourceOptions> } | null = null;
   let liveSessionExtensionFactoriesCache: { key: string; value: ExtensionFactory[] } | null = null;
 
@@ -155,6 +156,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     });
     liveSessionResourceOptionsCache = {
       key: JSON.stringify({ runtimeScope, modelRef, extensionEntries }),
+      updatedAtMs: Date.now(),
       value: withResourceOptionsPerf(
         {
           additionalExtensionPaths: resolved.extensionEntries,
@@ -334,6 +336,15 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   function buildLiveSessionResourceOptions(): LiveSessionResourceOptions {
     const startedAtMs = performance.now();
+    if (liveSessionResourceOptionsCache && Date.now() - liveSessionResourceOptionsCache.updatedAtMs < LIVE_SESSION_HOT_CACHE_TTL_MS) {
+      withResourceOptionsPerf(liveSessionResourceOptionsCache.value, {
+        cacheHit: 1,
+        hotCache: 1,
+        totalMs: Math.round(performance.now() - startedAtMs),
+      });
+      return liveSessionResourceOptionsCache.value;
+    }
+
     const extensionEntries = listRuntimeExtensionBackendEntries();
     const extensionEntriesAtMs = performance.now();
     const modelRef = readSavedModelRef(settingsFile);
@@ -388,12 +399,21 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         totalMs: Math.round(promptTemplatesAtMs - startedAtMs),
       },
     );
-    liveSessionResourceOptionsCache = { key: cacheKey, value };
+    liveSessionResourceOptionsCache = { key: cacheKey, value, updatedAtMs: Date.now() };
     return value;
   }
 
   async function buildLiveSessionResourceOptionsAsync(): Promise<LiveSessionResourceOptions> {
     const startedAtMs = performance.now();
+    if (liveSessionResourceOptionsCache && Date.now() - liveSessionResourceOptionsCache.updatedAtMs < LIVE_SESSION_HOT_CACHE_TTL_MS) {
+      withResourceOptionsPerf(liveSessionResourceOptionsCache.value, {
+        cacheHit: 1,
+        hotCache: 1,
+        totalMs: Math.round(performance.now() - startedAtMs),
+      });
+      return liveSessionResourceOptionsCache.value;
+    }
+
     const extensionEntries = listRuntimeExtensionBackendEntries();
     const extensionEntriesAtMs = performance.now();
     const modelRef = readSavedModelRef(settingsFile);
@@ -454,7 +474,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
           totalMs: Math.round(plansAtMs - startedAtMs),
         },
       );
-      liveSessionResourceOptionsCache = { key: cacheKey, value };
+      liveSessionResourceOptionsCache = { key: cacheKey, value, updatedAtMs: Date.now() };
       return value;
     })();
 
