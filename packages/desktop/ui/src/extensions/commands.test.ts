@@ -166,18 +166,26 @@ describe('extension commands', () => {
   });
 
   it('blocks active-conversation commands when no conversation is active', async () => {
+    const closeConversation = vi.fn(() => true);
     const toggleConversationPin = vi.fn(() => true);
+    const editConversationCwd = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
       activeConversationId: null,
+      closeConversation,
       toggleConversationPin,
+      editConversationCwd,
     };
 
+    await expect(executeExtensionCommand('conversation.close', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(false);
+    expect(closeConversation).not.toHaveBeenCalled();
     expect(toggleConversationPin).not.toHaveBeenCalled();
+    expect(editConversationCwd).not.toHaveBeenCalled();
   });
 
   it('includes command-backed workbench actions', async () => {

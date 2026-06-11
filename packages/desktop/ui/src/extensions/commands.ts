@@ -318,6 +318,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.closeConversation?.() ?? false;
       },
+      canExecute() {
+        return Boolean(options.activeConversationId);
+      },
     },
     {
       id: 'conversation.reopenClosed',
@@ -366,6 +369,9 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       category: 'Conversation',
       execute() {
         return options.editConversationCwd?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.activeConversationId);
       },
     },
     {
