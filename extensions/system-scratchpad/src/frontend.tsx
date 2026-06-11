@@ -137,3 +137,23 @@ export function ScratchpadPanel({ pa, context }: ExtensionSurfaceProps) {
     </section>
   );
 }
+
+export function ScratchpadToolPanel({ context }: ExtensionSurfaceProps) {
+  if (!context.conversationId) {
+    return (
+      <CenteredMessage
+        eyebrow="Scratchpad"
+        title="Open a conversation"
+        body="Scratchpad notes are scoped to one conversation and follow that thread across compaction and restarts."
+      />
+    );
+  }
+
+  return (
+    <CenteredMessage
+      eyebrow="Scratchpad"
+      title="Scratchpad pane"
+      body="Use the Scratchpad tab to edit thread-local notes available to the agent."
+    />
+  );
+}
