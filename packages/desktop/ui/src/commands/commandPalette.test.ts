@@ -287,6 +287,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('browser.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.saveCwd', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.cwdEditorOpen': false },

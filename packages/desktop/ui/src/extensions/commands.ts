@@ -65,6 +65,7 @@ export interface ExtensionCommandExecutorOptions {
   browserGoForward?(): boolean;
   browserReloadOrStop?(): boolean;
   browserFocusLocation?(): boolean;
+  browserClose?(): boolean;
   artifactCopySource?(): boolean;
   artifactToggleSource?(): boolean;
   artifactToggleFullscreen?(): boolean;
@@ -219,6 +220,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'browser.goForward', title: 'Browser Go Forward', category: 'Browser' },
     { id: 'browser.reloadOrStop', title: 'Reload or Stop Browser', category: 'Browser' },
     { id: 'browser.focusLocation', title: 'Focus Browser Location', category: 'Browser' },
+    { id: 'browser.close', title: 'Close Browser', category: 'Browser' },
     { id: 'artifact.copySource', title: 'Copy Artifact Source', category: 'Artifact' },
     { id: 'artifact.toggleSource', title: 'Show or Hide Artifact Source', category: 'Artifact' },
     { id: 'artifact.toggleFullscreen', title: 'Toggle Artifact Fullscreen', category: 'Artifact' },
@@ -816,6 +818,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.browserFocusLocation) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.close',
+      title: 'Close Browser',
+      category: 'Browser',
+      execute() {
+        return options.browserClose?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserClose) && readContextValue(context, 'browser.active') === true;
       },
     },
     {

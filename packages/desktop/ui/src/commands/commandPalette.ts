@@ -74,6 +74,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['browser.goForward', 'browser.canGoForward'],
   ['browser.reloadOrStop', 'browser.active'],
   ['browser.focusLocation', 'browser.active'],
+  ['browser.close', 'browser.active'],
   ['artifact.copySource', 'artifact.active'],
   ['artifact.toggleSource', 'artifact.canShowSource'],
   ['artifact.toggleFullscreen', 'artifact.active'],

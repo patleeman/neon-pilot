@@ -2008,6 +2008,10 @@ export function Layout() {
         window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'focusLocation' } }));
         return true;
       },
+      browserClose() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'close' } }));
+        return true;
+      },
       artifactCopySource() {
         window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'copySource' } }));
         return true;

@@ -48,6 +48,7 @@ export const HOST_COMMAND_IDS = [
   'browser.goForward',
   'browser.reloadOrStop',
   'browser.focusLocation',
+  'browser.close',
   'artifact.copySource',
   'artifact.toggleSource',
   'artifact.toggleFullscreen',

@@ -306,6 +306,10 @@ export function WorkbenchBrowserTab({
         urlInputRef.current?.select();
         return;
       }
+      if (command === 'close') {
+        onClose();
+        return;
+      }
       if (!bridge) return;
       if (command === 'goBack' && state?.canGoBack) {
         void runBrowserCommand(() => bridge.goBackWorkbenchBrowser({ sessionKey: browserSessionKey }));

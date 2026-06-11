@@ -324,6 +324,7 @@ describe('WorkbenchBrowserTab', () => {
 
     const container = document.createElement('div');
     document.body.appendChild(container);
+    const onClose = vi.fn();
     root = createRoot(container);
     act(() => {
       root?.render(
@@ -331,7 +332,7 @@ describe('WorkbenchBrowserTab', () => {
           tabsState={browserTabsState}
           activeTab={activeBrowserTab}
           onSetTabsState={vi.fn()}
-          onClose={() => undefined}
+          onClose={onClose}
           onNewTab={vi.fn()}
           onReopenTab={vi.fn()}
           onCloseCurrentTab={vi.fn()}
@@ -355,7 +356,13 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
 
+    act(() => {
+      window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'close' } }));
+    });
+    await flushAsyncWork();
+
     expect(goBackWorkbenchBrowser).toHaveBeenCalledWith(expect.objectContaining({ sessionKey: expect.stringMatching(/^@global:tab-/) }));
     expect(reloadWorkbenchBrowser).toHaveBeenCalledWith(expect.objectContaining({ sessionKey: expect.stringMatching(/^@global:tab-/) }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
