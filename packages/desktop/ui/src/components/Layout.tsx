@@ -41,6 +41,13 @@ import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
 import { ARTIFACT_MODAL_COMMAND_EVENT, type ArtifactModalCommand } from './artifactModalCommands';
+import {
+  COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT,
+} from './chat/composerAttachmentCommands';
 import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
@@ -2159,6 +2166,26 @@ export function Layout() {
       },
       closeComposerPreferences() {
         window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT));
+        return true;
+      },
+      previewFirstComposerAttachment() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT));
+        return true;
+      },
+      removeFirstComposerAttachment() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT));
+        return true;
+      },
+      previewFirstComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT));
+        return true;
+      },
+      editFirstComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT));
+        return true;
+      },
+      removeFirstComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT));
         return true;
       },
       pageConversation(direction: 'up' | 'down') {

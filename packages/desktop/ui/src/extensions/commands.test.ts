@@ -672,12 +672,27 @@ describe('extension commands', () => {
 
   it('opens and closes composer settings and preferences based on composer menu state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['composer.openSettings', 'composer.closeSettings', 'composer.openPreferences', 'composer.closePreferences']),
+      expect.arrayContaining([
+        'composer.openSettings',
+        'composer.closeSettings',
+        'composer.openPreferences',
+        'composer.closePreferences',
+        'composer.previewFirstAttachment',
+        'composer.removeFirstAttachment',
+        'composer.previewFirstDrawing',
+        'composer.editFirstDrawing',
+        'composer.removeFirstDrawing',
+      ]),
     );
     const openComposerSettings = vi.fn(() => true);
     const closeComposerSettings = vi.fn(() => true);
     const openComposerPreferences = vi.fn(() => true);
     const closeComposerPreferences = vi.fn(() => true);
+    const previewFirstComposerAttachment = vi.fn(() => true);
+    const removeFirstComposerAttachment = vi.fn(() => true);
+    const previewFirstComposerDrawing = vi.fn(() => true);
+    const editFirstComposerDrawing = vi.fn(() => true);
+    const removeFirstComposerDrawing = vi.fn(() => true);
     const baseOptions = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
@@ -687,12 +702,22 @@ describe('extension commands', () => {
       closeComposerSettings,
       openComposerPreferences,
       closeComposerPreferences,
+      previewFirstComposerAttachment,
+      removeFirstComposerAttachment,
+      previewFirstComposerDrawing,
+      editFirstComposerDrawing,
+      removeFirstComposerDrawing,
     };
 
     await expect(executeExtensionCommand('composer.openSettings', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.closeSettings', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.openPreferences', undefined, baseOptions)).resolves.toBe(false);
     await expect(executeExtensionCommand('composer.closePreferences', undefined, baseOptions)).resolves.toBe(false);
+    await expect(executeExtensionCommand('composer.previewFirstAttachment', undefined, baseOptions)).resolves.toBe(false);
+    await expect(executeExtensionCommand('composer.removeFirstAttachment', undefined, baseOptions)).resolves.toBe(false);
+    await expect(executeExtensionCommand('composer.previewFirstDrawing', undefined, baseOptions)).resolves.toBe(false);
+    await expect(executeExtensionCommand('composer.editFirstDrawing', undefined, baseOptions)).resolves.toBe(false);
+    await expect(executeExtensionCommand('composer.removeFirstDrawing', undefined, baseOptions)).resolves.toBe(false);
     await expect(
       executeExtensionCommand('composer.openSettings', undefined, {
         ...baseOptions,
@@ -717,11 +742,46 @@ describe('extension commands', () => {
         context: { 'composer.preferencesOpen': true },
       }),
     ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('composer.previewFirstAttachment', undefined, {
+        ...baseOptions,
+        context: { 'composer.canPreviewFirstAttachment': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('composer.removeFirstAttachment', undefined, {
+        ...baseOptions,
+        context: { 'composer.canRemoveFirstAttachment': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('composer.previewFirstDrawing', undefined, {
+        ...baseOptions,
+        context: { 'composer.canPreviewFirstDrawing': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('composer.editFirstDrawing', undefined, {
+        ...baseOptions,
+        context: { 'composer.canEditFirstDrawing': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('composer.removeFirstDrawing', undefined, {
+        ...baseOptions,
+        context: { 'composer.canRemoveFirstDrawing': true },
+      }),
+    ).resolves.toBe(true);
 
     expect(openComposerSettings).toHaveBeenCalledTimes(1);
     expect(closeComposerSettings).toHaveBeenCalledTimes(1);
     expect(openComposerPreferences).toHaveBeenCalledTimes(1);
     expect(closeComposerPreferences).toHaveBeenCalledTimes(1);
+    expect(previewFirstComposerAttachment).toHaveBeenCalledTimes(1);
+    expect(removeFirstComposerAttachment).toHaveBeenCalledTimes(1);
+    expect(previewFirstComposerDrawing).toHaveBeenCalledTimes(1);
+    expect(editFirstComposerDrawing).toHaveBeenCalledTimes(1);
+    expect(removeFirstComposerDrawing).toHaveBeenCalledTimes(1);
   });
 
   it('includes command-backed app chrome actions', async () => {

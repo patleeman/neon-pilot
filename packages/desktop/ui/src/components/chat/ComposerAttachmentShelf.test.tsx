@@ -4,6 +4,13 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ComposerAttachmentShelf } from './ComposerAttachmentShelf';
+import {
+  COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT,
+} from './composerAttachmentCommands';
 import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './imagePreviewCommands';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -140,6 +147,47 @@ describe('ComposerAttachmentShelf', () => {
     click(container.querySelector('button[title="Remove Wireframe"]'));
 
     expect(onRemoveAttachment).toHaveBeenCalledWith(0);
+    expect(onRemoveDrawingAttachment).toHaveBeenCalledWith('drawing-1');
+  });
+
+  it('handles shared first attachment commands', () => {
+    const { container, onRemoveAttachment } = renderShelf({ attachments: [imageAttachment] });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT));
+    });
+    expect(container.querySelector('[role="dialog"][aria-label="Screenshot 2026-04-22.png"]')).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT));
+    });
+    expect(onRemoveAttachment).toHaveBeenCalledWith(0);
+  });
+
+  it('handles shared first drawing commands', () => {
+    const { container, onEditDrawing, onRemoveDrawingAttachment } = renderShelf({
+      drawingAttachments: [
+        {
+          localId: 'drawing-1',
+          title: 'Wireframe',
+          revision: 3,
+          dirty: false,
+          previewUrl: 'data:image/png;base64,ZmFrZQ==',
+        },
+      ],
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT));
+    });
+    expect(container.querySelector('[role="dialog"][aria-label="Wireframe (rev 3)"]')).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT));
+    });
+
+    expect(onEditDrawing).toHaveBeenCalledWith('drawing-1');
     expect(onRemoveDrawingAttachment).toHaveBeenCalledWith('drawing-1');
   });
 });

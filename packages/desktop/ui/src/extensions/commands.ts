@@ -46,6 +46,11 @@ export interface ExtensionCommandExecutorOptions {
   closeComposerSettings?(): boolean;
   openComposerPreferences?(): boolean;
   closeComposerPreferences?(): boolean;
+  previewFirstComposerAttachment?(): boolean;
+  removeFirstComposerAttachment?(): boolean;
+  previewFirstComposerDrawing?(): boolean;
+  editFirstComposerDrawing?(): boolean;
+  removeFirstComposerDrawing?(): boolean;
   pageConversation?(direction: 'up' | 'down'): boolean;
   closeConversation?(): boolean;
   reopenClosedConversation?(): boolean;
@@ -239,6 +244,11 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'composer.closeSettings', title: 'Close Composer Settings', category: 'Conversation' },
     { id: 'composer.openPreferences', title: 'Open Composer Preferences', category: 'Conversation' },
     { id: 'composer.closePreferences', title: 'Close Composer Preferences', category: 'Conversation' },
+    { id: 'composer.previewFirstAttachment', title: 'Preview First Attachment', category: 'Conversation' },
+    { id: 'composer.removeFirstAttachment', title: 'Remove First Attachment', category: 'Conversation' },
+    { id: 'composer.previewFirstDrawing', title: 'Preview First Drawing', category: 'Conversation' },
+    { id: 'composer.editFirstDrawing', title: 'Edit First Drawing', category: 'Conversation' },
+    { id: 'composer.removeFirstDrawing', title: 'Remove First Drawing', category: 'Conversation' },
     { id: 'conversation.pageUp', title: 'Page Conversation Up', category: 'Conversation' },
     { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
     { id: 'workbench.newTab', title: 'New Workbench Tab', category: 'Workbench' },
@@ -874,6 +884,61 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.closeComposerPreferences) && readContextValue(context, 'composer.preferencesOpen') === true;
+      },
+    },
+    {
+      id: 'composer.previewFirstAttachment',
+      title: 'Preview First Attachment',
+      category: 'Conversation',
+      execute() {
+        return options.previewFirstComposerAttachment?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.previewFirstComposerAttachment) && readContextValue(context, 'composer.canPreviewFirstAttachment') === true;
+      },
+    },
+    {
+      id: 'composer.removeFirstAttachment',
+      title: 'Remove First Attachment',
+      category: 'Conversation',
+      execute() {
+        return options.removeFirstComposerAttachment?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.removeFirstComposerAttachment) && readContextValue(context, 'composer.canRemoveFirstAttachment') === true;
+      },
+    },
+    {
+      id: 'composer.previewFirstDrawing',
+      title: 'Preview First Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.previewFirstComposerDrawing?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.previewFirstComposerDrawing) && readContextValue(context, 'composer.canPreviewFirstDrawing') === true;
+      },
+    },
+    {
+      id: 'composer.editFirstDrawing',
+      title: 'Edit First Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.editFirstComposerDrawing?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.editFirstComposerDrawing) && readContextValue(context, 'composer.canEditFirstDrawing') === true;
+      },
+    },
+    {
+      id: 'composer.removeFirstDrawing',
+      title: 'Remove First Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.removeFirstComposerDrawing?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.removeFirstComposerDrawing) && readContextValue(context, 'composer.canRemoveFirstDrawing') === true;
       },
     },
     {

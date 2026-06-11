@@ -629,6 +629,66 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('composer.previewFirstAttachment', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canPreviewFirstAttachment': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.previewFirstAttachment', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canPreviewFirstAttachment': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('composer.removeFirstAttachment', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canRemoveFirstAttachment': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.removeFirstAttachment', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canRemoveFirstAttachment': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('composer.previewFirstDrawing', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canPreviewFirstDrawing': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.previewFirstDrawing', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canPreviewFirstDrawing': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('composer.editFirstDrawing', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canEditFirstDrawing': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.editFirstDrawing', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canEditFirstDrawing': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('composer.removeFirstDrawing', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canRemoveFirstDrawing': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.removeFirstDrawing', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canRemoveFirstDrawing': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': true },
