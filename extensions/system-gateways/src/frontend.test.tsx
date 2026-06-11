@@ -22,7 +22,6 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   ),
   Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
   DataTable: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
-  DataTableActionGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DataTableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
   DataTableCell: ({ children, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) => <td {...props}>{children}</td>,
   DataTableHead: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
@@ -167,15 +166,17 @@ describe('GatewaysPage', () => {
     expect(await screen.findByRole('heading', { name: 'Gateways' })).toBeTruthy();
     expect(screen.getAllByText('Chief of Threads').length).toBeGreaterThan(0);
     expect(screen.getByText('Telegram attached to Chief of Threads')).toBeTruthy();
-    expect(screen.getByText(/Token:\s*configured/)).toBeTruthy();
+    expect(screen.getByText(/Bot\s*configured;\s*1\s*active\s*route/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Active Routes' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Connections' })).toBeNull();
   });
 
   it('toggles Telegram through the backend connection route', async () => {
     renderPage();
     await screen.findAllByText('Chief of Threads');
 
-    const connectionsSection = screen.getByRole('heading', { name: 'Connections' }).closest('section')!;
-    fireEvent.click(within(connectionsSection).getByRole('button', { name: 'Pause' }));
+    const telegramSection = screen.getByRole('heading', { name: 'Telegram' }).closest('section')!;
+    fireEvent.click(within(telegramSection).getByRole('button', { name: 'Pause Telegram' }));
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
@@ -194,10 +195,10 @@ describe('GatewaysPage', () => {
     await screen.findAllByText('Chief of Threads');
 
     const telegramSection = screen.getByRole('heading', { name: 'Telegram' }).closest('section')!;
-    fireEvent.change(within(telegramSection).getByLabelText(/Conversation title/), { target: { value: 'Gateway Thread' } });
-    fireEvent.change(within(telegramSection).getByLabelText(/Telegram chat id/), { target: { value: '43' } });
-    fireEvent.change(within(telegramSection).getByLabelText(/Telegram chat label/), { target: { value: 'Test Chat' } });
-    fireEvent.click(within(telegramSection).getByRole('button', { name: 'Attach thread' }));
+    fireEvent.change(within(telegramSection).getByLabelText(/Conversation Title/), { target: { value: 'Gateway Thread' } });
+    fireEvent.change(within(telegramSection).getByLabelText(/Telegram Chat ID/), { target: { value: '43' } });
+    fireEvent.change(within(telegramSection).getByLabelText(/Telegram Chat Label/), { target: { value: 'Test Chat' } });
+    fireEvent.click(within(telegramSection).getByRole('button', { name: 'Save Route' }));
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
@@ -214,6 +215,6 @@ describe('GatewaysPage', () => {
         }),
       ),
     );
-    expect(await screen.findByText('Telegram gateway attached to thread.')).toBeTruthy();
+    expect(await screen.findByText('Telegram route saved.')).toBeTruthy();
   });
 });

@@ -5,7 +5,6 @@ import {
   AppPageSection,
   Button,
   DataTable,
-  DataTableActionGroup,
   DataTableBody,
   DataTableCell,
   DataTableHead,
@@ -146,6 +145,10 @@ function findProviderConnection(state: GatewayState, provider: GatewayProviderId
   return state.connections.find((connection) => connection.provider === provider) ?? null;
 }
 
+function hasTelegramRoute(state: GatewayState, conversationId: string): boolean {
+  return state.bindings.some((binding) => binding.provider === 'telegram' && binding.conversationId === conversationId);
+}
+
 function normalizeForm(value: GatewayFormState): GatewayFormState {
   return {
     conversationId: value.conversationId.trim(),
@@ -201,7 +204,13 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
 
   const telegramConnection = useMemo(() => findProviderConnection(state, 'telegram'), [state]);
   const telegramBindings = useMemo(() => state.bindings.filter((binding) => binding.provider === 'telegram'), [state.bindings]);
-  const telegramTargets = useMemo(() => state.chatTargets.filter((target) => target.provider === 'telegram'), [state.chatTargets]);
+  const unassignedTelegramTargets = useMemo(
+    () =>
+      state.chatTargets.filter(
+        (target) => target.provider === 'telegram' && (!target.conversationId || !hasTelegramRoute(state, target.conversationId)),
+      ),
+    [state],
+  );
 
   async function runOperation(label: string, operation: () => Promise<void>) {
     setBusy(label);
@@ -214,13 +223,6 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
     } finally {
       setBusy(null);
     }
-  }
-
-  async function createConnection(provider: GatewayProviderId) {
-    await runOperation(`create-${provider}`, async () => {
-      setState(await fetchJson<GatewayState>('/api/gateways/connections', { method: 'POST', body: JSON.stringify({ provider }) }));
-      setMessage(`${providerLabel(provider)} connection created.`);
-    });
   }
 
   async function toggleTelegram(enabled: boolean) {
@@ -284,7 +286,7 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
         }),
       );
       setForm({ ...emptyForm, conversationId: context.conversationId ?? '' });
-      setMessage('Telegram gateway attached to thread.');
+      setMessage('Telegram route saved.');
     });
   }
 
@@ -295,9 +297,12 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
           method: 'DELETE',
         }),
       );
-      setMessage('Telegram gateway detached from thread.');
+      setMessage('Telegram route removed.');
     });
   }
+
+  const telegramStatus = telegramConnection?.status ?? 'needs_config';
+  const telegramReady = token.configured && telegramConnection?.enabled && telegramStatus !== 'paused' && telegramStatus !== 'needs_attention';
 
   if (loading) {
     return (
@@ -325,141 +330,123 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
       <AppPageLayout shellClassName="max-w-[74rem]" contentClassName="space-y-8">
         <AppPageIntro
           title="Gateways"
-          summary="External channels attached to Neon Pilot threads."
+          summary="Route external messages into Neon Pilot conversations."
           actions={<ToolbarButton onClick={refresh}>Refresh</ToolbarButton>}
         />
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
         {message ? <Notice tone="success">{message}</Notice> : null}
 
-        <AppPageSection title="Connections" layout="stacked" bodyClassName="space-y-4">
-          <DataTable>
-            <DataTableHead>
-              <DataTableRow>
-                <DataTableHeaderCell>Provider</DataTableHeaderCell>
-                <DataTableHeaderCell>Status</DataTableHeaderCell>
-                <DataTableHeaderCell>Enabled</DataTableHeaderCell>
-                <DataTableHeaderCell>Updated</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-              </DataTableRow>
-            </DataTableHead>
-            <DataTableBody>
-              {state.providers.map((provider) => {
-                const connection = findProviderConnection(state, provider.id);
-                return (
-                  <DataTableRow key={provider.id}>
-                    <DataTableCell>
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-primary">{provider.label}</div>
-                        <div className="truncate text-[11px] text-muted">
-                          {provider.implemented ? 'Backend provider available' : 'Not implemented'}
-                        </div>
-                      </div>
-                    </DataTableCell>
-                    <DataTableCell>
-                      {connection ? (
-                        <div className="flex items-center gap-2">
-                          <StatusDot tone={statusTone(connection.status)} />
-                          <span className="capitalize">{formatStatus(connection.status)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted">Not created</span>
-                      )}
-                    </DataTableCell>
-                    <DataTableCell>{connection?.enabled ? 'Yes' : 'No'}</DataTableCell>
-                    <DataTableCell>{formatDate(connection?.updatedAt)}</DataTableCell>
-                    <DataTableCell align="right">
-                      <DataTableActionGroup>
-                        {connection ? (
-                          provider.id === 'telegram' ? (
-                            <ToolbarButton disabled={busy === 'toggle-telegram'} onClick={() => toggleTelegram(!connection.enabled)}>
-                              {connection.enabled ? 'Pause' : 'Enable'}
-                            </ToolbarButton>
-                          ) : null
-                        ) : (
-                          <ToolbarButton disabled={busy === `create-${provider.id}`} onClick={() => createConnection(provider.id)}>
-                            Create
-                          </ToolbarButton>
-                        )}
-                      </DataTableActionGroup>
-                    </DataTableCell>
-                  </DataTableRow>
-                );
-              })}
-            </DataTableBody>
-          </DataTable>
-        </AppPageSection>
-
-        <AppPageSection title="Telegram" layout="stacked" bodyClassName="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <form className="space-y-3" onSubmit={saveTelegramToken}>
-            <Field label="Bot token">
-              <TextInput
-                type="password"
-                value={tokenDraft}
-                placeholder={token.configured ? 'Configured' : '123456:ABC...'}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
-              />
-            </Field>
+        <AppPageSection title="Telegram" layout="stacked" bodyClassName="space-y-5">
+          <div className="flex flex-col gap-3 border-b border-border-subtle pb-4 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[13px] font-medium text-primary">
+                <StatusDot tone={telegramReady ? 'success' : statusTone(telegramStatus)} />
+                <span>{telegramReady ? 'Ready' : token.configured ? formatStatus(telegramStatus) : 'Needs Bot Token'}</span>
+              </div>
+              <p className="mt-1 text-[12px] text-muted">
+                Bot {token.configured ? 'configured' : 'not configured'}; {telegramBindings.length} active{' '}
+                {telegramBindings.length === 1 ? 'route' : 'routes'}.
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" variant="action" disabled={busy === 'telegram-token'}>
-                Save token
-              </Button>
+              {telegramConnection ? (
+                <ToolbarButton disabled={!token.configured || busy === 'toggle-telegram'} onClick={() => toggleTelegram(!telegramConnection.enabled)}>
+                  {telegramConnection.enabled ? 'Pause Telegram' : 'Start Telegram'}
+                </ToolbarButton>
+              ) : null}
               <ToolbarButton disabled={!token.configured || busy === 'remove-telegram-token'} onClick={removeTelegramToken}>
-                Remove token
+                Remove Token
               </ToolbarButton>
             </div>
-            <div className="text-[12px] text-muted">
-              Token: {token.configured ? 'configured' : 'not configured'}; connection:{' '}
-              {telegramConnection ? formatStatus(telegramConnection.status) : 'not created'}.
-            </div>
-          </form>
+          </div>
 
-          <form className="grid gap-3 md:grid-cols-2" onSubmit={attachConversation}>
-            <Field label="Conversation id">
-              <TextInput
-                value={form.conversationId}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, conversationId: event.target.value }))}
-              />
-            </Field>
-            <Field label="Conversation title">
-              <TextInput
-                value={form.conversationTitle}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setForm((current) => ({ ...current, conversationTitle: event.target.value }))
-                }
-              />
-            </Field>
-            <Field label="Telegram chat id">
-              <TextInput
-                value={form.externalChatId}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, externalChatId: event.target.value }))}
-              />
-            </Field>
-            <Field label="Telegram chat label">
-              <TextInput
-                value={form.externalChatLabel}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setForm((current) => ({ ...current, externalChatLabel: event.target.value }))
-                }
-              />
-            </Field>
-            <div className="md:col-span-2">
-              <Button type="submit" variant="action" disabled={busy === 'attach-telegram'}>
-                Attach thread
-              </Button>
-            </div>
-          </form>
+          <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
+            <form className="space-y-3" onSubmit={saveTelegramToken}>
+              <div>
+                <h3 className="text-[14px] font-semibold text-primary">Bot</h3>
+                <p className="mt-1 text-[12px] text-muted">Stored in extension secrets.</p>
+              </div>
+              <Field label="Telegram bot token">
+                <TextInput
+                  name="telegramBotToken"
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={tokenDraft}
+                  placeholder={token.configured ? 'Configured' : '123456:ABC...'}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
+                />
+              </Field>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="submit" variant="action" disabled={busy === 'telegram-token'}>
+                  Save Token
+                </Button>
+              </div>
+            </form>
+
+            <form className="grid gap-3 md:grid-cols-2" onSubmit={attachConversation}>
+              <div className="md:col-span-2">
+                <h3 className="text-[14px] font-semibold text-primary">Route Messages</h3>
+                <p className="mt-1 text-[12px] text-muted">Choose the conversation that receives messages from a Telegram chat.</p>
+              </div>
+              <Field label="Conversation ID">
+                <TextInput
+                  name="conversationId"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={form.conversationId}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, conversationId: event.target.value }))}
+                />
+              </Field>
+              <Field label="Conversation Title">
+                <TextInput
+                  name="conversationTitle"
+                  autoComplete="off"
+                  value={form.conversationTitle}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setForm((current) => ({ ...current, conversationTitle: event.target.value }))
+                  }
+                />
+              </Field>
+              <Field label="Telegram Chat ID">
+                <TextInput
+                  name="telegramChatId"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={form.externalChatId}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, externalChatId: event.target.value }))}
+                />
+              </Field>
+              <Field label="Telegram Chat Label">
+                <TextInput
+                  name="telegramChatLabel"
+                  autoComplete="off"
+                  value={form.externalChatLabel}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setForm((current) => ({ ...current, externalChatLabel: event.target.value }))
+                  }
+                />
+              </Field>
+              <div className="md:col-span-2">
+                <Button type="submit" variant="action" disabled={!token.configured || busy === 'attach-telegram'}>
+                  Save Route
+                </Button>
+                {!token.configured ? <p className="mt-2 text-[12px] text-muted">Save a bot token before routing messages.</p> : null}
+              </div>
+            </form>
+          </div>
         </AppPageSection>
 
-        <AppPageSection title="Thread bindings" layout="stacked">
+        <AppPageSection title="Active Routes" layout="stacked">
           {telegramBindings.length === 0 ? (
-            <EmptyState title="No Telegram bindings" />
+            <EmptyState title="No Telegram routes" />
           ) : (
             <DataTable>
               <DataTableHead>
                 <DataTableRow>
-                  <DataTableHeaderCell>Thread</DataTableHeaderCell>
-                  <DataTableHeaderCell>Chat</DataTableHeaderCell>
+                  <DataTableHeaderCell>Conversation</DataTableHeaderCell>
+                  <DataTableHeaderCell>Telegram Chat</DataTableHeaderCell>
                   <DataTableHeaderCell>Replies</DataTableHeaderCell>
                   <DataTableHeaderCell>Updated</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
@@ -489,21 +476,19 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
           )}
         </AppPageSection>
 
-        <AppPageSection title="Telegram chats" layout="stacked">
-          {telegramTargets.length === 0 ? (
-            <EmptyState title="No chat targets" />
-          ) : (
+        {unassignedTelegramTargets.length > 0 ? (
+          <AppPageSection title="Incoming Chats" layout="stacked">
             <DataTable>
               <DataTableHead>
                 <DataTableRow>
-                  <DataTableHeaderCell>Chat</DataTableHeaderCell>
-                  <DataTableHeaderCell>Thread</DataTableHeaderCell>
+                  <DataTableHeaderCell>Telegram Chat</DataTableHeaderCell>
+                  <DataTableHeaderCell>Conversation</DataTableHeaderCell>
                   <DataTableHeaderCell>Replies</DataTableHeaderCell>
                   <DataTableHeaderCell>Updated</DataTableHeaderCell>
                 </DataTableRow>
               </DataTableHead>
               <DataTableBody>
-                {telegramTargets.map((target) => (
+                {unassignedTelegramTargets.map((target) => (
                   <DataTableRow key={target.id}>
                     <DataTableCell>{target.externalChatLabel || target.externalChatId}</DataTableCell>
                     <DataTableCell>{target.conversationTitle || target.conversationId || 'Unassigned'}</DataTableCell>
@@ -513,12 +498,12 @@ export function GatewaysPage({ context }: ExtensionSurfaceProps) {
                 ))}
               </DataTableBody>
             </DataTable>
-          )}
-        </AppPageSection>
+          </AppPageSection>
+        ) : null}
 
-        <AppPageSection title="Recent events" layout="stacked">
+        <AppPageSection title="Recent Activity" layout="stacked">
           {state.events.length === 0 ? (
-            <EmptyState title="No gateway events" />
+            <EmptyState title="No gateway activity" />
           ) : (
             <DataTable>
               <DataTableHead>
