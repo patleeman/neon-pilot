@@ -51,6 +51,8 @@ export const HOST_COMMAND_IDS = [
   'artifact.toggleFullscreen',
   'artifact.close',
   'imagePreview.close',
+  'messageEdit.save',
+  'messageEdit.cancel',
   'conversation.newAndFocus',
   'model.cycle',
   'thinking.cycle',

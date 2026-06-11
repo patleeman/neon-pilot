@@ -45,6 +45,7 @@ import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
 import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
 import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './chat/imagePreviewCommands';
+import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -2011,6 +2012,14 @@ export function Layout() {
       },
       closeImagePreview() {
         window.dispatchEvent(new CustomEvent(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      saveMessageEdit() {
+        window.dispatchEvent(new CustomEvent<MessageEditCommand>(MESSAGE_EDIT_COMMAND_EVENT, { detail: 'save' }));
+        return true;
+      },
+      cancelMessageEdit() {
+        window.dispatchEvent(new CustomEvent<MessageEditCommand>(MESSAGE_EDIT_COMMAND_EVENT, { detail: 'cancel' }));
         return true;
       },
       focusComposer() {

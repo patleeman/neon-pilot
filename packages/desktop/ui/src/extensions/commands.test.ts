@@ -302,6 +302,44 @@ describe('extension commands', () => {
     expect(closeImagePreview).toHaveBeenCalledTimes(1);
   });
 
+  it('includes message edit commands gated by edit state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['messageEdit.save', 'messageEdit.cancel']));
+    const saveMessageEdit = vi.fn(() => true);
+    const cancelMessageEdit = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      saveMessageEdit,
+      cancelMessageEdit,
+    };
+
+    await expect(executeExtensionCommand('messageEdit.save', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('messageEdit.cancel', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('messageEdit.save', undefined, {
+        ...options,
+        context: { 'messageEdit.active': true, 'messageEdit.canSave': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('messageEdit.cancel', undefined, {
+        ...options,
+        context: { 'messageEdit.active': true, 'messageEdit.canSave': false },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('messageEdit.save', undefined, {
+        ...options,
+        context: { 'messageEdit.active': true, 'messageEdit.canSave': false },
+      }),
+    ).resolves.toBe(false);
+
+    expect(saveMessageEdit).toHaveBeenCalledTimes(1);
+    expect(cancelMessageEdit).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),

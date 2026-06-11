@@ -1,9 +1,10 @@
-import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
+import { setExtensionCommandContext } from '../../extensions/commands.js';
 import { cx, MessageActionButton, MessageCard, MessageMeta, TextButton } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
@@ -12,6 +13,7 @@ import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
 import { readMentionedLinkedRunsFromText } from './linkedRuns.js';
 import { renderMarkdownText, renderStreamingMarkdownText, renderText, SkillInvocationCard } from './MarkdownMessage.js';
 import { MessageActions } from './MessageActions.js';
+import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './messageEditCommands.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { isTopologyBlock } from './transcriptItems.js';
 
@@ -477,6 +479,40 @@ export const UserMessage = memo(function UserMessage({
       setEditSaving(false);
     }
   }, [editDraft, editSaving, messageIndex, onEditMessage]);
+  const canSaveEdit = editing && !editSaving && editDraft.trim().length > 0;
+
+  useEffect(() => {
+    if (!editing) {
+      return;
+    }
+
+    setExtensionCommandContext('messageEdit.active', editing);
+    setExtensionCommandContext('messageEdit.canSave', canSaveEdit);
+    return () => {
+      setExtensionCommandContext('messageEdit.active', null);
+      setExtensionCommandContext('messageEdit.canSave', null);
+    };
+  }, [canSaveEdit, editing]);
+
+  useEffect(() => {
+    if (!editing) {
+      return;
+    }
+
+    function handleMessageEditCommand(event: Event) {
+      const command = (event as CustomEvent<MessageEditCommand>).detail;
+      if (command === 'save') {
+        void saveEdit();
+        return;
+      }
+      if (command === 'cancel') {
+        cancelEdit();
+      }
+    }
+
+    window.addEventListener(MESSAGE_EDIT_COMMAND_EVENT, handleMessageEditCommand);
+    return () => window.removeEventListener(MESSAGE_EDIT_COMMAND_EVENT, handleMessageEditCommand);
+  }, [cancelEdit, editing, saveEdit]);
 
   const transcriptTargetAttrs = block.id ? transcriptTargetAttributes({ kind: 'block', blockId: block.id }) : {};
 

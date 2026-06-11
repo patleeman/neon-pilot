@@ -155,6 +155,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('messageEdit.save', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageEdit.canSave': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('messageEdit.save', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageEdit.canSave': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('messageEdit.cancel', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageEdit.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('messageEdit.cancel', {
+        activeConversationId: 'conversation-1',
+        context: { 'messageEdit.active': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('notifications.markAllRead', {
         activeConversationId: 'conversation-1',
         context: { 'notifications.hasUnread': false },

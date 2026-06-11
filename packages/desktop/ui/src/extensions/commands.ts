@@ -68,6 +68,8 @@ export interface ExtensionCommandExecutorOptions {
   artifactToggleFullscreen?(): boolean;
   artifactClose?(): boolean;
   closeImagePreview?(): boolean;
+  saveMessageEdit?(): boolean;
+  cancelMessageEdit?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: {
@@ -215,6 +217,8 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'artifact.toggleFullscreen', title: 'Toggle Artifact Fullscreen', category: 'Artifact' },
     { id: 'artifact.close', title: 'Close Artifact', category: 'Artifact' },
     { id: 'imagePreview.close', title: 'Close Image Preview', category: 'Image Preview' },
+    { id: 'messageEdit.save', title: 'Save Message Edit', category: 'Message Edit' },
+    { id: 'messageEdit.cancel', title: 'Cancel Message Edit', category: 'Message Edit' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -835,6 +839,32 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.closeImagePreview) && readContextValue(context, 'imagePreview.active') === true;
+      },
+    },
+    {
+      id: 'messageEdit.save',
+      title: 'Save Message Edit',
+      category: 'Message Edit',
+      execute() {
+        return options.saveMessageEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.saveMessageEdit) &&
+          readContextValue(context, 'messageEdit.active') === true &&
+          readContextValue(context, 'messageEdit.canSave') === true
+        );
+      },
+    },
+    {
+      id: 'messageEdit.cancel',
+      title: 'Cancel Message Edit',
+      category: 'Message Edit',
+      execute() {
+        return options.cancelMessageEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelMessageEdit) && readContextValue(context, 'messageEdit.active') === true;
       },
     },
     {

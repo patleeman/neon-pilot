@@ -78,6 +78,8 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['artifact.toggleFullscreen', 'artifact.active'],
   ['artifact.close', 'artifact.active'],
   ['imagePreview.close', 'imagePreview.active'],
+  ['messageEdit.save', 'messageEdit.canSave'],
+  ['messageEdit.cancel', 'messageEdit.active'],
   ['conversation.saveCwd', 'conversation.cwdEditorOpen'],
   ['conversation.cancelCwdEdit', 'conversation.cwdEditorOpen'],
   ['composer.submit', 'composer.canSubmit'],
