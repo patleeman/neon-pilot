@@ -119,6 +119,54 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('browser.goBack', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.canGoBack': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.goBack', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.canGoBack': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('browser.goForward', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.canGoForward': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.goForward', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.canGoForward': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('browser.reloadOrStop', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.reloadOrStop', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('browser.focusLocation', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.focusLocation', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': false },

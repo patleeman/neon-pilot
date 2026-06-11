@@ -7,6 +7,7 @@ import {
   type DesktopWorkbenchBrowserState,
   getDesktopBridge,
 } from '../../desktop/desktopBridge';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
@@ -14,6 +15,7 @@ import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '..
 import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
+export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set([
   'browser.newTab',
   'browser.reopenTab',
@@ -282,6 +284,49 @@ export function WorkbenchBrowserTab({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onNewTab, onReopenTab, onCloseCurrentTab, surfaceKeybindings]);
+
+  useEffect(() => {
+    setExtensionCommandContext('browser.active', true);
+    setExtensionCommandContext('browser.canGoBack', Boolean(state?.canGoBack));
+    setExtensionCommandContext('browser.canGoForward', Boolean(state?.canGoForward));
+    setExtensionCommandContext('browser.loading', Boolean(state?.loading));
+    return () => {
+      setExtensionCommandContext('browser.active', null);
+      setExtensionCommandContext('browser.canGoBack', null);
+      setExtensionCommandContext('browser.canGoForward', null);
+      setExtensionCommandContext('browser.loading', null);
+    };
+  }, [state?.canGoBack, state?.canGoForward, state?.loading]);
+
+  useEffect(() => {
+    function handleBrowserCommand(event: Event) {
+      const command = (event as CustomEvent<{ command?: unknown }>).detail?.command;
+      if (command === 'focusLocation') {
+        urlInputRef.current?.focus();
+        urlInputRef.current?.select();
+        return;
+      }
+      if (!bridge) return;
+      if (command === 'goBack' && state?.canGoBack) {
+        void runBrowserCommand(() => bridge.goBackWorkbenchBrowser({ sessionKey: browserSessionKey }));
+        return;
+      }
+      if (command === 'goForward' && state?.canGoForward) {
+        void runBrowserCommand(() => bridge.goForwardWorkbenchBrowser({ sessionKey: browserSessionKey }));
+        return;
+      }
+      if (command === 'reloadOrStop') {
+        void runBrowserCommand(() =>
+          state?.loading
+            ? bridge.stopWorkbenchBrowser({ sessionKey: browserSessionKey })
+            : bridge.reloadWorkbenchBrowser({ sessionKey: browserSessionKey }),
+        );
+      }
+    }
+
+    window.addEventListener(WORKBENCH_BROWSER_COMMAND_EVENT, handleBrowserCommand);
+    return () => window.removeEventListener(WORKBENCH_BROWSER_COMMAND_EVENT, handleBrowserCommand);
+  }, [bridge, browserSessionKey, state?.canGoBack, state?.canGoForward, state?.loading]);
 
   useEffect(() => {
     function handleBrowserCommentTarget(event: Event) {

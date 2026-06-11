@@ -109,6 +109,48 @@ describe('extension commands', () => {
     expect(dismissAllNotifications).toHaveBeenCalledTimes(1);
   });
 
+  it('includes browser toolbar commands gated by browser state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['browser.goBack', 'browser.goForward', 'browser.reloadOrStop', 'browser.focusLocation']),
+    );
+    const browserGoBack = vi.fn(() => true);
+    const browserGoForward = vi.fn(() => true);
+    const browserReloadOrStop = vi.fn(() => true);
+    const browserFocusLocation = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      browserGoBack,
+      browserGoForward,
+      browserReloadOrStop,
+      browserFocusLocation,
+    };
+
+    await expect(executeExtensionCommand('browser.goBack', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('browser.goForward', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('browser.reloadOrStop', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('browser.focusLocation', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('browser.goBack', undefined, { ...options, context: { 'browser.canGoBack': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('browser.goForward', undefined, { ...options, context: { 'browser.canGoForward': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('browser.reloadOrStop', undefined, { ...options, context: { 'browser.active': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('browser.focusLocation', undefined, { ...options, context: { 'browser.active': true } }),
+    ).resolves.toBe(true);
+
+    expect(browserGoBack).toHaveBeenCalledTimes(1);
+    expect(browserGoForward).toHaveBeenCalledTimes(1);
+    expect(browserReloadOrStop).toHaveBeenCalledTimes(1);
+    expect(browserFocusLocation).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),

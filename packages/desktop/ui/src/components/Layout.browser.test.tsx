@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
 import { type BrowserTabItem, type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
-import { WorkbenchBrowserTab } from './workbench/WorkbenchBrowserTab';
+import { WORKBENCH_BROWSER_COMMAND_EVENT, WorkbenchBrowserTab } from './workbench/WorkbenchBrowserTab';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -275,5 +275,87 @@ describe('WorkbenchBrowserTab', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 't', metaKey: true }));
 
     expect(onNewTab).toHaveBeenCalledOnce();
+  });
+
+  it('handles shared browser toolbar commands for the active tab', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => ({
+      url: 'https://example.com/',
+      title: 'Example',
+      loading: false,
+      canGoBack: true,
+      canGoForward: true,
+      browserRevision: 1,
+      snapshotRevision: 0,
+      changedSinceSnapshot: true,
+    }));
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const goBackWorkbenchBrowser = vi.fn(async () => ({
+      url: 'https://previous.example/',
+      title: 'Previous',
+      loading: false,
+      canGoBack: false,
+      canGoForward: true,
+      browserRevision: 2,
+      snapshotRevision: 0,
+      changedSinceSnapshot: true,
+    }));
+    const reloadWorkbenchBrowser = vi.fn(async () => ({
+      url: 'https://example.com/',
+      title: 'Example',
+      loading: false,
+      canGoBack: true,
+      canGoForward: true,
+      browserRevision: 3,
+      snapshotRevision: 0,
+      changedSinceSnapshot: true,
+    }));
+    window.neonPilotDesktop = {
+      setWorkbenchBrowserBounds,
+      navigateWorkbenchBrowser,
+      goBackWorkbenchBrowser,
+      goForwardWorkbenchBrowser: vi.fn(async () => null),
+      reloadWorkbenchBrowser,
+      stopWorkbenchBrowser: vi.fn(async () => null),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'focusLocation' } }));
+    });
+    expect(document.activeElement).toBe(container.querySelector('input'));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'goBack' } }));
+    });
+    await flushAsyncWork();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'reloadOrStop' } }));
+    });
+    await flushAsyncWork();
+
+    expect(goBackWorkbenchBrowser).toHaveBeenCalledWith(expect.objectContaining({ sessionKey: expect.stringMatching(/^@global:tab-/) }));
+    expect(reloadWorkbenchBrowser).toHaveBeenCalledWith(expect.objectContaining({ sessionKey: expect.stringMatching(/^@global:tab-/) }));
   });
 });

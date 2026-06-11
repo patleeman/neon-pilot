@@ -51,6 +51,10 @@ export interface ExtensionCommandExecutorOptions {
   refreshActiveWorkbenchFile?(): boolean;
   toggleWorkbenchExplorer?(): boolean;
   toggleWorkbenchDiff?(): boolean;
+  browserGoBack?(): boolean;
+  browserGoForward?(): boolean;
+  browserReloadOrStop?(): boolean;
+  browserFocusLocation?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: {
@@ -181,6 +185,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'workbench.refreshActiveFile', title: 'Refresh Active Workbench File', category: 'Workbench' },
     { id: 'workbench.toggleExplorer', title: 'Toggle Workbench Explorer', category: 'Workbench' },
     { id: 'workbench.toggleDiff', title: 'Toggle Workbench Diff Overlay', category: 'Workbench' },
+    { id: 'browser.goBack', title: 'Browser Go Back', category: 'Browser' },
+    { id: 'browser.goForward', title: 'Browser Go Forward', category: 'Browser' },
+    { id: 'browser.reloadOrStop', title: 'Reload or Stop Browser', category: 'Browser' },
+    { id: 'browser.focusLocation', title: 'Focus Browser Location', category: 'Browser' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -594,6 +602,50 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute() {
         return Boolean(options.toggleWorkbenchDiff);
+      },
+    },
+    {
+      id: 'browser.goBack',
+      title: 'Browser Go Back',
+      category: 'Browser',
+      execute() {
+        return options.browserGoBack?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserGoBack) && readContextValue(context, 'browser.canGoBack') === true;
+      },
+    },
+    {
+      id: 'browser.goForward',
+      title: 'Browser Go Forward',
+      category: 'Browser',
+      execute() {
+        return options.browserGoForward?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserGoForward) && readContextValue(context, 'browser.canGoForward') === true;
+      },
+    },
+    {
+      id: 'browser.reloadOrStop',
+      title: 'Reload or Stop Browser',
+      category: 'Browser',
+      execute() {
+        return options.browserReloadOrStop?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserReloadOrStop) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.focusLocation',
+      title: 'Focus Browser Location',
+      category: 'Browser',
+      execute() {
+        return options.browserFocusLocation?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserFocusLocation) && readContextValue(context, 'browser.active') === true;
       },
     },
     {

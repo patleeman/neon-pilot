@@ -76,6 +76,7 @@ const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
+const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
 const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
 
@@ -1937,6 +1938,22 @@ export function Layout() {
       },
       toggleWorkbenchDiff() {
         window.dispatchEvent(new CustomEvent(WORKBENCH_TOGGLE_DIFF_EVENT));
+        return true;
+      },
+      browserGoBack() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'goBack' } }));
+        return true;
+      },
+      browserGoForward() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'goForward' } }));
+        return true;
+      },
+      browserReloadOrStop() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'reloadOrStop' } }));
+        return true;
+      },
+      browserFocusLocation() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'focusLocation' } }));
         return true;
       },
       focusComposer() {
