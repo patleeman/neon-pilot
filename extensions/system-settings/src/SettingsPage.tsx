@@ -26,6 +26,7 @@ import {
   isDesktopShell,
   KeyboardShortcutCaptureInput,
   listHostCommands,
+  normalizeLegacyCommand,
   type ModelEditorDraft,
   type ModelProviderApi,
   type ModelProviderConfig,
@@ -191,7 +192,7 @@ type ShortcutListItem = {
   defaultShortcuts?: string[];
 };
 
-interface CommandSettingsEntry {
+export interface CommandSettingsEntry {
   id?: string;
   surfaceId?: string;
   extensionId?: string;
@@ -1043,30 +1044,15 @@ function emptyKeybindingForCommand(
   };
 }
 
-function desktopShortcutIdForHostCommand(command: CommandSettingsEntry): DesktopKeyboardShortcutId | null {
+export function desktopShortcutIdForHostCommand(command: CommandSettingsEntry): DesktopKeyboardShortcutId | null {
   if (command.extensionId !== 'host') return null;
   const commandId = command.id ?? command.surfaceId ?? '';
-  if (commandId === 'conversation.new') return 'newConversation';
-  if (commandId === 'conversation.close') return 'closeTab';
-  if (commandId === 'conversation.reopenClosed') return 'reopenClosedTab';
-  if (commandId === 'conversation.previous') return 'previousConversation';
-  if (commandId === 'conversation.next') return 'nextConversation';
-  if (commandId === 'conversation.togglePinned') return 'togglePinned';
-  if (commandId === 'conversation.toggleArchived') return 'archiveRestoreConversation';
-  if (commandId === 'conversation.rename') return 'renameConversation';
-  if (commandId === 'conversation.editCwd') return 'editWorkingDirectory';
-  if (commandId === 'composer.focus') return 'focusComposer';
-  if (commandId === 'page.find') return 'findOnPage';
-  if (commandId === 'layout.toggleSidebar') return 'toggleSidebar';
-  if (commandId === 'layout.toggleRightRail') return 'toggleRightRail';
-  if (commandId === 'workbench.newTab') return 'newWorkbenchTab';
-  if (commandId === 'workbench.closeActiveTab') return 'closeWorkbenchTab';
-  if (commandId === 'workbench.closeActiveFile') return 'closeWorkbenchFile';
-  if (commandId === 'workbench.refreshActiveFile') return 'refreshWorkbenchFile';
-  if (commandId === 'workbench.toggleExplorer') return 'toggleWorkbenchExplorer';
-  if (commandId === 'workbench.toggleDiff') return 'toggleWorkbenchDiff';
-  if (commandId === 'layout.set' && settingsArgsMatch(command.args, { mode: 'compact' })) return 'conversationMode';
-  if (commandId === 'layout.set' && settingsArgsMatch(command.args, { mode: 'workbench' })) return 'workbenchMode';
+  for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
+    const normalized = normalizeLegacyCommand(registration.command);
+    if (normalized.command === commandId && settingsArgsMatch(normalized.args, command.args)) {
+      return registration.id as DesktopKeyboardShortcutId;
+    }
+  }
   return null;
 }
 
