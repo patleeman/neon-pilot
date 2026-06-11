@@ -682,6 +682,25 @@ function isDesktopConversationShortcutAction(value: unknown): value is DesktopCo
   );
 }
 
+function desktopConversationShortcutCommandAction(command: unknown): DesktopConversationShortcutAction | null {
+  switch (command) {
+    case 'conversation.close':
+      return 'close-conversation';
+    case 'conversation.reopenClosed':
+      return 'reopen-closed-conversation';
+    case 'conversation.previous':
+      return 'previous-conversation';
+    case 'conversation.next':
+      return 'next-conversation';
+    case 'conversation.togglePinned':
+      return 'toggle-conversation-pin';
+    case 'conversation.toggleArchived':
+      return 'toggle-conversation-archive';
+    default:
+      return null;
+  }
+}
+
 function TopNavItem({
   to,
   icon,
@@ -3752,8 +3771,11 @@ export function Sidebar() {
         return;
       }
 
-      const action = (event as CustomEvent<{ action?: unknown }>).detail?.action;
-      if (!isDesktopConversationShortcutAction(action)) {
+      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
+      const action = isDesktopConversationShortcutAction(detail?.action)
+        ? detail.action
+        : desktopConversationShortcutCommandAction(detail?.command);
+      if (!action) {
         return;
       }
 

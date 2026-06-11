@@ -206,4 +206,21 @@ describe('Sidebar branch conversation interactions', () => {
     expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
   });
+
+  it('accepts command-only desktop shortcut events for shared conversation close', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['child']));
+    renderSidebar('/conversations/parent', [
+      session({ id: 'parent', title: 'Parent thread' }),
+      session({ id: 'child', title: 'Running child', parentSessionId: 'parent', sourceRunId: 'run-child', isRunning: true }),
+    ]);
+    await flush();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'conversation.close' } }));
+    });
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
+  });
 });
