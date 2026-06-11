@@ -11,7 +11,7 @@ const extensionsRoot = join(repoRoot, 'extensions');
 const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 const extensionPackScript = join(repoRoot, 'scripts', 'extension-pack.mjs');
 const installableBundleRoot = join(repoRoot, 'dist', 'installable-extensions');
-const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows', 'system-knowledge']);
+const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
