@@ -14,17 +14,17 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 async function readAgentSettings(): Promise<SettingsState> {
-  const response = await api.invokeExtensionAction('system-neon-pilot-agent', 'readSettings', {});
+  const response = await api.invokeExtensionAction('system-neon-pilot-admin-cli', 'readSettings', {});
   return response.result as SettingsState;
 }
 
 async function updateAgentSettings(patch: Partial<Settings>): Promise<SettingsState> {
-  const response = await api.invokeExtensionAction('system-neon-pilot-agent', 'updateSettings', patch);
+  const response = await api.invokeExtensionAction('system-neon-pilot-admin-cli', 'updateSettings', patch);
   return response.result as SettingsState;
 }
 
 export function NeonPilotAgentSettingsPanel() {
-  const { data, loading, error, refetch } = useApi(readAgentSettings, 'system-neon-pilot-agent-settings');
+  const { data, loading, error, refetch } = useApi(readAgentSettings, 'system-neon-pilot-cli-settings');
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -54,12 +54,12 @@ export function NeonPilotAgentSettingsPanel() {
   }
 
   return (
-    <SettingsSection title="External agent access" description="Control whether the Neon Pilot delegated-agent CLI entrypoint can be launched by other tools.">
+    <SettingsSection title="CLI access" description="Control whether Neon Pilot CLI entrypoints can be launched by other tools.">
       {loading ? <LoadingState label="Loading settings..." /> : null}
       {error ? <ErrorState title="Settings failed to load" body={error instanceof Error ? error.message : String(error)} /> : null}
       <SettingToggleRow
         title="CLI entrypoint"
-        description="Allows neon-pilot protocol neon-pilot-agent to run delegated tasks, start subagents, and inspect runs. Use neon-pilot commands for self-admin."
+        description="Allows neon-pilot to administer Neon Pilot, run delegated tasks, start subagents, and inspect runs."
         checked={settings.cliEnabled}
         disabled={saving}
         onCheckedChange={(checked) => void save({ cliEnabled: checked })}

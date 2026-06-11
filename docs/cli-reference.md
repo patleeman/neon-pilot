@@ -144,7 +144,7 @@ Examples:
 
 Configure Neon Pilot defaults and external-agent entrypoints.
 
-- Source: extension (system-neon-pilot-agent)
+- Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot bootstrap configure [--json]`
 - Mode: write
 - Requires app: no
@@ -161,7 +161,7 @@ Examples:
 
 Set default provider, model, cwd, thinking level, and service tier.
 
-- Source: extension (system-neon-pilot-agent)
+- Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot bootstrap defaults set [--json]`
 - Mode: write
 - Requires app: no
@@ -178,7 +178,7 @@ Examples:
 
 Check whether Neon Pilot is ready for external agent control.
 
-- Source: extension (system-neon-pilot-agent)
+- Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot bootstrap doctor [--json]`
 - Mode: read
 - Requires app: no
@@ -195,7 +195,7 @@ Examples:
 
 Create or update a provider model definition.
 
-- Source: extension (system-neon-pilot-agent)
+- Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot bootstrap provider model [--json]`
 - Mode: write
 - Requires app: no
@@ -212,7 +212,7 @@ Examples:
 
 Create or update a model provider definition.
 
-- Source: extension (system-neon-pilot-agent)
+- Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot bootstrap provider save [--json]`
 - Mode: write
 - Requires app: no
@@ -229,7 +229,7 @@ Examples:
 
 Store a provider API key through the configured secrets backend. Use --stdin.
 
-- Source: extension (system-neon-pilot-agent)
+- Source: extension (system-neon-pilot-admin-cli)
 - Usage: `neon-pilot bootstrap provider set-key [--json]`
 - Mode: write
 - Requires app: no
@@ -908,7 +908,7 @@ Examples:
 
 ### extensions delete
 
-Delete/uninstall a runtime extension by id. System extensions cannot be deleted.
+Delete a runtime extension by id. System extensions cannot be deleted.
 
 - Source: extension (system-extension-manager)
 - Usage: `neon-pilot extensions delete <id> [--json]`

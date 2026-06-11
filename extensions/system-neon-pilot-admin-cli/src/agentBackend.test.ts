@@ -5,13 +5,7 @@ import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  __setNeonPilotAgentApisForTest,
-  neonPilotAgent,
-  neonPilotAgentCli,
-  readSettings,
-  updateSettings,
-} from './backend';
+import { __setNeonPilotAgentApisForTest, neonPilotAgent, neonPilotAgentCli, readSettings, updateSettings } from './backend';
 
 function createStorage(initial: Record<string, unknown> = {}) {
   const state = new Map(Object.entries(initial));
@@ -24,7 +18,7 @@ function createStorage(initial: Record<string, unknown> = {}) {
 }
 
 function ctx(overrides: Record<string, unknown> = {}) {
-  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-agent-test-'));
+  const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-cli-test-'));
   return {
     runtime: { getRepoRoot: () => '/repo' },
     runtimeSettingsFilePath: join(tempRoot, 'runtime', 'settings.json'),
@@ -36,7 +30,7 @@ function ctx(overrides: Record<string, unknown> = {}) {
   } as never;
 }
 
-describe('system-neon-pilot-agent backend', () => {
+describe('system-neon-pilot-admin-cli agent backend', () => {
   afterEach(() => {
     __setNeonPilotAgentApisForTest({ agent: null, runs: null });
   });

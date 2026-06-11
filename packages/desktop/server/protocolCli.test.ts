@@ -245,7 +245,9 @@ describe('protocol CLI', () => {
       ],
     });
 
-    await expect(runProtocolCli(['settings', 'set', 'conversation.pinnedToolCalls', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+    await expect(runProtocolCli(['settings', 'set', 'conversation.pinnedToolCalls', '--json'])).resolves.toBe(
+      PROTOCOL_CLI_EXIT_CODES.usage,
+    );
 
     expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"code": "usage_error"'));
@@ -298,7 +300,10 @@ describe('protocol CLI', () => {
       ],
     });
     extensionHostClient.invokeAction.mockImplementationOnce(async (input) => {
-      input.toolContext?.onUpdate?.({ content: [{ type: 'text', text: 'Hello' }], details: { event: { type: 'text_delta', delta: 'Hello' } } });
+      input.toolContext?.onUpdate?.({
+        content: [{ type: 'text', text: 'Hello' }],
+        details: { event: { type: 'text_delta', delta: 'Hello' } },
+      });
       return { ok: true, result: { accepted: true } };
     });
 
@@ -380,7 +385,7 @@ describe('protocol CLI', () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
         {
-          extensionId: 'system-neon-pilot-agent',
+          extensionId: 'system-neon-pilot-admin-cli',
           surfaceId: 'bootstrap-provider-set-key',
           command: 'bootstrap provider set-key',
           action: 'neonPilotAgent',

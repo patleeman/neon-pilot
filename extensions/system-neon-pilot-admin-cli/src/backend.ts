@@ -8,6 +8,10 @@ import {
   updateStoredAutomation,
 } from '@neon-pilot/extensions/backend/automations';
 
+import { neonPilotAgent as runNeonPilotAgent } from './agentBackend.js';
+
+export { __setNeonPilotAgentApisForTest, neonPilotAgent, neonPilotAgentCli, readSettings, updateSettings } from './agentBackend.js';
+
 type AdminCommandId =
   | 'list_app_commands'
   | 'run_app_command'
@@ -131,16 +135,20 @@ function parseJsonFlag(flags: Record<string, unknown>, key: string): unknown {
   return JSON.parse(value);
 }
 
+function isAdminCommandId(value: string): value is AdminCommandId {
+  return adminCommands.some((command) => command.id === value);
+}
+
 function commandIdFromAction(action: string): AdminCommandId | undefined {
   if (action === 'list') return 'list_app_commands';
   if (action === 'run') return 'run_app_command';
   if (action === 'doctor') return 'control_plane_doctor';
   if (action === 'start') return 'heartbeat_start';
   if (action === 'stop') return 'heartbeat_stop';
-  return adminCommands.some((command) => command.id === action) ? (action as AdminCommandId) : undefined;
+  return isAdminCommandId(action) ? action : undefined;
 }
 
-function normalizeAdminInput(input: unknown): { command: AdminCommandId | 'list_admin_commands'; input: Record<string, unknown> } {
+function normalizeAdminInput(input: unknown): { command: string | 'list_admin_commands'; input: Record<string, unknown> } {
   const body = asRecord(input);
   const cli = cliCommand(body);
   const args = cliArgs(body);
@@ -171,7 +179,7 @@ function normalizeAdminInput(input: unknown): { command: AdminCommandId | 'list_
   const action = typeof body.action === 'string' ? body.action : '';
   const command = typeof body.command === 'string' ? body.command : '';
   const resolved = commandIdFromAction(command) ?? commandIdFromAction(action);
-  return { command: resolved ?? 'list_admin_commands', input: body };
+  return { command: resolved ?? (command || action || 'list_admin_commands'), input: body };
 }
 
 async function check(name: string, run: () => Promise<unknown>) {
@@ -254,7 +262,8 @@ async function startHeartbeat(input: Record<string, unknown>, ctx: ExtensionBack
   const binding = await automationsApi().resolveScheduledTaskThreadBinding({
     threadMode: 'existing',
     threadConversationId: conversationId,
-    threadSessionFile: conversationId === ctx.toolContext?.conversationId ? ctx.toolContext?.sessionFile : readString(existing?.threadSessionFile),
+    threadSessionFile:
+      conversationId === ctx.toolContext?.conversationId ? ctx.toolContext?.sessionFile : readString(existing?.threadSessionFile),
     cwd: readString(input.cwd) ?? readString(existing?.cwd) ?? ctx.toolContext?.cwd,
   });
   const saved = existing
@@ -288,7 +297,11 @@ async function startHeartbeat(input: Record<string, unknown>, ctx: ExtensionBack
     cwd: readString(input.cwd) ?? readString(existing?.cwd),
   });
   await automationsApi().invalidateAppTopics(['tasks', 'runs', 'sessions']);
-  return { ok: true, action: 'heartbeat_start', heartbeat: summarizeHeartbeat({ ...saved, ...bound, schedule: { type: 'cron', expression: cron } }) };
+  return {
+    ok: true,
+    action: 'heartbeat_start',
+    heartbeat: summarizeHeartbeat({ ...saved, ...bound, schedule: { type: 'cron', expression: cron } }),
+  };
 }
 
 async function listHeartbeats() {
@@ -363,11 +376,16 @@ function toolResult(result: unknown) {
 
 export async function neonPilotAdmin(input: unknown, ctx: ExtensionBackendContext) {
   const normalized = normalizeAdminInput(input);
-  return runAdminCommand(normalized.command, normalized.input, ctx);
+  if (normalized.command === 'list_admin_commands' || isAdminCommandId(normalized.command)) {
+    return runAdminCommand(normalized.command, normalized.input, ctx);
+  }
+  return runNeonPilotAgent({ ...normalized.input, action: normalized.command }, ctx);
 }
 
 export async function neonPilotTool(input: unknown, ctx: ExtensionBackendContext) {
-  return toolResult(await neonPilotAdmin(input, ctx));
+  const result = await neonPilotAdmin(input, ctx);
+  if (asRecord(result).content && Array.isArray(asRecord(result).content)) return result;
+  return toolResult(result);
 }
 
 export async function controlPlaneDoctor(input: unknown, ctx: ExtensionBackendContext) {

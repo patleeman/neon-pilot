@@ -5,7 +5,7 @@ description: Use when installing, bootstrapping, configuring, verifying, or cont
 
 # Neon Pilot Control
 
-Use the packaged app and `neon-pilot` CLI control plane. Do not build from source unless the user asks for development setup. Neon Pilot self-administration is not exposed through MCP; internal agents use the canonical `neon_pilot` tool.
+Use the packaged app and unified `neon-pilot` CLI control plane. Do not build from source unless the user asks for development setup. Neon Pilot control is not exposed through MCP; internal agents use the canonical `neon_pilot` tool for the same command surface.
 
 ## Install
 
@@ -45,7 +45,7 @@ neon-pilot protocol neon-pilot-agent capabilities --json
 neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
 ```
 
-If `bootstrap doctor` or `control-plane doctor` fails, fix the failed check before continuing. Common failures are: app not running, CLI not linked, no default provider/model, missing provider credential, stale extension discovery, or disabled Neon Pilot Agent CLI settings.
+If `bootstrap doctor` or `control-plane doctor` fails, fix the failed check before continuing. Common failures are: app not running, CLI not linked, no default provider/model, missing provider credential, stale extension discovery, or disabled Neon Pilot CLI settings.
 
 ## Operate
 

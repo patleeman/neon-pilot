@@ -1,11 +1,11 @@
 ---
 name: neon-pilot-admin-cli
-description: Use the Neon Pilot Admin CLI for self-administration of conversations, workspace/sidebar state, runs, automations, extensions, settings, and extension-contributed administration surfaces.
+description: Use the unified Neon Pilot CLI/control plane for self-administration, delegated agent control, conversations, workspace/sidebar state, runs, automations, extensions, settings, and extension-contributed administration surfaces.
 ---
 
-# Neon Pilot Admin CLI
+# Neon Pilot CLI
 
-Use the unified Neon Pilot self-administration surface instead of direct runtime-file edits, standalone model tools, or MCP. External/other agents use the `neon-pilot` CLI; internal Neon Pilot agents use the `neon_pilot` tool. These are dual interfaces over the same admin command semantics.
+Use the unified Neon Pilot CLI surface instead of direct runtime-file edits, standalone model tools, or MCP. External/other agents use the `neon-pilot` CLI; internal Neon Pilot agents use the `neon_pilot` tool. These are dual interfaces over the same control-plane command semantics.
 
 ## Workflow
 
@@ -17,7 +17,7 @@ Use the unified Neon Pilot self-administration surface instead of direct runtime
    neon-pilot help conversations
    ```
 
-   From an internal Neon Pilot conversation, prefer the canonical tool when it has the needed command:
+   From an internal Neon Pilot conversation, use the canonical tool for the same command surface:
 
    ```json
    { "command": "list_admin_commands" }
@@ -177,6 +177,20 @@ neon-pilot heartbeats list --json
 neon-pilot heartbeats stop <heartbeat-id> --json
 ```
 
+## Delegated agent control
+
+The same CLI surface also controls Neon Pilot as a delegated agent runtime:
+
+```sh
+neon-pilot bootstrap doctor --json
+neon-pilot bootstrap configure --provider openai-codex --model gpt-5.4 --json
+neon-pilot bootstrap defaults set --provider openai-codex --model gpt-5.4 --cwd "$PWD" --json
+neon-pilot protocol neon-pilot-agent capabilities --json
+neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
+neon-pilot protocol neon-pilot-agent start --prompt "Investigate this issue." --cwd "$PWD" --json
+neon-pilot protocol neon-pilot-agent runs list --kind subagent --json
+```
+
 ## Sharp transcript operations
 
 Transcript mutation commands are advanced recovery/admin tools. Inspect first and prefer safer conversation operations when possible.
@@ -195,4 +209,4 @@ neon-pilot conversations transcript update <id> <block-id> --type text --data '{
 - Built-in system extensions contribute the primary self-administration surfaces: `extensions ...`, `settings ...`, and `conversations ...`.
 - The agent shell receives Neon Pilot's channel-local CLI bin directory automatically. User shell installation is opt-in through `neon-pilot cli install`.
 - Do not edit internal runtime files directly when an extension-contributed CLI command exists for the same operation.
-- If the unified admin surface lacks a needed Neon Pilot admin operation, add it to the shared admin command registry/service and expose it through both `neon-pilot` CLI and `neon_pilot` tool instead of adding a one-off tool, MCP endpoint, hidden-file workflow, or ad hoc script.
+- If the unified CLI surface lacks a needed Neon Pilot operation, add it to the shared command registry/service and expose it through both `neon-pilot` CLI and `neon_pilot` tool instead of adding a one-off tool, MCP endpoint, hidden-file workflow, or ad hoc script.

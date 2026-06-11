@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-neon-pilot-admin-cli",
-  "name": "Neon Pilot Admin CLI",
+  "name": "Neon Pilot CLI",
   "packageType": "system",
-  "description": "Unified Neon Pilot administration guidance for the first-class CLI control plane.",
+  "description": "Unified Neon Pilot CLI control plane for internal agents and external callers.",
   "version": "0.1.0",
   "defaultEnabled": true,
   "contributes": {
@@ -11,8 +11,8 @@
       {
         "id": "neon-pilot-admin",
         "name": "neon_pilot",
-        "title": "Neon Pilot",
-        "description": "Canonical internal Neon Pilot self-admin tool. Use this instead of standalone self-admin tools or MCP. Commands: list_admin_commands, list_app_commands, run_app_command, control_plane_doctor, heartbeat_start, heartbeat_list, heartbeat_stop.",
+        "title": "Neon Pilot CLI",
+        "description": "Canonical internal Neon Pilot CLI/control-plane tool. Use this instead of standalone self-admin tools or MCP. Commands cover app commands, control-plane doctor, heartbeats, bootstrap, delegated tasks, conversations, and durable runs.",
         "action": "neonPilotTool",
         "inputSchema": {
           "type": "object",
@@ -26,7 +26,28 @@
                 "control_plane_doctor",
                 "heartbeat_start",
                 "heartbeat_list",
-                "heartbeat_stop"
+                "heartbeat_stop",
+                "bootstrap_doctor",
+                "bootstrap_configure",
+                "bootstrap_defaults_set",
+                "bootstrap_provider_set_key",
+                "bootstrap_provider_save",
+                "bootstrap_provider_model",
+                "run_task",
+                "conversation_create",
+                "conversation_send",
+                "conversation_get",
+                "conversation_list",
+                "conversation_abort",
+                "conversation_close",
+                "subagent_start",
+                "subagent_follow_up",
+                "runs_list",
+                "runs_get",
+                "runs_logs",
+                "runs_cancel",
+                "runs_rerun",
+                "capabilities"
               ],
               "description": "Admin command to run. Defaults to list_admin_commands."
             },
@@ -69,10 +90,7 @@
         "jsonDefault": true,
         "inputAction": "list",
         "usage": "app-commands list [--json]",
-        "examples": [
-          "neon-pilot app-commands list",
-          "neon-pilot app-commands list --json"
-        ],
+        "examples": ["neon-pilot app-commands list", "neon-pilot app-commands list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -95,10 +113,7 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "app-commands-run",
@@ -108,10 +123,7 @@
         "jsonDefault": true,
         "inputAction": "run",
         "usage": "app-commands run [--json]",
-        "examples": [
-          "neon-pilot app-commands run",
-          "neon-pilot app-commands run --json"
-        ],
+        "examples": ["neon-pilot app-commands run", "neon-pilot app-commands run --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -138,10 +150,7 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "control-plane-doctor",
@@ -151,10 +160,7 @@
         "jsonDefault": true,
         "inputAction": "doctor",
         "usage": "control-plane doctor [--json]",
-        "examples": [
-          "neon-pilot control-plane doctor",
-          "neon-pilot control-plane doctor --json"
-        ],
+        "examples": ["neon-pilot control-plane doctor", "neon-pilot control-plane doctor --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -177,15 +183,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "control-plane",
-            "doctor"
-          ],
+          "argv": ["control-plane", "doctor"],
           "expectJsonFields": []
         }
       },
@@ -197,10 +197,7 @@
         "jsonDefault": true,
         "inputAction": "heartbeat_start",
         "usage": "heartbeats start [--json]",
-        "examples": [
-          "neon-pilot heartbeats start",
-          "neon-pilot heartbeats start --json"
-        ],
+        "examples": ["neon-pilot heartbeats start", "neon-pilot heartbeats start --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -227,10 +224,7 @@
         "idempotent": false,
         "startsBackgroundWork": true,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
       },
       {
         "id": "heartbeats-list",
@@ -240,10 +234,7 @@
         "jsonDefault": true,
         "inputAction": "heartbeat_list",
         "usage": "heartbeats list [--json]",
-        "examples": [
-          "neon-pilot heartbeats list",
-          "neon-pilot heartbeats list --json"
-        ],
+        "examples": ["neon-pilot heartbeats list", "neon-pilot heartbeats list --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -266,15 +257,9 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": false,
-        "outputModes": [
-          "text",
-          "json"
-        ],
+        "outputModes": ["text", "json"],
         "smoke": {
-          "argv": [
-            "heartbeats",
-            "list"
-          ],
+          "argv": ["heartbeats", "list"],
           "expectJsonFields": []
         }
       },
@@ -286,10 +271,7 @@
         "jsonDefault": true,
         "inputAction": "heartbeat_stop",
         "usage": "heartbeats stop <id> [--json]",
-        "examples": [
-          "neon-pilot heartbeats stop example-id",
-          "neon-pilot heartbeats stop example-id --json"
-        ],
+        "examples": ["neon-pilot heartbeats stop example-id", "neon-pilot heartbeats stop example-id --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -318,20 +300,246 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
-        "outputModes": [
-          "text",
-          "json"
-        ]
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "bootstrap-doctor",
+        "command": "bootstrap doctor",
+        "description": "Check whether Neon Pilot is ready for external agent control.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true,
+        "usage": "bootstrap doctor [--json]",
+        "examples": ["neon-pilot bootstrap doctor", "neon-pilot bootstrap doctor --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"],
+        "smoke": {
+          "argv": ["bootstrap", "doctor"],
+          "expectJsonFields": []
+        }
+      },
+      {
+        "id": "bootstrap-configure",
+        "command": "bootstrap configure",
+        "description": "Configure Neon Pilot defaults and external-agent entrypoints.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true,
+        "usage": "bootstrap configure [--json]",
+        "examples": ["neon-pilot bootstrap configure", "neon-pilot bootstrap configure --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "bootstrap-defaults-set",
+        "command": "bootstrap defaults set",
+        "description": "Set default provider, model, cwd, thinking level, and service tier.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true,
+        "usage": "bootstrap defaults set [--json]",
+        "examples": ["neon-pilot bootstrap defaults set", "neon-pilot bootstrap defaults set --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "bootstrap-provider-set-key",
+        "command": "bootstrap provider set-key",
+        "description": "Store a provider API key through the configured secrets backend. Use --stdin.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true,
+        "usage": "bootstrap provider set-key [--json]",
+        "examples": ["neon-pilot bootstrap provider set-key", "neon-pilot bootstrap provider set-key --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "bootstrap-provider-save",
+        "command": "bootstrap provider save",
+        "description": "Create or update a model provider definition.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true,
+        "usage": "bootstrap provider save [--json]",
+        "examples": ["neon-pilot bootstrap provider save", "neon-pilot bootstrap provider save --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "bootstrap-provider-model",
+        "command": "bootstrap provider model",
+        "description": "Create or update a provider model definition.",
+        "action": "neonPilotAgent",
+        "jsonDefault": true,
+        "usage": "bootstrap provider model [--json]",
+        "examples": ["neon-pilot bootstrap provider model", "neon-pilot bootstrap provider model --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing runtime state."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
       }
     ],
     "skills": [
       {
         "id": "neon-pilot-admin-cli",
-        "title": "Neon Pilot Admin CLI",
-        "description": "Use the Neon Pilot Admin CLI for self-administration of conversations, workspace/sidebar state, runs, automations, extensions, settings, and extension-contributed surfaces.",
+        "title": "Neon Pilot CLI",
+        "description": "Use the Neon Pilot CLI for self-administration of conversations, workspace/sidebar state, runs, automations, extensions, settings, extension-contributed surfaces, and delegated agent control.",
         "path": "skills/neon-pilot-admin-cli/SKILL.md"
+      },
+      {
+        "id": "neon-pilot-control",
+        "path": "skills/neon-pilot-control/SKILL.md",
+        "title": "Neon Pilot Control"
       }
-    ]
+    ],
+    "settingsComponent": {
+      "id": "neon-pilot-cli",
+      "component": "NeonPilotAgentSettingsPanel",
+      "sectionId": "neon-pilot-cli",
+      "label": "Neon Pilot CLI",
+      "description": "Enable or disable Neon Pilot CLI entrypoints.",
+      "order": 45
+    }
   },
   "backend": {
     "entry": "src/backend.ts",
@@ -359,10 +567,7 @@
         "title": "App Commands",
         "worker": {
           "enabled": true,
-          "inputActions": [
-            "list",
-            "run"
-          ]
+          "inputActions": ["list", "run"]
         }
       },
       {
@@ -371,15 +576,13 @@
         "title": "Control Plane Doctor",
         "worker": {
           "enabled": true,
-          "inputActions": [
-            "doctor"
-          ]
+          "inputActions": ["doctor"]
         }
       },
       {
         "id": "neonPilotTool",
         "handler": "neonPilotTool",
-        "title": "Neon Pilot Admin Tool",
+        "title": "Neon Pilot CLI Tool",
         "worker": {
           "enabled": true,
           "inputActions": [
@@ -389,10 +592,68 @@
             "control_plane_doctor",
             "heartbeat_start",
             "heartbeat_list",
-            "heartbeat_stop"
+            "heartbeat_stop",
+            "bootstrap_doctor",
+            "bootstrap_configure",
+            "bootstrap_defaults_set",
+            "bootstrap_provider_set_key",
+            "bootstrap_provider_save",
+            "bootstrap_provider_model",
+            "run_task",
+            "conversation_create",
+            "conversation_send",
+            "conversation_get",
+            "conversation_list",
+            "conversation_abort",
+            "conversation_close",
+            "subagent_start",
+            "subagent_follow_up",
+            "runs_list",
+            "runs_get",
+            "runs_logs",
+            "runs_cancel",
+            "runs_rerun",
+            "capabilities"
           ]
         }
+      },
+      {
+        "id": "neonPilotAgent",
+        "handler": "neonPilotAgent",
+        "title": "Neon Pilot CLI",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "readSettings",
+        "handler": "readSettings",
+        "title": "Read Neon Pilot CLI settings",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "updateSettings",
+        "handler": "updateSettings",
+        "title": "Update Neon Pilot CLI settings",
+        "worker": {
+          "enabled": true
+        }
+      }
+    ],
+    "protocolEntrypoints": [
+      {
+        "id": "neon-pilot-agent",
+        "handler": "neonPilotAgentCli",
+        "title": "Neon Pilot CLI",
+        "description": "Command-line interface for controlling Neon Pilot, delegating tasks, and inspecting durable runs."
       }
     ]
-  }
+  },
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "permissions": ["agent:run", "agent:conversations", "runs:read", "runs:write", "settings:read", "settings:write"]
 }

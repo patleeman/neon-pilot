@@ -558,8 +558,6 @@ const smokes = {
     assert(run.ok === true && executedCommands.length === 1, 'app command run failed');
     const doctor = await module.controlPlaneDoctor({}, ctx);
     assert(doctor.ok === true && doctor.checks.length >= 1, 'control plane doctor failed');
-  },
-  async 'system-neon-pilot-agent'() {
     module.__setNeonPilotAgentApisForTest({
       agent: {
         async runAgentTask() {
@@ -585,13 +583,13 @@ const smokes = {
       },
     });
     const settings = await module.readSettings({}, ctx);
-    assert(settings.settings.cliEnabled === true, 'agent settings failed');
+    assert(settings.settings.cliEnabled === true, 'CLI settings failed');
     const capabilities = await module.neonPilotAgent({ action: 'capabilities' }, ctx);
-    assert(capabilities.text.includes('run_task'), 'agent capabilities missing run_task');
+    assert(capabilities.text.includes('run_task'), 'CLI capabilities missing run_task');
     const runs = await module.neonPilotAgent({ action: 'runs_list', kind: 'subagent' }, ctx);
-    assert(runs.details.runCount === 1, 'agent runs list failed');
+    assert(runs.details.runCount === 1, 'CLI runs list failed');
     const task = await module.neonPilotAgent({ action: 'run_task', prompt: 'smoke' }, ctx);
-    assert(task.text.includes('agent smoke'), 'agent run task failed');
+    assert(task.text.includes('agent smoke'), 'CLI run task failed');
   },
   async 'system-onboarding'() {
     const result = await module.ensure({}, ctx);
@@ -719,12 +717,10 @@ describe('system extension backend runtime smoke tests', () => {
     ).toEqual([]);
   });
 
-  it('registers the dynamic workflows skill for agent guidance', () => {
+  it('does not pre-install default installable extensions', () => {
     const summary = listExtensionInstallSummaries().find((item) => item.id === 'system-dynamic-workflows');
-    const skill = summary?.skills?.find((item) => item.id === 'dynamic-workflows');
 
-    expect(skill, 'system-dynamic-workflows must contribute a dynamic-workflows skill').toBeTruthy();
-    expect(skill?.path).toContain('skills/dynamic-workflows/SKILL.md');
+    expect(summary, 'system-dynamic-workflows should be available from the catalog, not pre-installed').toBeUndefined();
   });
 
   it('imports each prebuilt backend and exercises one safe runtime path', () => {
