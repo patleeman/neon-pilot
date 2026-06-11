@@ -193,6 +193,7 @@ function seedBaseFs(): void {
   markDirectory('/attachments/assistant');
   markDirectory('/tasks');
   markDirectory('/runs');
+  markDirectory('/state/extensions');
   markDirectory('/state/web');
   markFile('/state/daemon/task-state.json');
   markFile('/state/daemon/task-state.json-wal');
@@ -376,6 +377,28 @@ describe('appEvents mocked behavior', () => {
     expect(watchedActivityPaths).toEqual([]);
 
     expect(events).toEqual([]);
+    unsubscribe();
+  });
+
+  it('invalidates extensions when the runtime extensions folder changes', () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+    });
+
+    const extensionsWatcher = getLatestWatch('/state/extensions', (registration) => registration.options.recursive === true);
+    extensionsWatcher.callback('rename', 'system-ds4');
+    vi.advanceTimersByTime(80);
+
+    expect(events).toContainEqual({ type: 'invalidate', topics: ['extensions'] });
     unsubscribe();
   });
 

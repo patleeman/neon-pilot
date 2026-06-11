@@ -3,6 +3,7 @@ import { basename, dirname, join, normalize } from 'node:path';
 
 import {
   getDurableTasksDir,
+  getStateRoot,
   resolveConversationAttentionStatePath,
   resolveDeferredResumeStateFile,
   resolveProfileAlertsStateFile,
@@ -339,7 +340,7 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     ],
     runs: [{ path: runsRoot, kind: 'directory' }],
     executions: [],
-    extensions: [],
+    extensions: [{ path: join(getStateRoot(), 'extensions'), kind: 'directory', eventKinds: ['change', 'rename'] }],
     automation: [],
     models: [],
     daemon: [

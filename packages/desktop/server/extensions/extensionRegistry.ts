@@ -1109,11 +1109,6 @@ export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateR
   const cache = registryReadCache.getStore();
   const scoped = cache?.invalidEntries.get(stateRoot);
   if (scoped) return scoped;
-  const cached = processRegistryReadCache.invalidEntries.get(stateRoot);
-  if (cached) {
-    cache?.invalidEntries.set(stateRoot, cached);
-    return cached;
-  }
 
   const entries = listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
     .filter((entry) => entry.source === 'external')
@@ -1137,7 +1132,6 @@ export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateR
       }
     });
   cache?.invalidEntries.set(stateRoot, entries);
-  processRegistryReadCache.invalidEntries.set(stateRoot, entries);
   return entries;
 }
 
@@ -1161,7 +1155,7 @@ export function listExtensionEntries(stateRoot: string = getStateRoot()): Extens
   const scoped = cache?.entries.get(stateRoot);
   if (scoped) return scoped;
   const cached = processRegistryReadCache.entries.get(stateRoot);
-  if (cached) {
+  if (cached && cachedRuntimePackageRootsMatchDisk(cached, stateRoot)) {
     cache?.entries.set(stateRoot, cached);
     return cached;
   }
@@ -1179,6 +1173,22 @@ export function listExtensionEntries(stateRoot: string = getStateRoot()): Extens
   cache?.entries.set(stateRoot, filtered);
   processRegistryReadCache.entries.set(stateRoot, filtered);
   return filtered;
+}
+
+function cachedRuntimePackageRootsMatchDisk(entries: ExtensionRegistryEntry[], stateRoot: string): boolean {
+  const cachedRoots = new Set(
+    entries.flatMap((entry) => (entry.source === 'runtime' && entry.packageRoot ? [resolve(entry.packageRoot)] : [])),
+  );
+  const currentRoots = new Set(
+    listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
+      .filter((entry) => entry.source === 'external')
+      .map((entry) => resolve(entry.packageRoot)),
+  );
+  if (cachedRoots.size !== currentRoots.size) return false;
+  for (const root of currentRoots) {
+    if (!cachedRoots.has(root)) return false;
+  }
+  return true;
 }
 
 export function listEnabledExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {

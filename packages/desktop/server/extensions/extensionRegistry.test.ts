@@ -229,6 +229,31 @@ describe('extension registry', () => {
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
+  it('drops runtime extensions from process registry caches after their package folder is deleted', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'deleted-later');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'deleted-later',
+        name: 'Deleted Later',
+      }),
+    );
+
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'deleted-later')).toMatchObject({
+      id: 'deleted-later',
+      status: 'enabled',
+    });
+
+    rmSync(extensionRoot, { recursive: true, force: true });
+
+    expect(listExtensionInstallSummaries(stateRoot).some((extension) => extension.id === 'deleted-later')).toBe(false);
+
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
   it('exposes the extension manager as the standalone /extensions route', () => {
     const routes = readExtensionRegistrySnapshot().routes;
     expect(routes).toContainEqual(expect.objectContaining({ extensionId: 'system-extension-manager', route: '/extensions' }));
