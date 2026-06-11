@@ -53,6 +53,7 @@ export const HOST_COMMAND_IDS = [
   'imagePreview.close',
   'messageEdit.save',
   'messageEdit.cancel',
+  'draftWorkspacePicker.close',
   'conversation.newAndFocus',
   'model.cycle',
   'thinking.cycle',

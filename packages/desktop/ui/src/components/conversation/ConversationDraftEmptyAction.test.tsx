@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConversationDraftEmptyAction, DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS } from './ConversationDraftEmptyAction';
+import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './draftWorkspacePickerCommands';
 
 (globalThis as typeof globalThis & { React?: typeof React; IS_REACT_ACT_ENVIRONMENT?: boolean }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -114,6 +115,28 @@ describe('ConversationDraftEmptyAction', () => {
       expect(listbox).not.toBeNull();
       expect(listbox?.className).toContain('overflow-y-auto');
       expect(listbox?.style.maxHeight).toBe('min(18rem, 42vh)');
+    } finally {
+      unmount();
+    }
+  });
+
+  it('closes the saved workspace picker from the shared command event', () => {
+    const { container, unmount } = renderInteractive({
+      availableDraftWorkspacePaths: ['/Users/patrick/workingdir/neon-pilot', '/tmp/neon-pilot-long-worktree'],
+    });
+
+    try {
+      const workspaceButton = container.querySelector<HTMLButtonElement>('button[aria-label="Saved workspace"]');
+      expect(workspaceButton).not.toBeNull();
+
+      act(() => workspaceButton?.click());
+      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).not.toBeNull();
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT));
+      });
+
+      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
     } finally {
       unmount();
     }

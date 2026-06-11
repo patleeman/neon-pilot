@@ -340,6 +340,28 @@ describe('extension commands', () => {
     expect(cancelMessageEdit).toHaveBeenCalledTimes(1);
   });
 
+  it('includes draft workspace picker commands gated by picker state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['draftWorkspacePicker.close']));
+    const closeDraftWorkspacePicker = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      closeDraftWorkspacePicker,
+    };
+
+    await expect(executeExtensionCommand('draftWorkspacePicker.close', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('draftWorkspacePicker.close', undefined, {
+        ...options,
+        context: { 'draftWorkspacePicker.open': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(closeDraftWorkspacePicker).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),

@@ -179,6 +179,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('draftWorkspacePicker.close', {
+        activeConversationId: null,
+        context: { 'draftWorkspacePicker.open': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('draftWorkspacePicker.close', {
+        activeConversationId: null,
+        context: { 'draftWorkspacePicker.open': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('notifications.markAllRead', {
         activeConversationId: 'conversation-1',
         context: { 'notifications.hasUnread': false },
