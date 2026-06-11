@@ -128,6 +128,10 @@ Every desktop menu shortcut is listed in a searchable table. Each entry shows:
 - Current keybinding
 - Edit button to change
 
+The desktop shortcut list is derived from the core keyboard shortcut registry
+used by the native app menu so Settings, defaults, and reset behavior stay in
+sync when core shortcuts change.
+
 Changes auto-save immediately. If a shortcut conflicts with an existing one, the editor shows the conflict and lets you resolve it.
 
 Search by action name (e.g., "toggle sidebar") or by key (e.g., "Cmd+\").

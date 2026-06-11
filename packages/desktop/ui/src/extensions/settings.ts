@@ -79,6 +79,7 @@ export { useApi } from '../hooks/useApi';
 export { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 export { resetStoredConversationUiState, resetStoredLayoutPreferences } from '../local/localSettings';
 export { getModelSelectableServiceTierOptions, groupModelsByProvider, THINKING_LEVEL_OPTIONS } from '../model/modelPreferences';
+export { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from '../../../src/keyboard-shortcuts';
 export {
   createModelEditorDraft,
   createProviderEditorDraft,

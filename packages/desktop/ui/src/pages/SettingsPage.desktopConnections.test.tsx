@@ -8,37 +8,13 @@ import {
   DesktopConnectionsSettingsPanel,
   DesktopKeyboardShortcutsSettingsSection,
 } from '../../../../../extensions/system-settings/src/SettingsPage';
+import { DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from '../../../src/keyboard-shortcuts';
 import { api } from '../client/api';
 import type { NeonPilotDesktopBridge } from '../desktop/desktopBridge';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
-const DEFAULT_KEYBOARD_SHORTCUTS = {
-  showApp: 'CommandOrControl+Shift+A',
-  newConversation: 'CommandOrControl+N',
-  closeTab: 'CommandOrControl+W',
-  reopenClosedTab: 'Command+Shift+N',
-  previousConversation: 'CommandOrControl+[',
-  nextConversation: 'CommandOrControl+]',
-  togglePinned: 'CommandOrControl+Alt+P',
-  archiveRestoreConversation: 'CommandOrControl+Alt+A',
-  renameConversation: 'CommandOrControl+Alt+R',
-  focusComposer: 'CommandOrControl+L',
-  editWorkingDirectory: 'CommandOrControl+Shift+L',
-  findOnPage: 'CommandOrControl+F',
-  settings: 'CommandOrControl+,',
-  quit: 'CommandOrControl+Q',
-  conversationMode: 'F1',
-  workbenchMode: 'F2',
-  newWorkbenchTab: 'CommandOrControl+T',
-  closeWorkbenchTab: 'CommandOrControl+Shift+W',
-  closeWorkbenchFile: 'CommandOrControl+Alt+W',
-  refreshWorkbenchFile: 'F5',
-  toggleWorkbenchExplorer: 'CommandOrControl+B',
-  toggleWorkbenchDiff: 'CommandOrControl+Shift+D',
-  toggleSidebar: 'CommandOrControl+/',
-  toggleRightRail: 'CommandOrControl+\\',
-};
+const DEFAULT_KEYBOARD_SHORTCUTS = DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS;
 
 const mountedRoots: Root[] = [];
 const mocks = vi.hoisted(() => ({
