@@ -77,6 +77,51 @@ describe('extension commands', () => {
     expect(goForward).toHaveBeenCalledTimes(1);
   });
 
+  it('includes conversation cwd editor commands gated by editor state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['conversation.editCwd', 'conversation.saveCwd', 'conversation.cancelCwdEdit']),
+    );
+    const editConversationCwd = vi.fn(() => true);
+    const saveConversationCwd = vi.fn(() => true);
+    const cancelConversationCwdEdit = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      activeConversationId: 'conversation-1',
+      editConversationCwd,
+      saveConversationCwd,
+      cancelConversationCwdEdit,
+    };
+
+    await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.saveCwd', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.cancelCwdEdit', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('conversation.saveCwd', undefined, {
+        ...options,
+        context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': false },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.cancelCwdEdit', undefined, {
+        ...options,
+        context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': false },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.saveCwd', undefined, {
+        ...options,
+        context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': true },
+      }),
+    ).resolves.toBe(false);
+
+    expect(editConversationCwd).toHaveBeenCalledTimes(1);
+    expect(saveConversationCwd).toHaveBeenCalledTimes(1);
+    expect(cancelConversationCwdEdit).toHaveBeenCalledTimes(1);
+  });
+
   it('includes notification commands gated by notification state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['notifications.open', 'notifications.markAllRead', 'notifications.dismissAll']),

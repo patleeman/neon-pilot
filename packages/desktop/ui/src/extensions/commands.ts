@@ -46,6 +46,8 @@ export interface ExtensionCommandExecutorOptions {
   toggleConversationArchive?(): boolean;
   renameConversation?(): boolean;
   editConversationCwd?(): boolean;
+  saveConversationCwd?(): boolean;
+  cancelConversationCwdEdit?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
@@ -179,6 +181,8 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.toggleArchived', title: 'Archive or Restore Conversation', category: 'Conversation' },
     { id: 'conversation.rename', title: 'Rename Conversation', category: 'Conversation' },
     { id: 'conversation.editCwd', title: 'Edit Conversation Working Directory', category: 'Conversation' },
+    { id: 'conversation.saveCwd', title: 'Save Conversation Working Directory', category: 'Conversation' },
+    { id: 'conversation.cancelCwdEdit', title: 'Cancel Working Directory Edit', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
@@ -480,6 +484,38 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.editConversationCwd) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.saveCwd',
+      title: 'Save Conversation Working Directory',
+      category: 'Conversation',
+      execute() {
+        return options.saveConversationCwd?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.saveConversationCwd) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.cwdEditorOpen') === true &&
+          readContextValue(context, 'conversation.cwdEditorBusy') !== true
+        );
+      },
+    },
+    {
+      id: 'conversation.cancelCwdEdit',
+      title: 'Cancel Working Directory Edit',
+      category: 'Conversation',
+      execute() {
+        return options.cancelConversationCwdEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.cancelConversationCwdEdit) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.cwdEditorOpen') === true &&
+          readContextValue(context, 'conversation.cwdEditorBusy') !== true
+        );
       },
     },
     {

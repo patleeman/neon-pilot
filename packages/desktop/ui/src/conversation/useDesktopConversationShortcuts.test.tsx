@@ -16,6 +16,8 @@ function renderShortcutHarness(options: {
   beginTitleEdit?: () => void;
   beginConversationCwdEdit?: () => void;
   pickDraftConversationCwd?: () => void;
+  saveConversationCwdEdit?: () => void;
+  cancelConversationCwdEdit?: () => void;
 }) {
   const textareaRef = createRef<HTMLTextAreaElement>();
   const container = document.createElement('div');
@@ -30,6 +32,8 @@ function renderShortcutHarness(options: {
       textareaRef,
       beginTitleEdit: options.beginTitleEdit ?? vi.fn(),
       beginConversationCwdEdit: options.beginConversationCwdEdit ?? vi.fn(),
+      saveConversationCwdEdit: options.saveConversationCwdEdit ?? vi.fn(),
+      cancelConversationCwdEdit: options.cancelConversationCwdEdit ?? vi.fn(),
       pickDraftConversationCwd: options.pickDraftConversationCwd ?? vi.fn(),
     });
     return <textarea ref={textareaRef} defaultValue="hello" aria-label="Composer" />;
@@ -87,15 +91,26 @@ describe('useDesktopConversationShortcuts', () => {
   it('accepts command-only desktop shortcut events for shared conversation commands', () => {
     const beginTitleEdit = vi.fn();
     const beginConversationCwdEdit = vi.fn();
-    const textarea = renderShortcutHarness({ beginTitleEdit, beginConversationCwdEdit });
+    const saveConversationCwdEdit = vi.fn();
+    const cancelConversationCwdEdit = vi.fn();
+    const textarea = renderShortcutHarness({
+      beginTitleEdit,
+      beginConversationCwdEdit,
+      saveConversationCwdEdit,
+      cancelConversationCwdEdit,
+    });
 
     dispatchShortcutCommand('composer.focus');
     dispatchShortcutCommand('conversation.rename');
     dispatchShortcutCommand('conversation.editCwd');
+    dispatchShortcutCommand('conversation.saveCwd');
+    dispatchShortcutCommand('conversation.cancelCwdEdit');
 
     expect(document.activeElement).toBe(textarea);
     expect(beginTitleEdit).toHaveBeenCalledTimes(1);
     expect(beginConversationCwdEdit).toHaveBeenCalledTimes(1);
+    expect(saveConversationCwdEdit).toHaveBeenCalledTimes(1);
+    expect(cancelConversationCwdEdit).toHaveBeenCalledTimes(1);
   });
 
   it('routes draft working-directory shortcuts through the draft picker', () => {

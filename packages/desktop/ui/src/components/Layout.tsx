@@ -158,6 +158,8 @@ const DESKTOP_SHORTCUT_ACTIONS = {
   toggleConversationArchive: 'toggle-conversation-archive',
   renameConversation: 'rename-conversation',
   editConversationCwd: 'edit-working-directory',
+  saveConversationCwd: 'save-working-directory',
+  cancelConversationCwdEdit: 'cancel-working-directory-edit',
 } as const;
 
 interface WorkbenchTabInstance {
@@ -1911,6 +1913,14 @@ export function Layout() {
       },
       editConversationCwd() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.editConversationCwd);
+        return true;
+      },
+      saveConversationCwd() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationCwd);
+        return true;
+      },
+      cancelConversationCwdEdit() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationCwdEdit);
         return true;
       },
       newWorkbenchTab() {

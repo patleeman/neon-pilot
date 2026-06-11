@@ -49,6 +49,8 @@ const ACTIVE_CONVERSATION_HOST_COMMANDS = new Set([
   'conversation.toggleArchived',
   'conversation.rename',
   'conversation.editCwd',
+  'conversation.saveCwd',
+  'conversation.cancelCwdEdit',
   'conversation.pageUp',
   'conversation.pageDown',
 ]);
@@ -69,6 +71,8 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['artifact.toggleFullscreen', 'artifact.active'],
   ['artifact.close', 'artifact.active'],
   ['imagePreview.close', 'imagePreview.active'],
+  ['conversation.saveCwd', 'conversation.cwdEditorOpen'],
+  ['conversation.cancelCwdEdit', 'conversation.cwdEditorOpen'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
   ['composer.openSettings', 'composer.settingsAvailable'],

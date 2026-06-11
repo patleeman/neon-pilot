@@ -3721,6 +3721,15 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [currentCwd]);
 
   useEffect(() => {
+    setExtensionCommandContext('conversation.cwdEditorOpen', conversationCwdEditorOpen);
+    setExtensionCommandContext('conversation.cwdEditorBusy', conversationCwdBusy || conversationCwdPickBusy);
+    return () => {
+      setExtensionCommandContext('conversation.cwdEditorOpen', null);
+      setExtensionCommandContext('conversation.cwdEditorBusy', null);
+    };
+  }, [conversationCwdBusy, conversationCwdEditorOpen, conversationCwdPickBusy]);
+
+  useEffect(() => {
     if (
       !shouldAutoDispatchPendingInitialPrompt({
         draft,
@@ -4617,6 +4626,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     textareaRef,
     beginTitleEdit,
     beginConversationCwdEdit,
+    saveConversationCwdEdit: submitConversationCwdChange,
+    cancelConversationCwdEdit,
     pickDraftConversationCwd,
   });
 

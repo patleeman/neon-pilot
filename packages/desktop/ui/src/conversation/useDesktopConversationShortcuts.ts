@@ -2,10 +2,21 @@ import { type RefObject, useEffect } from 'react';
 
 const DESKTOP_CONVERSATION_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 
-type DesktopConversationShortcutAction = 'focus-composer' | 'edit-working-directory' | 'rename-conversation';
+type DesktopConversationShortcutAction =
+  | 'focus-composer'
+  | 'edit-working-directory'
+  | 'save-working-directory'
+  | 'cancel-working-directory-edit'
+  | 'rename-conversation';
 
 function isDesktopConversationShortcutAction(value: unknown): value is DesktopConversationShortcutAction {
-  return value === 'focus-composer' || value === 'edit-working-directory' || value === 'rename-conversation';
+  return (
+    value === 'focus-composer' ||
+    value === 'edit-working-directory' ||
+    value === 'save-working-directory' ||
+    value === 'cancel-working-directory-edit' ||
+    value === 'rename-conversation'
+  );
 }
 
 function desktopConversationShortcutCommandAction(command: unknown): DesktopConversationShortcutAction | null {
@@ -14,6 +25,10 @@ function desktopConversationShortcutCommandAction(command: unknown): DesktopConv
       return 'focus-composer';
     case 'conversation.editCwd':
       return 'edit-working-directory';
+    case 'conversation.saveCwd':
+      return 'save-working-directory';
+    case 'conversation.cancelCwdEdit':
+      return 'cancel-working-directory-edit';
     case 'conversation.rename':
       return 'rename-conversation';
     default:
@@ -27,6 +42,8 @@ interface UseDesktopConversationShortcutsOptions {
   textareaRef: RefObject<HTMLTextAreaElement>;
   beginTitleEdit: () => void;
   beginConversationCwdEdit: () => void;
+  saveConversationCwdEdit: () => Promise<void> | void;
+  cancelConversationCwdEdit: () => void;
   pickDraftConversationCwd: () => Promise<void> | void;
 }
 
@@ -36,6 +53,8 @@ export function useDesktopConversationShortcuts({
   textareaRef,
   beginTitleEdit,
   beginConversationCwdEdit,
+  saveConversationCwdEdit,
+  cancelConversationCwdEdit,
   pickDraftConversationCwd,
 }: UseDesktopConversationShortcutsOptions): void {
   useEffect(() => {
@@ -70,6 +89,16 @@ export function useDesktopConversationShortcuts({
         return;
       }
 
+      if (action === 'save-working-directory') {
+        void saveConversationCwdEdit();
+        return;
+      }
+
+      if (action === 'cancel-working-directory-edit') {
+        cancelConversationCwdEdit();
+        return;
+      }
+
       if (draft) {
         if (draftCwdPickBusy) {
           return;
@@ -84,5 +113,14 @@ export function useDesktopConversationShortcuts({
 
     window.addEventListener(DESKTOP_CONVERSATION_SHORTCUT_EVENT, handleDesktopShortcut);
     return () => window.removeEventListener(DESKTOP_CONVERSATION_SHORTCUT_EVENT, handleDesktopShortcut);
-  }, [beginConversationCwdEdit, beginTitleEdit, draft, draftCwdPickBusy, pickDraftConversationCwd, textareaRef]);
+  }, [
+    beginConversationCwdEdit,
+    beginTitleEdit,
+    cancelConversationCwdEdit,
+    draft,
+    draftCwdPickBusy,
+    pickDraftConversationCwd,
+    saveConversationCwdEdit,
+    textareaRef,
+  ]);
 }

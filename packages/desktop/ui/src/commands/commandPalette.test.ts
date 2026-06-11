@@ -155,6 +155,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.saveCwd', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.cwdEditorOpen': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.saveCwd', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.cwdEditorOpen': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelCwdEdit', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.cwdEditorOpen': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelCwdEdit', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.cwdEditorOpen': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.focusLocation', {
         activeConversationId: 'conversation-1',
         context: { 'browser.active': false },

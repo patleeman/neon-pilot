@@ -22,6 +22,8 @@ export const HOST_COMMAND_IDS = [
   'conversation.toggleArchived',
   'conversation.rename',
   'conversation.editCwd',
+  'conversation.saveCwd',
+  'conversation.cancelCwdEdit',
   'composer.focus',
   'composer.submit',
   'composer.stop',
