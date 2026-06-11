@@ -9,7 +9,6 @@
     "system-automations",
     "system-conversation-tools",
     "system-diffs",
-    "system-dynamic-workflows",
     "system-mcp",
     "system-telemetry",
     "system-todo",
@@ -95,20 +94,16 @@
       "actionId": "knowledgeListFiles",
       "input": {},
       "text": ["ok"]
+    },
+    {
+      "extensionId": "system-dynamic-workflows",
+      "actionId": "listWorkflows",
+      "input": {},
+      "text": ["workflows"]
     }
   ],
   "agentTools": {
-    "expectedNames": [
-      "artifact",
-      "bash",
-      "background_bash",
-      "checkpoint",
-      "neon_pilot",
-      "mcp",
-      "scheduled_task",
-      "subagent",
-      "todo"
-    ],
+    "expectedNames": ["artifact", "bash", "background_bash", "checkpoint", "neon_pilot", "mcp", "scheduled_task", "subagent", "todo"],
     "invocations": [
       {
         "name": "bash",
@@ -153,5 +148,9 @@
     ]
   },
   "installablePackages": [],
-  "catalogInstalls": []
+  "catalogInstalls": [
+    {
+      "extensionId": "system-dynamic-workflows"
+    }
+  ]
 }

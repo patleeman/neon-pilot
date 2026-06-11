@@ -32,6 +32,7 @@ const packagedExtensionFilter = [
   '*/skills/**/*',
   '*/docs/**/*',
   '*/assets/**/*',
+  '!system-dynamic-workflows{,/**/*}',
   '!**/*.map',
   '!**/src/**/*.test.*',
 ];

@@ -2,13 +2,16 @@
 /* eslint-env node */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionsRoot = join(repoRoot, 'extensions');
 const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
+const extensionPackScript = join(repoRoot, 'scripts', 'extension-pack.mjs');
+const installableBundleRoot = join(repoRoot, 'dist', 'installable-extensions');
+const defaultInstallableExtensionIds = new Set(['system-dynamic-workflows']);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -55,5 +58,13 @@ for (const extensionDir of extensionDirs) {
   assertBuiltEntriesExist(extensionDir);
 }
 
-const systemCount = extensionDirs.length;
 console.log(`Built and verified ${extensionDirs.length} extensions.`);
+
+mkdirSync(installableBundleRoot, { recursive: true });
+for (const extensionDir of extensionDirs) {
+  const manifest = readJson(join(extensionDir, 'extension.json'));
+  if (!defaultInstallableExtensionIds.has(manifest.id)) continue;
+  const outputPath = join(installableBundleRoot, `${manifest.id}.neon-extension.zip`);
+  console.log(`Packing installable ${extensionDir.replace(`${repoRoot}/`, '')}`);
+  execFileSync(process.execPath, [extensionPackScript, extensionDir, '--out', outputPath], { cwd: repoRoot, stdio: 'inherit' });
+}

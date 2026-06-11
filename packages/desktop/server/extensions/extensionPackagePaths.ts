@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readConfiguredExtensionPaths, readEnvironmentExtensionPaths } from './extensionSearchPaths.js';
@@ -8,6 +8,8 @@ export interface ExtensionPackagePath {
   packageRoot: string;
   source: 'bundled' | 'external';
 }
+
+const DEFAULT_INSTALLABLE_EXTENSION_IDS = new Set(['system-dynamic-workflows']);
 
 function resolveExplicitRepoRoot(): string | null {
   const repoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
@@ -28,6 +30,11 @@ function candidateBundledExtensionRoots(): string[] {
   ].filter((value): value is string => Boolean(value));
 }
 
+function shouldLoadBundledExtension(packageRoot: string, source: ExtensionPackagePath['source']): boolean {
+  if (source !== 'bundled') return true;
+  return !DEFAULT_INSTALLABLE_EXTENSION_IDS.has(basename(packageRoot));
+}
+
 function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath['source']): ExtensionPackagePath[] {
   const root = resolve(rootOrPackage);
   if (!existsSync(root) || !statSync(root).isDirectory()) {
@@ -35,7 +42,7 @@ function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath
   }
 
   if (existsSync(resolve(root, 'extension.json'))) {
-    return [{ packageRoot: root, source }];
+    return shouldLoadBundledExtension(root, source) ? [{ packageRoot: root, source }] : [];
   }
 
   return readdirSync(root)
@@ -45,7 +52,7 @@ function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath
       if (!statSync(packageRoot).isDirectory() || !existsSync(resolve(packageRoot, 'extension.json'))) {
         return [];
       }
-      return [{ packageRoot, source }];
+      return shouldLoadBundledExtension(packageRoot, source) ? [{ packageRoot, source }] : [];
     });
 }
 

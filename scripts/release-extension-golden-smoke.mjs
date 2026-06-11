@@ -339,6 +339,12 @@ async function installMatrixPackages(cdp, matrix) {
 
   for (const entry of matrix.catalogInstalls) {
     await postJson(cdp, '/api/extensions/system-extension-manager/actions/installCatalogExtension', { id: entry.extensionId });
+    if (entry.enable !== false)
+      await fetchFromRenderer(cdp, `/api/extensions/${encodeURIComponent(entry.extensionId)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ enabled: true }),
+      });
   }
 
   if (matrix.installablePackages.length > 0 || matrix.catalogInstalls.length > 0) {
