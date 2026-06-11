@@ -71,6 +71,18 @@ describe('command palette search', () => {
 
   it('disables context-gated host commands when their prerequisites are unavailable', () => {
     expect(
+      isHostCommandDisabledInPalette('composer.submit', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canSubmit': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.submit', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canSubmit': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.stop', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.isStreaming': false },

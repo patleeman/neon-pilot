@@ -5651,6 +5651,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     composerHasContent,
     composerRunState.streamControlsActive,
   );
+  const composerCanSubmit =
+    !composerDisabled &&
+    (composerHasContent || (composerShowsQuestionSubmit && composerQuestionCanSubmit && !composerQuestionSubmitting));
+  useEffect(() => {
+    setExtensionCommandContext('composer.canSubmit', composerCanSubmit);
+    return () => setExtensionCommandContext('composer.canSubmit', null);
+  }, [composerCanSubmit]);
   useEffect(() => {
     const handleComposerFocusCommand = () => {
       textareaRef.current?.focus();

@@ -117,6 +117,24 @@ describe('extension commands', () => {
     expect(stopComposer).toHaveBeenCalledTimes(1);
   });
 
+  it('disables composer submit unless the composer publishes submit availability', async () => {
+    const submitComposer = vi.fn(() => true);
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      submitComposer,
+    };
+
+    await expect(executeExtensionCommand('composer.submit', undefined, baseOptions)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('composer.submit', undefined, { ...baseOptions, context: { 'composer.canSubmit': true } }),
+    ).resolves.toBe(true);
+
+    expect(submitComposer).toHaveBeenCalledTimes(1);
+  });
+
   it('includes command-backed app chrome actions', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['layout.toggle', 'layout.toggleSidebar', 'layout.toggleRightRail', 'page.find']),

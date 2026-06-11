@@ -415,8 +415,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.submitComposer?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.submitComposer);
+      canExecute(_args, context) {
+        return Boolean(options.submitComposer) && readContextValue(context, 'composer.canSubmit') === true;
       },
     },
     {

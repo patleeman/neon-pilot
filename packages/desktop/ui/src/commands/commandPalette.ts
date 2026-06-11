@@ -56,6 +56,7 @@ const ACTIVE_CONVERSATION_HOST_COMMANDS = new Set([
 const ARGUMENT_REQUIRED_HOST_COMMANDS = new Set(['app.navigate', 'rail.open', 'layout.set']);
 
 const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
+  ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
   ['dictation.toggle', 'system-local-dictation.toggleAvailable'],
 ]);
