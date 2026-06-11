@@ -124,6 +124,11 @@ describe('startNewConversation', () => {
         },
       );
     }
+    apiMocks.createLiveSession.mockResolvedValue({
+      id: 'new-conversation',
+      sessionFile: '/tmp/new-conversation.jsonl',
+      bootstrap: undefined,
+    });
   });
 
   afterEach(() => {
@@ -153,6 +158,21 @@ describe('startNewConversation', () => {
     await startNewConversation({ navigate, cwd: '/repo' });
 
     expect(readDraftConversationCwd()).toBe('/repo');
+  });
+
+  it('submits initial prompt text without requesting composer focus', async () => {
+    const navigate = vi.fn();
+
+    await startNewConversation({ navigate, focusComposer: true, initialPromptText: 'Use the scheduled-tasks skill.' });
+
+    expect(apiMocks.createLiveSession).toHaveBeenCalledWith(undefined, 'Use the scheduled-tasks skill.', expect.any(Object));
+    expect(navigate).toHaveBeenCalledWith(expect.stringMatching(/^\/conversations\//), {
+      replace: undefined,
+      state: {
+        focusComposer: false,
+      },
+    });
+    expect(window.dispatchEvent).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'neon-pilot:composer-focus' }));
   });
 
   it('prepopulates the draft composer when requested', async () => {

@@ -32,6 +32,7 @@ export interface StartDraftConversationInput {
   replace?: boolean;
   focusComposer?: boolean;
   initialComposerText?: string | null;
+  initialPromptText?: string | null;
 }
 
 function focusComposerAfterNavigation(): void {
@@ -49,10 +50,11 @@ export async function startNewConversation(input: StartDraftConversationInput): 
   const cwd = input.cwd?.trim() ?? '';
   const model = readDraftConversationModel();
   const thinkingLevel = readDraftConversationThinkingLevel();
-  const initialComposerText = input.initialComposerText?.trim() ?? '';
+  const initialPromptText = input.initialPromptText?.trim() ?? input.initialComposerText?.trim() ?? '';
+  const shouldFocusComposer = input.focusComposer === true && !initialPromptText;
 
   try {
-    const created = await api.createLiveSession(cwd || undefined, initialComposerText || undefined, {
+    const created = await api.createLiveSession(cwd || undefined, initialPromptText || undefined, {
       ...(model ? { model } : {}),
       ...(thinkingLevel ? { thinkingLevel } : {}),
     });
@@ -73,11 +75,11 @@ export async function startNewConversation(input: StartDraftConversationInput): 
     input.navigate(`/conversations/${encodeURIComponent(created.id)}`, {
       replace: input.replace,
       state: {
-        focusComposer: input.focusComposer === true,
+        focusComposer: shouldFocusComposer,
       },
     });
 
-    if (input.focusComposer === true) {
+    if (shouldFocusComposer) {
       focusComposerAfterNavigation();
     }
 

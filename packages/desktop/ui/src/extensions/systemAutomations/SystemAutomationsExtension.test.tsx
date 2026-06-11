@@ -205,14 +205,15 @@ describe('AutomationsPage', () => {
     expect(pa.commands.execute).toHaveBeenCalledWith(
       'conversation.newAndFocus',
       expect.objectContaining({
-        initialComposerText: expect.stringContaining('Read the built-in scheduled-tasks skill'),
+        initialPromptText: expect.stringContaining('Read the built-in scheduled-tasks skill'),
       }),
     );
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toBeUndefined();
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain(
       'Do not create the automation until I confirm',
     );
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain('- Timeout seconds: 1800');
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain('- Timeout seconds: 1800');
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain(
       '- Catch-up policy window seconds: 900',
     );
   });
@@ -245,7 +246,7 @@ describe('AutomationsPage', () => {
       chatButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialComposerText).toContain(
+    expect((pa.commands.execute as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].initialPromptText).toContain(
       'Schedule: recurring cron 30 14 * * *',
     );
   });

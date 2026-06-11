@@ -1096,7 +1096,7 @@ export function AutomationsPage({ pa }: { pa: NativeExtensionClient }) {
   const createWithChat = useCallback(async () => {
     const prompt = buildCreateWithChatPrompt(form);
     const opened = await pa.commands.execute('conversation.newAndFocus', {
-      initialComposerText: prompt,
+      initialPromptText: prompt,
       cwd: form.cwd.trim() || undefined,
     });
     if (opened) {
