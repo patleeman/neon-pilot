@@ -60,6 +60,9 @@ const ARGUMENT_REQUIRED_HOST_COMMANDS = new Set(['app.navigate', 'rail.open', 'l
 const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['app.goBack', 'app.canGoBack'],
   ['app.goForward', 'app.canGoForward'],
+  ['page.findNext', 'pageSearch.hasMatches'],
+  ['page.findPrevious', 'pageSearch.hasMatches'],
+  ['page.closeFind', 'pageSearch.open'],
   ['notifications.markAllRead', 'notifications.hasUnread'],
   ['notifications.dismissAll', 'notifications.hasVisible'],
   ['browser.goBack', 'browser.canGoBack'],

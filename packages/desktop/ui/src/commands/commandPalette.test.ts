@@ -95,6 +95,42 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('page.findNext', {
+        activeConversationId: 'conversation-1',
+        context: { 'pageSearch.hasMatches': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('page.findNext', {
+        activeConversationId: 'conversation-1',
+        context: { 'pageSearch.hasMatches': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('page.findPrevious', {
+        activeConversationId: 'conversation-1',
+        context: { 'pageSearch.hasMatches': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('page.findPrevious', {
+        activeConversationId: 'conversation-1',
+        context: { 'pageSearch.hasMatches': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('page.closeFind', {
+        activeConversationId: 'conversation-1',
+        context: { 'pageSearch.open': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('page.closeFind', {
+        activeConversationId: 'conversation-1',
+        context: { 'pageSearch.open': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('notifications.markAllRead', {
         activeConversationId: 'conversation-1',
         context: { 'notifications.hasUnread': false },

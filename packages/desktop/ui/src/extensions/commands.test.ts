@@ -365,34 +365,76 @@ describe('extension commands', () => {
 
   it('includes command-backed app chrome actions', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['layout.toggle', 'layout.toggleSidebar', 'layout.toggleRightRail', 'page.find']),
+      expect.arrayContaining([
+        'layout.toggle',
+        'layout.toggleSidebar',
+        'layout.toggleRightRail',
+        'page.find',
+        'page.findNext',
+        'page.findPrevious',
+        'page.closeFind',
+      ]),
     );
 
     const toggleLayout = vi.fn(() => true);
     const toggleSidebar = vi.fn(() => true);
     const toggleRightRail = vi.fn(() => true);
     const findOnPage = vi.fn(() => true);
-
-    const commands = createHostCommands({
+    const findNextOnPage = vi.fn(() => true);
+    const findPreviousOnPage = vi.fn(() => true);
+    const closePageSearch = vi.fn(() => true);
+    const baseOptions = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
+    };
+
+    const commands = createHostCommands({
+      ...baseOptions,
       toggleLayout,
       toggleSidebar,
       toggleRightRail,
       findOnPage,
+      findNextOnPage,
+      findPreviousOnPage,
+      closePageSearch,
     });
 
     await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggle')?.execute(undefined))).resolves.toBe(true);
     await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleSidebar')?.execute(undefined))).resolves.toBe(true);
     await expect(Promise.resolve(commands.find((command) => command.id === 'layout.toggleRightRail')?.execute(undefined))).resolves.toBe(true);
     await expect(Promise.resolve(commands.find((command) => command.id === 'page.find')?.execute(undefined))).resolves.toBe(true);
+    await expect(executeExtensionCommand('page.findNext', undefined, { ...baseOptions, findNextOnPage })).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('page.findNext', undefined, {
+        ...baseOptions,
+        findNextOnPage,
+        context: { 'pageSearch.hasMatches': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('page.findPrevious', undefined, {
+        ...baseOptions,
+        findPreviousOnPage,
+        context: { 'pageSearch.hasMatches': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('page.closeFind', undefined, {
+        ...baseOptions,
+        closePageSearch,
+        context: { 'pageSearch.open': true },
+      }),
+    ).resolves.toBe(true);
 
     expect(toggleLayout).toHaveBeenCalledTimes(1);
     expect(toggleSidebar).toHaveBeenCalledTimes(1);
     expect(toggleRightRail).toHaveBeenCalledTimes(1);
     expect(findOnPage).toHaveBeenCalledTimes(1);
+    expect(findNextOnPage).toHaveBeenCalledTimes(1);
+    expect(findPreviousOnPage).toHaveBeenCalledTimes(1);
+    expect(closePageSearch).toHaveBeenCalledTimes(1);
   });
 
   it('does not report unwired focus commands as handled', async () => {

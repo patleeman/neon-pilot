@@ -1,5 +1,6 @@
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { setExtensionCommandContext } from '../extensions/commands';
 import { cx, IconButton, Keycap } from './ui';
 
 const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
@@ -83,8 +84,10 @@ function isDesktopPageSearchShortcutAction(value: unknown): value is 'find-in-pa
   return value === 'find-in-page';
 }
 
-function isDesktopPageSearchShortcutCommand(value: unknown): value is 'page.find' {
-  return value === 'page.find';
+function readDesktopPageSearchCommand(value: unknown): 'page.find' | 'page.findNext' | 'page.findPrevious' | 'page.closeFind' | null {
+  return value === 'page.find' || value === 'page.findNext' || value === 'page.findPrevious' || value === 'page.closeFind'
+    ? value
+    : null;
 }
 
 function readSelectedSearchText(): string {
@@ -402,6 +405,15 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
   );
 
   useEffect(() => {
+    setExtensionCommandContext('pageSearch.open', open);
+    setExtensionCommandContext('pageSearch.hasMatches', open && matchesCount > 0);
+    return () => {
+      setExtensionCommandContext('pageSearch.open', null);
+      setExtensionCommandContext('pageSearch.hasMatches', null);
+    };
+  }, [matchesCount, open]);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented || event.isComposing) {
         return;
@@ -437,7 +449,23 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
 
     function handleDesktopShortcut(event: Event) {
       const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
-      if (!isDesktopPageSearchShortcutAction(detail?.action) && !isDesktopPageSearchShortcutCommand(detail?.command)) {
+      const command = readDesktopPageSearchCommand(detail?.command);
+      if (!isDesktopPageSearchShortcutAction(detail?.action) && !command) {
+        return;
+      }
+
+      if (command === 'page.findNext') {
+        moveToMatch(1);
+        return;
+      }
+
+      if (command === 'page.findPrevious') {
+        moveToMatch(-1);
+        return;
+      }
+
+      if (command === 'page.closeFind') {
+        closeSearch();
         return;
       }
 

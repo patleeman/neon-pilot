@@ -1891,6 +1891,18 @@ export function Layout() {
         dispatchDesktopShortcutAction('find-in-page');
         return true;
       },
+      findNextOnPage() {
+        dispatchDesktopShortcutCommand('page.findNext');
+        return true;
+      },
+      findPreviousOnPage() {
+        dispatchDesktopShortcutCommand('page.findPrevious');
+        return true;
+      },
+      closePageSearch() {
+        dispatchDesktopShortcutCommand('page.closeFind');
+        return true;
+      },
       closeConversation() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.closeConversation);
         return true;

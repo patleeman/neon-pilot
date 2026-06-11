@@ -30,6 +30,9 @@ export interface ExtensionCommandExecutorOptions {
   toggleSidebar?(): boolean;
   toggleRightRail?(): boolean;
   findOnPage?(): boolean;
+  findNextOnPage?(): boolean;
+  findPreviousOnPage?(): boolean;
+  closePageSearch?(): boolean;
   focusComposer?(): void;
   focusSidebar?(): void;
   focusNext?(): boolean;
@@ -158,6 +161,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'layout.toggleSidebar', title: 'Toggle Left Sidebar', category: 'App' },
     { id: 'layout.toggleRightRail', title: 'Toggle Right Rail', category: 'App' },
     { id: 'page.find', title: 'Find on Page', category: 'App' },
+    { id: 'page.findNext', title: 'Find Next Match', category: 'App' },
+    { id: 'page.findPrevious', title: 'Find Previous Match', category: 'App' },
+    { id: 'page.closeFind', title: 'Close Page Search', category: 'App' },
     {
       id: 'conversation.new',
       title: 'New Conversation',
@@ -366,6 +372,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute() {
         return Boolean(options.findOnPage);
+      },
+    },
+    {
+      id: 'page.findNext',
+      title: 'Find Next Match',
+      category: 'App',
+      execute() {
+        return options.findNextOnPage?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.findNextOnPage) && readContextValue(context, 'pageSearch.hasMatches') === true;
+      },
+    },
+    {
+      id: 'page.findPrevious',
+      title: 'Find Previous Match',
+      category: 'App',
+      execute() {
+        return options.findPreviousOnPage?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.findPreviousOnPage) && readContextValue(context, 'pageSearch.hasMatches') === true;
+      },
+    },
+    {
+      id: 'page.closeFind',
+      title: 'Close Page Search',
+      category: 'App',
+      execute() {
+        return options.closePageSearch?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closePageSearch) && readContextValue(context, 'pageSearch.open') === true;
       },
     },
     {

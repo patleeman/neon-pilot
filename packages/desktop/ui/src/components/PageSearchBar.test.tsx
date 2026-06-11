@@ -146,6 +146,44 @@ describe('PageSearchBar', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it('navigates and closes from command-only desktop shortcut events', async () => {
+    const { container } = renderHarness();
+
+    dispatchDesktopShortcutCommand('page.find');
+    await flushAsyncWork();
+
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="Find on page"]');
+    expect(input).toBeInstanceOf(HTMLInputElement);
+
+    const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+    if (!valueSetter) {
+      throw new Error('HTMLInputElement value setter unavailable');
+    }
+
+    await act(async () => {
+      valueSetter.call(input, 'alpha beta');
+      input?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('1/2');
+
+    dispatchDesktopShortcutCommand('page.findNext');
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('2/2');
+
+    dispatchDesktopShortcutCommand('page.findPrevious');
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('1/2');
+
+    dispatchDesktopShortcutCommand('page.closeFind');
+    await flushAsyncWork();
+
+    expect(container.querySelector('input[aria-label="Find on page"]')).toBeNull();
+  });
+
   it('does not force-scroll the active match when content changes under an open search', async () => {
     const scrollIntoView = HTMLElement.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
     const { container } = renderHarness();
