@@ -407,6 +407,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('workbench.closeActiveTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.hasActiveTab': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('workbench.closeActiveTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.hasActiveTab': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('workbench.closeActiveFile', {
         activeConversationId: 'conversation-1',
         context: { 'workbench.hasActiveFile': false },

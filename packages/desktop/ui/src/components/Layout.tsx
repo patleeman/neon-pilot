@@ -1772,9 +1772,17 @@ export function Layout() {
     setExtensionCommandContext('route', location.pathname);
     setExtensionCommandContext('layout.mode', appLayoutMode);
     setExtensionCommandContext('conversation.hasActive', Boolean(activeConversationId));
+    setExtensionCommandContext('workbench.hasActiveTab', Boolean(activeWorkbenchTabId));
     setExtensionCommandContext('workbench.hasActiveFile', hasActiveWorkbenchFile);
     setExtensionCommandContext('workbench.canToggleExplorer', canToggleWorkbenchExplorer);
-  }, [activeConversationId, appLayoutMode, canToggleWorkbenchExplorer, hasActiveWorkbenchFile, location.pathname]);
+  }, [
+    activeConversationId,
+    activeWorkbenchTabId,
+    appLayoutMode,
+    canToggleWorkbenchExplorer,
+    hasActiveWorkbenchFile,
+    location.pathname,
+  ]);
 
   const creatingNewConversationRef = useRef(false);
   const startNewConversationFromLayout = useCallback(

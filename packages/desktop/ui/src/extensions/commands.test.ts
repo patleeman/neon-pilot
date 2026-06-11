@@ -1581,7 +1581,13 @@ describe('extension commands', () => {
     };
 
     await expect(executeExtensionCommand('workbench.newTab', undefined, options)).resolves.toBe(true);
-    await expect(executeExtensionCommand('workbench.closeActiveTab', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.closeActiveTab', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('workbench.closeActiveTab', undefined, {
+        ...options,
+        context: { 'workbench.hasActiveTab': true },
+      }),
+    ).resolves.toBe(true);
     await expect(executeExtensionCommand('workbench.closeActiveFile', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('workbench.refreshActiveFile', undefined, options)).resolves.toBe(false);
     await expect(

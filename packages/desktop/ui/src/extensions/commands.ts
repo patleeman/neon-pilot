@@ -1079,8 +1079,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.closeActiveWorkbenchTab?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.closeActiveWorkbenchTab);
+      canExecute(_args, context) {
+        return Boolean(options.closeActiveWorkbenchTab) && readContextValue(context, 'workbench.hasActiveTab') === true;
       },
     },
     {

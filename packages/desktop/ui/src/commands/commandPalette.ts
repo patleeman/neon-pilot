@@ -126,6 +126,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.openActiveCheckpoint', 'conversation.canOpenActiveCheckpoint'],
   ['conversation.openLatestCheckpoint', 'conversation.canOpenLatestCheckpoint'],
   ['conversation.scrollFirstCheckpointFile', 'conversation.canScrollFirstCheckpointFile'],
+  ['workbench.closeActiveTab', 'workbench.hasActiveTab'],
   ['workbench.closeActiveFile', 'workbench.hasActiveFile'],
   ['workbench.refreshActiveFile', 'workbench.hasActiveFile'],
   ['workbench.toggleExplorer', 'workbench.canToggleExplorer'],
