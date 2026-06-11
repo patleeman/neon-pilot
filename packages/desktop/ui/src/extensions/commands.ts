@@ -60,6 +60,8 @@ export interface ExtensionCommandExecutorOptions {
   toggleBackgroundRunDetails?(): boolean;
   toggleDeferredResumeDetails?(): boolean;
   toggleScheduledTaskDetails?(): boolean;
+  openLatestBackgroundRun?(): boolean;
+  cancelLatestBackgroundRun?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
@@ -215,6 +217,8 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.toggleBackgroundRunDetails', title: 'Toggle Background Work Details', category: 'Conversation' },
     { id: 'conversation.toggleDeferredResumeDetails', title: 'Toggle Attention Details', category: 'Conversation' },
     { id: 'conversation.toggleScheduledTaskDetails', title: 'Toggle Automation Details', category: 'Conversation' },
+    { id: 'conversation.openLatestBackgroundRun', title: 'Open Latest Background Run', category: 'Conversation' },
+    { id: 'conversation.cancelLatestBackgroundRun', title: 'Cancel Latest Background Run', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
@@ -689,6 +693,28 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.toggleScheduledTaskDetails) && readContextValue(context, 'conversation.hasScheduledTasks') === true;
+      },
+    },
+    {
+      id: 'conversation.openLatestBackgroundRun',
+      title: 'Open Latest Background Run',
+      category: 'Conversation',
+      execute() {
+        return options.openLatestBackgroundRun?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openLatestBackgroundRun) && readContextValue(context, 'conversation.canOpenLatestBackgroundRun') === true;
+      },
+    },
+    {
+      id: 'conversation.cancelLatestBackgroundRun',
+      title: 'Cancel Latest Background Run',
+      category: 'Conversation',
+      execute() {
+        return options.cancelLatestBackgroundRun?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelLatestBackgroundRun) && readContextValue(context, 'conversation.canCancelLatestBackgroundRun') === true;
       },
     },
     {

@@ -6,3 +6,7 @@ export const CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT =
   'neon-pilot-conversation-toggle-deferred-resume-details-command';
 export const CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT =
   'neon-pilot-conversation-toggle-scheduled-task-details-command';
+export const CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT =
+  'neon-pilot-conversation-open-latest-background-run-command';
+export const CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT =
+  'neon-pilot-conversation-cancel-latest-background-run-command';

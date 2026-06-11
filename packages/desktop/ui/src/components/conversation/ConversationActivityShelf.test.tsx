@@ -9,6 +9,8 @@ import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } fro
 import { ConversationActivityShelf } from './ConversationActivityShelf';
 import {
   CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
   CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
@@ -268,5 +270,48 @@ describe('ConversationActivityShelf', () => {
     expect(onToggleBackgroundRunDetails).toHaveBeenCalledTimes(1);
     expect(onToggleDeferredResumeDetails).toHaveBeenCalledTimes(1);
     expect(onToggleScheduledTaskDetails).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles shared latest background run commands', () => {
+    const onOpenBackgroundRun = vi.fn();
+    const onCancelBackgroundRun = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationActivityShelf
+          backgroundExecutions={[
+            { ...execution, id: 'run-latest', capabilities: { ...execution.capabilities, canCancel: false } },
+            { ...execution, id: 'run-cancellable', capabilities: { ...execution.capabilities, canCancel: true } },
+          ]}
+          backgroundExecutionIndicatorText="running"
+          showBackgroundRunDetails={false}
+          onToggleBackgroundRunDetails={vi.fn()}
+          onOpenBackgroundRun={onOpenBackgroundRun}
+          onCancelBackgroundRun={onCancelBackgroundRun}
+          deferredResumes={[]}
+          deferredResumeIndicatorText="none"
+          deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+          hasReadyDeferredResumes={false}
+          isLiveSession={false}
+          deferredResumesBusy={false}
+          showDeferredResumeDetails={false}
+          onContinueDeferredResumesNow={vi.fn()}
+          onToggleDeferredResumeDetails={vi.fn()}
+          onFireDeferredResumeNow={vi.fn()}
+          onCancelDeferredResume={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT));
+    });
+
+    expect(onOpenBackgroundRun).toHaveBeenCalledWith('run-latest');
+    expect(onCancelBackgroundRun).toHaveBeenCalledWith('run-cancellable');
   });
 });

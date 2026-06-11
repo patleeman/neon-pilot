@@ -35,6 +35,8 @@ export const HOST_COMMAND_IDS = [
   'conversation.toggleBackgroundRunDetails',
   'conversation.toggleDeferredResumeDetails',
   'conversation.toggleScheduledTaskDetails',
+  'conversation.openLatestBackgroundRun',
+  'conversation.cancelLatestBackgroundRun',
   'composer.focus',
   'composer.submit',
   'composer.stop',

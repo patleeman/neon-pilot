@@ -95,6 +95,8 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.toggleBackgroundRunDetails', 'conversation.hasBackgroundRuns'],
   ['conversation.toggleDeferredResumeDetails', 'conversation.hasDeferredResumes'],
   ['conversation.toggleScheduledTaskDetails', 'conversation.hasScheduledTasks'],
+  ['conversation.openLatestBackgroundRun', 'conversation.canOpenLatestBackgroundRun'],
+  ['conversation.cancelLatestBackgroundRun', 'conversation.canCancelLatestBackgroundRun'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],
   ['composer.openSettings', 'composer.settingsAvailable'],

@@ -419,6 +419,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.openLatestBackgroundRun', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenLatestBackgroundRun': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.openLatestBackgroundRun', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenLatestBackgroundRun': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelLatestBackgroundRun', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canCancelLatestBackgroundRun': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelLatestBackgroundRun', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canCancelLatestBackgroundRun': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.focusLocation', {
         activeConversationId: 'conversation-1',
         context: { 'browser.active': false },

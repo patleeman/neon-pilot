@@ -7,6 +7,8 @@ import { timeAgo } from '../../shared/utils';
 import { cx, MetaLabel, RowButton, ShelfHeader, ShelfSection, Spinner, TextButton } from '../ui';
 import {
   CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
   CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
@@ -98,19 +100,35 @@ export function ConversationActivityShelf({
   const canToggleBackgroundRunDetails = backgroundExecutions.length > 0;
   const canToggleDeferredResumeDetails = deferredResumes.length > 0;
   const canToggleScheduledTaskDetails = scheduledTasks.length > 0 && Boolean(onToggleScheduledTaskDetails);
+  const latestBackgroundRun = backgroundExecutions[0] ?? null;
+  const latestCancellableBackgroundRun =
+    backgroundExecutions.find((execution) => execution.capabilities.canCancel && !(cancellingBackgroundRunIds?.has(execution.id) ?? false)) ?? null;
+  const canOpenLatestBackgroundRun = Boolean(latestBackgroundRun && onOpenBackgroundRun);
+  const canCancelLatestBackgroundRun = Boolean(latestCancellableBackgroundRun && onCancelBackgroundRun);
 
   useEffect(() => {
     setExtensionCommandContext('conversation.canContinueDeferredResumes', canContinueDeferredResumes);
     setExtensionCommandContext('conversation.hasBackgroundRuns', canToggleBackgroundRunDetails);
     setExtensionCommandContext('conversation.hasDeferredResumes', canToggleDeferredResumeDetails);
     setExtensionCommandContext('conversation.hasScheduledTasks', canToggleScheduledTaskDetails);
+    setExtensionCommandContext('conversation.canOpenLatestBackgroundRun', canOpenLatestBackgroundRun);
+    setExtensionCommandContext('conversation.canCancelLatestBackgroundRun', canCancelLatestBackgroundRun);
     return () => {
       setExtensionCommandContext('conversation.canContinueDeferredResumes', null);
       setExtensionCommandContext('conversation.hasBackgroundRuns', null);
       setExtensionCommandContext('conversation.hasDeferredResumes', null);
       setExtensionCommandContext('conversation.hasScheduledTasks', null);
+      setExtensionCommandContext('conversation.canOpenLatestBackgroundRun', null);
+      setExtensionCommandContext('conversation.canCancelLatestBackgroundRun', null);
     };
-  }, [canContinueDeferredResumes, canToggleBackgroundRunDetails, canToggleDeferredResumeDetails, canToggleScheduledTaskDetails]);
+  }, [
+    canCancelLatestBackgroundRun,
+    canContinueDeferredResumes,
+    canOpenLatestBackgroundRun,
+    canToggleBackgroundRunDetails,
+    canToggleDeferredResumeDetails,
+    canToggleScheduledTaskDetails,
+  ]);
 
   useEffect(() => {
     if (!canContinueDeferredResumes) return;
@@ -138,6 +156,24 @@ export function ConversationActivityShelf({
     window.addEventListener(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT, onToggleScheduledTaskDetails);
     return () => window.removeEventListener(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT, onToggleScheduledTaskDetails);
   }, [canToggleScheduledTaskDetails, onToggleScheduledTaskDetails]);
+
+  useEffect(() => {
+    if (!latestBackgroundRun || !onOpenBackgroundRun) return;
+    function handleOpenLatestBackgroundRunCommand() {
+      onOpenBackgroundRun?.(latestBackgroundRun.id);
+    }
+    window.addEventListener(CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleOpenLatestBackgroundRunCommand);
+    return () => window.removeEventListener(CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleOpenLatestBackgroundRunCommand);
+  }, [latestBackgroundRun, onOpenBackgroundRun]);
+
+  useEffect(() => {
+    if (!latestCancellableBackgroundRun || !onCancelBackgroundRun) return;
+    function handleCancelLatestBackgroundRunCommand() {
+      onCancelBackgroundRun?.(latestCancellableBackgroundRun.id);
+    }
+    window.addEventListener(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleCancelLatestBackgroundRunCommand);
+    return () => window.removeEventListener(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleCancelLatestBackgroundRunCommand);
+  }, [latestCancellableBackgroundRun, onCancelBackgroundRun]);
 
   return (
     <>
