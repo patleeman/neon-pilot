@@ -1,4 +1,5 @@
 import type { ExtensionKeybindingRegistration } from './types';
+import { evaluateCommandEnablement, type ExtensionCommandContext } from './commands';
 
 export interface KeybindingEventLike {
   key: string;
@@ -66,6 +67,13 @@ function matchesExtensionKeybinding(event: KeybindingEventLike, shortcut: string
 export function findMatchingExtensionKeybinding(
   event: KeybindingEventLike,
   keybindings: ExtensionKeybindingRegistration[],
+  context: ExtensionCommandContext = {},
 ): ExtensionKeybindingRegistration | null {
-  return keybindings.find((keybinding) => keybinding.keys.some((shortcut) => matchesExtensionKeybinding(event, shortcut))) ?? null;
+  return (
+    keybindings.find(
+      (keybinding) =>
+        evaluateCommandEnablement(keybinding.when, context) &&
+        keybinding.keys.some((shortcut) => matchesExtensionKeybinding(event, shortcut)),
+    ) ?? null
+  );
 }

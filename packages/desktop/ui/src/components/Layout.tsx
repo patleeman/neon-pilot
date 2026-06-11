@@ -2001,6 +2001,7 @@ export function Layout() {
       const match = findMatchingExtensionKeybinding(
         event,
         extensionKeybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'global'),
+        executeCommandOptions.context,
       );
       if (!match) return;
       if (!canExecuteExtensionCommand(match.command, match.args, executeCommandOptions)) return;
