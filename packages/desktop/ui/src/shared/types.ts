@@ -458,6 +458,44 @@ export interface ConversationExecutionsResult {
   executions: ExecutionRecord[];
 }
 
+export type ConversationActivityKind = 'execution' | 'deferred-resume' | 'scheduled-task' | 'queued-prompt';
+export type ConversationActivityVisibility = 'primary' | 'system' | 'hidden';
+export type ConversationActivityStatus =
+  | 'queued'
+  | 'waiting'
+  | 'running'
+  | 'scheduled'
+  | 'ready'
+  | 'failed'
+  | 'done'
+  | 'cancelled'
+  | 'unknown';
+
+export interface ConversationActivityItem {
+  id: string;
+  kind: ConversationActivityKind;
+  title: string;
+  subtitle?: string;
+  status: ConversationActivityStatus;
+  active: boolean;
+  visibility: ConversationActivityVisibility;
+  conversationId: string;
+  source: { type: ConversationActivityKind; id: string };
+  createdAt?: string;
+  updatedAt?: string;
+  dueAt?: string;
+  actions: Array<{ id: string; label: string; command?: string }>;
+  payload?: unknown;
+}
+
+export interface ConversationActivityResult {
+  conversationId: string;
+  items: ConversationActivityItem[];
+  primary: ConversationActivityItem[];
+  system: ConversationActivityItem[];
+  hidden: ConversationActivityItem[];
+}
+
 export interface ExecutionDetailResult {
   execution: ExecutionRecord;
 }

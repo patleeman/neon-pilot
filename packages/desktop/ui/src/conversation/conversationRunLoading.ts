@@ -1,10 +1,3 @@
-export function filterVisibleActiveConversationBackgroundExecutions<TExecution extends { id: string }>(
-  executions: TExecution[],
-  conversationRunId: string | null,
-): TExecution[] {
-  return executions.filter((execution) => execution.id !== conversationRunId);
-}
-
 export function shouldLoadConversationRun(input: {
   conversationRunId: string | null;
   knownRunIds?: ReadonlySet<string> | null;

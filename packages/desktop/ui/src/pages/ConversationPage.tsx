@@ -88,10 +88,12 @@ import {
   shouldHandleDroppedComposerFiles,
 } from '../conversation/conversationDragDrop';
 import {
-  buildBackgroundExecutionIndicatorText,
-  buildScheduledTaskIndicatorText,
-  selectConversationScheduledTasks,
-} from '../conversation/conversationExecutionActivity';
+  activityDeferredResumes,
+  activityExecutions,
+  activityQueuedPrompts,
+  activityScheduledTasks,
+} from '../conversation/conversationActivityPresentation';
+import { buildBackgroundExecutionIndicatorText, buildScheduledTaskIndicatorText } from '../conversation/conversationExecutionActivity';
 import { buildComposerShelfContext, buildNewConversationPanelContext } from '../conversation/conversationExtensionContexts';
 import { buildMissionAutoModeInputFromDraft, createDraftMissionTask } from '../conversation/conversationGoalMode';
 import { formatThinkingLevelLabel } from '../conversation/conversationHeader';
@@ -171,10 +173,7 @@ import {
 import { insertReplyQuoteIntoComposer } from '../conversation/conversationReplyQuote';
 import { didConversationStopMidTurn, didConversationStopWithError, getConversationResumeState } from '../conversation/conversationResume';
 import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
-import {
-  filterVisibleActiveConversationBackgroundExecutions,
-  shouldLoadConversationRun as resolveShouldLoadConversationRun,
-} from '../conversation/conversationRunLoading';
+import { shouldLoadConversationRun as resolveShouldLoadConversationRun } from '../conversation/conversationRunLoading';
 import { createConversationLiveRunId, getConversationRunIdFromSearch } from '../conversation/conversationRuns';
 import { shouldRefetchSavedWorkspacePaths, syncSavedWorkspacePathValues } from '../conversation/conversationSavedWorkspaces';
 import {
@@ -262,7 +261,7 @@ import {
 } from '../conversation/relatedThreadSelection';
 import { collectCompletedToolAutoOpenBlockKeys, findRequestedToolPresentationToOpen } from '../conversation/toolAutoOpen';
 import { useComposerController } from '../conversation/useComposerController';
-import { useConversationActiveExecutions } from '../conversation/useConversationActiveExecutions';
+import { useConversationActivity } from '../conversation/useConversationActivity';
 import { useConversationComposerMenus, type UseConversationComposerMenusState } from '../conversation/useConversationComposerMenus';
 import { useComposerModifierKeys, useVisualViewportKeyboardInset } from '../conversation/useConversationKeyboardState';
 import { useConversationModels } from '../conversation/useConversationModels';
@@ -1130,6 +1129,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   // Pending steer/followup queue as reported by the live session.
   const pendingQueue = useMemo(() => buildConversationPendingQueueItems(stream.pendingQueue), [stream.pendingQueue]);
+  const pendingQueueActivityRefreshKey = useMemo(
+    () =>
+      [...stream.pendingQueue.steering, ...stream.pendingQueue.followUp]
+        .map((item) => `${item.id}:${item.restorable === false ? 'remote' : 'local'}:${item.text}:${item.imageCount}`)
+        .join('|'),
+    [stream.pendingQueue],
+  );
 
   // Live sessions hydrate from the SSE snapshot; until that arrives, fall back to
   // JSONL + live deltas only when we have at least one source of blocks.
@@ -2013,8 +2019,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const wholeLineBashRunningRef = useRef(false);
   const composerSubmitRunningRef = useRef(false);
   const [showBackgroundRunDetails, setShowBackgroundRunDetails] = useState(false);
-  const { executions: activeConversationBackgroundExecutions, refresh: refreshActiveConversationBackgroundExecutions } =
-    useConversationActiveExecutions(draft ? null : id);
+  const { activity: conversationActivity, refresh: refreshConversationActivity } = useConversationActivity(
+    draft ? null : id,
+    pendingQueueActivityRefreshKey,
+  );
   const composerDisabled = isConversationComposerDisabled({
     conversationNeedsTakeover,
     preparingRelatedThreadContext,
@@ -2079,7 +2087,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       setCancellingBackgroundRunIds((current) => new Set(current).add(normalizedRunId));
       void api
         .cancelExecution(normalizedRunId)
-        .then(() => refreshActiveConversationBackgroundExecutions())
+        .then(() => refreshConversationActivity())
         .catch(() => {})
         .finally(() => {
           setCancellingBackgroundRunIds((current) => {
@@ -2089,7 +2097,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           });
         });
     },
-    [refreshActiveConversationBackgroundExecutions],
+    [refreshConversationActivity],
   );
 
   useEffect(() => {
@@ -2703,30 +2711,35 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [currentSessionMeta, id]);
 
   const savedConversationSessionFile = currentSessionMeta?.file ?? visibleSessionDetail?.meta.file ?? null;
+  const activityItems = conversationActivity.items;
+  const activityBackgroundExecutions = useMemo(() => activityExecutions(activityItems), [activityItems]);
+  const activityDeferredResumeItems = useMemo(() => activityDeferredResumes(activityItems), [activityItems]);
+  const activityScheduledTaskItems = useMemo(() => activityScheduledTasks(activityItems), [activityItems]);
+  const activityPendingQueue = useMemo(() => activityQueuedPrompts(activityItems), [activityItems]);
+  const visiblePendingQueue = draft ? pendingQueue : activityPendingQueue;
+  const visibleDeferredResumes = draft ? deferredResumes : activityDeferredResumeItems;
   const deferredResumePresentation = useMemo(
     () =>
       resolveDeferredResumePresentationState({
-        resumes: deferredResumes,
+        resumes: visibleDeferredResumes,
         nowMs: deferredResumeNowMs,
         isLiveSession,
         sessionFile: savedConversationSessionFile,
       }),
-    [deferredResumeNowMs, deferredResumes, isLiveSession, savedConversationSessionFile],
+    [deferredResumeNowMs, isLiveSession, savedConversationSessionFile, visibleDeferredResumes],
   );
   const orderedDeferredResumes = deferredResumePresentation.orderedResumes;
-  const visibleActiveConversationBackgroundExecutions = useMemo(
-    () => filterVisibleActiveConversationBackgroundExecutions(activeConversationBackgroundExecutions, conversationRunId),
-    [activeConversationBackgroundExecutions, conversationRunId],
-  );
+  const visibleActiveConversationBackgroundExecutions = activityBackgroundExecutions.filter((execution) => execution.id !== conversationRunId);
   const backgroundExecutionIndicatorText = buildBackgroundExecutionIndicatorText(visibleActiveConversationBackgroundExecutions);
   const showActiveBackgroundRunDetails = showBackgroundRunDetails;
-  const conversationScheduledTasks = useMemo(() => selectConversationScheduledTasks({ conversationId: id, tasks }), [id, tasks]);
+  const conversationScheduledTasks = activityScheduledTaskItems;
   const scheduledTaskIndicatorText = buildScheduledTaskIndicatorText(conversationScheduledTasks);
   const runScheduledTaskFromShelf = useCallback(async (taskId: string) => {
     await api.runTaskNow(taskId);
     const nextTasks = await api.tasks();
     taskStore.replaceAll(nextTasks);
-  }, []);
+    await refreshConversationActivity().catch(() => {});
+  }, [refreshConversationActivity]);
 
   const hasReadyDeferredResumes = deferredResumePresentation.hasReadyResumes;
   const deferredResumeAutoResumeKey = deferredResumePresentation.autoResumeKey;
@@ -2828,8 +2841,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     const data = await api.deferredResumes(id);
     setDeferredResumes(data.resumes);
+    await refreshConversationActivity().catch(() => {});
     return data.resumes;
-  }, [id]);
+  }, [id, refreshConversationActivity]);
 
   const refetchLiveSessionContext = useCallback(async () => {
     if (draft || !id) {
@@ -2888,7 +2902,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [draft, refetchSavedWorkspacePaths]);
 
   useInvalidateOnTopics(['attachments'], refetchConversationAttachments);
-  useInvalidateOnTopics(['sessions'], refetchDeferredResumes);
   useInvalidateOnTopics(['workspace'], refetchLiveSessionContextIfReady);
   useInvalidateOnTopics(['workspace'], refetchSavedWorkspacePaths);
 
@@ -2961,7 +2974,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [id, initialDeferredResumeState, location.key, refetchDeferredResumes]);
 
   useEffect(() => {
-    if (deferredResumes.length === 0) {
+    if (orderedDeferredResumes.length === 0) {
       setShowDeferredResumeDetails(false);
       return;
     }
@@ -2973,7 +2986,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => {
       window.clearInterval(intervalHandle);
     };
-  }, [deferredResumes.length]);
+  }, [orderedDeferredResumes.length]);
 
   useEffect(() => {
     if (
@@ -4486,6 +4499,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     try {
       const result = await api.scheduleDeferredResume(id, { delay, prompt, behavior });
       setDeferredResumes(result.resumes);
+      await refreshConversationActivity().catch(() => {});
       composerController.clear();
       showNotice(
         'accent',
@@ -4507,6 +4521,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     try {
       const result = await api.fireDeferredResumeNow(id, resumeId);
       setDeferredResumes(result.resumes);
+      await refreshConversationActivity().catch(() => {});
       showNotice('accent', 'Wakeup firing…');
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
@@ -4524,6 +4539,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     try {
       const result = await api.cancelDeferredResume(id, resumeId);
       setDeferredResumes(result.resumes);
+      await refreshConversationActivity().catch(() => {});
       showNotice('accent', 'Wakeup cancelled.');
     } catch (error) {
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
@@ -5414,7 +5430,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   async function stopStreamAndRestoreQueuedPrompts() {
     await streamAbort();
 
-    if (!id || pendingQueue.length === 0) return;
+    if (!id || visiblePendingQueue.length === 0) return;
 
     try {
       const cleared = await api.clearQueuedMessages(id, currentSurfaceId);
@@ -5885,7 +5901,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       composerShelvesBottomCount: composerShelvesBottom.length,
       attachedContextDocsCount: attachedContextDocs.length,
       draftMentionItemsCount: draftMentionItems.length,
-      pendingQueueCount: pendingQueue.length,
+      pendingQueueCount: visiblePendingQueue.length,
       draft,
       orderedDeferredResumesCount: orderedDeferredResumes.length,
       pendingBrowserCommentsCount: pendingBrowserComments.length,
@@ -6657,7 +6673,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
                   <Suspense fallback={null}>
                     <ConversationQueueShelf
-                      pendingQueue={pendingQueue}
+                      pendingQueue={visiblePendingQueue}
                       conversationNeedsTakeover={conversationNeedsTakeover}
                       onRestoreQueuedPrompt={(behavior, queueIndex, previewId) => {
                         void restoreQueuedPromptToComposer(behavior, queueIndex, previewId);

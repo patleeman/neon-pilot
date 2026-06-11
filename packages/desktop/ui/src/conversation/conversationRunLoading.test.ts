@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterVisibleActiveConversationBackgroundExecutions, shouldLoadConversationRun } from './conversationRunLoading';
+import { shouldLoadConversationRun } from './conversationRunLoading';
 
 describe('conversationRunLoading', () => {
-  it('hides the active conversation run from background executions', () => {
-    expect(filterVisibleActiveConversationBackgroundExecutions([{ id: 'run-1' }, { id: 'run-2' }], 'run-1')).toEqual([{ id: 'run-2' }]);
-    expect(filterVisibleActiveConversationBackgroundExecutions([{ id: 'run-1' }], null)).toEqual([{ id: 'run-1' }]);
-  });
-
   it('loads conversation run details only for stopped non-live conversations', () => {
     const base = { conversationRunId: 'run-1', draft: false, isLiveSession: false, stoppedMidTurn: false, stoppedWithError: false };
     expect(shouldLoadConversationRun(base)).toBe(false);

@@ -23,6 +23,7 @@ import type {
   CacheEfficiencyPoint,
   ContextPointerUsageResult,
   ConversationAttachmentAssetData,
+  ConversationActivityResult,
   ConversationBootstrapState,
   ConversationCheckpointReviewContext,
   ConversationCommitCheckpointRecord,
@@ -591,6 +592,18 @@ export const api = {
   setSavedWorkspacePaths: async (workspacePaths: string[]) => {
     const { workspacePaths: savedPaths } = await api.setOpenConversationTabs(undefined, undefined, undefined, workspacePaths);
     return savedPaths;
+  },
+
+  // ── Conversation Activity ─────────────────────────────────────────────────
+  conversationActivity: async (
+    id: string,
+    options: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (options.active !== undefined) params.set('active', String(options.active));
+    if (options.visibility) params.set('visibility', options.visibility);
+    const query = params.toString();
+    return get<ConversationActivityResult>(`/conversations/${encodeURIComponent(id)}/activity${query ? `?${query}` : ''}`);
   },
 
   // ── Tasks ─────────────────────────────────────────────────────────────────

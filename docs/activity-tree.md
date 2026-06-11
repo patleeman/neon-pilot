@@ -37,7 +37,7 @@ Use executions for product UI freshness:
 - conversation background-work rail
 - background-work detail actions (`cancel`, `rerun`, `follow-up`)
 
-The conversation background-work shelf is a backend-truth view. It must fetch scoped conversation executions with `active=true&visibility=primary` and use app-wide execution snapshots only as refresh hints. Do not derive shelf rows from the global renderer execution cache; stale cache entries can make completed background commands or subagents look live. The backend endpoint owns active-status filtering and durable-run reconciliation before returning rows as active.
+The conversation background-work shelf is a backend-truth view. It consumes the conversation activity projection and uses app-wide execution snapshots only as refresh hints. Do not derive shelf rows from the global renderer execution cache; stale cache entries can make completed background commands or subagents look live. The backend endpoint owns active-status filtering and durable-run reconciliation before returning rows as active.
 
 Use durable runs only inside low-level detail/log plumbing, daemon recovery, and agent-facing `background_bash`/`subagent` APIs. Any durable-run mutation that can affect visible background work must invalidate the `executions` topic; invalidating `runs` alone is not enough.
 
