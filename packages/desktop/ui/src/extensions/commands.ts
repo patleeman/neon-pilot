@@ -575,8 +575,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleDictation?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleDictation);
+      canExecute(_args, context) {
+        return Boolean(options.toggleDictation) && readContextValue(context, 'system-local-dictation.toggleAvailable') === true;
       },
     },
     {

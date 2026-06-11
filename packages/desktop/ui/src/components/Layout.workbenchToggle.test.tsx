@@ -76,6 +76,7 @@ describe('Layout workbench toggle', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     setExtensionCommandContext('conversation.isStreaming', null);
+    setExtensionCommandContext('system-local-dictation.toggleAvailable', null);
     delete document.documentElement.dataset.neonPilotDesktop;
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
@@ -167,6 +168,20 @@ describe('Layout workbench toggle', () => {
 
     expect(stopListener).toHaveBeenCalledTimes(1);
     window.removeEventListener('neon-pilot:composer-stop', stopListener);
+  });
+
+  it('accepts command-only desktop shortcut events for available dictation toggle', () => {
+    const dictationListener = vi.fn();
+    window.addEventListener('neon-pilot:dictation-toggle', dictationListener);
+    setExtensionCommandContext('system-local-dictation.toggleAvailable', true);
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'dictation.toggle' } }));
+    });
+
+    expect(dictationListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('neon-pilot:dictation-toggle', dictationListener);
   });
 
   it('opens a side chat after reservation without waiting for live-session creation', async () => {

@@ -67,7 +67,7 @@ describe('extension commands', () => {
       submitComposer,
       stopComposer,
       toggleDictation,
-      context: { 'conversation.isStreaming': true },
+      context: { 'conversation.isStreaming': true, 'system-local-dictation.toggleAvailable': true },
     });
 
     await expect(Promise.resolve(commands.find((command) => command.id === 'composer.submit')?.execute(undefined))).resolves.toBe(true);
@@ -75,6 +75,27 @@ describe('extension commands', () => {
     await expect(Promise.resolve(commands.find((command) => command.id === 'dictation.toggle')?.execute(undefined))).resolves.toBe(true);
     expect(submitComposer).toHaveBeenCalledTimes(1);
     expect(stopComposer).toHaveBeenCalledTimes(1);
+    expect(toggleDictation).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables dictation toggle unless the dictation extension publishes availability', async () => {
+    const toggleDictation = vi.fn(() => true);
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      toggleDictation,
+    };
+
+    await expect(executeExtensionCommand('dictation.toggle', undefined, baseOptions)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('dictation.toggle', undefined, {
+        ...baseOptions,
+        context: { 'system-local-dictation.toggleAvailable': true },
+      }),
+    ).resolves.toBe(true);
+
     expect(toggleDictation).toHaveBeenCalledTimes(1);
   });
 
