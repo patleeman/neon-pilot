@@ -1596,7 +1596,13 @@ describe('extension commands', () => {
         context: { 'workbench.hasActiveFile': true },
       }),
     ).resolves.toBe(true);
-    await expect(executeExtensionCommand('workbench.toggleExplorer', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('workbench.toggleExplorer', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('workbench.toggleExplorer', undefined, {
+        ...options,
+        context: { 'workbench.canToggleExplorer': true },
+      }),
+    ).resolves.toBe(true);
     await expect(executeExtensionCommand('workbench.toggleDiff', undefined, options)).resolves.toBe(false);
     await expect(
       executeExtensionCommand('workbench.toggleDiff', undefined, {

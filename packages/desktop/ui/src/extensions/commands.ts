@@ -1112,8 +1112,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleWorkbenchExplorer?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleWorkbenchExplorer);
+      canExecute(_args, context) {
+        return Boolean(options.toggleWorkbenchExplorer) && readContextValue(context, 'workbench.canToggleExplorer') === true;
       },
     },
     {

@@ -1667,6 +1667,7 @@ export function Layout() {
     !isSinglePaneWorkbenchMode(activeWorkbenchTool, activeWorkbenchToolPanel)
       ? activeWorkbenchToolPanel
       : null;
+  const canToggleWorkbenchExplorer = Boolean(activeWorkbenchRailSurface);
   const effectiveWorkbenchExplorerOpen = workbenchExplorerOpen && activeWorkbenchRailSurface !== null;
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [commandPaletteMounted, setCommandPaletteMounted] = useState(false);
@@ -1772,7 +1773,8 @@ export function Layout() {
     setExtensionCommandContext('layout.mode', appLayoutMode);
     setExtensionCommandContext('conversation.hasActive', Boolean(activeConversationId));
     setExtensionCommandContext('workbench.hasActiveFile', hasActiveWorkbenchFile);
-  }, [activeConversationId, appLayoutMode, hasActiveWorkbenchFile, location.pathname]);
+    setExtensionCommandContext('workbench.canToggleExplorer', canToggleWorkbenchExplorer);
+  }, [activeConversationId, appLayoutMode, canToggleWorkbenchExplorer, hasActiveWorkbenchFile, location.pathname]);
 
   const creatingNewConversationRef = useRef(false);
   const startNewConversationFromLayout = useCallback(
@@ -2106,7 +2108,7 @@ export function Layout() {
         return true;
       },
       toggleWorkbenchExplorer() {
-        if (!activeWorkbenchRailSurface) return false;
+        if (!canToggleWorkbenchExplorer) return false;
         handleToggleWorkbenchExplorer();
         return true;
       },
@@ -2391,6 +2393,7 @@ export function Layout() {
       activeWorkbenchTabId,
       activeWorkbenchWorkspaceFileId,
       appLayoutMode,
+      canToggleWorkbenchExplorer,
       canToggleWorkbench,
       closeWorkbenchTab,
       extensionCommands,

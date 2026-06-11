@@ -128,6 +128,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.scrollFirstCheckpointFile', 'conversation.canScrollFirstCheckpointFile'],
   ['workbench.closeActiveFile', 'workbench.hasActiveFile'],
   ['workbench.refreshActiveFile', 'workbench.hasActiveFile'],
+  ['workbench.toggleExplorer', 'workbench.canToggleExplorer'],
   ['workbench.toggleDiff', 'workbench.canToggleDiff'],
   ['composer.submit', 'composer.canSubmit'],
   ['composer.stop', 'conversation.isStreaming'],

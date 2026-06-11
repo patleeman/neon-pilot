@@ -431,6 +431,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('workbench.toggleExplorer', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.canToggleExplorer': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('workbench.toggleExplorer', {
+        activeConversationId: 'conversation-1',
+        context: { 'workbench.canToggleExplorer': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('workbench.toggleDiff', {
         activeConversationId: 'conversation-1',
         context: { 'workbench.canToggleDiff': false },
