@@ -258,6 +258,57 @@ describe('extension commands', () => {
     expect(restoreFirstQueuedPrompt).toHaveBeenCalledTimes(1);
   });
 
+  it('includes checkpoint rail commands gated by checkpoint availability', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining([
+        'conversation.openActiveCheckpoint',
+        'conversation.openLatestCheckpoint',
+        'conversation.scrollFirstCheckpointFile',
+      ]),
+    );
+
+    const openActiveCheckpoint = vi.fn(() => true);
+    const openLatestCheckpoint = vi.fn(() => true);
+    const scrollFirstCheckpointFile = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      activeConversationId: 'conversation-1',
+      openActiveCheckpoint,
+      openLatestCheckpoint,
+      scrollFirstCheckpointFile,
+    };
+
+    await expect(executeExtensionCommand('conversation.openActiveCheckpoint', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.openLatestCheckpoint', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.scrollFirstCheckpointFile', undefined, options)).resolves.toBe(false);
+
+    await expect(
+      executeExtensionCommand('conversation.openActiveCheckpoint', undefined, {
+        ...options,
+        context: { 'conversation.canOpenActiveCheckpoint': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.openLatestCheckpoint', undefined, {
+        ...options,
+        context: { 'conversation.canOpenLatestCheckpoint': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.scrollFirstCheckpointFile', undefined, {
+        ...options,
+        context: { 'conversation.canScrollFirstCheckpointFile': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(openActiveCheckpoint).toHaveBeenCalledTimes(1);
+    expect(openLatestCheckpoint).toHaveBeenCalledTimes(1);
+    expect(scrollFirstCheckpointFile).toHaveBeenCalledTimes(1);
+  });
+
   it('includes conversation title editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['conversation.rename', 'conversation.saveTitle', 'conversation.cancelTitleEdit']),

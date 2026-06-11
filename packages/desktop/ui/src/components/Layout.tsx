@@ -63,6 +63,11 @@ import {
   CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
   CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
 } from './conversation/conversationActivityCommands';
+import {
+  CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT,
+} from './conversation/checkpointCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
 import { COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT } from './conversation/composerPreferenceCommands';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
@@ -2030,6 +2035,18 @@ export function Layout() {
       },
       restoreFirstQueuedPrompt() {
         window.dispatchEvent(new CustomEvent(CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT));
+        return true;
+      },
+      openActiveCheckpoint() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT));
+        return true;
+      },
+      openLatestCheckpoint() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT));
+        return true;
+      },
+      scrollFirstCheckpointFile() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT));
         return true;
       },
       newWorkbenchTab() {

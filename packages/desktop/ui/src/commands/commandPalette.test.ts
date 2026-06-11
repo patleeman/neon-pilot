@@ -179,6 +179,42 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.openActiveCheckpoint', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenActiveCheckpoint': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.openActiveCheckpoint', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenActiveCheckpoint': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.openLatestCheckpoint', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenLatestCheckpoint': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.openLatestCheckpoint', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canOpenLatestCheckpoint': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('conversation.scrollFirstCheckpointFile', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canScrollFirstCheckpointFile': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.scrollFirstCheckpointFile', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canScrollFirstCheckpointFile': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('messageEdit.cancel', {
         activeConversationId: 'conversation-1',
         context: { 'messageEdit.active': false },

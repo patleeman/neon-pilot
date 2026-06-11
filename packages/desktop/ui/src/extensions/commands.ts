@@ -74,6 +74,9 @@ export interface ExtensionCommandExecutorOptions {
   fireFirstDeferredResume?(): boolean;
   cancelFirstDeferredResume?(): boolean;
   restoreFirstQueuedPrompt?(): boolean;
+  openActiveCheckpoint?(): boolean;
+  openLatestCheckpoint?(): boolean;
+  scrollFirstCheckpointFile?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
@@ -236,6 +239,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.fireFirstDeferredResume', title: 'Fire First Attention Item', category: 'Conversation' },
     { id: 'conversation.cancelFirstDeferredResume', title: 'Cancel First Attention Item', category: 'Conversation' },
     { id: 'conversation.restoreFirstQueuedPrompt', title: 'Restore First Queued Prompt', category: 'Conversation' },
+    { id: 'conversation.openActiveCheckpoint', title: 'Open Active Checkpoint', category: 'Conversation' },
+    { id: 'conversation.openLatestCheckpoint', title: 'Open Latest Checkpoint', category: 'Conversation' },
+    { id: 'conversation.scrollFirstCheckpointFile', title: 'Scroll to First Checkpoint File', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
@@ -794,6 +800,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.restoreFirstQueuedPrompt) && readContextValue(context, 'conversation.canRestoreFirstQueuedPrompt') === true;
+      },
+    },
+    {
+      id: 'conversation.openActiveCheckpoint',
+      title: 'Open Active Checkpoint',
+      category: 'Conversation',
+      execute() {
+        return options.openActiveCheckpoint?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openActiveCheckpoint) && readContextValue(context, 'conversation.canOpenActiveCheckpoint') === true;
+      },
+    },
+    {
+      id: 'conversation.openLatestCheckpoint',
+      title: 'Open Latest Checkpoint',
+      category: 'Conversation',
+      execute() {
+        return options.openLatestCheckpoint?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openLatestCheckpoint) && readContextValue(context, 'conversation.canOpenLatestCheckpoint') === true;
+      },
+    },
+    {
+      id: 'conversation.scrollFirstCheckpointFile',
+      title: 'Scroll to First Checkpoint File',
+      category: 'Conversation',
+      execute() {
+        return options.scrollFirstCheckpointFile?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.scrollFirstCheckpointFile) && readContextValue(context, 'conversation.canScrollFirstCheckpointFile') === true;
       },
     },
     {
