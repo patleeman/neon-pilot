@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type CommandPaletteItem,
   isCommandPaletteThreadDataLoading,
+  isHostCommandDisabledInPalette,
   searchCommandPaletteItems,
   selectCommandPaletteScopedItems,
   shouldBootstrapCommandPaletteThreads,
@@ -52,6 +53,16 @@ const ITEMS: CommandPaletteItem<TestAction>[] = [
 ];
 
 describe('command palette search', () => {
+  it('keeps bridge-handled app chrome host commands selectable in the command palette', () => {
+    expect(isHostCommandDisabledInPalette('layout.toggleSidebar', { activeConversationId: null })).toBe(false);
+    expect(isHostCommandDisabledInPalette('page.find', { activeConversationId: null })).toBe(false);
+  });
+
+  it('disables active-conversation host commands when no conversation is active', () => {
+    expect(isHostCommandDisabledInPalette('conversation.close', { activeConversationId: null })).toBe(true);
+    expect(isHostCommandDisabledInPalette('conversation.close', { activeConversationId: 'conversation-1' })).toBe(false);
+  });
+
   it('filters extension quick-open matches in the requested extension scope', () => {
     const results = searchCommandPaletteItems(ITEMS, { query: 'workspace', scope: 'knowledge', sectionLabels: { knowledge: 'Knowledge' } });
 

@@ -39,6 +39,23 @@ export const COMMAND_PALETTE_SCOPE_OPTIONS: Array<{ value: CommandPaletteScope; 
   { value: THREADS_COMMAND_PALETTE_SCOPE, label: 'Threads' },
 ];
 
+const ACTIVE_CONVERSATION_HOST_COMMANDS = new Set([
+  'conversation.open',
+  'conversation.next',
+  'conversation.previous',
+  'conversation.close',
+  'conversation.togglePinned',
+  'conversation.toggleArchived',
+  'conversation.rename',
+  'conversation.editCwd',
+  'conversation.pageUp',
+  'conversation.pageDown',
+]);
+
+export function isHostCommandDisabledInPalette(commandId: string, options: { activeConversationId?: string | null }): boolean {
+  return ACTIVE_CONVERSATION_HOST_COMMANDS.has(commandId) && !options.activeConversationId;
+}
+
 export function shouldBootstrapCommandPaletteThreads(options: {
   open: boolean;
   scope: CommandPaletteScope;

@@ -9,6 +9,7 @@ import {
   type CommandPaletteScope,
   type CommandPaletteSection,
   isCommandPaletteThreadDataLoading,
+  isHostCommandDisabledInPalette,
   searchCommandPaletteItems,
   selectCommandPaletteScopedItems,
   shouldBootstrapCommandPaletteThreads,
@@ -26,7 +27,7 @@ import {
   type ScopedSessionMeta,
 } from '../commands/commandPaletteItems';
 import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
-import { canExecuteExtensionCommand, createHostCommands, listHostCommands } from '../extensions/commands';
+import { canExecuteExtensionCommand, listHostCommands } from '../extensions/commands';
 import { systemExtensionModules } from '../extensions/systemExtensionModules';
 import type {
   ExtensionCommandRegistration,
@@ -107,21 +108,18 @@ export function CommandPalette() {
   const openConversationItems = useMemo(() => buildConversationItems('open', openThreadSessions), [openThreadSessions]);
   const archivedConversationItems = useMemo(() => buildConversationItems('archived', archivedSessions), [archivedSessions]);
   const commandItems = useMemo<CommandPaletteItem<CommandPaletteAction>[]>(() => {
+    const activeConversationId = readConversationIdFromPathname(location.pathname);
     const commandOptions = {
       navigate,
       openCommandPalette: () => undefined,
       openRightRail: () => false,
       setLayout: () => undefined,
-      activeConversationId: readConversationIdFromPathname(location.pathname),
+      activeConversationId,
       extensionCommands,
       invokeExtensionCommand: async () => undefined,
       context: { route: location.pathname },
     };
-    const hostDefinitions = createHostCommands(commandOptions);
-    const context = { route: location.pathname };
     const hostItems = listHostCommands().map((command, index) => {
-      const definition = hostDefinitions.find((candidate) => candidate.id === command.id);
-      const disabled = definition?.canExecute ? !definition.canExecute(undefined, context) : false;
       return {
         id: `host-command:${command.id}`,
         section: 'commands',
@@ -130,7 +128,7 @@ export function CommandPalette() {
         meta: command.category,
         keywords: [command.id, command.category].filter((keyword): keyword is string => typeof keyword === 'string'),
         order: index,
-        disabled,
+        disabled: isHostCommandDisabledInPalette(command.id, { activeConversationId }),
         action: { kind: 'command' as const, command: command.id },
       };
     });
