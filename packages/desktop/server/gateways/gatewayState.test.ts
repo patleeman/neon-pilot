@@ -58,20 +58,61 @@ describe('gatewayState', () => {
     expect(state.connections).toMatchObject([{ provider: 'discord', label: 'discord', status: 'needs_config' }]);
   });
 
-  it('allows only one attached telegram conversation per connection', () => {
+  it('keeps multiple external chat bindings for one provider connection', () => {
     const stateRoot = makeStateRoot();
 
-    attachGatewayConversation({ stateRoot, profile: 'shared', provider: 'telegram', conversationId: 'conv-a', conversationTitle: 'A' });
+    attachGatewayConversation({
+      stateRoot,
+      profile: 'shared',
+      provider: 'slack_mcp',
+      conversationId: 'conv-a',
+      conversationTitle: 'A',
+      externalChatId: 'C123',
+      externalChatLabel: 'channel-a',
+    });
     const state = attachGatewayConversation({
       stateRoot,
       profile: 'shared',
-      provider: 'telegram',
+      provider: 'slack_mcp',
       conversationId: 'conv-b',
       conversationTitle: 'B',
+      externalChatId: 'C456',
+      externalChatLabel: 'channel-b',
+    });
+
+    expect(state.bindings).toHaveLength(2);
+    expect(state.bindings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ conversationId: 'conv-a', externalChatId: 'C123', conversationTitle: 'A' }),
+        expect.objectContaining({ conversationId: 'conv-b', externalChatId: 'C456', conversationTitle: 'B' }),
+      ]),
+    );
+  });
+
+  it('updates an existing external chat binding without duplicating it', () => {
+    const stateRoot = makeStateRoot();
+
+    attachGatewayConversation({
+      stateRoot,
+      profile: 'shared',
+      provider: 'slack_mcp',
+      conversationId: 'conv-a',
+      conversationTitle: 'A',
+      externalChatId: 'C123',
+      externalChatLabel: 'old-label',
+    });
+    const state = attachGatewayConversation({
+      stateRoot,
+      profile: 'shared',
+      provider: 'slack_mcp',
+      conversationId: 'conv-b',
+      conversationTitle: 'B',
+      externalChatId: 'C123',
+      externalChatLabel: 'new-label',
     });
 
     expect(state.bindings).toHaveLength(1);
-    expect(state.bindings[0]).toMatchObject({ conversationId: 'conv-b', conversationTitle: 'B' });
+    expect(state.bindings[0]).toMatchObject({ conversationId: 'conv-b', externalChatId: 'C123', externalChatLabel: 'new-label' });
   });
 
   it('keeps chat target config when a gateway thread is detached', () => {

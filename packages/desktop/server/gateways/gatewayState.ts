@@ -156,19 +156,36 @@ export function attachGatewayConversation(input: {
     connection.status = connection.status === 'needs_config' ? 'needs_config' : 'connected';
     connection.updatedAt = now;
 
-    state.bindings = state.bindings.filter((binding) => !(binding.provider === input.provider && binding.connectionId === connection.id));
-    state.bindings.push({
-      id: `${connection.id}:${input.conversationId}`,
-      provider: input.provider,
-      connectionId: connection.id,
-      conversationId: input.conversationId,
-      conversationTitle: input.conversationTitle,
-      externalChatId: input.externalChatId,
-      externalChatLabel: input.externalChatLabel,
-      repliesEnabled: true,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const existingBinding = state.bindings.find((binding) =>
+      input.externalChatId
+        ? binding.provider === input.provider &&
+          binding.connectionId === connection.id &&
+          binding.externalChatId === input.externalChatId
+        : binding.provider === input.provider &&
+          binding.connectionId === connection.id &&
+          binding.conversationId === input.conversationId &&
+          !binding.externalChatId,
+    );
+    if (existingBinding) {
+      existingBinding.conversationId = input.conversationId;
+      existingBinding.conversationTitle = input.conversationTitle ?? existingBinding.conversationTitle;
+      existingBinding.externalChatLabel = input.externalChatLabel ?? existingBinding.externalChatLabel;
+      existingBinding.repliesEnabled = true;
+      existingBinding.updatedAt = now;
+    } else {
+      state.bindings.push({
+        id: input.externalChatId ? `${connection.id}:chat:${input.externalChatId}` : `${connection.id}:${input.conversationId}`,
+        provider: input.provider,
+        connectionId: connection.id,
+        conversationId: input.conversationId,
+        conversationTitle: input.conversationTitle,
+        externalChatId: input.externalChatId,
+        externalChatLabel: input.externalChatLabel,
+        repliesEnabled: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
     if (input.externalChatId) {
       const existingTarget = state.chatTargets.find(
         (target) =>
