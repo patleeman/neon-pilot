@@ -698,6 +698,19 @@ function actionWorkerTimeoutMs(action: { worker?: { timeoutMs?: number } } | und
     : undefined;
 }
 
+function inputTimeoutMs(input: unknown): number | undefined {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return undefined;
+  const timeoutMs = (input as { timeoutMs?: unknown }).timeoutMs;
+  return typeof timeoutMs === 'number' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0 ? timeoutMs : undefined;
+}
+
+function actionInvocationWorkerTimeoutMs(action: { worker?: { timeoutMs?: number } } | undefined, input: unknown): number | undefined {
+  const manifestTimeoutMs = actionWorkerTimeoutMs(action);
+  const requestedTimeoutMs = inputTimeoutMs(input);
+  if (manifestTimeoutMs && requestedTimeoutMs) return Math.max(manifestTimeoutMs, requestedTimeoutMs);
+  return manifestTimeoutMs ?? requestedTimeoutMs;
+}
+
 function workerBackendToolContext(
   toolContext?: ExtensionBackendContext['toolContext'],
   updateHandleId?: string,
@@ -1077,7 +1090,7 @@ export async function invokeExtensionAction(
       actionId,
       handlerName,
       input,
-      actionWorkerTimeoutMs(action),
+      actionInvocationWorkerTimeoutMs(action, input),
       serverContext,
       toolContext ?? toolContextFromAgentToolContext(agentToolContext),
       agentToolContext,

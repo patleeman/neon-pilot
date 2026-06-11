@@ -328,8 +328,20 @@ function normalizeConversationCliInput(input: unknown): Record<string, unknown> 
     return { ...baseInspect, inspectAction: 'list', query: flagString(flags, 'query') ?? (positionals.join(' ') || undefined) };
   if (command === 'conversations search')
     return { ...baseInspect, inspectAction: 'search', query: flagString(flags, 'query') ?? positionals.join(' ') };
-  if (command === 'conversations inspect')
-    return { ...baseInspect, inspectAction: positionals[1] ?? flagString(flags, 'action') ?? 'outline', conversationId: positionals[0] };
+  if (command === 'conversations inspect') {
+    const inspectAction = positionals[1] ?? flagString(flags, 'action') ?? 'outline';
+    return {
+      ...baseInspect,
+      inspectAction: inspectAction === 'transcript' ? 'query' : inspectAction,
+      conversationId: positionals[0],
+    };
+  }
+  if (command === 'conversations transcript read')
+    return {
+      ...baseInspect,
+      inspectAction: 'query',
+      conversationId: positionals[0],
+    };
   if (command === 'conversations create')
     return {
       ...body,

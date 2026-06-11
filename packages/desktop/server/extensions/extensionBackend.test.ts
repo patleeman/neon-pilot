@@ -48,6 +48,56 @@ function installTestExtension(stateRoot: string, extensionId: string): void {
   invalidateExtensionRegistryReadCaches(stateRoot);
 }
 
+function installKnowledgeWorkerTestExtension(stateRoot: string): void {
+  const extensionRoot = join(stateRoot, 'extensions', 'system-knowledge');
+  mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+  writeFileSync(
+    join(extensionRoot, 'extension.json'),
+    JSON.stringify(
+      {
+        schemaVersion: 2,
+        id: 'system-knowledge',
+        name: 'Knowledge',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [
+            'knowledgeListFiles',
+            'readState',
+            'updateState',
+            'sync',
+            'knowledgeReadFile',
+            'knowledgeWriteFile',
+            'knowledgeCreateFolder',
+            'knowledgeDeleteFile',
+            'knowledgeRename',
+            'knowledgeMove',
+            'knowledgeUploadImage',
+            'knowledgeImportUrl',
+            'knowledgeImportSharedItem',
+            'readMemory',
+          ].map((id) => ({ id, handler: id, worker: { enabled: true } })),
+          routes: [
+            ['GET', '/knowledge/search', 'knowledgeSearchRoute'],
+            ['GET', '/memory', 'memoryRoute'],
+            ['PUT', '/knowledge/file', 'knowledgeWriteFileRoute'],
+            ['POST', '/knowledge/folder', 'knowledgeCreateFolderRoute'],
+            ['DELETE', '/knowledge/file', 'knowledgeDeleteFileRoute'],
+            ['POST', '/knowledge/rename', 'knowledgeRenameRoute'],
+            ['POST', '/knowledge/move', 'knowledgeMoveRoute'],
+            ['POST', '/knowledge/image', 'knowledgeUploadImageRoute'],
+            ['POST', '/knowledge/share-import', 'knowledgeImportUrlRoute'],
+            ['GET', '/asset', 'asset'],
+          ].map(([method, path, handler]) => ({ method, path, handler, worker: { enabled: true } })),
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export {};\n');
+  invalidateExtensionRegistryReadCaches(stateRoot);
+}
+
 const extensionServices = vi.hoisted(() => ({
   startExtensionServices: vi.fn(async () => undefined),
   stopExtensionServices: vi.fn(async () => undefined),
@@ -1900,6 +1950,21 @@ describe('extension backend action invocation', () => {
       },
     });
     await expect(
+      invokeExtensionAction(
+        'system-conversation-tools',
+        'conversationTool',
+        { action: 'create_and_run', cwd: '/repo', text: 'Review CLI', timeoutMs: 180_000 },
+        undefined,
+        { conversationId: 'conv-1', cwd: '/repo' },
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        content: [{ type: 'text', text: 'create_and_run complete.' }],
+        details: { blockId: 'block-1' },
+      },
+    });
+    await expect(
       invokeExtensionAction('system-conversation-tools', 'conversationTool', { action: 'inspect', inspectAction: 'list' }, undefined, {
         conversationId: 'conv-1',
         cwd: '/repo',
@@ -2015,6 +2080,25 @@ describe('extension backend action invocation', () => {
           runtimeSettingsFilePath: expect.any(String),
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         }),
+      },
+    );
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      expect.objectContaining({
+        path: expect.stringContaining(join('extensions', 'system-conversation-tools', 'dist', 'backend.mjs')),
+      }),
+      'conversationTool',
+      { type: 'action', label: 'action conversationTool', target: 'conversationTool' },
+      [{ action: 'create_and_run', cwd: '/repo', text: 'Review CLI', timeoutMs: 180_000 }],
+      {
+        context: expect.objectContaining({
+          type: 'backend',
+          runtimeScope: 'shared',
+          runtimeDir: expect.any(String),
+          runtimeSettingsFilePath: expect.any(String),
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        }),
+        timeoutMs: 180_000,
       },
     );
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
@@ -2788,6 +2872,9 @@ describe('extension backend action invocation', () => {
   });
 
   it('runs worker-safe knowledge read actions through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installKnowledgeWorkerTestExtension(stateRoot);
     const backendRunner = {
       loadModule: vi.fn(),
       clearModule: vi.fn(),
@@ -3264,6 +3351,9 @@ describe('extension backend action invocation', () => {
   });
 
   it('runs worker-safe knowledge read routes through the worker runner', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installKnowledgeWorkerTestExtension(stateRoot);
     const backendRunner = {
       loadModule: vi.fn(),
       clearModule: vi.fn(),
@@ -3408,6 +3498,9 @@ describe('extension backend action invocation', () => {
   });
 
   it('runs worker-safe knowledge asset route through the worker runner with binary bodies', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installKnowledgeWorkerTestExtension(stateRoot);
     const body = Uint8Array.from([137, 80, 78, 71]);
     const backendRunner = {
       loadModule: vi.fn(),

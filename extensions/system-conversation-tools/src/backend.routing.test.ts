@@ -148,6 +148,18 @@ describe('system-conversation-tools backend routing', () => {
       expect.objectContaining({ cwd: '/repo' }),
     );
 
+    await conversationTool({ cli: { command: 'conversations inspect', args: ['conv-2', 'transcript', '--limit', '20'] } }, context);
+    expect(inspect.executeConversationInspectTool).toHaveBeenLastCalledWith(
+      { action: 'query', conversationId: 'conv-2', limit: 20 },
+      expect.objectContaining({ cwd: '/repo' }),
+    );
+
+    await conversationTool({ cli: { command: 'conversations transcript read', args: ['conv-2', '--order', 'desc'] } }, context);
+    expect(inspect.executeConversationInspectTool).toHaveBeenLastCalledWith(
+      { action: 'query', conversationId: 'conv-2', order: 'desc' },
+      expect.objectContaining({ cwd: '/repo' }),
+    );
+
     await conversationTool({ cli: { command: 'conversations create', args: ['CLI', 'Thread'] } }, context);
     expect(conversations.create).toHaveBeenLastCalledWith({ title: 'CLI Thread' });
 

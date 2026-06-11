@@ -297,9 +297,10 @@
         "action": "conversationTool",
         "jsonDefault": true,
         "inputAction": "inspect",
-        "usage": "conversations inspect <conversationId> [--json]",
+        "usage": "conversations inspect <conversationId> [outline|query|diff|read_window|transcript] [--limit <n>] [--order asc|desc] [--json]",
         "examples": [
           "neon-pilot conversations inspect conversation-example",
+          "neon-pilot conversations inspect conversation-example transcript --limit 20",
           "neon-pilot conversations inspect conversation-example --json"
         ],
         "argsSchema": {
@@ -316,6 +317,71 @@
             "json": {
               "type": "boolean",
               "description": "Print structured JSON output."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Maximum transcript blocks or results to return."
+            },
+            "order": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Transcript/result order."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": [
+          "text",
+          "json"
+        ]
+      },
+      {
+        "id": "conversations-transcript-read",
+        "command": "conversations transcript read",
+        "description": "Read visible transcript blocks for a conversation.",
+        "action": "conversationTool",
+        "jsonDefault": true,
+        "inputAction": "inspect",
+        "usage": "conversations transcript read <conversationId> [--limit <n>] [--order asc|desc] [--json]",
+        "examples": [
+          "neon-pilot conversations transcript read conversation-example",
+          "neon-pilot conversations transcript read conversation-example --limit 20 --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: conversationId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Maximum transcript blocks to return."
+            },
+            "order": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Transcript order."
             }
           },
           "additionalProperties": true
