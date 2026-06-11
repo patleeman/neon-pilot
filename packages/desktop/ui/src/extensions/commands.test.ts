@@ -475,6 +475,29 @@ describe('extension commands', () => {
     expect(toggleFirstFileChange).toHaveBeenCalledTimes(1);
   });
 
+  it('includes tool block commands gated by transcript tool state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['toolBlock.toggleFirst']));
+
+    const toggleFirstToolBlock = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      toggleFirstToolBlock,
+    };
+
+    await expect(executeExtensionCommand('toolBlock.toggleFirst', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('toolBlock.toggleFirst', undefined, {
+        ...options,
+        context: { 'toolBlock.canToggleFirst': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(toggleFirstToolBlock).toHaveBeenCalledTimes(1);
+  });
+
   it('includes conversation title editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['conversation.rename', 'conversation.saveTitle', 'conversation.cancelTitleEdit']),

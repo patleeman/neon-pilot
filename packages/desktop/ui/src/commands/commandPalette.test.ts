@@ -263,6 +263,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('toolBlock.toggleFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'toolBlock.canToggleFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('toolBlock.toggleFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'toolBlock.canToggleFirst': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.openActiveCheckpoint', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.canOpenActiveCheckpoint': false },
