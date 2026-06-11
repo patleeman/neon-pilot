@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import { COMMAND_PALETTE_STATE_EVENT, type CommandPaletteStateDetail, OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
+import { setExtensionCommandContext } from '../extensions/commands';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import type { DesktopAppPreferencesState, DesktopEnvironmentState, DesktopNavigationState } from '../shared/types';
@@ -62,6 +63,7 @@ function NeonPilotMarkIcon() {
 }
 
 const MAX_BROWSER_NAVIGATION_INDEX = 10_000;
+export const APP_NAVIGATION_COMMAND_EVENT = 'neon-pilot-app-navigation-command';
 
 function isSafeNavigationIndex(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0 && value <= MAX_BROWSER_NAVIGATION_INDEX;
@@ -192,10 +194,6 @@ export function DesktopTopBar({
   const desktopShell = isDesktopShell();
   const showDesktopChrome = bridge !== null || environment !== null || desktopShell;
 
-  if (!showDesktopChrome) {
-    return null;
-  }
-
   async function handleBack() {
     if (!bridge) {
       window.history.back();
@@ -222,10 +220,39 @@ export function DesktopTopBar({
     setNavigation(state);
   }
 
+  useEffect(() => {
+    setExtensionCommandContext('app.canGoBack', navigation.canGoBack);
+    setExtensionCommandContext('app.canGoForward', navigation.canGoForward);
+    return () => {
+      setExtensionCommandContext('app.canGoBack', null);
+      setExtensionCommandContext('app.canGoForward', null);
+    };
+  }, [navigation.canGoBack, navigation.canGoForward]);
+
+  useEffect(() => {
+    function handleNavigationCommand(event: Event) {
+      const direction = (event as CustomEvent<{ direction?: unknown }>).detail?.direction;
+      if (direction === 'back') {
+        if (navigation.canGoBack) void handleBack();
+        return;
+      }
+      if (direction === 'forward' && navigation.canGoForward) {
+        void handleForward();
+      }
+    }
+
+    window.addEventListener(APP_NAVIGATION_COMMAND_EVENT, handleNavigationCommand);
+    return () => window.removeEventListener(APP_NAVIGATION_COMMAND_EVENT, handleNavigationCommand);
+  }, [navigation.canGoBack, navigation.canGoForward, bridge]);
+
   async function handleUpdateClick() {
     if (!bridge?.installReadyUpdate) return;
     const state = await bridge.installReadyUpdate();
     setAppPreferences(state);
+  }
+
+  if (!showDesktopChrome) {
+    return null;
   }
 
   const noDragStyle = { WebkitAppRegion: 'no-drag' } as CSSProperties;

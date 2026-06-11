@@ -18,6 +18,8 @@ export interface HostCommandDefinition {
 
 export interface ExtensionCommandExecutorOptions {
   navigate: NavigateFunction;
+  goBack?(): boolean;
+  goForward?(): boolean;
   openCommandPalette(scope?: string): void;
   openRightRail(target: string): boolean;
   setLayout(mode: 'compact' | 'workbench'): void;
@@ -114,6 +116,8 @@ function compareContextValue(value: ExtensionCommandContextValue, operator: stri
 export function listHostCommands(): Array<{ id: string; title: string; category?: string; argsSchema?: Record<string, unknown> }> {
   return [
     { id: 'app.navigate', title: 'Navigate', category: 'App', argsSchema: { type: 'object', properties: { to: { type: 'string' } } } },
+    { id: 'app.goBack', title: 'Go Back', category: 'App' },
+    { id: 'app.goForward', title: 'Go Forward', category: 'App' },
     {
       id: 'palette.open',
       title: 'Open Command Palette',
@@ -201,6 +205,28 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         if (!to) return false;
         options.navigate(to);
         return true;
+      },
+    },
+    {
+      id: 'app.goBack',
+      title: 'Go Back',
+      category: 'App',
+      execute() {
+        return options.goBack?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.goBack) && readContextValue(context, 'app.canGoBack') === true;
+      },
+    },
+    {
+      id: 'app.goForward',
+      title: 'Go Forward',
+      category: 'App',
+      execute() {
+        return options.goForward?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.goForward) && readContextValue(context, 'app.canGoForward') === true;
       },
     },
     {

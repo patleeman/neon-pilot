@@ -41,7 +41,7 @@ import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, w
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
 import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
-import { DesktopTopBar } from './DesktopTopBar';
+import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -1787,6 +1787,14 @@ export function Layout() {
         route: location.pathname,
         'layout.mode': appLayoutMode,
         'conversation.hasActive': Boolean(activeConversationId),
+      },
+      goBack() {
+        window.dispatchEvent(new CustomEvent(APP_NAVIGATION_COMMAND_EVENT, { detail: { direction: 'back' } }));
+        return true;
+      },
+      goForward() {
+        window.dispatchEvent(new CustomEvent(APP_NAVIGATION_COMMAND_EVENT, { detail: { direction: 'forward' } }));
+        return true;
       },
       openCommandPalette(scope?: string) {
         window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope } }));

@@ -71,6 +71,30 @@ describe('command palette search', () => {
 
   it('disables context-gated host commands when their prerequisites are unavailable', () => {
     expect(
+      isHostCommandDisabledInPalette('app.goBack', {
+        activeConversationId: 'conversation-1',
+        context: { 'app.canGoBack': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('app.goBack', {
+        activeConversationId: 'conversation-1',
+        context: { 'app.canGoBack': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('app.goForward', {
+        activeConversationId: 'conversation-1',
+        context: { 'app.canGoForward': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('app.goForward', {
+        activeConversationId: 'conversation-1',
+        context: { 'app.canGoForward': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': false },

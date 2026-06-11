@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { COMMAND_PALETTE_STATE_EVENT } from '../commands/commandPaletteEvents.js';
-import { DesktopTopBar } from './DesktopTopBar.js';
+import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar.js';
 
 function renderTopBar() {
   render(
@@ -29,6 +29,10 @@ function renderTopBar() {
 }
 
 describe('DesktopTopBar interactions', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('clears the top-bar search query when the command palette closes', () => {
     renderTopBar();
 
@@ -42,5 +46,22 @@ describe('DesktopTopBar interactions', () => {
     });
 
     expect(input.value).toBe('');
+  });
+
+  it('handles shared app history navigation commands', async () => {
+    window.history.replaceState({ idx: 1 }, '', '/conversations/one');
+    window.sessionStorage.setItem('__pa_nav_max_idx__', '1');
+    const back = vi.spyOn(window.history, 'back').mockImplementation(() => undefined);
+    renderTopBar();
+
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Go back' }) as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(APP_NAVIGATION_COMMAND_EVENT, { detail: { direction: 'back' } }));
+    });
+
+    expect(back).toHaveBeenCalledTimes(1);
   });
 });

@@ -51,6 +51,32 @@ describe('extension commands', () => {
     expect(evaluateCommandEnablement('missing.context', context)).toBe(false);
   });
 
+  it('includes app history navigation commands gated by navigation availability', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['app.goBack', 'app.goForward']));
+    const goBack = vi.fn(() => true);
+    const goForward = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      goBack,
+      goForward,
+    };
+
+    await expect(executeExtensionCommand('app.goBack', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('app.goBack', undefined, { ...options, context: { 'app.canGoBack': true } }),
+    ).resolves.toBe(true);
+    await expect(executeExtensionCommand('app.goForward', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('app.goForward', undefined, { ...options, context: { 'app.canGoForward': true } }),
+    ).resolves.toBe(true);
+
+    expect(goBack).toHaveBeenCalledTimes(1);
+    expect(goForward).toHaveBeenCalledTimes(1);
+  });
+
   it('includes hardware-friendly composer and dictation commands', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['composer.submit', 'composer.stop', 'dictation.toggle']),

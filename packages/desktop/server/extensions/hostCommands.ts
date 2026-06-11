@@ -1,5 +1,7 @@
 export const HOST_COMMAND_IDS = [
   'app.navigate',
+  'app.goBack',
+  'app.goForward',
   'palette.open',
   'rail.open',
   'layout.set',
