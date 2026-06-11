@@ -771,7 +771,7 @@ Right-rail views are tab-local extension rails. They may point at a paired workb
 
 ## Commands and keybindings
 
-Commands are the shared action substrate for app navigation, hardware controls, command palette entries, and extension-owned actions. Extensions contribute user-facing commands with metadata, then keybindings or code execute those command ids.
+Commands are the shared action substrate for app navigation, hardware controls, command palette entries, and extension-owned actions. Extensions contribute user-facing commands with metadata, then keybindings or code execute those command ids. Meaningful user-reachable actions should be commands first, including page buttons, toolbar actions, navigation, workflow operations, and actions that may later need a shortcut or hardware trigger. Keep one-off local handlers only for tiny control internals that are not useful from the command palette, automation, or a hotkey.
 
 ```json
 {
@@ -816,6 +816,8 @@ Built-in host commands include:
 Extension command contributions may point at a backend action or at a built-in host command via `action`, with default `args` and optional `argsSchema` when needed. Backend-triggered host commands wait briefly for a renderer acknowledgement and return whether the command was handled. Command executions are recorded as renderer telemetry under `commands/execute` for debugging keybindings, palette invocations, and hardware integrations.
 
 The Extension Manager includes a command inspector for listing commands, running them with JSON args, and editing/resetting contributed keybindings.
+
+Add keybinding contributions for high-frequency actions and for actions where the UI implies keyboard operation. Prefer user-editable keybindings through command metadata over hardcoded shortcut listeners, and avoid shipping action surfaces that cannot be hot-keyed when they are part of a repeated workflow.
 
 Legacy string commands still work for compatibility: `navigate:/path`, `commandPalette:threads|files|commands|search`, `rightRail:{extensionId}/{surfaceId}`, and `layout:compact|workbench`.
 

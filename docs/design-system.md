@@ -22,6 +22,10 @@ The desktop app may import from local compatibility paths such as `packages/desk
 
 For dynamic or generated settings UIs, avoid local input/select/button class constants. Compose the shared primitives directly. Use `Field` for simple controls, and use `FieldLabel` plus `FieldHint` in a neutral wrapper for composite controls that contain buttons.
 
+Always use the most user-friendly input method available. Prefer constrained controls over free-form text whenever the value space is known: `Select` or `InlineSelect` instead of a typed string, `Switch` or `SettingToggleRow` instead of a boolean text field, `SegmentedControl` or tabs instead of magic mode names, swatches instead of hex-only color fields, and resource pickers instead of path text boxes. Prefer explicit key/value or structured row editors for individual settings and records over a `Textarea` containing JSON. Use raw JSON editing only for genuinely large, deeply nested, import/export, or expert-only payloads, and pair it with validation and clear errors.
+
+User-reachable UI actions should be command-backed when they may need a shortcut, command-palette entry, hardware trigger, or automation hook. Add or reuse an extension/app command for meaningful page actions, toolbar actions, navigation, and workflow operations instead of leaving behavior trapped inside an anonymous button handler.
+
 When auditing an extension or app surface, search first for repeated local recipes such as `rounded-md border border-border-subtle`, `bg-elevated p-`, `ui-toolbar-button`, local `BUTTON_CLASS` constants, `details`/`summary`, and hand-written empty/error/loading text. Most of those should collapse into an existing primitive.
 
 ## Commands
@@ -141,6 +145,8 @@ Before introducing local UI markup in an app page or extension:
 
 1. Check `packages/ui/README.md` for a matching primitive and inspect `packages/ui/src/stories/Primitives.stories.tsx` for composition examples.
 2. Prefer SDK imports from `@neon-pilot/extensions/ui` for extension code and `@neon-pilot/extensions/settings` for Settings extension code.
-3. Keep domain behavior local, but move generic chrome, spacing, state color, empty/error/loading presentation, and modal/list/table shells to shared primitives.
-4. When adding a new primitive, update `packages/ui/src/index.ts`, `packages/desktop/ui/src/extensions/ui.ts` or settings exports if extensions need it, `packages/ui/README.md`, Storybook, and tests where behavior is non-trivial.
-5. Validate the actual touched surface: build the package or extension, run `pnpm run check:extensions:static` for extension boundary work, and perform browser/app QA when user-visible UI changes.
+3. Choose the friendliest control before defaulting to text: dropdowns, toggles, segmented controls, pickers, key/value editors, and structured rows should replace raw inputs or JSON textareas whenever practical.
+4. Back meaningful user actions with commands so they can be discovered, automated, and hot-keyed.
+5. Keep domain behavior local, but move generic chrome, spacing, state color, empty/error/loading presentation, and modal/list/table shells to shared primitives.
+6. When adding a new primitive, update `packages/ui/src/index.ts`, `packages/desktop/ui/src/extensions/ui.ts` or settings exports if extensions need it, `packages/ui/README.md`, Storybook, and tests where behavior is non-trivial.
+7. Validate the actual touched surface: build the package or extension, run `pnpm run check:extensions:static` for extension boundary work, and perform browser/app QA when user-visible UI changes.

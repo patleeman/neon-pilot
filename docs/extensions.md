@@ -55,6 +55,8 @@ Before calling an extension done, an agent must be able to answer each item with
 - **Diagnostics clean**: `neon-pilot-extension doctor <extension-dir>` is clean when available; boundary work also runs `pnpm run check:extensions:static`.
 - **User path validated**: the route, rail, Settings section, command, composer control, or tool invocation was opened or invoked through the app/extension host.
 - **States covered**: UI surfaces show useful loading, empty, error, and success states; backend-only extensions return useful error text/details for malformed input.
+- **Inputs user-friendly**: UI uses constrained, structured controls where possible: dropdowns over free-form inputs for known choices, toggles for booleans, segmented controls for modes, pickers for resources, and key/value or row editors over raw JSON textareas unless the JSON is highly complex or expert-only.
+- **Actions command-backed**: meaningful user-reachable actions are contributed as commands so they can appear in the command palette, be invoked programmatically, and be hot-keyed with default or user-editable keybindings when appropriate.
 - **Docs local**: the extension has or updates a `README.md` with build, reload, validation, and usage notes for the next agent.
 - **Release matrix updated**: if the extension is release-critical or fixes a released regression, add a route/action/install case to `scripts/release-extension-golden-matrix.json` so packaged-app verification catches future breakage.
 

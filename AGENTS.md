@@ -38,6 +38,8 @@ neon-pilot is Patrick's personal AI agent runtime. Keep core small and build use
 
 ## UI design bans
 
+- Always choose the most user-friendly control for the job. Prefer constrained controls such as dropdowns, segmented controls, checkboxes, toggles, sliders, steppers, pickers, and resource choosers over free-form text inputs when the valid values are known. Prefer key/value or structured row editors for individual settings over a raw JSON textarea unless the data is genuinely large, deeply nested, or expert-only.
+- User-reachable actions should be command-backed so they can appear in the command palette and be hot-keyed. Add command contributions for meaningful buttons, navigation actions, workflow operations, and toolbar actions; wire default or user-editable keybindings when a shortcut is part of the expected workflow.
 - Avoid nested bordered containers/cards unless truly unavoidable.
 - Avoid decorative pills/chips as a default treatment; use spacing, typography, and alignment for hierarchy.
 - Keep pages visually consistent; do not design in isolation.
