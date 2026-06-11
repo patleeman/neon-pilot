@@ -21,6 +21,10 @@ export interface ExtensionCommandExecutorOptions {
   openCommandPalette(scope?: string): void;
   openRightRail(target: string): boolean;
   setLayout(mode: 'compact' | 'workbench'): void;
+  toggleLayout?(): boolean;
+  toggleSidebar?(): boolean;
+  toggleRightRail?(): boolean;
+  findOnPage?(): boolean;
   focusComposer?(): void;
   focusSidebar?(): void;
   focusNext?(): void;
@@ -101,6 +105,10 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
       category: 'App',
       argsSchema: { type: 'object', properties: { mode: { enum: ['compact', 'workbench'] } } },
     },
+    { id: 'layout.toggle', title: 'Toggle Layout Mode', category: 'App' },
+    { id: 'layout.toggleSidebar', title: 'Toggle Left Sidebar', category: 'App' },
+    { id: 'layout.toggleRightRail', title: 'Toggle Right Rail', category: 'App' },
+    { id: 'page.find', title: 'Find on Page', category: 'App' },
     {
       id: 'conversation.new',
       title: 'New Conversation',
@@ -179,6 +187,38 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         if (mode !== 'compact' && mode !== 'workbench') return false;
         options.setLayout(mode);
         return true;
+      },
+    },
+    {
+      id: 'layout.toggle',
+      title: 'Toggle Layout Mode',
+      category: 'App',
+      execute() {
+        return options.toggleLayout?.() ?? false;
+      },
+    },
+    {
+      id: 'layout.toggleSidebar',
+      title: 'Toggle Left Sidebar',
+      category: 'App',
+      execute() {
+        return options.toggleSidebar?.() ?? false;
+      },
+    },
+    {
+      id: 'layout.toggleRightRail',
+      title: 'Toggle Right Rail',
+      category: 'App',
+      execute() {
+        return options.toggleRightRail?.() ?? false;
+      },
+    },
+    {
+      id: 'page.find',
+      title: 'Find on Page',
+      category: 'App',
+      execute() {
+        return options.findOnPage?.() ?? false;
       },
     },
     {
@@ -350,6 +390,14 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
 }
 
 export function normalizeLegacyCommand(command: string): { command: string; args?: Record<string, unknown> } {
+  if (command === 'core.newConversation') return { command: 'conversation.new' };
+  if (command === 'core.previousConversation') return { command: 'conversation.previous' };
+  if (command === 'core.nextConversation') return { command: 'conversation.next' };
+  if (command === 'core.focusComposer') return { command: 'composer.focus' };
+  if (command === 'core.findOnPage') return { command: 'page.find' };
+  if (command === 'core.settings') return { command: 'app.navigate', args: { to: '/settings' } };
+  if (command === 'core.toggleSidebar') return { command: 'layout.toggleSidebar' };
+  if (command === 'core.toggleRightRail') return { command: 'layout.toggleRightRail' };
   if (command.startsWith('navigate:')) return { command: 'app.navigate', args: { to: command.slice('navigate:'.length) } };
   if (command.startsWith('commandPalette:')) return { command: 'palette.open', args: { scope: command.slice('commandPalette:'.length) } };
   if (command.startsWith('rightRail:')) {

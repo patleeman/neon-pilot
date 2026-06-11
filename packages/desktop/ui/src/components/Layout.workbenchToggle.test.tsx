@@ -112,6 +112,19 @@ describe('Layout workbench toggle', () => {
     expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it('accepts command-only desktop shortcut events for command-backed app chrome actions', () => {
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'compact');
+    renderLayout('/conversations/conv-1');
+
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'layout.toggleRightRail' } }));
+    });
+
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
+  });
+
   it('opens a side chat after reservation without waiting for live-session creation', async () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const reserveConversation = vi.spyOn(api, 'reserveConversation').mockResolvedValue({

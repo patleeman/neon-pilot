@@ -231,6 +231,21 @@ function isDesktopLayoutShortcutAction(value: unknown): value is DesktopLayoutSh
   );
 }
 
+function desktopLayoutShortcutCommand(action: DesktopLayoutShortcutAction): { command: string; args?: Record<string, unknown> } {
+  switch (action) {
+    case 'toggle-sidebar':
+      return { command: 'layout.toggleSidebar' };
+    case 'toggle-right-rail':
+      return { command: 'layout.toggleRightRail' };
+    case 'toggle-layout-mode':
+      return { command: 'layout.toggle' };
+    case 'show-conversation-mode':
+      return { command: 'layout.set', args: { mode: 'compact' } };
+    case 'show-workbench-mode':
+      return { command: 'layout.set', args: { mode: 'workbench' } };
+  }
+}
+
 function isDesktopNavigateDetail(value: unknown): value is { route: string; replace?: boolean } {
   if (!value || typeof value !== 'object') {
     return false;
@@ -1636,6 +1651,92 @@ export function Layout() {
     [location.pathname, navigate],
   );
 
+  const lastWorkbenchRouteRef = useRef<{ pathname: string; search: string }>({ pathname: '/conversations/new', search: '' });
+
+  const toggleWorkbenchExplorer = useCallback(() => {
+    setWorkbenchExplorerOpen((current) => {
+      const next = !current;
+      writeStoredWorkbenchExplorerOpen(next);
+      return next;
+    });
+  }, []);
+
+  const activeRightRailControl = showWorkbench
+    ? activeWorkbenchRailSurface
+      ? {
+          railOpen: workbenchExplorerOpen,
+          toggleRail: toggleWorkbenchExplorer,
+        }
+      : null
+    : routePrimaryRailSurface
+      ? {
+          railOpen: showRoutePrimaryRail,
+          toggleRail: () => setRailOpen((current) => !current),
+        }
+      : registeredRightRailControl;
+
+  const handleAppLayoutModeChange = useCallback(
+    (mode: AppLayoutMode) => {
+      const previousMode = appLayoutMode;
+      setAppLayoutMode(mode);
+      writeAppLayoutMode(mode);
+
+      if (mode === 'compact') {
+        setSearchParams(
+          (current) => {
+            const next = new URLSearchParams(clearWorkbenchOnlySearchParamsForCompact(current.toString()));
+            next.delete('view');
+            return next;
+          },
+          { replace: true },
+        );
+        return;
+      }
+
+      if (mode === 'workbench' && previousMode === 'compact') {
+        setWorkbenchExplorerOpen(true);
+        writeStoredWorkbenchExplorerOpen(true);
+
+        if (routeIsKnowledge(location.pathname, extensionRegistry.surfaces)) {
+          const nextSearch = new URLSearchParams(lastWorkbenchRouteRef.current.search);
+          nextSearch.delete('artifact');
+          nextSearch.delete('checkpoint');
+          nextSearch.delete('run');
+          const activeKnowledgeFileId = searchParams.get('file');
+          if (activeKnowledgeFileId) {
+            nextSearch.set('file', activeKnowledgeFileId);
+          } else {
+            nextSearch.delete('file');
+          }
+          setActiveConversationTool(systemKnowledgeExtensionSurface ? extensionToolPanelMode(systemKnowledgeExtensionSurface) : 'files');
+          navigate({
+            pathname: lastWorkbenchRouteRef.current.pathname,
+            search: nextSearch.toString(),
+          });
+          return;
+        }
+      }
+    },
+    [
+      appLayoutMode,
+      extensionRegistry.surfaces,
+      location.pathname,
+      navigate,
+      searchParams,
+      setActiveConversationTool,
+      setSearchParams,
+      systemKnowledgeExtensionSurface,
+    ],
+  );
+
+  const handlePrimarySidebarToggle = useCallback(() => {
+    setSidebarOpen((current) => !current);
+  }, []);
+
+  const handleWorkbenchToggle = useCallback(() => {
+    handleAppLayoutModeChange(showWorkbench ? 'compact' : 'workbench');
+  }, [handleAppLayoutModeChange, showWorkbench]);
+
   const executeCommandOptions = useMemo(
     () => ({
       navigate,
@@ -1666,6 +1767,26 @@ export function Layout() {
       setLayout(mode: 'compact' | 'workbench') {
         writeAppLayoutMode(mode);
         setAppLayoutMode(mode);
+      },
+      toggleLayout() {
+        handleAppLayoutModeChange(appLayoutMode === 'workbench' ? 'compact' : 'workbench');
+        return true;
+      },
+      toggleSidebar() {
+        handlePrimarySidebarToggle();
+        return true;
+      },
+      toggleRightRail() {
+        if (canToggleWorkbench) {
+          handleWorkbenchToggle();
+          return true;
+        }
+        activeRightRailControl?.toggleRail();
+        return activeRightRailControl !== null;
+      },
+      findOnPage() {
+        window.dispatchEvent(new CustomEvent(DESKTOP_SHORTCUT_EVENT, { detail: { action: 'find-in-page' } }));
+        return true;
       },
       focusComposer() {
         const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
@@ -1731,10 +1852,15 @@ export function Layout() {
       },
     }),
     [
+      activeRightRailControl,
       activeConversationId,
       appLayoutMode,
+      canToggleWorkbench,
       extensionCommands,
       extensionRightToolPanels,
+      handleAppLayoutModeChange,
+      handlePrimarySidebarToggle,
+      handleWorkbenchToggle,
       location.pathname,
       navigate,
       openWorkbenchToolTab,
@@ -1742,8 +1868,6 @@ export function Layout() {
       startNewConversationFromLayout,
     ],
   );
-
-  const lastWorkbenchRouteRef = useRef<{ pathname: string; search: string }>({ pathname: '/conversations/new', search: '' });
 
   useEffect(() => {
     let cancelled = false;
@@ -1976,89 +2100,6 @@ export function Layout() {
     return () => window.clearTimeout(timer);
   }, [commandPaletteMounted, pendingCommandPaletteOpen]);
 
-  const toggleWorkbenchExplorer = useCallback(() => {
-    setWorkbenchExplorerOpen((current) => {
-      const next = !current;
-      writeStoredWorkbenchExplorerOpen(next);
-      return next;
-    });
-  }, []);
-
-  const activeRightRailControl = showWorkbench
-    ? activeWorkbenchRailSurface
-      ? {
-          railOpen: workbenchExplorerOpen,
-          toggleRail: toggleWorkbenchExplorer,
-        }
-      : null
-    : routePrimaryRailSurface
-      ? {
-          railOpen: showRoutePrimaryRail,
-          toggleRail: () => setRailOpen((current) => !current),
-        }
-      : registeredRightRailControl;
-  const handleAppLayoutModeChange = useCallback(
-    (mode: AppLayoutMode) => {
-      const previousMode = appLayoutMode;
-      setAppLayoutMode(mode);
-      writeAppLayoutMode(mode);
-
-      if (mode === 'compact') {
-        setSearchParams(
-          (current) => {
-            const next = new URLSearchParams(clearWorkbenchOnlySearchParamsForCompact(current.toString()));
-            next.delete('view');
-            return next;
-          },
-          { replace: true },
-        );
-        return;
-      }
-
-      if (mode === 'workbench' && previousMode === 'compact') {
-        setWorkbenchExplorerOpen(true);
-        writeStoredWorkbenchExplorerOpen(true);
-
-        if (routeIsKnowledge(location.pathname, extensionRegistry.surfaces)) {
-          const nextSearch = new URLSearchParams(lastWorkbenchRouteRef.current.search);
-          nextSearch.delete('artifact');
-          nextSearch.delete('checkpoint');
-          nextSearch.delete('run');
-          const activeKnowledgeFileId = searchParams.get('file');
-          if (activeKnowledgeFileId) {
-            nextSearch.set('file', activeKnowledgeFileId);
-          } else {
-            nextSearch.delete('file');
-          }
-          setActiveConversationTool(systemKnowledgeExtensionSurface ? extensionToolPanelMode(systemKnowledgeExtensionSurface) : 'files');
-          navigate({
-            pathname: lastWorkbenchRouteRef.current.pathname,
-            search: nextSearch.toString(),
-          });
-          return;
-        }
-      }
-    },
-    [
-      appLayoutMode,
-      extensionRegistry.surfaces,
-      location.pathname,
-      navigate,
-      searchParams,
-      setActiveConversationTool,
-      setSearchParams,
-      systemKnowledgeExtensionSurface,
-    ],
-  );
-
-  const handlePrimarySidebarToggle = useCallback(() => {
-    setSidebarOpen((current) => !current);
-  }, []);
-
-  const handleWorkbenchToggle = useCallback(() => {
-    handleAppLayoutModeChange(showWorkbench ? 'compact' : 'workbench');
-  }, [handleAppLayoutModeChange, showWorkbench]);
-
   const handleStartSideChat = useCallback(async () => {
     if (!activeConversationId) return;
     const parentPreferencesPromise = api.conversationModelPreferences(activeConversationId).catch(() => null);
@@ -2129,37 +2170,19 @@ export function Layout() {
         return;
       }
 
-      const action = (event as CustomEvent<{ action?: unknown }>).detail?.action;
+      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown; args?: unknown }>).detail;
+      if (detail?.action === undefined && typeof detail.command === 'string' && detail.command.trim()) {
+        void executeExtensionCommand(detail.command, detail.args, executeCommandOptions);
+        return;
+      }
+
+      const action = detail?.action;
       if (!isDesktopLayoutShortcutAction(action)) {
         return;
       }
 
-      if (action === 'toggle-sidebar') {
-        handlePrimarySidebarToggle();
-        return;
-      }
-
-      if (action === 'toggle-layout-mode') {
-        handleAppLayoutModeChange(appLayoutMode === 'workbench' ? 'compact' : 'workbench');
-        return;
-      }
-
-      if (action === 'show-conversation-mode') {
-        handleAppLayoutModeChange('compact');
-        return;
-      }
-
-      if (action === 'show-workbench-mode') {
-        handleAppLayoutModeChange('workbench');
-        return;
-      }
-
-      if (canToggleWorkbench) {
-        handleWorkbenchToggle();
-        return;
-      }
-
-      activeRightRailControl?.toggleRail();
+      const { command, args } = desktopLayoutShortcutCommand(action);
+      void executeExtensionCommand(command, args, executeCommandOptions);
     }
 
     function handleDesktopNavigate(event: Event) {
@@ -2248,13 +2271,9 @@ export function Layout() {
     };
   }, [
     activeConversationId,
-    activeRightRailControl,
-    appLayoutMode,
-    canToggleWorkbench,
     closeWorkbenchTab,
+    executeCommandOptions,
     handleAppLayoutModeChange,
-    handlePrimarySidebarToggle,
-    handleWorkbenchToggle,
     location.hash,
     extensionRegistry.surfaces,
     location.pathname,

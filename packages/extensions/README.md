@@ -804,6 +804,8 @@ Built-in host commands include:
 - `palette.open` with `{ "scope": "threads" }`
 - `rail.open` with `{ "extensionId": "...", "surfaceId": "..." }`
 - `layout.set` with `{ "mode": "compact" | "workbench" }` for hiding/showing the workbench panel
+- `layout.toggle`, `layout.toggleSidebar`, and `layout.toggleRightRail`
+- `page.find`
 - `conversation.new`
 - `conversation.open` with `{ "conversationId": "..." }`
 - `conversation.next` / `conversation.previous`
@@ -819,7 +821,7 @@ The Extension Manager includes a command inspector for listing commands, running
 
 Add keybinding contributions for high-frequency actions and for actions where the UI implies keyboard operation. Prefer user-editable keybindings through command metadata over hardcoded shortcut listeners, and avoid shipping action surfaces that cannot be hot-keyed when they are part of a repeated workflow.
 
-Legacy string commands still work for compatibility: `navigate:/path`, `commandPalette:threads|files|commands|search`, `rightRail:{extensionId}/{surfaceId}`, and `layout:compact|workbench`.
+Legacy string commands still work for compatibility: `navigate:/path`, `commandPalette:threads|files|commands|search`, `rightRail:{extensionId}/{surfaceId}`, `layout:compact|workbench`, and desktop shortcut aliases such as `core.newConversation`, `core.settings`, `core.findOnPage`, `core.toggleSidebar`, and `core.toggleRightRail`.
 
 Frontend extensions can call `pa.commands.execute(id, args)`, `pa.commands.list()`, and `pa.commands.setContext(key, value)`. Backend actions can call `ctx.commands.execute(id, args)` for extension-contributed commands and built-in host commands; host command execution is delivered to the renderer over the app event stream.
 
