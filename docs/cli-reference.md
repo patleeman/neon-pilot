@@ -1289,7 +1289,7 @@ Examples:
 List merged Neon Pilot settings, optionally filtered by key prefix.
 
 - Source: extension (system-settings)
-- Usage: `neon-pilot settings list [--json]`
+- Usage: `neon-pilot settings list [prefix] [--json]`
 - Mode: read
 - Requires app: no
 - Idempotent: yes
@@ -1299,6 +1299,7 @@ List merged Neon Pilot settings, optionally filtered by key prefix.
 
 Examples:
 - `neon-pilot settings list`
+- `neon-pilot settings list conversation`
 - `neon-pilot settings list --json`
 
 ### settings reset

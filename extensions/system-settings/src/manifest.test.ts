@@ -59,4 +59,25 @@ describe('system-settings manifest', () => {
       ]),
     );
   });
+
+  it('keeps settings CLI positional schemas aligned with backend requirements', () => {
+    const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
+
+    expect(commands.get('settings list')).toMatchObject({
+      usage: 'settings list [prefix] [--json]',
+      argsSchema: { maxItems: 1 },
+    });
+    expect(commands.get('settings schema')).toMatchObject({
+      usage: 'settings schema [--json]',
+      argsSchema: { maxItems: 0 },
+    });
+    expect(commands.get('settings get')).toMatchObject({
+      usage: 'settings get <key> [--json]',
+      argsSchema: { minItems: 1, maxItems: 1 },
+    });
+    expect(commands.get('settings set')).toMatchObject({
+      usage: 'settings set <key> <value> [--json]',
+      argsSchema: { minItems: 2, maxItems: 2 },
+    });
+  });
 });

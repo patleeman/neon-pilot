@@ -80,16 +80,19 @@
         "description": "List merged Neon Pilot settings, optionally filtered by key prefix.",
         "action": "manageSettings",
         "jsonDefault": true,
-        "usage": "settings list [--json]",
+        "usage": "settings list [prefix] [--json]",
         "examples": [
           "neon-pilot settings list",
+          "neon-pilot settings list conversation",
           "neon-pilot settings list --json"
         ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 1,
+          "description": "Optional positional args: prefix."
         },
         "flagsSchema": {
           "type": "object",
@@ -134,7 +137,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "maxItems": 0
         },
         "flagsSchema": {
           "type": "object",
@@ -181,6 +185,7 @@
             "type": "string"
           },
           "minItems": 1,
+          "maxItems": 1,
           "description": "Positional args: key."
         },
         "flagsSchema": {
@@ -220,8 +225,9 @@
           "items": {
             "type": "string"
           },
-          "minItems": 1,
-          "description": "Positional args: key."
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Positional args: key value."
         },
         "flagsSchema": {
           "type": "object",
