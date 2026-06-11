@@ -63,7 +63,7 @@
         "location": "rightRail",
         "scope": "conversation",
         "component": "ScratchpadToolPanel",
-        "icon": "notebook",
+        "icon": "file",
         "detailView": "scratchpad-detail",
         "placement": "workbench-tool",
         "activation": "on-open",
@@ -76,7 +76,7 @@
         "location": "workbench",
         "scope": "conversation",
         "component": "ScratchpadPanel",
-        "icon": "notebook",
+        "icon": "file",
         "placement": "workbench-tool",
         "activation": "on-open",
         "persistOpen": true
@@ -92,6 +92,19 @@
           "extensionId": "system-scratchpad",
           "surfaceId": "scratchpad"
         }
+      }
+    ],
+    "keybindings": [
+      {
+        "id": "scratchpad.open",
+        "title": "Open Scratchpad",
+        "keys": ["mod+shift+s"],
+        "command": "rail.open",
+        "args": {
+          "extensionId": "system-scratchpad",
+          "surfaceId": "scratchpad"
+        },
+        "scope": "global"
       }
     ],
     "tools": [

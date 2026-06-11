@@ -8,7 +8,7 @@ Do not store secrets, credentials, private keys, tokens, or unrelated long-term 
 
 ## User Surface
 
-- Workbench right rail: open **Scratchpad** from the workbench tool rail or command palette command **Scratchpad: Open Scratchpad**.
+- Workbench right rail: open **Scratchpad** from the workbench tool rail, command palette command **Scratchpad: Open Scratchpad**, or `Cmd/Ctrl+Shift+S`.
 - Scope: one scratchpad per conversation.
 - Enable/disable: this is a normal system extension (`system-scratchpad`) with `defaultEnabled: true`; disable or re-enable it from Settings → Extensions when available for non-required system extensions.
 
