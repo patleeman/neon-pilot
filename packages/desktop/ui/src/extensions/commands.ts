@@ -61,6 +61,9 @@ export interface ExtensionCommandExecutorOptions {
   refreshActiveWorkbenchFile?(): boolean;
   toggleWorkbenchExplorer?(): boolean;
   toggleWorkbenchDiff?(): boolean;
+  browserNewTab?(): boolean;
+  browserReopenTab?(): boolean;
+  browserCloseTab?(): boolean;
   browserGoBack?(): boolean;
   browserGoForward?(): boolean;
   browserReloadOrStop?(): boolean;
@@ -216,6 +219,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'workbench.refreshActiveFile', title: 'Refresh Active Workbench File', category: 'Workbench' },
     { id: 'workbench.toggleExplorer', title: 'Toggle Workbench Explorer', category: 'Workbench' },
     { id: 'workbench.toggleDiff', title: 'Toggle Workbench Diff Overlay', category: 'Workbench' },
+    { id: 'browser.newTab', title: 'New Browser Tab', category: 'Browser' },
+    { id: 'browser.reopenTab', title: 'Reopen Closed Browser Tab', category: 'Browser' },
+    { id: 'browser.closeTab', title: 'Close Browser Tab', category: 'Browser' },
     { id: 'browser.goBack', title: 'Browser Go Back', category: 'Browser' },
     { id: 'browser.goForward', title: 'Browser Go Forward', category: 'Browser' },
     { id: 'browser.reloadOrStop', title: 'Reload or Stop Browser', category: 'Browser' },
@@ -774,6 +780,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute() {
         return Boolean(options.toggleWorkbenchDiff);
+      },
+    },
+    {
+      id: 'browser.newTab',
+      title: 'New Browser Tab',
+      category: 'Browser',
+      execute() {
+        return options.browserNewTab?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserNewTab) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.reopenTab',
+      title: 'Reopen Closed Browser Tab',
+      category: 'Browser',
+      execute() {
+        return options.browserReopenTab?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserReopenTab) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.closeTab',
+      title: 'Close Browser Tab',
+      category: 'Browser',
+      execute() {
+        return options.browserCloseTab?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserCloseTab) && readContextValue(context, 'browser.active') === true;
       },
     },
     {

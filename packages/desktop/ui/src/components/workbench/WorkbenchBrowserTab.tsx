@@ -253,37 +253,46 @@ export function WorkbenchBrowserTab({
     };
   }, []);
 
+  const executeBrowserTabCommand = useCallback(
+    (command: unknown): boolean => {
+      switch (command) {
+        case 'browser.newTab':
+        case 'newTab':
+          onNewTab();
+          return true;
+        case 'browser.reopenTab':
+        case 'reopenTab':
+          onReopenTab();
+          return true;
+        case 'browser.closeTab':
+        case 'closeTab':
+          onCloseCurrentTab();
+          return true;
+        case 'browser.focusLocation':
+        case 'focusLocation':
+          urlInputRef.current?.focus();
+          urlInputRef.current?.select();
+          return true;
+        default:
+          return false;
+      }
+    },
+    [onCloseCurrentTab, onNewTab, onReopenTab],
+  );
+
   // Surface-scoped keyboard shortcuts from the browser extension manifest.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented) return;
       const match = findMatchingExtensionKeybinding(event, surfaceKeybindings);
       if (!match) return;
-
-      switch (match.command) {
-        case 'browser.newTab':
-          event.preventDefault();
-          onNewTab();
-          return;
-        case 'browser.reopenTab':
-          event.preventDefault();
-          onReopenTab();
-          return;
-        case 'browser.closeTab':
-          event.preventDefault();
-          onCloseCurrentTab();
-          return;
-        case 'browser.focusLocation':
-          event.preventDefault();
-          urlInputRef.current?.focus();
-          urlInputRef.current?.select();
-          return;
-      }
+      if (!executeBrowserTabCommand(match.command)) return;
+      event.preventDefault();
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onNewTab, onReopenTab, onCloseCurrentTab, surfaceKeybindings]);
+  }, [executeBrowserTabCommand, surfaceKeybindings]);
 
   useEffect(() => {
     setExtensionCommandContext('browser.active', true);
@@ -301,9 +310,7 @@ export function WorkbenchBrowserTab({
   useEffect(() => {
     function handleBrowserCommand(event: Event) {
       const command = (event as CustomEvent<{ command?: unknown }>).detail?.command;
-      if (command === 'focusLocation') {
-        urlInputRef.current?.focus();
-        urlInputRef.current?.select();
+      if (executeBrowserTabCommand(command)) {
         return;
       }
       if (command === 'close') {
@@ -330,7 +337,7 @@ export function WorkbenchBrowserTab({
 
     window.addEventListener(WORKBENCH_BROWSER_COMMAND_EVENT, handleBrowserCommand);
     return () => window.removeEventListener(WORKBENCH_BROWSER_COMMAND_EVENT, handleBrowserCommand);
-  }, [bridge, browserSessionKey, state?.canGoBack, state?.canGoForward, state?.loading]);
+  }, [bridge, browserSessionKey, executeBrowserTabCommand, onClose, state?.canGoBack, state?.canGoForward, state?.loading]);
 
   useEffect(() => {
     function handleBrowserCommentTarget(event: Event) {

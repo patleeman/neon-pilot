@@ -325,6 +325,9 @@ describe('WorkbenchBrowserTab', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const onClose = vi.fn();
+    const onNewTab = vi.fn();
+    const onReopenTab = vi.fn();
+    const onCloseCurrentTab = vi.fn();
     root = createRoot(container);
     act(() => {
       root?.render(
@@ -333,13 +336,19 @@ describe('WorkbenchBrowserTab', () => {
           activeTab={activeBrowserTab}
           onSetTabsState={vi.fn()}
           onClose={onClose}
-          onNewTab={vi.fn()}
-          onReopenTab={vi.fn()}
-          onCloseCurrentTab={vi.fn()}
+          onNewTab={onNewTab}
+          onReopenTab={onReopenTab}
+          onCloseCurrentTab={onCloseCurrentTab}
         />,
       );
     });
     await flushAsyncWork();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'newTab' } }));
+      window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'reopenTab' } }));
+      window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'closeTab' } }));
+    });
 
     act(() => {
       window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'focusLocation' } }));
@@ -363,6 +372,9 @@ describe('WorkbenchBrowserTab', () => {
 
     expect(goBackWorkbenchBrowser).toHaveBeenCalledWith(expect.objectContaining({ sessionKey: expect.stringMatching(/^@global:tab-/) }));
     expect(reloadWorkbenchBrowser).toHaveBeenCalledWith(expect.objectContaining({ sessionKey: expect.stringMatching(/^@global:tab-/) }));
+    expect(onNewTab).toHaveBeenCalledTimes(1);
+    expect(onReopenTab).toHaveBeenCalledTimes(1);
+    expect(onCloseCurrentTab).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

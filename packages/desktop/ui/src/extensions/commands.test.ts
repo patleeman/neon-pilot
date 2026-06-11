@@ -208,8 +208,20 @@ describe('extension commands', () => {
 
   it('includes browser toolbar commands gated by browser state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['browser.goBack', 'browser.goForward', 'browser.reloadOrStop', 'browser.focusLocation', 'browser.close']),
+      expect.arrayContaining([
+        'browser.newTab',
+        'browser.reopenTab',
+        'browser.closeTab',
+        'browser.goBack',
+        'browser.goForward',
+        'browser.reloadOrStop',
+        'browser.focusLocation',
+        'browser.close',
+      ]),
     );
+    const browserNewTab = vi.fn(() => true);
+    const browserReopenTab = vi.fn(() => true);
+    const browserCloseTab = vi.fn(() => true);
     const browserGoBack = vi.fn(() => true);
     const browserGoForward = vi.fn(() => true);
     const browserReloadOrStop = vi.fn(() => true);
@@ -220,6 +232,9 @@ describe('extension commands', () => {
       openCommandPalette: vi.fn(),
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
+      browserNewTab,
+      browserReopenTab,
+      browserCloseTab,
       browserGoBack,
       browserGoForward,
       browserReloadOrStop,
@@ -228,12 +243,24 @@ describe('extension commands', () => {
     };
 
     await expect(executeExtensionCommand('browser.goBack', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('browser.newTab', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('browser.reopenTab', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('browser.closeTab', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('browser.goForward', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('browser.reloadOrStop', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('browser.focusLocation', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('browser.close', undefined, options)).resolves.toBe(false);
     await expect(
       executeExtensionCommand('browser.goBack', undefined, { ...options, context: { 'browser.canGoBack': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('browser.newTab', undefined, { ...options, context: { 'browser.active': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('browser.reopenTab', undefined, { ...options, context: { 'browser.active': true } }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('browser.closeTab', undefined, { ...options, context: { 'browser.active': true } }),
     ).resolves.toBe(true);
     await expect(
       executeExtensionCommand('browser.goForward', undefined, { ...options, context: { 'browser.canGoForward': true } }),
@@ -249,6 +276,9 @@ describe('extension commands', () => {
     ).resolves.toBe(true);
 
     expect(browserGoBack).toHaveBeenCalledTimes(1);
+    expect(browserNewTab).toHaveBeenCalledTimes(1);
+    expect(browserReopenTab).toHaveBeenCalledTimes(1);
+    expect(browserCloseTab).toHaveBeenCalledTimes(1);
     expect(browserGoForward).toHaveBeenCalledTimes(1);
     expect(browserReloadOrStop).toHaveBeenCalledTimes(1);
     expect(browserFocusLocation).toHaveBeenCalledTimes(1);

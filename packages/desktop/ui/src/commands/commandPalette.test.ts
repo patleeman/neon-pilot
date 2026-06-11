@@ -257,6 +257,42 @@ describe('command palette search', () => {
       }),
     ).toBe(true);
     expect(
+      isHostCommandDisabledInPalette('browser.newTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.newTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('browser.reopenTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.reopenTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('browser.closeTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('browser.closeTab', {
+        activeConversationId: 'conversation-1',
+        context: { 'browser.active': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.goBack', {
         activeConversationId: 'conversation-1',
         context: { 'browser.canGoBack': true },

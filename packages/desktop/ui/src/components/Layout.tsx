@@ -1992,6 +1992,18 @@ export function Layout() {
         window.dispatchEvent(new CustomEvent(WORKBENCH_TOGGLE_DIFF_EVENT));
         return true;
       },
+      browserNewTab() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'newTab' } }));
+        return true;
+      },
+      browserReopenTab() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'reopenTab' } }));
+        return true;
+      },
+      browserCloseTab() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'closeTab' } }));
+        return true;
+      },
       browserGoBack() {
         window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'goBack' } }));
         return true;
