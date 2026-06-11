@@ -61,7 +61,7 @@ Send a message:
 neon-pilot protocol neon-pilot-agent conversation send <conversationId> --prompt "Continue." --json
 ```
 
-Start and inspect durable subagents:
+Start and inspect durable agent work through the protocol control surface, not the public command list:
 
 ```bash
 neon-pilot protocol neon-pilot-agent start --prompt "Investigate this issue." --cwd "$PWD" --json

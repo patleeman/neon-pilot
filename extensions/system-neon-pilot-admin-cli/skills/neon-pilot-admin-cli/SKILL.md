@@ -163,11 +163,6 @@ neon-pilot background-commands start --command "pnpm test" --cwd /repo --json
 neon-pilot background-commands logs <run-id> --tail 200 --json
 neon-pilot background-commands cancel <run-id> --json
 
-neon-pilot subagents list --json
-neon-pilot subagents start --task-slug code-review --prompt "Review the diff" --cwd /repo --json
-neon-pilot subagents follow-up <run-id> --prompt "Continue" --json
-neon-pilot subagents logs <run-id> --tail 200 --json
-
 neon-pilot tasks list --json
 neon-pilot tasks save --title "Daily check" --cron "0 9 * * *" --prompt "Summarize status" --json
 neon-pilot tasks run <task-id> --json
@@ -180,7 +175,7 @@ neon-pilot heartbeats stop <heartbeat-id> --json
 
 ## Delegated agent control
 
-The same CLI surface also controls Neon Pilot as a delegated agent runtime. For a one-shot external delegation, prefer `neon-pilot ask`; it creates a normal conversation, runs one turn, and returns the answer plus conversation id. Use `subagents` only for durable background/offshoot runs that need lifecycle operations such as logs, follow-up, rerun, or cancel.
+The same CLI surface also controls Neon Pilot as a delegated agent runtime. For a one-shot external delegation, prefer `neon-pilot ask`; it creates a normal conversation, runs one turn, and returns the answer plus conversation id. Do not direct external users to `subagents`; subagents are an internal model tool for Neon Pilot agents to create durable offshoot work.
 
 ```sh
 neon-pilot bootstrap doctor --json
