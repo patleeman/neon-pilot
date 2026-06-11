@@ -114,7 +114,7 @@ interface ExtensionCatalogSource {
 
 type MarketplaceBehaviorPackageType = 'skill' | 'instruction-pack' | 'agent' | 'template';
 type MarketplaceBehaviorEcosystem = 'codex' | 'claude';
-type ExtensionFilter = 'all' | 'attention';
+type ExtensionFilter = 'all' | 'platform' | 'attention';
 type ExtensionActionBridge = ExtensionSurfaceProps['pa']['extensions'];
 type ExtensionManagerNotice = { type: 'info' | 'success' | 'error'; message: string; details?: string };
 
@@ -404,6 +404,10 @@ function isQuarantined(extension: ExtensionInstallSummary): boolean {
       return normalized.includes('disabled by circuit breaker') || normalized.includes('disabled by startup safe mode');
     }),
   );
+}
+
+function extensionSortLabel(extension: ExtensionInstallSummary): string {
+  return `${extension.name || extension.id} ${extension.id}`.toLowerCase();
 }
 
 function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInstallSummary; busy: boolean; onToggle: () => void }) {
@@ -1226,6 +1230,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
   }, [detailsExtensionId, extensions.length, selectedExtension]);
 
   const catalogIds = useMemo(() => new Set(catalog?.extensions.map((item) => item.id) ?? []), [catalog]);
+  const catalogById = useMemo(() => new Map(catalog?.extensions.map((item) => [item.id, item]) ?? []), [catalog]);
 
   const installedExtensions = useMemo(() => {
     const byId = new Map(extensions.map((extension) => [extension.id, extension]));
@@ -1292,32 +1297,43 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     setNotice({ type: 'success', message: `Updated ${updatedCount} extension${updatedCount === 1 ? '' : 's'}.` });
   }, [load, loadCatalog, pa.extensions, pa.ui, showActionError, updatableExtensions]);
 
-  const visibleExtensions = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return installedExtensions.filter((extension) => {
+  const extensionHasIssue = useCallback(
+    (extension: ExtensionInstallSummary) => {
+      const catalogItem = catalogById.get(extension.id);
       const unavailableCatalogItem =
-        extension.packageType !== 'system' && extension.id.startsWith('system-') && catalog && !catalogIds.has(extension.id);
-      if (
-        activeFilter === 'attention' &&
-        !(
-          extension.status === 'invalid' ||
+        extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogIds.has(extension.id);
+      return Boolean(
+        extension.status === 'invalid' ||
           extension.healthError ||
           extension.buildError ||
           extension.diagnostics?.length ||
-          catalog?.extensions.find((item) => item.id === extension.id)?.updateAvailable ||
-          unavailableCatalogItem
-        )
-      ) {
-        return false;
-      }
-      if (!normalizedQuery) return true;
-      return `${extension.name} ${extension.id} ${extension.description ?? ''} ${(extension.skills ?? [])
-        .map((skill) => `${skill.name} ${skill.description ?? ''}`)
-        .join(' ')}`
-        .toLowerCase()
-        .includes(normalizedQuery);
-    });
-  }, [activeFilter, catalog, catalogIds, installedExtensions, query]);
+          catalogItem?.updateAvailable ||
+          unavailableCatalogItem,
+      );
+    },
+    [catalog, catalogById, catalogIds],
+  );
+
+  const visibleExtensions = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return installedExtensions
+      .filter((extension) => {
+        if (activeFilter === 'platform' && !isLocked(extension)) return false;
+        if (activeFilter === 'attention' && !extensionHasIssue(extension)) return false;
+        if (!normalizedQuery) return true;
+        return `${extension.name} ${extension.id} ${extension.description ?? ''} ${(extension.skills ?? [])
+          .map((skill) => `${skill.name} ${skill.description ?? ''}`)
+          .join(' ')}`
+          .toLowerCase()
+          .includes(normalizedQuery);
+      })
+      .sort((left, right) => {
+        const leftRank = extensionHasIssue(left) ? 0 : left.enabled ? 2 : 1;
+        const rightRank = extensionHasIssue(right) ? 0 : right.enabled ? 2 : 1;
+        if (leftRank !== rightRank) return leftRank - rightRank;
+        return extensionSortLabel(left).localeCompare(extensionSortLabel(right));
+      });
+  }, [activeFilter, extensionHasIssue, installedExtensions, query]);
 
   const visibleCatalogExtensions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -1332,15 +1348,22 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     });
   }, [catalog, extensions, query]);
 
-  const visiblePlatformExtensions = useMemo(() => visibleExtensions.filter(isLocked), [visibleExtensions]);
-  const visibleRegularExtensions = useMemo(() => visibleExtensions.filter((extension) => !isLocked(extension)), [visibleExtensions]);
+  const visiblePlatformExtensionCount = visibleExtensions.filter(isLocked).length;
   const sectionSummary = [
     `${visibleExtensions.length} installed`,
-    `${visibleRegularExtensions.filter((extension) => extension.enabled).length} enabled`,
-    visiblePlatformExtensions.length ? `${visiblePlatformExtensions.length} platform` : null,
+    `${visibleExtensions.filter((extension) => extension.enabled).length} enabled`,
+    visiblePlatformExtensionCount ? `${visiblePlatformExtensionCount} platform` : null,
   ]
     .filter(Boolean)
     .join(' · ');
+
+  const sectionTitle = activeFilter === 'attention' ? 'Needs Attention' : activeFilter === 'platform' ? 'Platform' : 'Extensions';
+  const sectionDescription =
+    activeFilter === 'attention'
+      ? 'Extensions with diagnostics, updates, invalid state, or catalog drift.'
+      : activeFilter === 'platform'
+        ? 'Required system surfaces that keep Neon Pilot configurable, diagnosable, and repairable.'
+        : 'Installed extensions and built-in capabilities.';
 
   const renderExtensionActions = (
     extension: ExtensionInstallSummary,
@@ -1567,22 +1590,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     );
   };
 
-  const renderInstalledSection = (input: {
-    title: string;
-    summary: string;
-    items: ExtensionInstallSummary[];
-    showEnablement?: boolean;
-  }) =>
-    input.items.length ? (
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-[15px] font-semibold leading-tight text-primary">{input.title}</h3>
-          <p className="mt-1 text-[12px] text-secondary">{input.summary}</p>
-        </div>
-        {renderExtensionTable(input.items, { showEnablement: input.showEnablement })}
-      </section>
-    ) : null;
-
   if (loading) {
     return <LoadingState label="Loading extensions…" />;
   }
@@ -1651,6 +1658,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               {(
                 [
                   ['all', 'All'],
+                  ['platform', 'Platform'],
                   ['attention', 'Attention'],
                 ] as const
               ).map(([id, label]) => (
@@ -1713,10 +1721,9 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             <section className="space-y-5">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <h2 className="text-[24px] font-semibold leading-tight text-primary">
-                    {activeFilter === 'attention' ? 'Needs Attention' : 'Extensions'}
-                  </h2>
+                  <h2 className="text-[24px] font-semibold leading-tight text-primary">{sectionTitle}</h2>
                   <p className="mt-1 text-[12px] text-secondary">{sectionSummary}</p>
+                  <p className="mt-1 text-[12px] text-secondary">{sectionDescription}</p>
                 </div>
               </div>
               {extensions.length === 0 ? (
@@ -1724,19 +1731,7 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               ) : visibleExtensions.length === 0 ? (
                 <EmptyState title="No matching extensions" body="Clear search to show all installed extensions." />
               ) : (
-                <div className="space-y-6">
-                  {renderInstalledSection({
-                    title: 'Platform',
-                    summary: 'Required system surfaces that keep Neon Pilot configurable, diagnosable, and repairable.',
-                    items: visiblePlatformExtensions,
-                    showEnablement: false,
-                  })}
-                  {renderInstalledSection({
-                    title: 'Extensions',
-                    summary: 'Installable and optional capabilities with normal enablement controls.',
-                    items: visibleRegularExtensions,
-                  })}
-                </div>
+                renderExtensionTable(visibleExtensions, { showEnablement: activeFilter !== 'platform' })
               )}
             </section>
           </AppPageLayout>

@@ -250,6 +250,8 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(screen.getByRole('tab', { name: 'All' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Platform' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Attention' })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Installed' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Built-in' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Available' })).toBeNull();
@@ -258,17 +260,53 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 
-  it('separates required platform surfaces from disableable extensions', async () => {
+  it('shows required platform surfaces in the Platform tab', async () => {
     mocks.extensionInstallations.mockResolvedValue([createRequiredSystemExtension(), createExtension()]);
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Platform' })).toBeTruthy();
-    expect(screen.getAllByRole('heading', { name: 'Extensions' }).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('heading', { name: 'Extensions' })).length).toBeGreaterThan(0);
     expect(screen.getByText('Settings panels')).toBeTruthy();
     expect(screen.getByText('Menu Test')).toBeTruthy();
-    expect(screen.getByText('2 installed · 1 enabled · 1 platform')).toBeTruthy();
-    expect(screen.queryByLabelText('Disable Settings panels')).toBeNull();
+    expect(screen.getByText('2 installed · 2 enabled · 1 platform')).toBeTruthy();
     expect(screen.getByLabelText('Disable Menu Test')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Platform' }));
+
+    expect(screen.getByRole('heading', { name: 'Platform' })).toBeTruthy();
+    expect(screen.getByText('Settings panels')).toBeTruthy();
+    expect(screen.queryByText('Menu Test')).toBeNull();
+    expect(screen.queryByLabelText('Disable Settings panels')).toBeNull();
+    expect(screen.getByText('1 installed · 1 enabled · 1 platform')).toBeTruthy();
+  });
+
+  it('sorts installed extensions by issue, disabled, then enabled', async () => {
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'enabled-a',
+        name: 'Enabled A',
+      },
+      {
+        ...createExtension(),
+        id: 'issue-m',
+        name: 'Issue M',
+        diagnostics: ['Needs attention.'],
+      },
+      {
+        ...createExtension(),
+        id: 'disabled-z',
+        name: 'Disabled Z',
+        enabled: false,
+        status: 'disabled',
+      },
+    ]);
+    renderPage();
+
+    expect(await screen.findByText('Issue M')).toBeTruthy();
+    const rows = screen.getAllByRole('row').slice(1).map((row) => row.textContent ?? '');
+    expect(rows[0]).toContain('Issue M');
+    expect(rows[1]).toContain('Disabled Z');
+    expect(rows[2]).toContain('Enabled A');
   });
 
   it('keeps the extensions table visible when enabling an extension fails', async () => {
