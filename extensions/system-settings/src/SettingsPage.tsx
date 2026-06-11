@@ -23,6 +23,7 @@ import {
   IconButton,
   isDesktopShell,
   KeyboardShortcutCaptureInput,
+  listHostCommands,
   type ModelEditorDraft,
   type ModelProviderApi,
   type ModelProviderConfig,
@@ -828,7 +829,15 @@ export function CommandsSettingsSection() {
   }, [load]);
 
   const rows = useMemo<CommandWithKeybindings[]>(() => {
-    return commands.map((command) => {
+    const hostCommands = listHostCommands().map(
+      (command): CommandSettingsEntry => ({
+        ...command,
+        extensionId: 'host',
+        packageType: 'system',
+        action: command.id,
+      }),
+    );
+    return [...hostCommands, ...commands].map((command) => {
       const matches = keybindings.filter((keybinding) => keybindingMatchesCommandSetting(keybinding, command));
       return { ...command, keybindings: matches.length ? matches : [emptyKeybindingForCommand(command)] };
     });
@@ -966,6 +975,7 @@ export function CommandsSettingsSection() {
 
 function commandDisplayId(command: CommandSettingsEntry): string {
   const id = command.id ?? command.surfaceId ?? 'unknown';
+  if (command.extensionId === 'host') return id;
   return command.extensionId ? `${command.extensionId}.${id}` : id;
 }
 

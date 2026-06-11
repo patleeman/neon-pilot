@@ -76,7 +76,7 @@ await api.updateSettings({ 'myExt.timeout': 60 }); // updates + returns merged
 | Conversation | Built-in (model, thinking)                                                                     |
 | Workspace    | Built-in (default working dir)                                                                 |
 | Extensions   | Built-in extension enablement, imported packages, AGENTS.md files, skills, tools, and settings |
-| Commands     | Built-in command/keybinding editor                                                             |
+| Commands     | Built-in and extension command/keybinding editor                                                |
 | Providers    | Built-in (model providers, credentials)                                                        |
 | Desktop      | Built-in (updates, app behavior)                                                               |
 
@@ -131,6 +131,12 @@ Every desktop menu shortcut is listed in a searchable table. Each entry shows:
 Changes auto-save immediately. If a shortcut conflicts with an existing one, the editor shows the conflict and lets you resolve it.
 
 Search by action name (e.g., "toggle sidebar") or by key (e.g., "Cmd+\").
+
+## Commands
+
+The Commands section lists host commands such as composer, conversation, focus,
+model, and dictation actions alongside extension-contributed commands. Commands
+without a default shortcut still appear so a user can bind them from Settings.
 
 ## Provider Configuration
 

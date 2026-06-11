@@ -280,12 +280,14 @@ describe('CommandsSettingsSection', () => {
     await flushAsyncWork();
 
     const rows = Array.from(container.querySelectorAll('.grid.gap-3.py-3'));
-    expect(rows).toHaveLength(2);
-    expect(rows[0]?.textContent).toContain('Open thread palette');
-    expect(rows[0]?.textContent).toContain('mod + p');
-    expect(rows[0]?.textContent).not.toContain('mod + shift + p');
-    expect(rows[1]?.textContent).toContain('Open command palette');
-    expect(rows[1]?.textContent).toContain('mod + shift + p');
-    expect(rows[1]?.textContent).not.toContain('mod + k');
+    const hostComposerRow = rows.find((row) => row.textContent?.includes('Focus Composer'));
+    const threadRow = rows.find((row) => row.textContent?.includes('Open thread palette'));
+    const commandRow = rows.find((row) => row.textContent?.includes('Open command palette'));
+    expect(hostComposerRow?.textContent).toContain('composer.focus');
+    expect(hostComposerRow?.textContent).toContain('host');
+    expect(threadRow?.textContent).toContain('mod + p');
+    expect(threadRow?.textContent).not.toContain('mod + shift + p');
+    expect(commandRow?.textContent).toContain('mod + shift + p');
+    expect(commandRow?.textContent).not.toContain('mod + k');
   });
 });
