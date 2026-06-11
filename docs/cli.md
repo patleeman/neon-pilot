@@ -91,6 +91,7 @@ neon-pilot extensions list
 neon-pilot settings list
 neon-pilot settings get conversation.pinnedToolCalls
 neon-pilot settings set conversation.pinnedToolCalls false
+neon-pilot app update --json
 neon-pilot bootstrap doctor
 neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
 printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin

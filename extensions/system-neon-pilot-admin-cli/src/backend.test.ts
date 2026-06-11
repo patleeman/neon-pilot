@@ -28,6 +28,14 @@ function ctx(overrides: Record<string, unknown> = {}) {
     runtime: {
       getRepoRoot: vi.fn().mockReturnValue('/repo'),
     },
+    shell: {
+      exec: vi.fn().mockResolvedValue({
+        stdout:
+          '{"installed":true,"appPath":"/Applications/Neon Pilot.app","cliReady":true,"cliInstalled":true,"bootstrapDoctorReady":true}',
+        stderr: '',
+        executionWrappers: [],
+      }),
+    },
     storage: {
       put: vi.fn(async (key: string, value: unknown) => {
         storage.set(key, value);
@@ -82,10 +90,51 @@ describe('system-neon-pilot-admin-cli backend', () => {
       commands: expect.arrayContaining([
         { id: 'list_app_commands', description: expect.any(String), inputSchema: expect.any(Object) },
         { id: 'run_app_command', description: expect.any(String), inputSchema: expect.any(Object) },
+        { id: 'app_update', description: expect.any(String), inputSchema: expect.any(Object) },
         { id: 'control_plane_doctor', description: expect.any(String), inputSchema: expect.any(Object) },
         { id: 'heartbeat_start', description: expect.any(String), inputSchema: expect.any(Object) },
       ]),
     });
+  });
+
+  it('normalizes app update CLI dry-run input', async () => {
+    const result = await neonPilotAdmin(
+      { cli: { command: 'app update', flags: { channel: 'rc', 'app-dir': '/Applications', repo: 'patleeman/neon-pilot', 'dry-run': true } } },
+      ctx(),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      dryRun: true,
+      action: 'app_update',
+      description: expect.any(String),
+    });
+    expect((result as { command: string }).command).toContain("bash '/repo/install.sh'");
+    expect((result as { command: string }).command).toContain("'--channel' 'rc'");
+    expect((result as { command: string }).command).toContain('raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh');
+  });
+
+  it('runs app update through the signed release installer', async () => {
+    const context = ctx();
+    const result = await neonPilotAdmin({ command: 'app_update', channel: 'stable' }, context);
+
+    expect(result).toMatchObject({
+      ok: true,
+      action: 'app_update',
+      installerResult: {
+        installed: true,
+        appPath: '/Applications/Neon Pilot.app',
+        cliReady: true,
+      },
+    });
+    expect((context as { shell: { exec: ReturnType<typeof vi.fn> } }).shell.exec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: 'sh',
+        args: ['-lc', expect.stringContaining("bash '/repo/install.sh'")],
+        cwd: '/repo',
+        timeoutMs: 15 * 60 * 1000,
+      }),
+    );
   });
 
   it('uses shared semantics for heartbeat CLI and neon_pilot tool inputs', async () => {

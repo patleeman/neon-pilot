@@ -15,6 +15,7 @@ export { __setNeonPilotAgentApisForTest, neonPilotAgent, neonPilotAgentCli, read
 type AdminCommandId =
   | 'list_app_commands'
   | 'run_app_command'
+  | 'app_update'
   | 'control_plane_doctor'
   | 'heartbeat_start'
   | 'heartbeat_list'
@@ -73,6 +74,20 @@ const adminCommands: AdminCommandDefinition[] = [
     id: 'control_plane_doctor',
     description: 'Run non-destructive control-plane smoke checks.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: true },
+  },
+  {
+    id: 'app_update',
+    description: 'Update the packaged Neon Pilot app from the signed GitHub release installer.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channel: { type: 'string', enum: ['stable', 'rc'] },
+        appDir: { type: 'string' },
+        repo: { type: 'string' },
+        dryRun: { type: 'boolean' },
+      },
+      additionalProperties: true,
+    },
   },
   {
     id: 'heartbeat_start',
@@ -160,6 +175,18 @@ function normalizeAdminInput(input: unknown): { command: string | 'list_admin_co
       input: { ...body, commandId: args[0], args: parseJsonFlag(flags, 'args') ?? (args.length > 1 ? args.slice(1) : undefined) },
     };
   }
+  if (cli === 'app update') {
+    return {
+      command: 'app_update',
+      input: {
+        ...body,
+        channel: flagString(flags, 'channel'),
+        appDir: flagString(flags, 'app-dir'),
+        repo: flagString(flags, 'repo'),
+        dryRun: flags['dry-run'] === true,
+      },
+    };
+  }
   if (cli === 'control-plane doctor') return { command: 'control_plane_doctor', input: body };
   if (cli === 'heartbeats start') {
     return {
@@ -213,6 +240,84 @@ function readNumber(value: unknown): number | undefined {
     return Number.isFinite(parsed) ? parsed : undefined;
   }
   return undefined;
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function normalizeUpdateChannel(value: unknown): 'stable' | 'rc' {
+  const channel = readString(value) ?? 'stable';
+  if (channel !== 'stable' && channel !== 'rc') throw new Error('channel must be "stable" or "rc".');
+  return channel;
+}
+
+function readBoolean(value: unknown): boolean {
+  return value === true || value === 'true' || value === '1' || value === 'yes';
+}
+
+function buildUpdateCommand(input: Record<string, unknown>, ctx: ExtensionBackendContext): { command: string; source: 'local' | 'remote' } {
+  const channel = normalizeUpdateChannel(input.channel);
+  const appDir = readString(input.appDir) ?? '/Applications';
+  const repo = readString(input.repo) ?? 'patleeman/neon-pilot';
+  const repoRoot = ctx.runtime.getRepoRoot();
+  const localInstaller = `${repoRoot}/install.sh`;
+  const commonArgs = [
+    '--channel',
+    channel,
+    '--app-dir',
+    appDir,
+    '--repo',
+    repo,
+    '--install-cli',
+    '--bootstrap',
+    '--json',
+  ];
+  const quotedArgs = commonArgs.map(shellQuote).join(' ');
+  const localCommand = `[ -f ${shellQuote(localInstaller)} ] && bash ${shellQuote(localInstaller)} ${quotedArgs}`;
+  const remoteCommand = `curl -fsSL ${shellQuote(`https://raw.githubusercontent.com/${repo}/master/install.sh`)} | bash -s -- ${quotedArgs}`;
+  return {
+    command: `${localCommand} || ${remoteCommand}`,
+    source: 'local',
+  };
+}
+
+async function updateApp(input: Record<string, unknown>, ctx: ExtensionBackendContext) {
+  const built = buildUpdateCommand(input, ctx);
+  if (readBoolean(input.dryRun)) {
+    return {
+      ok: true,
+      dryRun: true,
+      action: 'app_update',
+      command: built.command,
+      description: 'Would update Neon Pilot from the signed GitHub release installer.',
+    };
+  }
+
+  const result = await ctx.shell.exec({
+    command: 'sh',
+    args: ['-lc', built.command],
+    cwd: ctx.runtime.getRepoRoot(),
+    timeoutMs: 15 * 60 * 1000,
+  });
+  const stdout = typeof result.stdout === 'string' ? result.stdout.trim() : '';
+  const stderr = typeof result.stderr === 'string' ? result.stderr.trim() : '';
+  let installerResult: unknown = null;
+  if (stdout) {
+    try {
+      installerResult = JSON.parse(stdout);
+    } catch {
+      installerResult = null;
+    }
+  }
+  return {
+    ok: true,
+    action: 'app_update',
+    installerResult,
+    stdout,
+    stderr,
+    executionWrappers: result.executionWrappers ?? [],
+  };
 }
 
 function heartbeatCron(intervalMinutes: number): string {
@@ -346,6 +451,7 @@ export async function runAdminCommand(command: AdminCommandId | 'list_admin_comm
     const executed = await ctx.commands.execute(commandId, body.args);
     return { ok: executed, commandId, executed };
   }
+  if (command === 'app_update') return updateApp(body, ctx);
   if (command === 'heartbeat_start') return startHeartbeat(body, ctx);
   if (command === 'heartbeat_list') return listHeartbeats();
   if (command === 'heartbeat_stop') return stopHeartbeat(body);
