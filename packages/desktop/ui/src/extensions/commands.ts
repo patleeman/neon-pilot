@@ -935,8 +935,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.clearComposer?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.clearComposer);
+      canExecute(_args, context) {
+        return Boolean(options.clearComposer) && readContextValue(context, 'composer.canClear') === true;
       },
     },
     {

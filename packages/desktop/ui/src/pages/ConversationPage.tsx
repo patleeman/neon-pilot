@@ -5718,6 +5718,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => setExtensionCommandContext('composer.canSubmit', null);
   }, [composerCanSubmit]);
   useEffect(() => {
+    setExtensionCommandContext('composer.canClear', composerHasContent);
+    return () => setExtensionCommandContext('composer.canClear', null);
+  }, [composerHasContent]);
+  useEffect(() => {
     const handleComposerFocusCommand = () => {
       textareaRef.current?.focus();
     };

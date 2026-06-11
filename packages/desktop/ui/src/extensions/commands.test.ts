@@ -1078,6 +1078,24 @@ describe('extension commands', () => {
     expect(submitComposer).toHaveBeenCalledTimes(1);
   });
 
+  it('disables composer clear unless the composer publishes clear availability', async () => {
+    const clearComposer = vi.fn(() => true);
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      clearComposer,
+    };
+
+    await expect(executeExtensionCommand('composer.clear', undefined, baseOptions)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('composer.clear', undefined, { ...baseOptions, context: { 'composer.canClear': true } }),
+    ).resolves.toBe(true);
+
+    expect(clearComposer).toHaveBeenCalledTimes(1);
+  });
+
   it('opens and closes composer settings and preferences based on composer menu state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining([

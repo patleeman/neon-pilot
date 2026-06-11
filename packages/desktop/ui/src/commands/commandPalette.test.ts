@@ -989,6 +989,18 @@ describe('command palette search', () => {
       }),
     ).toBe(true);
     expect(
+      isHostCommandDisabledInPalette('composer.clear', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canClear': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.clear', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.canClear': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.openSettings', {
         activeConversationId: 'conversation-1',
         context: { 'composer.settingsAvailable': false },

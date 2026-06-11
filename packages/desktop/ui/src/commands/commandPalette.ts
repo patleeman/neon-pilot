@@ -133,6 +133,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['workbench.toggleExplorer', 'workbench.canToggleExplorer'],
   ['workbench.toggleDiff', 'workbench.canToggleDiff'],
   ['composer.submit', 'composer.canSubmit'],
+  ['composer.clear', 'composer.canClear'],
   ['composer.stop', 'conversation.isStreaming'],
   ['composer.openSettings', 'composer.settingsAvailable'],
   ['composer.closeSettings', 'composer.settingsOpen'],
