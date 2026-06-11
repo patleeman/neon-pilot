@@ -26,7 +26,7 @@ Examples:
 Run a command-palette/app command by id: app-commands run <command-id> [--args <json>]
 
 - Source: extension (system-neon-pilot-admin-cli)
-- Usage: `neon-pilot app-commands run [--json]`
+- Usage: `neon-pilot app-commands run <commandId> [args...] [--args <json>] [--json]`
 - Mode: write
 - Requires app: yes
 - Idempotent: no
@@ -35,8 +35,8 @@ Run a command-palette/app command by id: app-commands run <command-id> [--args <
 - Output: text, json
 
 Examples:
-- `neon-pilot app-commands run`
-- `neon-pilot app-commands run --json`
+- `neon-pilot app-commands run cmd-1`
+- `neon-pilot app-commands run cmd-1 --args '{"value":1}' --json`
 
 ### background-commands cancel
 
@@ -1170,7 +1170,7 @@ Examples:
 Start a recurring conversation heartbeat: heartbeats start <id> --interval-minutes <n> --conversation-id <id> --prompt <prompt>.
 
 - Source: extension (system-neon-pilot-admin-cli)
-- Usage: `neon-pilot heartbeats start [--json]`
+- Usage: `neon-pilot heartbeats start <id> --interval-minutes <n> --conversation-id <id> --prompt <prompt> [--json]`
 - Mode: background
 - Requires app: no
 - Idempotent: no
@@ -1179,8 +1179,8 @@ Start a recurring conversation heartbeat: heartbeats start <id> --interval-minut
 - Output: text, json
 
 Examples:
-- `neon-pilot heartbeats start`
-- `neon-pilot heartbeats start --json`
+- `neon-pilot heartbeats start hb-1 --interval-minutes 5 --conversation-id conv-1 --prompt "Check work."`
+- `neon-pilot heartbeats start hb-1 --interval-minutes 5 --conversation-id conv-1 --prompt "Check work." --json`
 
 ### heartbeats stop
 

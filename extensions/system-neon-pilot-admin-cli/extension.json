@@ -122,13 +122,15 @@
         "action": "manageAppCommands",
         "jsonDefault": true,
         "inputAction": "run",
-        "usage": "app-commands run [--json]",
-        "examples": ["neon-pilot app-commands run", "neon-pilot app-commands run --json"],
+        "usage": "app-commands run <commandId> [args...] [--args <json>] [--json]",
+        "examples": ["neon-pilot app-commands run cmd-1", "neon-pilot app-commands run cmd-1 --args '{\"value\":1}' --json"],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1,
+          "description": "Positional args: commandId and optional command arguments."
         },
         "flagsSchema": {
           "type": "object",
@@ -140,6 +142,10 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "args": {
+              "type": "string",
+              "description": "JSON arguments to pass to the app command."
             }
           },
           "additionalProperties": true
@@ -196,13 +202,19 @@
         "action": "neonPilotAdmin",
         "jsonDefault": true,
         "inputAction": "heartbeat_start",
-        "usage": "heartbeats start [--json]",
-        "examples": ["neon-pilot heartbeats start", "neon-pilot heartbeats start --json"],
+        "usage": "heartbeats start <id> --interval-minutes <n> --conversation-id <id> --prompt <prompt> [--json]",
+        "examples": [
+          "neon-pilot heartbeats start hb-1 --interval-minutes 5 --conversation-id conv-1 --prompt \"Check work.\"",
+          "neon-pilot heartbeats start hb-1 --interval-minutes 5 --conversation-id conv-1 --prompt \"Check work.\" --json"
+        ],
         "argsSchema": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Positional args: id."
         },
         "flagsSchema": {
           "type": "object",
@@ -214,8 +226,24 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing runtime state."
+            },
+            "interval-minutes": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Heartbeat interval in minutes, from 1 to 59."
+            },
+            "conversation-id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversation that receives the heartbeat."
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Prompt to send on each heartbeat."
             }
           },
+          "required": ["interval-minutes", "conversation-id", "prompt"],
           "additionalProperties": true
         },
         "mode": "background",
