@@ -239,6 +239,49 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     expect(container.textContent).toContain('Close file from extension');
     expect(container.textContent).toContain('Alt + ⌘/Ctrl + W is assigned to both Close workbench file and Close file from extension.');
   });
+
+  it('detects shortcut conflicts when arrows use alternate names', async () => {
+    mocks.readDesktopAppPreferences.mockResolvedValue({
+      available: true,
+      supportsStartOnSystemStart: true,
+      autoInstallUpdates: true,
+      updatePath: 'test',
+      startOnSystemStart: false,
+      keyboardShortcuts: { ...DEFAULT_KEYBOARD_SHORTCUTS, conversationMode: 'Alt+Left' },
+      update: {
+        supported: true,
+        status: 'idle',
+        currentVersion: '0.3.7',
+      },
+    });
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-test',
+        surfaceId: 'go-back',
+        packageType: 'system',
+        title: 'Go back from extension',
+        keys: ['Alt+ArrowLeft'],
+        command: 'test.goBack',
+        scope: 'global',
+        defaultKeys: ['Alt+ArrowLeft'],
+        enabled: true,
+      },
+    ]);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Conversation mode');
+    expect(container.textContent).toContain('Go back from extension');
+    expect(container.textContent).toContain('Alt + ArrowLeft is assigned to both Conversation mode and Go back from extension.');
+  });
 });
 
 describe('CommandsSettingsSection', () => {

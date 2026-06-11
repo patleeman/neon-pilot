@@ -228,6 +228,12 @@ function normalizeShortcutForConflict(shortcut: string): string {
     shift: 'shift',
     mod: 'mod',
   };
+  const keyAliases: Record<string, string> = {
+    arrowdown: 'down',
+    arrowleft: 'left',
+    arrowright: 'right',
+    arrowup: 'up',
+  };
   const parts = shortcut
     .trim()
     .toLowerCase()
@@ -239,7 +245,7 @@ function normalizeShortcutForConflict(shortcut: string): string {
   for (const part of parts) {
     const modifier = modifierAliases[part];
     if (modifier) modifiers.add(modifier);
-    else key = part;
+    else key = keyAliases[part] ?? part;
   }
   return [...modifierOrder.filter((modifier) => modifiers.has(modifier)), key].filter(Boolean).join('+');
 }
