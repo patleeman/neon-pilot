@@ -81,4 +81,13 @@ describe('extension keybindings', () => {
       findMatchingExtensionKeybinding({ key: 'p', metaKey: true, ctrlKey: true, altKey: false, shiftKey: false }, specificOnly)?.args,
     ).toEqual({ scope: 'specific' });
   });
+
+  it('ignores disabled registrations even when callers pass them through', () => {
+    expect(
+      findMatchingExtensionKeybinding(
+        { key: 'p', metaKey: true, ctrlKey: false, altKey: false, shiftKey: false },
+        [{ ...keybindings[0]!, enabled: false }],
+      ),
+    ).toBeNull();
+  });
 });

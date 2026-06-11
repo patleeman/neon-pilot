@@ -79,6 +79,7 @@ export function findMatchingExtensionKeybinding(
   return (
     keybindings.find(
       (keybinding) =>
+        keybinding.enabled !== false &&
         evaluateCommandEnablement(keybinding.when, context) &&
         keybinding.keys.some((shortcut) => matchesExtensionKeybinding(event, shortcut)),
     ) ?? null
