@@ -86,6 +86,7 @@ const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
 const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
 const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
+const NOTIFICATIONS_CLOSE_EVENT = 'neon-pilot-notifications-close';
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -105,18 +106,20 @@ const ExtensionModalHost = lazyRouteWithRecovery('layout-extension-modal-host', 
   import('../extensions/ExtensionModalHost').then((module) => ({ default: module.ExtensionModalHost })),
 );
 
-function NotificationCommandBridge() {
+function NotificationCommandBridge({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { notifications, unreadCount, markAllRead, dismissAll } = useNotificationStore();
   const hasVisible = notifications.some((notification) => !notification.dismissed);
 
   useEffect(() => {
+    setExtensionCommandContext('notifications.open', open);
     setExtensionCommandContext('notifications.hasUnread', unreadCount > 0);
     setExtensionCommandContext('notifications.hasVisible', hasVisible);
     return () => {
+      setExtensionCommandContext('notifications.open', null);
       setExtensionCommandContext('notifications.hasUnread', null);
       setExtensionCommandContext('notifications.hasVisible', null);
     };
-  }, [hasVisible, unreadCount]);
+  }, [hasVisible, open, unreadCount]);
 
   useEffect(() => {
     function handleMarkAllRead() {
@@ -127,13 +130,19 @@ function NotificationCommandBridge() {
       dismissAll();
     }
 
+    function handleClose() {
+      onClose();
+    }
+
     window.addEventListener(NOTIFICATIONS_MARK_ALL_READ_EVENT, handleMarkAllRead);
     window.addEventListener(NOTIFICATIONS_DISMISS_ALL_EVENT, handleDismissAll);
+    window.addEventListener(NOTIFICATIONS_CLOSE_EVENT, handleClose);
     return () => {
       window.removeEventListener(NOTIFICATIONS_MARK_ALL_READ_EVENT, handleMarkAllRead);
       window.removeEventListener(NOTIFICATIONS_DISMISS_ALL_EVENT, handleDismissAll);
+      window.removeEventListener(NOTIFICATIONS_CLOSE_EVENT, handleClose);
     };
-  }, [dismissAll, markAllRead]);
+  }, [dismissAll, markAllRead, onClose]);
 
   return null;
 }
@@ -1847,6 +1856,10 @@ export function Layout() {
         startTransition(() => setNotificationCenterOpen(true));
         return true;
       },
+      closeNotifications() {
+        window.dispatchEvent(new CustomEvent(NOTIFICATIONS_CLOSE_EVENT));
+        return true;
+      },
       markAllNotificationsRead() {
         window.dispatchEvent(new CustomEvent(NOTIFICATIONS_MARK_ALL_READ_EVENT));
         return true;
@@ -2566,7 +2579,7 @@ export function Layout() {
 
   return (
     <NotificationProvider>
-      <NotificationCommandBridge />
+      <NotificationCommandBridge open={notificationCenterOpen} onClose={() => setNotificationCenterOpen(false)} />
       <DesktopChromeContext.Provider value={{ setRightRailControl: setRegisteredRightRailControl }}>
         <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
           <DesktopTopBar

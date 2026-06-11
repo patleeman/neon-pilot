@@ -169,9 +169,10 @@ describe('extension commands', () => {
 
   it('includes notification commands gated by notification state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['notifications.open', 'notifications.markAllRead', 'notifications.dismissAll']),
+      expect.arrayContaining(['notifications.open', 'notifications.close', 'notifications.markAllRead', 'notifications.dismissAll']),
     );
     const openNotifications = vi.fn(() => true);
+    const closeNotifications = vi.fn(() => true);
     const markAllNotificationsRead = vi.fn(() => true);
     const dismissAllNotifications = vi.fn(() => true);
     const options = {
@@ -180,13 +181,18 @@ describe('extension commands', () => {
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
       openNotifications,
+      closeNotifications,
       markAllNotificationsRead,
       dismissAllNotifications,
     };
 
     await expect(executeExtensionCommand('notifications.open', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('notifications.close', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('notifications.markAllRead', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('notifications.dismissAll', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('notifications.close', undefined, { ...options, context: { 'notifications.open': true } }),
+    ).resolves.toBe(true);
     await expect(
       executeExtensionCommand('notifications.markAllRead', undefined, { ...options, context: { 'notifications.hasUnread': true } }),
     ).resolves.toBe(true);
@@ -195,6 +201,7 @@ describe('extension commands', () => {
     ).resolves.toBe(true);
 
     expect(openNotifications).toHaveBeenCalledTimes(1);
+    expect(closeNotifications).toHaveBeenCalledTimes(1);
     expect(markAllNotificationsRead).toHaveBeenCalledTimes(1);
     expect(dismissAllNotifications).toHaveBeenCalledTimes(1);
   });

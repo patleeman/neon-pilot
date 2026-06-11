@@ -67,6 +67,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['page.closeFind', 'pageSearch.open'],
   ['conversation.saveTitle', 'conversation.titleEditorOpen'],
   ['conversation.cancelTitleEdit', 'conversation.titleEditorOpen'],
+  ['notifications.close', 'notifications.open'],
   ['notifications.markAllRead', 'notifications.hasUnread'],
   ['notifications.dismissAll', 'notifications.hasVisible'],
   ['browser.goBack', 'browser.canGoBack'],

@@ -21,6 +21,7 @@ export interface ExtensionCommandExecutorOptions {
   goBack?(): boolean;
   goForward?(): boolean;
   openNotifications?(): boolean;
+  closeNotifications?(): boolean;
   markAllNotificationsRead?(): boolean;
   dismissAllNotifications?(): boolean;
   openCommandPalette(scope?: string): void;
@@ -144,6 +145,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'app.goBack', title: 'Go Back', category: 'App' },
     { id: 'app.goForward', title: 'Go Forward', category: 'App' },
     { id: 'notifications.open', title: 'Open Notifications', category: 'App' },
+    { id: 'notifications.close', title: 'Close Notifications', category: 'App' },
     { id: 'notifications.markAllRead', title: 'Mark Notifications Read', category: 'App' },
     { id: 'notifications.dismissAll', title: 'Dismiss Notifications', category: 'App' },
     {
@@ -297,6 +299,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute() {
         return Boolean(options.openNotifications);
+      },
+    },
+    {
+      id: 'notifications.close',
+      title: 'Close Notifications',
+      category: 'App',
+      execute() {
+        return options.closeNotifications?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeNotifications) && readContextValue(context, 'notifications.open') === true;
       },
     },
     {

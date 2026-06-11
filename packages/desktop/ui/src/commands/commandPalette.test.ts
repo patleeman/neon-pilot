@@ -131,6 +131,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('notifications.close', {
+        activeConversationId: null,
+        context: { 'notifications.open': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('notifications.close', {
+        activeConversationId: null,
+        context: { 'notifications.open': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.saveTitle', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.titleEditorOpen': false },

@@ -3,6 +3,7 @@ export const HOST_COMMAND_IDS = [
   'app.goBack',
   'app.goForward',
   'notifications.open',
+  'notifications.close',
   'notifications.markAllRead',
   'notifications.dismissAll',
   'palette.open',
