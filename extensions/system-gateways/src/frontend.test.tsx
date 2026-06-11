@@ -308,6 +308,42 @@ describe('GatewaysPage', () => {
     expect((within(telegramSection).getByLabelText(/^Conversation$/) as HTMLSelectElement).value).toBe('conv-2');
   });
 
+  it('clears the route-selected conversation when the query selection is removed', async () => {
+    const view = renderPage({ search: '?conversationId=conv-2', conversationId: undefined });
+    await screen.findAllByText('Chief of Threads');
+
+    const telegramSection = screen.getByRole('heading', { name: 'Telegram' }).closest('section')!;
+    expect((within(telegramSection).getByLabelText(/^Conversation$/) as HTMLSelectElement).value).toBe('conv-2');
+
+    view.rerender(
+      <GatewaysPage
+        pa={{} as never}
+        context={{
+          extensionId: 'system-gateways',
+          surfaceId: 'page',
+          pathname: '/gateways',
+          search: '',
+          hash: '',
+        }}
+        surface={{} as never}
+        params={{}}
+      />,
+    );
+
+    await waitFor(() => expect((within(telegramSection).getByLabelText(/^Conversation$/) as HTMLSelectElement).value).toBe(''));
+  });
+
+  it('does not overwrite a manual conversation choice after route preselection', async () => {
+    renderPage({ search: '?conversationId=conv-2', conversationId: undefined });
+    await screen.findAllByText('Chief of Threads');
+
+    const telegramSection = screen.getByRole('heading', { name: 'Telegram' }).closest('section')!;
+    const select = within(telegramSection).getByLabelText(/^Conversation$/) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'conv-1' } });
+
+    await waitFor(() => expect(select.value).toBe('conv-1'));
+  });
+
   it('renders contributed gateway providers in the channel detail', async () => {
     renderPage();
     await screen.findAllByText('Chief of Threads');

@@ -24,7 +24,7 @@ import {
   ToolbarButton,
   type ActivityTreeItem,
 } from '@neon-pilot/extensions/ui';
-import React, { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type GatewayProviderId = string;
 type GatewayStatus = 'needs_config' | 'connected' | 'active' | 'paused' | 'needs_attention';
@@ -357,6 +357,7 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
     ...emptyForm,
     conversationId: selectedContextConversationId,
   }));
+  const previousContextConversationIdRef = useRef(selectedContextConversationId);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -393,14 +394,38 @@ export function GatewaysPage({ pa, context }: ExtensionSurfaceProps) {
   }, [refresh]);
 
   useEffect(() => {
-    if (selectedContextConversationId) {
-      const matched = conversations.find((conversation) => conversation.id === selectedContextConversationId);
-      setForm((current) => ({
-        ...current,
-        conversationId: current.conversationId || selectedContextConversationId,
-        conversationTitle: current.conversationTitle || matched?.title || '',
-      }));
-    }
+    const previousContextConversationId = previousContextConversationIdRef.current;
+    const contextChanged = previousContextConversationId !== selectedContextConversationId;
+    const matched = conversations.find((conversation) => conversation.id === selectedContextConversationId);
+
+    setForm((current) => {
+      if (contextChanged) {
+        if (selectedContextConversationId) {
+          return {
+            ...current,
+            conversationId: selectedContextConversationId,
+            conversationTitle: matched?.title || '',
+          };
+        }
+        if (previousContextConversationId && current.conversationId === previousContextConversationId) {
+          return {
+            ...current,
+            conversationId: '',
+            conversationTitle: '',
+          };
+        }
+        return current;
+      }
+
+      if (selectedContextConversationId && current.conversationId === selectedContextConversationId && matched?.title) {
+        return {
+          ...current,
+          conversationTitle: current.conversationTitle || matched.title,
+        };
+      }
+      return current;
+    });
+    previousContextConversationIdRef.current = selectedContextConversationId;
   }, [selectedContextConversationId, conversations]);
 
   const selectedProvider = state.providers.find((provider) => provider.id === selectedProviderId) ?? state.providers[0] ?? null;
