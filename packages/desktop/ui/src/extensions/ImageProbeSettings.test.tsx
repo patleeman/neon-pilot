@@ -115,6 +115,7 @@ describe('ImageProbeSettings', () => {
     expect(container.textContent).toContain('Not configured');
     expect(container.textContent).toContain('GPT-5.4');
     expect(container.textContent).not.toContain('Text Only');
+    expect(container.querySelector('.ui-panel')).toBeNull();
 
     updateSelectValue(visionSelect!, 'openai-codex/gpt-5.4');
     await flushAsyncWork();
