@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createHostCommands, evaluateCommandEnablement, executeExtensionCommand, listHostCommands, normalizeLegacyCommand } from './commands';
+import {
+  canExecuteExtensionCommand,
+  createHostCommands,
+  evaluateCommandEnablement,
+  executeExtensionCommand,
+  listHostCommands,
+  normalizeLegacyCommand,
+} from './commands';
 
 describe('extension commands', () => {
   it('normalizes legacy host command strings', () => {
@@ -141,6 +148,69 @@ describe('extension commands', () => {
       const command = commandById.get(commandId);
       expect(command?.canExecute?.(undefined, {}), commandId).toBe(false);
     }
+  });
+
+  it('checks command availability before global keybindings suppress input', () => {
+    const extensionCommands = [
+      {
+        extensionId: 'system-test',
+        surfaceId: 'toggle-sidebar',
+        title: 'Toggle Sidebar',
+        action: 'layout.toggleSidebar',
+      },
+      {
+        extensionId: 'system-test',
+        surfaceId: 'run-action',
+        title: 'Run Action',
+        action: 'runAction',
+        enablement: 'workspace.open',
+      },
+    ];
+    const baseOptions = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      extensionCommands,
+      context: { 'workspace.open': true },
+    };
+
+    expect(canExecuteExtensionCommand('layout.toggleSidebar', undefined, baseOptions)).toBe(false);
+    expect(canExecuteExtensionCommand('system-test.toggle-sidebar', undefined, baseOptions)).toBe(false);
+    expect(canExecuteExtensionCommand('system-test.run-action', undefined, baseOptions)).toBe(false);
+
+    expect(
+      canExecuteExtensionCommand('system-test.toggle-sidebar', undefined, {
+        ...baseOptions,
+        toggleSidebar: vi.fn(() => true),
+      }),
+    ).toBe(true);
+    expect(
+      canExecuteExtensionCommand('system-test.run-action', undefined, {
+        ...baseOptions,
+        invokeExtensionCommand: vi.fn(),
+      }),
+    ).toBe(true);
+  });
+
+  it('does not report extension commands as handled without an invoker', async () => {
+    const extensionCommands = [
+      {
+        extensionId: 'system-test',
+        surfaceId: 'run-action',
+        title: 'Run Action',
+        action: 'runAction',
+      },
+    ];
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      extensionCommands,
+    };
+
+    await expect(executeExtensionCommand('system-test.run-action', undefined, options)).resolves.toBe(false);
   });
 
   it('executes core shortcut aliases through host commands', async () => {

@@ -651,6 +651,34 @@ function isHostCommandString(command: string): boolean {
   return listHostCommands().some((candidate) => candidate.id === normalized);
 }
 
+function findExtensionCommand(command: string, options: ExtensionCommandExecutorOptions): ExtensionCommandRegistration | undefined {
+  return (
+    options.extensionCommands?.find((candidate) => `${candidate.extensionId}.${candidate.surfaceId}` === command) ??
+    (() => {
+      const bare = options.extensionCommands?.filter((candidate) => candidate.surfaceId === command);
+      return bare?.length === 1 ? bare[0] : undefined;
+    })()
+  );
+}
+
+export function canExecuteExtensionCommand(command: string, args: unknown, options: ExtensionCommandExecutorOptions): boolean {
+  const invocation = normalizeLegacyCommand(command);
+  const commandArgs = (args ?? invocation.args) as ExtensionCommandArgs;
+  const hostCommand = createHostCommands(options).find((candidate) => candidate.id === invocation.command);
+  if (hostCommand) {
+    return hostCommand.canExecute ? hostCommand.canExecute(commandArgs, options.context ?? {}) : true;
+  }
+
+  const extensionCommand = findExtensionCommand(invocation.command, options);
+  if (!extensionCommand) return false;
+  if (!evaluateCommandEnablement(extensionCommand.enablement, options.context)) return false;
+  const effectiveArgs = commandArgs ?? (extensionCommand.args as ExtensionCommandArgs);
+  if (isHostCommandString(extensionCommand.action)) {
+    return canExecuteExtensionCommand(extensionCommand.action, effectiveArgs, options);
+  }
+  return Boolean(options.invokeExtensionCommand);
+}
+
 export async function executeExtensionCommand(command: string, args: unknown, options: ExtensionCommandExecutorOptions): Promise<boolean> {
   const startedAt = performance.now();
   const invocation = normalizeLegacyCommand(command);
@@ -665,12 +693,7 @@ export async function executeExtensionCommand(command: string, args: unknown, op
     }
     // Prefer scoped match (extensionId.surfaceId) over bare surfaceId to avoid
     // cross-extension collisions. Bare matches are only accepted when unambiguous.
-    const extensionCommand =
-      options.extensionCommands?.find((candidate) => `${candidate.extensionId}.${candidate.surfaceId}` === invocation.command) ??
-      (() => {
-        const bare = options.extensionCommands?.filter((c) => c.surfaceId === invocation.command);
-        return bare?.length === 1 ? bare[0] : undefined;
-      })();
+    const extensionCommand = findExtensionCommand(invocation.command, options);
     if (!extensionCommand) return false;
     if (!evaluateCommandEnablement(extensionCommand.enablement, options.context)) return false;
     const effectiveArgs = commandArgs ?? (extensionCommand.args as ExtensionCommandArgs);
@@ -678,7 +701,8 @@ export async function executeExtensionCommand(command: string, args: unknown, op
       handled = await executeExtensionCommand(extensionCommand.action, effectiveArgs, options);
       return handled;
     }
-    await options.invokeExtensionCommand?.(extensionCommand, effectiveArgs ?? {});
+    if (!options.invokeExtensionCommand) return false;
+    await options.invokeExtensionCommand(extensionCommand, effectiveArgs ?? {});
     handled = true;
     return true;
   } finally {

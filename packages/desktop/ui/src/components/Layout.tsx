@@ -11,7 +11,7 @@ import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { startNewConversation } from '../conversation/newConversationNavigation';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
-import { executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
+import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
@@ -2003,6 +2003,7 @@ export function Layout() {
         extensionKeybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'global'),
       );
       if (!match) return;
+      if (!canExecuteExtensionCommand(match.command, match.args, executeCommandOptions)) return;
       event.preventDefault();
       event.stopPropagation();
       void executeExtensionCommand(match.command, match.args, executeCommandOptions);
