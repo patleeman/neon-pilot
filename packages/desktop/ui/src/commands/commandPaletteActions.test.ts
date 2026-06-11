@@ -99,6 +99,16 @@ describe('activateCommandPaletteItem', () => {
     expect(ctx.closePalette).toHaveBeenCalledOnce();
   });
 
+  it('keeps the palette open when a command item is not handled', async () => {
+    const executeExtensionCommand = vi.fn().mockResolvedValue(false);
+    const ctx = context({ executeExtensionCommand });
+
+    await activateCommandPaletteItem(item({ kind: 'command', command: 'host.test', args: { ok: true } }), ctx);
+
+    expect(executeExtensionCommand).toHaveBeenCalledWith('host.test', { ok: true });
+    expect(ctx.closePalette).not.toHaveBeenCalled();
+  });
+
   it('executes extension search command actions only when declared in the palette', async () => {
     const executeExtensionCommand = vi.fn().mockResolvedValue(undefined);
     const declared = item({ kind: 'command', command: 'declared.command' }, { id: 'declared' });
@@ -111,6 +121,20 @@ describe('activateCommandPaletteItem', () => {
 
     expect(executeExtensionCommand).toHaveBeenCalledWith('declared.command', { x: 1 });
     expect(ctx.closePalette).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the palette open when a declared extension search command is not handled', async () => {
+    const executeExtensionCommand = vi.fn().mockResolvedValue(false);
+    const declared = item({ kind: 'command', command: 'declared.command' }, { id: 'declared' });
+    const ctx = context({ commandItems: [declared], executeExtensionCommand });
+
+    await activateCommandPaletteItem(
+      item({ kind: 'extensionSearchAction', extensionId: 'ext', action: { kind: 'command', command: 'declared.command', args: { x: 1 } } }),
+      ctx,
+    );
+
+    expect(executeExtensionCommand).toHaveBeenCalledWith('declared.command', { x: 1 });
+    expect(ctx.closePalette).not.toHaveBeenCalled();
   });
 
   it('rejects undeclared extension search command actions', async () => {

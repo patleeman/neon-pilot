@@ -44,11 +44,12 @@ async function executeDeclaredPaletteCommand(
   command: string,
   args: unknown,
   executeExtensionCommand: (command: string, args: unknown) => Promise<unknown>,
-): Promise<void> {
+): Promise<boolean> {
   if (!isDeclaredPaletteCommand(commandItems, command)) {
     throw new Error(`Command is not available in the palette: ${command}`);
   }
-  await executeExtensionCommand(command, args ?? {});
+  const handled = await executeExtensionCommand(command, args ?? {});
+  return handled !== false;
 }
 
 export async function activateCommandPaletteItem(
@@ -86,27 +87,29 @@ export async function activateCommandPaletteItem(
       context.closePalette();
       return;
     case 'command':
-      await executeExtensionCommand(item.action.command, item.action.args ?? {});
-      context.closePalette();
+      if ((await executeExtensionCommand(item.action.command, item.action.args ?? {})) !== false) {
+        context.closePalette();
+      }
       return;
     case 'extensionSearchAction': {
       const searchAction = item.action.action;
+      let handled = true;
       if (searchAction && typeof searchAction === 'object' && 'kind' in searchAction) {
         const typedAction = searchAction as { kind?: unknown; to?: unknown; command?: unknown; args?: unknown };
         if (typedAction.kind === 'navigate' && typeof typedAction.to === 'string') {
           context.navigate(typedAction.to);
         } else if (typedAction.kind === 'command' && typeof typedAction.command === 'string') {
-          await executeDeclaredPaletteCommand(context.commandItems, typedAction.command, typedAction.args ?? {}, executeExtensionCommand);
+          handled = await executeDeclaredPaletteCommand(context.commandItems, typedAction.command, typedAction.args ?? {}, executeExtensionCommand);
         }
       } else if (searchAction && typeof searchAction === 'object' && 'command' in searchAction) {
-        await executeDeclaredPaletteCommand(
+        handled = await executeDeclaredPaletteCommand(
           context.commandItems,
           String((searchAction as { command: unknown }).command),
           (searchAction as { args?: unknown }).args ?? {},
           executeExtensionCommand,
         );
       }
-      context.closePalette();
+      if (handled) context.closePalette();
       return;
     }
     default:
