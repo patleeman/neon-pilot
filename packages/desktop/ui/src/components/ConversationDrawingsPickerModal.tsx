@@ -1,7 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { setExtensionCommandContext } from '../extensions/commands';
 import type { ConversationAttachmentRecord, ConversationAttachmentSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
+import {
+  DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
+  DRAWING_PICKER_CLOSE_COMMAND_EVENT,
+  DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
+} from './conversation/drawingPickerCommands';
 import {
   CardMeta,
   CardTitle,
@@ -47,25 +53,66 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
     });
   }, [attachments, query]);
 
-  async function toggleHistory(attachment: ConversationAttachmentSummary) {
-    const isExpanded = expandedAttachmentId === attachment.id;
-    if (isExpanded) {
-      setExpandedAttachmentId(null);
-      return;
+  const firstVisibleAttachment = filtered[0] ?? null;
+
+  const toggleHistory = useCallback(
+    async (attachment: ConversationAttachmentSummary) => {
+      const isExpanded = expandedAttachmentId === attachment.id;
+      if (isExpanded) {
+        setExpandedAttachmentId(null);
+        return;
+      }
+
+      if (!recordsById[attachment.id]) {
+        setLoadingAttachmentId(attachment.id);
+        try {
+          const record = await onLoadAttachment(attachment.id);
+          setRecordsById((current) => ({ ...current, [attachment.id]: record }));
+        } finally {
+          setLoadingAttachmentId(null);
+        }
+      }
+
+      setExpandedAttachmentId(attachment.id);
+    },
+    [expandedAttachmentId, onLoadAttachment, recordsById],
+  );
+
+  useEffect(() => {
+    setExtensionCommandContext('drawingPicker.open', true);
+    setExtensionCommandContext('drawingPicker.hasVisibleDrawing', Boolean(firstVisibleAttachment));
+    return () => {
+      setExtensionCommandContext('drawingPicker.open', null);
+      setExtensionCommandContext('drawingPicker.hasVisibleDrawing', null);
+    };
+  }, [firstVisibleAttachment]);
+
+  useEffect(() => {
+    function handleCloseCommand() {
+      onClose();
     }
 
-    if (!recordsById[attachment.id]) {
-      setLoadingAttachmentId(attachment.id);
-      try {
-        const record = await onLoadAttachment(attachment.id);
-        setRecordsById((current) => ({ ...current, [attachment.id]: record }));
-      } finally {
-        setLoadingAttachmentId(null);
+    function handleAttachFirstCommand() {
+      if (firstVisibleAttachment) {
+        onAttach({ attachment: firstVisibleAttachment, revision: firstVisibleAttachment.currentRevision });
       }
     }
 
-    setExpandedAttachmentId(attachment.id);
-  }
+    function handleToggleFirstHistoryCommand() {
+      if (firstVisibleAttachment) {
+        void toggleHistory(firstVisibleAttachment);
+      }
+    }
+
+    window.addEventListener(DRAWING_PICKER_CLOSE_COMMAND_EVENT, handleCloseCommand);
+    window.addEventListener(DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT, handleAttachFirstCommand);
+    window.addEventListener(DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT, handleToggleFirstHistoryCommand);
+    return () => {
+      window.removeEventListener(DRAWING_PICKER_CLOSE_COMMAND_EVENT, handleCloseCommand);
+      window.removeEventListener(DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT, handleAttachFirstCommand);
+      window.removeEventListener(DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT, handleToggleFirstHistoryCommand);
+    };
+  }, [firstVisibleAttachment, onAttach, onClose, toggleHistory]);
 
   return (
     <ResourcePickerDialog

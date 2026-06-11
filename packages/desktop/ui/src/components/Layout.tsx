@@ -68,6 +68,11 @@ import {
   CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT,
   CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT,
 } from './conversation/checkpointCommands';
+import {
+  DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
+  DRAWING_PICKER_CLOSE_COMMAND_EVENT,
+  DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
+} from './conversation/drawingPickerCommands';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
 import { COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT } from './conversation/composerPreferenceCommands';
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
@@ -2139,6 +2144,18 @@ export function Layout() {
       },
       cancelMessageEdit() {
         window.dispatchEvent(new CustomEvent<MessageEditCommand>(MESSAGE_EDIT_COMMAND_EVENT, { detail: 'cancel' }));
+        return true;
+      },
+      closeDrawingPicker() {
+        window.dispatchEvent(new CustomEvent(DRAWING_PICKER_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      attachFirstDrawingFromPicker() {
+        window.dispatchEvent(new CustomEvent(DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT));
+        return true;
+      },
+      toggleFirstDrawingHistory() {
+        window.dispatchEvent(new CustomEvent(DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT));
         return true;
       },
       closeDraftWorkspacePicker() {

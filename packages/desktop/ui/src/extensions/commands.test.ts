@@ -309,6 +309,52 @@ describe('extension commands', () => {
     expect(scrollFirstCheckpointFile).toHaveBeenCalledTimes(1);
   });
 
+  it('includes drawing picker commands gated by picker state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['drawingPicker.close', 'drawingPicker.attachFirst', 'drawingPicker.toggleFirstHistory']),
+    );
+
+    const closeDrawingPicker = vi.fn(() => true);
+    const attachFirstDrawingFromPicker = vi.fn(() => true);
+    const toggleFirstDrawingHistory = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      closeDrawingPicker,
+      attachFirstDrawingFromPicker,
+      toggleFirstDrawingHistory,
+    };
+
+    await expect(executeExtensionCommand('drawingPicker.close', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('drawingPicker.attachFirst', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('drawingPicker.toggleFirstHistory', undefined, options)).resolves.toBe(false);
+
+    await expect(
+      executeExtensionCommand('drawingPicker.close', undefined, {
+        ...options,
+        context: { 'drawingPicker.open': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('drawingPicker.attachFirst', undefined, {
+        ...options,
+        context: { 'drawingPicker.hasVisibleDrawing': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('drawingPicker.toggleFirstHistory', undefined, {
+        ...options,
+        context: { 'drawingPicker.hasVisibleDrawing': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(closeDrawingPicker).toHaveBeenCalledTimes(1);
+    expect(attachFirstDrawingFromPicker).toHaveBeenCalledTimes(1);
+    expect(toggleFirstDrawingHistory).toHaveBeenCalledTimes(1);
+  });
+
   it('includes conversation title editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['conversation.rename', 'conversation.saveTitle', 'conversation.cancelTitleEdit']),

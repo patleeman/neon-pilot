@@ -98,6 +98,9 @@ export interface ExtensionCommandExecutorOptions {
   closeImagePreview?(): boolean;
   saveMessageEdit?(): boolean;
   cancelMessageEdit?(): boolean;
+  closeDrawingPicker?(): boolean;
+  attachFirstDrawingFromPicker?(): boolean;
+  toggleFirstDrawingHistory?(): boolean;
   closeDraftWorkspacePicker?(): boolean;
   closeWorkspaceQuickSelect?(): boolean;
   closeExtensionModal?(): boolean;
@@ -278,6 +281,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'imagePreview.close', title: 'Close Image Preview', category: 'Image Preview' },
     { id: 'messageEdit.save', title: 'Save Message Edit', category: 'Message Edit' },
     { id: 'messageEdit.cancel', title: 'Cancel Message Edit', category: 'Message Edit' },
+    { id: 'drawingPicker.close', title: 'Close Drawing Picker', category: 'Conversation' },
+    { id: 'drawingPicker.attachFirst', title: 'Attach First Visible Drawing', category: 'Conversation' },
+    { id: 'drawingPicker.toggleFirstHistory', title: 'Toggle First Drawing History', category: 'Conversation' },
     { id: 'draftWorkspacePicker.close', title: 'Close Draft Workspace Picker', category: 'Conversation' },
     { id: 'workspaceQuickSelect.close', title: 'Close Workspace Picker', category: 'Conversation' },
     { id: 'extensionModal.close', title: 'Close Extension Modal', category: 'Extensions' },
@@ -1235,6 +1241,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.cancelMessageEdit) && readContextValue(context, 'messageEdit.active') === true;
+      },
+    },
+    {
+      id: 'drawingPicker.close',
+      title: 'Close Drawing Picker',
+      category: 'Conversation',
+      execute() {
+        return options.closeDrawingPicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeDrawingPicker) && readContextValue(context, 'drawingPicker.open') === true;
+      },
+    },
+    {
+      id: 'drawingPicker.attachFirst',
+      title: 'Attach First Visible Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.attachFirstDrawingFromPicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.attachFirstDrawingFromPicker) && readContextValue(context, 'drawingPicker.hasVisibleDrawing') === true;
+      },
+    },
+    {
+      id: 'drawingPicker.toggleFirstHistory',
+      title: 'Toggle First Drawing History',
+      category: 'Conversation',
+      execute() {
+        return options.toggleFirstDrawingHistory?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstDrawingHistory) && readContextValue(context, 'drawingPicker.hasVisibleDrawing') === true;
       },
     },
     {

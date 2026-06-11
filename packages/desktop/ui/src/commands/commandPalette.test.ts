@@ -215,6 +215,42 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('drawingPicker.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.open': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('drawingPicker.close', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.open': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('drawingPicker.attachFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.hasVisibleDrawing': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('drawingPicker.attachFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.hasVisibleDrawing': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('drawingPicker.toggleFirstHistory', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.hasVisibleDrawing': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('drawingPicker.toggleFirstHistory', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.hasVisibleDrawing': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('messageEdit.cancel', {
         activeConversationId: 'conversation-1',
         context: { 'messageEdit.active': false },
