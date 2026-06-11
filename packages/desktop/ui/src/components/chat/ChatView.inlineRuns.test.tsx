@@ -7,6 +7,7 @@ import { AppDataContext } from '../../app/contexts';
 import type { DurableRunRecord, MessageBlock } from '../../shared/types';
 import { runStore } from '../../store';
 import { ChatView } from './ChatView';
+import { INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, type InlineTraceRunCommandDetail } from './inlineTraceRunCommands';
 
 const apiMocks = vi.hoisted(() => ({
   durableRun: vi.fn(),
@@ -315,6 +316,41 @@ describe('ChatView inline run cards', () => {
       await flushAsyncWork();
     });
 
+    expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
+    expect(apiMocks.durableRunLog).toHaveBeenCalledWith(RUN_ID, 240);
+    expect(container.textContent).toContain('Polling live log');
+  });
+
+  it('toggles the first inline run card from the shared command event', async () => {
+    const { container } = renderChatView([
+      {
+        type: 'text',
+        ts: '2026-03-11T18:00:00.000Z',
+        text: [
+          `Durable run ${RUN_ID} has finished.`,
+          'taskSlug=ui-preview-check',
+          'status=completed',
+          `log=/tmp/runs/${RUN_ID}/output.log`,
+          'command=npm test',
+          '',
+          'Recent log tail:',
+          'very noisy callback output',
+        ].join('\n'),
+      },
+    ]);
+
+    let runButtons = findInlineRunButtons(container);
+    expect(runButtons.length).toBeGreaterThan(0);
+    expect(runButtons[0]?.getAttribute('aria-expanded')).toBe('false');
+    expect(container.textContent).not.toContain('Polling live log');
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent<InlineTraceRunCommandDetail>(INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+      await flushAsyncWork();
+    });
+
+    runButtons = findInlineRunButtons(container);
+    expect(runButtons[0]?.getAttribute('aria-expanded')).toBe('true');
     expect(apiMocks.durableRun).toHaveBeenCalledWith(RUN_ID);
     expect(apiMocks.durableRunLog).toHaveBeenCalledWith(RUN_ID, 240);
     expect(container.textContent).toContain('Polling live log');

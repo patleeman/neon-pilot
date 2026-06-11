@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ChatRenderItem } from './transcriptItems.js';
-import { collectVisibleInlineRunKeys, filterInlineRunKeys, toggleInlineRunKey } from './useInlineTraceRunExpansion.js';
+import {
+  collectVisibleInlineRunKeys,
+  filterInlineRunKeys,
+  readFirstVisibleInlineRunKey,
+  toggleInlineRunKey,
+} from './useInlineTraceRunExpansion.js';
 
 function runTool(runId: string) {
   return {
@@ -28,6 +33,32 @@ describe('useInlineTraceRunExpansion helpers', () => {
     ];
 
     expect(Array.from(collectVisibleInlineRunKeys(renderItems))).toEqual(['1:run-review-def456', '1:run-cleanup-abc123']);
+    expect(readFirstVisibleInlineRunKey(renderItems)).toBe('1:run-review-def456');
+  });
+
+  it('collects visible inline run expansion keys from raw run callbacks', () => {
+    const renderItems: ChatRenderItem[] = [
+      {
+        type: 'message',
+        index: 3,
+        block: {
+          type: 'text',
+          ts: '2026-04-26T00:00:00.000Z',
+          text: [
+            'Durable run run-ui-preview-check-abc123 has finished.',
+            'taskSlug=ui-preview-check',
+            'status=completed',
+            'log=/tmp/runs/run-ui-preview-check-abc123/output.log',
+            '',
+            'Recent log tail:',
+            'ok',
+          ].join('\n'),
+        },
+      },
+    ];
+
+    expect(Array.from(collectVisibleInlineRunKeys(renderItems))).toEqual(['3:run-ui-preview-check-abc123']);
+    expect(readFirstVisibleInlineRunKey(renderItems)).toBe('3:run-ui-preview-check-abc123');
   });
 
   it('filters stale expanded keys while preserving identity when unchanged', () => {

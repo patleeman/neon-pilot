@@ -513,11 +513,12 @@ describe('extension commands', () => {
 
   it('includes trace cluster commands gated by transcript trace state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['traceCluster.toggleFirst', 'traceCluster.toggleFirstOverflow']),
+      expect.arrayContaining(['traceCluster.toggleFirst', 'traceCluster.toggleFirstOverflow', 'inlineTraceRun.toggleFirst']),
     );
 
     const toggleFirstTraceCluster = vi.fn(() => true);
     const toggleFirstTraceClusterOverflow = vi.fn(() => true);
+    const toggleFirstInlineTraceRun = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
@@ -525,6 +526,7 @@ describe('extension commands', () => {
       setLayout: vi.fn(),
       toggleFirstTraceCluster,
       toggleFirstTraceClusterOverflow,
+      toggleFirstInlineTraceRun,
     };
 
     await expect(executeExtensionCommand('traceCluster.toggleFirst', undefined, options)).resolves.toBe(false);
@@ -543,8 +545,17 @@ describe('extension commands', () => {
       }),
     ).resolves.toBe(true);
 
+    await expect(executeExtensionCommand('inlineTraceRun.toggleFirst', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('inlineTraceRun.toggleFirst', undefined, {
+        ...options,
+        context: { 'inlineTraceRun.canToggleFirst': true },
+      }),
+    ).resolves.toBe(true);
+
     expect(toggleFirstTraceCluster).toHaveBeenCalledTimes(1);
     expect(toggleFirstTraceClusterOverflow).toHaveBeenCalledTimes(1);
+    expect(toggleFirstInlineTraceRun).toHaveBeenCalledTimes(1);
   });
 
   it('includes thinking block commands gated by transcript thinking state', async () => {

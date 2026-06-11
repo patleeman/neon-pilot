@@ -84,6 +84,7 @@ import {
   IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT,
   type ImagePreviewCommandDetail,
 } from './chat/imagePreviewCommands';
+import { INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, type InlineTraceRunCommandDetail } from './chat/inlineTraceRunCommands';
 import { FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, type FileChangeCommandDetail } from './chat/fileChangeCommands';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './chat/messageActionCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
@@ -2183,6 +2184,10 @@ export function Layout() {
       },
       toggleFirstTraceClusterOverflow() {
         window.dispatchEvent(new CustomEvent<TraceClusterCommandDetail>(TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstInlineTraceRun() {
+        window.dispatchEvent(new CustomEvent<InlineTraceRunCommandDetail>(INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
         return true;
       },
       toggleFirstThinkingBlock() {

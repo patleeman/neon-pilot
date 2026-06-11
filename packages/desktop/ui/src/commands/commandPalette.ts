@@ -90,6 +90,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['toolBlock.toggleFirstLinkedRuns', 'toolBlock.canToggleFirstLinkedRuns'],
   ['traceCluster.toggleFirst', 'traceCluster.canToggleFirst'],
   ['traceCluster.toggleFirstOverflow', 'traceCluster.canToggleFirstOverflow'],
+  ['inlineTraceRun.toggleFirst', 'inlineTraceRun.canToggleFirst'],
   ['thinkingBlock.toggleFirst', 'thinkingBlock.canToggleFirst'],
   ['subagentBlock.toggleFirst', 'subagentBlock.canToggleFirst'],
   ['messageAction.copyFirst', 'messageAction.canCopyFirst'],

@@ -311,6 +311,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('inlineTraceRun.toggleFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'inlineTraceRun.canToggleFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('inlineTraceRun.toggleFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'inlineTraceRun.canToggleFirst': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('thinkingBlock.toggleFirst', {
         activeConversationId: 'conversation-1',
         context: { 'thinkingBlock.canToggleFirst': false },
