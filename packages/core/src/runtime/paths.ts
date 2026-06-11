@@ -16,6 +16,8 @@ import { existsSync, mkdirSync, readFileSync, realpathSync } from 'fs';
 import { homedir } from 'os';
 import { basename, dirname, join, resolve } from 'path';
 
+import { resolveNeonPilotRuntimeChannelConfig } from '../runtime-channel.js';
+
 /**
  * Default state root directory (outside repo)
  * Uses XDG_STATE_HOME or falls back to ~/.local/state/neon-pilot
@@ -45,7 +47,13 @@ function expandHomePath(pathValue: string): string {
  */
 export function getStateRoot(): string {
   const explicit = process.env.NEON_PILOT_STATE_ROOT;
-  return explicit && explicit.trim().length > 0 ? expandHomePath(explicit.trim()) : getDefaultStateRoot();
+  if (explicit && explicit.trim().length > 0) {
+    return expandHomePath(explicit.trim());
+  }
+
+  const defaultStateRoot = getDefaultStateRoot();
+  const { stateRootSuffix } = resolveNeonPilotRuntimeChannelConfig();
+  return stateRootSuffix ? join(dirname(defaultStateRoot), `${basename(defaultStateRoot)}${stateRootSuffix}`) : defaultStateRoot;
 }
 
 export function getPiAgentStateDir(stateRoot: string = getStateRoot()): string {

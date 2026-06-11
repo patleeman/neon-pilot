@@ -66,6 +66,8 @@ describe('getStateRoot', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    delete process.env.NEON_PILOT_RUNTIME_CHANNEL;
+    delete process.env.NEON_PILOT_DESKTOP_VARIANT;
     delete process.env.NEON_PILOT_STATE_ROOT;
     delete process.env.XDG_STATE_HOME;
   });
@@ -82,6 +84,24 @@ describe('getStateRoot', () => {
   it('should fall back to default state root', () => {
     delete process.env.NEON_PILOT_STATE_ROOT;
     expect(getStateRoot()).toBe(getDefaultStateRoot());
+  });
+
+  it('should isolate explicit runtime channels onto channel-specific state roots', () => {
+    process.env.XDG_STATE_HOME = '/state';
+    process.env.NEON_PILOT_RUNTIME_CHANNEL = 'testing';
+    expect(getStateRoot()).toBe('/state/neon-pilot-testing');
+
+    process.env.NEON_PILOT_RUNTIME_CHANNEL = 'dev';
+    expect(getStateRoot()).toBe('/state/neon-pilot-dev');
+
+    process.env.NEON_PILOT_RUNTIME_CHANNEL = 'rc';
+    expect(getStateRoot()).toBe('/state/neon-pilot-rc');
+  });
+
+  it('should keep explicit state root overrides ahead of runtime channel defaults', () => {
+    process.env.NEON_PILOT_RUNTIME_CHANNEL = 'testing';
+    process.env.NEON_PILOT_STATE_ROOT = '/custom/runtime/state';
+    expect(getStateRoot()).toBe('/custom/runtime/state');
   });
 });
 
