@@ -1,4 +1,6 @@
-export const DESKTOP_CONVERSATION_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
+import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
+
+export const DESKTOP_CONVERSATION_SHORTCUT_EVENT = DESKTOP_SHORTCUT_EVENT;
 
 export type ConversationEditorShortcutAction =
   | 'focus-composer'

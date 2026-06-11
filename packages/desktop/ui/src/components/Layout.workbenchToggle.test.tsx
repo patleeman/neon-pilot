@@ -77,6 +77,8 @@ describe('Layout workbench toggle', () => {
     vi.restoreAllMocks();
     setExtensionCommandContext('conversation.isStreaming', null);
     setExtensionCommandContext('system-local-dictation.toggleAvailable', null);
+    setExtensionCommandContext('workbench.hasActiveFile', null);
+    setExtensionCommandContext('workbench.canToggleDiff', null);
     delete document.documentElement.dataset.neonPilotDesktop;
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
@@ -132,7 +134,7 @@ describe('Layout workbench toggle', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
-    renderLayout('/conversations/conv-1');
+    renderLayout('/conversations/conv-1?workspaceFile=%2Frepo%2FREADME.md');
 
     act(() => {
       window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'workbench.refreshActiveFile' } }));
@@ -146,6 +148,7 @@ describe('Layout workbench toggle', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const diffListener = vi.fn();
     window.addEventListener('pa:workbench-toggle-diff', diffListener);
+    setExtensionCommandContext('workbench.canToggleDiff', true);
     renderLayout('/conversations/conv-1');
 
     act(() => {

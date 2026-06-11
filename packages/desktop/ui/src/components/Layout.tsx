@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-r
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
+import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
 import { COMPANION_CHAT_CLOSE_EVENT, COMPANION_CHAT_OPEN_EVENT, type CompanionChatOpenDetail } from '../companion/companionEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
 import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
@@ -135,7 +136,6 @@ import {
 } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
-const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 const DESKTOP_NAVIGATE_EVENT = 'neon-pilot-desktop-navigate';
 const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
   import('./CommandPalette').then((module) => ({ default: module.CommandPalette })),
@@ -1955,6 +1955,9 @@ export function Layout() {
         route: location.pathname,
         'layout.mode': appLayoutMode,
         'conversation.hasActive': Boolean(activeConversationId),
+        'workbench.hasActiveTab': Boolean(activeWorkbenchTabId),
+        'workbench.hasActiveFile': hasActiveWorkbenchFile,
+        'workbench.canToggleExplorer': canToggleWorkbenchExplorer,
       },
       goBack() {
         window.dispatchEvent(new CustomEvent(APP_NAVIGATION_COMMAND_EVENT, { detail: { direction: 'back' } }));
