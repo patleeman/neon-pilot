@@ -11,6 +11,7 @@ export function buildInvalidExtensionInstallSummary(entry: {
     id: entry.id,
     name: entry.name,
     packageType: entry.packageType,
+    required: false,
     enabled: false,
     status: 'invalid' as const,
     errors: entry.errors,

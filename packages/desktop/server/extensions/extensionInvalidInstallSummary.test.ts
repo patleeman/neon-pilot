@@ -10,6 +10,7 @@ describe('extensionInvalidInstallSummary', () => {
       id: 'bad',
       name: 'Bad',
       packageType: 'user',
+      required: false,
       enabled: false,
       status: 'invalid',
       errors: ['oops'],

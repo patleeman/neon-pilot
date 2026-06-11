@@ -26,6 +26,7 @@ interface RuntimeCapability {
   priority?: number;
   metadata?: Record<string, unknown>;
   diagnostics?: unknown[];
+  required?: boolean;
 }
 
 export async function inspectAgentRuntime(input: unknown, ctx: ExtensionBackendContext) {
@@ -174,8 +175,9 @@ export async function updateRuntimeCapability(input: unknown, ctx: ExtensionBack
   if (kind === 'skill') {
     await setSkillEnabled(id, enabled);
   } else if (kind === 'extension') {
-    if (!enabled && id === 'system-extension-manager') {
-      throw new Error('Cannot disable the Extension Manager: this extension is required by the application.');
+    const extension = (await listExtensionInstallSummaries()).find((candidate) => candidate.id === id);
+    if (!enabled && extension?.required === true) {
+      throw new Error(`Cannot disable ${id}: this extension is required by the application.`);
     }
     ctx.extensions.setEnabled(id, enabled);
     ctx.ui.invalidate(['extensions']);
@@ -196,6 +198,7 @@ function extensionToCapability(extension: Record<string, unknown>): RuntimeCapab
     title: String(extension.name ?? extension.id ?? 'Unknown extension'),
     description: typeof extension.description === 'string' ? extension.description : undefined,
     ownerExtensionId: typeof extension.id === 'string' ? extension.id : undefined,
+    required: extension.required === true,
     source: {
       kind: extension.packageType === 'user' ? 'user-extension' : 'system-extension',
       label: String(extension.packageRoot ?? extension.id ?? ''),

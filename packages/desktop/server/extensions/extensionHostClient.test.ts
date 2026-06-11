@@ -478,6 +478,24 @@ describe('extension host client', () => {
     expect(extensionServices.startExtensionServices).not.toHaveBeenCalled();
   });
 
+  it('rejects disablement for required system extensions through the host request envelope', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.setExtensionEnabled.mockClear();
+    extensionRegistry.findExtensionEntry.mockReturnValueOnce({
+      manifest: { id: 'system-settings', name: 'Settings panels', packageType: 'system' },
+    });
+    extensionRegistry.listExtensionInstallSummaries.mockReturnValueOnce([
+      { id: 'system-settings', status: 'enabled', enabled: true, required: true },
+    ]);
+
+    await expect(getExtensionHostClient().setEnabled({ extensionId: 'system-settings', enabled: false })).resolves.toEqual({
+      ok: false,
+      status: 400,
+      error: 'Cannot disable system-settings: this extension is required by the application.',
+    });
+    expect(extensionRegistry.setExtensionEnabled).not.toHaveBeenCalledWith('system-settings', false);
+  });
+
   it('rejects enablement for incompatible extensions', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.setExtensionEnabled.mockClear();

@@ -2,6 +2,7 @@ import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { runExtensionBackendExportInWorker } from './extensionBackend.js';
 import { extensionBackendOperation } from './extensionBackendRunner.js';
+import { isLockedExtensionId } from './extensionEnabledConfig.js';
 import { type ExtensionEvent, publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
@@ -82,7 +83,9 @@ export async function installSubscriptionsForExtension(extensionId: string, serv
       } catch (error) {
         if (error instanceof ExtensionProcessTerminationBlockedError) {
           setExtensionHealthError(extensionId, error.message);
-          setExtensionEnabled(extensionId, false);
+          if (!isLockedExtensionId(extensionId)) {
+            setExtensionEnabled(extensionId, false);
+          }
           uninstallExtensionSubscriptions(extensionId);
         } else {
           recordExtensionFailure({

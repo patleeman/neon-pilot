@@ -1,6 +1,7 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 
 import { loadExtensionAgentFactory, runExtensionAgentFactory } from './extensionBackend.js';
+import { isLockedExtensionId } from './extensionEnabledConfig.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   listExtensionAgentRegistrations,
@@ -13,6 +14,7 @@ import {
 function quarantineExtensionFatalError(extensionId: string, error: unknown): void {
   if (!(error instanceof ExtensionProcessTerminationBlockedError)) return;
   setExtensionHealthError(extensionId, error.message);
+  if (isLockedExtensionId(extensionId)) return;
   setExtensionEnabled(extensionId, false);
 }
 

@@ -26,6 +26,7 @@ import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { createExtensionDatabaseManager } from './extensionDatabase.js';
 import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
+import { isLockedExtensionId } from './extensionEnabledConfig.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
@@ -1100,13 +1101,18 @@ export async function invokeExtensionAction(
         ? error.message
         : `Extension "${extensionId}" action "${actionId}" failed: ${error instanceof Error ? error.message : String(error)}`;
     if (error instanceof ExtensionProcessTerminationBlockedError) {
+      const locked = isLockedExtensionId(extensionId);
       setExtensionHealthError(extensionId, error.message);
-      setExtensionEnabled(extensionId, false);
+      if (!locked) {
+        setExtensionEnabled(extensionId, false);
+      }
       invalidateAppTopics('extensions');
       publishAppEvent({
         type: 'notification',
         extensionId,
-        message: `${error.message} The extension was disabled to prevent a startup loop.`,
+        message: locked
+          ? `${error.message} The extension stayed enabled because it is required by the application.`
+          : `${error.message} The extension was disabled to prevent a startup loop.`,
         severity: 'error',
       });
     } else if (!actionHandlerStarted && (!(error instanceof ExtensionLoadError) || error.code !== 'extension_disabled')) {
@@ -1260,7 +1266,9 @@ export async function checkEnabledExtensionBackendHealth(): Promise<Array<{ exte
         const message = error instanceof Error ? error.message : String(error);
         setExtensionHealthError(summary.id, message);
         if (error instanceof ExtensionProcessTerminationBlockedError) {
-          setExtensionEnabled(summary.id, false);
+          if (!isLockedExtensionId(summary.id)) {
+            setExtensionEnabled(summary.id, false);
+          }
         } else {
           recordExtensionFailure({ extensionId: summary.id, operation: 'backend health check', error: message });
         }

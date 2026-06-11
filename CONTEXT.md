@@ -81,6 +81,12 @@ Use **plugin** when referring to Codex-style or third-party plugin packages. Do 
 
 A bundled extension shipped with the app or repo. System extensions can still own product-facing features; they are not automatically core.
 
+### Required system extension
+
+A bundled extension that owns a platform repair, configuration, routing, prompt assembly, terminal, or background-work surface that must stay available for the app to manage itself.
+
+Required system extensions still use the extension API for their product surfaces, but the core extension host treats their availability as platform infrastructure: users cannot disable them, stale disabled config is ignored, and extension circuit-breaker failures are recorded without quarantining the surface.
+
 ### User extension
 
 A runtime-installed extension owned by the user rather than bundled with the app.

@@ -6,6 +6,10 @@ export const LOCKED_EXTENSION_IDS = [
   'system-terminal',
 ];
 
+export function isLockedExtensionId(extensionId: string): boolean {
+  return LOCKED_EXTENSION_IDS.includes(extensionId);
+}
+
 export function assertCanSetExtensionEnabled(input: {
   extensionId: string;
   enabled: boolean;

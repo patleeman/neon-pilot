@@ -384,10 +384,16 @@ function ExtensionActionsMenu({
   );
 }
 
-const LOCKED_EXTENSION_IDS = ['system-extension-manager', 'system-prompt-assembly', 'system-runs', 'system-settings'];
+const FALLBACK_LOCKED_EXTENSION_IDS = [
+  'system-extension-manager',
+  'system-prompt-assembly',
+  'system-runs',
+  'system-settings',
+  'system-terminal',
+];
 
 function isLocked(extension: ExtensionInstallSummary): boolean {
-  return LOCKED_EXTENSION_IDS.includes(extension.id);
+  return extension.required === true || FALLBACK_LOCKED_EXTENSION_IDS.includes(extension.id);
 }
 
 function isQuarantined(extension: ExtensionInstallSummary): boolean {

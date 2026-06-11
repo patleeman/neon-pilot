@@ -442,13 +442,13 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       if (!entry) {
         return { ok: true, enabledResult: { ok: false, status: 404, error: 'Extension not found.' } };
       }
-      if (!request.enabled && entry.manifest.id === 'system-extension-manager') {
+      if (!request.enabled && summary?.required === true) {
         return {
           ok: true,
           enabledResult: {
             ok: false,
             status: 400,
-            error: 'Cannot disable the Extension Manager: this extension is required by the application.',
+            error: `Cannot disable ${entry.manifest.id}: this extension is required by the application.`,
           },
         };
       }

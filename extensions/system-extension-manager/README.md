@@ -42,7 +42,9 @@ Add-on extensions live in runtime state by default:
 ~/.local/state/neon-pilot/extensions/{extension-id}/
 ```
 
-Built-in first-party extensions live in the repo/app bundle under `extensions/` and use the same extension contract. They are discovered by the same package-path scanner as add-on extensions; there is no hard-coded built-in extension allowlist.
+Built-in first-party extensions live in the repo/app bundle under `extensions/` and use the same extension contract. They are discovered by the same package-path scanner as add-on extensions; there is no hard-coded built-in extension discovery allowlist.
+
+Some bundled extensions are required platform surfaces. Extension Manager shows them as **Required** / **Always on** because the core extension host refuses user/API disable attempts, ignores stale disabled config, and records circuit-breaker failures without quarantining them. Keep that required list in `packages/desktop/server/extensions/extensionEnabledConfig.ts`; UI code should consume the `required` install-summary field instead of maintaining its own source of truth.
 
 Optional first-party extensions live in the separate [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) repo. The loader does not auto-discover source directories. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as installed extensions during development. Normal users install GitHub release artifacts from the Available Extensions flow.
 

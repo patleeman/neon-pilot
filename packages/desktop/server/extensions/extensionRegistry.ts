@@ -53,7 +53,12 @@ import {
   validateQuickOpenContributions,
   validateSearchProviderContributions,
 } from './extensionDiscoveryContributionValidation.js';
-import { assertCanSetExtensionEnabled, buildExtensionEnabledConfigPatch, LOCKED_EXTENSION_IDS } from './extensionEnabledConfig.js';
+import {
+  assertCanSetExtensionEnabled,
+  buildExtensionEnabledConfigPatch,
+  isLockedExtensionId,
+  LOCKED_EXTENSION_IDS,
+} from './extensionEnabledConfig.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import { buildExtensionFailureResponse, shouldQuarantineExtensionFailure } from './extensionFailureResponse.js';
 import { buildExtensionInstallRoutes } from './extensionInstallRoutes.js';
@@ -247,6 +252,7 @@ export interface ExtensionInstallSummary {
   id: string;
   name: string;
   packageType: ExtensionPackageType;
+  required: boolean;
   enabled: boolean;
   status: 'enabled' | 'disabled' | 'invalid';
   errors?: string[];
@@ -710,7 +716,7 @@ export function isExtensionEnabled(extensionId: string, stateRoot: string = getS
 function isExtensionEntryEnabled(entry: ExtensionRegistryEntry | undefined, config: ExtensionRegistryConfig): boolean {
   if (!entry) return true;
   if (entry.manifest.packageType !== 'system' && getExtensionCompatibilityError(entry.manifest)) return false;
-  if (LOCKED_EXTENSION_IDS.includes(entry.manifest.id)) return true;
+  if (isLockedExtensionId(entry.manifest.id)) return true;
   if ((config.disabledIds ?? []).includes(entry.manifest.id)) return false;
   if (entry.manifest.defaultEnabled === false) {
     return (config.enabledIds ?? []).includes(entry.manifest.id);
@@ -763,6 +769,10 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
   ];
   records[input.extensionId] = next;
   writeExtensionFailureRecords(records, stateRoot);
+
+  if (isLockedExtensionId(input.extensionId)) {
+    return buildExtensionFailureResponse({ quarantined: false, failures: next.length });
+  }
 
   if (!shouldQuarantineExtensionFailure({ failureCount: next.length, threshold: EXTENSION_FAILURE_THRESHOLD })) {
     return buildExtensionFailureResponse({ quarantined: false, failures: next.length });
@@ -1215,11 +1225,13 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const effectivePackageType = isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot) ? 'user' : (manifest.packageType ?? 'user');
     const compatibilityDiagnostic = effectivePackageType === 'system' ? null : getExtensionCompatibilityError(manifest);
     const quarantine = config.quarantined?.[manifest.id];
-    const quarantineDiagnostic = buildExtensionQuarantineDiagnostic(quarantine);
+    const required = isLockedExtensionId(manifest.id);
+    const quarantineDiagnostic = required ? null : buildExtensionQuarantineDiagnostic(quarantine);
     return {
       id: manifest.id,
       name: manifest.name,
       packageType: effectivePackageType,
+      required,
       enabled,
       status: enabled ? ('enabled' as const) : ('disabled' as const),
       ...(buildError ? { buildError } : {}),

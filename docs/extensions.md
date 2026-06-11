@@ -66,6 +66,8 @@ Everything user-facing, domain-specific, or workflow-specific should be an exten
 
 When a feature cannot be built cleanly as an extension, add a general-purpose extension API or SDK primitive to core rather than hardcoding a one-off app feature. Core should make features possible; extensions should be where features live.
 
+Some bundled extensions are **required system extensions** because they own platform repair or configuration surfaces such as extension management, Settings, Prompt Assembly inspection, Terminal, or background work. They still live behind the extension API, but the core extension host treats their availability as infrastructure: stale disabled config is ignored, user/API disable attempts fail, and circuit-breaker failures are recorded without quarantining the extension.
+
 ## Extension Structure
 
 A minimal extension looks like:

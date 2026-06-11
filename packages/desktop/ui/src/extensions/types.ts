@@ -554,6 +554,7 @@ export interface ExtensionInstallSummary {
   id: string;
   name: string;
   packageType?: ExtensionPackageType;
+  required?: boolean;
   enabled: boolean;
   status?: 'enabled' | 'disabled' | 'invalid';
   errors?: string[];

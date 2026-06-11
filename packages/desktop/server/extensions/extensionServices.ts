@@ -3,6 +3,7 @@ import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { runExtensionBackendExportInWorker } from './extensionBackend.js';
 import { extensionBackendOperation } from './extensionBackendRunner.js';
+import { isLockedExtensionId } from './extensionEnabledConfig.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearExtensionFailureRecordsForOperation,
@@ -119,8 +120,10 @@ async function startOneExtensionService(
     const message = error instanceof Error ? error.message : String(error);
     setExtensionHealthError(extensionId, message);
     if (error instanceof ExtensionProcessTerminationBlockedError) {
-      const { setExtensionEnabled } = await import('./extensionRegistry.js');
-      setExtensionEnabled(extensionId, false);
+      if (!isLockedExtensionId(extensionId)) {
+        const { setExtensionEnabled } = await import('./extensionRegistry.js');
+        setExtensionEnabled(extensionId, false);
+      }
     } else {
       recordExtensionFailure({ extensionId, operation: `service ${service.id} startup`, error: message });
     }
@@ -193,8 +196,10 @@ export async function runExtensionServiceHealthChecks(serverContext?: ExtensionB
         if (running) running.lastError = message;
         setExtensionHealthError(summary.id, message);
         if (error instanceof ExtensionProcessTerminationBlockedError) {
-          const { setExtensionEnabled } = await import('./extensionRegistry.js');
-          setExtensionEnabled(summary.id, false);
+          if (!isLockedExtensionId(summary.id)) {
+            const { setExtensionEnabled } = await import('./extensionRegistry.js');
+            setExtensionEnabled(summary.id, false);
+          }
           await stopOneService(summary.id, service.id);
           continue;
         }

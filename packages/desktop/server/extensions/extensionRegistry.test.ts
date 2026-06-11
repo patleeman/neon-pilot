@@ -582,6 +582,40 @@ describe('extension registry', () => {
     });
   });
 
+  it('records locked extension failures without quarantining core platform surfaces', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'system-extension-manager');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'system-extension-manager',
+        name: 'Extension Manager',
+        packageType: 'system',
+      }),
+    );
+
+    recordExtensionFailure({ extensionId: 'system-extension-manager', operation: 'action manageExtension', error: 'boom 1', stateRoot });
+    recordExtensionFailure({ extensionId: 'system-extension-manager', operation: 'action manageExtension', error: 'boom 2', stateRoot });
+    expect(
+      recordExtensionFailure({ extensionId: 'system-extension-manager', operation: 'action manageExtension', error: 'boom 3', stateRoot }),
+    ).toMatchObject({
+      quarantined: false,
+      failures: 3,
+    });
+
+    expect(isExtensionEnabled('system-extension-manager', stateRoot)).toBe(true);
+    const summary = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'system-extension-manager');
+    expect(summary).toMatchObject({
+      enabled: true,
+      required: true,
+    });
+    expect(summary?.diagnostics ?? []).not.toEqual(expect.arrayContaining([expect.stringContaining('Extension disabled by circuit breaker')]));
+    expect(appEvents.invalidateAppTopics).not.toHaveBeenCalledWith('extensions', 'notifications');
+    expect(appEvents.publishAppEvent).not.toHaveBeenCalledWith(expect.objectContaining({ extensionId: 'system-extension-manager' }));
+  });
+
   it('clears failure records for a recovered operation without dropping unrelated failures', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
     const extensionRoot = join(stateRoot, 'extensions', 'recovering-board');
@@ -745,7 +779,10 @@ describe('extension registry', () => {
     writeFileSync(join(stateRoot, 'extensions', 'registry.json'), JSON.stringify({ disabledIds: ['system-terminal'] }));
 
     expect(isExtensionEnabled('system-terminal', stateRoot)).toBe(true);
-    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'system-terminal')?.enabled).toBe(true);
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'system-terminal')).toMatchObject({
+      enabled: true,
+      required: true,
+    });
   });
 
   it('indexes enabled extension skills and tools', () => {

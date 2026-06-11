@@ -51,6 +51,7 @@ interface RuntimeCapability {
   priority?: number;
   metadata?: Record<string, unknown>;
   diagnostics?: unknown[];
+  required?: boolean;
 }
 
 interface AgentRuntimeResult {
@@ -535,7 +536,7 @@ function formatDiagnostic(diagnostic: unknown): string {
 }
 
 function StatusToggle({ row, busy, onToggle }: { row: RuntimeCapability; busy: boolean; onToggle: () => void }) {
-  const locked = row.kind === 'extension' && row.id === 'system-extension-manager';
+  const locked = row.kind === 'extension' && row.required === true;
   return (
     <Switch
       checked={row.enabled}
