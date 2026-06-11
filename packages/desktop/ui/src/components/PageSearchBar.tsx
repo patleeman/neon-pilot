@@ -83,6 +83,10 @@ function isDesktopPageSearchShortcutAction(value: unknown): value is 'find-in-pa
   return value === 'find-in-page';
 }
 
+function isDesktopPageSearchShortcutCommand(value: unknown): value is 'page.find' {
+  return value === 'page.find';
+}
+
 function readSelectedSearchText(): string {
   if (typeof window === 'undefined' || typeof window.getSelection !== 'function') {
     return '';
@@ -432,8 +436,8 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
     }
 
     function handleDesktopShortcut(event: Event) {
-      const action = (event as CustomEvent<{ action?: unknown }>).detail?.action;
-      if (!isDesktopPageSearchShortcutAction(action)) {
+      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
+      if (!isDesktopPageSearchShortcutAction(detail?.action) && !isDesktopPageSearchShortcutCommand(detail?.command)) {
         return;
       }
 

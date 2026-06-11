@@ -15,6 +15,12 @@ function pressGlobalKey(key: string, options: KeyboardEventInit = {}) {
   });
 }
 
+function dispatchDesktopShortcutCommand(command: string) {
+  act(() => {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command } }));
+  });
+}
+
 async function flushAsyncWork() {
   await act(async () => {
     await Promise.resolve();
@@ -127,6 +133,17 @@ describe('PageSearchBar', () => {
     });
 
     expect(container.textContent).toContain('1/2');
+  });
+
+  it('opens from command-only desktop shortcut events for shared page find', async () => {
+    const { container } = renderHarness();
+
+    dispatchDesktopShortcutCommand('page.find');
+    await flushAsyncWork();
+
+    const input = container.querySelector('input[aria-label="Find on page"]');
+    expect(input).toBeInstanceOf(HTMLInputElement);
+    expect(document.activeElement).toBe(input);
   });
 
   it('does not force-scroll the active match when content changes under an open search', async () => {
