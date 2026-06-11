@@ -96,6 +96,8 @@ export interface ExtensionCommandExecutorOptions {
   artifactToggleFullscreen?(): boolean;
   artifactClose?(): boolean;
   closeImagePreview?(): boolean;
+  inspectFirstImagePreview?(): boolean;
+  loadFirstImagePreview?(): boolean;
   copyFirstMessageAction?(): boolean;
   editFirstMessageAction?(): boolean;
   rewindFirstMessageAction?(): boolean;
@@ -283,6 +285,8 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'artifact.toggleFullscreen', title: 'Toggle Artifact Fullscreen', category: 'Artifact' },
     { id: 'artifact.close', title: 'Close Artifact', category: 'Artifact' },
     { id: 'imagePreview.close', title: 'Close Image Preview', category: 'Image Preview' },
+    { id: 'imagePreview.inspectFirst', title: 'Inspect First Image', category: 'Image Preview' },
+    { id: 'imagePreview.loadFirst', title: 'Load First Deferred Image', category: 'Image Preview' },
     { id: 'messageAction.copyFirst', title: 'Copy First Message', category: 'Message Actions' },
     { id: 'messageAction.editFirst', title: 'Edit First Message', category: 'Message Actions' },
     { id: 'messageAction.rewindFirst', title: 'Rewind First Message', category: 'Message Actions' },
@@ -1223,6 +1227,28 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.closeImagePreview) && readContextValue(context, 'imagePreview.active') === true;
+      },
+    },
+    {
+      id: 'imagePreview.inspectFirst',
+      title: 'Inspect First Image',
+      category: 'Image Preview',
+      execute() {
+        return options.inspectFirstImagePreview?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.inspectFirstImagePreview) && readContextValue(context, 'imagePreview.canInspectFirst') === true;
+      },
+    },
+    {
+      id: 'imagePreview.loadFirst',
+      title: 'Load First Deferred Image',
+      category: 'Image Preview',
+      execute() {
+        return options.loadFirstImagePreview?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.loadFirstImagePreview) && readContextValue(context, 'imagePreview.canLoadFirst') === true;
       },
     },
     {

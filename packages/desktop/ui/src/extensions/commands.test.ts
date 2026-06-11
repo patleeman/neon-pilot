@@ -416,6 +416,42 @@ describe('extension commands', () => {
     expect(forkFirstMessageAction).toHaveBeenCalledTimes(1);
   });
 
+  it('includes image preview commands gated by available image actions', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(
+      expect.arrayContaining(['imagePreview.inspectFirst', 'imagePreview.loadFirst']),
+    );
+
+    const inspectFirstImagePreview = vi.fn(() => true);
+    const loadFirstImagePreview = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      inspectFirstImagePreview,
+      loadFirstImagePreview,
+    };
+
+    await expect(executeExtensionCommand('imagePreview.inspectFirst', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('imagePreview.loadFirst', undefined, options)).resolves.toBe(false);
+
+    await expect(
+      executeExtensionCommand('imagePreview.inspectFirst', undefined, {
+        ...options,
+        context: { 'imagePreview.canInspectFirst': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('imagePreview.loadFirst', undefined, {
+        ...options,
+        context: { 'imagePreview.canLoadFirst': true },
+      }),
+    ).resolves.toBe(true);
+
+    expect(inspectFirstImagePreview).toHaveBeenCalledTimes(1);
+    expect(loadFirstImagePreview).toHaveBeenCalledTimes(1);
+  });
+
   it('includes conversation title editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining(['conversation.rename', 'conversation.saveTitle', 'conversation.cancelTitleEdit']),

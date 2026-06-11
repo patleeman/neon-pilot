@@ -79,6 +79,8 @@ export const HOST_COMMAND_IDS = [
   'artifact.toggleFullscreen',
   'artifact.close',
   'imagePreview.close',
+  'imagePreview.inspectFirst',
+  'imagePreview.loadFirst',
   'messageAction.copyFirst',
   'messageAction.editFirst',
   'messageAction.rewindFirst',

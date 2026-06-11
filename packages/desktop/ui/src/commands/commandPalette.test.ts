@@ -179,6 +179,30 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('imagePreview.inspectFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'imagePreview.canInspectFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('imagePreview.inspectFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'imagePreview.canInspectFirst': true },
+      }),
+    ).toBe(false);
+    expect(
+      isHostCommandDisabledInPalette('imagePreview.loadFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'imagePreview.canLoadFirst': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('imagePreview.loadFirst', {
+        activeConversationId: 'conversation-1',
+        context: { 'imagePreview.canLoadFirst': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('messageAction.copyFirst', {
         activeConversationId: 'conversation-1',
         context: { 'messageAction.canCopyFirst': false },

@@ -83,6 +83,8 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['artifact.toggleFullscreen', 'artifact.active'],
   ['artifact.close', 'artifact.active'],
   ['imagePreview.close', 'imagePreview.active'],
+  ['imagePreview.inspectFirst', 'imagePreview.canInspectFirst'],
+  ['imagePreview.loadFirst', 'imagePreview.canLoadFirst'],
   ['messageAction.copyFirst', 'messageAction.canCopyFirst'],
   ['messageAction.editFirst', 'messageAction.canEditFirst'],
   ['messageAction.rewindFirst', 'messageAction.canRewindFirst'],

@@ -78,7 +78,12 @@ import { COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT, COMPOSER_OPEN_PREFERENCES_COM
 import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
 import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversation/conversationQueueCommands';
 import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
-import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './chat/imagePreviewCommands';
+import {
+  IMAGE_PREVIEW_CLOSE_COMMAND_EVENT,
+  IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT,
+  IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT,
+  type ImagePreviewCommandDetail,
+} from './chat/imagePreviewCommands';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './chat/messageActionCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
 import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
@@ -2137,6 +2142,14 @@ export function Layout() {
       },
       closeImagePreview() {
         window.dispatchEvent(new CustomEvent(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      inspectFirstImagePreview() {
+        window.dispatchEvent(new CustomEvent<ImagePreviewCommandDetail>(IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      loadFirstImagePreview() {
+        window.dispatchEvent(new CustomEvent<ImagePreviewCommandDetail>(IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT, { detail: {} }));
         return true;
       },
       copyFirstMessageAction() {
