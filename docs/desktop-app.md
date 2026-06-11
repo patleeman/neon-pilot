@@ -75,7 +75,7 @@ Knowledge is also a primary left-sidebar page. Extension-contributed workbench t
 
 ## Keyboard Shortcuts
 
-All desktop shortcuts are configurable in Settings → Keyboard. Defaults:
+Desktop menu shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings → Commands. Defaults:
 
 | Action           | Default               |
 | ---------------- | --------------------- |

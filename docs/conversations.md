@@ -216,7 +216,7 @@ The agent can read other conversation transcripts using the `conversation` actio
 | Cancel agent response    | Escape                |
 | Retrieve queued messages | Alt+Up                |
 
-Default shortcuts are configurable in Settings → Keyboard.
+Default desktop shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings → Commands.
 
 ## Routes
 
