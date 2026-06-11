@@ -135,7 +135,7 @@ describe('extension commands', () => {
       restoreFirstQueuedPrompt,
     };
 
-    await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.saveCwd', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.cancelCwdEdit', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.cancelGoal', undefined, options)).resolves.toBe(false);
@@ -150,6 +150,12 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('conversation.fireFirstDeferredResume', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.cancelFirstDeferredResume', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.restoreFirstQueuedPrompt', undefined, options)).resolves.toBe(false);
+    await expect(
+      executeExtensionCommand('conversation.editCwd', undefined, {
+        ...options,
+        context: { 'conversation.canEditCwd': true },
+      }),
+    ).resolves.toBe(true);
     await expect(
       executeExtensionCommand('conversation.saveCwd', undefined, {
         ...options,
@@ -1471,7 +1477,12 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.toggleArchived', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.rename', undefined, options)).resolves.toBe(true);
-    await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.editCwd', undefined, {
+        ...options,
+        context: { 'conversation.canEditCwd': true },
+      }),
+    ).resolves.toBe(true);
 
     expect(closeConversation).toHaveBeenCalledTimes(1);
     expect(reopenClosedConversation).toHaveBeenCalledTimes(1);

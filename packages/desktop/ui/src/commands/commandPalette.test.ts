@@ -599,6 +599,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.editCwd', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canEditCwd': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.editCwd', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canEditCwd': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.saveCwd', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.cwdEditorOpen': false },

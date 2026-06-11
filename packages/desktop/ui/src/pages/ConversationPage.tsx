@@ -3730,13 +3730,18 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [isEditingTitle, titleSaving]);
 
   useEffect(() => {
+    setExtensionCommandContext(
+      'conversation.canEditCwd',
+      !draft && Boolean(id) && !conversationCwdEditorOpen && !conversationCwdBusy && !conversationCwdPickBusy && !stream.isStreaming,
+    );
     setExtensionCommandContext('conversation.cwdEditorOpen', conversationCwdEditorOpen);
     setExtensionCommandContext('conversation.cwdEditorBusy', conversationCwdBusy || conversationCwdPickBusy);
     return () => {
+      setExtensionCommandContext('conversation.canEditCwd', null);
       setExtensionCommandContext('conversation.cwdEditorOpen', null);
       setExtensionCommandContext('conversation.cwdEditorBusy', null);
     };
-  }, [conversationCwdBusy, conversationCwdEditorOpen, conversationCwdPickBusy]);
+  }, [conversationCwdBusy, conversationCwdEditorOpen, conversationCwdPickBusy, draft, id, stream.isStreaming]);
 
   useEffect(() => {
     if (

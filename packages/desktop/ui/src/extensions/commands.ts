@@ -675,7 +675,11 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.editConversationCwd?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.editConversationCwd) && hasActiveConversation(options, context);
+        return (
+          Boolean(options.editConversationCwd) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.canEditCwd') === true
+        );
       },
     },
     {
