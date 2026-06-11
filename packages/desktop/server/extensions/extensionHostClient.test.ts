@@ -496,7 +496,7 @@ describe('extension host client', () => {
     expect(extensionRegistry.setExtensionEnabled).not.toHaveBeenCalledWith('system-settings', false);
   });
 
-  it('rejects enablement for incompatible extensions', async () => {
+  it('allows enablement for extensions with stale compatibility metadata', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.setExtensionEnabled.mockClear();
     extensionRegistry.findExtensionEntry.mockReturnValueOnce({
@@ -506,14 +506,18 @@ describe('extension host client', () => {
         compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
       },
     });
-    extensionRegistry.listExtensionInstallSummaries.mockReturnValue([{ id: 'old-extension', status: 'disabled' }]);
+    extensionRegistry.listExtensionInstallSummaries
+      .mockReturnValueOnce([{ id: 'old-extension', status: 'disabled' }])
+      .mockReturnValueOnce([{ id: 'old-extension', status: 'disabled' }])
+      .mockReturnValueOnce([{ id: 'old-extension', status: 'enabled', enabled: true }]);
+    extensionSubscriptions.installSubscriptionsForExtension.mockResolvedValueOnce(undefined);
+    extensionServices.startServicesForExtension.mockResolvedValueOnce([]);
 
     await expect(getExtensionHostClient().setEnabled({ extensionId: 'old-extension', enabled: true })).resolves.toEqual({
-      ok: false,
-      status: 400,
-      error: expect.stringContaining('requires Neon Pilot >=0.10.0 <0.11.0'),
+      ok: true,
+      extension: { id: 'old-extension', status: 'enabled', enabled: true },
     });
-    expect(extensionRegistry.setExtensionEnabled).not.toHaveBeenCalledWith('old-extension', true);
+    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('old-extension', true);
   });
 
   it('does not reject enablement for system extensions with stale compatibility metadata', async () => {

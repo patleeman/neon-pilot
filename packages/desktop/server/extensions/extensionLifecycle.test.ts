@@ -179,7 +179,7 @@ describe('extensionLifecycle', () => {
     expect(existsSync(join(runtimeRoot, 'imported-ext'))).toBe(false);
   });
 
-  it('rejects extension bundles that are incompatible with the running app', () => {
+  it('imports extension bundles with stale compatibility metadata', () => {
     const zipPath = join(stateRoot, 'incompatible.neon-extension.zip');
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(zipPath, 'zip');
@@ -204,9 +204,13 @@ describe('extensionLifecycle', () => {
       }
       return Buffer.from('');
     });
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'old-extension', name: 'Old Extension' }]);
 
-    expect(() => importRuntimeExtensionBundle({ zipPath }, stateRoot)).toThrow('requires Neon Pilot >=0.10.0 <0.11.0');
-    expect(existsSync(join(runtimeRoot, 'old-extension'))).toBe(false);
+    expect(importRuntimeExtensionBundle({ zipPath }, stateRoot)).toMatchObject({
+      ok: true,
+      extension: { id: 'old-extension' },
+    });
+    expect(existsSync(join(runtimeRoot, 'old-extension'))).toBe(true);
   });
 
   it('rejects bundles that declare a backend without a built backend artifact', () => {

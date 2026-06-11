@@ -116,6 +116,7 @@ export interface InstallableExtensionCatalogItem extends CatalogSeed {
   installedVersion?: string;
   enabled?: boolean;
   availableVersion?: string;
+  compatibilityWarning?: string;
   unavailableReason?: string;
   updateAvailable: boolean;
 }
@@ -216,7 +217,8 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
       ...(installed?.version ? { installedVersion: installed.version } : {}),
       ...(installed ? { enabled: installed.enabled } : {}),
       ...(explicitVersion ? { availableVersion: explicitVersion } : {}),
-      ...(compatibilityReason || staleFallbackReason ? { unavailableReason: compatibilityReason ?? staleFallbackReason } : {}),
+      ...(compatibilityReason ? { compatibilityWarning: compatibilityReason } : {}),
+      ...(staleFallbackReason ? { unavailableReason: staleFallbackReason } : {}),
       updateAvailable,
     };
   });

@@ -709,8 +709,9 @@ describe('extension registry', () => {
     expect(isExtensionEnabled('slack-mcp-gateway', stateRoot)).toBe(true);
   });
 
-  it('keeps incompatible runtime extensions disabled with diagnostics even when explicitly enabled', () => {
+  it('keeps runtime extensions enabled with diagnostics when compatibility metadata is stale', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'old-extension');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(
@@ -726,13 +727,11 @@ describe('extension registry', () => {
 
     setExtensionEnabled('old-extension', true, stateRoot);
 
-    expect(isExtensionEnabled('old-extension', stateRoot)).toBe(false);
-    expect(readExtensionRegistrySnapshot().routes).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ extensionId: 'old-extension' })]),
-    );
+    expect(isExtensionEnabled('old-extension', stateRoot)).toBe(true);
+    expect(readExtensionRegistrySnapshot().routes).toEqual(expect.arrayContaining([expect.objectContaining({ extensionId: 'old-extension' })]));
     expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'old-extension')).toMatchObject({
-      enabled: false,
-      status: 'disabled',
+      enabled: true,
+      status: 'enabled',
       diagnostics: [expect.stringContaining('requires Neon Pilot >=0.10.0 <0.11.0')],
     });
   });

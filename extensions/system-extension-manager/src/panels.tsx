@@ -79,6 +79,7 @@ interface InstallableExtensionCatalogItem {
   installedVersion?: string;
   enabled?: boolean;
   availableVersion?: string;
+  compatibilityWarning?: string;
   unavailableReason?: string;
   updateAvailable?: boolean;
 }
@@ -1900,6 +1901,7 @@ function InstallExtensionModal({
                     detail={
                       <>
                         {item.description || packageKindLabel(item)}
+                        {item.compatibilityWarning ? <span className="block text-warning">{item.compatibilityWarning}</span> : null}
                         {item.unavailableReason ? <span className="block text-warning">{item.unavailableReason}</span> : null}
                       </>
                     }

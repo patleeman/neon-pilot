@@ -352,31 +352,55 @@ describe('extension catalog', () => {
     expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
   });
 
-  it('refuses to update incompatible catalog entries before deleting the installed copy', async () => {
+  it('warns about stale compatibility without blocking catalog updates', async () => {
     summaries.mockReturnValue([
       { id: 'system-writing-studio', name: 'Writing Studio', enabled: true, version: '0.1.1', packageType: 'user' },
     ]);
+    deleteRuntimeExtension.mockResolvedValue({ ok: true, extensionId: 'system-writing-studio', deleted: true });
+    importRuntimeExtensionBundle.mockReturnValue({
+      ok: true,
+      extension: { id: 'system-writing-studio', enabled: false },
+      packageRoot: '/tmp/ext',
+    });
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({
-          packages: [
-            {
-              id: 'system-writing-studio',
-              tag: 'v0.10.2',
-              artifact: 'system-writing-studio.neon-extension.zip',
-              compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+      vi.fn(async (url: string | URL) =>
+        String(url).endsWith('/neon-extension-catalog.json')
+          ? {
+              ok: true,
+              json: async () => ({
+                packages: [
+                  {
+                    id: 'system-writing-studio',
+                    tag: 'v0.10.2',
+                    artifact: 'system-writing-studio.neon-extension.zip',
+                    compatibility: { neonPilot: '>=0.10.0 <0.11.0' },
+                  },
+                ],
+              }),
+            }
+          : {
+              ok: true,
+              headers: new Headers({ 'content-length': '4' }),
+              arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
             },
-          ],
-        }),
-      })),
+      ),
     );
 
-    const { updateCatalogExtension } = await import('./extensionCatalog.js');
-    await expect(updateCatalogExtension({ id: 'system-writing-studio' })).rejects.toThrow('is not installable');
-    expect(deleteRuntimeExtension).not.toHaveBeenCalled();
-    expect(importRuntimeExtensionBundle).not.toHaveBeenCalled();
+    const { listInstallableExtensionCatalog, updateCatalogExtension } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog();
+    const catalogItem = catalog.extensions.find((item) => item.id === 'system-writing-studio');
+    expect(catalogItem).toMatchObject({
+      id: 'system-writing-studio',
+      compatibilityWarning: expect.stringContaining('requires Neon Pilot >=0.10.0 <0.11.0'),
+    });
+    expect(catalogItem).not.toHaveProperty('unavailableReason');
+    await expect(updateCatalogExtension({ id: 'system-writing-studio' })).resolves.toMatchObject({
+      ok: true,
+      updated: true,
+    });
+    expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-writing-studio', undefined);
+    expect(importRuntimeExtensionBundle).toHaveBeenCalled();
   });
 
   it('updates catalog extensions and preserves the enabled state', async () => {

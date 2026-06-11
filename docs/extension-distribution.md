@@ -85,7 +85,7 @@ Every distributed extension should declare the Neon Pilot and extension API vers
 }
 ```
 
-Neon Pilot should refuse incompatible packages before installation. Compatibility belongs in the package manifest so a zip, local folder, catalog item, or GitHub release all carry the same contract.
+Neon Pilot treats compatibility as an install-time warning, not a hard refusal. Compatibility belongs in the package manifest so a zip, local folder, catalog item, or GitHub release can explain the version range it was tested against, while package validation still enforces concrete runtime requirements such as safe paths, valid manifests, and built artifacts.
 
 ## Release artifacts
 
