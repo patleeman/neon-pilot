@@ -15,7 +15,7 @@ import {
   THREAD_COMMAND_PALETTE_SECTIONS,
   THREADS_COMMAND_PALETTE_SCOPE,
 } from '../commands/commandPalette';
-import { activateCommandPaletteItem, type CommandPaletteAction } from '../commands/commandPaletteActions';
+import { activateCommandPaletteItem, executePaletteCommand, type CommandPaletteAction } from '../commands/commandPaletteActions';
 import { COMMAND_PALETTE_STATE_EVENT, OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import {
   buildConversationContentSearchItems,
@@ -525,6 +525,7 @@ export function CommandPalette() {
           navigate,
           openSession,
           closePalette,
+          executeExtensionCommand: executePaletteCommand,
         });
       } catch (error) {
         setActionError(error instanceof Error ? error.message : String(error));

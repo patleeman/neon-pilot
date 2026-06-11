@@ -23,6 +23,16 @@ export interface ActivateCommandPaletteItemContext {
   readLayoutMode?: () => ReturnType<typeof readAppLayoutMode>;
 }
 
+export function executePaletteCommand(command: string, args: unknown): Promise<boolean> {
+  if (typeof window === 'undefined') {
+    return api.executeExtensionCommand(command, args).then(() => true);
+  }
+
+  return new Promise<boolean>((resolve) => {
+    window.dispatchEvent(new CustomEvent('neon-pilot-extension-command-execute', { detail: { command, args, resolve } }));
+  });
+}
+
 function isDeclaredPaletteCommand(commandItems: Array<CommandPaletteItem<CommandPaletteAction>>, command: string): boolean {
   return commandItems.some(
     (candidate) => candidate.action.kind === 'command' && candidate.action.command === command && !candidate.disabled,

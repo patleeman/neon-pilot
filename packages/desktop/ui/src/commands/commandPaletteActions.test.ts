@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CommandPaletteItem } from './commandPalette';
-import { activateCommandPaletteItem, type CommandPaletteAction } from './commandPaletteActions';
+import { activateCommandPaletteItem, executePaletteCommand, type CommandPaletteAction } from './commandPaletteActions';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function item(
   action: CommandPaletteAction,
@@ -32,6 +36,22 @@ function context(
 }
 
 describe('activateCommandPaletteItem', () => {
+  it('dispatches palette commands through the renderer host command bridge', async () => {
+    vi.stubGlobal('window', new EventTarget());
+    const listener = vi.fn((event: Event) => {
+      const detail = (event as CustomEvent<{ command?: string; args?: unknown; resolve?: (handled: boolean) => void }>).detail;
+      detail.resolve?.(detail.command === 'layout.toggleSidebar');
+    });
+    window.addEventListener('neon-pilot-extension-command-execute', listener);
+
+    await expect(executePaletteCommand('layout.toggleSidebar', { source: 'palette' })).resolves.toBe(true);
+
+    expect(listener).toHaveBeenCalledOnce();
+    const detail = (listener.mock.calls[0]?.[0] as CustomEvent).detail;
+    expect(detail).toMatchObject({ command: 'layout.toggleSidebar', args: { source: 'palette' } });
+    window.removeEventListener('neon-pilot-extension-command-execute', listener);
+  });
+
   it('ignores disabled items', async () => {
     const ctx = context();
 
