@@ -16,6 +16,19 @@ describe('extension commands', () => {
     expect(listHostCommands().map((command) => command.id).sort()).toEqual([...HOST_COMMAND_IDS].sort());
   });
 
+  it('keeps every listed host command backed by a renderer executor', () => {
+    const executorIds = new Set(
+      createHostCommands({
+        navigate: vi.fn(),
+        openCommandPalette: vi.fn(),
+        openRightRail: vi.fn(),
+        setLayout: vi.fn(),
+      }).map((command) => command.id),
+    );
+
+    expect(listHostCommands().map((command) => command.id).sort()).toEqual([...executorIds].sort());
+  });
+
   it('keeps desktop shortcut commands backed by executable host commands', () => {
     const desktopNativeCommands = new Set(['core.showApp', 'core.quit']);
     const hostCommandIds = new Set(listHostCommands().map((command) => command.id));
