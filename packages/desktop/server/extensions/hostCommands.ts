@@ -30,6 +30,7 @@ export const HOST_COMMAND_IDS = [
   'conversation.editCwd',
   'conversation.saveCwd',
   'conversation.cancelCwdEdit',
+  'conversation.cancelGoal',
   'composer.focus',
   'composer.submit',
   'composer.stop',

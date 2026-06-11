@@ -45,6 +45,7 @@ import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness'
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
 import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
+import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
 import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
 import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './chat/imagePreviewCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
@@ -1960,6 +1961,10 @@ export function Layout() {
       },
       cancelConversationCwdEdit() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationCwdEdit);
+        return true;
+      },
+      cancelConversationGoal() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_GOAL_COMMAND_EVENT));
         return true;
       },
       newWorkbenchTab() {

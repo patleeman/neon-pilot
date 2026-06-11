@@ -359,6 +359,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.cancelGoal', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.goalActive': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.cancelGoal', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.goalActive': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('browser.focusLocation', {
         activeConversationId: 'conversation-1',
         context: { 'browser.active': false },

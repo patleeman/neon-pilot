@@ -79,11 +79,12 @@ describe('extension commands', () => {
 
   it('includes conversation cwd editor commands gated by editor state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['conversation.editCwd', 'conversation.saveCwd', 'conversation.cancelCwdEdit']),
+      expect.arrayContaining(['conversation.editCwd', 'conversation.saveCwd', 'conversation.cancelCwdEdit', 'conversation.cancelGoal']),
     );
     const editConversationCwd = vi.fn(() => true);
     const saveConversationCwd = vi.fn(() => true);
     const cancelConversationCwdEdit = vi.fn(() => true);
+    const cancelConversationGoal = vi.fn(() => true);
     const options = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
@@ -93,11 +94,13 @@ describe('extension commands', () => {
       editConversationCwd,
       saveConversationCwd,
       cancelConversationCwdEdit,
+      cancelConversationGoal,
     };
 
     await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.saveCwd', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.cancelCwdEdit', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.cancelGoal', undefined, options)).resolves.toBe(false);
     await expect(
       executeExtensionCommand('conversation.saveCwd', undefined, {
         ...options,
@@ -111,6 +114,12 @@ describe('extension commands', () => {
       }),
     ).resolves.toBe(true);
     await expect(
+      executeExtensionCommand('conversation.cancelGoal', undefined, {
+        ...options,
+        context: { 'conversation.goalActive': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
       executeExtensionCommand('conversation.saveCwd', undefined, {
         ...options,
         context: { 'conversation.cwdEditorOpen': true, 'conversation.cwdEditorBusy': true },
@@ -120,6 +129,7 @@ describe('extension commands', () => {
     expect(editConversationCwd).toHaveBeenCalledTimes(1);
     expect(saveConversationCwd).toHaveBeenCalledTimes(1);
     expect(cancelConversationCwdEdit).toHaveBeenCalledTimes(1);
+    expect(cancelConversationGoal).toHaveBeenCalledTimes(1);
   });
 
   it('includes conversation title editor commands gated by editor state', async () => {

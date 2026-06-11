@@ -55,6 +55,7 @@ export interface ExtensionCommandExecutorOptions {
   editConversationCwd?(): boolean;
   saveConversationCwd?(): boolean;
   cancelConversationCwdEdit?(): boolean;
+  cancelConversationGoal?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
@@ -205,6 +206,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.editCwd', title: 'Edit Conversation Working Directory', category: 'Conversation' },
     { id: 'conversation.saveCwd', title: 'Save Conversation Working Directory', category: 'Conversation' },
     { id: 'conversation.cancelCwdEdit', title: 'Cancel Working Directory Edit', category: 'Conversation' },
+    { id: 'conversation.cancelGoal', title: 'Cancel Active Goal', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
@@ -624,6 +626,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
           readContextValue(context, 'conversation.cwdEditorOpen') === true &&
           readContextValue(context, 'conversation.cwdEditorBusy') !== true
         );
+      },
+    },
+    {
+      id: 'conversation.cancelGoal',
+      title: 'Cancel Active Goal',
+      category: 'Conversation',
+      execute() {
+        return options.cancelConversationGoal?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelConversationGoal) && readContextValue(context, 'conversation.goalActive') === true;
       },
     },
     {
