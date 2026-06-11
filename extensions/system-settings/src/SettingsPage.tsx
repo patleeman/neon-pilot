@@ -177,7 +177,7 @@ const DESKTOP_KEYBOARD_SHORTCUT_LABELS: Record<DesktopKeyboardShortcutId, { labe
   toggleWorkbenchExplorer: { label: 'Toggle workbench explorer', description: 'Collapse or restore the workbench file explorer.' },
   toggleWorkbenchDiff: { label: 'Toggle workbench diff', description: 'Toggle git diff decorations for the active workbench file.' },
   toggleSidebar: { label: 'Toggle left sidebar', description: 'Collapse or restore the conversation sidebar.' },
-  toggleRightRail: { label: 'Toggle workbench', description: 'Collapse or restore the workbench panel.' },
+  toggleRightRail: { label: 'Toggle right rail', description: 'Collapse or restore the active workbench rail.' },
 };
 
 const DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS: DesktopAppPreferencesState['keyboardShortcuts'] = {
