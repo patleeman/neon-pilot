@@ -6217,22 +6217,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                     <Suspense fallback={<h1 className="ui-conversation-title-clamp text-[38px] font-semibold leading-[1.05] sm:text-[42px]">{title}</h1>}>
                       <ConversationSavedHeader
                         title={title}
-                        cwd={currentCwd}
                         onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined}
-                        cwdEditing={false}
-                        cwdDraft={conversationCwdDraft}
-                        cwdError={null}
-                        cwdSaveBusy={conversationCwdBusy}
-                        onCwdDraftChange={(value) => {
-                          setConversationCwdDraft(value);
-                          if (conversationCwdError) {
-                            setConversationCwdError(null);
-                          }
-                        }}
-                        onCancelEditingCwd={cancelConversationCwdEdit}
-                        onSaveCwd={() => {
-                          void submitConversationCwdChange();
-                        }}
                       />
                     </Suspense>
                   )}
