@@ -17,17 +17,25 @@ export function buildExtensionContributedCommandRegistrations(extension: {
     }>;
   };
 }) {
-  return (extension.contributes?.commands ?? []).map((command) => ({
-    extensionId: extension.id,
-    surfaceId: command.id,
-    packageType: extension.packageType ?? 'user',
-    title: command.title,
-    action: command.action,
-    ...(command.args !== undefined ? { args: command.args } : {}),
-    ...(command.argsSchema !== undefined ? { argsSchema: command.argsSchema } : {}),
-    ...(command.icon ? { icon: command.icon } : {}),
-    ...(command.category ? { category: command.category } : {}),
-    ...(command.description ? { description: command.description } : {}),
-    ...(command.enablement ? { enablement: command.enablement } : {}),
-  }));
+  return (extension.contributes?.commands ?? []).flatMap((command) => {
+    const id = command.id.trim();
+    const title = command.title.trim();
+    const action = command.action.trim();
+    if (!id || !title || !action) return [];
+    return [
+      {
+        extensionId: extension.id,
+        surfaceId: id,
+        packageType: extension.packageType ?? 'user',
+        title,
+        action,
+        ...(command.args !== undefined ? { args: command.args } : {}),
+        ...(command.argsSchema !== undefined ? { argsSchema: command.argsSchema } : {}),
+        ...(command.icon?.trim() ? { icon: command.icon.trim() } : {}),
+        ...(command.category?.trim() ? { category: command.category.trim() } : {}),
+        ...(command.description?.trim() ? { description: command.description.trim() } : {}),
+        ...(command.enablement?.trim() ? { enablement: command.enablement.trim() } : {}),
+      },
+    ];
+  });
 }
