@@ -32,7 +32,7 @@ import {
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
-import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
+import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
 function getComposerPreferenceInlineLimit(composerShellWidth: number | null): number {
@@ -251,6 +251,15 @@ function CoreModelPreferenceOverflow({
   }, [settingsAvailable]);
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setExtensionCommandContext('composer.settingsOpen', true);
+    return () => setExtensionCommandContext('composer.settingsOpen', null);
+  }, [open]);
+
+  useEffect(() => {
     function handleOpenSettings() {
       if (settingsAvailable) setOpen(true);
     }
@@ -258,6 +267,19 @@ function CoreModelPreferenceOverflow({
     window.addEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
     return () => window.removeEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
   }, [settingsAvailable]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleCloseSettings() {
+      setOpen(false);
+    }
+
+    window.addEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettings);
+    return () => window.removeEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettings);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

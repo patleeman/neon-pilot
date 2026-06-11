@@ -35,6 +35,7 @@ export const HOST_COMMAND_IDS = [
   'composer.stop',
   'composer.clear',
   'composer.openSettings',
+  'composer.closeSettings',
   'conversation.pageUp',
   'conversation.pageDown',
   'workbench.newTab',

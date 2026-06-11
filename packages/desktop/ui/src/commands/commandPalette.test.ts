@@ -401,6 +401,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('composer.closeSettings', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.settingsOpen': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('composer.closeSettings', {
+        activeConversationId: 'conversation-1',
+        context: { 'composer.settingsOpen': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('composer.submit', {
         activeConversationId: 'conversation-1',
         context: { 'composer.canSubmit': true },

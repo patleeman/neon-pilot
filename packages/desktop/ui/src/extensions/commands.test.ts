@@ -497,26 +497,36 @@ describe('extension commands', () => {
     expect(submitComposer).toHaveBeenCalledTimes(1);
   });
 
-  it('opens composer settings only when the composer publishes settings availability', async () => {
-    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['composer.openSettings']));
+  it('opens and closes composer settings based on composer menu state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['composer.openSettings', 'composer.closeSettings']));
     const openComposerSettings = vi.fn(() => true);
+    const closeComposerSettings = vi.fn(() => true);
     const baseOptions = {
       navigate: vi.fn(),
       openCommandPalette: vi.fn(),
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
       openComposerSettings,
+      closeComposerSettings,
     };
 
     await expect(executeExtensionCommand('composer.openSettings', undefined, baseOptions)).resolves.toBe(false);
+    await expect(executeExtensionCommand('composer.closeSettings', undefined, baseOptions)).resolves.toBe(false);
     await expect(
       executeExtensionCommand('composer.openSettings', undefined, {
         ...baseOptions,
         context: { 'composer.settingsAvailable': true },
       }),
     ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('composer.closeSettings', undefined, {
+        ...baseOptions,
+        context: { 'composer.settingsOpen': true },
+      }),
+    ).resolves.toBe(true);
 
     expect(openComposerSettings).toHaveBeenCalledTimes(1);
+    expect(closeComposerSettings).toHaveBeenCalledTimes(1);
   });
 
   it('includes command-backed app chrome actions', async () => {

@@ -43,6 +43,7 @@ export interface ExtensionCommandExecutorOptions {
   stopComposer?(): boolean;
   clearComposer?(): boolean;
   openComposerSettings?(): boolean;
+  closeComposerSettings?(): boolean;
   pageConversation?(direction: 'up' | 'down'): boolean;
   closeConversation?(): boolean;
   reopenClosedConversation?(): boolean;
@@ -205,6 +206,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
     { id: 'composer.clear', title: 'Clear Composer', category: 'Conversation' },
     { id: 'composer.openSettings', title: 'Open Composer Settings', category: 'Conversation' },
+    { id: 'composer.closeSettings', title: 'Close Composer Settings', category: 'Conversation' },
     { id: 'conversation.pageUp', title: 'Page Conversation Up', category: 'Conversation' },
     { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
     { id: 'workbench.newTab', title: 'New Workbench Tab', category: 'Workbench' },
@@ -671,6 +673,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.openComposerSettings) && readContextValue(context, 'composer.settingsAvailable') === true;
+      },
+    },
+    {
+      id: 'composer.closeSettings',
+      title: 'Close Composer Settings',
+      category: 'Conversation',
+      execute() {
+        return options.closeComposerSettings?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeComposerSettings) && readContextValue(context, 'composer.settingsOpen') === true;
       },
     },
     {

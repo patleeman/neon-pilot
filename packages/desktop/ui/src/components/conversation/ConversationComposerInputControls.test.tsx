@@ -6,7 +6,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ModelInfo } from '../../shared/types';
-import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
+import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationComposerInputControls, setComposerFocusedCommandContext } from './ConversationComposerInputControls';
 import { ConversationRunModePanel } from './ConversationRunModePanel';
 
@@ -293,6 +293,13 @@ describe('ConversationComposerInputControls', () => {
       expect(menu?.querySelector('[aria-label="Conversation model"]')).toBeTruthy();
       expect(menu?.querySelector('[aria-label="Thinking level"]')).toBeTruthy();
       expect(menuButton?.getAttribute('aria-expanded')).toBe('true');
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT));
+      });
+
+      expect(rendered.container.querySelector('[aria-label="Composer settings"]')).toBeNull();
+      expect(menuButton?.getAttribute('aria-expanded')).toBe('false');
     } finally {
       rendered.unmount();
     }

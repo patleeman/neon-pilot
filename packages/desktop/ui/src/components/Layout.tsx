@@ -44,7 +44,7 @@ import { ARTIFACT_MODAL_COMMAND_EVENT, type ArtifactModalCommand } from './artif
 import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
-import { COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
+import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
 import { DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
 import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './chat/imagePreviewCommands';
 import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
@@ -2068,6 +2068,10 @@ export function Layout() {
       },
       openComposerSettings() {
         window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
+        return true;
+      },
+      closeComposerSettings() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT));
         return true;
       },
       pageConversation(direction: 'up' | 'down') {
