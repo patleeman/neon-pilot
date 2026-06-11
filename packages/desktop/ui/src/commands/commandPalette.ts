@@ -65,6 +65,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['page.findNext', 'pageSearch.hasMatches'],
   ['page.findPrevious', 'pageSearch.hasMatches'],
   ['page.closeFind', 'pageSearch.open'],
+  ['conversation.rename', 'conversation.canRename'],
   ['conversation.saveTitle', 'conversation.titleEditorOpen'],
   ['conversation.cancelTitleEdit', 'conversation.titleEditorOpen'],
   ['conversation.editCwd', 'conversation.canEditCwd'],

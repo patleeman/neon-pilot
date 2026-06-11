@@ -143,6 +143,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('conversation.rename', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canRename': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('conversation.rename', {
+        activeConversationId: 'conversation-1',
+        context: { 'conversation.canRename': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.saveTitle', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.titleEditorOpen': false },

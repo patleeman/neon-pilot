@@ -632,7 +632,11 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.renameConversation?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.renameConversation) && hasActiveConversation(options, context);
+        return (
+          Boolean(options.renameConversation) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.canRename') === true
+        );
       },
     },
     {

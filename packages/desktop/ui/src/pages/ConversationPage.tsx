@@ -3531,7 +3531,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [title, isEditingTitle]);
 
   const beginTitleEdit = useCallback(() => {
-    if (draft || !id || titleSaving) {
+    if (draft || !id || titleSaving || isEditingTitle || conversationCwdEditorOpen || conversationCwdBusy || conversationCwdPickBusy) {
       return;
     }
 
@@ -3544,7 +3544,18 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     setConversationCwdError(null);
     setTitleDraft(title === NEW_CONVERSATION_TITLE ? '' : title);
     setIsEditingTitle(true);
-  }, [conversationNeedsTakeover, draft, id, title, titleSaving, showNotice]);
+  }, [
+    conversationCwdBusy,
+    conversationCwdEditorOpen,
+    conversationCwdPickBusy,
+    conversationNeedsTakeover,
+    draft,
+    id,
+    isEditingTitle,
+    title,
+    titleSaving,
+    showNotice,
+  ]);
 
   const cancelTitleEdit = useCallback(() => {
     setIsEditingTitle(false);
@@ -3721,13 +3732,34 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [currentCwd]);
 
   useEffect(() => {
+    setExtensionCommandContext(
+      'conversation.canRename',
+      !draft &&
+        Boolean(id) &&
+        !isEditingTitle &&
+        !titleSaving &&
+        !conversationNeedsTakeover &&
+        !conversationCwdEditorOpen &&
+        !conversationCwdBusy &&
+        !conversationCwdPickBusy,
+    );
     setExtensionCommandContext('conversation.titleEditorOpen', isEditingTitle);
     setExtensionCommandContext('conversation.titleEditorBusy', titleSaving);
     return () => {
+      setExtensionCommandContext('conversation.canRename', null);
       setExtensionCommandContext('conversation.titleEditorOpen', null);
       setExtensionCommandContext('conversation.titleEditorBusy', null);
     };
-  }, [isEditingTitle, titleSaving]);
+  }, [
+    conversationCwdBusy,
+    conversationCwdEditorOpen,
+    conversationCwdPickBusy,
+    conversationNeedsTakeover,
+    draft,
+    id,
+    isEditingTitle,
+    titleSaving,
+  ]);
 
   useEffect(() => {
     setExtensionCommandContext(

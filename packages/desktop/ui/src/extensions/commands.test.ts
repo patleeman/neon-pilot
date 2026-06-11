@@ -628,7 +628,12 @@ describe('extension commands', () => {
       cancelConversationTitleEdit,
     };
 
-    await expect(executeExtensionCommand('conversation.rename', undefined, options)).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.rename', undefined, {
+        ...options,
+        context: { 'conversation.canRename': true },
+      }),
+    ).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.saveTitle', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.cancelTitleEdit', undefined, options)).resolves.toBe(false);
     await expect(
@@ -1476,7 +1481,12 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('conversation.reopenClosed', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.toggleArchived', undefined, options)).resolves.toBe(true);
-    await expect(executeExtensionCommand('conversation.rename', undefined, options)).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('conversation.rename', undefined, {
+        ...options,
+        context: { 'conversation.canRename': true },
+      }),
+    ).resolves.toBe(true);
     await expect(
       executeExtensionCommand('conversation.editCwd', undefined, {
         ...options,
