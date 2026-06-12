@@ -125,6 +125,7 @@ import {
   isSinglePaneWorkbenchMode,
   parseExtensionToolPanelMode,
   resolveActiveExtensionWorkbenchSurface,
+  singletonWorkbenchToolTabId,
   type WorkbenchRailMode,
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
@@ -1705,19 +1706,27 @@ export function Layout() {
 
       // Compute next tabs state and derive next active tab ID from current state.
       const current = openWorkbenchTabsRef.current;
-      if (!options?.forceNewTab) {
+      const parsed = parseExtensionToolPanelMode(tool);
+      const surface = parsed
+        ? extensionRightToolPanels.find((candidate) => candidate.extensionId === parsed.extensionId && candidate.id === parsed.surfaceId)
+        : findExtensionToolPanelBySlot(extensionRightToolPanels, tool);
+      const singletonTabId = singletonWorkbenchToolTabId(tool, surface, activeConversationId);
+      const normalizedOptions = singletonTabId
+        ? { ...options, id: singletonTabId, conversationId: activeConversationId ?? options?.conversationId ?? null }
+        : options;
+      if (!options?.forceNewTab || singletonTabId) {
         const existing =
-          tool === 'chat' && options?.conversationId
-            ? current.find((tab) => tab.mode === 'chat' && tab.conversationId === options.conversationId)
-            : options?.id
-              ? current.find((tab) => tab.id === options.id)
+          tool === 'chat' && normalizedOptions?.conversationId
+            ? current.find((tab) => tab.mode === 'chat' && tab.conversationId === normalizedOptions.conversationId)
+            : normalizedOptions?.id
+              ? current.find((tab) => tab.id === normalizedOptions.id)
               : null;
         if (existing) {
           setActiveWorkbenchTabId(existing.id);
           return;
         }
       }
-      const tab = createWorkbenchTabInstance(tool, options);
+      const tab = createWorkbenchTabInstance(tool, normalizedOptions);
       setOpenWorkbenchTabs([...current, tab]);
       setActiveWorkbenchTabId(tab.id);
 
@@ -1728,7 +1737,7 @@ export function Layout() {
         }));
       }
     },
-    [activeConversationId],
+    [activeConversationId, extensionRightToolPanels],
   );
 
   const setActiveConversationTool = useCallback(

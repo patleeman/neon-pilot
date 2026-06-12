@@ -38,6 +38,18 @@ export function findExtensionToolPanelBySlot(panels: WorkbenchToolPanelSurface[]
   return panels.find((p) => inferSurfaceToolSlot(p) === slot) ?? null;
 }
 
+export function singletonWorkbenchToolTabId(
+  mode: WorkbenchRailMode,
+  surface?: WorkbenchToolPanelSurface | null,
+  conversationId?: string | null,
+): string | null {
+  const surfaceToolSlot = surface ? inferSurfaceToolSlot(surface) : undefined;
+  if (mode === 'scratchpad' || surfaceToolSlot === 'scratchpad') {
+    return `scratchpad:${conversationId || 'global'}`;
+  }
+  return null;
+}
+
 export function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { extensionId?: string } | null): boolean {
   const surfaceToolSlot = surface ? inferSurfaceToolSlot(surface as WorkbenchToolPanelSurface) : undefined;
   return (
