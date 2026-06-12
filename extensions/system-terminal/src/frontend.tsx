@@ -292,7 +292,10 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         cwd: context.cwd ?? undefined,
       })
       .then((result) => {
-        if (closed) return;
+        if (closed) {
+          pa.extension.invoke('terminalClose', { id: result.id }).catch(() => {});
+          return;
+        }
         terminalId = result.id;
         state.id = result.id;
         state.usingPty = result.usingPty;

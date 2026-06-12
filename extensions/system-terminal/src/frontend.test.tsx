@@ -288,4 +288,43 @@ describe('TerminalPanel', () => {
 
     expect(terminal?.write.mock.calls.slice(writesBeforeStaleMessage).map(([value]) => value)).toEqual(['fallback-output']);
   });
+
+  it('closes the backend terminal if create resolves after the panel unmounts', async () => {
+    let resolveCreate: ((value: { id: string; pid: number | null; usingPty: boolean; realtimeUrl: string }) => void) | null = null;
+    const invoke = vi.fn((action: string) => {
+      if (action === 'terminalCreate') {
+        return new Promise((resolve) => {
+          resolveCreate = resolve;
+        });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          pa={{
+            extension: { invoke },
+            workbench: { closeTab: vi.fn() },
+          } as never}
+          context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      root?.unmount();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      resolveCreate?.({ id: 'term-1', pid: 123, usingPty: true, realtimeUrl: 'ws://127.0.0.1:4321/api/realtime' });
+      await Promise.resolve();
+    });
+
+    expect(invoke).toHaveBeenCalledWith('terminalClose', { id: 'term-1' });
+  });
 });
