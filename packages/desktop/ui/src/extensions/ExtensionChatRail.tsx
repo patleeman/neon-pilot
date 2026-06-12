@@ -90,7 +90,9 @@ export function ExtensionChatRail({
       if (currentConversationIdRef.current === conversationId) setHydratedState(nextState);
       return nextState;
     } catch (error) {
-      onError?.(error instanceof Error ? error.message : String(error));
+      if (currentConversationIdRef.current === conversationId) {
+        onError?.(error instanceof Error ? error.message : String(error));
+      }
       return null;
     }
   }, [conversationId, onError, tailBlocks]);

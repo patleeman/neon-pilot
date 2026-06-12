@@ -293,4 +293,66 @@ describe('ExtensionChatRail', () => {
     expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });
+
+  it('ignores stale refresh errors after switching conversations', async () => {
+    let rejectConversationOneRefresh: ((reason?: unknown) => void) | null = null;
+
+    desktopConversationStateMock
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        sessionDetail: { meta: { cwd: null } },
+        liveSession: { live: true, id: 'conversation-1', cwd: null, sessionFile: null, isStreaming: false },
+        stream: {
+          blocks: [],
+          isStreaming: false,
+          isCompacting: false,
+          contextUsage: null,
+          tokens: null,
+        },
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectConversationOneRefresh = reject;
+          }),
+      )
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-2',
+        sessionDetail: { meta: { cwd: '/tmp/next-project' } },
+        liveSession: { live: true, id: 'conversation-2', cwd: '/tmp/next-project', sessionFile: null, isStreaming: false },
+        stream: {
+          blocks: [],
+          isStreaming: false,
+          isCompacting: false,
+          contextUsage: null,
+          tokens: null,
+        },
+      });
+
+    const onError = vi.fn();
+    const view = render(<ExtensionChatRail conversationId="conversation-1" onError={onError} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'send' }));
+
+    await waitFor(() => {
+      expect(sendMock).toHaveBeenCalledWith('Review this draft', 'steer', undefined, undefined, undefined);
+    });
+    await waitFor(() => {
+      expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+    });
+
+    view.rerender(<ExtensionChatRail conversationId="conversation-2" onError={onError} />);
+
+    await waitFor(() => {
+      expect(desktopConversationStateMock).toHaveBeenCalledTimes(3);
+    });
+
+    rejectConversationOneRefresh?.(new Error('stale conversation-1 refresh failed'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onError).not.toHaveBeenCalledWith('stale conversation-1 refresh failed');
+  });
 });
