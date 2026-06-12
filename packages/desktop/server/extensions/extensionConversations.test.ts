@@ -258,6 +258,32 @@ describe('extensionConversations', () => {
     expect(entry.session.steer).not.toHaveBeenCalled();
   });
 
+  it('waits for agent_end instead of resolving on the first turn_end', async () => {
+    let liveHandler: ((event: unknown) => void) | null = null;
+    live.subscribe.mockImplementationOnce((_conversationId: string, handler: (event: unknown) => void) => {
+      liveHandler = handler;
+      return vi.fn();
+    });
+    live.registry.set('conv-1', liveEntry());
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
+
+    let resolved = false;
+    const result = capability.runTurn('conv-1', 'use a tool').then((value) => {
+      resolved = true;
+      return value;
+    });
+
+    await Promise.resolve();
+    expect(liveHandler).toBeTruthy();
+    liveHandler?.({ type: 'turn_end' });
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    liveHandler?.({ type: 'agent_end' });
+    await expect(result).resolves.toEqual({ accepted: true });
+    expect(resolved).toBe(true);
+  });
+
   it('sets titles through the session and broadcasts title changes', async () => {
     const entry = liveEntry();
     live.registry.set('conv-1', entry);

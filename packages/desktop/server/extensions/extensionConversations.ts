@@ -609,7 +609,7 @@ export function createExtensionConversationsCapability(
           options?.onEvent?.(event);
           const ev = event as Record<string, unknown> | null;
           if (!ev || typeof ev.type !== 'string') return;
-          if (ev.type !== 'turn_end' && ev.type !== 'error') return;
+          if (ev.type !== 'agent_end' && ev.type !== 'error') return;
           if (settled) return;
           settled = true;
           clearTimeout(timeout);
