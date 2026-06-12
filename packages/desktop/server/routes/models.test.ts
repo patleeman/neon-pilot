@@ -460,4 +460,24 @@ describe('model routes', () => {
       template: '# Custom\n\n{{ knowledge_root }}\n',
     });
   });
+
+  it('closes provider OAuth event streams when the login is cancelled', () => {
+    const { getHandler } = createDesktopHarness(allocateFiles());
+    const unsubscribe = vi.fn();
+    let listener: ((login: { status: string; id?: string }) => void) | undefined;
+    subscribeProviderOAuthLoginMock.mockImplementation((_loginId, onLogin) => {
+      listener = onLogin;
+      return unsubscribe;
+    });
+    const req = createRequest({ params: { loginId: 'login-1' } });
+    const res = createResponse();
+
+    getHandler('/api/provider-auth/oauth/:loginId/events')(req, res);
+    listener?.({ id: 'login-1', status: 'cancelled' });
+
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream');
+    expect(res.write).toHaveBeenCalledWith(`data: ${JSON.stringify({ id: 'login-1', status: 'cancelled' })}\n\n`);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(res.end).toHaveBeenCalledTimes(1);
+  });
 });

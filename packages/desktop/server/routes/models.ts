@@ -19,6 +19,7 @@ import type { Express } from 'express';
 
 import { logError } from '../middleware/index.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
+import { shouldCloseProviderOAuthSubscription } from '../app/localApiProviderOAuthSubscription.js';
 import type { ServerRouteContext } from './context.js';
 
 let getRuntimeScopeFn: () => string = () => {
@@ -203,7 +204,7 @@ export function registerModelRoutes(
 
       const unsubscribe = subscribeProviderOAuthLogin(loginId, (login: { status: string }) => {
         res.write(`data: ${JSON.stringify(login)}\n\n`);
-        if (login.status === 'completed' || login.status === 'failed') {
+        if (shouldCloseProviderOAuthSubscription(login)) {
           clearTimeout(timeoutId);
           unsubscribe();
           res.end();
