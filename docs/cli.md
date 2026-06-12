@@ -5,7 +5,7 @@ The `neon-pilot` command is the local control plane for Neon Pilot administratio
 Core owns the shell and built-in commands. Extensions add product commands with `contributes.cliCommands`, and enabled extension commands are discoverable at runtime:
 
 ```bash
-neon-pilot commands --json
+neon-pilot commands
 ```
 
 Use `neon-pilot help` for the core shell and `neon-pilot help <command>` for a specific command:
@@ -57,7 +57,7 @@ Use `background-commands` for detached shell commands with logs/status/cancel/re
 Use subagent commands to inspect or manage delegated background agent work, not for ordinary prompting.
 Use scheduled-task commands, currently `tasks ...`, for scheduled recurring behavior.
 Use `extensions` and `settings` for product administration.
-Use `app-commands` and `protocol` only as advanced escape hatches when no first-class CLI command fits; they are hidden from default human discovery and appear under `commands --verbose`.
+Use `app-commands`, `protocol`, and `schema` only as advanced/script escape hatches when no first-class CLI command fits; they are hidden from default human discovery and appear under `commands --verbose`.
 ```
 
 The most important ambiguity to avoid is `ask` versus subagents. A one-off shell request like "run an agent to review this repo" should become `neon-pilot ask ...`. Subagent commands are for delegated background agent records created by the runtime/conversation workflow; they are not the default way for an external caller to start normal agent work.
@@ -120,9 +120,10 @@ For internal agents and automation, keep deeper control-plane details in skills 
 ```text
 Discovery
   commands                      Browse task-oriented command families
+  commands --brief              Print compact agent-readable text
   commands --verbose            Include advanced/internal escape hatches
   commands --json               List live command contracts for scripts
-  schema --json                 Export full machine-readable command schema for generated references
+  schema --json                 Hidden generated-reference contract export
   help <command>                Show human usage for one command
   paths                         Show local runtime paths
   version                       Show CLI and runtime version
@@ -224,7 +225,7 @@ neon-pilot conversations list
 neon-pilot conversations search "query text"
 ```
 
-Agents should prefer `--json` for inspection and automation, list or inspect before mutating, and use CLI commands instead of editing runtime files directly when a command exists.
+Agents should prefer human output or `commands --brief` for command selection, list or inspect before mutating, and use CLI commands instead of editing runtime files directly when a command exists. Use `--json` only for scripts, generated references, health gates, and stable machine parsing.
 
 ## Ownership
 

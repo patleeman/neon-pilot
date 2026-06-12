@@ -144,7 +144,9 @@ describe('protocol CLI', () => {
   it('prints stable human help for the core shell', async () => {
     await expect(runProtocolCli(['help'])).resolves.toBe(0);
 
-    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('schema [--json]               Export CLI command contracts'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('commands [--brief]'));
+    expect(stdoutWrite).not.toHaveBeenCalledWith(expect.stringContaining('schema [--json]'));
+    expect(stdoutWrite).not.toHaveBeenCalledWith(expect.stringContaining('protocol <protocol-id>'));
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('doctor [--json]               Check CLI/runtime readiness'));
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('--quiet      Suppress non-essential human output'));
   });
@@ -203,6 +205,19 @@ describe('protocol CLI', () => {
 
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('settings list [system-settings]  List runtime settings.'));
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('cli status  Show the channel-local launcher'));
+    expect(stdoutWrite).not.toHaveBeenCalledWith(expect.stringContaining('protocol  Invoke a raw extension protocol entrypoint'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Advanced Commands: hidden from the default human list.'));
+  });
+
+  it('prints compact brief command lists and reveals advanced commands only with verbose', async () => {
+    await expect(runProtocolCli(['commands', '--brief'])).resolves.toBe(0);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Neon Pilot commands (brief):'));
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('commands | cli.discover_contracts | public'));
+    expect(stdoutWrite).not.toHaveBeenCalledWith(expect.stringContaining('protocol | host.raw_protocol_escape_hatch | advanced'));
+
+    stdoutWrite.mockClear();
+    await expect(runProtocolCli(['commands', '--brief', '--verbose'])).resolves.toBe(0);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('protocol | host.raw_protocol_escape_hatch | advanced'));
   });
 
   it('returns structured errors for JSON callers', async () => {
@@ -392,9 +407,7 @@ describe('protocol CLI', () => {
       ],
     });
 
-    await expect(runProtocolCli(['background-commands', 'logs', '--tail', '25', '--json'])).resolves.toBe(
-      PROTOCOL_CLI_EXIT_CODES.usage,
-    );
+    await expect(runProtocolCli(['background-commands', 'logs', '--tail', '25', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
 
     expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Expected at least 1 positional argument'));

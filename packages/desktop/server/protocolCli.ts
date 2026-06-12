@@ -81,8 +81,7 @@ function usage(): string {
     commandName: 'neon-pilot',
     summary: 'Neon Pilot command line administration for the local runtime and enabled extensions.',
     builtInCommands: [
-      'commands [--json]             List core and extension CLI commands',
-      'schema [--json]               Export CLI command contracts',
+      'commands [--brief]            Browse command families; use --brief for compact agent-readable text',
       'doctor [--json]               Check CLI/runtime readiness',
       'paths [--json]                Show local runtime paths',
       'version [--json]              Show CLI package/runtime version',
@@ -104,13 +103,14 @@ const CORE_CLI_COMMANDS: NeonPilotCliCommandDefinition[] = [
     command: 'commands',
     aliases: ['ls'],
     description: 'List core and enabled extension CLI commands.',
-    usage: 'commands [--json] [--quiet] [--verbose] [--no-color]',
-    examples: ['neon-pilot commands', 'neon-pilot commands --json'],
+    usage: 'commands [--brief] [--verbose] [--json] [--quiet] [--no-color]',
+    examples: ['neon-pilot commands', 'neon-pilot commands --brief', 'neon-pilot commands --verbose'],
     argsSchema: { type: 'array', items: false, maxItems: 0 },
     flagsSchema: {
       type: 'object',
       properties: {
         json: { type: 'boolean' },
+        brief: { type: 'boolean' },
         quiet: { type: 'boolean' },
         verbose: { type: 'boolean' },
         'no-color': { type: 'boolean' },
@@ -697,8 +697,14 @@ async function allCliCommandDefinitions(): Promise<NeonPilotCliCommandDefinition
 async function listCliCommands(args: string[], rawArgs = args): Promise<number> {
   try {
     const definitions = await allCliCommandDefinitions();
-    if (!rawArgs.includes('--quiet'))
-      process.stdout.write(renderCliCommandList(definitions, wantsJson(rawArgs), { verbose: rawArgs.includes('--verbose') }));
+    if (!rawArgs.includes('--quiet')) {
+      process.stdout.write(
+        renderCliCommandList(definitions, wantsJson(rawArgs), {
+          brief: rawArgs.includes('--brief'),
+          verbose: rawArgs.includes('--verbose'),
+        }),
+      );
+    }
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

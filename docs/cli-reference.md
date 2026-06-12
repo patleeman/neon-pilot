@@ -333,7 +333,7 @@ Examples:
 List core and enabled extension CLI commands.
 
 - Source: core
-- Usage: `neon-pilot commands [--json] [--quiet] [--verbose] [--no-color]`
+- Usage: `neon-pilot commands [--brief] [--verbose] [--json] [--quiet] [--no-color]`
 - Mode: read
 - Requires app: no
 - Idempotent: yes
@@ -344,7 +344,8 @@ List core and enabled extension CLI commands.
 
 Examples:
 - `neon-pilot commands`
-- `neon-pilot commands --json`
+- `neon-pilot commands --brief`
+- `neon-pilot commands --verbose`
 
 ### control-plane doctor
 

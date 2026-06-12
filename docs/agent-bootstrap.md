@@ -56,7 +56,7 @@ Neon Pilot self-administration is through `neon-pilot` for external agents and t
 ## Rules For Agents
 
 - Prefer CLI commands over editing runtime files directly.
-- Use `--json` for inspection and automation.
+- Use human output for orientation; use `--json` only for scripted health gates and parsed automation.
 - Never put provider API keys in command arguments, logs, transcripts, or config files.
 - Use `--stdin`, Keychain, or OAuth/device login for credentials.
 - Use `neon-pilot bootstrap doctor --json` after every install or settings change.

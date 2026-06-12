@@ -342,10 +342,11 @@ export function renderCliUsage(options: NeonPilotCliHelpOptions = {}): string {
 export function renderCliCommandList(
   definitions: NeonPilotCliCommandDefinition[],
   json: boolean,
-  options: { verbose?: boolean } = {},
+  options: { verbose?: boolean; brief?: boolean } = {},
 ): string {
   const commands = [...definitions].sort((a, b) => a.command.localeCompare(b.command));
   if (json) return `${JSON.stringify({ commands }, null, 2)}\n`;
+  if (options.brief === true) return renderCliBriefCommandList(commands, { includeAdvanced: options.verbose === true });
   const renderedGroups = renderCliCommandGroups(commands, { includeAdvanced: options.verbose === true });
   const commonIntents = renderCliCommonIntents(commands);
   return (
@@ -367,6 +368,25 @@ export function renderCliCommandList(
       'Use `neon-pilot help <command>` for details, `commands --verbose` for advanced surfaces, or `commands --json` for scripts.',
     ].join('\n') + '\n'
   );
+}
+
+function renderCliBriefCommandList(commands: NeonPilotCliCommandDefinition[], options: { includeAdvanced: boolean }): string {
+  const visibleCommands = commands.filter((command) => options.includeAdvanced || command.stability !== 'advanced');
+  const lines = [
+    'Neon Pilot commands (brief):',
+    'command | intent | stability | use | not',
+    ...visibleCommands.map((command) => {
+      const use = command.recommendedFor?.[0] ?? command.description ?? command.title ?? '';
+      const not = command.notFor?.[0] ?? '';
+      return [command.command, command.intent ?? '', command.stability ?? 'public', use ? `use: ${use}` : '', not ? `not: ${not}` : '']
+        .filter(Boolean)
+        .join(' | ');
+    }),
+  ];
+  if (!options.includeAdvanced && commands.some((command) => command.stability === 'advanced')) {
+    lines.push('advanced commands hidden; use `neon-pilot commands --brief --verbose`');
+  }
+  return `${lines.join('\n')}\n`;
 }
 
 function renderCliCommonIntents(commands: NeonPilotCliCommandDefinition[]): string[] {
@@ -456,10 +476,17 @@ export function renderCliCommandHelp(definition: NeonPilotCliCommandDefinition, 
   ].filter((item): item is string => Boolean(item));
   if (details.length > 0) lines.push('', `Contract: ${details.join(', ')}`);
   if (definition.examples?.length) {
+    const examples = humanCliExamples(definition.examples);
     lines.push('', 'Examples:');
-    lines.push(...definition.examples.map((example) => `  ${example}`));
+    lines.push(...examples.map((example) => `  ${example}`));
+    if (examples.length < definition.examples.length) lines.push('  Add --json when scripting or parsing output.');
   }
   return `${lines.join('\n')}\n`;
+}
+
+function humanCliExamples(examples: string[]): string[] {
+  const nonJsonExamples = examples.filter((example) => !example.includes('--json'));
+  return nonJsonExamples.length > 0 ? nonJsonExamples : examples;
 }
 
 export function findCliHelpTarget<T extends NeonPilotCliCommandDefinition>(definitions: T[], target: string): T | undefined {
@@ -611,7 +638,7 @@ export function withDefaultCliCommandContract<T extends NeonPilotCliCommandDefin
     notFor: definition.notFor ?? inferCliCommandNotFor(definition.command),
     preferredOver: definition.preferredOver ?? inferCliCommandPreferredOver(definition.command),
     usage,
-    examples: definition.examples ?? [exampleFromCliUsage(usage), `${exampleFromCliUsage(usage)} --json`],
+    examples: definition.examples ?? [exampleFromCliUsage(usage)],
     argsSchema: definition.argsSchema ?? inferCliArgsSchema(definition.command),
     flagsSchema,
     mode,
@@ -662,7 +689,9 @@ function inferCliCommandAudience(command: string): NonNullable<NeonPilotCliComma
 }
 
 function inferCliCommandStability(command: string): NonNullable<NeonPilotCliCommandDefinition['stability']> {
+  if (command === 'schema') return 'advanced';
   if (command.startsWith('app-commands') || command === 'protocol') return 'advanced';
+  if (command.startsWith('conversations transcript append') || command.startsWith('conversations transcript update')) return 'advanced';
   return 'public';
 }
 
@@ -691,6 +720,12 @@ function inferCliCommandRecommendedFor(command: string): string[] {
   if (command === 'protocol') {
     return ['advanced raw extension protocol integration when no first-class CLI command fits'];
   }
+  if (command === 'schema') {
+    return ['scripted contract export and generated references'];
+  }
+  if (command.startsWith('conversations transcript append') || command.startsWith('conversations transcript update')) {
+    return ['advanced transcript recovery after inspecting the conversation first'];
+  }
   return [];
 }
 
@@ -703,6 +738,12 @@ function inferCliCommandNotFor(command: string): string[] {
   }
   if (command.startsWith('app-commands') || command === 'protocol') {
     return ['normal user-facing automation when a first-class CLI command exists'];
+  }
+  if (command === 'schema') {
+    return ['human command discovery; use `commands` or `help <command>` instead'];
+  }
+  if (command.startsWith('conversations transcript append') || command.startsWith('conversations transcript update')) {
+    return ['normal conversation turns; use `ask` or `conversations run-turn` instead'];
   }
   if (command === 'ask') {
     return [

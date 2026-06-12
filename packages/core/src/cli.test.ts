@@ -14,6 +14,7 @@ import {
   renderCliUsage,
   selectCliCommandMatch,
   validateCliInvocation,
+  withDefaultCliCommandContract,
   type NeonPilotCliCommandDefinition,
 } from './cli.js';
 
@@ -98,6 +99,68 @@ describe('core CLI shell helpers', () => {
     expect(renderCliCommandHelp(commands[0]!, 'neon-pilot')).toContain('Usage: neon-pilot settings list [prefix] [--json]');
     expect(renderCliCommandHelp(commands[0]!, 'neon-pilot')).toContain('Contract: mode=read, offline-ok, output=text|json');
     expect(findCliHelpTarget(commands, 'ext list')).toBe(commands[1]);
+  });
+
+  it('hides advanced commands by default and shows them in verbose or JSON modes', () => {
+    const commandDefinitions = [
+      withDefaultCliCommandContract({ id: 'ask', command: 'ask', description: 'Ask Neon Pilot.' }),
+      withDefaultCliCommandContract({ id: 'schema', command: 'schema', description: 'Export contracts.' }),
+      withDefaultCliCommandContract({ id: 'protocol', command: 'protocol', description: 'Raw protocol.' }),
+      withDefaultCliCommandContract({
+        id: 'transcript-update',
+        command: 'conversations transcript update',
+        description: 'Advanced transcript mutation.',
+      }),
+    ];
+
+    const human = renderCliCommandList(commandDefinitions, false);
+    expect(human).toContain('ask  Ask Neon Pilot.');
+    expect(human).not.toContain('protocol  Raw protocol.');
+    expect(human).not.toContain('schema  Export contracts.');
+    expect(human).not.toContain('conversations transcript update');
+    expect(human).toContain('Advanced Commands: hidden from the default human list.');
+
+    const verbose = renderCliCommandList(commandDefinitions, false, { verbose: true });
+    expect(verbose).toContain('protocol  Raw protocol.');
+    expect(verbose).toContain('schema  Export contracts.');
+    expect(verbose).toContain('conversations transcript update  Advanced transcript mutation.');
+
+    const json = renderCliCommandList(commandDefinitions, true);
+    expect(json).toContain('"command": "protocol"');
+    expect(json).toContain('"stability": "advanced"');
+  });
+
+  it('renders compact brief command output for agent reading without exposing advanced commands by default', () => {
+    const commandDefinitions = [
+      withDefaultCliCommandContract({ id: 'ask', command: 'ask', description: 'Ask Neon Pilot.' }),
+      withDefaultCliCommandContract({ id: 'protocol', command: 'protocol', description: 'Raw protocol.' }),
+    ];
+
+    const brief = renderCliCommandList(commandDefinitions, false, { brief: true });
+    expect(brief).toContain('Neon Pilot commands (brief):');
+    expect(brief).toContain('ask | agent.new_conversation_turn | public | use: asking Neon Pilot to do a one-off task from the CLI');
+    expect(brief).not.toContain('protocol | host.raw_protocol_escape_hatch');
+    expect(brief).toContain('advanced commands hidden');
+
+    expect(renderCliCommandList(commandDefinitions, false, { brief: true, verbose: true })).toContain(
+      'protocol | host.raw_protocol_escape_hatch | advanced',
+    );
+  });
+
+  it('keeps JSON examples out of normal help when a human example exists', () => {
+    const help = renderCliCommandHelp(
+      {
+        id: 'settings-list',
+        command: 'settings list',
+        description: 'List settings.',
+        examples: ['neon-pilot settings list', 'neon-pilot settings list --json'],
+      },
+      'neon-pilot',
+    );
+
+    expect(help).toContain('neon-pilot settings list');
+    expect(help).not.toContain('neon-pilot settings list --json');
+    expect(help).toContain('Add --json when scripting or parsing output.');
   });
 
   it('formats human output without forcing JSON when text is available', () => {

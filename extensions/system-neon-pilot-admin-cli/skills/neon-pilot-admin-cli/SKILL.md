@@ -19,7 +19,7 @@ Use the unified Neon Pilot command surface instead of direct runtime-file edits,
    neon-pilot extensions list                                   # extension admin
    ```
 
-   Use `neon-pilot commands` and `neon-pilot help <command>` for human-readable discovery. Use `--json` only when you are writing a script, need stable ids/schema fields, or must parse output mechanically.
+   Use `neon-pilot commands`, `neon-pilot commands --brief`, and `neon-pilot help <command>` for command discovery. Use `--json` only when you are writing a script, need stable ids/schema fields, or must parse output mechanically.
 
 2. From an internal Neon Pilot conversation, prefer the canonical tool for the same command surface:
 
@@ -67,7 +67,7 @@ Default CLI output is for humans and agents reading transcripts. Prefer it when 
 
 Use `--json` for scripts, assertions, stable ids, machine parsing, and generated references. Do not use JSON simply because the caller is an agent; it costs more context and hides the product ontology behind schema noise.
 
-Use `commands --verbose` when you need advanced escape hatches such as app-command or raw protocol surfaces. They are intentionally not emphasized in the default human command list.
+Use `commands --brief` for compact agent-readable text. Use `commands --verbose` when you need advanced escape hatches such as schema export, app-command, or raw protocol surfaces. They are intentionally not emphasized in the default human command list.
 
 ## Install and bootstrap
 
@@ -226,7 +226,7 @@ neon-pilot heartbeats list
 neon-pilot heartbeats stop <heartbeat-id>
 ```
 
-## Delegated agent control
+## Advanced internal delegated agent control
 
 The same CLI surface also controls Neon Pilot as a delegated agent runtime. For a one-shot external delegation, prefer `neon-pilot ask`; it creates a normal conversation, runs one turn, and returns the answer plus conversation id. Do not direct external users to `subagents`; subagents are an internal model tool for Neon Pilot agents to create durable offshoot work.
 
