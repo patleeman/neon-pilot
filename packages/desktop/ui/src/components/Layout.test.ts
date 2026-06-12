@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SessionMeta } from '../shared/types';
 import {
+  clearSelectedWorkbenchTool,
   clearWorkbenchOnlySearchParamsForCompact,
   focusComposerTextarea,
   focusFirstSidebarControl,
@@ -193,6 +194,26 @@ describe('Layout workbench rail state', () => {
       nextActiveTabId: 'files-1',
       removed: true,
     });
+  });
+
+  it('clears stale conversation tool selections when terminal tabs are retired', () => {
+    expect(
+      clearSelectedWorkbenchTool(
+        {
+          'conversation-1': 'terminal',
+          'conversation-2': 'files',
+        },
+        'terminal',
+      ),
+    ).toEqual({
+      'conversation-2': 'files',
+    });
+
+    const preserved = {
+      'conversation-1': 'files',
+      'conversation-2': 'chat',
+    } as const;
+    expect(clearSelectedWorkbenchTool(preserved, 'terminal')).toBe(preserved);
   });
 });
 

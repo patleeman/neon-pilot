@@ -281,6 +281,22 @@ export function removeTerminalWorkbenchTabs(
   return { nextTabs, nextActiveTabId, removed: true };
 }
 
+export function clearSelectedWorkbenchTool(
+  selectedToolByConversation: Record<string, WorkbenchRailMode>,
+  tool: WorkbenchRailMode,
+): Record<string, WorkbenchRailMode> {
+  let changed = false;
+  const nextSelectedToolByConversation: Record<string, WorkbenchRailMode> = {};
+  for (const [conversationId, selectedTool] of Object.entries(selectedToolByConversation)) {
+    if (selectedTool === tool) {
+      changed = true;
+      continue;
+    }
+    nextSelectedToolByConversation[conversationId] = selectedTool;
+  }
+  return changed ? nextSelectedToolByConversation : selectedToolByConversation;
+}
+
 function createWorkbenchTabInstance(
   mode: WorkbenchRailMode,
   options?: { id?: string; artifactId?: string | null; conversationId?: string | null },
@@ -1821,6 +1837,10 @@ export function Layout() {
       setOpenWorkbenchTabs(next);
       setActiveWorkbenchTabId(nextActiveTabId);
 
+      if (closingTab?.mode === 'terminal' && !next.some((tab) => tab.mode === 'terminal')) {
+        setSelectedToolByConversation((current) => clearSelectedWorkbenchTool(current, 'terminal'));
+      }
+
       if (nextWouldHaveNoTabs && closingTab?.mode === 'files') {
         clearActiveWorkbenchFileSelection();
       }
@@ -1937,6 +1957,7 @@ export function Layout() {
     if (!removed) return;
     setOpenWorkbenchTabs(nextTabs);
     setActiveWorkbenchTabId(nextActiveTabId);
+    setSelectedToolByConversation((current) => clearSelectedWorkbenchTool(current, 'terminal'));
   }, [activeWorkbenchTabId, extensionRegistry.surfaces, location.pathname]);
 
   const handleAppLayoutModeChange = useCallback(
@@ -1950,6 +1971,7 @@ export function Layout() {
         if (removed) {
           setOpenWorkbenchTabs(nextTabs);
           setActiveWorkbenchTabId(nextActiveTabId);
+          setSelectedToolByConversation((current) => clearSelectedWorkbenchTool(current, 'terminal'));
         }
         setSearchParams(
           (current) => {
