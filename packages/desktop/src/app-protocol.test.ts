@@ -85,4 +85,64 @@ describe('ensureDesktopAppProtocolForHost', () => {
 
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
+
+  it('tears down synchronous protocol stream errors without double-closing the stream controller', async () => {
+    sessionProtocolHandleMock.mockClear();
+    const unsubscribe = vi.fn();
+    ensureDesktopAppProtocolForHost(
+      {
+        getHostController: () =>
+          ({
+            subscribeApiStream: vi.fn(async (_path, onEvent) => {
+              onEvent({ type: 'error', message: 'boom' });
+              return unsubscribe;
+            }),
+          }) as never,
+      } as never,
+      'sync-stream-error-test',
+    );
+
+    const handler = sessionProtocolHandleMock.mock.calls.at(-1)?.[1] as ((request: Request) => Promise<Response>) | undefined;
+    expect(handler).toBeTypeOf('function');
+
+    const response = await handler!(
+      new Request('neon-pilot://app/api/extensions/system-terminal/routes/stream', {
+        method: 'GET',
+        headers: { Accept: 'text/event-stream' },
+      }),
+    );
+
+    await expect(response.body?.getReader().read()).rejects.toThrow('boom');
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('tears down synchronous protocol stream closes without double-closing the stream controller', async () => {
+    sessionProtocolHandleMock.mockClear();
+    const unsubscribe = vi.fn();
+    ensureDesktopAppProtocolForHost(
+      {
+        getHostController: () =>
+          ({
+            subscribeApiStream: vi.fn(async (_path, onEvent) => {
+              onEvent({ type: 'close' });
+              return unsubscribe;
+            }),
+          }) as never,
+      } as never,
+      'sync-stream-close-test',
+    );
+
+    const handler = sessionProtocolHandleMock.mock.calls.at(-1)?.[1] as ((request: Request) => Promise<Response>) | undefined;
+    expect(handler).toBeTypeOf('function');
+
+    const response = await handler!(
+      new Request('neon-pilot://app/api/extensions/system-terminal/routes/stream', {
+        method: 'GET',
+        headers: { Accept: 'text/event-stream' },
+      }),
+    );
+
+    await expect(response.body?.getReader().read()).resolves.toEqual({ done: true, value: undefined });
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
 });

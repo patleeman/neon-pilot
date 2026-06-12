@@ -203,6 +203,7 @@ function createSseProtocolResponse(
   const encoder = new TextEncoder();
   let unsubscribe: (() => void) | null = null;
   let closed = false;
+  let streamTerminated = false;
 
   const close = () => {
     if (closed) {
@@ -235,21 +236,28 @@ function createSseProtocolResponse(
               return;
             case 'error':
               close();
+              streamTerminated = true;
               controller.error(new Error(event.message ?? 'Desktop API stream failed.'));
               return;
             case 'close':
               close();
+              streamTerminated = true;
               controller.close();
               return;
           }
         });
         if (closed) {
           teardown();
-          controller.close();
+          if (!streamTerminated) {
+            controller.close();
+          }
           return;
         }
         unsubscribe = teardown;
       } catch (error) {
+        if (closed) {
+          return;
+        }
         close();
         controller.error(error instanceof Error ? error : new Error(String(error)));
       }
