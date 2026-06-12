@@ -1,12 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const clearCacheMock = vi.fn().mockResolvedValue(undefined);
-const setProxyMock = vi.fn().mockResolvedValue(undefined);
+const { clearCacheMock, setProxyMock, sessionProtocolHandleMock, rootProtocolHandleMock } = vi.hoisted(() => ({
+  clearCacheMock: vi.fn().mockResolvedValue(undefined),
+  setProxyMock: vi.fn().mockResolvedValue(undefined),
+  sessionProtocolHandleMock: vi.fn(),
+  rootProtocolHandleMock: vi.fn(),
+}));
 
 vi.mock('electron', () => ({
   app: { name: 'Neon Pilot' },
-  protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
-  session: { fromPartition: () => ({ protocol: { handle: vi.fn() }, setProxy: setProxyMock, clearCache: clearCacheMock }) },
+  protocol: { registerSchemesAsPrivileged: vi.fn(), handle: rootProtocolHandleMock },
+  session: {
+    fromPartition: () => ({ protocol: { handle: sessionProtocolHandleMock }, setProxy: setProxyMock, clearCache: clearCacheMock }),
+  },
 }));
 
 import { buildDesktopProtocolErrorResponse, ensureDesktopAppProtocolForHost, getDesktopAppBaseUrl } from './app-protocol.js';
@@ -37,5 +43,46 @@ describe('ensureDesktopAppProtocolForHost', () => {
     vi.advanceTimersByTime(10_000);
     expect(clearCacheMock).toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  it('tears down a late stream subscription if the protocol request aborts before subscribe resolves', async () => {
+    sessionProtocolHandleMock.mockClear();
+    const unsubscribe = vi.fn();
+    let resolveSubscribe: ((value: () => void) => void) | null = null;
+    ensureDesktopAppProtocolForHost(
+      {
+        getHostController: () =>
+          ({
+            subscribeApiStream: vi.fn(
+              () =>
+                new Promise<() => void>((resolve) => {
+                  resolveSubscribe = resolve;
+                }),
+            ),
+          }) as never,
+      } as never,
+      'late-stream-test',
+    );
+
+    const handler = sessionProtocolHandleMock.mock.calls.at(-1)?.[1] as ((request: Request) => Promise<Response>) | undefined;
+    expect(handler).toBeTypeOf('function');
+
+    const abort = new AbortController();
+    const response = await handler!(
+      new Request('neon-pilot://app/api/extensions/system-terminal/routes/stream', {
+        method: 'GET',
+        headers: { Accept: 'text/event-stream' },
+        signal: abort.signal,
+      }),
+    );
+
+    const reader = response.body?.getReader();
+    const readPromise = reader?.read();
+    abort.abort();
+
+    resolveSubscribe?.(unsubscribe);
+    await readPromise?.catch(() => undefined);
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 });

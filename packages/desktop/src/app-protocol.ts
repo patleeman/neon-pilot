@@ -222,7 +222,7 @@ function createSseProtocolResponse(
       request.signal.addEventListener('abort', close, { once: true });
 
       try {
-        unsubscribe = await subscribe((event) => {
+        const teardown = await subscribe((event) => {
           if (closed) {
             return;
           }
@@ -243,6 +243,12 @@ function createSseProtocolResponse(
               return;
           }
         });
+        if (closed) {
+          teardown();
+          controller.close();
+          return;
+        }
+        unsubscribe = teardown;
       } catch (error) {
         close();
         controller.error(error instanceof Error ? error : new Error(String(error)));
