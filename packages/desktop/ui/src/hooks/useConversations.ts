@@ -113,6 +113,7 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   const seenRunningAutomationIdsRef = useRef<Set<string>>(new Set());
   const missingSessionMetaInflightRef = useRef<Set<string>>(new Set());
   const hasSyncedRemoteLayoutAfterSessionChangeRef = useRef(false);
+  const latestRefetchRequestIdRef = useRef(0);
 
   const automationThreadTitleBySessionId = useMemo(
     () =>
@@ -173,7 +174,12 @@ export function useConversations(options: { includeArchivedSessions?: boolean } 
   }, []);
 
   const refetch = useCallback(async () => {
+    const requestId = latestRefetchRequestIdRef.current + 1;
+    latestRefetchRequestIdRef.current = requestId;
     const next = await fetchSessionsSnapshot();
+    if (latestRefetchRequestIdRef.current !== requestId) {
+      return next;
+    }
     sessionStore.replaceAll(next);
     sessionStore.markReady?.();
     return next;

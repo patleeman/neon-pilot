@@ -24,8 +24,14 @@ const apiMocks = vi.hoisted(() => ({
   setOpenConversationTabs: vi.fn(),
 }));
 
+const fetchSessionsSnapshotMock = vi.hoisted(() => vi.fn());
+
 vi.mock('../client/api', () => ({
   api: apiMocks,
+}));
+
+vi.mock('../session/sessionSnapshot', () => ({
+  fetchSessionsSnapshot: fetchSessionsSnapshotMock,
 }));
 
 const mountedRoots: Root[] = [];
@@ -311,6 +317,7 @@ describe('useConversations', () => {
     apiMocks.openConversationTabs.mockReset();
     apiMocks.sessionMeta.mockReset();
     apiMocks.setOpenConversationTabs.mockReset();
+    fetchSessionsSnapshotMock.mockReset();
     apiMocks.openConversationTabs.mockResolvedValue({
       sessionIds: [],
       pinnedSessionIds: [],
@@ -440,6 +447,44 @@ describe('useConversations', () => {
     expect(apiMocks.sessionMeta).toHaveBeenCalledWith('open-one');
     expect(latestHookResult?.tabs.map((session) => session.title)).toEqual(['Loaded open-one']);
     expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['open-one']);
+  });
+
+  it('does not let an older manual refetch overwrite a newer snapshot', async () => {
+    let resolveFirst!: (sessions: SessionMeta[]) => void;
+    let resolveSecond!: (sessions: SessionMeta[]) => void;
+    const first = new Promise<SessionMeta[]>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<SessionMeta[]>((resolve) => {
+      resolveSecond = resolve;
+    });
+    fetchSessionsSnapshotMock.mockReturnValueOnce(first).mockReturnValueOnce(second);
+
+    renderProbe({
+      sessions: [createSession({ id: 'initial', title: 'Initial session' })],
+      tasks: null,
+    });
+
+    await flushAsyncWork();
+
+    const firstRefetch = latestHookResult?.refetch();
+    const secondRefetch = latestHookResult?.refetch();
+
+    await act(async () => {
+      resolveSecond([createSession({ id: 'newer', title: 'Newer snapshot' })]);
+      await secondRefetch;
+    });
+
+    expect(sessionStore.get('newer')?.title).toBe('Newer snapshot');
+    expect(sessionStore.get('initial')).toBeUndefined();
+
+    await act(async () => {
+      resolveFirst([createSession({ id: 'older', title: 'Older snapshot' })]);
+      await firstRefetch;
+    });
+
+    expect(sessionStore.get('newer')?.title).toBe('Newer snapshot');
+    expect(sessionStore.get('older')).toBeUndefined();
   });
 
   it('does not let stale remote layout sync close locally visible live conversation tabs', async () => {
