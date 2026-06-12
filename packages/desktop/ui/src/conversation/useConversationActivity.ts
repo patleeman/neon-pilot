@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
@@ -43,14 +43,39 @@ export function useConversationActivity(
   const { versions } = useAppEvents();
   const [activity, setActivity] = useState<ConversationActivityResult>(EMPTY_ACTIVITY);
   const documentVisible = useDocumentVisible();
+  const lifecycleRef = useRef({
+    conversationId: normalizedConversationId,
+    documentVisible,
+    disposed: false,
+  });
+  lifecycleRef.current.conversationId = normalizedConversationId;
+  lifecycleRef.current.documentVisible = documentVisible;
+
+  useEffect(() => {
+    lifecycleRef.current.disposed = false;
+    return () => {
+      lifecycleRef.current.disposed = true;
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!normalizedConversationId || !documentVisible) {
-      setActivity(EMPTY_ACTIVITY);
+      if (!lifecycleRef.current.disposed) {
+        setActivity(EMPTY_ACTIVITY);
+      }
       return;
     }
 
-    setActivity(await api.conversationActivity(normalizedConversationId));
+    const requestConversationId = normalizedConversationId;
+    const result = await api.conversationActivity(requestConversationId);
+    if (
+      lifecycleRef.current.disposed ||
+      !lifecycleRef.current.documentVisible ||
+      lifecycleRef.current.conversationId !== requestConversationId
+    ) {
+      return;
+    }
+    setActivity(result);
   }, [documentVisible, normalizedConversationId]);
 
   useEffect(() => {
