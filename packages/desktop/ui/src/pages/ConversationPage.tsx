@@ -1513,6 +1513,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const appliedInitialModelPreferenceLocationKeyRef = useRef<string | null>(null);
   const skippedInitialDeferredResumeLocationKeyRef = useRef<string | null>(null);
   const attemptedDeferredResumeAutoResumeKeyRef = useRef<string | null>(null);
+  const liveSessionContextLifecycleRef = useRef({
+    disposed: false,
+    latestRequestId: 0,
+  });
   const savedWorkspacePathsLifecycleRef = useRef({
     disposed: false,
     latestRequestId: 0,
@@ -1568,6 +1572,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     clearDraftConversationModel();
   }, [draft, models]);
+
+  useEffect(() => {
+    const lifecycle = liveSessionContextLifecycleRef.current;
+    lifecycle.disposed = false;
+    return () => {
+      lifecycle.disposed = true;
+    };
+  }, []);
 
   useEffect(() => {
     const lifecycle = savedWorkspacePathsLifecycleRef.current;
@@ -2863,12 +2875,24 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return null;
     }
 
+    const lifecycle = liveSessionContextLifecycleRef.current;
+    const requestId = lifecycle.latestRequestId + 1;
+    lifecycle.latestRequestId = requestId;
+
     try {
       const next = await api.liveSessionContext(id);
+      const currentLifecycle = liveSessionContextLifecycleRef.current;
+      if (currentLifecycle.disposed || currentLifecycle.latestRequestId !== requestId) {
+        return next;
+      }
+
       setLiveSessionContext(next);
       return next;
     } catch {
-      setLiveSessionContext(null);
+      const currentLifecycle = liveSessionContextLifecycleRef.current;
+      if (!currentLifecycle.disposed && currentLifecycle.latestRequestId === requestId) {
+        setLiveSessionContext(null);
+      }
       return null;
     }
   }, [draft, id]);

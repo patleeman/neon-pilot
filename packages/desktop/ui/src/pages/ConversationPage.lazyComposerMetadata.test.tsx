@@ -19,11 +19,13 @@ const apiMock = vi.hoisted(() => ({
   runs: vi.fn(),
   settings: vi.fn(),
   liveSession: vi.fn(),
+  liveSessionContext: vi.fn(),
   conversationAttachments: vi.fn(),
   conversationModelPreferences: vi.fn(),
   savedWorkspacePaths: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
   pickFolder: vi.fn(),
+  changeConversationCwd: vi.fn(),
   workspaceUncommittedDiff: vi.fn(),
 }));
 
@@ -241,6 +243,9 @@ function renderDraftConversationPage() {
 beforeEach(() => {
   vi.useFakeTimers();
   window.localStorage.clear();
+  regressionBootstrap.loading = false;
+  regressionBootstrap.error = null;
+  regressionBootstrap.data = regressionBootstrapData;
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   desktopConversationState.mode = 'disabled';
   desktopConversationState.active = false;
@@ -291,10 +296,24 @@ beforeEach(() => {
   apiMock.runs.mockResolvedValue({ runs: [] });
   apiMock.settings.mockResolvedValue({});
   apiMock.liveSession.mockResolvedValue({ live: false, hasStaleTurnState: false });
+  apiMock.liveSessionContext.mockResolvedValue({
+    cwd: '/tmp/project',
+    branch: 'main',
+    git: {
+      changeCount: 0,
+      linesAdded: 0,
+      linesDeleted: 0,
+    },
+  });
   apiMock.conversationAttachments.mockResolvedValue({ conversationId: 'conv-regression', attachments: [] });
   apiMock.savedWorkspacePaths.mockResolvedValue([]);
   apiMock.setSavedWorkspacePaths.mockImplementation(async (workspacePaths: string[]) => workspacePaths);
   apiMock.pickFolder.mockResolvedValue({ cancelled: true, path: null });
+  apiMock.changeConversationCwd.mockResolvedValue({
+    id: 'conv-regression',
+    cwd: '/tmp/project',
+    changed: false,
+  });
   apiMock.workspaceUncommittedDiff.mockResolvedValue({
     branch: 'main',
     changeCount: 0,
@@ -572,5 +591,105 @@ describe('ConversationPage lazy composer metadata', () => {
 
     listbox = screen.getByRole('listbox', { name: 'Saved workspaces' });
     expect(within(listbox).getByText('late-picked-workspace')).toBeTruthy();
+  });
+
+  it('ignores an older live session context refresh after a same-thread workspace switch triggers a newer one', async () => {
+    regressionBootstrapData.liveSession = {
+      live: true,
+      id: 'conv-regression',
+      cwd: '/tmp/project',
+      sessionFile: '/tmp/conv-regression.jsonl',
+      title: 'Regression conversation',
+      isStreaming: false,
+      hasStaleTurnState: false,
+    };
+    regressionBootstrapData.sessionDetail = {
+      ...regressionBootstrapData.sessionDetail,
+      meta: {
+        ...regressionBootstrapData.sessionDetail.meta,
+        cwd: '/tmp/project',
+        cwdSlug: 'project',
+        isLive: true,
+      },
+    };
+
+    const liveSessionContextResolvers: Array<
+      (value: {
+        cwd: string;
+        branch: string | null;
+        git: { changeCount: number; linesAdded: number; linesDeleted: number } | null;
+      }) => void
+    > = [];
+    apiMock.liveSessionContext.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          liveSessionContextResolvers.push(resolve);
+        }),
+    );
+    apiMock.pickFolder.mockResolvedValue({ cancelled: false, path: '/tmp/new-workspace' });
+    apiMock.changeConversationCwd.mockResolvedValue({
+      id: 'conv-regression',
+      cwd: '/tmp/new-workspace',
+      changed: false,
+    });
+
+    renderConversationPage();
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    expect(apiMock.liveSessionContext).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '/tmp/project' }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('textbox', { name: 'Conversation working directory' }), {
+        target: { value: '/tmp/new-workspace' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.changeConversationCwd).toHaveBeenCalledWith('conv-regression', '/tmp/new-workspace', '');
+    expect(apiMock.liveSessionContext).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      liveSessionContextResolvers[1]?.({
+        cwd: '/tmp/new-workspace',
+        branch: 'main',
+        git: {
+          changeCount: 0,
+          linesAdded: 0,
+          linesDeleted: 0,
+        },
+      });
+      await Promise.resolve();
+    });
+
+    const workspaceButton = screen.getByRole('button', { name: '/tmp/new-workspace' });
+    expect(workspaceButton.getAttribute('title')).toBe('Working directory: /tmp/new-workspace');
+
+    await act(async () => {
+      liveSessionContextResolvers[0]?.({
+        cwd: '/tmp/project',
+        branch: 'main',
+        git: {
+          changeCount: 0,
+          linesAdded: 0,
+          linesDeleted: 0,
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('button', { name: '/tmp/new-workspace' }).getAttribute('title')).toBe(
+      'Working directory: /tmp/new-workspace',
+    );
   });
 });
