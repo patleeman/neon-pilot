@@ -259,7 +259,25 @@ export function removeTerminalWorkbenchTabs(
   if (nextTabs.length === tabs.length) {
     return { nextTabs: tabs, nextActiveTabId: activeTabId, removed: false };
   }
-  const nextActiveTabId = activeTabId && nextTabs.some((tab) => tab.id === activeTabId) ? activeTabId : null;
+  let nextActiveTabId = activeTabId && nextTabs.some((tab) => tab.id === activeTabId) ? activeTabId : null;
+  if (!nextActiveTabId && activeTabId) {
+    const activeIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+    if (activeIndex !== -1 && nextTabs.length > 0) {
+      const nextIds = new Set(nextTabs.map((tab) => tab.id));
+      for (let offset = 1; offset <= tabs.length; offset += 1) {
+        const right = tabs[activeIndex + offset];
+        if (right && nextIds.has(right.id)) {
+          nextActiveTabId = right.id;
+          break;
+        }
+        const left = tabs[activeIndex - offset];
+        if (left && nextIds.has(left.id)) {
+          nextActiveTabId = left.id;
+          break;
+        }
+      }
+    }
+  }
   return { nextTabs, nextActiveTabId, removed: true };
 }
 

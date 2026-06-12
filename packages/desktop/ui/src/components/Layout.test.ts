@@ -166,7 +166,7 @@ describe('Layout workbench rail state', () => {
         { id: 'files-1', mode: 'files' },
         { id: 'chat-1', mode: 'chat', conversationId: 'chat-1' },
       ],
-      nextActiveTabId: null,
+      nextActiveTabId: 'chat-1',
       removed: true,
     });
 
@@ -174,6 +174,24 @@ describe('Layout workbench rail state', () => {
       nextTabs: [{ id: 'files-1', mode: 'files' }],
       nextActiveTabId: 'files-1',
       removed: false,
+    });
+
+    expect(
+      removeTerminalWorkbenchTabs(
+        [
+          { id: 'terminal-1', mode: 'terminal' },
+          { id: 'files-1', mode: 'files' },
+          { id: 'chat-1', mode: 'chat', conversationId: 'chat-1' },
+        ],
+        'terminal-1',
+      ),
+    ).toEqual({
+      nextTabs: [
+        { id: 'files-1', mode: 'files' },
+        { id: 'chat-1', mode: 'chat', conversationId: 'chat-1' },
+      ],
+      nextActiveTabId: 'files-1',
+      removed: true,
     });
   });
 });
