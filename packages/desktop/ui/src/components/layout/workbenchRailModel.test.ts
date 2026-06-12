@@ -88,5 +88,6 @@ describe('workbench rail model', () => {
     expect(isSinglePaneWorkbenchMode('terminal')).toBe(true);
     expect(isSinglePaneWorkbenchMode('files')).toBe(false);
     expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'terminal' }))).toBe(true);
+    expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'scratchpad' }))).toBe(true);
   });
 });

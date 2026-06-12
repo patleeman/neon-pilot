@@ -47,7 +47,8 @@ export function isSinglePaneWorkbenchMode(mode: WorkbenchRailMode, surface?: { e
     mode === 'artifacts' ||
     surface?.extensionId === 'system-artifacts' ||
     surface?.extensionId === 'system-excalidraw-input' ||
-    surfaceToolSlot === 'terminal'
+    surfaceToolSlot === 'terminal' ||
+    surfaceToolSlot === 'scratchpad'
   );
 }
 
