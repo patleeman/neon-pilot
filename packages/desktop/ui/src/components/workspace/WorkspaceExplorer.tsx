@@ -65,6 +65,11 @@ type TreeNodeState = {
   error: string | null;
 };
 
+type DirectoryLoadLifecycle = {
+  generation: number;
+  latestRequestIds: Map<string, number>;
+};
+
 const WORKSPACE_EXPLORER_OPEN_KEY = 'pa:workspace-explorer-open';
 const WORKSPACE_EXPLORER_DIFF_KEY = 'pa:workspace-explorer-diff-overlay';
 export const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
@@ -493,6 +498,7 @@ export function WorkspaceExplorer({
   const refreshSerial = useRef(0);
   const refreshTimer = useRef<number | null>(null);
   const selectFileRequestIdRef = useRef(0);
+  const directoryLoadLifecycleRef = useRef<DirectoryLoadLifecycle>({ generation: 0, latestRequestIds: new Map() });
   const useNativeWorkspaceContextMenu = shouldUseNativeAppContextMenus();
   const { model, resetTree, nativeContextMenuOpenRef } = useFileTreeModel({
     useNativeContextMenu: useNativeWorkspaceContextMenu,
@@ -558,6 +564,8 @@ export function WorkspaceExplorer({
 
   useEffect(() => {
     selectFileRequestIdRef.current += 1;
+    directoryLoadLifecycleRef.current.generation += 1;
+    directoryLoadLifecycleRef.current.latestRequestIds.clear();
     setNodes({});
     setSelectedPath(null);
     setFileState({ status: 'idle', data: null, error: null });
@@ -600,14 +608,29 @@ export function WorkspaceExplorer({
   const loadDirectory = useCallback(
     async (path: string) => {
       if (!cwd) return;
+      const lifecycle = directoryLoadLifecycleRef.current;
+      const generation = lifecycle.generation;
+      const requestId = (lifecycle.latestRequestIds.get(path) ?? 0) + 1;
+      lifecycle.latestRequestIds.set(path, requestId);
+      const isCurrentRequest = () => {
+        const currentLifecycle = directoryLoadLifecycleRef.current;
+        return currentLifecycle.generation === generation && currentLifecycle.latestRequestIds.get(path) === requestId;
+      };
+
       setNodes((current) => ({
         ...current,
         [path]: { ...(current[path] ?? { expanded: true, entries: null, error: null }), expanded: true, loading: true, error: null },
       }));
       try {
         const listing = await api.workspaceTree(cwd, path);
+        if (!isCurrentRequest()) {
+          return;
+        }
         setNodes((current) => ({ ...current, [path]: { expanded: true, loading: false, entries: listing.entries, error: null } }));
       } catch (error) {
+        if (!isCurrentRequest()) {
+          return;
+        }
         setNodes((current) => ({
           ...current,
           [path]: {
@@ -627,6 +650,8 @@ export function WorkspaceExplorer({
       setNodes((current) => {
         const existing = current[entry.path];
         if (existing?.expanded) {
+          const currentRequestId = directoryLoadLifecycleRef.current.latestRequestIds.get(entry.path) ?? 0;
+          directoryLoadLifecycleRef.current.latestRequestIds.set(entry.path, currentRequestId + 1);
           return { ...current, [entry.path]: { ...existing, expanded: false } };
         }
         return {

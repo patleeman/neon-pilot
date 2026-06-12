@@ -416,6 +416,114 @@ describe('formatWorkspaceEntrySize', () => {
     });
   });
 
+  it('ignores stale directory loads after switching workspaces', async () => {
+    const rootA = deferred<{
+      root: string;
+      rootName: string;
+      rootKind: 'git';
+      branch: string;
+      changes: never[];
+      entries: Array<{ path: 'src'; name: 'src'; kind: 'directory'; size: null; gitStatus: null; descendantGitStatusCount: null }>;
+    }>();
+    const dirA = deferred<{
+      root: string;
+      rootName: string;
+      rootKind: 'git';
+      branch: string;
+      changes: never[];
+      entries: Array<{ path: 'src/old.ts'; name: 'old.ts'; kind: 'file'; size: 1; gitStatus: null; descendantGitStatusCount: null }>;
+    }>();
+    const rootB = deferred<{
+      root: string;
+      rootName: string;
+      rootKind: 'git';
+      branch: string;
+      changes: never[];
+      entries: Array<{ path: 'src'; name: 'src'; kind: 'directory'; size: null; gitStatus: null; descendantGitStatusCount: null }>;
+    }>();
+    apiMocks.workspaceTree.mockImplementation((cwd: string, path: string) => {
+      if (cwd === '/repo-a' && path === '') {
+        return rootA.promise;
+      }
+      if (cwd === '/repo-a' && path === 'src') {
+        return dirA.promise;
+      }
+      if (cwd === '/repo-b' && path === '') {
+        return rootB.promise;
+      }
+      throw new Error(`unexpected tree ${cwd}:${path}`);
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(React.createElement(WorkspaceExplorer, { cwd: '/repo-a', onDraftPrompt: () => undefined }));
+    });
+
+    await act(async () => {
+      rootA.resolve({
+        root: '/repo-a',
+        rootName: 'repo-a',
+        rootKind: 'git',
+        branch: 'main',
+        changes: [],
+        entries: [{ path: 'src', name: 'src', kind: 'directory', size: null, gitStatus: null, descendantGitStatusCount: null }],
+      });
+      await rootA.promise;
+    });
+
+    const repoARow = await vi.waitFor(() => {
+      const row = [...container.querySelectorAll('[role="button"]')].find((node) => node.textContent?.includes('src'));
+      expect(row).toBeTruthy();
+      return row as HTMLElement;
+    });
+
+    act(() => {
+      repoARow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    act(() => {
+      root.render(React.createElement(WorkspaceExplorer, { cwd: '/repo-b', onDraftPrompt: () => undefined }));
+    });
+
+    await act(async () => {
+      rootB.resolve({
+        root: '/repo-b',
+        rootName: 'repo-b',
+        rootKind: 'git',
+        branch: 'main',
+        changes: [],
+        entries: [{ path: 'src', name: 'src', kind: 'directory', size: null, gitStatus: null, descendantGitStatusCount: null }],
+      });
+      await rootB.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('repo-b');
+      expect(container.textContent).toContain('src');
+    });
+
+    await act(async () => {
+      dirA.resolve({
+        root: '/repo-a',
+        rootName: 'repo-a',
+        rootKind: 'git',
+        branch: 'main',
+        changes: [],
+        entries: [{ path: 'src/old.ts', name: 'old.ts', kind: 'file', size: 1, gitStatus: null, descendantGitStatusCount: null }],
+      });
+      await dirA.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain('repo-b');
+      expect(container.textContent).not.toContain('old.ts');
+    });
+  });
+
   it('ignores late workspace watcher callbacks after unmount', async () => {
     vi.useFakeTimers();
     apiMocks.workspaceTree.mockResolvedValue({
