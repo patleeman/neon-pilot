@@ -942,4 +942,77 @@ describe('ConversationPage lazy composer metadata', () => {
       expect(screen.getByTestId('drawings-picker-modal').textContent).toContain('drawing-next');
     });
   });
+
+  it('ignores stale attachment refresh failures after switching saved conversations', async () => {
+    vi.useRealTimers();
+
+    let rejectRegressionAttachments: ((reason?: unknown) => void) | null = null;
+    let resolveNextAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null = null;
+
+    apiMock.conversationAttachments.mockImplementation((conversationId: string) => {
+      if (conversationId === 'conv-regression') {
+        return new Promise((_, reject) => {
+          rejectRegressionAttachments = reject;
+        });
+      }
+
+      if (conversationId === 'conv-next') {
+        return new Promise((resolve) => {
+          resolveNextAttachments = resolve;
+        });
+      }
+
+      throw new Error(`unexpected conversation ${conversationId}`);
+    });
+
+    regressionBootstrap.data = createRegressionBootstrapData('conv-regression', '/tmp/project');
+    renderSwitchableConversationPage();
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(DRAWING_PICKER_OPEN_COMMAND_EVENT));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-regression');
+    });
+
+    regressionBootstrap.data = createRegressionBootstrapData('conv-next', '/tmp/next-project');
+    fireEvent.click(screen.getByRole('button', { name: 'Go next' }));
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(DRAWING_PICKER_OPEN_COMMAND_EVENT));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-next');
+    });
+
+    rejectRegressionAttachments?.(new Error('stale regression failure'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText('stale regression failure')).toBeNull();
+
+    resolveNextAttachments?.({
+      conversationId: 'conv-next',
+      attachments: [
+        {
+          id: 'drawing-next',
+          title: 'Next drawing',
+          kind: 'drawing',
+          currentRevision: 2,
+          updatedAt: '2026-05-27T12:05:00.000Z',
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('drawings-picker-modal').textContent).toContain('drawing-next');
+    });
+    expect(screen.queryByText('stale regression failure')).toBeNull();
+  });
 });

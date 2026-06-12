@@ -2858,14 +2858,23 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     const requestId = lifecycle.latestRequestId + 1;
     lifecycle.latestRequestId = requestId;
 
-    const data = await api.conversationAttachments(id);
-    const currentLifecycle = conversationAttachmentsLifecycleRef.current;
-    if (currentLifecycle.disposed || currentLifecycle.latestRequestId !== requestId) {
-      return data.attachments;
-    }
+    try {
+      const data = await api.conversationAttachments(id);
+      const currentLifecycle = conversationAttachmentsLifecycleRef.current;
+      if (currentLifecycle.disposed || currentLifecycle.latestRequestId !== requestId) {
+        return data.attachments;
+      }
 
-    setConversationAttachments(data.attachments);
-    return data.attachments;
+      setConversationAttachments(data.attachments);
+      return data.attachments;
+    } catch (error) {
+      const currentLifecycle = conversationAttachmentsLifecycleRef.current;
+      if (currentLifecycle.disposed || currentLifecycle.latestRequestId !== requestId) {
+        return [] as ConversationAttachmentSummary[];
+      }
+
+      throw error;
+    }
   }, [id]);
   const shouldFetchConversationAttachmentsNow = resolveShouldFetchConversationAttachmentsNow({
     draft,
