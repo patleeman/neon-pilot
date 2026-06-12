@@ -344,4 +344,28 @@ describe('localApiStreams', () => {
       { type: 'close' },
     ]);
   });
+
+  it('closes extension backend SSE routes after iterator errors', async () => {
+    const events: unknown[] = [];
+    extensionHostClientMock.invokeRoute.mockResolvedValue({
+      stream: 'sse',
+      events: (async function* () {
+        yield { data: { ok: true } };
+        throw new Error('stream failed');
+      })(),
+    });
+
+    await subscribeDesktopLocalApiStreamByUrl(
+      new URL('http://local.test/api/extensions/system-terminal/routes/stream'),
+      (event) => events.push(event),
+    );
+    await Promise.resolve();
+
+    expect(events).toEqual([
+      { type: 'open' },
+      { type: 'sse', data: JSON.stringify({ ok: true }) },
+      { type: 'error', message: 'stream failed' },
+      { type: 'close' },
+    ]);
+  });
 });

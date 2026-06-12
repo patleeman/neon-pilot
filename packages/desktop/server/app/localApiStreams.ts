@@ -194,8 +194,8 @@ async function subscribeDesktopExtensionRouteStream(url: URL, onEvent: (event: D
       close();
     } catch (error) {
       if (closed) return;
-      closed = true;
       onEvent({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      close();
     }
   })();
 
