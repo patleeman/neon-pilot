@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const apiMocks = vi.hoisted(() => ({
+  workspaceTree: vi.fn(),
   workspaceFile: vi.fn(),
   workspaceDiff: vi.fn(),
 }));
@@ -12,8 +13,32 @@ const commandContextMocks = vi.hoisted(() => ({
   setExtensionCommandContext: vi.fn(),
 }));
 
+const eventSources = vi.hoisted(() => [] as FakeEventSource[]);
+
+class FakeEventSource {
+  onmessage: ((event: MessageEvent<string>) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  closed = false;
+
+  close(): void {
+    this.closed = true;
+  }
+
+  send(data: unknown): void {
+    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) }));
+  }
+}
+
 vi.mock('../../client/api', () => ({
   api: apiMocks,
+}));
+
+vi.mock('../../desktop/desktopEventSource', () => ({
+  createDesktopAwareEventSource: vi.fn(() => {
+    const source = new FakeEventSource();
+    eventSources.push(source);
+    return source;
+  }),
 }));
 
 vi.mock('../../extensions/commands', () => ({
@@ -29,7 +54,23 @@ vi.mock('./WorkspaceCodeEditor', () => ({
     React.createElement('textarea', { 'aria-label': 'mock editor', readOnly: true, value: value ?? '' }),
 }));
 
-import { formatWorkspaceEntrySize, WorkspaceFileDocument } from './WorkspaceExplorer.js';
+vi.mock('@pierre/trees/react', () => ({
+  FileTree: () => React.createElement('div', { 'data-testid': 'mock-file-tree' }),
+}));
+
+vi.mock('../shared/useFileTreeModel', () => ({
+  useFileTreeModel: () => ({
+    model: {
+      subscribe: () => () => undefined,
+      getItem: () => null,
+      startRenaming: () => undefined,
+    },
+    resetTree: () => undefined,
+    nativeContextMenuOpenRef: { current: null },
+  }),
+}));
+
+import { formatWorkspaceEntrySize, WorkspaceExplorer, WorkspaceFileDocument } from './WorkspaceExplorer.js';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -79,6 +120,7 @@ describe('formatWorkspaceEntrySize', () => {
       act(() => root?.unmount());
     }
     document.body.innerHTML = '';
+    eventSources.length = 0;
     vi.clearAllMocks();
   });
 
@@ -174,5 +216,57 @@ describe('formatWorkspaceEntrySize', () => {
     await vi.waitFor(() => {
       expect(commandContextMocks.setExtensionCommandContext).toHaveBeenCalledWith('workbench.canToggleDiff', true);
     });
+  });
+
+  it('ignores late workspace watcher callbacks after unmount', async () => {
+    vi.useFakeTimers();
+    apiMocks.workspaceTree.mockResolvedValue({
+      root: '/repo',
+      rootName: 'repo',
+      rootKind: 'git',
+      branch: 'main',
+      changes: [],
+      entries: [],
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        React.createElement(WorkspaceExplorer, {
+          cwd: '/repo',
+          railOnly: true,
+          onDraftPrompt: vi.fn(),
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(eventSources).toHaveLength(1);
+    expect(apiMocks.workspaceTree).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      root.unmount();
+    });
+
+    expect(eventSources[0]?.closed).toBe(true);
+
+    act(() => {
+      eventSources[0]?.send({ type: 'workspace' });
+      eventSources[0]?.onerror?.(new Event('error'));
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+      await Promise.resolve();
+    });
+
+    expect(apiMocks.workspaceTree).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
   });
 });

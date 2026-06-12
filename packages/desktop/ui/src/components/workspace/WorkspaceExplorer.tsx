@@ -215,13 +215,20 @@ function useWorkspaceWatcher(cwd: string | null, enabled: boolean, onEvent: () =
 
   useEffect(() => {
     if (!cwd || !enabled || typeof window === 'undefined') return;
+    let closed = false;
     let timer: number | null = null;
     const source = createDesktopAwareEventSource(`/api/workspace/events?cwd=${encodeURIComponent(cwd)}`);
     const schedule = () => {
+      if (closed) {
+        return;
+      }
       if (timer !== null) window.clearTimeout(timer);
       timer = window.setTimeout(() => onEventRef.current(), WATCH_DEBOUNCE_MS);
     };
     source.onmessage = (event) => {
+      if (closed) {
+        return;
+      }
       try {
         const payload = JSON.parse(event.data) as { type?: string };
         if (payload.type !== 'workspace') return;
@@ -231,10 +238,14 @@ function useWorkspaceWatcher(cwd: string | null, enabled: boolean, onEvent: () =
       schedule();
     };
     source.onerror = () => {
+      if (closed) {
+        return;
+      }
       source.close();
       schedule();
     };
     return () => {
+      closed = true;
       if (timer !== null) window.clearTimeout(timer);
       source.close();
     };
