@@ -483,9 +483,15 @@ async function subscribeDesktopWorkspaceEventsStream(url: URL, onEvent: (event: 
 
 async function subscribeDesktopAppEventsStream(url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
   onEvent({ type: 'open' });
-  const unsubscribe = subscribeAppEvents((event) => emitStreamMessage(onEvent, event));
   const initialSnapshotTopics = readInitialAppEventTopics(url.searchParams);
   let closed = false;
+  const unsubscribe = subscribeAppEvents((event) => {
+    if (closed) {
+      return;
+    }
+
+    emitStreamMessage(onEvent, event);
+  });
 
   const deferredSnapshotTimer = setTimeout(() => {
     void (async () => {

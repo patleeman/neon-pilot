@@ -122,6 +122,24 @@ describe('localApiStreams', () => {
     vi.useRealTimers();
   });
 
+  it('ignores late app events after the desktop app-events stream closes', async () => {
+    const events: unknown[] = [];
+    const unsubscribeFromEvents = vi.fn();
+    let listener: ((event: unknown) => void) | undefined;
+    subscribeAppEventsMock.mockImplementationOnce((onEvent: (event: unknown) => void) => {
+      listener = onEvent;
+      return unsubscribeFromEvents;
+    });
+
+    const close = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/app-events/events'), (event) => events.push(event));
+
+    close();
+    listener?.({ type: 'late_app_event', id: 'evt-1' });
+
+    expect(unsubscribeFromEvents).toHaveBeenCalledOnce();
+    expect(events).toEqual([{ type: 'open' }, { type: 'close' }]);
+  });
+
   it('honors requested initial app snapshot topics on the desktop app-events stream', async () => {
     vi.useFakeTimers();
     buildSnapshotEventsForTopicMock.mockImplementation(async (topic: string) => [{ type: `${topic}_snapshot` }]);
