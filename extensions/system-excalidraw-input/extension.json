@@ -10,6 +10,16 @@
     "styles": []
   },
   "contributes": {
+    "keybindings": [
+      {
+        "id": "excalidraw.createDrawing",
+        "title": "Create Drawing",
+        "keys": ["mod+shift+x"],
+        "command": "composer.createDrawing",
+        "when": "composer.canCreateDrawing",
+        "scope": "global"
+      }
+    ],
     "views": [
       {
         "id": "drawings",

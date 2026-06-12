@@ -502,7 +502,8 @@ export async function doThing(_input, ctx) {
   const compacted = await ctx.conversations.compact('conv-1', 'short');
   const forked = await ctx.conversations.fork({ conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' });
   const titled = await ctx.conversations.setTitle('conv-1', 'New Title');
-  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback, ensured, sent, aborted, compacted, forked, titled };
+  const connections = await ctx.conversations.connections('conv-1', { kind: 'state', surface: 'cli' });
+  return { before, created, tools, entry, block, updated, workspaceBefore, workspaceAfter, rollback, ensured, sent, aborted, compacted, forked, titled, connections };
 }
 `,
     );
@@ -703,6 +704,21 @@ export async function doThing(_input, ctx) {
     workerThreads.messageHandler?.({ id: 15, kind: 'capabilityResponse', ok: true, result: { ok: true } });
 
     await waitForPostMessage({
+      id: 16,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'conversations',
+      operation: 'connections',
+      input: { conversationId: 'conv-1', kind: 'state', surface: 'cli' },
+    });
+    workerThreads.messageHandler?.({
+      id: 16,
+      kind: 'capabilityResponse',
+      ok: true,
+      result: { items: [{ id: 'system-todo:todos', kind: 'state' }] },
+    });
+
+    await waitForPostMessage({
       id: 17,
       ok: true,
       result: {
@@ -721,6 +737,7 @@ export async function doThing(_input, ctx) {
         compacted: { ok: true },
         forked: { id: 'conv-fork', conversationId: 'conv-fork' },
         titled: { ok: true },
+        connections: { items: [{ id: 'system-todo:todos', kind: 'state' }] },
       },
     });
   });

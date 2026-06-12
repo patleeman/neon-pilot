@@ -116,6 +116,12 @@ export function DictationButton({
   const captureRef = useRef<ComposerDictationCapture | null>(null);
   const pendingStartRef = useRef<Promise<void> | null>(null);
   const pointerRef = useRef<{ pointerId: number; startedAt: number; startedExistingRecording: boolean } | null>(null);
+  const toggleAvailable = !buttonContext.composerDisabled && state !== 'transcribing';
+
+  useEffect(() => {
+    pa.commands.setContext('toggleAvailable', toggleAvailable);
+    return () => pa.commands.setContext('toggleAvailable', null);
+  }, [pa, toggleAvailable]);
 
   const stop = useCallback(async () => {
     if (pendingStartRef.current) {

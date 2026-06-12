@@ -191,6 +191,7 @@ The manifest declares what your extension contributes:
 | `promptReferences`            | @-mention resolvers                                                                           |                                                                                           |
 | `turnContextProviders`        | Ordered per-turn context injection                                                            | [See below](#turn-context-providers-turncontextproviders)                                 |
 | `promptContextProviders`      | Prompt Assembly context diagnostics/providers                                                 | [See below](#prompt-context-providers-promptcontextproviders)                             |
+| `conversationConnectionProviders` | Conversation-attached state/work/assets for shelves, right rail, and CLI                  | [See below](#conversation-connection-providers-conversationconnectionproviders)           |
 | `selectionActions`            | Actions available for selected transcript/composer text                                       | [See below](#selection-actions-selectionactions)                                          |
 | `transcriptBlocks`            | Extension-owned transcript block renderers                                                    | [See below](#transcript-blocks-transcriptblocks)                                          |
 | `subscriptions`               | Backend event subscriptions                                                                   | [See below](#backend-event-subscriptions-subscriptions)                                   |
@@ -452,6 +453,31 @@ Use `turnContextProviders` when an extension needs to add scoped hidden context 
 ```
 
 Handlers receive `{ prompt, conversationId, currentCwd, relatedConversationIds }` and may return legacy `{ contextMessages }` or `{ blocks }`. Blocks are converted into extension turn-context messages.
+
+### Conversation Connection Providers (`conversationConnectionProviders`)
+
+Use `conversationConnectionProviders` when an extension owns conversation-attached work, state, assets, context, integrations, or surfaces that should be discoverable by both UI and CLI. The host calls the provider action for `/api/conversations/:id/connections`, `ctx.conversations.connections(...)`, and `neon-pilot conversations connections <id>`.
+
+```json
+{
+  "contributes": {
+    "conversationConnectionProviders": [
+      {
+        "id": "scratchpad",
+        "title": "Scratchpad",
+        "action": "listScratchpadConnections",
+        "kind": "state",
+        "surfaces": ["rightRail", "cli"],
+        "priority": 40
+      }
+    ]
+  }
+}
+```
+
+Provider actions receive `{ conversationId, providerId }` and should return either an array of items or `{ "items": [...] }`. Required item fields are `id`, `kind`, `title`, `active`, `meaningful`, `visibility`, `source`, and `surfaces`. The host prefixes returned IDs with the extension ID and silently skips malformed items.
+
+Only return meaningful connections. Empty scratchpads, zero-item todo lists, dormant optional panels, and purely decorative surfaces should return `{ "items": [] }`.
 
 ### Runtime Providers (`runtimeProviders`)
 

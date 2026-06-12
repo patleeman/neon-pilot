@@ -87,8 +87,10 @@ const AdminConversationParams = {
     olderThanMs: { type: 'number', minimum: 1 },
     archivedOnly: { type: 'boolean' },
     dryRun: { type: 'boolean' },
-    scratchpadOperation: { type: 'string', enum: ['get', 'set', 'append', 'prepend'] },
-    content: { type: 'string', description: 'Markdown content for scratchpad set/append/prepend. Do not store secrets.' },
+    active: { type: 'boolean', description: 'Only include currently active conversation activity items.' },
+    visibility: { type: 'string', enum: ['primary', 'system', 'hidden', 'visible', 'all'] },
+    kind: { type: 'string', enum: ['activity', 'state', 'asset', 'context', 'integration', 'surface', 'all'] },
+    surface: { type: 'string', enum: ['activityShelf', 'composerShelf', 'rightRail', 'workbench', 'sidebar', 'cli', 'all'] },
   },
 } as const;
 
@@ -99,6 +101,8 @@ export const ConversationToolParams = {
       type: 'string',
       enum: [
         'ask',
+        'activity',
+        'connections',
         'inspect',
         'set_title',
         'change_working_directory',
@@ -117,7 +121,6 @@ export const ConversationToolParams = {
         'workspace_open_update',
         'delete',
         'retention_prune',
-        'scratchpad',
         'append_transcript_block',
         'update_transcript_block',
         'rollback',
@@ -137,6 +140,8 @@ export const ConversationToolParams = {
 
 export const CONVERSATION_ACTIONS = [
   'ask',
+  'activity',
+  'connections',
   'inspect',
   'set_title',
   'change_working_directory',
@@ -155,7 +160,6 @@ export const CONVERSATION_ACTIONS = [
   'workspace_open_update',
   'delete',
   'retention_prune',
-  'scratchpad',
   'append_transcript_block',
   'update_transcript_block',
   'rollback',

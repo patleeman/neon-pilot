@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { AttachmentChip, AttachmentChipButton, IconButton, TextButton } from '../ui';
+import {
+  COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT,
+} from './composerAttachmentCommands';
+import { IMAGE_PREVIEW_CLOSE_COMMAND_EVENT } from './imagePreviewCommands';
 
 interface ComposerAttachmentShelfDrawingAttachment {
   localId: string;
@@ -69,7 +78,12 @@ function ComposerImagePreviewModal({ image, onClose }: { image: ComposerPreviewI
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
+    setExtensionCommandContext('imagePreview.active', true);
+    return () => setExtensionCommandContext('imagePreview.active', null);
+  }, []);
+
+  useEffect(() => {
+    function closeFromKeyboard(event: KeyboardEvent) {
       if (event.key !== 'Escape') {
         return;
       }
@@ -78,8 +92,16 @@ function ComposerImagePreviewModal({ image, onClose }: { image: ComposerPreviewI
       onClose();
     }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    function closeFromCommand() {
+      onClose();
+    }
+
+    window.addEventListener('keydown', closeFromKeyboard);
+    window.addEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    return () => {
+      window.removeEventListener('keydown', closeFromKeyboard);
+      window.removeEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    };
   }, [onClose]);
 
   return (
@@ -154,6 +176,10 @@ export function ComposerAttachmentShelf({
   onRemoveDrawingAttachment,
 }: ComposerAttachmentShelfProps) {
   const [previewImage, setPreviewImage] = useState<ComposerPreviewImage | null>(null);
+  const firstPreviewableAttachment = attachments.find((attachment) => attachment.mimeType.startsWith('image/') && Boolean(attachment.previewUrl)) ?? null;
+  const firstAttachment = attachments[0] ?? null;
+  const firstDrawing = drawingAttachments[0] ?? null;
+  const firstAttachmentIndex = firstAttachment ? attachments.indexOf(firstAttachment) : -1;
 
   useEffect(
     () => () => {
@@ -187,6 +213,66 @@ export function ComposerAttachmentShelf({
       label,
     });
   }, []);
+
+  useEffect(() => {
+    setExtensionCommandContext('composer.canPreviewFirstAttachment', Boolean(firstPreviewableAttachment));
+    setExtensionCommandContext('composer.canRemoveFirstAttachment', Boolean(firstAttachment));
+    setExtensionCommandContext('composer.canPreviewFirstDrawing', Boolean(firstDrawing));
+    setExtensionCommandContext('composer.canEditFirstDrawing', Boolean(firstDrawing));
+    setExtensionCommandContext('composer.canRemoveFirstDrawing', Boolean(firstDrawing));
+    return () => {
+      setExtensionCommandContext('composer.canPreviewFirstAttachment', null);
+      setExtensionCommandContext('composer.canRemoveFirstAttachment', null);
+      setExtensionCommandContext('composer.canPreviewFirstDrawing', null);
+      setExtensionCommandContext('composer.canEditFirstDrawing', null);
+      setExtensionCommandContext('composer.canRemoveFirstDrawing', null);
+    };
+  }, [firstAttachment, firstDrawing, firstPreviewableAttachment]);
+
+  useEffect(() => {
+    if (!firstPreviewableAttachment) return;
+    function handlePreviewFirstAttachmentCommand() {
+      openAttachmentPreview(firstPreviewableAttachment!);
+    }
+    window.addEventListener(COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT, handlePreviewFirstAttachmentCommand);
+    return () => window.removeEventListener(COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT, handlePreviewFirstAttachmentCommand);
+  }, [firstPreviewableAttachment, openAttachmentPreview]);
+
+  useEffect(() => {
+    if (!firstAttachment || firstAttachmentIndex < 0) return;
+    function handleRemoveFirstAttachmentCommand() {
+      onRemoveAttachment(firstAttachmentIndex);
+    }
+    window.addEventListener(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT, handleRemoveFirstAttachmentCommand);
+    return () => window.removeEventListener(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT, handleRemoveFirstAttachmentCommand);
+  }, [firstAttachment, firstAttachmentIndex, onRemoveAttachment]);
+
+  useEffect(() => {
+    if (!firstDrawing) return;
+    function handlePreviewFirstDrawingCommand() {
+      openDrawingPreview(firstDrawing!);
+    }
+    window.addEventListener(COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT, handlePreviewFirstDrawingCommand);
+    return () => window.removeEventListener(COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT, handlePreviewFirstDrawingCommand);
+  }, [firstDrawing, openDrawingPreview]);
+
+  useEffect(() => {
+    if (!firstDrawing) return;
+    function handleEditFirstDrawingCommand() {
+      onEditDrawing(firstDrawing!.localId);
+    }
+    window.addEventListener(COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT, handleEditFirstDrawingCommand);
+    return () => window.removeEventListener(COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT, handleEditFirstDrawingCommand);
+  }, [firstDrawing, onEditDrawing]);
+
+  useEffect(() => {
+    if (!firstDrawing) return;
+    function handleRemoveFirstDrawingCommand() {
+      onRemoveDrawingAttachment(firstDrawing!.localId);
+    }
+    window.addEventListener(COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT, handleRemoveFirstDrawingCommand);
+    return () => window.removeEventListener(COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT, handleRemoveFirstDrawingCommand);
+  }, [firstDrawing, onRemoveDrawingAttachment]);
 
   return (
     <>

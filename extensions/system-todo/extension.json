@@ -76,10 +76,28 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "listTodoConnections",
+        "handler": "listTodoConnections",
+        "title": "Todo conversation connections",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
   "contributes": {
+    "conversationConnectionProviders": [
+      {
+        "id": "todos",
+        "title": "Todos",
+        "action": "listTodoConnections",
+        "kind": "state",
+        "surfaces": ["composerShelf", "cli"],
+        "priority": 50
+      }
+    ],
     "composerShelves": [
       {
         "id": "todos",

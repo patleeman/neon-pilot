@@ -10,7 +10,9 @@ import {
   createModelEditorDraft,
   createProviderEditorDraft,
   Button,
+  CORE_KEYBOARD_SHORTCUT_REGISTRATIONS,
   cx,
+  DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS,
   type DesktopAppPreferencesState,
   type DesktopEnvironmentState,
   Disclosure,
@@ -24,6 +26,7 @@ import {
   isDesktopShell,
   KeyboardShortcutCaptureInput,
   listHostCommands,
+  normalizeLegacyCommand,
   type ModelEditorDraft,
   type ModelProviderApi,
   type ModelProviderConfig,
@@ -153,61 +156,17 @@ function SettingsIcon({ name }: { name: SettingsIconName }) {
 
 type DesktopKeyboardShortcutId = keyof DesktopAppPreferencesState['keyboardShortcuts'];
 
-const DESKTOP_KEYBOARD_SHORTCUT_LABELS: Record<DesktopKeyboardShortcutId, { label: string; description: string }> = {
-  showApp: { label: 'Show Neon Pilot', description: 'Bring the desktop window forward.' },
-  newConversation: { label: 'New conversation', description: 'Start a fresh chat.' },
-  closeTab: { label: 'Close tab', description: 'Close the active conversation tab.' },
-  reopenClosedTab: { label: 'Reopen closed tab', description: 'Restore the most recently closed conversation tab.' },
-  previousConversation: { label: 'Previous conversation', description: 'Move to the previous open conversation.' },
-  nextConversation: { label: 'Next conversation', description: 'Move to the next open conversation.' },
-  togglePinned: { label: 'Toggle pinned', description: 'Pin or unpin the active conversation.' },
-  archiveRestoreConversation: { label: 'Archive / restore', description: 'Archive or restore the active conversation.' },
-  renameConversation: { label: 'Rename conversation', description: 'Rename the active conversation.' },
-  focusComposer: { label: 'Focus composer', description: 'Move focus to the message composer.' },
-  editWorkingDirectory: { label: 'Edit working directory', description: 'Open the working-directory editor.' },
-  findOnPage: { label: 'Find on page', description: 'Search text in the current page.' },
-  settings: { label: 'Settings', description: 'Open this settings page.' },
-  quit: { label: 'Quit', description: 'Quit the desktop app.' },
-  conversationMode: { label: 'Hide workbench', description: 'Show the normal chat layout.' },
-  workbenchMode: { label: 'Show workbench', description: 'Show the chat and workbench layout.' },
-  newWorkbenchTab: { label: 'New workbench tab', description: 'Open a new workbench tab.' },
-  closeWorkbenchTab: { label: 'Close workbench tab', description: 'Close the active workbench tab.' },
-  closeWorkbenchFile: { label: 'Close workbench file', description: 'Close the active workbench file.' },
-  refreshWorkbenchFile: { label: 'Refresh workbench file', description: 'Refresh the active workbench file and tree.' },
-  toggleWorkbenchExplorer: { label: 'Toggle workbench explorer', description: 'Collapse or restore the workbench file explorer.' },
-  toggleWorkbenchDiff: { label: 'Toggle workbench diff', description: 'Toggle git diff decorations for the active workbench file.' },
-  toggleSidebar: { label: 'Toggle left sidebar', description: 'Collapse or restore the conversation sidebar.' },
-  toggleRightRail: { label: 'Toggle right rail', description: 'Collapse or restore the active workbench rail.' },
-};
-
-const DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS: DesktopAppPreferencesState['keyboardShortcuts'] = {
-  showApp: 'CommandOrControl+Shift+A',
-  newConversation: 'CommandOrControl+N',
-  closeTab: 'CommandOrControl+W',
-  reopenClosedTab: 'Command+Shift+N',
-  previousConversation: 'CommandOrControl+[',
-  nextConversation: 'CommandOrControl+]',
-  togglePinned: 'CommandOrControl+Alt+P',
-  archiveRestoreConversation: 'CommandOrControl+Alt+A',
-  renameConversation: 'CommandOrControl+Alt+R',
-  focusComposer: 'CommandOrControl+L',
-  editWorkingDirectory: 'CommandOrControl+Shift+L',
-  findOnPage: 'CommandOrControl+F',
-  settings: 'CommandOrControl+,',
-  quit: 'CommandOrControl+Q',
-  conversationMode: 'F1',
-  workbenchMode: 'F2',
-  newWorkbenchTab: 'CommandOrControl+T',
-  closeWorkbenchTab: 'CommandOrControl+Shift+W',
-  closeWorkbenchFile: 'CommandOrControl+Alt+W',
-  refreshWorkbenchFile: 'F5',
-  toggleWorkbenchExplorer: 'CommandOrControl+B',
-  toggleWorkbenchDiff: 'CommandOrControl+Shift+D',
-  toggleSidebar: 'CommandOrControl+/',
-  toggleRightRail: 'CommandOrControl+\\',
-};
-
-const DESKTOP_KEYBOARD_SHORTCUT_IDS = Object.keys(DESKTOP_KEYBOARD_SHORTCUT_LABELS) as DesktopKeyboardShortcutId[];
+const DESKTOP_KEYBOARD_SHORTCUT_IDS = CORE_KEYBOARD_SHORTCUT_REGISTRATIONS.map(
+  (registration) => registration.id,
+) as DesktopKeyboardShortcutId[];
+const DESKTOP_KEYBOARD_SHORTCUT_LABELS = Object.fromEntries(
+  CORE_KEYBOARD_SHORTCUT_REGISTRATIONS.map((registration) => [
+    registration.id,
+    { label: registration.title, description: registration.description },
+  ]),
+) as Record<DesktopKeyboardShortcutId, { label: string; description: string }>;
+const DEFAULT_DESKTOP_KEYBOARD_SHORTCUT_DRAFT =
+  DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS as DesktopAppPreferencesState['keyboardShortcuts'];
 
 export function readSettingsSectionIdFromHash(hash: string): string {
   const rawSectionId = hash.replace(/^#/, '');
@@ -233,7 +192,7 @@ type ShortcutListItem = {
   defaultShortcuts?: string[];
 };
 
-interface CommandSettingsEntry {
+export interface CommandSettingsEntry {
   id?: string;
   surfaceId?: string;
   extensionId?: string;
@@ -255,11 +214,40 @@ interface CommandWithKeybindings extends CommandSettingsEntry {
 }
 
 function normalizeShortcutForConflict(shortcut: string): string {
-  return shortcut
+  const modifierOrder = ['mod', 'ctrl', 'meta', 'alt', 'shift'];
+  const modifierAliases: Record<string, string> = {
+    commandorcontrol: 'mod',
+    cmdorctrl: 'mod',
+    cmd: 'mod',
+    command: 'mod',
+    control: 'ctrl',
+    ctrl: 'ctrl',
+    meta: 'meta',
+    alt: 'alt',
+    option: 'alt',
+    shift: 'shift',
+    mod: 'mod',
+  };
+  const keyAliases: Record<string, string> = {
+    arrowdown: 'down',
+    arrowleft: 'left',
+    arrowright: 'right',
+    arrowup: 'up',
+  };
+  const parts = shortcut
     .trim()
     .toLowerCase()
-    .replace(/commandorcontrol|cmdorctrl|cmd|command/g, 'mod')
-    .replace(/control/g, 'ctrl');
+    .split('+')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const modifiers = new Set<string>();
+  let key = '';
+  for (const part of parts) {
+    const modifier = modifierAliases[part];
+    if (modifier) modifiers.add(modifier);
+    else key = keyAliases[part] ?? part;
+  }
+  return [...modifierOrder.filter((modifier) => modifiers.has(modifier)), key].filter(Boolean).join('+');
 }
 
 const MODEL_PROVIDER_API_OPTIONS: Array<{ value: ModelProviderApi; label: string }> = [
@@ -580,7 +568,7 @@ function formatStartOnSystemStartSummary(state: DesktopAppPreferencesState | nul
 
 export function DesktopKeyboardShortcutsSettingsSection() {
   const [preferencesState, setPreferencesState] = useState<DesktopAppPreferencesState | null>(null);
-  const [draft, setDraft] = useState<DesktopAppPreferencesState['keyboardShortcuts']>(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS);
+  const [draft, setDraft] = useState<DesktopAppPreferencesState['keyboardShortcuts']>(DEFAULT_DESKTOP_KEYBOARD_SHORTCUT_DRAFT);
   const [extensionKeybindings, setExtensionKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -696,11 +684,12 @@ export function DesktopKeyboardShortcutsSettingsSection() {
     const shortcutValues = Object.values(nextShortcuts).filter((s): s is string => typeof s === 'string' && s.length > 0);
     const seenShortcuts = new Set<string>();
     for (const value of shortcutValues) {
-      if (seenShortcuts.has(value)) {
+      const normalizedValue = normalizeShortcutForConflict(value);
+      if (seenShortcuts.has(normalizedValue)) {
         setError(`Duplicate shortcut: ${value} is already assigned.`);
         return;
       }
-      seenShortcuts.add(value);
+      seenShortcuts.add(normalizedValue);
     }
 
     setSaving(true);
@@ -799,8 +788,8 @@ export function DesktopKeyboardShortcutsSettingsSection() {
             <ToolbarButton
               type="button"
               onClick={() => {
-                setDraft(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS);
-                void saveKeyboardShortcuts(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS);
+                setDraft(DEFAULT_DESKTOP_KEYBOARD_SHORTCUT_DRAFT);
+                void saveKeyboardShortcuts(DEFAULT_DESKTOP_KEYBOARD_SHORTCUT_DRAFT);
               }}
               disabled={saving || duplicateShortcut !== null}
             >
@@ -902,6 +891,7 @@ export function CommandsSettingsSection() {
         title: keybinding.title,
         command: keybinding.command,
         args: keybinding.args,
+        when: keybinding.when,
         scope: keybinding.scope,
         packageType: keybinding.packageType,
         keys,
@@ -927,6 +917,7 @@ export function CommandsSettingsSection() {
         title: keybinding.title,
         command: keybinding.command,
         args: keybinding.args,
+        when: keybinding.when,
         scope: keybinding.scope,
         packageType: keybinding.packageType,
         enabled: !keybinding.enabled,
@@ -1044,7 +1035,7 @@ function emptyKeybindingForCommand(
 ): CommandKeybindingSettingsEntry {
   const commandId = commandDisplayId(command);
   const desktopShortcutId = desktopShortcutIdForHostCommand(command);
-  const desktopShortcut = desktopShortcutId ? (desktopShortcuts?.[desktopShortcutId] ?? DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS[desktopShortcutId]) : '';
+  const desktopShortcut = desktopShortcutId ? (desktopShortcuts?.[desktopShortcutId] ?? DEFAULT_DESKTOP_KEYBOARD_SHORTCUT_DRAFT[desktopShortcutId]) : '';
   return {
     extensionId: command.extensionId ?? 'host',
     surfaceId: `command:${commandId}`,
@@ -1054,35 +1045,20 @@ function emptyKeybindingForCommand(
     command: commandId,
     args: command.args,
     scope: 'global',
-    defaultKeys: desktopShortcutId ? [DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS[desktopShortcutId]] : [],
+    defaultKeys: desktopShortcutId ? [DEFAULT_DESKTOP_KEYBOARD_SHORTCUT_DRAFT[desktopShortcutId]] : [],
     enabled: true,
   };
 }
 
-function desktopShortcutIdForHostCommand(command: CommandSettingsEntry): DesktopKeyboardShortcutId | null {
+export function desktopShortcutIdForHostCommand(command: CommandSettingsEntry): DesktopKeyboardShortcutId | null {
   if (command.extensionId !== 'host') return null;
   const commandId = command.id ?? command.surfaceId ?? '';
-  if (commandId === 'conversation.new') return 'newConversation';
-  if (commandId === 'conversation.close') return 'closeTab';
-  if (commandId === 'conversation.reopenClosed') return 'reopenClosedTab';
-  if (commandId === 'conversation.previous') return 'previousConversation';
-  if (commandId === 'conversation.next') return 'nextConversation';
-  if (commandId === 'conversation.togglePinned') return 'togglePinned';
-  if (commandId === 'conversation.toggleArchived') return 'archiveRestoreConversation';
-  if (commandId === 'conversation.rename') return 'renameConversation';
-  if (commandId === 'conversation.editCwd') return 'editWorkingDirectory';
-  if (commandId === 'composer.focus') return 'focusComposer';
-  if (commandId === 'page.find') return 'findOnPage';
-  if (commandId === 'layout.toggleSidebar') return 'toggleSidebar';
-  if (commandId === 'layout.toggleRightRail') return 'toggleRightRail';
-  if (commandId === 'workbench.newTab') return 'newWorkbenchTab';
-  if (commandId === 'workbench.closeActiveTab') return 'closeWorkbenchTab';
-  if (commandId === 'workbench.closeActiveFile') return 'closeWorkbenchFile';
-  if (commandId === 'workbench.refreshActiveFile') return 'refreshWorkbenchFile';
-  if (commandId === 'workbench.toggleExplorer') return 'toggleWorkbenchExplorer';
-  if (commandId === 'workbench.toggleDiff') return 'toggleWorkbenchDiff';
-  if (commandId === 'layout.set' && settingsArgsMatch(command.args, { mode: 'compact' })) return 'conversationMode';
-  if (commandId === 'layout.set' && settingsArgsMatch(command.args, { mode: 'workbench' })) return 'workbenchMode';
+  for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
+    const normalized = normalizeLegacyCommand(registration.command);
+    if (normalized.command === commandId && settingsArgsMatch(normalized.args, command.args)) {
+      return registration.id as DesktopKeyboardShortcutId;
+    }
+  }
   return null;
 }
 

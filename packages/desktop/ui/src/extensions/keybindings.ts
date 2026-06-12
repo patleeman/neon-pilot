@@ -1,4 +1,5 @@
 import type { ExtensionKeybindingRegistration } from './types';
+import { evaluateCommandEnablement, type ExtensionCommandContext } from './commands';
 
 export interface KeybindingEventLike {
   key: string;
@@ -53,6 +54,13 @@ function matchesExtensionKeybinding(event: KeybindingEventLike, shortcut: string
   const eventMod = event.metaKey || event.ctrlKey;
   if (required.has('mod')) {
     if (!eventMod) return false;
+    const explicitCtrl = required.has('ctrl');
+    const explicitMeta = required.has('meta');
+    if (explicitCtrl && !event.ctrlKey) return false;
+    if (explicitMeta && !event.metaKey) return false;
+    if (!explicitCtrl && !explicitMeta && event.ctrlKey && event.metaKey) return false;
+    if (explicitCtrl && !explicitMeta && !event.metaKey) return false;
+    if (explicitMeta && !explicitCtrl && !event.ctrlKey) return false;
   } else {
     if (required.has('ctrl') !== event.ctrlKey) return false;
     if (required.has('meta') !== event.metaKey) return false;
@@ -66,6 +74,14 @@ function matchesExtensionKeybinding(event: KeybindingEventLike, shortcut: string
 export function findMatchingExtensionKeybinding(
   event: KeybindingEventLike,
   keybindings: ExtensionKeybindingRegistration[],
+  context: ExtensionCommandContext = {},
 ): ExtensionKeybindingRegistration | null {
-  return keybindings.find((keybinding) => keybinding.keys.some((shortcut) => matchesExtensionKeybinding(event, shortcut))) ?? null;
+  return (
+    keybindings.find(
+      (keybinding) =>
+        keybinding.enabled !== false &&
+        evaluateCommandEnablement(keybinding.when, context) &&
+        keybinding.keys.some((shortcut) => matchesExtensionKeybinding(event, shortcut)),
+    ) ?? null
+  );
 }

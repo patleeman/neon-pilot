@@ -57,12 +57,12 @@ interface AdminCommandDefinition {
 const adminCommands: AdminCommandDefinition[] = [
   {
     id: 'list_app_commands',
-    description: 'List command-palette/app commands available to extensions.',
+    description: 'List command-palette/app commands available to extensions. Advanced escape hatch; prefer first-class CLI commands when available.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: true },
   },
   {
     id: 'run_app_command',
-    description: 'Run a command-palette/app command by id.',
+    description: 'Run a command-palette/app command by id. Advanced escape hatch; prefer first-class CLI commands when available.',
     inputSchema: {
       type: 'object',
       properties: { commandId: { type: 'string' }, args: {} },
@@ -172,7 +172,12 @@ function normalizeAdminInput(input: unknown): { command: string | 'list_admin_co
   if (cli === 'app-commands run') {
     return {
       command: 'run_app_command',
-      input: { ...body, commandId: args[0], args: parseJsonFlag(flags, 'args') ?? (args.length > 1 ? args.slice(1) : undefined) },
+      input: {
+        ...body,
+        commandId: args[0],
+        args: parseJsonFlag(flags, 'args') ?? (args.length > 1 ? args.slice(1) : undefined),
+        dryRun: flags['dry-run'] === true,
+      },
     };
   }
   if (cli === 'app update') {
@@ -448,6 +453,7 @@ export async function runAdminCommand(command: AdminCommandId | 'list_admin_comm
   if (command === 'run_app_command') {
     const commandId = typeof body.commandId === 'string' ? body.commandId.trim() : '';
     if (!commandId) throw new Error('command id is required.');
+    if (readBoolean(body.dryRun)) return { ok: true, dryRun: true, action: 'run_app_command', commandId, args: body.args, executed: false };
     const executed = await ctx.commands.execute(commandId, body.args);
     return { ok: executed, commandId, executed };
   }

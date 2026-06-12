@@ -529,6 +529,7 @@ export function registerExtensionRoutes(
         ...(typeof req.body?.title === 'string' ? { title: req.body.title } : {}),
         ...(typeof req.body?.command === 'string' ? { command: req.body.command } : {}),
         ...(req.body?.args !== undefined ? { args: req.body.args } : {}),
+        ...(typeof req.body?.when === 'string' ? { when: req.body.when } : {}),
         ...(req.body?.scope === 'global' || req.body?.scope === 'surface' ? { scope: req.body.scope } : {}),
         ...(req.body?.packageType === 'system' || req.body?.packageType === 'user' ? { packageType: req.body.packageType } : {}),
         ...(Array.isArray(req.body?.keys) ? { keys: req.body.keys } : {}),

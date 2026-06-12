@@ -1,18 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { modelPreferencesImportedMock, providerDesktopCapabilityImportedMock, prewarmModelDefinitionsMock, readModelStateMock } = vi.hoisted(
-  () => ({
-    modelPreferencesImportedMock: vi.fn(),
-    providerDesktopCapabilityImportedMock: vi.fn(),
-    prewarmModelDefinitionsMock: vi.fn(),
-    readModelStateMock: vi.fn(),
-  }),
-);
+const {
+  modelPreferencesImportedMock,
+  providerDesktopCapabilityImportedMock,
+  prewarmModelDefinitionsMock,
+  readSavedModelRefMock,
+  readModelStateMock,
+} = vi.hoisted(() => ({
+  modelPreferencesImportedMock: vi.fn(),
+  providerDesktopCapabilityImportedMock: vi.fn(),
+  prewarmModelDefinitionsMock: vi.fn(),
+  readSavedModelRefMock: vi.fn(),
+  readModelStateMock: vi.fn(),
+}));
 
 vi.mock('../models/modelPreferences.js', () => {
   modelPreferencesImportedMock();
   return {
     prewarmModelDefinitions: prewarmModelDefinitionsMock,
+    readSavedModelRef: readSavedModelRefMock,
     readModelState: readModelStateMock,
   };
 });
@@ -33,7 +39,7 @@ describe('localApi model provider loading', () => {
     vi.clearAllMocks();
   });
 
-  it('keeps model provider modules lazy until model APIs are used', async () => {
+  it('keeps provider-management modules lazy when read-only model APIs are used', async () => {
     vi.useFakeTimers();
     readModelStateMock.mockResolvedValue({ models: [{ id: 'gpt-test' }] });
 
@@ -44,7 +50,7 @@ describe('localApi model provider loading', () => {
     await expect(readDesktopModels()).resolves.toEqual({ models: [{ id: 'gpt-test' }] });
 
     expect(modelPreferencesImportedMock).toHaveBeenCalledTimes(1);
-    expect(providerDesktopCapabilityImportedMock).toHaveBeenCalledTimes(1);
+    expect(providerDesktopCapabilityImportedMock).not.toHaveBeenCalled();
     expect(prewarmModelDefinitionsMock).not.toHaveBeenCalled();
   });
 });

@@ -458,6 +458,88 @@ export interface ConversationExecutionsResult {
   executions: ExecutionRecord[];
 }
 
+export type ConversationActivityKind = 'execution' | 'deferred-resume' | 'scheduled-task' | 'queued-prompt';
+export type ConversationActivityVisibility = 'primary' | 'system' | 'hidden';
+export type ConversationActivityStatus =
+  | 'queued'
+  | 'waiting'
+  | 'running'
+  | 'scheduled'
+  | 'ready'
+  | 'failed'
+  | 'done'
+  | 'cancelled'
+  | 'unknown';
+
+export interface ConversationActivityItem {
+  id: string;
+  kind: ConversationActivityKind;
+  title: string;
+  subtitle?: string;
+  status: ConversationActivityStatus;
+  active: boolean;
+  visibility: ConversationActivityVisibility;
+  conversationId: string;
+  source: { type: ConversationActivityKind; id: string };
+  createdAt?: string;
+  updatedAt?: string;
+  dueAt?: string;
+  actions: Array<{ id: string; label: string; command?: string }>;
+  payload?: unknown;
+}
+
+export interface ConversationActivityResult {
+  conversationId: string;
+  items: ConversationActivityItem[];
+  primary: ConversationActivityItem[];
+  system: ConversationActivityItem[];
+  hidden: ConversationActivityItem[];
+}
+
+export type ConversationConnectionKind = 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface';
+export type ConversationConnectionSurface = 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli';
+export type ConversationConnectionVisibility = 'primary' | 'system' | 'hidden';
+export type ConversationConnectionStatus =
+  | 'queued'
+  | 'waiting'
+  | 'running'
+  | 'scheduled'
+  | 'ready'
+  | 'failed'
+  | 'done'
+  | 'cancelled'
+  | 'available'
+  | 'unknown';
+
+export interface ConversationConnectionItem {
+  id: string;
+  conversationId: string;
+  kind: ConversationConnectionKind;
+  title: string;
+  subtitle?: string;
+  status?: ConversationConnectionStatus;
+  active: boolean;
+  meaningful: boolean;
+  visibility: ConversationConnectionVisibility;
+  extensionId?: string;
+  source: { type: string; id: string };
+  surfaces: ConversationConnectionSurface[];
+  createdAt?: string;
+  updatedAt?: string;
+  dueAt?: string;
+  actions: Array<{ id: string; label: string; command?: string }>;
+  payload?: unknown;
+}
+
+export interface ConversationConnectionsResult {
+  conversationId: string;
+  items: ConversationConnectionItem[];
+  byKind: Record<ConversationConnectionKind, ConversationConnectionItem[]>;
+  primary: ConversationConnectionItem[];
+  system: ConversationConnectionItem[];
+  hidden: ConversationConnectionItem[];
+}
+
 export interface ExecutionDetailResult {
   execution: ExecutionRecord;
 }

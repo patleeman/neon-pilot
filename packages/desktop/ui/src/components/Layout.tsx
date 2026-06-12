@@ -4,14 +4,21 @@ import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-r
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
+import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
 import { COMPANION_CHAT_CLOSE_EVENT, COMPANION_CHAT_OPEN_EVENT, type CompanionChatOpenDetail } from '../companion/companionEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
-import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
+import {
+  buildConversationDeeplink,
+  buildConversationSurfacePath,
+  readConversationIdFromPathname,
+} from '../conversation/conversationRoutes';
 import { DRAFT_CONVERSATION_ROUTE } from '../conversation/draftConversation';
 import { startNewConversation } from '../conversation/newConversationNavigation';
+import { writeClipboardText } from '../desktop/clipboard';
 import { DESKTOP_SHOW_WORKBENCH_BROWSER_EVENT, isDesktopShell, readDesktopEnvironment } from '../desktop/desktopBridge';
 import { DesktopChromeContext, type DesktopRightRailControl } from '../desktop/desktopChromeContext';
 import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionCommandContext } from '../extensions/commands';
+import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from '../extensions/extensionModalCommands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
@@ -33,15 +40,82 @@ import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { attemptLazyRouteRecovery, isRecoverableLazyRouteError, lazyRouteWithRecovery } from '../navigation/lazyRouteRecovery';
 import { routeIsKnowledge, routeMatchesPrefix, routeSupportsWorkbench } from '../navigation/routeRegistry';
-import { readConversationLayout } from '../session/sessionTabs';
+import { CONVERSATION_LAYOUT_CHANGED_EVENT, readConversationLayout } from '../session/sessionTabs';
 import type { DesktopEnvironmentState, SessionMeta } from '../shared/types';
 import { useAllSessions, useSession } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
+import { ARTIFACT_MODAL_COMMAND_EVENT, type ArtifactModalCommand } from './artifactModalCommands';
+import {
+  COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT,
+  COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT,
+} from './chat/composerAttachmentCommands';
 import { registerPendingSideChatSession } from './chat/sideChatSessionReadiness';
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
-import { DesktopTopBar } from './DesktopTopBar';
+import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
+import {
+  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
+} from './conversation/conversationActivityCommands';
+import {
+  CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT,
+} from './conversation/checkpointCommands';
+import {
+  DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
+  DRAWING_PICKER_CLOSE_COMMAND_EVENT,
+  DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
+} from './conversation/drawingPickerCommands';
+import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './conversation/composerSettingsCommands';
+import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './conversation/composerInputCommands';
+import {
+  COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT,
+  COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT,
+} from './conversation/composerPreferenceCommands';
+import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversation/conversationGoalCommands';
+import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversation/conversationQueueCommands';
+import {
+  DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT,
+} from './conversation/draftWorkspacePickerCommands';
+import {
+  IMAGE_PREVIEW_CLOSE_COMMAND_EVENT,
+  IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT,
+  IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT,
+  type ImagePreviewCommandDetail,
+} from './chat/imagePreviewCommands';
+import { INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, type InlineTraceRunCommandDetail } from './chat/inlineTraceRunCommands';
+import { FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, type FileChangeCommandDetail } from './chat/fileChangeCommands';
+import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './chat/messageActionCommands';
+import { MESSAGE_EDIT_COMMAND_EVENT, type MessageEditCommand } from './chat/messageEditCommands';
+import { SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type SubagentBlockCommandDetail } from './chat/subagentBlockCommands';
+import { THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ThinkingBlockCommandDetail } from './chat/thinkingBlockCommands';
+import {
+  TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
+  type ToolBlockCommandDetail,
+} from './chat/toolBlockCommands';
+import {
+  TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT,
+  TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT,
+  type TraceClusterCommandDetail,
+} from './chat/traceClusterCommands';
+import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
@@ -51,10 +125,11 @@ import {
   isSinglePaneWorkbenchMode,
   parseExtensionToolPanelMode,
   resolveActiveExtensionWorkbenchSurface,
+  singletonWorkbenchToolTabId,
   type WorkbenchRailMode,
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
-import { addNotification, NotificationProvider } from './notifications/notificationStore';
+import { addNotification, NotificationProvider, useNotificationStore } from './notifications/notificationStore';
 import {
   ActionTile,
   CenteredMessage,
@@ -68,7 +143,6 @@ import {
 } from './ui';
 import { iconGlyphForExtensionSurface, labelForExtensionToolPanel, shouldRenderWorkbenchToolInNav } from './workbenchNav';
 
-const DESKTOP_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 const DESKTOP_NAVIGATE_EVENT = 'neon-pilot-desktop-navigate';
 const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
   import('./CommandPalette').then((module) => ({ default: module.CommandPalette })),
@@ -76,6 +150,10 @@ const CommandPalette = lazyRouteWithRecovery('layout-command-palette', () =>
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_REFRESH_ACTIVE_FILE_EVENT = 'pa:workbench-refresh-active-file';
 const WORKBENCH_TOGGLE_DIFF_EVENT = 'pa:workbench-toggle-diff';
+const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
+const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
+const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
+const NOTIFICATIONS_CLOSE_EVENT = 'neon-pilot-notifications-close';
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -94,6 +172,47 @@ const ChatRail = lazyRouteWithRecovery('layout-chat-rail', () =>
 const ExtensionModalHost = lazyRouteWithRecovery('layout-extension-modal-host', () =>
   import('../extensions/ExtensionModalHost').then((module) => ({ default: module.ExtensionModalHost })),
 );
+
+function NotificationCommandBridge({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { notifications, unreadCount, markAllRead, dismissAll } = useNotificationStore();
+  const hasVisible = notifications.some((notification) => !notification.dismissed);
+
+  useEffect(() => {
+    setExtensionCommandContext('notifications.open', open);
+    setExtensionCommandContext('notifications.hasUnread', unreadCount > 0);
+    setExtensionCommandContext('notifications.hasVisible', hasVisible);
+    return () => {
+      setExtensionCommandContext('notifications.open', null);
+      setExtensionCommandContext('notifications.hasUnread', null);
+      setExtensionCommandContext('notifications.hasVisible', null);
+    };
+  }, [hasVisible, open, unreadCount]);
+
+  useEffect(() => {
+    function handleMarkAllRead() {
+      markAllRead();
+    }
+
+    function handleDismissAll() {
+      dismissAll();
+    }
+
+    function handleClose() {
+      onClose();
+    }
+
+    window.addEventListener(NOTIFICATIONS_MARK_ALL_READ_EVENT, handleMarkAllRead);
+    window.addEventListener(NOTIFICATIONS_DISMISS_ALL_EVENT, handleDismissAll);
+    window.addEventListener(NOTIFICATIONS_CLOSE_EVENT, handleClose);
+    return () => {
+      window.removeEventListener(NOTIFICATIONS_MARK_ALL_READ_EVENT, handleMarkAllRead);
+      window.removeEventListener(NOTIFICATIONS_DISMISS_ALL_EVENT, handleDismissAll);
+      window.removeEventListener(NOTIFICATIONS_CLOSE_EVENT, handleClose);
+    };
+  }, [dismissAll, markAllRead, onClose]);
+
+  return null;
+}
 const NotificationCenter = lazyRouteWithRecovery('layout-notification-center', () =>
   import('./notifications/NotificationCenter').then((module) => ({ default: module.NotificationCenter })),
 );
@@ -118,7 +237,11 @@ const DESKTOP_SHORTCUT_ACTIONS = {
   toggleConversationPin: 'toggle-conversation-pin',
   toggleConversationArchive: 'toggle-conversation-archive',
   renameConversation: 'rename-conversation',
+  saveConversationTitle: 'save-conversation-title',
+  cancelConversationTitleEdit: 'cancel-conversation-title-edit',
   editConversationCwd: 'edit-working-directory',
+  saveConversationCwd: 'save-working-directory',
+  cancelConversationCwdEdit: 'cancel-working-directory-edit',
 } as const;
 
 interface WorkbenchTabInstance {
@@ -381,11 +504,28 @@ function getFocusableElements(): HTMLElement[] {
   );
 }
 
-function moveDocumentFocus(delta: 1 | -1): void {
+function moveDocumentFocus(delta: 1 | -1): boolean {
   const elements = getFocusableElements();
-  if (elements.length === 0) return;
+  if (elements.length === 0) return false;
   const currentIndex = document.activeElement instanceof HTMLElement ? elements.indexOf(document.activeElement) : -1;
-  elements[(currentIndex + delta + elements.length) % elements.length]?.focus();
+  const next = elements[(currentIndex + delta + elements.length) % elements.length];
+  if (!next) return false;
+  next.focus();
+  return document.activeElement === next;
+}
+
+export function focusFirstSidebarControl(): boolean {
+  const target = document.querySelector<HTMLElement>('aside a, aside button, nav a, nav button');
+  if (!target) return false;
+  target.focus();
+  return document.activeElement === target;
+}
+
+export function focusComposerTextarea(): boolean {
+  const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
+  if (!textarea) return false;
+  textarea.focus();
+  return document.activeElement === textarea;
 }
 
 function cycleSelectByLabel(label: string): boolean {
@@ -709,7 +849,7 @@ function WorkbenchDocumentPane({
         instanceId={activeTabId}
       />
     );
-  } else if (activeExtensionToolPanel && activeToolSlot === 'terminal') {
+  } else if (activeExtensionToolPanel && isSinglePaneWorkbenchMode(activeTool, activeExtensionToolPanel)) {
     mainContent = (
       <NativeExtensionSurfaceHost
         key={activeTabId ?? `${activeExtensionToolPanel.extensionId}:${activeExtensionToolPanel.id}`}
@@ -862,6 +1002,7 @@ function WorkbenchPanel({
         activeTool === 'browser' ||
         activeTool === 'chat' ||
         activeTool === 'terminal' ||
+        isSinglePaneWorkbenchMode(activeTool) ||
         isNewWorkbenchTabMode(activeTool) ||
         extensionWorkbenchSurface
           ? 'true'
@@ -1432,6 +1573,9 @@ export function Layout() {
         selectedArtifactByConversation[activeConversationId] ??
         null)
       : null;
+  const hasActiveWorkbenchFile = Boolean(
+    activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId,
+  );
   const previousActiveConversationIdRef = useRef<string | null>(activeConversationId);
   const prewarmedLiveSessionWorkspaceCwdsRef = useRef(new Map<string, number>());
   const activeWorkspaceCwd = activeSessionCwd;
@@ -1545,6 +1689,7 @@ export function Layout() {
     !isSinglePaneWorkbenchMode(activeWorkbenchTool, activeWorkbenchToolPanel)
       ? activeWorkbenchToolPanel
       : null;
+  const canToggleWorkbenchExplorer = Boolean(activeWorkbenchRailSurface);
   const effectiveWorkbenchExplorerOpen = workbenchExplorerOpen && activeWorkbenchRailSurface !== null;
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [commandPaletteMounted, setCommandPaletteMounted] = useState(false);
@@ -1562,19 +1707,27 @@ export function Layout() {
 
       // Compute next tabs state and derive next active tab ID from current state.
       const current = openWorkbenchTabsRef.current;
-      if (!options?.forceNewTab) {
+      const parsed = parseExtensionToolPanelMode(tool);
+      const surface = parsed
+        ? extensionRightToolPanels.find((candidate) => candidate.extensionId === parsed.extensionId && candidate.id === parsed.surfaceId)
+        : findExtensionToolPanelBySlot(extensionRightToolPanels, tool);
+      const singletonTabId = singletonWorkbenchToolTabId(tool, surface, activeConversationId);
+      const normalizedOptions = singletonTabId
+        ? { ...options, id: singletonTabId, conversationId: activeConversationId ?? options?.conversationId ?? null }
+        : options;
+      if (!options?.forceNewTab || singletonTabId) {
         const existing =
-          tool === 'chat' && options?.conversationId
-            ? current.find((tab) => tab.mode === 'chat' && tab.conversationId === options.conversationId)
-            : options?.id
-              ? current.find((tab) => tab.id === options.id)
+          tool === 'chat' && normalizedOptions?.conversationId
+            ? current.find((tab) => tab.mode === 'chat' && tab.conversationId === normalizedOptions.conversationId)
+            : normalizedOptions?.id
+              ? current.find((tab) => tab.id === normalizedOptions.id)
               : null;
         if (existing) {
           setActiveWorkbenchTabId(existing.id);
           return;
         }
       }
-      const tab = createWorkbenchTabInstance(tool, options);
+      const tab = createWorkbenchTabInstance(tool, normalizedOptions);
       setOpenWorkbenchTabs([...current, tab]);
       setActiveWorkbenchTabId(tab.id);
 
@@ -1585,7 +1738,7 @@ export function Layout() {
         }));
       }
     },
-    [activeConversationId],
+    [activeConversationId, extensionRightToolPanels],
   );
 
   const setActiveConversationTool = useCallback(
@@ -1649,7 +1802,35 @@ export function Layout() {
     setExtensionCommandContext('route', location.pathname);
     setExtensionCommandContext('layout.mode', appLayoutMode);
     setExtensionCommandContext('conversation.hasActive', Boolean(activeConversationId));
-  }, [activeConversationId, appLayoutMode, location.pathname]);
+    setExtensionCommandContext('workbench.hasActiveTab', Boolean(activeWorkbenchTabId));
+    setExtensionCommandContext('workbench.hasActiveFile', hasActiveWorkbenchFile);
+    setExtensionCommandContext('workbench.canToggleExplorer', canToggleWorkbenchExplorer);
+  }, [
+    activeConversationId,
+    activeWorkbenchTabId,
+    appLayoutMode,
+    canToggleWorkbenchExplorer,
+    hasActiveWorkbenchFile,
+    location.pathname,
+  ]);
+
+  useEffect(() => {
+    function publishConversationNavigationAvailability() {
+      const layout = readConversationLayout();
+      const conversationIds = [...layout.pinnedSessionIds, ...layout.sessionIds];
+      setExtensionCommandContext(
+        'conversation.canNavigate',
+        Boolean(activeConversationId && conversationIds.length >= 2 && conversationIds.includes(activeConversationId)),
+      );
+    }
+
+    publishConversationNavigationAvailability();
+    window.addEventListener(CONVERSATION_LAYOUT_CHANGED_EVENT, publishConversationNavigationAvailability);
+    return () => {
+      window.removeEventListener(CONVERSATION_LAYOUT_CHANGED_EVENT, publishConversationNavigationAvailability);
+      setExtensionCommandContext('conversation.canNavigate', null);
+    };
+  }, [activeConversationId]);
 
   const creatingNewConversationRef = useRef(false);
   const startNewConversationFromLayout = useCallback(
@@ -1713,6 +1894,12 @@ export function Layout() {
           toggleRail: () => setRailOpen((current) => !current),
         }
       : registeredRightRailControl;
+  const canToggleRightRail = canToggleWorkbench || activeRightRailControl !== null;
+
+  useEffect(() => {
+    setExtensionCommandContext('layout.canToggleRightRail', canToggleRightRail);
+    return () => setExtensionCommandContext('layout.canToggleRightRail', null);
+  }, [canToggleRightRail]);
 
   const handleAppLayoutModeChange = useCallback(
     (mode: AppLayoutMode) => {
@@ -1784,6 +1971,34 @@ export function Layout() {
         route: location.pathname,
         'layout.mode': appLayoutMode,
         'conversation.hasActive': Boolean(activeConversationId),
+        'conversation.hasCwd': Boolean(activeSessionCwd?.trim()),
+        'workbench.hasActiveTab': Boolean(activeWorkbenchTabId),
+        'workbench.hasActiveFile': hasActiveWorkbenchFile,
+        'workbench.canToggleExplorer': canToggleWorkbenchExplorer,
+      },
+      goBack() {
+        window.dispatchEvent(new CustomEvent(APP_NAVIGATION_COMMAND_EVENT, { detail: { direction: 'back' } }));
+        return true;
+      },
+      goForward() {
+        window.dispatchEvent(new CustomEvent(APP_NAVIGATION_COMMAND_EVENT, { detail: { direction: 'forward' } }));
+        return true;
+      },
+      openNotifications() {
+        startTransition(() => setNotificationCenterOpen(true));
+        return true;
+      },
+      closeNotifications() {
+        window.dispatchEvent(new CustomEvent(NOTIFICATIONS_CLOSE_EVENT));
+        return true;
+      },
+      markAllNotificationsRead() {
+        window.dispatchEvent(new CustomEvent(NOTIFICATIONS_MARK_ALL_READ_EVENT));
+        return true;
+      },
+      dismissAllNotifications() {
+        window.dispatchEvent(new CustomEvent(NOTIFICATIONS_DISMISS_ALL_EVENT));
+        return true;
       },
       openCommandPalette(scope?: string) {
         window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope } }));
@@ -1821,10 +2036,22 @@ export function Layout() {
           return true;
         }
         activeRightRailControl?.toggleRail();
-        return activeRightRailControl !== null;
+        return canToggleRightRail;
       },
       findOnPage() {
         dispatchDesktopShortcutAction('find-in-page');
+        return true;
+      },
+      findNextOnPage() {
+        dispatchDesktopShortcutCommand('page.findNext');
+        return true;
+      },
+      findPreviousOnPage() {
+        dispatchDesktopShortcutCommand('page.findPrevious');
+        return true;
+      },
+      closePageSearch() {
+        dispatchDesktopShortcutCommand('page.closeFind');
         return true;
       },
       closeConversation() {
@@ -1847,8 +2074,130 @@ export function Layout() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.renameConversation);
         return true;
       },
+      async duplicateConversation() {
+        if (!activeConversationId) return false;
+        try {
+          const { newSessionId } = await api.duplicateConversation(activeConversationId);
+          navigate(buildConversationSurfacePath(newSessionId));
+          return true;
+        } catch (error) {
+          addNotification({
+            type: 'error',
+            message: `Duplicate failed: ${error instanceof Error ? error.message : String(error)}`,
+            source: 'conversation',
+          });
+          return false;
+        }
+      },
+      async copyConversationWorkingDirectory() {
+        const cwd = activeSessionCwd?.trim();
+        if (!cwd) return false;
+        try {
+          await writeClipboardText(cwd);
+          return true;
+        } catch {
+          addNotification({ type: 'error', message: 'Copy to clipboard failed.', source: 'conversation' });
+          return false;
+        }
+      },
+      async copyConversationId() {
+        if (!activeConversationId) return false;
+        try {
+          await writeClipboardText(activeConversationId);
+          return true;
+        } catch {
+          addNotification({ type: 'error', message: 'Copy to clipboard failed.', source: 'conversation' });
+          return false;
+        }
+      },
+      async copyConversationDeeplink() {
+        if (!activeConversationId || typeof window === 'undefined') return false;
+        try {
+          await writeClipboardText(buildConversationDeeplink(activeConversationId, window.location.href));
+          return true;
+        } catch {
+          addNotification({ type: 'error', message: 'Could not build a deeplink for this conversation.', source: 'conversation' });
+          return false;
+        }
+      },
+      saveConversationTitle() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationTitle);
+        return true;
+      },
+      cancelConversationTitleEdit() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationTitleEdit);
+        return true;
+      },
       editConversationCwd() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.editConversationCwd);
+        return true;
+      },
+      saveConversationCwd() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.saveConversationCwd);
+        return true;
+      },
+      cancelConversationCwdEdit() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.cancelConversationCwdEdit);
+        return true;
+      },
+      cancelConversationGoal() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_GOAL_COMMAND_EVENT));
+        return true;
+      },
+      continueDeferredResumes() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT));
+        return true;
+      },
+      toggleBackgroundRunDetails() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT));
+        return true;
+      },
+      toggleDeferredResumeDetails() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT));
+        return true;
+      },
+      toggleScheduledTaskDetails() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT));
+        return true;
+      },
+      openLatestBackgroundRun() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT));
+        return true;
+      },
+      cancelLatestBackgroundRun() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT));
+        return true;
+      },
+      runFirstScheduledTask() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+        return true;
+      },
+      openFirstScheduledTask() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+        return true;
+      },
+      fireFirstDeferredResume() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
+        return true;
+      },
+      cancelFirstDeferredResume() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
+        return true;
+      },
+      restoreFirstQueuedPrompt() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT));
+        return true;
+      },
+      openActiveCheckpoint() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT));
+        return true;
+      },
+      openLatestCheckpoint() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT));
+        return true;
+      },
+      scrollFirstCheckpointFile() {
+        window.dispatchEvent(new CustomEvent(CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT));
         return true;
       },
       newWorkbenchTab() {
@@ -1861,19 +2210,17 @@ export function Layout() {
         return true;
       },
       closeActiveWorkbenchFile() {
-        const hasActiveFile = Boolean(
-          activeWorkbenchArtifactId || activeWorkbenchKnowledgeFileId || activeWorkbenchWorkspaceFileId,
-        );
-        if (!hasActiveFile) return false;
+        if (!hasActiveWorkbenchFile) return false;
         window.dispatchEvent(new CustomEvent(WORKBENCH_CLOSE_ACTIVE_FILE_EVENT));
         return true;
       },
       refreshActiveWorkbenchFile() {
+        if (!hasActiveWorkbenchFile) return false;
         window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT));
         return true;
       },
       toggleWorkbenchExplorer() {
-        if (!activeWorkbenchRailSurface) return false;
+        if (!canToggleWorkbenchExplorer) return false;
         handleToggleWorkbenchExplorer();
         return true;
       },
@@ -1881,16 +2228,213 @@ export function Layout() {
         window.dispatchEvent(new CustomEvent(WORKBENCH_TOGGLE_DIFF_EVENT));
         return true;
       },
+      browserNewTab() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'newTab' } }));
+        return true;
+      },
+      browserReopenTab() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'reopenTab' } }));
+        return true;
+      },
+      browserCloseTab() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'closeTab' } }));
+        return true;
+      },
+      browserGoBack() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'goBack' } }));
+        return true;
+      },
+      browserGoForward() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'goForward' } }));
+        return true;
+      },
+      browserReloadOrStop() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'reloadOrStop' } }));
+        return true;
+      },
+      browserFocusLocation() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'focusLocation' } }));
+        return true;
+      },
+      browserClose() {
+        window.dispatchEvent(new CustomEvent(WORKBENCH_BROWSER_COMMAND_EVENT, { detail: { command: 'close' } }));
+        return true;
+      },
+      artifactCopySource() {
+        window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'copySource' } }));
+        return true;
+      },
+      artifactToggleSource() {
+        window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'toggleSource' } }));
+        return true;
+      },
+      artifactToggleFullscreen() {
+        window.dispatchEvent(
+          new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'toggleFullscreen' } }),
+        );
+        return true;
+      },
+      artifactClose() {
+        window.dispatchEvent(new CustomEvent<{ command: ArtifactModalCommand }>(ARTIFACT_MODAL_COMMAND_EVENT, { detail: { command: 'close' } }));
+        return true;
+      },
+      closeImagePreview() {
+        window.dispatchEvent(new CustomEvent(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      inspectFirstImagePreview() {
+        window.dispatchEvent(new CustomEvent<ImagePreviewCommandDetail>(IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      loadFirstImagePreview() {
+        window.dispatchEvent(new CustomEvent<ImagePreviewCommandDetail>(IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstFileChange() {
+        window.dispatchEvent(new CustomEvent<FileChangeCommandDetail>(FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstToolBlock() {
+        window.dispatchEvent(new CustomEvent<ToolBlockCommandDetail>(TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstToolBlockLinkedRuns() {
+        window.dispatchEvent(new CustomEvent<ToolBlockCommandDetail>(TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstTraceCluster() {
+        window.dispatchEvent(new CustomEvent<TraceClusterCommandDetail>(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstTraceClusterOverflow() {
+        window.dispatchEvent(new CustomEvent<TraceClusterCommandDetail>(TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstInlineTraceRun() {
+        window.dispatchEvent(new CustomEvent<InlineTraceRunCommandDetail>(INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstThinkingBlock() {
+        window.dispatchEvent(new CustomEvent<ThinkingBlockCommandDetail>(THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      toggleFirstSubagentBlock() {
+        window.dispatchEvent(new CustomEvent<SubagentBlockCommandDetail>(SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, { detail: {} }));
+        return true;
+      },
+      copyFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'copyFirst' } }));
+        return true;
+      },
+      editFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'editFirst' } }));
+        return true;
+      },
+      rewindFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'rewindFirst' } }));
+        return true;
+      },
+      forkFirstMessageAction() {
+        window.dispatchEvent(new CustomEvent<MessageActionCommandDetail>(MESSAGE_ACTION_COMMAND_EVENT, { detail: { command: 'forkFirst' } }));
+        return true;
+      },
+      saveMessageEdit() {
+        window.dispatchEvent(new CustomEvent<MessageEditCommand>(MESSAGE_EDIT_COMMAND_EVENT, { detail: 'save' }));
+        return true;
+      },
+      cancelMessageEdit() {
+        window.dispatchEvent(new CustomEvent<MessageEditCommand>(MESSAGE_EDIT_COMMAND_EVENT, { detail: 'cancel' }));
+        return true;
+      },
+      closeDrawingPicker() {
+        window.dispatchEvent(new CustomEvent(DRAWING_PICKER_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      attachFirstDrawingFromPicker() {
+        window.dispatchEvent(new CustomEvent(DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT));
+        return true;
+      },
+      toggleFirstDrawingHistory() {
+        window.dispatchEvent(new CustomEvent(DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT));
+        return true;
+      },
+      openDraftWorkspacePicker() {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT));
+        return true;
+      },
+      toggleDraftWorkspacePicker() {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
+        return true;
+      },
+      closeDraftWorkspacePicker() {
+        window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      closeWorkspaceQuickSelect() {
+        window.dispatchEvent(new CustomEvent(WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT));
+        return true;
+      },
+      closeExtensionModal() {
+        window.dispatchEvent(new CustomEvent(EXTENSION_MODAL_CLOSE_COMMAND_EVENT));
+        return true;
+      },
       focusComposer() {
-        const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Message"]');
-        textarea?.focus();
+        return focusComposerTextarea();
       },
       submitComposer() {
         window.dispatchEvent(new CustomEvent('neon-pilot:composer-submit'));
         return true;
       },
+      stopComposer() {
+        window.dispatchEvent(new CustomEvent('neon-pilot:composer-stop'));
+        return true;
+      },
       clearComposer() {
         window.dispatchEvent(new CustomEvent('neon-pilot:composer-clear'));
+        return true;
+      },
+      openComposerSettings() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT));
+        return true;
+      },
+      closeComposerSettings() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT));
+        return true;
+      },
+      openComposerPreferences() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_OPEN_PREFERENCES_COMMAND_EVENT));
+        return true;
+      },
+      toggleComposerPreferences() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_TOGGLE_PREFERENCES_COMMAND_EVENT));
+        return true;
+      },
+      closeComposerPreferences() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CLOSE_PREFERENCES_COMMAND_EVENT));
+        return true;
+      },
+      previewFirstComposerAttachment() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_PREVIEW_FIRST_ATTACHMENT_COMMAND_EVENT));
+        return true;
+      },
+      removeFirstComposerAttachment() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT));
+        return true;
+      },
+      createComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_CREATE_DRAWING_COMMAND_EVENT));
+        return true;
+      },
+      previewFirstComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_PREVIEW_FIRST_DRAWING_COMMAND_EVENT));
+        return true;
+      },
+      editFirstComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT));
+        return true;
+      },
+      removeFirstComposerDrawing() {
+        window.dispatchEvent(new CustomEvent(COMPOSER_REMOVE_FIRST_DRAWING_COMMAND_EVENT));
         return true;
       },
       pageConversation(direction: 'up' | 'down') {
@@ -1916,17 +2460,28 @@ export function Layout() {
         return true;
       },
       focusSidebar() {
-        document.querySelector<HTMLElement>('aside a, aside button, nav a, nav button')?.focus();
+        return focusFirstSidebarControl();
       },
       focusNext() {
-        moveDocumentFocus(1);
+        return moveDocumentFocus(1);
       },
       focusPrevious() {
-        moveDocumentFocus(-1);
+        return moveDocumentFocus(-1);
       },
       activateSelection() {
         const active = document.activeElement;
-        if (active instanceof HTMLElement) active.click();
+        if (
+          active instanceof HTMLButtonElement ||
+          active instanceof HTMLAnchorElement ||
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          active instanceof HTMLSelectElement ||
+          (active instanceof HTMLElement && active.tabIndex >= 0)
+        ) {
+          active.click();
+          return true;
+        }
+        return false;
       },
       navigateConversation(direction: 'next' | 'previous') {
         if (!activeConversationId) return false;
@@ -1947,12 +2502,15 @@ export function Layout() {
     [
       activeRightRailControl,
       activeConversationId,
+      activeSessionCwd,
       activeWorkbenchArtifactId,
       activeWorkbenchKnowledgeFileId,
       activeWorkbenchRailSurface,
       activeWorkbenchTabId,
       activeWorkbenchWorkspaceFileId,
       appLayoutMode,
+      canToggleRightRail,
+      canToggleWorkbenchExplorer,
       canToggleWorkbench,
       closeWorkbenchTab,
       extensionCommands,
@@ -1960,6 +2518,7 @@ export function Layout() {
       handleAppLayoutModeChange,
       handlePrimarySidebarToggle,
       handleWorkbenchToggle,
+      hasActiveWorkbenchFile,
       location.pathname,
       navigate,
       openWorkbenchNewTab,
@@ -2001,6 +2560,7 @@ export function Layout() {
       const match = findMatchingExtensionKeybinding(
         event,
         extensionKeybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'global'),
+        executeCommandOptions.context,
       );
       if (!match) return;
       if (!canExecuteExtensionCommand(match.command, match.args, executeCommandOptions)) return;
@@ -2390,6 +2950,7 @@ export function Layout() {
 
   return (
     <NotificationProvider>
+      <NotificationCommandBridge open={notificationCenterOpen} onClose={() => setNotificationCenterOpen(false)} />
       <DesktopChromeContext.Provider value={{ setRightRailControl: setRegisteredRightRailControl }}>
         <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
           <DesktopTopBar

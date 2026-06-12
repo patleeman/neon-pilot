@@ -23,6 +23,16 @@ export interface ActivateCommandPaletteItemContext {
   readLayoutMode?: () => ReturnType<typeof readAppLayoutMode>;
 }
 
+export function executePaletteCommand(command: string, args: unknown): Promise<boolean> {
+  if (typeof window === 'undefined') {
+    return api.executeExtensionCommand(command, args).then(() => true);
+  }
+
+  return new Promise<boolean>((resolve) => {
+    window.dispatchEvent(new CustomEvent('neon-pilot-extension-command-execute', { detail: { command, args, resolve } }));
+  });
+}
+
 function isDeclaredPaletteCommand(commandItems: Array<CommandPaletteItem<CommandPaletteAction>>, command: string): boolean {
   return commandItems.some(
     (candidate) => candidate.action.kind === 'command' && candidate.action.command === command && !candidate.disabled,
@@ -34,19 +44,20 @@ async function executeDeclaredPaletteCommand(
   command: string,
   args: unknown,
   executeExtensionCommand: (command: string, args: unknown) => Promise<unknown>,
-): Promise<void> {
+): Promise<boolean> {
   if (!isDeclaredPaletteCommand(commandItems, command)) {
     throw new Error(`Command is not available in the palette: ${command}`);
   }
-  await executeExtensionCommand(command, args ?? {});
+  const handled = await executeExtensionCommand(command, args ?? {});
+  return handled !== false;
 }
 
 export async function activateCommandPaletteItem(
   item: CommandPaletteItem<CommandPaletteAction>,
   context: ActivateCommandPaletteItemContext,
-): Promise<void> {
+): Promise<boolean> {
   if (item.disabled) {
-    return;
+    return false;
   }
 
   const executeExtensionCommand = context.executeExtensionCommand ?? api.executeExtensionCommand;
@@ -56,12 +67,12 @@ export async function activateCommandPaletteItem(
     case 'navigate':
       context.navigate(item.action.to);
       context.closePalette();
-      return;
+      return true;
     case 'restoreArchivedConversation':
       context.openSession(item.action.conversationId);
       context.navigate(`/conversations/${encodeURIComponent(item.action.conversationId)}`);
       context.closePalette();
-      return;
+      return true;
     case 'openFile':
       context.navigate(
         buildCommandPaletteFileOpenRoute({
@@ -74,32 +85,35 @@ export async function activateCommandPaletteItem(
         }),
       );
       context.closePalette();
-      return;
+      return true;
     case 'command':
-      await executeExtensionCommand(item.action.command, item.action.args ?? {});
-      context.closePalette();
-      return;
+      if ((await executeExtensionCommand(item.action.command, item.action.args ?? {})) !== false) {
+        context.closePalette();
+        return true;
+      }
+      return false;
     case 'extensionSearchAction': {
       const searchAction = item.action.action;
+      let handled = true;
       if (searchAction && typeof searchAction === 'object' && 'kind' in searchAction) {
         const typedAction = searchAction as { kind?: unknown; to?: unknown; command?: unknown; args?: unknown };
         if (typedAction.kind === 'navigate' && typeof typedAction.to === 'string') {
           context.navigate(typedAction.to);
         } else if (typedAction.kind === 'command' && typeof typedAction.command === 'string') {
-          await executeDeclaredPaletteCommand(context.commandItems, typedAction.command, typedAction.args ?? {}, executeExtensionCommand);
+          handled = await executeDeclaredPaletteCommand(context.commandItems, typedAction.command, typedAction.args ?? {}, executeExtensionCommand);
         }
       } else if (searchAction && typeof searchAction === 'object' && 'command' in searchAction) {
-        await executeDeclaredPaletteCommand(
+        handled = await executeDeclaredPaletteCommand(
           context.commandItems,
           String((searchAction as { command: unknown }).command),
           (searchAction as { args?: unknown }).args ?? {},
           executeExtensionCommand,
         );
       }
-      context.closePalette();
-      return;
+      if (handled) context.closePalette();
+      return handled;
     }
     default:
-      return;
+      return false;
   }
 }

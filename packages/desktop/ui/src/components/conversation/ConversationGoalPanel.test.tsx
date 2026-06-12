@@ -1,10 +1,26 @@
+// @vitest-environment jsdom
 import React from 'react';
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConversationGoalPanel } from './ConversationGoalPanel';
+import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversationGoalCommands';
+
+Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 describe('ConversationGoalPanel', () => {
+  let root: Root | null = null;
+
+  afterEach(() => {
+    if (root) {
+      act(() => root?.unmount());
+      root = null;
+    }
+    vi.restoreAllMocks();
+  });
+
   it('renders goal with spinner on the left and cancel button', () => {
     const html = renderToStaticMarkup(
       <ConversationGoalPanel goal={{ objective: 'Ship goal mode', status: 'active', tasks: [], stopReason: null, updatedAt: null }} />,
@@ -38,5 +54,27 @@ describe('ConversationGoalPanel', () => {
     expect(html).toContain('Paused');
     expect(html).not.toContain('Cancel');
     expect(html).not.toContain('ui-spinner');
+  });
+
+  it('handles the shared cancel goal command while active', () => {
+    const onCancel = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationGoalPanel
+          goal={{ objective: 'Ship goal mode', status: 'active', tasks: [], stopReason: null, updatedAt: null }}
+          onCancel={onCancel}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_GOAL_COMMAND_EVENT));
+    });
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

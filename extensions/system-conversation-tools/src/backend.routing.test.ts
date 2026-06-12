@@ -148,6 +148,18 @@ describe('system-conversation-tools backend routing', () => {
       expect.objectContaining({ cwd: '/repo' }),
     );
 
+    await conversationTool({ cli: { command: 'conversations inspect', args: ['conv-2', 'transcript', '--limit', '20'] } }, context);
+    expect(inspect.executeConversationInspectTool).toHaveBeenLastCalledWith(
+      { action: 'query', conversationId: 'conv-2', limit: 20 },
+      expect.objectContaining({ cwd: '/repo' }),
+    );
+
+    await conversationTool({ cli: { command: 'conversations transcript read', args: ['conv-2', '--order', 'desc'] } }, context);
+    expect(inspect.executeConversationInspectTool).toHaveBeenLastCalledWith(
+      { action: 'query', conversationId: 'conv-2', order: 'desc' },
+      expect.objectContaining({ cwd: '/repo' }),
+    );
+
     await conversationTool({ cli: { command: 'conversations create', args: ['CLI', 'Thread'] } }, context);
     expect(conversations.create).toHaveBeenLastCalledWith({ title: 'CLI Thread' });
 
@@ -418,35 +430,6 @@ describe('system-conversation-tools backend routing', () => {
 
     await conversationTool({ action: 'rollback', conversationId: 'conv-2', count: 2 }, context);
     expect(conversations.rollback).toHaveBeenCalledWith('conv-2', 2);
-  });
-
-  it('routes conversation scratchpad admin actions through conversation metadata', async () => {
-    const context = ctx();
-    const conversations = (context as { conversations: { metadata: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> } } }).conversations;
-
-    await expect(
-      conversationTool({ action: 'scratchpad', conversationId: 'conv-2', scratchpadOperation: 'get' }, context),
-    ).resolves.toMatchObject({ details: { conversationId: 'conv-2', content: 'Existing' } });
-    expect(conversations.metadata.get).toHaveBeenCalledWith({ conversationId: 'conv-2', namespace: 'threadScratchpad' });
-
-    await conversationTool({ action: 'scratchpad', conversationId: 'conv-2', scratchpadOperation: 'append', content: 'Next' }, context);
-    expect(conversations.metadata.set).toHaveBeenCalledWith({
-      conversationId: 'conv-2',
-      namespace: 'threadScratchpad',
-      values: expect.objectContaining({ content: 'Existing\n\nNext', updatedAt: expect.any(String) }),
-    });
-  });
-
-  it('normalizes conversations scratchpad cli commands', async () => {
-    const context = ctx();
-    const conversations = (context as { conversations: { metadata: { set: ReturnType<typeof vi.fn> } } }).conversations;
-
-    await conversationTool({ cli: { command: 'conversations scratchpad set', args: ['conv-2', '--content', 'From CLI'] } }, context);
-    expect(conversations.metadata.set).toHaveBeenCalledWith({
-      conversationId: 'conv-2',
-      namespace: 'threadScratchpad',
-      values: expect.objectContaining({ content: 'From CLI' }),
-    });
   });
 
   it('passes only provided fields for workspace updates', async () => {

@@ -93,6 +93,7 @@ describe('system-conversation-tools manifest', () => {
         expect.objectContaining({ command: 'conversations list', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations search', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations inspect', action: 'conversationTool' }),
+        expect.objectContaining({ command: 'conversations transcript read', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations create', action: 'conversationTool' }),
         expect.objectContaining({ command: 'ask', action: 'conversationTool' }),
         expect.objectContaining({ command: 'conversations title', action: 'conversationTool' }),

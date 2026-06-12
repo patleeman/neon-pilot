@@ -18,6 +18,12 @@ export interface HostCommandDefinition {
 
 export interface ExtensionCommandExecutorOptions {
   navigate: NavigateFunction;
+  goBack?(): boolean;
+  goForward?(): boolean;
+  openNotifications?(): boolean;
+  closeNotifications?(): boolean;
+  markAllNotificationsRead?(): boolean;
+  dismissAllNotifications?(): boolean;
   openCommandPalette(scope?: string): void;
   openRightRail(target: string): boolean;
   setLayout(mode: 'compact' | 'workbench'): void;
@@ -25,26 +31,101 @@ export interface ExtensionCommandExecutorOptions {
   toggleSidebar?(): boolean;
   toggleRightRail?(): boolean;
   findOnPage?(): boolean;
-  focusComposer?(): void;
-  focusSidebar?(): void;
-  focusNext?(): void;
-  focusPrevious?(): void;
-  activateSelection?(): void;
+  findNextOnPage?(): boolean;
+  findPreviousOnPage?(): boolean;
+  closePageSearch?(): boolean;
+  focusComposer?(): boolean;
+  focusSidebar?(): boolean;
+  focusNext?(): boolean;
+  focusPrevious?(): boolean;
+  activateSelection?(): boolean;
   submitComposer?(): boolean;
+  stopComposer?(): boolean;
   clearComposer?(): boolean;
+  openComposerSettings?(): boolean;
+  closeComposerSettings?(): boolean;
+  openComposerPreferences?(): boolean;
+  closeComposerPreferences?(): boolean;
+  toggleComposerPreferences?(): boolean;
+  previewFirstComposerAttachment?(): boolean;
+  removeFirstComposerAttachment?(): boolean;
+  createComposerDrawing?(): boolean;
+  previewFirstComposerDrawing?(): boolean;
+  editFirstComposerDrawing?(): boolean;
+  removeFirstComposerDrawing?(): boolean;
   pageConversation?(direction: 'up' | 'down'): boolean;
   closeConversation?(): boolean;
   reopenClosedConversation?(): boolean;
   toggleConversationPin?(): boolean;
   toggleConversationArchive?(): boolean;
   renameConversation?(): boolean;
+  duplicateConversation?(): boolean | Promise<boolean>;
+  copyConversationWorkingDirectory?(): boolean | Promise<boolean>;
+  copyConversationId?(): boolean | Promise<boolean>;
+  copyConversationDeeplink?(): boolean | Promise<boolean>;
+  saveConversationTitle?(): boolean;
+  cancelConversationTitleEdit?(): boolean;
   editConversationCwd?(): boolean;
+  saveConversationCwd?(): boolean;
+  cancelConversationCwdEdit?(): boolean;
+  cancelConversationGoal?(): boolean;
+  continueDeferredResumes?(): boolean;
+  toggleBackgroundRunDetails?(): boolean;
+  toggleDeferredResumeDetails?(): boolean;
+  toggleScheduledTaskDetails?(): boolean;
+  openLatestBackgroundRun?(): boolean;
+  cancelLatestBackgroundRun?(): boolean;
+  runFirstScheduledTask?(): boolean;
+  openFirstScheduledTask?(): boolean;
+  fireFirstDeferredResume?(): boolean;
+  cancelFirstDeferredResume?(): boolean;
+  restoreFirstQueuedPrompt?(): boolean;
+  openActiveCheckpoint?(): boolean;
+  openLatestCheckpoint?(): boolean;
+  scrollFirstCheckpointFile?(): boolean;
   newWorkbenchTab?(): boolean;
   closeActiveWorkbenchTab?(): boolean;
   closeActiveWorkbenchFile?(): boolean;
   refreshActiveWorkbenchFile?(): boolean;
   toggleWorkbenchExplorer?(): boolean;
   toggleWorkbenchDiff?(): boolean;
+  browserNewTab?(): boolean;
+  browserReopenTab?(): boolean;
+  browserCloseTab?(): boolean;
+  browserGoBack?(): boolean;
+  browserGoForward?(): boolean;
+  browserReloadOrStop?(): boolean;
+  browserFocusLocation?(): boolean;
+  browserClose?(): boolean;
+  artifactCopySource?(): boolean;
+  artifactToggleSource?(): boolean;
+  artifactToggleFullscreen?(): boolean;
+  artifactClose?(): boolean;
+  closeImagePreview?(): boolean;
+  inspectFirstImagePreview?(): boolean;
+  loadFirstImagePreview?(): boolean;
+  toggleFirstFileChange?(): boolean;
+  toggleFirstToolBlock?(): boolean;
+  toggleFirstToolBlockLinkedRuns?(): boolean;
+  toggleFirstTraceCluster?(): boolean;
+  toggleFirstTraceClusterOverflow?(): boolean;
+  toggleFirstInlineTraceRun?(): boolean;
+  toggleFirstThinkingBlock?(): boolean;
+  toggleFirstSubagentBlock?(): boolean;
+  copyFirstMessageAction?(): boolean;
+  editFirstMessageAction?(): boolean;
+  rewindFirstMessageAction?(): boolean;
+  forkFirstMessageAction?(): boolean;
+  saveMessageEdit?(): boolean;
+  cancelMessageEdit?(): boolean;
+  closeDrawingPicker?(): boolean;
+  attachFirstDrawingFromPicker?(): boolean;
+  toggleFirstDrawingHistory?(): boolean;
+  openDraftWorkspacePicker?(): boolean;
+  toggleDraftWorkspacePicker?(): boolean;
+  closeDraftWorkspacePicker?(): boolean;
+  closeWorkspaceQuickSelect?(): boolean;
+  closeExtensionModal?(): boolean;
   cycleModel?(): boolean;
   cycleThinking?(): boolean;
   newConversation?(args?: {
@@ -64,6 +145,8 @@ export interface ExtensionCommandExecutorOptions {
   invokeExtensionCommand?(command: ExtensionCommandRegistration, args: unknown): Promise<unknown>;
   context?: ExtensionCommandContext;
 }
+
+export const EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT = 'neon-pilot-extension-command-context-changed';
 
 const extensionCommandContext = new Map<string, ExtensionCommandContextValue>();
 
@@ -88,7 +171,7 @@ export function setExtensionCommandContext(key: string, value: ExtensionCommandC
   if (!key.trim()) return;
   if (value === undefined || value === null) extensionCommandContext.delete(key);
   else extensionCommandContext.set(key, value);
-  window.dispatchEvent(new CustomEvent('neon-pilot-extension-command-context-changed', { detail: { key, value } }));
+  window.dispatchEvent(new CustomEvent(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, { detail: { key, value } }));
 }
 
 export function evaluateCommandEnablement(expression: string | undefined, context: ExtensionCommandContext = {}): boolean {
@@ -111,6 +194,12 @@ function compareContextValue(value: ExtensionCommandContextValue, operator: stri
 export function listHostCommands(): Array<{ id: string; title: string; category?: string; argsSchema?: Record<string, unknown> }> {
   return [
     { id: 'app.navigate', title: 'Navigate', category: 'App', argsSchema: { type: 'object', properties: { to: { type: 'string' } } } },
+    { id: 'app.goBack', title: 'Go Back', category: 'App' },
+    { id: 'app.goForward', title: 'Go Forward', category: 'App' },
+    { id: 'notifications.open', title: 'Open Notifications', category: 'App' },
+    { id: 'notifications.close', title: 'Close Notifications', category: 'App' },
+    { id: 'notifications.markAllRead', title: 'Mark Notifications Read', category: 'App' },
+    { id: 'notifications.dismissAll', title: 'Dismiss Notifications', category: 'App' },
     {
       id: 'palette.open',
       title: 'Open Command Palette',
@@ -133,6 +222,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'layout.toggleSidebar', title: 'Toggle Left Sidebar', category: 'App' },
     { id: 'layout.toggleRightRail', title: 'Toggle Right Rail', category: 'App' },
     { id: 'page.find', title: 'Find on Page', category: 'App' },
+    { id: 'page.findNext', title: 'Find Next Match', category: 'App' },
+    { id: 'page.findPrevious', title: 'Find Previous Match', category: 'App' },
+    { id: 'page.closeFind', title: 'Close Page Search', category: 'App' },
     {
       id: 'conversation.new',
       title: 'New Conversation',
@@ -155,10 +247,45 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.togglePinned', title: 'Pin or Unpin Conversation', category: 'Conversation' },
     { id: 'conversation.toggleArchived', title: 'Archive or Restore Conversation', category: 'Conversation' },
     { id: 'conversation.rename', title: 'Rename Conversation', category: 'Conversation' },
+    { id: 'conversation.duplicate', title: 'Duplicate Conversation', category: 'Conversation' },
+    { id: 'conversation.copyWorkingDirectory', title: 'Copy Conversation Working Directory', category: 'Conversation' },
+    { id: 'conversation.copyId', title: 'Copy Conversation ID', category: 'Conversation' },
+    { id: 'conversation.copyDeeplink', title: 'Copy Conversation Deeplink', category: 'Conversation' },
+    { id: 'conversation.saveTitle', title: 'Save Conversation Title', category: 'Conversation' },
+    { id: 'conversation.cancelTitleEdit', title: 'Cancel Title Edit', category: 'Conversation' },
     { id: 'conversation.editCwd', title: 'Edit Conversation Working Directory', category: 'Conversation' },
+    { id: 'conversation.saveCwd', title: 'Save Conversation Working Directory', category: 'Conversation' },
+    { id: 'conversation.cancelCwdEdit', title: 'Cancel Working Directory Edit', category: 'Conversation' },
+    { id: 'conversation.cancelGoal', title: 'Cancel Active Goal', category: 'Conversation' },
+    { id: 'conversation.continueDeferredResumes', title: 'Continue Deferred Resumes', category: 'Conversation' },
+    { id: 'conversation.toggleBackgroundRunDetails', title: 'Toggle Background Work Details', category: 'Conversation' },
+    { id: 'conversation.toggleDeferredResumeDetails', title: 'Toggle Attention Details', category: 'Conversation' },
+    { id: 'conversation.toggleScheduledTaskDetails', title: 'Toggle Automation Details', category: 'Conversation' },
+    { id: 'conversation.openLatestBackgroundRun', title: 'Open Latest Background Run', category: 'Conversation' },
+    { id: 'conversation.cancelLatestBackgroundRun', title: 'Cancel Latest Background Run', category: 'Conversation' },
+    { id: 'conversation.runFirstScheduledTask', title: 'Run First Automation', category: 'Conversation' },
+    { id: 'conversation.openFirstScheduledTask', title: 'Open First Automation', category: 'Conversation' },
+    { id: 'conversation.fireFirstDeferredResume', title: 'Fire First Attention Item', category: 'Conversation' },
+    { id: 'conversation.cancelFirstDeferredResume', title: 'Cancel First Attention Item', category: 'Conversation' },
+    { id: 'conversation.restoreFirstQueuedPrompt', title: 'Restore First Queued Prompt', category: 'Conversation' },
+    { id: 'conversation.openActiveCheckpoint', title: 'Open Active Checkpoint', category: 'Conversation' },
+    { id: 'conversation.openLatestCheckpoint', title: 'Open Latest Checkpoint', category: 'Conversation' },
+    { id: 'conversation.scrollFirstCheckpointFile', title: 'Scroll to First Checkpoint File', category: 'Conversation' },
     { id: 'composer.focus', title: 'Focus Composer', category: 'Conversation' },
     { id: 'composer.submit', title: 'Send Message', category: 'Conversation' },
+    { id: 'composer.stop', title: 'Stop Streaming', category: 'Conversation' },
     { id: 'composer.clear', title: 'Clear Composer', category: 'Conversation' },
+    { id: 'composer.openSettings', title: 'Open Composer Settings', category: 'Conversation' },
+    { id: 'composer.closeSettings', title: 'Close Composer Settings', category: 'Conversation' },
+    { id: 'composer.openPreferences', title: 'Open Composer Preferences', category: 'Conversation' },
+    { id: 'composer.togglePreferences', title: 'Toggle Composer Preferences', category: 'Conversation' },
+    { id: 'composer.closePreferences', title: 'Close Composer Preferences', category: 'Conversation' },
+    { id: 'composer.previewFirstAttachment', title: 'Preview First Attachment', category: 'Conversation' },
+    { id: 'composer.removeFirstAttachment', title: 'Remove First Attachment', category: 'Conversation' },
+    { id: 'composer.createDrawing', title: 'Create Drawing', category: 'Conversation' },
+    { id: 'composer.previewFirstDrawing', title: 'Preview First Drawing', category: 'Conversation' },
+    { id: 'composer.editFirstDrawing', title: 'Edit First Drawing', category: 'Conversation' },
+    { id: 'composer.removeFirstDrawing', title: 'Remove First Drawing', category: 'Conversation' },
     { id: 'conversation.pageUp', title: 'Page Conversation Up', category: 'Conversation' },
     { id: 'conversation.pageDown', title: 'Page Conversation Down', category: 'Conversation' },
     { id: 'workbench.newTab', title: 'New Workbench Tab', category: 'Workbench' },
@@ -167,6 +294,43 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'workbench.refreshActiveFile', title: 'Refresh Active Workbench File', category: 'Workbench' },
     { id: 'workbench.toggleExplorer', title: 'Toggle Workbench Explorer', category: 'Workbench' },
     { id: 'workbench.toggleDiff', title: 'Toggle Workbench Diff Overlay', category: 'Workbench' },
+    { id: 'browser.newTab', title: 'New Browser Tab', category: 'Browser' },
+    { id: 'browser.reopenTab', title: 'Reopen Closed Browser Tab', category: 'Browser' },
+    { id: 'browser.closeTab', title: 'Close Browser Tab', category: 'Browser' },
+    { id: 'browser.goBack', title: 'Browser Go Back', category: 'Browser' },
+    { id: 'browser.goForward', title: 'Browser Go Forward', category: 'Browser' },
+    { id: 'browser.reloadOrStop', title: 'Reload or Stop Browser', category: 'Browser' },
+    { id: 'browser.focusLocation', title: 'Focus Browser Location', category: 'Browser' },
+    { id: 'browser.close', title: 'Close Browser', category: 'Browser' },
+    { id: 'artifact.copySource', title: 'Copy Artifact Source', category: 'Artifact' },
+    { id: 'artifact.toggleSource', title: 'Show or Hide Artifact Source', category: 'Artifact' },
+    { id: 'artifact.toggleFullscreen', title: 'Toggle Artifact Fullscreen', category: 'Artifact' },
+    { id: 'artifact.close', title: 'Close Artifact', category: 'Artifact' },
+    { id: 'imagePreview.close', title: 'Close Image Preview', category: 'Image Preview' },
+    { id: 'imagePreview.inspectFirst', title: 'Inspect First Image', category: 'Image Preview' },
+    { id: 'imagePreview.loadFirst', title: 'Load First Deferred Image', category: 'Image Preview' },
+    { id: 'fileChange.toggleFirst', title: 'Toggle First File Change', category: 'Diff' },
+    { id: 'toolBlock.toggleFirst', title: 'Toggle First Tool Block', category: 'Transcript' },
+    { id: 'toolBlock.toggleFirstLinkedRuns', title: 'Toggle First Tool Block Linked Runs', category: 'Transcript' },
+    { id: 'traceCluster.toggleFirst', title: 'Toggle First Internal Work Cluster', category: 'Transcript' },
+    { id: 'traceCluster.toggleFirstOverflow', title: 'Toggle First Internal Work Overflow', category: 'Transcript' },
+    { id: 'inlineTraceRun.toggleFirst', title: 'Toggle First Inline Run Details', category: 'Transcript' },
+    { id: 'thinkingBlock.toggleFirst', title: 'Toggle First Thinking Block', category: 'Transcript' },
+    { id: 'subagentBlock.toggleFirst', title: 'Toggle First Subagent Block', category: 'Transcript' },
+    { id: 'messageAction.copyFirst', title: 'Copy First Message', category: 'Message Actions' },
+    { id: 'messageAction.editFirst', title: 'Edit First Message', category: 'Message Actions' },
+    { id: 'messageAction.rewindFirst', title: 'Rewind First Message', category: 'Message Actions' },
+    { id: 'messageAction.forkFirst', title: 'Fork First Message', category: 'Message Actions' },
+    { id: 'messageEdit.save', title: 'Save Message Edit', category: 'Message Edit' },
+    { id: 'messageEdit.cancel', title: 'Cancel Message Edit', category: 'Message Edit' },
+    { id: 'drawingPicker.close', title: 'Close Drawing Picker', category: 'Conversation' },
+    { id: 'drawingPicker.attachFirst', title: 'Attach First Visible Drawing', category: 'Conversation' },
+    { id: 'drawingPicker.toggleFirstHistory', title: 'Toggle First Drawing History', category: 'Conversation' },
+    { id: 'draftWorkspacePicker.open', title: 'Open Draft Workspace Picker', category: 'Conversation' },
+    { id: 'draftWorkspacePicker.toggle', title: 'Toggle Draft Workspace Picker', category: 'Conversation' },
+    { id: 'draftWorkspacePicker.close', title: 'Close Draft Workspace Picker', category: 'Conversation' },
+    { id: 'workspaceQuickSelect.close', title: 'Close Workspace Picker', category: 'Conversation' },
+    { id: 'extensionModal.close', title: 'Close Extension Modal', category: 'Extensions' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -198,6 +362,31 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         options.navigate(to);
         return true;
       },
+      canExecute(args) {
+        return readStringArg(args, 'to') !== null;
+      },
+    },
+    {
+      id: 'app.goBack',
+      title: 'Go Back',
+      category: 'App',
+      execute() {
+        return options.goBack?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.goBack) && readContextValue(context, 'app.canGoBack') === true;
+      },
+    },
+    {
+      id: 'app.goForward',
+      title: 'Go Forward',
+      category: 'App',
+      execute() {
+        return options.goForward?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.goForward) && readContextValue(context, 'app.canGoForward') === true;
+      },
     },
     {
       id: 'palette.open',
@@ -206,6 +395,50 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute(args) {
         options.openCommandPalette(readStringArg(args, 'scope') ?? undefined);
         return true;
+      },
+    },
+    {
+      id: 'notifications.open',
+      title: 'Open Notifications',
+      category: 'App',
+      execute() {
+        return options.openNotifications?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.openNotifications);
+      },
+    },
+    {
+      id: 'notifications.close',
+      title: 'Close Notifications',
+      category: 'App',
+      execute() {
+        return options.closeNotifications?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeNotifications) && readContextValue(context, 'notifications.open') === true;
+      },
+    },
+    {
+      id: 'notifications.markAllRead',
+      title: 'Mark Notifications Read',
+      category: 'App',
+      execute() {
+        return options.markAllNotificationsRead?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.markAllNotificationsRead) && readContextValue(context, 'notifications.hasUnread') === true;
+      },
+    },
+    {
+      id: 'notifications.dismissAll',
+      title: 'Dismiss Notifications',
+      category: 'App',
+      execute() {
+        return options.dismissAllNotifications?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.dismissAllNotifications) && readContextValue(context, 'notifications.hasVisible') === true;
       },
     },
     {
@@ -219,6 +452,11 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         const surfaceId = readStringArg(args, 'surfaceId');
         return extensionId && surfaceId ? options.openRightRail(`${extensionId}/${surfaceId}`) : false;
       },
+      canExecute(args) {
+        const target = readStringArg(args, 'target');
+        if (target) return true;
+        return readStringArg(args, 'extensionId') !== null && readStringArg(args, 'surfaceId') !== null;
+      },
     },
     {
       id: 'layout.set',
@@ -229,6 +467,10 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         if (mode !== 'compact' && mode !== 'workbench') return false;
         options.setLayout(mode);
         return true;
+      },
+      canExecute(args) {
+        const mode = readStringArg(args, 'mode');
+        return mode === 'compact' || mode === 'workbench';
       },
     },
     {
@@ -260,8 +502,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleRightRail?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleRightRail);
+      canExecute(_args, context) {
+        return Boolean(options.toggleRightRail) && readContextValue(context, 'layout.canToggleRightRail') === true;
       },
     },
     {
@@ -273,6 +515,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute() {
         return Boolean(options.findOnPage);
+      },
+    },
+    {
+      id: 'page.findNext',
+      title: 'Find Next Match',
+      category: 'App',
+      execute() {
+        return options.findNextOnPage?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.findNextOnPage) && readContextValue(context, 'pageSearch.hasMatches') === true;
+      },
+    },
+    {
+      id: 'page.findPrevious',
+      title: 'Find Previous Match',
+      category: 'App',
+      execute() {
+        return options.findPreviousOnPage?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.findPreviousOnPage) && readContextValue(context, 'pageSearch.hasMatches') === true;
+      },
+    },
+    {
+      id: 'page.closeFind',
+      title: 'Close Page Search',
+      category: 'App',
+      execute() {
+        return options.closePageSearch?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closePageSearch) && readContextValue(context, 'pageSearch.open') === true;
       },
     },
     {
@@ -313,7 +588,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.navigateConversation?.('next') ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.navigateConversation) && hasActiveConversation(options, context);
+        return Boolean(options.navigateConversation) && readContextValue(context, 'conversation.canNavigate') === true;
       },
     },
     {
@@ -324,7 +599,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.navigateConversation?.('previous') ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.navigateConversation) && hasActiveConversation(options, context);
+        return Boolean(options.navigateConversation) && readContextValue(context, 'conversation.canNavigate') === true;
       },
     },
     {
@@ -379,7 +654,91 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.renameConversation?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.renameConversation) && hasActiveConversation(options, context);
+        return (
+          Boolean(options.renameConversation) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.canRename') === true
+        );
+      },
+    },
+    {
+      id: 'conversation.duplicate',
+      title: 'Duplicate Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.duplicateConversation?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.duplicateConversation) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.copyWorkingDirectory',
+      title: 'Copy Conversation Working Directory',
+      category: 'Conversation',
+      execute() {
+        return options.copyConversationWorkingDirectory?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.copyConversationWorkingDirectory) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.hasCwd') === true
+        );
+      },
+    },
+    {
+      id: 'conversation.copyId',
+      title: 'Copy Conversation ID',
+      category: 'Conversation',
+      execute() {
+        return options.copyConversationId?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.copyConversationId) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.copyDeeplink',
+      title: 'Copy Conversation Deeplink',
+      category: 'Conversation',
+      execute() {
+        return options.copyConversationDeeplink?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.copyConversationDeeplink) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.saveTitle',
+      title: 'Save Conversation Title',
+      category: 'Conversation',
+      execute() {
+        return options.saveConversationTitle?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.saveConversationTitle) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.titleEditorOpen') === true &&
+          readContextValue(context, 'conversation.titleEditorBusy') !== true
+        );
+      },
+    },
+    {
+      id: 'conversation.cancelTitleEdit',
+      title: 'Cancel Title Edit',
+      category: 'Conversation',
+      execute() {
+        return options.cancelConversationTitleEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.cancelConversationTitleEdit) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.titleEditorOpen') === true &&
+          readContextValue(context, 'conversation.titleEditorBusy') !== true
+        );
       },
     },
     {
@@ -390,7 +749,208 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
         return options.editConversationCwd?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.editConversationCwd) && hasActiveConversation(options, context);
+        return (
+          Boolean(options.editConversationCwd) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.canEditCwd') === true
+        );
+      },
+    },
+    {
+      id: 'conversation.saveCwd',
+      title: 'Save Conversation Working Directory',
+      category: 'Conversation',
+      execute() {
+        return options.saveConversationCwd?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.saveConversationCwd) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.cwdEditorOpen') === true &&
+          readContextValue(context, 'conversation.cwdEditorBusy') !== true
+        );
+      },
+    },
+    {
+      id: 'conversation.cancelCwdEdit',
+      title: 'Cancel Working Directory Edit',
+      category: 'Conversation',
+      execute() {
+        return options.cancelConversationCwdEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.cancelConversationCwdEdit) &&
+          hasActiveConversation(options, context) &&
+          readContextValue(context, 'conversation.cwdEditorOpen') === true &&
+          readContextValue(context, 'conversation.cwdEditorBusy') !== true
+        );
+      },
+    },
+    {
+      id: 'conversation.cancelGoal',
+      title: 'Cancel Active Goal',
+      category: 'Conversation',
+      execute() {
+        return options.cancelConversationGoal?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelConversationGoal) && readContextValue(context, 'conversation.goalActive') === true;
+      },
+    },
+    {
+      id: 'conversation.continueDeferredResumes',
+      title: 'Continue Deferred Resumes',
+      category: 'Conversation',
+      execute() {
+        return options.continueDeferredResumes?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.continueDeferredResumes) && readContextValue(context, 'conversation.canContinueDeferredResumes') === true;
+      },
+    },
+    {
+      id: 'conversation.toggleBackgroundRunDetails',
+      title: 'Toggle Background Work Details',
+      category: 'Conversation',
+      execute() {
+        return options.toggleBackgroundRunDetails?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleBackgroundRunDetails) && readContextValue(context, 'conversation.hasBackgroundRuns') === true;
+      },
+    },
+    {
+      id: 'conversation.toggleDeferredResumeDetails',
+      title: 'Toggle Attention Details',
+      category: 'Conversation',
+      execute() {
+        return options.toggleDeferredResumeDetails?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleDeferredResumeDetails) && readContextValue(context, 'conversation.hasDeferredResumes') === true;
+      },
+    },
+    {
+      id: 'conversation.toggleScheduledTaskDetails',
+      title: 'Toggle Automation Details',
+      category: 'Conversation',
+      execute() {
+        return options.toggleScheduledTaskDetails?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleScheduledTaskDetails) && readContextValue(context, 'conversation.hasScheduledTasks') === true;
+      },
+    },
+    {
+      id: 'conversation.openLatestBackgroundRun',
+      title: 'Open Latest Background Run',
+      category: 'Conversation',
+      execute() {
+        return options.openLatestBackgroundRun?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openLatestBackgroundRun) && readContextValue(context, 'conversation.canOpenLatestBackgroundRun') === true;
+      },
+    },
+    {
+      id: 'conversation.cancelLatestBackgroundRun',
+      title: 'Cancel Latest Background Run',
+      category: 'Conversation',
+      execute() {
+        return options.cancelLatestBackgroundRun?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelLatestBackgroundRun) && readContextValue(context, 'conversation.canCancelLatestBackgroundRun') === true;
+      },
+    },
+    {
+      id: 'conversation.runFirstScheduledTask',
+      title: 'Run First Automation',
+      category: 'Conversation',
+      execute() {
+        return options.runFirstScheduledTask?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.runFirstScheduledTask) && readContextValue(context, 'conversation.canRunFirstScheduledTask') === true;
+      },
+    },
+    {
+      id: 'conversation.openFirstScheduledTask',
+      title: 'Open First Automation',
+      category: 'Conversation',
+      execute() {
+        return options.openFirstScheduledTask?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openFirstScheduledTask) && readContextValue(context, 'conversation.canOpenFirstScheduledTask') === true;
+      },
+    },
+    {
+      id: 'conversation.fireFirstDeferredResume',
+      title: 'Fire First Attention Item',
+      category: 'Conversation',
+      execute() {
+        return options.fireFirstDeferredResume?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.fireFirstDeferredResume) && readContextValue(context, 'conversation.canFireFirstDeferredResume') === true;
+      },
+    },
+    {
+      id: 'conversation.cancelFirstDeferredResume',
+      title: 'Cancel First Attention Item',
+      category: 'Conversation',
+      execute() {
+        return options.cancelFirstDeferredResume?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelFirstDeferredResume) && readContextValue(context, 'conversation.canCancelFirstDeferredResume') === true;
+      },
+    },
+    {
+      id: 'conversation.restoreFirstQueuedPrompt',
+      title: 'Restore First Queued Prompt',
+      category: 'Conversation',
+      execute() {
+        return options.restoreFirstQueuedPrompt?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.restoreFirstQueuedPrompt) && readContextValue(context, 'conversation.canRestoreFirstQueuedPrompt') === true;
+      },
+    },
+    {
+      id: 'conversation.openActiveCheckpoint',
+      title: 'Open Active Checkpoint',
+      category: 'Conversation',
+      execute() {
+        return options.openActiveCheckpoint?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openActiveCheckpoint) && readContextValue(context, 'conversation.canOpenActiveCheckpoint') === true;
+      },
+    },
+    {
+      id: 'conversation.openLatestCheckpoint',
+      title: 'Open Latest Checkpoint',
+      category: 'Conversation',
+      execute() {
+        return options.openLatestCheckpoint?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openLatestCheckpoint) && readContextValue(context, 'conversation.canOpenLatestCheckpoint') === true;
+      },
+    },
+    {
+      id: 'conversation.scrollFirstCheckpointFile',
+      title: 'Scroll to First Checkpoint File',
+      category: 'Conversation',
+      execute() {
+        return options.scrollFirstCheckpointFile?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.scrollFirstCheckpointFile) && readContextValue(context, 'conversation.canScrollFirstCheckpointFile') === true;
       },
     },
     {
@@ -398,9 +958,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Composer',
       category: 'Conversation',
       execute() {
-        if (!options.focusComposer) return false;
-        options.focusComposer();
-        return true;
+        return options.focusComposer?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusComposer);
@@ -413,8 +971,19 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.submitComposer?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.submitComposer);
+      canExecute(_args, context) {
+        return Boolean(options.submitComposer) && readContextValue(context, 'composer.canSubmit') === true;
+      },
+    },
+    {
+      id: 'composer.stop',
+      title: 'Stop Streaming',
+      category: 'Conversation',
+      execute() {
+        return options.stopComposer?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.stopComposer) && readContextValue(context, 'conversation.isStreaming') === true;
       },
     },
     {
@@ -424,8 +993,129 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.clearComposer?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.clearComposer);
+      canExecute(_args, context) {
+        return Boolean(options.clearComposer) && readContextValue(context, 'composer.canClear') === true;
+      },
+    },
+    {
+      id: 'composer.openSettings',
+      title: 'Open Composer Settings',
+      category: 'Conversation',
+      execute() {
+        return options.openComposerSettings?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openComposerSettings) && readContextValue(context, 'composer.settingsAvailable') === true;
+      },
+    },
+    {
+      id: 'composer.closeSettings',
+      title: 'Close Composer Settings',
+      category: 'Conversation',
+      execute() {
+        return options.closeComposerSettings?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeComposerSettings) && readContextValue(context, 'composer.settingsOpen') === true;
+      },
+    },
+    {
+      id: 'composer.openPreferences',
+      title: 'Open Composer Preferences',
+      category: 'Conversation',
+      execute() {
+        return options.openComposerPreferences?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openComposerPreferences) && readContextValue(context, 'composer.preferencesAvailable') === true;
+      },
+    },
+    {
+      id: 'composer.togglePreferences',
+      title: 'Toggle Composer Preferences',
+      category: 'Conversation',
+      execute() {
+        return options.toggleComposerPreferences?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleComposerPreferences) && readContextValue(context, 'composer.preferencesAvailable') === true;
+      },
+    },
+    {
+      id: 'composer.closePreferences',
+      title: 'Close Composer Preferences',
+      category: 'Conversation',
+      execute() {
+        return options.closeComposerPreferences?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeComposerPreferences) && readContextValue(context, 'composer.preferencesOpen') === true;
+      },
+    },
+    {
+      id: 'composer.previewFirstAttachment',
+      title: 'Preview First Attachment',
+      category: 'Conversation',
+      execute() {
+        return options.previewFirstComposerAttachment?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.previewFirstComposerAttachment) && readContextValue(context, 'composer.canPreviewFirstAttachment') === true;
+      },
+    },
+    {
+      id: 'composer.removeFirstAttachment',
+      title: 'Remove First Attachment',
+      category: 'Conversation',
+      execute() {
+        return options.removeFirstComposerAttachment?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.removeFirstComposerAttachment) && readContextValue(context, 'composer.canRemoveFirstAttachment') === true;
+      },
+    },
+    {
+      id: 'composer.createDrawing',
+      title: 'Create Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.createComposerDrawing?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.createComposerDrawing) && readContextValue(context, 'composer.canCreateDrawing') === true;
+      },
+    },
+    {
+      id: 'composer.previewFirstDrawing',
+      title: 'Preview First Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.previewFirstComposerDrawing?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.previewFirstComposerDrawing) && readContextValue(context, 'composer.canPreviewFirstDrawing') === true;
+      },
+    },
+    {
+      id: 'composer.editFirstDrawing',
+      title: 'Edit First Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.editFirstComposerDrawing?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.editFirstComposerDrawing) && readContextValue(context, 'composer.canEditFirstDrawing') === true;
+      },
+    },
+    {
+      id: 'composer.removeFirstDrawing',
+      title: 'Remove First Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.removeFirstComposerDrawing?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.removeFirstComposerDrawing) && readContextValue(context, 'composer.canRemoveFirstDrawing') === true;
       },
     },
     {
@@ -468,8 +1158,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.closeActiveWorkbenchTab?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.closeActiveWorkbenchTab);
+      canExecute(_args, context) {
+        return Boolean(options.closeActiveWorkbenchTab) && readContextValue(context, 'workbench.hasActiveTab') === true;
       },
     },
     {
@@ -479,8 +1169,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.closeActiveWorkbenchFile?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.closeActiveWorkbenchFile);
+      canExecute(_args, context) {
+        return Boolean(options.closeActiveWorkbenchFile) && readContextValue(context, 'workbench.hasActiveFile') === true;
       },
     },
     {
@@ -490,8 +1180,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.refreshActiveWorkbenchFile?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.refreshActiveWorkbenchFile);
+      canExecute(_args, context) {
+        return Boolean(options.refreshActiveWorkbenchFile) && readContextValue(context, 'workbench.hasActiveFile') === true;
       },
     },
     {
@@ -501,8 +1191,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleWorkbenchExplorer?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleWorkbenchExplorer);
+      canExecute(_args, context) {
+        return Boolean(options.toggleWorkbenchExplorer) && readContextValue(context, 'workbench.canToggleExplorer') === true;
       },
     },
     {
@@ -512,8 +1202,423 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleWorkbenchDiff?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleWorkbenchDiff);
+      canExecute(_args, context) {
+        return Boolean(options.toggleWorkbenchDiff) && readContextValue(context, 'workbench.canToggleDiff') === true;
+      },
+    },
+    {
+      id: 'browser.newTab',
+      title: 'New Browser Tab',
+      category: 'Browser',
+      execute() {
+        return options.browserNewTab?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserNewTab) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.reopenTab',
+      title: 'Reopen Closed Browser Tab',
+      category: 'Browser',
+      execute() {
+        return options.browserReopenTab?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserReopenTab) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.closeTab',
+      title: 'Close Browser Tab',
+      category: 'Browser',
+      execute() {
+        return options.browserCloseTab?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserCloseTab) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.goBack',
+      title: 'Browser Go Back',
+      category: 'Browser',
+      execute() {
+        return options.browserGoBack?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserGoBack) && readContextValue(context, 'browser.canGoBack') === true;
+      },
+    },
+    {
+      id: 'browser.goForward',
+      title: 'Browser Go Forward',
+      category: 'Browser',
+      execute() {
+        return options.browserGoForward?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserGoForward) && readContextValue(context, 'browser.canGoForward') === true;
+      },
+    },
+    {
+      id: 'browser.reloadOrStop',
+      title: 'Reload or Stop Browser',
+      category: 'Browser',
+      execute() {
+        return options.browserReloadOrStop?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserReloadOrStop) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.focusLocation',
+      title: 'Focus Browser Location',
+      category: 'Browser',
+      execute() {
+        return options.browserFocusLocation?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserFocusLocation) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'browser.close',
+      title: 'Close Browser',
+      category: 'Browser',
+      execute() {
+        return options.browserClose?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.browserClose) && readContextValue(context, 'browser.active') === true;
+      },
+    },
+    {
+      id: 'artifact.copySource',
+      title: 'Copy Artifact Source',
+      category: 'Artifact',
+      execute() {
+        return options.artifactCopySource?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactCopySource) && readContextValue(context, 'artifact.active') === true;
+      },
+    },
+    {
+      id: 'artifact.toggleSource',
+      title: 'Show or Hide Artifact Source',
+      category: 'Artifact',
+      execute() {
+        return options.artifactToggleSource?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactToggleSource) && readContextValue(context, 'artifact.canShowSource') === true;
+      },
+    },
+    {
+      id: 'artifact.toggleFullscreen',
+      title: 'Toggle Artifact Fullscreen',
+      category: 'Artifact',
+      execute() {
+        return options.artifactToggleFullscreen?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactToggleFullscreen) && readContextValue(context, 'artifact.active') === true;
+      },
+    },
+    {
+      id: 'artifact.close',
+      title: 'Close Artifact',
+      category: 'Artifact',
+      execute() {
+        return options.artifactClose?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.artifactClose) && readContextValue(context, 'artifact.active') === true;
+      },
+    },
+    {
+      id: 'imagePreview.close',
+      title: 'Close Image Preview',
+      category: 'Image Preview',
+      execute() {
+        return options.closeImagePreview?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeImagePreview) && readContextValue(context, 'imagePreview.active') === true;
+      },
+    },
+    {
+      id: 'imagePreview.inspectFirst',
+      title: 'Inspect First Image',
+      category: 'Image Preview',
+      execute() {
+        return options.inspectFirstImagePreview?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.inspectFirstImagePreview) && readContextValue(context, 'imagePreview.canInspectFirst') === true;
+      },
+    },
+    {
+      id: 'imagePreview.loadFirst',
+      title: 'Load First Deferred Image',
+      category: 'Image Preview',
+      execute() {
+        return options.loadFirstImagePreview?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.loadFirstImagePreview) && readContextValue(context, 'imagePreview.canLoadFirst') === true;
+      },
+    },
+    {
+      id: 'fileChange.toggleFirst',
+      title: 'Toggle First File Change',
+      category: 'Diff',
+      execute() {
+        return options.toggleFirstFileChange?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstFileChange) && readContextValue(context, 'fileChange.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'toolBlock.toggleFirst',
+      title: 'Toggle First Tool Block',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstToolBlock?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstToolBlock) && readContextValue(context, 'toolBlock.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'toolBlock.toggleFirstLinkedRuns',
+      title: 'Toggle First Tool Block Linked Runs',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstToolBlockLinkedRuns?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.toggleFirstToolBlockLinkedRuns) && readContextValue(context, 'toolBlock.canToggleFirstLinkedRuns') === true
+        );
+      },
+    },
+    {
+      id: 'traceCluster.toggleFirst',
+      title: 'Toggle First Internal Work Cluster',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstTraceCluster?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstTraceCluster) && readContextValue(context, 'traceCluster.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'traceCluster.toggleFirstOverflow',
+      title: 'Toggle First Internal Work Overflow',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstTraceClusterOverflow?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.toggleFirstTraceClusterOverflow) && readContextValue(context, 'traceCluster.canToggleFirstOverflow') === true
+        );
+      },
+    },
+    {
+      id: 'inlineTraceRun.toggleFirst',
+      title: 'Toggle First Inline Run Details',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstInlineTraceRun?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstInlineTraceRun) && readContextValue(context, 'inlineTraceRun.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'thinkingBlock.toggleFirst',
+      title: 'Toggle First Thinking Block',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstThinkingBlock?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstThinkingBlock) && readContextValue(context, 'thinkingBlock.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'subagentBlock.toggleFirst',
+      title: 'Toggle First Subagent Block',
+      category: 'Transcript',
+      execute() {
+        return options.toggleFirstSubagentBlock?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstSubagentBlock) && readContextValue(context, 'subagentBlock.canToggleFirst') === true;
+      },
+    },
+    {
+      id: 'messageAction.copyFirst',
+      title: 'Copy First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.copyFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.copyFirstMessageAction) && readContextValue(context, 'messageAction.canCopyFirst') === true;
+      },
+    },
+    {
+      id: 'messageAction.editFirst',
+      title: 'Edit First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.editFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.editFirstMessageAction) && readContextValue(context, 'messageAction.canEditFirst') === true;
+      },
+    },
+    {
+      id: 'messageAction.rewindFirst',
+      title: 'Rewind First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.rewindFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.rewindFirstMessageAction) && readContextValue(context, 'messageAction.canRewindFirst') === true;
+      },
+    },
+    {
+      id: 'messageAction.forkFirst',
+      title: 'Fork First Message',
+      category: 'Message Actions',
+      execute() {
+        return options.forkFirstMessageAction?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.forkFirstMessageAction) && readContextValue(context, 'messageAction.canForkFirst') === true;
+      },
+    },
+    {
+      id: 'messageEdit.save',
+      title: 'Save Message Edit',
+      category: 'Message Edit',
+      execute() {
+        return options.saveMessageEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return (
+          Boolean(options.saveMessageEdit) &&
+          readContextValue(context, 'messageEdit.active') === true &&
+          readContextValue(context, 'messageEdit.canSave') === true
+        );
+      },
+    },
+    {
+      id: 'messageEdit.cancel',
+      title: 'Cancel Message Edit',
+      category: 'Message Edit',
+      execute() {
+        return options.cancelMessageEdit?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.cancelMessageEdit) && readContextValue(context, 'messageEdit.active') === true;
+      },
+    },
+    {
+      id: 'drawingPicker.close',
+      title: 'Close Drawing Picker',
+      category: 'Conversation',
+      execute() {
+        return options.closeDrawingPicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeDrawingPicker) && readContextValue(context, 'drawingPicker.open') === true;
+      },
+    },
+    {
+      id: 'drawingPicker.attachFirst',
+      title: 'Attach First Visible Drawing',
+      category: 'Conversation',
+      execute() {
+        return options.attachFirstDrawingFromPicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.attachFirstDrawingFromPicker) && readContextValue(context, 'drawingPicker.hasVisibleDrawing') === true;
+      },
+    },
+    {
+      id: 'drawingPicker.toggleFirstHistory',
+      title: 'Toggle First Drawing History',
+      category: 'Conversation',
+      execute() {
+        return options.toggleFirstDrawingHistory?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleFirstDrawingHistory) && readContextValue(context, 'drawingPicker.hasVisibleDrawing') === true;
+      },
+    },
+    {
+      id: 'draftWorkspacePicker.close',
+      title: 'Close Draft Workspace Picker',
+      category: 'Conversation',
+      execute() {
+        return options.closeDraftWorkspacePicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeDraftWorkspacePicker) && readContextValue(context, 'draftWorkspacePicker.open') === true;
+      },
+    },
+    {
+      id: 'draftWorkspacePicker.open',
+      title: 'Open Draft Workspace Picker',
+      category: 'Conversation',
+      execute() {
+        return options.openDraftWorkspacePicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openDraftWorkspacePicker) && readContextValue(context, 'draftWorkspacePicker.available') === true;
+      },
+    },
+    {
+      id: 'draftWorkspacePicker.toggle',
+      title: 'Toggle Draft Workspace Picker',
+      category: 'Conversation',
+      execute() {
+        return options.toggleDraftWorkspacePicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleDraftWorkspacePicker) && readContextValue(context, 'draftWorkspacePicker.available') === true;
+      },
+    },
+    {
+      id: 'workspaceQuickSelect.close',
+      title: 'Close Workspace Picker',
+      category: 'Conversation',
+      execute() {
+        return options.closeWorkspaceQuickSelect?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeWorkspaceQuickSelect) && readContextValue(context, 'workspaceQuickSelect.open') === true;
+      },
+    },
+    {
+      id: 'extensionModal.close',
+      title: 'Close Extension Modal',
+      category: 'Extensions',
+      execute() {
+        return options.closeExtensionModal?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeExtensionModal) && readContextValue(context, 'extensionModal.open') === true;
       },
     },
     {
@@ -562,8 +1667,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       execute() {
         return options.toggleDictation?.() ?? false;
       },
-      canExecute() {
-        return Boolean(options.toggleDictation);
+      canExecute(_args, context) {
+        return Boolean(options.toggleDictation) && readContextValue(context, 'system-local-dictation.toggleAvailable') === true;
       },
     },
     {
@@ -571,9 +1676,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Sidebar',
       category: 'Focus',
       execute() {
-        if (!options.focusSidebar) return false;
-        options.focusSidebar();
-        return true;
+        return options.focusSidebar?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusSidebar);
@@ -584,9 +1687,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Next',
       category: 'Focus',
       execute() {
-        if (!options.focusNext) return false;
-        options.focusNext();
-        return true;
+        return options.focusNext?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusNext);
@@ -597,9 +1698,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Focus Previous',
       category: 'Focus',
       execute() {
-        if (!options.focusPrevious) return false;
-        options.focusPrevious();
-        return true;
+        return options.focusPrevious?.() ?? false;
       },
       canExecute() {
         return Boolean(options.focusPrevious);
@@ -610,9 +1709,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       title: 'Activate Selection',
       category: 'Focus',
       execute() {
-        if (!options.activateSelection) return false;
-        options.activateSelection();
-        return true;
+        return options.activateSelection?.() ?? false;
       },
       canExecute() {
         return Boolean(options.activateSelection);

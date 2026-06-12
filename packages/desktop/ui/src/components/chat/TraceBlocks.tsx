@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { MessageBlock } from '../../shared/types';
 import { getStreamingThroughputLabel } from '../../transcript/streamingThroughput';
@@ -9,6 +9,23 @@ import { ContextShelf } from './MessageBlocks.js';
 import { buildReplySelectionScopeProps, type ReplySelectionGestureHandler } from './replySelection.js';
 import { buildSummaryPreview } from './summaryPreview.js';
 import { ToolBlock } from './ToolBlock.js';
+import {
+  registerTraceClusterOverflowToggleCapability,
+  registerTraceClusterToggleCapability,
+  TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT,
+  TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT,
+  type TraceClusterCommandDetail,
+} from './traceClusterCommands.js';
+import {
+  registerThinkingBlockToggleCapability,
+  THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  type ThinkingBlockCommandDetail,
+} from './thinkingBlockCommands.js';
+import {
+  registerSubagentBlockToggleCapability,
+  SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  type SubagentBlockCommandDetail,
+} from './subagentBlockCommands.js';
 import {
   type ConversationDiffDisclosureMode,
   type ConversationTranscriptDisclosureMode,
@@ -31,10 +48,26 @@ export const ThinkingBlock = memo(function ThinkingBlock({
   const [preference, setPreference] = useState<DisclosurePreference>('auto');
   const open = resolveDisclosureOpen(autoOpen, preference);
   const preview = useMemo(() => buildSummaryPreview(block.text, 1), [block.text]);
+  const toggleThinkingBlock = useCallback(() => {
+    setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+  }, [autoOpen]);
+
+  useEffect(() => registerThinkingBlockToggleCapability(), []);
+  useEffect(() => {
+    function handleToggleFirstThinkingBlock(event: Event) {
+      const detail = (event as CustomEvent<ThinkingBlockCommandDetail>).detail;
+      if (detail?.handled) return;
+      if (detail) detail.handled = true;
+      toggleThinkingBlock();
+    }
+
+    window.addEventListener(THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstThinkingBlock);
+    return () => window.removeEventListener(THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstThinkingBlock);
+  }, [toggleThinkingBlock]);
 
   return (
     <SurfacePanel muted className="overflow-hidden border-transparent bg-elevated/35 text-[12px] shadow-none">
-      <RowButton onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))} className="px-2.5 py-2">
+      <RowButton onClick={toggleThinkingBlock} className="px-2.5 py-2">
         <Pill tone="muted">Thinking</Pill>
         {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
         {autoOpen && <MetaLabel tone="muted">live</MetaLabel>}
@@ -57,15 +90,32 @@ export const ThinkingBlock = memo(function ThinkingBlock({
 
 export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Extract<MessageBlock, { type: 'subagent' }> }) {
   const [open, setOpen] = useState(false);
+  const toggleSubagentBlock = useCallback(() => {
+    setOpen((current) => !current);
+  }, []);
   const clr = {
     running: 'text-steel bg-steel/8 border-steel/20',
     complete: 'text-success bg-success/8 border-success/20',
     failed: 'text-danger bg-danger/8 border-danger/20',
   }[block.status];
   const tone = { running: 'steel', complete: 'success', failed: 'danger' }[block.status] as 'steel' | 'success' | 'danger';
+
+  useEffect(() => registerSubagentBlockToggleCapability(), []);
+  useEffect(() => {
+    function handleToggleFirstSubagentBlock(event: Event) {
+      const detail = (event as CustomEvent<SubagentBlockCommandDetail>).detail;
+      if (detail?.handled) return;
+      if (detail) detail.handled = true;
+      toggleSubagentBlock();
+    }
+
+    window.addEventListener(SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstSubagentBlock);
+    return () => window.removeEventListener(SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstSubagentBlock);
+  }, [toggleSubagentBlock]);
+
   return (
     <div className={`rounded-lg overflow-hidden text-[12px] ${clr}`}>
-      <RowButton onClick={() => setOpen((o) => !o)} className="px-2.5 py-2 hover:bg-black/5">
+      <RowButton onClick={toggleSubagentBlock} className="px-2.5 py-2 hover:bg-black/5">
         <Pill tone={tone} mono>
           subagent
         </Pill>
@@ -325,6 +375,12 @@ export function TraceClusterBlock({
   const title = stableActive ? 'Working' : 'Internal work';
   const autoOpen = transcriptDisclosureMode === 'expanded' ? true : shouldAutoOpenTraceCluster(stableActive, false);
   const open = resolveDisclosureOpen(autoOpen, preference);
+  const toggleTraceCluster = useCallback(() => {
+    setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+  }, [autoOpen]);
+  const toggleTraceClusterOverflow = useCallback(() => {
+    setShowAllBlocks((current) => !current);
+  }, []);
   const hydrateDeferredBlocks = () => {
     if (!onHydrateMessage || deferredBlockIds.length === 0) {
       return;
@@ -343,6 +399,18 @@ export function TraceClusterBlock({
       hydrateDeferredBlocks();
     }
   }, [open]);
+  useEffect(() => registerTraceClusterToggleCapability(), []);
+  useEffect(() => {
+    function handleToggleFirstTraceCluster(event: Event) {
+      const detail = (event as CustomEvent<TraceClusterCommandDetail>).detail;
+      if (detail?.handled) return;
+      if (detail) detail.handled = true;
+      toggleTraceCluster();
+    }
+
+    window.addEventListener(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstTraceCluster);
+    return () => window.removeEventListener(TRACE_CLUSTER_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstTraceCluster);
+  }, [toggleTraceCluster]);
   const runningBlockIndex = useMemo(
     () => blocks.findIndex((block) => block.type === 'tool_use' && (block.status === 'running' || !!block.running)),
     [blocks],
@@ -358,7 +426,24 @@ export function TraceClusterBlock({
 
     return blocks.slice(-MAX_VISIBLE_TRACE_BLOCKS);
   }, [blocks, open, runningBlockIndex, showAllBlocks]);
-  const hiddenBlockCount = open ? Math.max(0, blocks.length - visibleBlocks.length) : 0;
+  const overflowBlockCount = Math.max(0, blocks.length - MAX_VISIBLE_TRACE_BLOCKS);
+  const hiddenBlockCount = open && !showAllBlocks ? overflowBlockCount : 0;
+  const canToggleTraceClusterOverflow = open && overflowBlockCount > 0;
+  useEffect(() => {
+    if (!canToggleTraceClusterOverflow) return undefined;
+    return registerTraceClusterOverflowToggleCapability();
+  }, [canToggleTraceClusterOverflow]);
+  useEffect(() => {
+    function handleToggleFirstTraceClusterOverflow(event: Event) {
+      const detail = (event as CustomEvent<TraceClusterCommandDetail>).detail;
+      if (detail?.handled || !canToggleTraceClusterOverflow) return;
+      if (detail) detail.handled = true;
+      toggleTraceClusterOverflow();
+    }
+
+    window.addEventListener(TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT, handleToggleFirstTraceClusterOverflow);
+    return () => window.removeEventListener(TRACE_CLUSTER_TOGGLE_FIRST_OVERFLOW_COMMAND_EVENT, handleToggleFirstTraceClusterOverflow);
+  }, [canToggleTraceClusterOverflow, toggleTraceClusterOverflow]);
   const visibleStartIndex = blocks.length - visibleBlocks.length;
   return (
     <div className="space-y-1.5">
@@ -373,7 +458,7 @@ export function TraceClusterBlock({
           compact
           onMouseEnter={hydrateDeferredBlocks}
           onFocus={hydrateDeferredBlocks}
-          onClick={() => setPreference((current) => toggleDisclosurePreference(autoOpen, current))}
+          onClick={toggleTraceCluster}
           aria-expanded={open}
           className={
             compact
@@ -430,15 +515,15 @@ export function TraceClusterBlock({
 
       {open && (
         <div className="ml-2.5 space-y-1.5 border-l border-border-subtle pl-2.5">
-          {hiddenBlockCount > 0 && (
+          {overflowBlockCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 rounded-md bg-elevated/35 px-2.5 py-1.5 text-[11px] text-secondary">
               <span>
                 {showAllBlocks
                   ? `Showing all ${blocks.length} steps.`
-                  : `${hiddenBlockCount} earlier step${hiddenBlockCount === 1 ? '' : 's'} summarized above.`}
+                  : `${overflowBlockCount} earlier step${overflowBlockCount === 1 ? '' : 's'} summarized above.`}
               </span>
               <span className="flex-1" />
-              <Button variant="action" onClick={() => setShowAllBlocks((current) => !current)} className="text-[10px]">
+              <Button variant="action" onClick={toggleTraceClusterOverflow} className="text-[10px]">
                 {showAllBlocks ? `Show latest ${MAX_VISIBLE_TRACE_BLOCKS}` : 'Show all'}
               </Button>
             </div>

@@ -7,6 +7,7 @@ import {
   type DesktopWorkbenchBrowserState,
   getDesktopBridge,
 } from '../../desktop/desktopBridge';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
@@ -14,6 +15,13 @@ import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '..
 import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
+export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
+const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set([
+  'browser.newTab',
+  'browser.reopenTab',
+  'browser.closeTab',
+  'browser.focusLocation',
+]);
 
 function hasBlockingHtmlModal(): boolean {
   if (typeof document === 'undefined') {
@@ -225,7 +233,12 @@ export function WorkbenchBrowserTab({
         .extensionKeybindings()
         .then((keybindings) => {
           if (!cancelled) {
-            setSurfaceKeybindings(keybindings.filter((keybinding) => keybinding.enabled && keybinding.scope === 'surface'));
+            setSurfaceKeybindings(
+              keybindings.filter(
+                (keybinding) =>
+                  keybinding.enabled && keybinding.scope === 'surface' && WORKBENCH_BROWSER_SHORTCUT_COMMANDS.has(keybinding.command),
+              ),
+            );
           }
         })
         .catch(() => {
@@ -240,36 +253,91 @@ export function WorkbenchBrowserTab({
     };
   }, []);
 
+  const executeBrowserTabCommand = useCallback(
+    (command: unknown): boolean => {
+      switch (command) {
+        case 'browser.newTab':
+        case 'newTab':
+          onNewTab();
+          return true;
+        case 'browser.reopenTab':
+        case 'reopenTab':
+          onReopenTab();
+          return true;
+        case 'browser.closeTab':
+        case 'closeTab':
+          onCloseCurrentTab();
+          return true;
+        case 'browser.focusLocation':
+        case 'focusLocation':
+          urlInputRef.current?.focus();
+          urlInputRef.current?.select();
+          return true;
+        default:
+          return false;
+      }
+    },
+    [onCloseCurrentTab, onNewTab, onReopenTab],
+  );
+
   // Surface-scoped keyboard shortcuts from the browser extension manifest.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented) return;
       const match = findMatchingExtensionKeybinding(event, surfaceKeybindings);
       if (!match) return;
-
-      switch (match.command) {
-        case 'browser.newTab':
-          event.preventDefault();
-          onNewTab();
-          return;
-        case 'browser.reopenTab':
-          event.preventDefault();
-          onReopenTab();
-          return;
-        case 'browser.closeTab':
-          event.preventDefault();
-          onCloseCurrentTab();
-          return;
-        case 'browser.focusLocation':
-          event.preventDefault();
-          urlInputRef.current?.focus();
-          urlInputRef.current?.select();
-          return;
-      }
+      if (!executeBrowserTabCommand(match.command)) return;
+      event.preventDefault();
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onNewTab, onReopenTab, onCloseCurrentTab, surfaceKeybindings]);
+  }, [executeBrowserTabCommand, surfaceKeybindings]);
+
+  useEffect(() => {
+    setExtensionCommandContext('browser.active', true);
+    setExtensionCommandContext('browser.canGoBack', Boolean(state?.canGoBack));
+    setExtensionCommandContext('browser.canGoForward', Boolean(state?.canGoForward));
+    setExtensionCommandContext('browser.loading', Boolean(state?.loading));
+    return () => {
+      setExtensionCommandContext('browser.active', null);
+      setExtensionCommandContext('browser.canGoBack', null);
+      setExtensionCommandContext('browser.canGoForward', null);
+      setExtensionCommandContext('browser.loading', null);
+    };
+  }, [state?.canGoBack, state?.canGoForward, state?.loading]);
+
+  useEffect(() => {
+    function handleBrowserCommand(event: Event) {
+      const command = (event as CustomEvent<{ command?: unknown }>).detail?.command;
+      if (executeBrowserTabCommand(command)) {
+        return;
+      }
+      if (command === 'close') {
+        onClose();
+        return;
+      }
+      if (!bridge) return;
+      if (command === 'goBack' && state?.canGoBack) {
+        void runBrowserCommand(() => bridge.goBackWorkbenchBrowser({ sessionKey: browserSessionKey }));
+        return;
+      }
+      if (command === 'goForward' && state?.canGoForward) {
+        void runBrowserCommand(() => bridge.goForwardWorkbenchBrowser({ sessionKey: browserSessionKey }));
+        return;
+      }
+      if (command === 'reloadOrStop') {
+        void runBrowserCommand(() =>
+          state?.loading
+            ? bridge.stopWorkbenchBrowser({ sessionKey: browserSessionKey })
+            : bridge.reloadWorkbenchBrowser({ sessionKey: browserSessionKey }),
+        );
+      }
+    }
+
+    window.addEventListener(WORKBENCH_BROWSER_COMMAND_EVENT, handleBrowserCommand);
+    return () => window.removeEventListener(WORKBENCH_BROWSER_COMMAND_EVENT, handleBrowserCommand);
+  }, [bridge, browserSessionKey, executeBrowserTabCommand, onClose, state?.canGoBack, state?.canGoForward, state?.loading]);
 
   useEffect(() => {
     function handleBrowserCommentTarget(event: Event) {

@@ -11,13 +11,7 @@ describe('ConversationSavedHeader', () => {
     const html = renderToString(
       <ConversationSavedHeader
         title="Fix the top bar"
-        cwd="/tmp/neon-pilot"
         onTitleClick={() => {}}
-        cwdEditing={false}
-        cwdDraft="/tmp/neon-pilot"
-        onCwdDraftChange={() => {}}
-        onCancelEditingCwd={() => {}}
-        onSaveCwd={() => {}}
       />,
     );
 
@@ -29,12 +23,6 @@ describe('ConversationSavedHeader', () => {
     const html = renderToString(
       <ConversationSavedHeader
         title="Fix the top bar"
-        cwd="/tmp/neon-pilot"
-        cwdEditing={false}
-        cwdDraft="/tmp/neon-pilot"
-        onCwdDraftChange={() => {}}
-        onCancelEditingCwd={() => {}}
-        onSaveCwd={() => {}}
       />,
     );
 
@@ -44,26 +32,5 @@ describe('ConversationSavedHeader', () => {
     expect(html).not.toContain('Enter the working directory manually');
     expect(html).not.toContain('Running');
     expect(html).not.toContain('Needs review');
-  });
-
-  it('renders the inline cwd editor when requested', () => {
-    const html = renderToString(
-      <ConversationSavedHeader
-        title="Fix the top bar"
-        cwd="/tmp/neon-pilot"
-        cwdEditing
-        cwdDraft="/tmp/other-repo"
-        cwdError="Directory does not exist"
-        onCwdDraftChange={() => {}}
-        onCancelEditingCwd={() => {}}
-        onSaveCwd={() => {}}
-      />,
-    );
-
-    expect(html).toContain('aria-label="Conversation working directory"');
-    expect(html).toContain('/tmp/other-repo');
-    expect(html).toContain('>Switch<');
-    expect(html).toContain('>Cancel<');
-    expect(html).toContain('Directory does not exist');
   });
 });

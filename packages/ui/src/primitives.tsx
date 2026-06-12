@@ -2695,12 +2695,13 @@ const SHORTCUT_KEY_LABELS: Record<string, string> = {
 export function formatKeyboardShortcutLabel(shortcut: string) {
   const labels = shortcut.split('+').map((part) => {
     const trimmed = part.trim();
-    if (trimmed === 'CommandOrControl') return '⌘/Ctrl';
-    if (trimmed === 'Command') return '⌘';
-    if (trimmed === 'Control') return 'Ctrl';
-    if (trimmed === 'Shift') return 'Shift';
-    if (trimmed === 'Alt') return 'Alt';
-    if (trimmed === 'Meta') return 'Meta';
+    const normalized = trimmed.toLowerCase();
+    if (normalized === 'commandorcontrol' || normalized === 'cmdorctrl' || normalized === 'mod') return '⌘/Ctrl';
+    if (normalized === 'command' || normalized === 'cmd') return '⌘';
+    if (normalized === 'control' || normalized === 'ctrl') return 'Ctrl';
+    if (normalized === 'shift') return 'Shift';
+    if (normalized === 'alt' || normalized === 'option') return 'Alt';
+    if (normalized === 'meta') return 'Meta';
     return SHORTCUT_KEY_LABELS[trimmed] ?? trimmed;
   });
   return labels.join(' + ');

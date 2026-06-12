@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getRunConnections, isRunActive, type RunPresentationLookups } from '../../automation/runPresentation';
@@ -21,6 +21,13 @@ import {
 } from './linkedRunPolling.js';
 import { buildToolPreview, readLinkedRuns } from './linkedRuns.js';
 import { TerminalToolBlock } from './TerminalToolBlock.js';
+import {
+  registerToolBlockLinkedRunsToggleCapability,
+  registerToolBlockToggleCapability,
+  TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT,
+  TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT,
+  type ToolBlockCommandDetail,
+} from './toolBlockCommands.js';
 import {
   type ConversationDiffDisclosureMode,
   type DisclosurePreference,
@@ -228,10 +235,6 @@ export function ToolBlock({
   const isRunning = block.status === 'running' || !!block.running;
   const isError = block.status === 'error' || !!block.error || isCheckpointFailureOutput(block);
 
-  if (terminalBashBlock) {
-    return <TerminalToolBlock block={block} onHydrateMessage={onHydrateMessage} hydratingMessageBlockIds={hydratingMessageBlockIds} />;
-  }
-
   const subagentPrompt = block.tool === 'subagent' ? readToolInputString(block.input, 'prompt') : undefined;
   const subagentTask = block.tool === 'subagent' ? readToolInputString(block.input, 'taskSlug') : undefined;
   const subagentConversationId = block.tool === 'subagent' ? readToolDetailString(block.details, 'childConversationId') : undefined;
@@ -256,6 +259,96 @@ export function ToolBlock({
   const pinnedVisual = isPinnedVisualTool(block);
   const fileChangingTool = isFileChangingTool(block, fileChanges);
   const pinnedTool = pinnedSubagent || pinnedCheckpoint || pinnedArtifact || pinnedVisual;
+
+  // Normalise tool state across streamed and persisted entries.
+  const output = stripAnsiForTranscript(block.output ?? '');
+  const blockId = typeof block.id === 'string' ? block.id.trim() : '';
+  const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
+  const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
+  const prefetchDeferredOutput = () => {
+    if (!outputDeferred || !blockId || hydratingDeferredOutput) {
+      return;
+    }
+
+    void onHydrateMessage?.(blockId);
+  };
+
+  const preview = buildToolPreview(block);
+  const visualPreview = readToolInputString(block.input, 'prompt') ?? readToolInputString(block.input, 'tabId') ?? preview;
+  const displayPreview =
+    block.tool === 'subagent'
+      ? (subagentTitle ?? subagentPrompt ?? preview)
+      : block.tool === 'artifact'
+        ? (artifactTitle ?? preview)
+        : pinnedVisual
+          ? visualPreview
+          : preview;
+  const displayedLinkedRuns = linkedRuns.scope === 'listed' ? linkedRuns.runs : [];
+  const hiddenRunCount = Math.max(0, displayedLinkedRuns.length - MAX_VISIBLE_LINKED_RUNS);
+  const toggleLinkedRuns = useCallback(() => {
+    setShowAllRuns((current) => !current);
+  }, []);
+  const canToggleLinkedRuns = hiddenRunCount > 0 && !pinnedTool && !backgroundShellStart;
+  const visibleRuns = showAllRuns || hiddenRunCount === 0 ? displayedLinkedRuns : displayedLinkedRuns.slice(0, MAX_VISIBLE_LINKED_RUNS);
+  const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
+  const backgroundRun = backgroundRunId ? runRecords.find((candidate) => candidate.runId === backgroundRunId) : null;
+  const bashCommand = readToolInputString(block.input, 'command') ?? preview;
+  const headerDisclosureLabel = subagentConversationRoute
+    ? 'open'
+    : fileChangingTool && fileChanges.length > 0 && !isRunning && !isError
+      ? pinnedDiffOpen
+        ? 'Hide diff'
+        : 'View diff'
+      : open
+        ? 'hide'
+        : 'show';
+  const canToggleHeaderDisclosure = !terminalBashBlock && !useExtensionRenderer && !subagentConversationRoute;
+  const toggleHeaderDisclosure = useCallback(() => {
+    if (fileChangingTool && fileChanges.length > 0 && !isRunning && !isError) {
+      setPinnedDiffOpen((current) => !current);
+      return;
+    }
+
+    setPreference((current) => toggleDisclosurePreference(autoOpen, current));
+  }, [autoOpen, fileChanges.length, fileChangingTool, isError, isRunning]);
+
+  useEffect(() => {
+    if (!canToggleHeaderDisclosure) return undefined;
+    return registerToolBlockToggleCapability();
+  }, [canToggleHeaderDisclosure]);
+
+  useEffect(() => {
+    function handleToggleFirstToolBlock(event: Event) {
+      const detail = (event as CustomEvent<ToolBlockCommandDetail>).detail;
+      if (detail?.handled || !canToggleHeaderDisclosure) return;
+      if (detail) detail.handled = true;
+      toggleHeaderDisclosure();
+    }
+
+    window.addEventListener(TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstToolBlock);
+    return () => window.removeEventListener(TOOL_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstToolBlock);
+  }, [canToggleHeaderDisclosure, toggleHeaderDisclosure]);
+
+  useEffect(() => {
+    if (!canToggleLinkedRuns) return undefined;
+    return registerToolBlockLinkedRunsToggleCapability();
+  }, [canToggleLinkedRuns]);
+
+  useEffect(() => {
+    function handleToggleFirstToolBlockLinkedRuns(event: Event) {
+      const detail = (event as CustomEvent<ToolBlockCommandDetail>).detail;
+      if (detail?.handled || !canToggleLinkedRuns) return;
+      if (detail) detail.handled = true;
+      toggleLinkedRuns();
+    }
+
+    window.addEventListener(TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT, handleToggleFirstToolBlockLinkedRuns);
+    return () => window.removeEventListener(TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT, handleToggleFirstToolBlockLinkedRuns);
+  }, [canToggleLinkedRuns, toggleLinkedRuns]);
+
+  if (terminalBashBlock) {
+    return <TerminalToolBlock block={block} onHydrateMessage={onHydrateMessage} hydratingMessageBlockIds={hydratingMessageBlockIds} />;
+  }
 
   if (useExtensionRenderer && pinnedCheckpoint) {
     return (
@@ -300,53 +393,6 @@ export function ToolBlock({
       </>
     );
   }
-
-  // Normalise tool state across streamed and persisted entries.
-  const output = stripAnsiForTranscript(block.output ?? '');
-  const blockId = typeof block.id === 'string' ? block.id.trim() : '';
-  const outputDeferred = Boolean(block.outputDeferred && blockId && onHydrateMessage);
-  const hydratingDeferredOutput = Boolean(blockId && hydratingMessageBlockIds?.has(blockId));
-  const prefetchDeferredOutput = () => {
-    if (!outputDeferred || !blockId || hydratingDeferredOutput) {
-      return;
-    }
-
-    void onHydrateMessage?.(blockId);
-  };
-
-  const preview = buildToolPreview(block);
-  const visualPreview = readToolInputString(block.input, 'prompt') ?? readToolInputString(block.input, 'tabId') ?? preview;
-  const displayPreview =
-    block.tool === 'subagent'
-      ? (subagentTitle ?? subagentPrompt ?? preview)
-      : block.tool === 'artifact'
-        ? (artifactTitle ?? preview)
-        : pinnedVisual
-          ? visualPreview
-          : preview;
-  const displayedLinkedRuns = linkedRuns.scope === 'listed' ? linkedRuns.runs : [];
-  const hiddenRunCount = Math.max(0, displayedLinkedRuns.length - MAX_VISIBLE_LINKED_RUNS);
-  const visibleRuns = showAllRuns || hiddenRunCount === 0 ? displayedLinkedRuns : displayedLinkedRuns.slice(0, MAX_VISIBLE_LINKED_RUNS);
-  const backgroundRunId = backgroundShellStart ? linkedRuns.runs[0]?.runId : undefined;
-  const backgroundRun = backgroundRunId ? runRecords.find((candidate) => candidate.runId === backgroundRunId) : null;
-  const bashCommand = readToolInputString(block.input, 'command') ?? preview;
-  const headerDisclosureLabel = subagentConversationRoute
-    ? 'open'
-    : fileChangingTool && fileChanges.length > 0 && !isRunning && !isError
-      ? pinnedDiffOpen
-        ? 'Hide diff'
-        : 'View diff'
-      : open
-        ? 'hide'
-        : 'show';
-  const toggleHeaderDisclosure = () => {
-    if (fileChangingTool && fileChanges.length > 0 && !isRunning && !isError) {
-      setPinnedDiffOpen((current) => !current);
-      return;
-    }
-
-    setPreference((current) => toggleDisclosurePreference(autoOpen, current));
-  };
 
   const headerClassName = cx(
     'w-full flex items-center gap-2 px-2.5 py-2 hover:bg-black/5 transition-colors text-left',
@@ -450,7 +496,7 @@ export function ToolBlock({
                   : `Showing ${MAX_VISIBLE_LINKED_RUNS} of ${displayedLinkedRuns.length} executions returned by the tool.`}
               </span>
               <span className="flex-1" />
-              <Button variant="action" onClick={() => setShowAllRuns((current) => !current)} className="text-[10px]">
+              <Button variant="action" onClick={toggleLinkedRuns} className="text-[10px]">
                 {showAllRuns ? 'Show fewer' : 'Show all'}
               </Button>
             </div>

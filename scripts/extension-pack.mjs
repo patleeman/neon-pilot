@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* eslint-env node */
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
@@ -16,7 +16,7 @@ if (!existsSync(manifestPath) || !statSync(manifestPath).isFile()) {
 const outIndex = args.indexOf('--out');
 const outputPath = resolve(outIndex >= 0 && args[outIndex + 1] ? args[outIndex + 1] : `${packageRoot}.zip`);
 mkdirSync(dirname(outputPath), { recursive: true });
-execFileSync(
+const result = spawnSync(
   'zip',
   [
     '-qry',
@@ -29,4 +29,7 @@ execFileSync(
   ],
   { cwd: dirname(packageRoot), stdio: 'inherit' },
 );
+if ((result.status ?? 1) !== 0 && !((result.status ?? 1) === 18 && existsSync(outputPath))) {
+  process.exit(result.status ?? 1);
+}
 console.log(outputPath);

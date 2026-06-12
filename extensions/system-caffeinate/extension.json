@@ -31,6 +31,23 @@
         "order": 1
       }
     },
+    "commands": [
+      {
+        "id": "caffeinate.toggle",
+        "title": "Toggle Caffeinate",
+        "category": "Caffeinate",
+        "action": "caffeinateToggle"
+      }
+    ],
+    "keybindings": [
+      {
+        "id": "caffeinate.toggle",
+        "title": "Toggle Caffeinate",
+        "keys": ["mod+shift+c"],
+        "command": "system-caffeinate.caffeinate.toggle",
+        "scope": "global"
+      }
+    ],
     "topBarElements": [
       {
         "id": "caffeinate-toggle",

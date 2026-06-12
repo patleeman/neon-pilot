@@ -1,7 +1,7 @@
 import { readIndexedConversationSearchText } from './conversationSearchIndex.js';
 import { listConversationSessionsSnapshot, readConversationSessionMeta } from './conversationService.js';
 
-export function readConversationSessionsCapability(input: { limit?: number } = {}) {
+export function readConversationSessionsCapability(input: { limit?: number; profile?: string } = {}) {
   return listConversationSessionsSnapshot(input);
 }
 

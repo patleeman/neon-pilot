@@ -20,6 +20,16 @@
     ]
   },
   "contributes": {
+    "keybindings": [
+      {
+        "id": "dictation.toggle",
+        "title": "Start or Stop Dictation",
+        "keys": ["mod+shift+m"],
+        "command": "dictation.toggle",
+        "when": "system-local-dictation.toggleAvailable",
+        "scope": "global"
+      }
+    ],
     "composerButtons": [
       {
         "id": "dictation",

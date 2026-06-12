@@ -9,13 +9,14 @@ import {
   type CommandPaletteScope,
   type CommandPaletteSection,
   isCommandPaletteThreadDataLoading,
+  isHostCommandDisabledInPalette,
   searchCommandPaletteItems,
   selectCommandPaletteScopedItems,
   shouldBootstrapCommandPaletteThreads,
   THREAD_COMMAND_PALETTE_SECTIONS,
   THREADS_COMMAND_PALETTE_SCOPE,
 } from '../commands/commandPalette';
-import { activateCommandPaletteItem, type CommandPaletteAction } from '../commands/commandPaletteActions';
+import { activateCommandPaletteItem, executePaletteCommand, type CommandPaletteAction } from '../commands/commandPaletteActions';
 import { COMMAND_PALETTE_STATE_EVENT, OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import {
   buildConversationContentSearchItems,
@@ -26,7 +27,7 @@ import {
   type ScopedSessionMeta,
 } from '../commands/commandPaletteItems';
 import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
-import { canExecuteExtensionCommand, createHostCommands, listHostCommands } from '../extensions/commands';
+import { canExecuteExtensionCommand, EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, listHostCommands } from '../extensions/commands';
 import { systemExtensionModules } from '../extensions/systemExtensionModules';
 import type {
   ExtensionCommandRegistration,
@@ -99,6 +100,7 @@ export function CommandPalette() {
   const [extensionSearchLoading, setExtensionSearchLoading] = useState(false);
   const [extensionSearchError, setExtensionSearchError] = useState<string | null>(null);
   const [extensionCommands, setExtensionCommands] = useState<ExtensionCommandRegistration[]>([]);
+  const [commandContextRevision, setCommandContextRevision] = useState(0);
   const openThreadSessions = useMemo(
     () => [...pinnedSessions.map((session) => ({ ...session, pinned: true }) satisfies ScopedSessionMeta), ...tabs],
     [pinnedSessions, tabs],
@@ -107,21 +109,18 @@ export function CommandPalette() {
   const openConversationItems = useMemo(() => buildConversationItems('open', openThreadSessions), [openThreadSessions]);
   const archivedConversationItems = useMemo(() => buildConversationItems('archived', archivedSessions), [archivedSessions]);
   const commandItems = useMemo<CommandPaletteItem<CommandPaletteAction>[]>(() => {
+    const activeConversationId = readConversationIdFromPathname(location.pathname);
     const commandOptions = {
       navigate,
       openCommandPalette: () => undefined,
       openRightRail: () => false,
       setLayout: () => undefined,
-      activeConversationId: readConversationIdFromPathname(location.pathname),
+      activeConversationId,
       extensionCommands,
       invokeExtensionCommand: async () => undefined,
       context: { route: location.pathname },
     };
-    const hostDefinitions = createHostCommands(commandOptions);
-    const context = { route: location.pathname };
     const hostItems = listHostCommands().map((command, index) => {
-      const definition = hostDefinitions.find((candidate) => candidate.id === command.id);
-      const disabled = definition?.canExecute ? !definition.canExecute(undefined, context) : false;
       return {
         id: `host-command:${command.id}`,
         section: 'commands',
@@ -130,7 +129,7 @@ export function CommandPalette() {
         meta: command.category,
         keywords: [command.id, command.category].filter((keyword): keyword is string => typeof keyword === 'string'),
         order: index,
-        disabled,
+        disabled: isHostCommandDisabledInPalette(command.id, { activeConversationId, context: commandOptions.context }),
         action: { kind: 'command' as const, command: command.id },
       };
     });
@@ -148,7 +147,7 @@ export function CommandPalette() {
       action: { kind: 'command' as const, command: `${command.extensionId}.${command.surfaceId}`, args: command.args },
     }));
     return [...hostItems, ...extensionItems];
-  }, [extensionCommands, location.pathname, navigate]);
+  }, [commandContextRevision, extensionCommands, location.pathname, navigate]);
   const fileItems = scope === 'commands' ? commandItems : quickOpenItems;
   const searchedFileItems = quickOpenSearchItems;
   const quickOpenScopes = useMemo(
@@ -243,6 +242,13 @@ export function CommandPalette() {
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent(COMMAND_PALETTE_STATE_EVENT, { detail: { open } }));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleCommandContextChanged = () => setCommandContextRevision((current) => current + 1);
+    window.addEventListener(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, handleCommandContextChanged);
+    return () => window.removeEventListener(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, handleCommandContextChanged);
   }, [open]);
 
   useEffect(() => {
@@ -519,13 +525,17 @@ export function CommandPalette() {
       setBusyItemId(item.id);
 
       try {
-        await activateCommandPaletteItem(item, {
+        const handled = await activateCommandPaletteItem(item, {
           commandItems,
           location,
           navigate,
           openSession,
           closePalette,
+          executeExtensionCommand: executePaletteCommand,
         });
+        if (!handled) {
+          setActionError('Command is unavailable right now.');
+        }
       } catch (error) {
         setActionError(error instanceof Error ? error.message : String(error));
       } finally {

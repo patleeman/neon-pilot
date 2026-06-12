@@ -1,31 +1,13 @@
-import type { FormEvent } from 'react';
-
-import { TextInput, TitleButton, ToolbarButton } from './ui';
+import { TitleButton } from './ui';
 
 interface ConversationSavedHeaderProps {
   title: string;
-  cwd: string | null;
   onTitleClick?: () => void;
-  cwdEditing: boolean;
-  cwdDraft: string;
-  cwdError?: string | null;
-  cwdSaveBusy?: boolean;
-  onCwdDraftChange: (value: string) => void;
-  onCancelEditingCwd: () => void;
-  onSaveCwd: () => void;
 }
 
 export function ConversationSavedHeader({
   title,
-  cwd,
   onTitleClick,
-  cwdEditing,
-  cwdDraft,
-  cwdError,
-  cwdSaveBusy = false,
-  onCwdDraftChange,
-  onCancelEditingCwd,
-  onSaveCwd,
 }: ConversationSavedHeaderProps) {
   return (
     <div className="space-y-3">
@@ -47,39 +29,6 @@ export function ConversationSavedHeader({
           </h1>
         )}
       </div>
-      {cwdEditing && (
-        <form
-          className="flex min-w-0 flex-wrap items-center gap-2"
-          onSubmit={(event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            onSaveCwd();
-          }}
-        >
-          <TextInput
-            autoFocus
-            value={cwdDraft}
-            onChange={(event) => onCwdDraftChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                onCancelEditingCwd();
-              }
-            }}
-            placeholder={cwd ?? '~/workingdir/repo'}
-            spellCheck={false}
-            aria-label="Conversation working directory"
-            className="min-w-[16rem] flex-1 font-mono"
-            disabled={cwdSaveBusy}
-          />
-          <ToolbarButton type="submit" className="text-accent" disabled={cwdSaveBusy}>
-            {cwdSaveBusy ? 'Switching…' : 'Switch'}
-          </ToolbarButton>
-          <ToolbarButton onClick={onCancelEditingCwd} disabled={cwdSaveBusy}>
-            Cancel
-          </ToolbarButton>
-        </form>
-      )}
-      {cwdError && <p className="text-[11px] text-danger/80">{cwdError}</p>}
     </div>
   );
 }

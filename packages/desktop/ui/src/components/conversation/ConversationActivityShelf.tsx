@@ -1,7 +1,22 @@
+import { useEffect } from 'react';
+
 import { describeDeferredResumeStatus, formatDeferredResumeWhen } from '../../deferred-resume/deferredResumeIndicator';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { cx, MetaLabel, RowButton, ShelfHeader, ShelfSection, Spinner, TextButton } from '../ui';
+import {
+  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
+} from './conversationActivityCommands';
 
 function formatScheduledTaskSchedule(task: ScheduledTaskSummary): string {
   if (task.scheduleType === 'cron' && task.cron) return task.cron;
@@ -85,6 +100,141 @@ export function ConversationActivityShelf({
   onRunScheduledTaskNow?: (taskId: string) => void;
   onOpenScheduledTask?: (taskId: string) => void;
 }) {
+  const canContinueDeferredResumes = hasReadyDeferredResumes && !isLiveSession && !deferredResumesBusy;
+  const canToggleBackgroundRunDetails = backgroundExecutions.length > 0;
+  const canToggleDeferredResumeDetails = deferredResumes.length > 0;
+  const canToggleScheduledTaskDetails = scheduledTasks.length > 0 && Boolean(onToggleScheduledTaskDetails);
+  const latestBackgroundRun = backgroundExecutions[0] ?? null;
+  const latestCancellableBackgroundRun =
+    backgroundExecutions.find((execution) => execution.capabilities.canCancel && !(cancellingBackgroundRunIds?.has(execution.id) ?? false)) ?? null;
+  const firstRunnableScheduledTask = scheduledTasks.find((task) => task.enabled && !task.running) ?? null;
+  const firstOpenableScheduledTask = scheduledTasks[0] ?? null;
+  const firstFireableDeferredResume = deferredResumes.find((resume) => resume.status === 'scheduled') ?? null;
+  const firstCancellableDeferredResume = deferredResumes[0] ?? null;
+  const canOpenLatestBackgroundRun = Boolean(latestBackgroundRun && onOpenBackgroundRun);
+  const canCancelLatestBackgroundRun = Boolean(latestCancellableBackgroundRun && onCancelBackgroundRun);
+  const canRunFirstScheduledTask = Boolean(firstRunnableScheduledTask && onRunScheduledTaskNow);
+  const canOpenFirstScheduledTask = Boolean(firstOpenableScheduledTask && onOpenScheduledTask);
+  const canFireFirstDeferredResume = Boolean(firstFireableDeferredResume && !deferredResumesBusy);
+  const canCancelFirstDeferredResume = Boolean(firstCancellableDeferredResume && !deferredResumesBusy);
+
+  useEffect(() => {
+    setExtensionCommandContext('conversation.canContinueDeferredResumes', canContinueDeferredResumes);
+    setExtensionCommandContext('conversation.hasBackgroundRuns', canToggleBackgroundRunDetails);
+    setExtensionCommandContext('conversation.hasDeferredResumes', canToggleDeferredResumeDetails);
+    setExtensionCommandContext('conversation.hasScheduledTasks', canToggleScheduledTaskDetails);
+    setExtensionCommandContext('conversation.canOpenLatestBackgroundRun', canOpenLatestBackgroundRun);
+    setExtensionCommandContext('conversation.canCancelLatestBackgroundRun', canCancelLatestBackgroundRun);
+    setExtensionCommandContext('conversation.canRunFirstScheduledTask', canRunFirstScheduledTask);
+    setExtensionCommandContext('conversation.canOpenFirstScheduledTask', canOpenFirstScheduledTask);
+    setExtensionCommandContext('conversation.canFireFirstDeferredResume', canFireFirstDeferredResume);
+    setExtensionCommandContext('conversation.canCancelFirstDeferredResume', canCancelFirstDeferredResume);
+    return () => {
+      setExtensionCommandContext('conversation.canContinueDeferredResumes', null);
+      setExtensionCommandContext('conversation.hasBackgroundRuns', null);
+      setExtensionCommandContext('conversation.hasDeferredResumes', null);
+      setExtensionCommandContext('conversation.hasScheduledTasks', null);
+      setExtensionCommandContext('conversation.canOpenLatestBackgroundRun', null);
+      setExtensionCommandContext('conversation.canCancelLatestBackgroundRun', null);
+      setExtensionCommandContext('conversation.canRunFirstScheduledTask', null);
+      setExtensionCommandContext('conversation.canOpenFirstScheduledTask', null);
+      setExtensionCommandContext('conversation.canFireFirstDeferredResume', null);
+      setExtensionCommandContext('conversation.canCancelFirstDeferredResume', null);
+    };
+  }, [
+    canCancelLatestBackgroundRun,
+    canCancelFirstDeferredResume,
+    canContinueDeferredResumes,
+    canFireFirstDeferredResume,
+    canOpenLatestBackgroundRun,
+    canOpenFirstScheduledTask,
+    canRunFirstScheduledTask,
+    canToggleBackgroundRunDetails,
+    canToggleDeferredResumeDetails,
+    canToggleScheduledTaskDetails,
+  ]);
+
+  useEffect(() => {
+    if (!canContinueDeferredResumes) return;
+    function handleContinueDeferredResumesCommand() {
+      onContinueDeferredResumesNow();
+    }
+    window.addEventListener(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT, handleContinueDeferredResumesCommand);
+    return () => window.removeEventListener(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT, handleContinueDeferredResumesCommand);
+  }, [canContinueDeferredResumes, onContinueDeferredResumesNow]);
+
+  useEffect(() => {
+    if (!canToggleBackgroundRunDetails) return;
+    window.addEventListener(CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT, onToggleBackgroundRunDetails);
+    return () => window.removeEventListener(CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT, onToggleBackgroundRunDetails);
+  }, [canToggleBackgroundRunDetails, onToggleBackgroundRunDetails]);
+
+  useEffect(() => {
+    if (!canToggleDeferredResumeDetails) return;
+    window.addEventListener(CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT, onToggleDeferredResumeDetails);
+    return () => window.removeEventListener(CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT, onToggleDeferredResumeDetails);
+  }, [canToggleDeferredResumeDetails, onToggleDeferredResumeDetails]);
+
+  useEffect(() => {
+    if (!canToggleScheduledTaskDetails || !onToggleScheduledTaskDetails) return;
+    window.addEventListener(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT, onToggleScheduledTaskDetails);
+    return () => window.removeEventListener(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT, onToggleScheduledTaskDetails);
+  }, [canToggleScheduledTaskDetails, onToggleScheduledTaskDetails]);
+
+  useEffect(() => {
+    if (!latestBackgroundRun || !onOpenBackgroundRun) return;
+    function handleOpenLatestBackgroundRunCommand() {
+      onOpenBackgroundRun?.(latestBackgroundRun.id);
+    }
+    window.addEventListener(CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleOpenLatestBackgroundRunCommand);
+    return () => window.removeEventListener(CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleOpenLatestBackgroundRunCommand);
+  }, [latestBackgroundRun, onOpenBackgroundRun]);
+
+  useEffect(() => {
+    if (!latestCancellableBackgroundRun || !onCancelBackgroundRun) return;
+    function handleCancelLatestBackgroundRunCommand() {
+      onCancelBackgroundRun?.(latestCancellableBackgroundRun.id);
+    }
+    window.addEventListener(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleCancelLatestBackgroundRunCommand);
+    return () => window.removeEventListener(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT, handleCancelLatestBackgroundRunCommand);
+  }, [latestCancellableBackgroundRun, onCancelBackgroundRun]);
+
+  useEffect(() => {
+    if (!firstRunnableScheduledTask || !onRunScheduledTaskNow) return;
+    function handleRunFirstScheduledTaskCommand() {
+      onRunScheduledTaskNow?.(firstRunnableScheduledTask.id);
+    }
+    window.addEventListener(CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT, handleRunFirstScheduledTaskCommand);
+    return () => window.removeEventListener(CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT, handleRunFirstScheduledTaskCommand);
+  }, [firstRunnableScheduledTask, onRunScheduledTaskNow]);
+
+  useEffect(() => {
+    if (!firstOpenableScheduledTask || !onOpenScheduledTask) return;
+    function handleOpenFirstScheduledTaskCommand() {
+      onOpenScheduledTask?.(firstOpenableScheduledTask.id);
+    }
+    window.addEventListener(CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT, handleOpenFirstScheduledTaskCommand);
+    return () => window.removeEventListener(CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT, handleOpenFirstScheduledTaskCommand);
+  }, [firstOpenableScheduledTask, onOpenScheduledTask]);
+
+  useEffect(() => {
+    if (!firstFireableDeferredResume || deferredResumesBusy) return;
+    function handleFireFirstDeferredResumeCommand() {
+      onFireDeferredResumeNow(firstFireableDeferredResume.id);
+    }
+    window.addEventListener(CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT, handleFireFirstDeferredResumeCommand);
+    return () => window.removeEventListener(CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT, handleFireFirstDeferredResumeCommand);
+  }, [deferredResumesBusy, firstFireableDeferredResume, onFireDeferredResumeNow]);
+
+  useEffect(() => {
+    if (!firstCancellableDeferredResume || deferredResumesBusy) return;
+    function handleCancelFirstDeferredResumeCommand() {
+      onCancelDeferredResume(firstCancellableDeferredResume.id);
+    }
+    window.addEventListener(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT, handleCancelFirstDeferredResumeCommand);
+    return () => window.removeEventListener(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT, handleCancelFirstDeferredResumeCommand);
+  }, [deferredResumesBusy, firstCancellableDeferredResume, onCancelDeferredResume]);
+
   return (
     <>
       {scheduledTasks.length > 0 && (

@@ -1,19 +1,21 @@
 import { type RefObject, useEffect } from 'react';
 
-const DESKTOP_CONVERSATION_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
-
-type DesktopConversationShortcutAction = 'focus-composer' | 'edit-working-directory' | 'rename-conversation';
-
-function isDesktopConversationShortcutAction(value: unknown): value is DesktopConversationShortcutAction {
-  return value === 'focus-composer' || value === 'edit-working-directory' || value === 'rename-conversation';
-}
+import {
+  conversationEditorShortcutCommandAction,
+  DESKTOP_CONVERSATION_SHORTCUT_EVENT,
+  isConversationEditorShortcutAction,
+} from './desktopConversationShortcutActions';
 
 interface UseDesktopConversationShortcutsOptions {
   draft: boolean;
   draftCwdPickBusy: boolean;
   textareaRef: RefObject<HTMLTextAreaElement>;
   beginTitleEdit: () => void;
+  saveTitleEdit: () => Promise<void> | void;
+  cancelTitleEdit: () => void;
   beginConversationCwdEdit: () => void;
+  saveConversationCwdEdit: () => Promise<void> | void;
+  cancelConversationCwdEdit: () => void;
   pickDraftConversationCwd: () => Promise<void> | void;
 }
 
@@ -22,7 +24,11 @@ export function useDesktopConversationShortcuts({
   draftCwdPickBusy,
   textareaRef,
   beginTitleEdit,
+  saveTitleEdit,
+  cancelTitleEdit,
   beginConversationCwdEdit,
+  saveConversationCwdEdit,
+  cancelConversationCwdEdit,
   pickDraftConversationCwd,
 }: UseDesktopConversationShortcutsOptions): void {
   useEffect(() => {
@@ -31,8 +37,11 @@ export function useDesktopConversationShortcuts({
         return;
       }
 
-      const action = (event as CustomEvent<{ action?: unknown }>).detail?.action;
-      if (!isDesktopConversationShortcutAction(action)) {
+      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
+      const action = isConversationEditorShortcutAction(detail?.action)
+        ? detail.action
+        : conversationEditorShortcutCommandAction(detail?.command);
+      if (!action) {
         return;
       }
 
@@ -54,6 +63,26 @@ export function useDesktopConversationShortcuts({
         return;
       }
 
+      if (action === 'save-conversation-title') {
+        void saveTitleEdit();
+        return;
+      }
+
+      if (action === 'cancel-conversation-title-edit') {
+        cancelTitleEdit();
+        return;
+      }
+
+      if (action === 'save-working-directory') {
+        void saveConversationCwdEdit();
+        return;
+      }
+
+      if (action === 'cancel-working-directory-edit') {
+        cancelConversationCwdEdit();
+        return;
+      }
+
       if (draft) {
         if (draftCwdPickBusy) {
           return;
@@ -68,5 +97,16 @@ export function useDesktopConversationShortcuts({
 
     window.addEventListener(DESKTOP_CONVERSATION_SHORTCUT_EVENT, handleDesktopShortcut);
     return () => window.removeEventListener(DESKTOP_CONVERSATION_SHORTCUT_EVENT, handleDesktopShortcut);
-  }, [beginConversationCwdEdit, beginTitleEdit, draft, draftCwdPickBusy, pickDraftConversationCwd, textareaRef]);
+  }, [
+    beginConversationCwdEdit,
+    beginTitleEdit,
+    cancelTitleEdit,
+    cancelConversationCwdEdit,
+    draft,
+    draftCwdPickBusy,
+    pickDraftConversationCwd,
+    saveConversationCwdEdit,
+    saveTitleEdit,
+    textareaRef,
+  ]);
 }

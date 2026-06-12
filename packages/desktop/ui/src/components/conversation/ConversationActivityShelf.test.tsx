@@ -1,11 +1,27 @@
+// @vitest-environment jsdom
 import React from 'react';
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DeferredResumeSummary, ExecutionRecord, ScheduledTaskSummary } from '../../shared/types';
 import { ConversationActivityShelf } from './ConversationActivityShelf';
+import {
+  CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT,
+  CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT,
+  CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT,
+  CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT,
+} from './conversationActivityCommands';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const execution: ExecutionRecord = {
   id: 'run-1',
@@ -43,6 +59,16 @@ const scheduledTask: ScheduledTaskSummary = {
 };
 
 describe('ConversationActivityShelf', () => {
+  let root: Root | null = null;
+
+  afterEach(() => {
+    if (root) {
+      act(() => root?.unmount());
+      root = null;
+    }
+    vi.restoreAllMocks();
+  });
+
   it('renders background execution summary and expanded details', () => {
     const html = renderToString(
       <ConversationActivityShelf
@@ -168,5 +194,184 @@ describe('ConversationActivityShelf', () => {
     expect(html).toContain('*/15 * * * *');
     expect(html).toContain('run now');
     expect(html).toContain('open');
+  });
+
+  it('handles the shared continue deferred resumes command when ready', () => {
+    const onContinueDeferredResumesNow = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationActivityShelf
+          backgroundExecutions={[]}
+          backgroundExecutionIndicatorText=""
+          showBackgroundRunDetails={false}
+          onToggleBackgroundRunDetails={vi.fn()}
+          deferredResumes={[{ ...resume, status: 'ready' }]}
+          deferredResumeIndicatorText="1 ready"
+          deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+          hasReadyDeferredResumes
+          isLiveSession={false}
+          deferredResumesBusy={false}
+          showDeferredResumeDetails={false}
+          onContinueDeferredResumesNow={onContinueDeferredResumesNow}
+          onToggleDeferredResumeDetails={vi.fn()}
+          onFireDeferredResumeNow={vi.fn()}
+          onCancelDeferredResume={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_CONTINUE_DEFERRED_RESUMES_COMMAND_EVENT));
+    });
+
+    expect(onContinueDeferredResumesNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles shared activity details toggle commands when sections are available', () => {
+    const onToggleBackgroundRunDetails = vi.fn();
+    const onToggleDeferredResumeDetails = vi.fn();
+    const onToggleScheduledTaskDetails = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationActivityShelf
+          backgroundExecutions={[execution]}
+          backgroundExecutionIndicatorText="running"
+          showBackgroundRunDetails={false}
+          onToggleBackgroundRunDetails={onToggleBackgroundRunDetails}
+          scheduledTasks={[scheduledTask]}
+          scheduledTaskIndicatorText="enabled"
+          showScheduledTaskDetails={false}
+          onToggleScheduledTaskDetails={onToggleScheduledTaskDetails}
+          deferredResumes={[resume]}
+          deferredResumeIndicatorText="1 scheduled"
+          deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+          hasReadyDeferredResumes={false}
+          isLiveSession={false}
+          deferredResumesBusy={false}
+          showDeferredResumeDetails={false}
+          onContinueDeferredResumesNow={vi.fn()}
+          onToggleDeferredResumeDetails={onToggleDeferredResumeDetails}
+          onFireDeferredResumeNow={vi.fn()}
+          onCancelDeferredResume={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_BACKGROUND_RUN_DETAILS_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_DEFERRED_RESUME_DETAILS_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_TOGGLE_SCHEDULED_TASK_DETAILS_COMMAND_EVENT));
+    });
+
+    expect(onToggleBackgroundRunDetails).toHaveBeenCalledTimes(1);
+    expect(onToggleDeferredResumeDetails).toHaveBeenCalledTimes(1);
+    expect(onToggleScheduledTaskDetails).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles shared latest background run commands', () => {
+    const onOpenBackgroundRun = vi.fn();
+    const onCancelBackgroundRun = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationActivityShelf
+          backgroundExecutions={[
+            { ...execution, id: 'run-latest', capabilities: { ...execution.capabilities, canCancel: false } },
+            { ...execution, id: 'run-cancellable', capabilities: { ...execution.capabilities, canCancel: true } },
+          ]}
+          backgroundExecutionIndicatorText="running"
+          showBackgroundRunDetails={false}
+          onToggleBackgroundRunDetails={vi.fn()}
+          onOpenBackgroundRun={onOpenBackgroundRun}
+          onCancelBackgroundRun={onCancelBackgroundRun}
+          deferredResumes={[]}
+          deferredResumeIndicatorText="none"
+          deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+          hasReadyDeferredResumes={false}
+          isLiveSession={false}
+          deferredResumesBusy={false}
+          showDeferredResumeDetails={false}
+          onContinueDeferredResumesNow={vi.fn()}
+          onToggleDeferredResumeDetails={vi.fn()}
+          onFireDeferredResumeNow={vi.fn()}
+          onCancelDeferredResume={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_LATEST_BACKGROUND_RUN_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_LATEST_BACKGROUND_RUN_COMMAND_EVENT));
+    });
+
+    expect(onOpenBackgroundRun).toHaveBeenCalledWith('run-latest');
+    expect(onCancelBackgroundRun).toHaveBeenCalledWith('run-cancellable');
+  });
+
+  it('handles shared first automation and attention item commands', () => {
+    const onRunScheduledTaskNow = vi.fn();
+    const onOpenScheduledTask = vi.fn();
+    const onFireDeferredResumeNow = vi.fn();
+    const onCancelDeferredResume = vi.fn();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ConversationActivityShelf
+          backgroundExecutions={[]}
+          backgroundExecutionIndicatorText="none"
+          showBackgroundRunDetails={false}
+          onToggleBackgroundRunDetails={vi.fn()}
+          scheduledTasks={[
+            { ...scheduledTask, id: 'task-running', running: true, enabled: true },
+            { ...scheduledTask, id: 'task-runnable', running: false, enabled: true },
+          ]}
+          scheduledTaskIndicatorText="2 enabled"
+          showScheduledTaskDetails
+          onToggleScheduledTaskDetails={vi.fn()}
+          onRunScheduledTaskNow={onRunScheduledTaskNow}
+          onOpenScheduledTask={onOpenScheduledTask}
+          deferredResumes={[
+            { ...resume, id: 'resume-ready', status: 'ready' },
+            { ...resume, id: 'resume-scheduled', status: 'scheduled' },
+          ]}
+          deferredResumeIndicatorText="2 scheduled"
+          deferredResumeNowMs={Date.parse('2026-04-01T09:00:00.000Z')}
+          hasReadyDeferredResumes
+          isLiveSession={false}
+          deferredResumesBusy={false}
+          showDeferredResumeDetails
+          onContinueDeferredResumesNow={vi.fn()}
+          onToggleDeferredResumeDetails={vi.fn()}
+          onFireDeferredResumeNow={onFireDeferredResumeNow}
+          onCancelDeferredResume={onCancelDeferredResume}
+        />,
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(CONVERSATION_RUN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_OPEN_FIRST_SCHEDULED_TASK_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_FIRE_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
+      window.dispatchEvent(new CustomEvent(CONVERSATION_CANCEL_FIRST_DEFERRED_RESUME_COMMAND_EVENT));
+    });
+
+    expect(onRunScheduledTaskNow).toHaveBeenCalledWith('task-runnable');
+    expect(onOpenScheduledTask).toHaveBeenCalledWith('task-running');
+    expect(onFireDeferredResumeNow).toHaveBeenCalledWith('resume-scheduled');
+    expect(onCancelDeferredResume).toHaveBeenCalledWith('resume-ready');
   });
 });

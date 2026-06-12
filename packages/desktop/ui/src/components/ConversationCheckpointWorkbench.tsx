@@ -3,9 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
+import { setExtensionCommandContext } from '../extensions/commands';
 import type { ConversationCommitCheckpointRecord, ConversationCommitCheckpointSummary, UncommittedDiffResult } from '../shared/types';
 import { formatDate } from '../shared/utils';
 import { CheckpointDiffSection, fileDisplayPath } from './checkpoints/CheckpointDiffView';
+import {
+  CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT,
+  CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT,
+} from './conversation/checkpointCommands';
 import { UNCOMMITTED_SENTINEL, useConversationCheckpointSummaries, useUncommittedDiff } from './conversationCheckpointHooks';
 import { addNotification } from './notifications/notificationStore';
 import {
@@ -89,6 +95,9 @@ export function ConversationDiffRailContent({
   const { result: uncommitted, loading: uncommittedLoading } = useUncommittedDiff(workspaceCwd);
   const uncommittedSelected = activeCheckpointId === UNCOMMITTED_SENTINEL;
   const latestCheckpointId = checkpoints[0]?.id ?? null;
+  const activeCheckpointFiles =
+    activeCheckpointId && activeCheckpointId !== UNCOMMITTED_SENTINEL ? (filesByCheckpoint[activeCheckpointId] ?? []) : [];
+  const firstActiveFilePath = uncommittedSelected ? (uncommitted?.files[0]?.path ?? null) : (activeCheckpointFiles[0]?.path ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +126,46 @@ export function ConversationDiffRailContent({
       cancelled = true;
     };
   }, [checkpoints, filesByCheckpoint]);
+
+  useEffect(() => {
+    setExtensionCommandContext('conversation.canOpenActiveCheckpoint', Boolean(activeCheckpointId));
+    setExtensionCommandContext('conversation.canOpenLatestCheckpoint', Boolean(latestCheckpointId));
+    setExtensionCommandContext('conversation.canScrollFirstCheckpointFile', Boolean(firstActiveFilePath && onScrollToFile));
+    return () => {
+      setExtensionCommandContext('conversation.canOpenActiveCheckpoint', null);
+      setExtensionCommandContext('conversation.canOpenLatestCheckpoint', null);
+      setExtensionCommandContext('conversation.canScrollFirstCheckpointFile', null);
+    };
+  }, [activeCheckpointId, firstActiveFilePath, latestCheckpointId, onScrollToFile]);
+
+  useEffect(() => {
+    function handleOpenActiveCheckpoint() {
+      if (activeCheckpointId) {
+        onOpenCheckpoint(activeCheckpointId);
+      }
+    }
+
+    function handleOpenLatestCheckpoint() {
+      if (latestCheckpointId) {
+        onOpenCheckpoint(latestCheckpointId);
+      }
+    }
+
+    function handleScrollFirstCheckpointFile() {
+      if (firstActiveFilePath && onScrollToFile) {
+        onScrollToFile(firstActiveFilePath);
+      }
+    }
+
+    window.addEventListener(CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT, handleOpenActiveCheckpoint);
+    window.addEventListener(CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT, handleOpenLatestCheckpoint);
+    window.addEventListener(CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT, handleScrollFirstCheckpointFile);
+    return () => {
+      window.removeEventListener(CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT, handleOpenActiveCheckpoint);
+      window.removeEventListener(CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT, handleOpenLatestCheckpoint);
+      window.removeEventListener(CONVERSATION_SCROLL_FIRST_CHECKPOINT_FILE_COMMAND_EVENT, handleScrollFirstCheckpointFile);
+    };
+  }, [activeCheckpointId, firstActiveFilePath, latestCheckpointId, onOpenCheckpoint, onScrollToFile]);
 
   if (loading && checkpoints.length === 0 && !uncommittedLoading) {
     return (

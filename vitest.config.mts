@@ -38,10 +38,6 @@ export default defineConfig({
       '@neon-pilot/extensions/backend/skills': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/skills.ts'),
       '@neon-pilot/extensions/backend/telemetry': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/telemetry.ts'),
       '@neon-pilot/extensions/backend/terminal': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/terminal.ts'),
-      '@neon-pilot/extensions/backend/slackMcpGateway': resolve(
-        repoRoot,
-        'packages/desktop/server/extensions/backendApi/slackMcpGateway.ts',
-      ),
       '@neon-pilot/extensions/backend/webContent': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/webContent.ts'),
       '@neon-pilot/extensions/backend': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/index.ts'),
       '@neon-pilot/extensions': resolve(repoRoot, 'packages/extensions/src/index.ts'),

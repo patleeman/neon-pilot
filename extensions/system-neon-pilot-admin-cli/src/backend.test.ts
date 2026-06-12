@@ -77,6 +77,21 @@ describe('system-neon-pilot-admin-cli backend', () => {
     expect((toolContext as { commands: { execute: ReturnType<typeof vi.fn> } }).commands.execute).toHaveBeenCalledWith('cmd-1', { value: 1 });
   });
 
+  it('honors app command dry-runs without executing the command', async () => {
+    const cliContext = ctx();
+    const toolContext = ctx();
+
+    await expect(
+      manageAppCommands({ cli: { command: 'app-commands run', args: ['cmd-1'], flags: { args: '{"value":1}', 'dry-run': true } } }, cliContext),
+    ).resolves.toEqual({ ok: true, dryRun: true, action: 'run_app_command', commandId: 'cmd-1', args: { value: 1 }, executed: false });
+    await expect(
+      neonPilotAdmin({ command: 'run_app_command', commandId: 'cmd-1', args: { value: 1 }, dryRun: true }, toolContext),
+    ).resolves.toEqual({ ok: true, dryRun: true, action: 'run_app_command', commandId: 'cmd-1', args: { value: 1 }, executed: false });
+
+    expect((cliContext as { commands: { execute: ReturnType<typeof vi.fn> } }).commands.execute).not.toHaveBeenCalled();
+    expect((toolContext as { commands: { execute: ReturnType<typeof vi.fn> } }).commands.execute).not.toHaveBeenCalled();
+  });
+
   it('wraps neon_pilot tool results in agent tool content with details', async () => {
     const result = await neonPilotTool({ command: 'list_app_commands' }, ctx());
     expect(result.details).toEqual({ ok: true, commands: [{ id: 'cmd-1' }] });

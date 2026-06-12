@@ -404,8 +404,8 @@ function isLiveEntryRunning(liveEntry: ReturnType<typeof listAllLiveSessions>[nu
   );
 }
 
-export function listConversationSessionsSnapshot(options: { includeLive?: boolean; limit?: number } = {}) {
-  const profile = getRuntimeScopeFn();
+export function listConversationSessionsSnapshot(options: { includeLive?: boolean; limit?: number; profile?: string } = {}) {
+  const profile = options.profile?.trim() || getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
   const catalogComplete = isConversationCatalogComplete();
   const catalogHasRows = hasConversationCatalogRows();
@@ -677,8 +677,8 @@ export function readConversationSessionSignatureWithTelemetry(conversationId: st
   }
 }
 
-export function readConversationSessionMeta(conversationId: string) {
-  const profile = getRuntimeScopeFn();
+export function readConversationSessionMeta(conversationId: string, options: { profile?: string } = {}) {
+  const profile = options.profile?.trim() || getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
   const storedSession = readConversationCatalogSession(conversationId) ?? readSessionMeta(conversationId);
   const decoratedSession = storedSession

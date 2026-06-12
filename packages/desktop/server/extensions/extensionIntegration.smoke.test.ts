@@ -501,6 +501,76 @@ describe('extension manifests - structural validation', () => {
     expect(dangling, 'Keybindings must target a known host command or extension command').toEqual([]);
   });
 
+  it('exposes a default scratchpad hotkey for the command palette action', () => {
+    const scratchpadCommand = listExtensionCommandRegistrations().find(
+      (command) => command.extensionId === 'system-scratchpad' && command.surfaceId === 'scratchpad.open',
+    );
+    const scratchpadKeybinding = listExtensionKeybindingRegistrations().find(
+      (keybinding) => keybinding.extensionId === 'system-scratchpad' && keybinding.surfaceId === 'scratchpad.open',
+    );
+
+    expect(scratchpadCommand).toMatchObject({
+      title: 'Open Scratchpad',
+      action: 'rail.open',
+      args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+    });
+    expect(scratchpadKeybinding).toMatchObject({
+      title: 'Open Scratchpad',
+      keys: ['mod+shift+s'],
+      command: 'rail.open',
+      args: { extensionId: 'system-scratchpad', surfaceId: 'scratchpad' },
+      scope: 'global',
+    });
+  });
+
+  it('exposes caffeinate as a command-backed hotkey', () => {
+    const caffeinateCommand = listExtensionCommandRegistrations().find(
+      (command) => command.extensionId === 'system-caffeinate' && command.surfaceId === 'caffeinate.toggle',
+    );
+    const caffeinateKeybinding = listExtensionKeybindingRegistrations().find(
+      (keybinding) => keybinding.extensionId === 'system-caffeinate' && keybinding.surfaceId === 'caffeinate.toggle',
+    );
+
+    expect(caffeinateCommand).toMatchObject({
+      title: 'Toggle Caffeinate',
+      action: 'caffeinateToggle',
+    });
+    expect(caffeinateKeybinding).toMatchObject({
+      title: 'Toggle Caffeinate',
+      keys: ['mod+shift+c'],
+      command: 'system-caffeinate.caffeinate.toggle',
+      scope: 'global',
+    });
+  });
+
+  it('exposes dictation toggle as a default host-command hotkey', () => {
+    const dictationKeybinding = listExtensionKeybindingRegistrations().find(
+      (keybinding) => keybinding.extensionId === 'system-local-dictation' && keybinding.surfaceId === 'dictation.toggle',
+    );
+
+    expect(dictationKeybinding).toMatchObject({
+      title: 'Start or Stop Dictation',
+      keys: ['mod+shift+m'],
+      command: 'dictation.toggle',
+      when: 'system-local-dictation.toggleAvailable',
+      scope: 'global',
+    });
+  });
+
+  it('exposes Excalidraw composer drawing as a default host-command hotkey', () => {
+    const excalidrawKeybinding = listExtensionKeybindingRegistrations().find(
+      (keybinding) => keybinding.extensionId === 'system-excalidraw-input' && keybinding.surfaceId === 'excalidraw.createDrawing',
+    );
+
+    expect(excalidrawKeybinding).toMatchObject({
+      title: 'Create Drawing',
+      keys: ['mod+shift+x'],
+      command: 'composer.createDrawing',
+      when: 'composer.canCreateDrawing',
+      scope: 'global',
+    });
+  });
+
   it('settings contributions have type-consistent values', () => {
     for (const ext of summaries) {
       if (ext.packageType !== 'system') continue;
@@ -677,13 +747,7 @@ describe('extension manifests - cross-extension conflict detection', () => {
 
   it('exposes valid default agent tool names', () => {
     const toolNames = new Set(listExtensionToolRegistrations().map((tool) => tool.name));
-    for (const expected of [
-      'web_fetch',
-      'background_bash',
-      'subagent',
-      'ask_user',
-      'neon_pilot',
-    ]) {
+    for (const expected of ['web_fetch', 'background_bash', 'subagent', 'ask_user', 'neon_pilot']) {
       expect(toolNames.has(expected), `missing tool ${expected}`).toBe(true);
     }
     expect(toolNames.has('apply_patch'), 'missing tool apply_patch').toBe(true);
@@ -1446,11 +1510,6 @@ describe('extension agent extensions - registration listing', () => {
 
     // system-conversation-tools migrated to manifest tools; no agentExtension expected
     expect(agentIds, 'system-conversation-tools should not have an agentExtension').not.toContain('system-conversation-tools');
-    // system-slack-mcp-gateway has defaultEnabled: false, so it may not be registered
-    const slackGateway = listExtensionInstallSummaries().find((s) => s.id === 'system-slack-mcp-gateway');
-    if (slackGateway?.enabled) {
-      expect(agentIds, 'Expected system-slack-mcp-gateway agent extension').toContain('system-slack-mcp-gateway');
-    }
   });
 });
 

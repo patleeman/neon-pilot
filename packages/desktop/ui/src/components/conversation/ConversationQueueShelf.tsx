@@ -1,10 +1,14 @@
+import { useEffect } from 'react';
+
 import {
   formatQueuedPromptImageSummary,
   formatQueuedPromptShelfText,
   summarizeQueuedRunCallbackPrompt,
   truncateConversationShelfText,
 } from '../../conversation/conversationComposerPresentation';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { Pill, SectionLabel, ShelfSection, TextButton } from '../ui';
+import { CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT } from './conversationQueueCommands';
 
 export interface ConversationPendingQueueItem {
   id: string;
@@ -24,6 +28,23 @@ export function ConversationQueueShelf({
   conversationNeedsTakeover: boolean;
   onRestoreQueuedPrompt: (behavior: 'steer' | 'followUp', queueIndex: number, previewId?: string) => void;
 }) {
+  const firstRestorablePrompt = pendingQueue.find((message) => message.restorable !== false) ?? null;
+  const canRestoreFirstQueuedPrompt = Boolean(firstRestorablePrompt && !conversationNeedsTakeover);
+
+  useEffect(() => {
+    setExtensionCommandContext('conversation.canRestoreFirstQueuedPrompt', canRestoreFirstQueuedPrompt);
+    return () => setExtensionCommandContext('conversation.canRestoreFirstQueuedPrompt', null);
+  }, [canRestoreFirstQueuedPrompt]);
+
+  useEffect(() => {
+    if (!firstRestorablePrompt || conversationNeedsTakeover) return;
+    function handleRestoreFirstQueuedPromptCommand() {
+      onRestoreQueuedPrompt(firstRestorablePrompt!.type, firstRestorablePrompt!.queueIndex, firstRestorablePrompt!.id);
+    }
+    window.addEventListener(CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT, handleRestoreFirstQueuedPromptCommand);
+    return () => window.removeEventListener(CONVERSATION_RESTORE_FIRST_QUEUED_PROMPT_COMMAND_EVENT, handleRestoreFirstQueuedPromptCommand);
+  }, [conversationNeedsTakeover, firstRestorablePrompt, onRestoreQueuedPrompt]);
+
   return (
     <>
       {pendingQueue.length > 0 && (

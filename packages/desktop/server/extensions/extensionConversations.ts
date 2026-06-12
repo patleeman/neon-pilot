@@ -197,7 +197,36 @@ export function createExtensionConversationsCapability(
     // ── Read operations ──────────────────────────────────────────────────
 
     async list(): Promise<unknown> {
-      return readConversationSessionsCapability();
+      return readConversationSessionsCapability({ profile: serverContext?.getRuntimeScope?.() ?? 'shared' });
+    },
+
+    async activity(
+      conversationId: string,
+      options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
+    ): Promise<unknown> {
+      const { listConversationActivity } = await import('../conversations/conversationActivity.js');
+      return listConversationActivity(conversationId, {
+        ...options,
+        profile: serverContext?.getRuntimeScope?.() ?? 'shared',
+        tasks: serverContext?.listTasksForRuntimeScope?.(),
+      });
+    },
+
+    async connections(
+      conversationId: string,
+      options?: {
+        active?: boolean;
+        kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all';
+        surface?: 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all';
+        visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
+      },
+    ): Promise<unknown> {
+      const { listConversationConnections } = await import('../conversations/conversationConnections.js');
+      return listConversationConnections(conversationId, {
+        ...options,
+        profile: serverContext?.getRuntimeScope?.() ?? 'shared',
+        tasks: serverContext?.listTasksForRuntimeScope?.(),
+      });
     },
 
     async getMeta(conversationId: string): Promise<unknown> {

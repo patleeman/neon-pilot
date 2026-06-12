@@ -153,7 +153,6 @@ function statusTone(status: GatewayStatus): string {
 
 function providerFallbackLabel(provider: GatewayProviderId): string {
   if (provider === 'telegram') return 'Telegram';
-  if (provider === 'slack_mcp') return 'Slack MCP';
   return provider
     .replace(/[_:-]+/g, ' ')
     .replace(/\s+/g, ' ')

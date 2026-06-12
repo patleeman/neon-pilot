@@ -7,38 +7,16 @@ import {
   CommandsSettingsSection,
   DesktopConnectionsSettingsPanel,
   DesktopKeyboardShortcutsSettingsSection,
+  desktopShortcutIdForHostCommand,
 } from '../../../../../extensions/system-settings/src/SettingsPage';
+import { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from '../../../src/keyboard-shortcuts';
 import { api } from '../client/api';
 import type { NeonPilotDesktopBridge } from '../desktop/desktopBridge';
+import { listHostCommands, normalizeLegacyCommand } from '../extensions/commands';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
-const DEFAULT_KEYBOARD_SHORTCUTS = {
-  showApp: 'CommandOrControl+Shift+A',
-  newConversation: 'CommandOrControl+N',
-  closeTab: 'CommandOrControl+W',
-  reopenClosedTab: 'Command+Shift+N',
-  previousConversation: 'CommandOrControl+[',
-  nextConversation: 'CommandOrControl+]',
-  togglePinned: 'CommandOrControl+Alt+P',
-  archiveRestoreConversation: 'CommandOrControl+Alt+A',
-  renameConversation: 'CommandOrControl+Alt+R',
-  focusComposer: 'CommandOrControl+L',
-  editWorkingDirectory: 'CommandOrControl+Shift+L',
-  findOnPage: 'CommandOrControl+F',
-  settings: 'CommandOrControl+,',
-  quit: 'CommandOrControl+Q',
-  conversationMode: 'F1',
-  workbenchMode: 'F2',
-  newWorkbenchTab: 'CommandOrControl+T',
-  closeWorkbenchTab: 'CommandOrControl+Shift+W',
-  closeWorkbenchFile: 'CommandOrControl+Alt+W',
-  refreshWorkbenchFile: 'F5',
-  toggleWorkbenchExplorer: 'CommandOrControl+B',
-  toggleWorkbenchDiff: 'CommandOrControl+Shift+D',
-  toggleSidebar: 'CommandOrControl+/',
-  toggleRightRail: 'CommandOrControl+\\',
-};
+const DEFAULT_KEYBOARD_SHORTCUTS = DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS;
 
 const mountedRoots: Root[] = [];
 const mocks = vi.hoisted(() => ({
@@ -231,6 +209,79 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     expect(container.textContent).not.toContain('Built-in shortcuts');
     expect(container.textContent).not.toContain('Save shortcuts');
   });
+
+  it('detects shortcut conflicts even when modifiers are declared in a different order', async () => {
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-test',
+        surfaceId: 'close-file',
+        packageType: 'system',
+        title: 'Close file from extension',
+        keys: ['Alt+Mod+W'],
+        command: 'test.closeFile',
+        scope: 'global',
+        defaultKeys: ['Alt+Mod+W'],
+        enabled: true,
+      },
+    ]);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Close workbench file');
+    expect(container.textContent).toContain('Close file from extension');
+    expect(container.textContent).toContain('Alt + ⌘/Ctrl + W is assigned to both Close workbench file and Close file from extension.');
+  });
+
+  it('detects shortcut conflicts when arrows use alternate names', async () => {
+    mocks.readDesktopAppPreferences.mockResolvedValue({
+      available: true,
+      supportsStartOnSystemStart: true,
+      autoInstallUpdates: true,
+      updatePath: 'test',
+      startOnSystemStart: false,
+      keyboardShortcuts: { ...DEFAULT_KEYBOARD_SHORTCUTS, conversationMode: 'Alt+Left' },
+      update: {
+        supported: true,
+        status: 'idle',
+        currentVersion: '0.3.7',
+      },
+    });
+    vi.spyOn(api, 'extensionKeybindings').mockResolvedValue([
+      {
+        extensionId: 'system-test',
+        surfaceId: 'go-back',
+        packageType: 'system',
+        title: 'Go back from extension',
+        keys: ['Alt+ArrowLeft'],
+        command: 'test.goBack',
+        scope: 'global',
+        defaultKeys: ['Alt+ArrowLeft'],
+        enabled: true,
+      },
+    ]);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(<DesktopKeyboardShortcutsSettingsSection />);
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Conversation mode');
+    expect(container.textContent).toContain('Go back from extension');
+    expect(container.textContent).toContain('Alt + ArrowLeft is assigned to both Conversation mode and Go back from extension.');
+  });
 });
 
 describe('CommandsSettingsSection', () => {
@@ -242,6 +293,26 @@ describe('CommandsSettingsSection', () => {
     }
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+  });
+
+  it('maps every host-backed desktop shortcut registration through the shared command normalizer', () => {
+    const hostCommandIds = new Set(listHostCommands().map((command) => command.id));
+    const desktopNativeCommands = new Set(['core.showApp', 'core.quit']);
+
+    for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
+      if (desktopNativeCommands.has(registration.command)) continue;
+
+      const normalized = normalizeLegacyCommand(registration.command);
+      expect(hostCommandIds.has(normalized.command), registration.id).toBe(true);
+      expect(
+        desktopShortcutIdForHostCommand({
+          id: normalized.command,
+          extensionId: 'host',
+          args: normalized.args,
+        }),
+        registration.id,
+      ).toBe(registration.id);
+    }
   });
 
   it('matches command shortcuts by action args when actions are shared', async () => {
@@ -280,11 +351,13 @@ describe('CommandsSettingsSection', () => {
         keys: ['mod+shift+p'],
         command: 'palette.open',
         args: { scope: 'commands' },
+        when: 'workspace.open',
         scope: 'global',
         defaultKeys: ['mod+shift+p'],
         enabled: true,
       },
     ]);
+    vi.spyOn(api, 'updateExtensionKeybinding').mockResolvedValue({ ok: true });
 
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -302,10 +375,26 @@ describe('CommandsSettingsSection', () => {
     const commandRow = rows.find((row) => row.textContent?.includes('Open command palette'));
     expect(hostComposerRow?.textContent).toContain('composer.focus');
     expect(hostComposerRow?.textContent).toContain('host');
-    expect(threadRow?.textContent).toContain('mod + p');
-    expect(threadRow?.textContent).not.toContain('mod + shift + p');
-    expect(commandRow?.textContent).toContain('mod + shift + p');
+    expect(threadRow?.textContent).toContain('⌘/Ctrl + p');
+    expect(threadRow?.textContent).not.toContain('⌘/Ctrl + Shift + p');
+    expect(commandRow?.textContent).toContain('⌘/Ctrl + Shift + p');
     expect(commandRow?.textContent).not.toContain('mod + k');
+
+    const clearButton = commandRow?.querySelector<HTMLButtonElement>('button[aria-label="Clear shortcut for Open command palette"]');
+    if (!(clearButton instanceof HTMLButtonElement)) {
+      throw new Error('Expected command palette shortcut clear button');
+    }
+
+    act(() => {
+      clearButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    expect(api.updateExtensionKeybinding).toHaveBeenCalledWith(
+      'system-conversation-tools',
+      'open-command-palette',
+      expect.objectContaining({ enabled: false, when: 'workspace.open' }),
+    );
   });
 
   it('shows host commands as read-only in the command shortcut catalog', async () => {

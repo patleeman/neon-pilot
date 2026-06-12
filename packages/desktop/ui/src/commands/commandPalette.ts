@@ -1,3 +1,4 @@
+import { evaluateCommandEnablement, type ExtensionCommandContext } from '../extensions/commands';
 import { fuzzyScore } from './slashMenu';
 
 export type CommandPaletteSection = string;
@@ -38,6 +39,159 @@ export const COMMAND_PALETTE_SECTION_LABELS: Record<CommandPaletteSection, strin
 export const COMMAND_PALETTE_SCOPE_OPTIONS: Array<{ value: CommandPaletteScope; label: string }> = [
   { value: THREADS_COMMAND_PALETTE_SCOPE, label: 'Threads' },
 ];
+
+const ACTIVE_CONVERSATION_HOST_COMMANDS = new Set([
+  'conversation.open',
+  'conversation.close',
+  'conversation.togglePinned',
+  'conversation.toggleArchived',
+  'conversation.rename',
+  'conversation.duplicate',
+  'conversation.copyWorkingDirectory',
+  'conversation.copyId',
+  'conversation.copyDeeplink',
+  'conversation.saveTitle',
+  'conversation.cancelTitleEdit',
+  'conversation.editCwd',
+  'conversation.saveCwd',
+  'conversation.cancelCwdEdit',
+  'conversation.pageUp',
+  'conversation.pageDown',
+]);
+
+const ARGUMENT_REQUIRED_HOST_COMMANDS = new Set(['app.navigate', 'rail.open', 'layout.set']);
+
+const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
+  ['app.goBack', 'app.canGoBack'],
+  ['app.goForward', 'app.canGoForward'],
+  ['page.findNext', 'pageSearch.hasMatches'],
+  ['page.findPrevious', 'pageSearch.hasMatches'],
+  ['page.closeFind', 'pageSearch.open'],
+  ['conversation.rename', 'conversation.canRename'],
+  ['conversation.copyWorkingDirectory', 'conversation.hasCwd'],
+  ['conversation.saveTitle', 'conversation.titleEditorOpen'],
+  ['conversation.cancelTitleEdit', 'conversation.titleEditorOpen'],
+  ['layout.toggleRightRail', 'layout.canToggleRightRail'],
+  ['conversation.next', 'conversation.canNavigate'],
+  ['conversation.previous', 'conversation.canNavigate'],
+  ['conversation.editCwd', 'conversation.canEditCwd'],
+  ['notifications.close', 'notifications.open'],
+  ['notifications.markAllRead', 'notifications.hasUnread'],
+  ['notifications.dismissAll', 'notifications.hasVisible'],
+  ['browser.newTab', 'browser.active'],
+  ['browser.reopenTab', 'browser.active'],
+  ['browser.closeTab', 'browser.active'],
+  ['browser.goBack', 'browser.canGoBack'],
+  ['browser.goForward', 'browser.canGoForward'],
+  ['browser.reloadOrStop', 'browser.active'],
+  ['browser.focusLocation', 'browser.active'],
+  ['browser.close', 'browser.active'],
+  ['artifact.copySource', 'artifact.active'],
+  ['artifact.toggleSource', 'artifact.canShowSource'],
+  ['artifact.toggleFullscreen', 'artifact.active'],
+  ['artifact.close', 'artifact.active'],
+  ['imagePreview.close', 'imagePreview.active'],
+  ['imagePreview.inspectFirst', 'imagePreview.canInspectFirst'],
+  ['imagePreview.loadFirst', 'imagePreview.canLoadFirst'],
+  ['fileChange.toggleFirst', 'fileChange.canToggleFirst'],
+  ['toolBlock.toggleFirst', 'toolBlock.canToggleFirst'],
+  ['toolBlock.toggleFirstLinkedRuns', 'toolBlock.canToggleFirstLinkedRuns'],
+  ['traceCluster.toggleFirst', 'traceCluster.canToggleFirst'],
+  ['traceCluster.toggleFirstOverflow', 'traceCluster.canToggleFirstOverflow'],
+  ['inlineTraceRun.toggleFirst', 'inlineTraceRun.canToggleFirst'],
+  ['thinkingBlock.toggleFirst', 'thinkingBlock.canToggleFirst'],
+  ['subagentBlock.toggleFirst', 'subagentBlock.canToggleFirst'],
+  ['messageAction.copyFirst', 'messageAction.canCopyFirst'],
+  ['messageAction.editFirst', 'messageAction.canEditFirst'],
+  ['messageAction.rewindFirst', 'messageAction.canRewindFirst'],
+  ['messageAction.forkFirst', 'messageAction.canForkFirst'],
+  ['messageEdit.save', 'messageEdit.canSave'],
+  ['messageEdit.cancel', 'messageEdit.active'],
+  ['drawingPicker.close', 'drawingPicker.open'],
+  ['drawingPicker.attachFirst', 'drawingPicker.hasVisibleDrawing'],
+  ['drawingPicker.toggleFirstHistory', 'drawingPicker.hasVisibleDrawing'],
+  ['draftWorkspacePicker.open', 'draftWorkspacePicker.available'],
+  ['draftWorkspacePicker.toggle', 'draftWorkspacePicker.available'],
+  ['draftWorkspacePicker.close', 'draftWorkspacePicker.open'],
+  ['workspaceQuickSelect.close', 'workspaceQuickSelect.open'],
+  ['extensionModal.close', 'extensionModal.open'],
+  ['conversation.saveCwd', 'conversation.cwdEditorOpen'],
+  ['conversation.cancelCwdEdit', 'conversation.cwdEditorOpen'],
+  ['conversation.cancelGoal', 'conversation.goalActive'],
+  ['conversation.continueDeferredResumes', 'conversation.canContinueDeferredResumes'],
+  ['conversation.toggleBackgroundRunDetails', 'conversation.hasBackgroundRuns'],
+  ['conversation.toggleDeferredResumeDetails', 'conversation.hasDeferredResumes'],
+  ['conversation.toggleScheduledTaskDetails', 'conversation.hasScheduledTasks'],
+  ['conversation.openLatestBackgroundRun', 'conversation.canOpenLatestBackgroundRun'],
+  ['conversation.cancelLatestBackgroundRun', 'conversation.canCancelLatestBackgroundRun'],
+  ['conversation.runFirstScheduledTask', 'conversation.canRunFirstScheduledTask'],
+  ['conversation.openFirstScheduledTask', 'conversation.canOpenFirstScheduledTask'],
+  ['conversation.fireFirstDeferredResume', 'conversation.canFireFirstDeferredResume'],
+  ['conversation.cancelFirstDeferredResume', 'conversation.canCancelFirstDeferredResume'],
+  ['conversation.restoreFirstQueuedPrompt', 'conversation.canRestoreFirstQueuedPrompt'],
+  ['conversation.openActiveCheckpoint', 'conversation.canOpenActiveCheckpoint'],
+  ['conversation.openLatestCheckpoint', 'conversation.canOpenLatestCheckpoint'],
+  ['conversation.scrollFirstCheckpointFile', 'conversation.canScrollFirstCheckpointFile'],
+  ['workbench.closeActiveTab', 'workbench.hasActiveTab'],
+  ['workbench.closeActiveFile', 'workbench.hasActiveFile'],
+  ['workbench.refreshActiveFile', 'workbench.hasActiveFile'],
+  ['workbench.toggleExplorer', 'workbench.canToggleExplorer'],
+  ['workbench.toggleDiff', 'workbench.canToggleDiff'],
+  ['composer.submit', 'composer.canSubmit'],
+  ['composer.clear', 'composer.canClear'],
+  ['composer.stop', 'conversation.isStreaming'],
+  ['composer.openSettings', 'composer.settingsAvailable'],
+  ['composer.closeSettings', 'composer.settingsOpen'],
+  ['composer.openPreferences', 'composer.preferencesAvailable'],
+  ['composer.togglePreferences', 'composer.preferencesAvailable'],
+  ['composer.closePreferences', 'composer.preferencesOpen'],
+  ['composer.previewFirstAttachment', 'composer.canPreviewFirstAttachment'],
+  ['composer.removeFirstAttachment', 'composer.canRemoveFirstAttachment'],
+  ['composer.createDrawing', 'composer.canCreateDrawing'],
+  ['composer.previewFirstDrawing', 'composer.canPreviewFirstDrawing'],
+  ['composer.editFirstDrawing', 'composer.canEditFirstDrawing'],
+  ['composer.removeFirstDrawing', 'composer.canRemoveFirstDrawing'],
+  ['dictation.toggle', 'system-local-dictation.toggleAvailable'],
+]);
+
+const CONTEXT_BLOCKED_HOST_COMMANDS = new Map([
+  ['conversation.saveTitle', 'conversation.titleEditorBusy'],
+  ['conversation.cancelTitleEdit', 'conversation.titleEditorBusy'],
+  ['conversation.saveCwd', 'conversation.cwdEditorBusy'],
+  ['conversation.cancelCwdEdit', 'conversation.cwdEditorBusy'],
+]);
+
+export function listCommandPaletteGatedHostCommandIds(): string[] {
+  return [
+    ...new Set([
+      ...ACTIVE_CONVERSATION_HOST_COMMANDS,
+      ...ARGUMENT_REQUIRED_HOST_COMMANDS,
+      ...CONTEXT_REQUIRED_HOST_COMMANDS.keys(),
+      ...CONTEXT_BLOCKED_HOST_COMMANDS.keys(),
+    ]),
+  ];
+}
+
+export function isHostCommandDisabledInPalette(
+  commandId: string,
+  options: { activeConversationId?: string | null; context?: ExtensionCommandContext },
+): boolean {
+  if (ARGUMENT_REQUIRED_HOST_COMMANDS.has(commandId)) {
+    return true;
+  }
+
+  if (ACTIVE_CONVERSATION_HOST_COMMANDS.has(commandId) && !options.activeConversationId) {
+    return true;
+  }
+
+  const requiredContext = CONTEXT_REQUIRED_HOST_COMMANDS.get(commandId);
+  if (requiredContext && !evaluateCommandEnablement(requiredContext, options.context)) {
+    return true;
+  }
+
+  const blockedContext = CONTEXT_BLOCKED_HOST_COMMANDS.get(commandId);
+  return blockedContext ? evaluateCommandEnablement(blockedContext, options.context) : false;
+}
 
 export function shouldBootstrapCommandPaletteThreads(options: {
   open: boolean;

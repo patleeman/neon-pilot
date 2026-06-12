@@ -103,6 +103,13 @@ function summarize(state: TodoState): string {
   return `${open} open${done ? ` · ${done} done` : ''}`;
 }
 
+function connectionSubtitle(state: TodoState): string {
+  const open = state.items.filter((item) => item.status !== 'done').length;
+  const blocked = state.items.filter((item) => item.status === 'blocked').length;
+  const doing = state.items.filter((item) => item.status === 'doing').length;
+  return [open ? `${open} open` : '', blocked ? `${blocked} blocked` : '', doing ? `${doing} doing` : ''].filter(Boolean).join(' · ');
+}
+
 export async function getState(input: unknown, ctx: ExtensionBackendContext): Promise<TodoState> {
   return readState(conversationIdFrom(input, ctx), ctx);
 }
@@ -240,6 +247,31 @@ export async function provideTurnContext(
           '',
           ...openItems.map((item) => `- ${item.id}: [${item.status}] ${item.text}${item.note ? ` — ${item.note}` : ''}`),
         ].join('\n'),
+      },
+    ],
+  };
+}
+
+export async function listTodoConnections(input: unknown, ctx: ExtensionBackendContext): Promise<{ items: unknown[] }> {
+  const conversationId = conversationIdFrom(input, ctx);
+  const state = await readState(conversationId, ctx);
+  if (state.items.length === 0) return { items: [] };
+  return {
+    items: [
+      {
+        id: 'todos',
+        conversationId,
+        kind: 'state',
+        title: 'Todos',
+        subtitle: connectionSubtitle(state) || `${state.items.length} done`,
+        active: state.items.some((item) => item.status !== 'done'),
+        meaningful: true,
+        visibility: 'system',
+        source: { type: 'conversation-metadata', id: METADATA_NAMESPACE },
+        surfaces: ['composerShelf', 'cli'],
+        updatedAt: state.updatedAt,
+        actions: [{ id: 'open', label: 'Open', command: 'todos.open' }],
+        payload: state,
       },
     ],
   };

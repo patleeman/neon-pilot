@@ -521,6 +521,15 @@ export interface ExtensionComposerShelfContribution {
   placement?: 'top' | 'bottom';
 }
 
+export interface ExtensionConversationConnectionProviderContribution {
+  id: string;
+  action: string;
+  kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface';
+  title?: string;
+  surfaces?: Array<'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli'>;
+  priority?: number;
+}
+
 export interface ExtensionDraftConversationCreateContribution {
   id: string;
   /** Backend action called before the draft conversation is created. */
@@ -826,6 +835,8 @@ export interface ExtensionContributions {
   runtimeProviders?: ExtensionRuntimeProviderContribution[];
   /** External message gateway providers rendered in the Gateways system extension. */
   gatewayProviders?: ExtensionGatewayProviderContribution[];
+  /** Conversation-scoped connection providers for CLI, shelves, and host projections. */
+  conversationConnectionProviders?: ExtensionConversationConnectionProviderContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];
   searchProviders?: ExtensionSearchProviderContribution[];
   themes?: ExtensionThemeContribution[];
@@ -1423,6 +1434,16 @@ export interface ExtensionBackendContext {
   knowledge: Record<string, (...args: never[]) => Promise<unknown>>;
   conversations: Record<string, (...args: never[]) => Promise<unknown>> & {
     list(...args: never[]): Promise<unknown>;
+    activity(conversationId: string, options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' }): Promise<unknown>;
+    connections(
+      conversationId: string,
+      options?: {
+        active?: boolean;
+        kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all';
+        surface?: 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all';
+        visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
+      },
+    ): Promise<unknown>;
     getMeta(conversationId: string): Promise<unknown>;
     get(conversationId: string, options?: { tailBlocks?: number }): Promise<unknown>;
     getBlocks(conversationId: string, options?: { tailBlocks?: number }): Promise<unknown>;

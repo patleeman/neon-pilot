@@ -6,6 +6,7 @@ import {
   isSinglePaneWorkbenchMode,
   resolveActiveExtensionWorkbenchSurface,
   resolveWorkbenchRailMode,
+  singletonWorkbenchToolTabId,
 } from './workbenchRailModel';
 
 function surface(overrides: Record<string, unknown>) {
@@ -88,5 +89,16 @@ describe('workbench rail model', () => {
     expect(isSinglePaneWorkbenchMode('terminal')).toBe(true);
     expect(isSinglePaneWorkbenchMode('files')).toBe(false);
     expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'terminal' }))).toBe(true);
+    expect(isSinglePaneWorkbenchMode('files', surface({ toolSlot: 'scratchpad' }))).toBe(true);
+  });
+
+  it('assigns scratchpad a conversation-scoped singleton tab id', () => {
+    expect(singletonWorkbenchToolTabId('scratchpad', surface({ toolSlot: 'scratchpad' }), 'conversation-1')).toBe(
+      'scratchpad:conversation-1',
+    );
+    expect(singletonWorkbenchToolTabId('scratchpad', surface({ toolSlot: 'scratchpad' }), 'conversation-2')).toBe(
+      'scratchpad:conversation-2',
+    );
+    expect(singletonWorkbenchToolTabId('terminal', surface({ toolSlot: 'terminal' }), 'conversation-1')).toBeNull();
   });
 });

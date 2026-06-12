@@ -15,6 +15,7 @@ export interface ExtensionRegistryConfig {
       title: string;
       command: string;
       args?: unknown;
+      when?: string;
       scope?: 'global' | 'surface';
       defaultKeys?: string[];
     }
@@ -63,6 +64,7 @@ export function normalizeExtensionRegistryConfig(value: unknown): ExtensionRegis
             title: commandValue.title,
             command: commandValue.command,
             ...(commandValue.args !== undefined ? { args: commandValue.args } : {}),
+            ...(typeof commandValue.when === 'string' && commandValue.when.trim() ? { when: commandValue.when.trim() } : {}),
             scope,
             defaultKeys,
             ...(packageType ? { packageType } : {}),

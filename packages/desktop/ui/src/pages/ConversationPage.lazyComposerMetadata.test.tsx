@@ -354,22 +354,14 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(patchSpy).not.toHaveBeenCalledWith('conv-regression', expect.objectContaining({ title: 'Regression conversation' }));
   });
 
-  it('defers saved-conversation model catalog loading past initial route settle', async () => {
+  it('loads saved-conversation model catalog during initial route settle', async () => {
     renderConversationPage();
 
     await act(async () => {
       vi.advanceTimersByTime(700);
-    });
-
-    expect(apiMock.models).not.toHaveBeenCalled();
-
-    await act(async () => {
-      vi.advanceTimersByTime(9_600);
-    });
-
-    await act(async () => {
       await Promise.resolve();
     });
+
     expect(apiMock.models).toHaveBeenCalledTimes(1);
   });
 

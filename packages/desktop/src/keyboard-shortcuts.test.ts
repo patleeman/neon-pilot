@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 import { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from './keyboard-shortcuts.js';
 
@@ -40,4 +41,16 @@ describe('DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS', () => {
     expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.showApp).toBe('CommandOrControl+Shift+A');
     expect(DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS.quit).toBe('CommandOrControl+Q');
   });
+
+  it('keeps the desktop app docs shortcut table aligned with the core registry', () => {
+    const docs = readFileSync(new URL('../../../docs/desktop-app.md', import.meta.url), 'utf8');
+
+    for (const registration of CORE_KEYBOARD_SHORTCUT_REGISTRATIONS) {
+      expect(docs).toContain(`| ${registration.title} | \`${formatShortcutForDocs(registration.defaultKeys[0] ?? '')}\` |`);
+    }
+  });
 });
+
+function formatShortcutForDocs(shortcut: string): string {
+  return shortcut.replaceAll('CommandOrControl', 'Cmd/Ctrl').replaceAll('Command', 'Cmd');
+}

@@ -23,9 +23,11 @@ import type {
   CacheEfficiencyPoint,
   ContextPointerUsageResult,
   ConversationAttachmentAssetData,
+  ConversationActivityResult,
   ConversationBootstrapState,
   ConversationCheckpointReviewContext,
   ConversationCommitCheckpointRecord,
+  ConversationConnectionsResult,
   ConversationContentSearchResult,
   ConversationContextDocRef,
   ConversationSummaryRecord,
@@ -345,6 +347,7 @@ export const api = {
       title?: string;
       command?: string;
       args?: unknown;
+      when?: string;
       scope?: 'global' | 'surface';
       packageType?: 'system' | 'user';
       keys?: string[];
@@ -590,6 +593,35 @@ export const api = {
   setSavedWorkspacePaths: async (workspacePaths: string[]) => {
     const { workspacePaths: savedPaths } = await api.setOpenConversationTabs(undefined, undefined, undefined, workspacePaths);
     return savedPaths;
+  },
+
+  // ── Conversation Activity ─────────────────────────────────────────────────
+  conversationActivity: async (
+    id: string,
+    options: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (options.active !== undefined) params.set('active', String(options.active));
+    if (options.visibility) params.set('visibility', options.visibility);
+    const query = params.toString();
+    return get<ConversationActivityResult>(`/conversations/${encodeURIComponent(id)}/activity${query ? `?${query}` : ''}`);
+  },
+  conversationConnections: async (
+    id: string,
+    options: {
+      active?: boolean;
+      kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all';
+      surface?: 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all';
+      visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
+    } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (options.active !== undefined) params.set('active', String(options.active));
+    if (options.kind) params.set('kind', options.kind);
+    if (options.surface) params.set('surface', options.surface);
+    if (options.visibility) params.set('visibility', options.visibility);
+    const query = params.toString();
+    return get<ConversationConnectionsResult>(`/conversations/${encodeURIComponent(id)}/connections${query ? `?${query}` : ''}`);
   },
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
@@ -1177,17 +1209,6 @@ export const api = {
     post<{ configured: boolean; state: GatewayState }>('/gateways/telegram/token', { token }),
   deleteTelegramGatewayToken: async () => del<{ configured: boolean; state: GatewayState }>('/gateways/telegram/token'),
   saveTelegramGatewayChat: async (chatId: string) => post<GatewayState>('/gateways/telegram/chat', { chatId }),
-  slackMcpAuthState: async () => get<{ authenticated: boolean }>('/gateways/slack-mcp/auth'),
-  connectSlackMcp: async () => post<{ authenticated: boolean; state: GatewayState }>('/gateways/slack-mcp/auth', {}),
-  disconnectSlackMcp: async () => del<{ authenticated: boolean; state: GatewayState }>('/gateways/slack-mcp/auth'),
-  saveSlackMcpChannel: async (input: { channelId: string; channelLabel?: string }) =>
-    post<GatewayState>('/gateways/slack-mcp/channel', input),
-  attachSlackMcpChannel: async (input: {
-    conversationId: string;
-    conversationTitle?: string;
-    externalChatId: string;
-    externalChatLabel?: string;
-  }) => post<GatewayState>('/gateways/slack-mcp/attach', input),
 
   // ── Traces ────────────────────────────────────────────────────────────
   tracesSummary: (range?: string) => get<TraceSummary>(`/traces/summary${range ? `?range=${range}` : ''}`),

@@ -41,6 +41,15 @@ export declare const ProgressBar: HostComponent;
 export declare const RailSubsection: HostComponent;
 export declare const SupportingText: HostComponent;
 export declare const THINKING_LEVEL_OPTIONS: unknown;
+export declare const CORE_KEYBOARD_SHORTCUT_REGISTRATIONS: ReadonlyArray<{
+  id: string;
+  title: string;
+  description: string;
+  command: string;
+  defaultKeys: string[];
+  menu: 'file' | 'edit' | 'view' | 'app';
+}>;
+export declare const DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS: Record<string, string>;
 export declare const ToolbarButton: HostComponent;
 export declare const Tooltip: HostComponent;
 export declare const api: unknown;

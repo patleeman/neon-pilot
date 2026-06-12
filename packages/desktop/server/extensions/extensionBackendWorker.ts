@@ -228,7 +228,23 @@ function createWorkerBackendContext(
     events: {
       publish: (input: { event: string; payload: unknown }) => callHostCapability(extensionId, 'events', 'publish', input),
     },
+    commands: {
+      list: () => callHostCapability(extensionId, 'commands', 'list'),
+      execute: (commandId: string, args?: unknown) =>
+        callHostCapability(extensionId, 'commands', 'execute', { commandId, ...(args !== undefined ? { args } : {}) }),
+    },
     conversations: {
+      list: () =>
+        callHostCapability(extensionId, 'conversations', 'list', {
+          runtimeScope,
+          runtimeSettingsFilePath,
+        }),
+      activity: (conversationId: string, options?: { active?: boolean; visibility?: string }) =>
+        callHostCapability(extensionId, 'conversations', 'activity', { conversationId, ...(options ?? {}) }),
+      connections: (
+        conversationId: string,
+        options?: { active?: boolean; kind?: string; surface?: string; visibility?: string },
+      ) => callHostCapability(extensionId, 'conversations', 'connections', { conversationId, ...(options ?? {}) }),
       get: (conversationId: string) => callHostCapability(extensionId, 'conversations', 'get', { conversationId }),
       create: (input?: {
         cwd?: string;
@@ -305,6 +321,8 @@ function createWorkerBackendContext(
         callHostCapability(extensionId, 'conversations', 'fork', input),
       setTitle: (conversationId: string, title: string) =>
         callHostCapability(extensionId, 'conversations', 'setTitle', { conversationId, title }),
+      prune: (input: { olderThanMs: number; archivedOnly?: boolean | null; dryRun?: boolean | null }) =>
+        callHostCapability(extensionId, 'conversations', 'prune', input),
       metadata: {
         get: (input: { conversationId: string; namespace?: string }) =>
           callHostCapability(extensionId, 'conversations', 'metadata.get', { ...input, profile: runtimeScope }),

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 
 const repoRoot = resolve(new URL('..', import.meta.url).pathname);
@@ -12,23 +13,41 @@ const outputPath = resolve(repoRoot, 'docs/cli-reference.md');
 const check = process.argv.includes('--check');
 
 function runCli(args) {
-  const result = spawnSync(tsxBin, ['--eval', oneShotCliEval(args)], {
-    cwd: repoRoot,
-    encoding: 'utf-8',
-    timeout: 60_000,
-    env: { ...process.env, NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT || repoRoot, NEON_PILOT_FORCE_SOURCE_CLI: '1' },
-  });
-  if (result.status !== 0) {
-    throw new Error(result.stderr || result.stdout || `neon-pilot ${args.join(' ')} exited with ${result.status}`);
+  const tempDir = mkdtempSync(join(tmpdir(), 'neon-cli-reference-'));
+  const stdoutPath = join(tempDir, 'stdout.txt');
+  try {
+    const result = spawnSync(tsxBin, ['--eval', oneShotCliEval(args, stdoutPath)], {
+      cwd: repoRoot,
+      encoding: 'utf-8',
+      timeout: 60_000,
+      maxBuffer: 8 * 1024 * 1024,
+      env: { ...process.env, NEON_PILOT_REPO_ROOT: process.env.NEON_PILOT_REPO_ROOT || repoRoot, NEON_PILOT_FORCE_SOURCE_CLI: '1' },
+    });
+    const stdout = existsSync(stdoutPath) ? readFileSync(stdoutPath, 'utf-8') : result.stdout;
+    if (result.status !== 0) {
+      throw new Error(result.stderr || stdout || `neon-pilot ${args.join(' ')} exited with ${result.status}`);
+    }
+    return stdout;
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
   }
-  return result.stdout;
 }
 
-function oneShotCliEval(args) {
+function oneShotCliEval(args, stdoutPath) {
   return [
+    `import { appendFileSync } from 'node:fs';`,
     `import(${JSON.stringify(cliSource)})`,
     `  .then(async (module) => {`,
+    `    const stdoutPath = ${JSON.stringify(stdoutPath)};`,
+    `    const originalWrite = process.stdout.write.bind(process.stdout);`,
+    `    process.stdout.write = ((chunk, encoding, callback) => {`,
+    `      appendFileSync(stdoutPath, typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString(typeof encoding === 'string' ? encoding : undefined));`,
+    `      if (typeof encoding === 'function') encoding();`,
+    `      else if (typeof callback === 'function') callback();`,
+    `      return true;`,
+    `    });`,
     `    await module.main(${JSON.stringify(args)});`,
+    `    process.stdout.write = originalWrite;`,
     `    process.exit(process.exitCode ?? 0);`,
     `  })`,
     `  .catch((error) => {`,

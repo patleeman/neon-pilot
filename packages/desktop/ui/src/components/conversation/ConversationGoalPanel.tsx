@@ -1,5 +1,9 @@
+import { useEffect } from 'react';
+
 import type { ThreadGoal } from '../../shared/types';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { Button, cx, MetaLabel, Spinner } from '../ui';
+import { CONVERSATION_CANCEL_GOAL_COMMAND_EVENT } from './conversationGoalCommands';
 
 export interface GoalPanelProps {
   goal: ThreadGoal | null;
@@ -13,6 +17,22 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 };
 
 export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
+  const goalActive = Boolean(goal?.objective && goal.status === 'active');
+
+  useEffect(() => {
+    setExtensionCommandContext('conversation.goalActive', goalActive);
+    return () => setExtensionCommandContext('conversation.goalActive', null);
+  }, [goalActive]);
+
+  useEffect(() => {
+    if (!goalActive || !onCancel) return;
+    function handleCancelGoalCommand() {
+      onCancel?.();
+    }
+    window.addEventListener(CONVERSATION_CANCEL_GOAL_COMMAND_EVENT, handleCancelGoalCommand);
+    return () => window.removeEventListener(CONVERSATION_CANCEL_GOAL_COMMAND_EVENT, handleCancelGoalCommand);
+  }, [goalActive, onCancel]);
+
   if (!goal || !goal.objective || goal.status === 'complete') {
     return null;
   }

@@ -112,6 +112,12 @@ function clickArchive(container: HTMLElement, id: string) {
   act(() => button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 }
 
+function dispatchDesktopShortcutCommand(command: string): void {
+  act(() => {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command } }));
+  });
+}
+
 function readJsonList(key: string): string[] {
   return JSON.parse(localStorage.getItem(key) ?? '[]') as string[];
 }
@@ -204,6 +210,40 @@ describe('Sidebar branch conversation interactions', () => {
     await flush();
 
     expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
+  });
+
+  it('accepts command-only desktop shortcut events for shared conversation close', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['child']));
+    renderSidebar('/conversations/parent', [
+      session({ id: 'parent', title: 'Parent thread' }),
+      session({ id: 'child', title: 'Running child', parentSessionId: 'parent', sourceRunId: 'run-child', isRunning: true }),
+    ]);
+    await flush();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'conversation.close' } }));
+    });
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['child']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
+  });
+
+  it('accepts command-only desktop shortcut events for conversation pin and archive toggles', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['parent']));
+    renderSidebar('/conversations/parent', [session({ id: 'parent', title: 'Parent thread' })]);
+    await flush();
+
+    dispatchDesktopShortcutCommand('conversation.togglePinned');
+    await flush();
+
+    expect(readJsonList(PINNED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
+
+    dispatchDesktopShortcutCommand('conversation.toggleArchived');
+    await flush();
+
+    expect(readJsonList(PINNED_SESSION_IDS_STORAGE_KEY)).toEqual([]);
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['parent']);
   });
 });

@@ -31,6 +31,36 @@ export function validateRuntimeProviderContributions(value: unknown): void {
   }
 }
 
+export function validateConversationConnectionProviderContributions(value: unknown): void {
+  for (const [index, provider] of assertRecordArray(value, 'contributes.conversationConnectionProviders').entries()) {
+    requireString(provider.id, `contributes.conversationConnectionProviders[${index}].id`);
+    requireString(provider.action, `contributes.conversationConnectionProviders[${index}].action`);
+    validateOptionalString(provider.title, `contributes.conversationConnectionProviders[${index}].title`);
+    if (provider.kind !== undefined) {
+      validateEnum(
+        provider.kind,
+        ['activity', 'state', 'asset', 'context', 'integration', 'surface'],
+        `contributes.conversationConnectionProviders[${index}].kind`,
+      );
+    }
+    if (provider.surfaces !== undefined) {
+      for (const [surfaceIndex, surface] of requireStringArray(
+        provider.surfaces,
+        `contributes.conversationConnectionProviders[${index}].surfaces`,
+      ).entries()) {
+        validateEnum(
+          surface,
+          ['activityShelf', 'composerShelf', 'rightRail', 'workbench', 'sidebar', 'cli'],
+          `contributes.conversationConnectionProviders[${index}].surfaces[${surfaceIndex}]`,
+        );
+      }
+    }
+    if (provider.priority !== undefined && !Number.isInteger(provider.priority)) {
+      throw new Error(`Extension manifest contributes.conversationConnectionProviders[${index}].priority must be an integer.`);
+    }
+  }
+}
+
 export function validateDynamicProviderContributions(contributes: Record<string, unknown>, providerFields: readonly string[]): void {
   for (const providerField of providerFields) {
     if (contributes[providerField] === undefined) {

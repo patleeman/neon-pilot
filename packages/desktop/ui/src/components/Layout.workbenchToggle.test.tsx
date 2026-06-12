@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
+import { setExtensionCommandContext } from '../extensions/commands';
 import { sessionStore } from '../store';
 import { APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
 import { Layout } from './Layout';
@@ -74,6 +75,10 @@ describe('Layout workbench toggle', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    setExtensionCommandContext('conversation.isStreaming', null);
+    setExtensionCommandContext('system-local-dictation.toggleAvailable', null);
+    setExtensionCommandContext('workbench.hasActiveFile', null);
+    setExtensionCommandContext('workbench.canToggleDiff', null);
     delete document.documentElement.dataset.neonPilotDesktop;
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
@@ -129,7 +134,7 @@ describe('Layout workbench toggle', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
-    renderLayout('/conversations/conv-1');
+    renderLayout('/conversations/conv-1?workspaceFile=%2Frepo%2FREADME.md');
 
     act(() => {
       window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'workbench.refreshActiveFile' } }));
@@ -139,10 +144,72 @@ describe('Layout workbench toggle', () => {
     window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
   });
 
+  it('does not consume global keybindings for unavailable commands', async () => {
+    vi.mocked(api.extensionKeybindings).mockResolvedValue([
+      {
+        extensionId: 'host',
+        surfaceId: 'refresh-workbench-file',
+        packageType: 'system',
+        title: 'Refresh workbench file',
+        keys: ['F5'],
+        command: 'workbench.refreshActiveFile',
+        scope: 'global',
+        defaultKeys: ['F5'],
+        enabled: true,
+      },
+    ]);
+    vi.mocked(api.extensionCommands).mockResolvedValue([]);
+    const refreshListener = vi.fn();
+    window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
+    renderLayout('/conversations/conv-1');
+    await waitFor(() => expect(api.extensionKeybindings).toHaveBeenCalled());
+
+    const event = new KeyboardEvent('keydown', { key: 'F5', cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(refreshListener).not.toHaveBeenCalled();
+    window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
+  });
+
+  it('executes available global keybindings through shared host commands', async () => {
+    vi.mocked(api.extensionKeybindings).mockResolvedValue([
+      {
+        extensionId: 'host',
+        surfaceId: 'refresh-workbench-file',
+        packageType: 'system',
+        title: 'Refresh workbench file',
+        keys: ['F5'],
+        command: 'workbench.refreshActiveFile',
+        scope: 'global',
+        defaultKeys: ['F5'],
+        enabled: true,
+      },
+    ]);
+    vi.mocked(api.extensionCommands).mockResolvedValue([]);
+    window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
+    const refreshListener = vi.fn();
+    window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
+    renderLayout('/conversations/conv-1?workspaceFile=%2Frepo%2FREADME.md');
+    await waitFor(() => expect(api.extensionKeybindings).toHaveBeenCalled());
+
+    const event = new KeyboardEvent('keydown', { key: 'F5', cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(refreshListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('pa:workbench-refresh-active-file', refreshListener);
+  });
+
   it('accepts command-only desktop shortcut events for workbench diff toggle', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
     const diffListener = vi.fn();
     window.addEventListener('pa:workbench-toggle-diff', diffListener);
+    setExtensionCommandContext('workbench.canToggleDiff', true);
     renderLayout('/conversations/conv-1');
 
     act(() => {
@@ -151,6 +218,75 @@ describe('Layout workbench toggle', () => {
 
     expect(diffListener).toHaveBeenCalledTimes(1);
     window.removeEventListener('pa:workbench-toggle-diff', diffListener);
+  });
+
+  it('accepts command-only desktop shortcut events for composer stop', () => {
+    const stopListener = vi.fn();
+    window.addEventListener('neon-pilot:composer-stop', stopListener);
+    setExtensionCommandContext('conversation.isStreaming', true);
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'composer.stop' } }));
+    });
+
+    expect(stopListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('neon-pilot:composer-stop', stopListener);
+  });
+
+  it('accepts command-only desktop shortcut events for available dictation toggle', () => {
+    const dictationListener = vi.fn();
+    window.addEventListener('neon-pilot:dictation-toggle', dictationListener);
+    setExtensionCommandContext('system-local-dictation.toggleAvailable', true);
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'dictation.toggle' } }));
+    });
+
+    expect(dictationListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('neon-pilot:dictation-toggle', dictationListener);
+  });
+
+  it('accepts command-only desktop shortcut events for available composer drawing creation', () => {
+    const createDrawingListener = vi.fn();
+    window.addEventListener('neon-pilot-composer-create-drawing-command', createDrawingListener);
+    setExtensionCommandContext('composer.canCreateDrawing', true);
+    renderLayout('/conversations/conv-1');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'composer.createDrawing' } }));
+    });
+
+    expect(createDrawingListener).toHaveBeenCalledTimes(1);
+    window.removeEventListener('neon-pilot-composer-create-drawing-command', createDrawingListener);
+  });
+
+  it('accepts command-only desktop shortcut events for focus traversal', () => {
+    const offsetParentDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent');
+    Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+      configurable: true,
+      get() {
+        return document.body;
+      },
+    });
+    renderLayout('/conversations/conv-1');
+    const focusable = [
+      ...document.querySelectorAll<HTMLElement>('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])'),
+    ].filter((element) => !element.hasAttribute('disabled') && element.tabIndex >= 0);
+    expect(focusable.length).toBeGreaterThan(0);
+    expect(document.activeElement).not.toBe(focusable[0]);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'focus.next' } }));
+    });
+
+    expect(document.activeElement).toBe(focusable[0]);
+    if (offsetParentDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'offsetParent', offsetParentDescriptor);
+    } else {
+      delete (HTMLElement.prototype as { offsetParent?: unknown }).offsetParent;
+    }
   });
 
   it('opens a side chat after reservation without waiting for live-session creation', async () => {

@@ -26,7 +26,7 @@ See [Getting Started](getting-started.md) for the full setup.
 - [Desktop App](desktop-app.md) — Electron shell, shortcuts, and app chrome
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
-- [Knowledge](../extensions/system-knowledge/README.md) — knowledge, docs, skills, instruction files, and managed sync
+- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — installable knowledge, docs, skills, instruction files, and managed sync
 - [Knowledge base sync](knowledge-base.md) — git-backed knowledge base setup, local paths, and sync behavior
 - [Configuration](configuration.md) — file-based config, env vars
 - [Development workflow](development.md) — validation, UI QA, checkpoints, and secret scanning
@@ -77,7 +77,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Host view components](host-view-components.md)
 - [Image Probe](../extensions/system-image-probe/README.md)
 - [Kitty Litter Mobile Pairing](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-alleycat)
-- [Knowledge](../extensions/system-knowledge/README.md)
+- [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — installable first-party extension
 - [Local Dictation](../extensions/system-local-dictation/README.md)
 - [Local Models](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-local-models)
 - [MCP](../extensions/system-mcp/README.md)
@@ -88,6 +88,7 @@ Feature-specific documentation lives beside the owning extension package:
 - [Runs](../extensions/system-runs/README.md)
 - [Self Preservation](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-self-preservation)
 - [Settings](../extensions/system-settings/README.md)
+- [Scratchpad](../extensions/system-scratchpad/README.md)
 - [Skills](../extensions/system-skills/README.md)
 - [Suggested Context](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context)
 - [Telemetry extension](../extensions/system-telemetry/README.md)

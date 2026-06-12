@@ -1,0 +1,110 @@
+// @vitest-environment jsdom
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { ConversationAttachmentRecord, ConversationAttachmentSummary } from '../shared/types';
+import { ConversationDrawingsPickerModal } from './ConversationDrawingsPickerModal';
+import {
+  DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
+  DRAWING_PICKER_CLOSE_COMMAND_EVENT,
+  DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
+} from './conversation/drawingPickerCommands';
+
+(globalThis as typeof globalThis & { React?: typeof React }).React = React;
+
+const firstDrawing = drawingSummary({
+  id: 'drawing-1',
+  title: 'Architecture sketch',
+  currentRevision: 3,
+});
+
+function drawingSummary(overrides: Partial<ConversationAttachmentSummary>): ConversationAttachmentSummary {
+  const revision = overrides.currentRevision ?? 1;
+  return {
+    id: 'drawing',
+    conversationId: 'conv-1',
+    kind: 'excalidraw',
+    title: 'Drawing',
+    createdAt: '2026-04-30T12:00:00.000Z',
+    updatedAt: '2026-04-30T12:05:00.000Z',
+    currentRevision: revision,
+    latestRevision: {
+      revision,
+      createdAt: '2026-04-30T12:05:00.000Z',
+      sourceName: 'drawing.excalidraw',
+      sourceMimeType: 'application/vnd.excalidraw+json',
+      sourceDownloadPath: '/attachments/drawing/source',
+      previewName: 'drawing.png',
+      previewMimeType: 'image/png',
+      previewDownloadPath: '/attachments/drawing/preview',
+    },
+    ...overrides,
+  };
+}
+
+function drawingRecord(summary: ConversationAttachmentSummary): ConversationAttachmentRecord {
+  return {
+    ...summary,
+    revisions: [
+      { ...summary.latestRevision, revision: 3, note: 'latest' },
+      { ...summary.latestRevision, revision: 2, note: 'layout' },
+    ],
+  };
+}
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('ConversationDrawingsPickerModal', () => {
+  it('handles shared close, attach-first, and first-history commands', async () => {
+    const onClose = vi.fn();
+    const onAttach = vi.fn();
+    const onLoadAttachment = vi.fn(async () => drawingRecord(firstDrawing));
+
+    render(
+      <ConversationDrawingsPickerModal
+        attachments={[firstDrawing]}
+        onLoadAttachment={onLoadAttachment}
+        onAttach={onAttach}
+        onClose={onClose}
+      />,
+    );
+
+    fireEvent(window, new CustomEvent(DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT));
+    expect(onAttach).toHaveBeenCalledWith({ attachment: firstDrawing, revision: 3 });
+
+    fireEvent(window, new CustomEvent(DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT));
+    await waitFor(() => {
+      expect(onLoadAttachment).toHaveBeenCalledWith('drawing-1');
+      expect(screen.getByText('rev 2')).toBeTruthy();
+    });
+
+    fireEvent(window, new CustomEvent(DRAWING_PICKER_CLOSE_COMMAND_EVENT));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('attaches the first filtered drawing from the shared command', () => {
+    const secondDrawing = drawingSummary({
+      id: 'drawing-2',
+      title: 'Wireframe',
+      currentRevision: 5,
+    });
+    const onAttach = vi.fn();
+
+    render(
+      <ConversationDrawingsPickerModal
+        attachments={[firstDrawing, secondDrawing]}
+        onLoadAttachment={vi.fn(async () => drawingRecord(secondDrawing))}
+        onAttach={onAttach}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Filter drawings by id or title...'), { target: { value: 'wire' } });
+    fireEvent(window, new CustomEvent(DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT));
+
+    expect(onAttach).toHaveBeenCalledWith({ attachment: secondDrawing, revision: 5 });
+  });
+});

@@ -25,6 +25,7 @@ import {
 import { emitExtensionToolUpdate } from './extensionBackendLiveHandles.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
 import type { ExtensionBackendWorkerCapabilityEvent, ExtensionBackendWorkerCapabilityRequest } from './extensionBackendWorkerProtocol.js';
+import { executeHostCommandInRenderer } from './extensionCommandBridge.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
 import { createExtensionConversationsCapability } from './extensionConversations.js';
 import { publishExtensionEvent } from './extensionEventBus.js';
@@ -32,11 +33,18 @@ import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionBackendServerContextFromSnapshot } from './extensionHostServerContext.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
-import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
+import {
+  findExtensionCommandRegistration,
+  findExtensionEntry,
+  listExtensionCommandRegistrations,
+  listExtensionInstallSummaries,
+  setExtensionEnabled,
+} from './extensionRegistry.js';
 import { type ExtensionRuntimeRefreshSkillMcpConfigInput, refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { createExtensionGitCapability, createExtensionShellCapability } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
+import { isKnownHostCommand } from './hostCommands.js';
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -84,6 +92,22 @@ interface ExtensionBackendCapabilityImage {
 }
 
 interface ExtensionBackendCapabilityConversations {
+  list?(extensionId: string, input?: { runtimeScope?: string; runtimeSettingsFilePath?: string }): Promise<unknown> | unknown;
+  activity?(
+    extensionId: string,
+    conversationId: string,
+    options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
+  ): Promise<unknown> | unknown;
+  connections?(
+    extensionId: string,
+    conversationId: string,
+    options?: {
+      active?: boolean;
+      kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all';
+      surface?: 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all';
+      visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
+    },
+  ): Promise<unknown> | unknown;
   get(extensionId: string, conversationId: string): Promise<unknown> | unknown;
   create?(
     extensionId: string,
@@ -150,6 +174,10 @@ interface ExtensionBackendCapabilityConversations {
   ): Promise<unknown> | unknown;
   setTitle?(extensionId: string, conversationId: string, title: string): Promise<unknown> | unknown;
   rollback?(extensionId: string, conversationId: string, count: number): Promise<unknown> | unknown;
+  prune?(
+    extensionId: string,
+    input: { olderThanMs: number; archivedOnly?: boolean | null; dryRun?: boolean | null },
+  ): Promise<unknown> | unknown;
   metadata: {
     get(extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }): Promise<unknown> | unknown;
     set(
@@ -172,6 +200,21 @@ interface ExtensionBackendCapabilityExtensions {
   listActions(): unknown;
   getStatus(extensionId: string): unknown;
   setEnabled(extensionId: string, enabled: boolean): unknown;
+}
+
+interface ExtensionBackendCapabilityCommands {
+  list(): Promise<unknown[]> | unknown[];
+  execute(extensionId: string, commandId: string, args?: unknown): Promise<boolean> | boolean;
+}
+
+function isHostCommandAction(action: string): boolean {
+  return (
+    isKnownHostCommand(action) ||
+    action.startsWith('navigate:') ||
+    action.startsWith('commandPalette:') ||
+    action.startsWith('rightRail:') ||
+    action.startsWith('layout:')
+  );
 }
 
 interface ExtensionBackendCapabilityModels {
@@ -295,6 +338,7 @@ export type ExtensionBackendCapabilityDispatcher = (
 ) => Promise<unknown> | unknown;
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
+  commands?: ExtensionBackendCapabilityCommands;
   conversations?: ExtensionBackendCapabilityConversations;
   events?: ExtensionBackendCapabilityEvents;
   extensions?: ExtensionBackendCapabilityExtensions;
@@ -355,6 +399,17 @@ function dispatchEventsCapability(events: ExtensionBackendCapabilityEvents, requ
   return events.publish(request.extensionId, requireString(input.event, 'Event name'), input.payload);
 }
 
+function dispatchCommandsCapability(commands: ExtensionBackendCapabilityCommands, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation === 'list') {
+    return commands.list();
+  }
+  if (request.operation === 'execute') {
+    const input = normalizeRecordInput(request.input, 'Commands');
+    return commands.execute(request.extensionId, requireString(input.commandId, 'Command id'), input.args);
+  }
+  throw new Error(`Unsupported commands capability operation: ${request.operation}`);
+}
+
 function optionalConversationMetadataWhere(
   value: unknown,
 ): Array<{ key: string; op?: 'eq' | 'neq' | 'in' | 'exists'; value?: unknown }> | undefined {
@@ -382,6 +437,60 @@ function dispatchConversationsCapability(
   emit?: (event: ExtensionBackendWorkerCapabilityEvent) => void,
 ): unknown {
   const input = normalizeRecordInput(request.input, 'Conversations');
+
+  if (request.operation === 'list') {
+    if (!conversations.list) {
+      throw new Error('Conversation list capability is unavailable.');
+    }
+    return conversations.list(request.extensionId, {
+      ...(input.runtimeScope !== undefined ? { runtimeScope: optionalString(input.runtimeScope, 'Conversation runtime scope') } : {}),
+      ...(input.runtimeSettingsFilePath !== undefined
+        ? { runtimeSettingsFilePath: optionalString(input.runtimeSettingsFilePath, 'Conversation runtime settings file path') }
+        : {}),
+    });
+  }
+
+  if (request.operation === 'activity') {
+    if (!conversations.activity) {
+      throw new Error('Conversation activity capability is unavailable.');
+    }
+    const visibility =
+      input.visibility !== undefined ? optionalString(input.visibility, 'Conversation activity visibility') : undefined;
+    if (visibility !== undefined && !['primary', 'system', 'hidden', 'visible', 'all'].includes(visibility)) {
+      throw new Error('Conversation activity visibility must be one of: primary, system, hidden, visible, all.');
+    }
+    return conversations.activity(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
+      ...(input.active !== undefined ? { active: optionalBoolean(input.active, 'Conversation activity active') } : {}),
+      ...(visibility !== undefined ? { visibility: visibility as 'primary' | 'system' | 'hidden' | 'visible' | 'all' } : {}),
+    });
+  }
+
+  if (request.operation === 'connections') {
+    if (!conversations.connections) {
+      throw new Error('Conversation connections capability is unavailable.');
+    }
+    const visibility =
+      input.visibility !== undefined ? optionalString(input.visibility, 'Conversation connections visibility') : undefined;
+    if (visibility !== undefined && !['primary', 'system', 'hidden', 'visible', 'all'].includes(visibility)) {
+      throw new Error('Conversation connections visibility must be one of: primary, system, hidden, visible, all.');
+    }
+    const kind = input.kind !== undefined ? optionalString(input.kind, 'Conversation connection kind') : undefined;
+    if (kind !== undefined && !['activity', 'state', 'asset', 'context', 'integration', 'surface', 'all'].includes(kind)) {
+      throw new Error('Conversation connection kind must be one of: activity, state, asset, context, integration, surface, all.');
+    }
+    const surface = input.surface !== undefined ? optionalString(input.surface, 'Conversation connection surface') : undefined;
+    if (surface !== undefined && !['activityShelf', 'composerShelf', 'rightRail', 'workbench', 'sidebar', 'cli', 'all'].includes(surface)) {
+      throw new Error('Conversation connection surface must be one of: activityShelf, composerShelf, rightRail, workbench, sidebar, cli, all.');
+    }
+    return conversations.connections(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
+      ...(input.active !== undefined ? { active: optionalBoolean(input.active, 'Conversation connections active') } : {}),
+      ...(kind !== undefined ? { kind: kind as 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all' } : {}),
+      ...(surface !== undefined
+        ? { surface: surface as 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all' }
+        : {}),
+      ...(visibility !== undefined ? { visibility: visibility as 'primary' | 'system' | 'hidden' | 'visible' | 'all' } : {}),
+    });
+  }
 
   if (request.operation === 'get') {
     return conversations.get(request.extensionId, requireString(input.conversationId, 'Conversation id'));
@@ -627,6 +736,17 @@ function dispatchConversationsCapability(
       requireString(input.conversationId, 'Conversation id'),
       requireString(input.title, 'Conversation title'),
     );
+  }
+
+  if (request.operation === 'prune') {
+    if (!conversations.prune) {
+      throw new Error('Conversation prune capability is unavailable.');
+    }
+    return conversations.prune(request.extensionId, {
+      olderThanMs: requireNumber(input.olderThanMs, 'Conversation retention olderThanMs'),
+      ...(input.archivedOnly !== undefined ? { archivedOnly: optionalBoolean(input.archivedOnly, 'Conversation retention archivedOnly') } : {}),
+      ...(input.dryRun !== undefined ? { dryRun: optionalBoolean(input.dryRun, 'Conversation retention dryRun') } : {}),
+    });
   }
 
   if (request.operation === 'metadata.get') {
@@ -1533,7 +1653,47 @@ export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const filesystemHandles = new Map<string, ScopedFileSystem>();
+  const commands = options.commands ?? {
+    list: () => listExtensionCommandRegistrations(),
+    execute: async (extensionId: string, commandId: string, args?: unknown) => {
+      const command = findExtensionCommandRegistration(commandId);
+      if (command) {
+        if (isHostCommandAction(command.action)) {
+          return executeHostCommandInRenderer({ command: command.action, args: args ?? command.args, sourceExtensionId: extensionId });
+        }
+        const { invokeExtensionAction } = await import('./extensionBackend.js');
+        const actionResult = await invokeExtensionAction(command.extensionId, command.action, args ?? command.args ?? {});
+        if (!actionResult.ok) throw new Error(actionResult.error);
+        return true;
+      }
+      return executeHostCommandInRenderer({ command: commandId, args, sourceExtensionId: extensionId });
+    },
+  };
   const conversations = options.conversations ?? {
+    list: (_extensionId: string, input?: { runtimeScope?: string; runtimeSettingsFilePath?: string }) =>
+      createExtensionConversationsCapability(
+        input?.runtimeSettingsFilePath
+          ? {
+              getRuntimeScope: () => input.runtimeScope ?? 'shared',
+              getSettingsFile: () => input.runtimeSettingsFilePath!,
+            }
+          : undefined,
+      ).list(),
+    activity: (
+      _extensionId: string,
+      conversationId: string,
+      options?: { active?: boolean; visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all' },
+    ) => createExtensionConversationsCapability().activity(conversationId, options),
+    connections: (
+      _extensionId: string,
+      conversationId: string,
+      options?: {
+        active?: boolean;
+        kind?: 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface' | 'all';
+        surface?: 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli' | 'all';
+        visibility?: 'primary' | 'system' | 'hidden' | 'visible' | 'all';
+      },
+    ) => createExtensionConversationsCapability().connections(conversationId, options),
     get: (_extensionId: string, conversationId: string) => createExtensionConversationsCapability().get(conversationId),
     create: (_extensionId: string, input?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['create']>[0]) =>
       createExtensionConversationsCapability().create(input),
@@ -1602,6 +1762,10 @@ export function createExtensionBackendCapabilityDispatcher(
       createExtensionConversationsCapability().fork(input),
     setTitle: (_extensionId: string, conversationId: string, title: string) =>
       createExtensionConversationsCapability().setTitle(conversationId, title),
+    prune: (
+      _extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['prune']>[0],
+    ) => createExtensionConversationsCapability().prune(input),
     metadata: {
       get: (extensionId: string, input: { conversationId: string; namespace?: string; profile?: string }) =>
         readConversationMetadata({ ...input, extensionId }),
@@ -1728,6 +1892,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'browser') {
       return dispatchBrowserCapability(request);
+    }
+    if (request.capability === 'commands') {
+      return dispatchCommandsCapability(commands, request);
     }
     if (request.capability === 'conversations') {
       return dispatchConversationsCapability(conversations, request, emit);

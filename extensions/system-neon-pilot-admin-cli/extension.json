@@ -154,7 +154,7 @@
       {
         "id": "app-commands-list",
         "command": "app-commands list",
-        "description": "List command-palette/app commands available to extensions.",
+        "description": "List command-palette/app commands available to extensions. Advanced escape hatch; prefer first-class CLI commands when available.",
         "action": "manageAppCommands",
         "jsonDefault": true,
         "inputAction": "list",
@@ -188,7 +188,7 @@
       {
         "id": "app-commands-run",
         "command": "app-commands run",
-        "description": "Run a command-palette/app command by id: app-commands run <command-id> [--args <json>]",
+        "description": "Run a command-palette/app command by id. Advanced escape hatch; prefer first-class CLI commands when available.",
         "action": "manageAppCommands",
         "jsonDefault": true,
         "inputAction": "run",

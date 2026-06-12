@@ -691,23 +691,23 @@ describe('extension registry', () => {
 
   it('keeps default-disabled extensions off until explicitly enabled', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
-    const extensionRoot = join(stateRoot, 'extensions', 'slack-mcp-gateway');
+    const extensionRoot = join(stateRoot, 'extensions', 'default-disabled-tool');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(
       join(extensionRoot, 'extension.json'),
       JSON.stringify({
         schemaVersion: 2,
-        id: 'slack-mcp-gateway',
-        name: 'Slack MCP Gateway',
+        id: 'default-disabled-tool',
+        name: 'Default Disabled Tool',
         defaultEnabled: false,
       }),
     );
 
-    expect(isExtensionEnabled('slack-mcp-gateway', stateRoot)).toBe(false);
-    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'slack-mcp-gateway')?.enabled).toBe(false);
+    expect(isExtensionEnabled('default-disabled-tool', stateRoot)).toBe(false);
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'default-disabled-tool')?.enabled).toBe(false);
 
-    setExtensionEnabled('slack-mcp-gateway', true, stateRoot);
-    expect(isExtensionEnabled('slack-mcp-gateway', stateRoot)).toBe(true);
+    setExtensionEnabled('default-disabled-tool', true, stateRoot);
+    expect(isExtensionEnabled('default-disabled-tool', stateRoot)).toBe(true);
   });
 
   it('lists gateway provider contributions from enabled extensions', () => {

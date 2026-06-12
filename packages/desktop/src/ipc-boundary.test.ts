@@ -57,6 +57,23 @@ describe('desktop IPC protocol boundary', () => {
     }
   });
 
+  it('mirrors desktop shortcut actions into preload command payloads', () => {
+    const mainSource = readRepoFile('packages/desktop/src/main.ts');
+    const preloadSource = readRepoFile('packages/desktop/src/preload.cts');
+    const rendererShortcutActions = Array.from(
+      mainSource.matchAll(/sendShortcutToFocusedWindow\('([^']+)'\)/g),
+      (match) => match[1],
+    );
+
+    expect(rendererShortcutActions.length).toBeGreaterThan(0);
+    for (const action of rendererShortcutActions) {
+      expect(preloadSource, action).toContain(`case '${action}':`);
+    }
+    expect(preloadSource).toContain("return { command: 'layout.set', args: { mode: 'compact' } };");
+    expect(preloadSource).toContain("return { command: 'layout.set', args: { mode: 'workbench' } };");
+    expect(preloadSource).toContain("return { command: 'workbench.closeActiveTab' };");
+  });
+
   it('does not expose generic product API or realtime stream IPC channels', () => {
     const ipcSource = readRepoFile('packages/desktop/src/ipc.ts');
     const preloadSource = readRepoFile('packages/desktop/src/preload.cts');

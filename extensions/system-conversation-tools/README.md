@@ -326,7 +326,6 @@ Before targeting an unclear conversation, use `action: "inspect"` with `inspectA
 | `workspace_open_update`   | `operation`                                      | Ergonomic CLI-only open/sidebar mutation for add, remove, pin, unpin, active, archive, and unarchive.                                                |
 | `append_transcript_block` | `conversationId`, `blockType`, `data`            | Appends an extension-owned visible transcript block. Optional `title`, `blockId`.                                                                    |
 | `update_transcript_block` | `conversationId`, `blockType`, `blockId`, `data` | Updates an extension-owned visible transcript block.                                                                                                 |
-| `scratchpad`              | `conversationId`, `scratchpadOperation`          | Gets, replaces, appends, or prepends a durable per-conversation markdown scratchpad. Use only for non-secret operational state.                       |
 | `rollback`                | `conversationId`                                 | Rolls back a live conversation by `count` turns. Defaults to `1`.                                                                                    |
 
 Use `neon-pilot ask` for one-shot external delegation: it creates a normal conversation, runs one turn, and returns the answer plus conversation id. Use `run_turn`/`neon-pilot conversations run-turn` when the caller already has a conversation id and needs to wait for the remote conversation to finish. Use `send_message` for fire-and-forget steering or follow-up delivery. Use the unified deferred-resume admin command for time-based continuation; do not run sleeping shell commands as timers.
@@ -381,10 +380,7 @@ neon-pilot conversations archive conv-old --json
 neon-pilot conversations unarchive conv-old --json
 neon-pilot conversations delete conv-old --json
 neon-pilot conversations retention prune --older-than 180d --archived-only --dry-run --json
-neon-pilot conversations scratchpad get <id> --json
-neon-pilot conversations scratchpad set <id> --content "## Plan" --json
-neon-pilot conversations scratchpad patch <id> --operation append --content "Validation passed" --json
 neon-pilot conversations transcript append <id> --type text --data '{"text":"note"}' --json
 ```
 
-Conversation scratchpads are stored in conversation metadata under the `threadScratchpad` namespace, keyed by `conversationId`, so they survive compaction and restarts. Do not store secrets.
+Conversation scratchpads are owned by the Scratchpad system extension. Use its `scratchpad` agent tool, Workbench rail pane, or `neon-pilot conversations scratchpad ...` CLI commands for per-conversation working notes.

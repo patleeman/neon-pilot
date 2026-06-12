@@ -88,7 +88,7 @@ function usage(): string {
       'version [--json]              Show CLI package/runtime version',
       'cli status|install|uninstall  Manage the optional user-shell CLI symlink',
       'help [command]                Show help',
-      'protocol <protocol-id> ...    Invoke a raw extension protocol entrypoint',
+      'protocol <protocol-id> ...    Invoke an advanced raw extension protocol entrypoint',
     ],
     examples: ['neon-pilot commands', 'neon-pilot help extensions list', 'neon-pilot extensions list', 'neon-pilot protocol acp'],
   });
@@ -263,7 +263,7 @@ const CORE_CLI_COMMANDS: NeonPilotCliCommandDefinition[] = [
   {
     id: 'protocol',
     command: 'protocol',
-    description: 'Invoke a raw extension protocol entrypoint.',
+    description: 'Invoke a raw extension protocol entrypoint. Advanced integration surface; prefer first-class CLI commands for normal automation.',
     usage: 'protocol <protocol-id> [args]',
     examples: ['neon-pilot protocol acp', 'neon-pilot protocol ds4-tools tools'],
     argsSchema: {

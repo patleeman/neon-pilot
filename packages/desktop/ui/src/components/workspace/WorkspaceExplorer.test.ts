@@ -8,8 +8,16 @@ const apiMocks = vi.hoisted(() => ({
   workspaceDiff: vi.fn(),
 }));
 
+const commandContextMocks = vi.hoisted(() => ({
+  setExtensionCommandContext: vi.fn(),
+}));
+
 vi.mock('../../client/api', () => ({
   api: apiMocks,
+}));
+
+vi.mock('../../extensions/commands', () => ({
+  setExtensionCommandContext: commandContextMocks.setExtensionCommandContext,
 }));
 
 vi.mock('../../ui-state/theme', () => ({
@@ -43,7 +51,7 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve, reject };
 }
 
-function file(path: string, content: string) {
+function file(path: string, content: string, options?: { gitStatus?: string | null }) {
   return {
     path,
     name: path.split('/').pop() ?? path,
@@ -52,7 +60,7 @@ function file(path: string, content: string) {
     tooLarge: false,
     size: content.length,
     mime: 'text/plain',
-    gitStatus: null,
+    gitStatus: options?.gitStatus ?? null,
   };
 }
 
@@ -119,6 +127,52 @@ describe('formatWorkspaceEntrySize', () => {
     await vi.waitFor(() => {
       const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
       expect(textarea?.value).toBe('current file');
+    });
+  });
+
+  it('publishes diff toggle command availability from the active file', async () => {
+    const plain = deferred<ReturnType<typeof file>>();
+    apiMocks.workspaceFile.mockReturnValueOnce(plain.promise);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(React.createElement(WorkspaceFileDocument, { cwd: '/repo', path: 'plain.ts' }));
+    });
+
+    await act(async () => {
+      plain.resolve(file('plain.ts', 'plain file'));
+      await plain.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(commandContextMocks.setExtensionCommandContext).toHaveBeenCalledWith('workbench.canToggleDiff', false);
+    });
+
+    commandContextMocks.setExtensionCommandContext.mockClear();
+    const changed = deferred<ReturnType<typeof file>>();
+    const diff = deferred<{ addedLines: never[]; deletedBlocks: never[] }>();
+    apiMocks.workspaceFile.mockReturnValueOnce(changed.promise);
+    apiMocks.workspaceDiff.mockReturnValueOnce(diff.promise);
+
+    act(() => {
+      root.render(React.createElement(WorkspaceFileDocument, { cwd: '/repo', path: 'changed.ts' }));
+    });
+
+    await act(async () => {
+      changed.resolve(file('changed.ts', 'changed file', { gitStatus: 'modified' }));
+      await changed.promise;
+    });
+    await act(async () => {
+      diff.resolve({ addedLines: [], deletedBlocks: [] });
+      await diff.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(commandContextMocks.setExtensionCommandContext).toHaveBeenCalledWith('workbench.canToggleDiff', true);
     });
   });
 });

@@ -1,7 +1,15 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 
+import { setExtensionCommandContext } from '../../extensions/commands';
 import type { MessageBlock } from '../../shared/types';
 import { Button, IconButton, MediaPreviewButton, SurfacePanel } from '../ui';
+import {
+  IMAGE_PREVIEW_CLOSE_COMMAND_EVENT,
+  IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT,
+  IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT,
+  registerImagePreviewCapability,
+  type ImagePreviewCommandDetail,
+} from './imagePreviewCommands';
 
 export type InspectableImage = {
   alt: string;
@@ -13,6 +21,30 @@ export type InspectableImage = {
 
 export function ImageInspectModal({ image, onClose }: { image: InspectableImage; onClose: () => void }) {
   const label = image.caption?.trim() || image.alt.trim() || 'Conversation image';
+
+  useEffect(() => {
+    setExtensionCommandContext('imagePreview.active', true);
+    return () => setExtensionCommandContext('imagePreview.active', null);
+  }, []);
+
+  useEffect(() => {
+    function closeFromKeyboard(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose();
+    }
+
+    function closeFromCommand() {
+      onClose();
+    }
+
+    window.addEventListener('keydown', closeFromKeyboard);
+    window.addEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    return () => {
+      window.removeEventListener('keydown', closeFromKeyboard);
+      window.removeEventListener(IMAGE_PREVIEW_CLOSE_COMMAND_EVENT, closeFromCommand);
+    };
+  }, [onClose]);
 
   return (
     <div
@@ -95,6 +127,39 @@ export function ImagePreview({
         height,
       }
     : null;
+
+  useEffect(() => {
+    if (!inspectableImage || !onInspect) return undefined;
+    return registerImagePreviewCapability('inspect');
+  }, [inspectableImage, onInspect]);
+
+  useEffect(() => {
+    if (!deferred || !onLoad) return undefined;
+    return registerImagePreviewCapability('load');
+  }, [deferred, onLoad]);
+
+  useEffect(() => {
+    function handleInspectFirstCommand(event: Event) {
+      const detail = (event as CustomEvent<ImagePreviewCommandDetail>).detail;
+      if (detail?.handled || !inspectableImage || !onInspect) return;
+      if (detail) detail.handled = true;
+      onInspect(inspectableImage);
+    }
+
+    function handleLoadFirstCommand(event: Event) {
+      const detail = (event as CustomEvent<ImagePreviewCommandDetail>).detail;
+      if (detail?.handled || !deferred || loading || !onLoad) return;
+      if (detail) detail.handled = true;
+      void onLoad();
+    }
+
+    window.addEventListener(IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT, handleInspectFirstCommand);
+    window.addEventListener(IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT, handleLoadFirstCommand);
+    return () => {
+      window.removeEventListener(IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT, handleInspectFirstCommand);
+      window.removeEventListener(IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT, handleLoadFirstCommand);
+    };
+  }, [deferred, inspectableImage, loading, onInspect, onLoad]);
 
   return (
     <SurfacePanel muted className="overflow-hidden">

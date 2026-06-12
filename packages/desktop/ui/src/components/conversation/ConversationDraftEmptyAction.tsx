@@ -1,7 +1,13 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { cx, RowButton, SectionLabel } from '../ui';
 import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
+import {
+  DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT,
+  DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT,
+} from './draftWorkspacePickerCommands';
 
 const DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS = 'mx-auto w-full max-w-[38rem] items-stretch';
 
@@ -81,6 +87,28 @@ export function ConversationDraftEmptyAction({
   );
 
   useEffect(() => {
+    setExtensionCommandContext('draftWorkspacePicker.available', !workspacePickerDisabled);
+    return () => setExtensionCommandContext('draftWorkspacePicker.available', null);
+  }, [workspacePickerDisabled]);
+
+  useEffect(() => {
+    function handleOpenCommand() {
+      if (!workspacePickerDisabled) setWorkspacePickerOpen(true);
+    }
+
+    function handleToggleCommand() {
+      if (!workspacePickerDisabled) setWorkspacePickerOpen((open) => !open);
+    }
+
+    window.addEventListener(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT, handleOpenCommand);
+    window.addEventListener(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT, handleToggleCommand);
+    return () => {
+      window.removeEventListener(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT, handleOpenCommand);
+      window.removeEventListener(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT, handleToggleCommand);
+    };
+  }, [workspacePickerDisabled]);
+
+  useEffect(() => {
     if (!workspacePickerOpen) return;
 
     function handleDocumentMouseDown(event: MouseEvent) {
@@ -92,12 +120,27 @@ export function ConversationDraftEmptyAction({
       if (event.key === 'Escape') setWorkspacePickerOpen(false);
     }
 
+    function handleCloseCommand() {
+      setWorkspacePickerOpen(false);
+    }
+
     document.addEventListener('mousedown', handleDocumentMouseDown);
     document.addEventListener('keydown', handleDocumentKeyDown);
+    window.addEventListener(DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT, handleCloseCommand);
     return () => {
       document.removeEventListener('mousedown', handleDocumentMouseDown);
       document.removeEventListener('keydown', handleDocumentKeyDown);
+      window.removeEventListener(DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT, handleCloseCommand);
     };
+  }, [workspacePickerOpen]);
+
+  useEffect(() => {
+    if (!workspacePickerOpen) {
+      return;
+    }
+
+    setExtensionCommandContext('draftWorkspacePicker.open', true);
+    return () => setExtensionCommandContext('draftWorkspacePicker.open', null);
   }, [workspacePickerOpen]);
 
   function selectWorkspace(nextWorkspacePath: string) {

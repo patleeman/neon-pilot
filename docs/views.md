@@ -47,4 +47,4 @@ For extension authors, an extension rail is for compact contextual tools inside 
 | Toggle left sidebar | `Cmd+/` (or `Ctrl+/`) |
 | Toggle workbench    | `Cmd+\` (or `Ctrl+\`) |
 
-Default shortcuts are configurable in Settings → Keyboard.
+Default desktop shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings → Commands.

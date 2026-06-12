@@ -12,6 +12,11 @@ import { SelectionContextMenu, StreamingIndicator } from './ChatTranscriptChrome
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { CHAT_VIEW_RENDERING_PROFILE, type ChatViewPerformanceMode, WindowedChatChunk } from './chatWindowing.js';
 import { ImageInspectModal, type InspectableImage } from './ImageMessageBlocks.js';
+import {
+  INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT,
+  registerInlineTraceRunToggleCapability,
+  type InlineTraceRunCommandDetail,
+} from './inlineTraceRunCommands.js';
 import { buildInlineRunExpansionKey } from './linkedRunPolling.js';
 import { collectTraceClusterLinkedRuns } from './linkedRuns.js';
 import { ContextShelf, SystemPromptMessage } from './MessageBlocks.js';
@@ -285,7 +290,24 @@ export const ChatView = memo(function ChatView({
       },
     );
   }, [conversationId, renderItems]);
-  const { isInlineRunExpanded, toggleInlineRun, expandInlineRun } = useInlineTraceRunExpansion(renderItems);
+  const { isInlineRunExpanded, toggleInlineRun, toggleFirstInlineRun, hasVisibleInlineRuns, expandInlineRun } =
+    useInlineTraceRunExpansion(renderItems);
+
+  useEffect(() => {
+    if (!hasVisibleInlineRuns) return undefined;
+    return registerInlineTraceRunToggleCapability();
+  }, [hasVisibleInlineRuns]);
+
+  useEffect(() => {
+    function handleToggleFirstInlineTraceRun(event: Event) {
+      const detail = (event as CustomEvent<InlineTraceRunCommandDetail>).detail;
+      if (detail?.handled || !hasVisibleInlineRuns) return;
+      if (toggleFirstInlineRun() && detail) detail.handled = true;
+    }
+
+    window.addEventListener(INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstInlineTraceRun);
+    return () => window.removeEventListener(INLINE_TRACE_RUN_TOGGLE_FIRST_COMMAND_EVENT, handleToggleFirstInlineTraceRun);
+  }, [hasVisibleInlineRuns, toggleFirstInlineRun]);
 
   useEffect(() => {
     function handleTranscriptSpotlight(event: Event) {

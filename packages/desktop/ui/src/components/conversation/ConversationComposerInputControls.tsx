@@ -21,6 +21,7 @@ import {
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { ComposerButtonHost } from '../../extensions/ComposerButtonHost';
 import { ComposerInputToolHost } from '../../extensions/ComposerInputToolHost';
+import { setExtensionCommandContext } from '../../extensions/commands';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import {
   getModelSelectionValue,
@@ -31,6 +32,8 @@ import {
 import type { ModelInfo } from '../../shared/types';
 import { cx, IconButton } from '../ui';
 import { ConversationComposerActions, type ConversationComposerSubmitLabel } from './ConversationComposerActions';
+import { COMPOSER_CREATE_DRAWING_COMMAND_EVENT } from './composerInputCommands';
+import { COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, COMPOSER_OPEN_SETTINGS_COMMAND_EVENT } from './composerSettingsCommands';
 import { ConversationPreferencesRow } from './ConversationPreferencesRow';
 
 function getComposerPreferenceInlineLimit(composerShellWidth: number | null): number {
@@ -48,6 +51,10 @@ const CORE_COMPOSER_INPUT_TOOL_KEYS = new Set(['system-excalidraw-input:excalidr
 
 function composerRegistrationKey(registration: { extensionId: string; id: string }): string {
   return `${registration.extensionId}:${registration.id}`;
+}
+
+export function setComposerFocusedCommandContext(focused: boolean | null): void {
+  setExtensionCommandContext('composer.focused', focused);
 }
 
 function modelOptionLabel(model: ModelInfo): string {
@@ -116,6 +123,7 @@ function CoreDrawingControl({
   onUpsertDrawingAttachment: (payload: Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>) => void;
 }) {
   const openDrawingModal = useCallback(async () => {
+    if (disabled) return;
     const result = await new Promise<unknown>((resolve, reject) => {
       window.dispatchEvent(
         new CustomEvent('neon-pilot-extension-modal', {
@@ -133,7 +141,16 @@ function CoreDrawingControl({
     if (result && typeof result === 'object') {
       onUpsertDrawingAttachment(result as Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>);
     }
-  }, [conversationId, onUpsertDrawingAttachment]);
+  }, [conversationId, disabled, onUpsertDrawingAttachment]);
+
+  useEffect(() => {
+    const handleCreateDrawingCommand = () => {
+      void openDrawingModal();
+    };
+
+    window.addEventListener(COMPOSER_CREATE_DRAWING_COMMAND_EVENT, handleCreateDrawingCommand);
+    return () => window.removeEventListener(COMPOSER_CREATE_DRAWING_COMMAND_EVENT, handleCreateDrawingCommand);
+  }, [openDrawingModal]);
 
   return (
     <IconButton
@@ -237,6 +254,43 @@ function CoreModelPreferenceOverflow({
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const settingsAvailable = !(disabled && models.length === 0);
+
+  useEffect(() => {
+    setExtensionCommandContext('composer.settingsAvailable', settingsAvailable);
+    return () => setExtensionCommandContext('composer.settingsAvailable', null);
+  }, [settingsAvailable]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setExtensionCommandContext('composer.settingsOpen', true);
+    return () => setExtensionCommandContext('composer.settingsOpen', null);
+  }, [open]);
+
+  useEffect(() => {
+    function handleOpenSettings() {
+      if (settingsAvailable) setOpen(true);
+    }
+
+    window.addEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
+    return () => window.removeEventListener(COMPOSER_OPEN_SETTINGS_COMMAND_EVENT, handleOpenSettings);
+  }, [settingsAvailable]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleCloseSettings() {
+      setOpen(false);
+    }
+
+    window.addEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettings);
+    return () => window.removeEventListener(COMPOSER_CLOSE_SETTINGS_COMMAND_EVENT, handleCloseSettings);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -263,7 +317,7 @@ function CoreModelPreferenceOverflow({
         aria-label="More composer settings"
         aria-haspopup="dialog"
         aria-expanded={open}
-        disabled={disabled && models.length === 0}
+        disabled={!settingsAvailable}
         onPointerDown={(event) => {
           event.preventDefault();
           if ((event.pointerType && event.pointerType !== 'mouse') || event.button === 0) setOpen((current) => !current);
@@ -461,6 +515,13 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
     setLocalInput(input);
   }, [input, textareaRef]);
 
+  useEffect(() => () => setComposerFocusedCommandContext(null), []);
+
+  useEffect(() => {
+    setExtensionCommandContext('composer.canCreateDrawing', !composerDisabled);
+    return () => setExtensionCommandContext('composer.canCreateDrawing', null);
+  }, [composerDisabled]);
+
   const visibleComposerInputTools = useMemo(
     () =>
       extensionComposerInputTools.filter((tool) => {
@@ -555,7 +616,11 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
               onRememberComposerSelection(event.currentTarget);
             }}
             onFocus={(event) => {
+              setComposerFocusedCommandContext(true);
               onRememberComposerSelection(event.currentTarget);
+            }}
+            onBlur={() => {
+              setComposerFocusedCommandContext(false);
             }}
             onKeyDown={onKeyDown}
             onPaste={onPaste}

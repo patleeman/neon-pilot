@@ -72,9 +72,9 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - States: bundled system extension, installed user extension, invalid manifest, missing build artifact, action failure.
 - Skills: `skills-and-capabilities`, `local-extension-development`.
 
-### `/knowledge` and knowledge rail/detail (`system-knowledge`)
+### `/knowledge` and knowledge rail/detail (`system-knowledge`, installable)
 
-- Nav item: Knowledge.
+- Nav item: Knowledge after installation.
 - Views: Knowledge page, Knowledge left-sidebar file browser, Knowledge tree tab-local rail, Knowledge file workbench detail.
 - Actions: `readState`, `updateState`, `sync`, `knowledgeListFiles`, `knowledgeTree`, `knowledgeReadFile`, `knowledgeWriteFile`, `knowledgeCreateFolder`, `knowledgeDeleteFile`, `knowledgeRename`, `knowledgeMove`, `knowledgeBacklinks`, `knowledgeSearch`, `knowledgeUploadImage`, `knowledgeImportUrl`, `resolvePromptReferences`.
 - Prompt reference provider: `knowledge-files`.
@@ -199,11 +199,13 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 ### Excalidraw input (`system-excalidraw-input`)
 
 - Composer action: Excalidraw.
+- Command/hotkey: `composer.createDrawing` (`Cmd/Ctrl+Shift+X` default when available).
 - Test open editor modal, draw/save/cancel, insert into composer, image/reference handling, reload after draft if supported.
 
 ### Local Dictation (`system-local-dictation`)
 
 - Dictation composer/control surface.
+- Command/hotkey: `dictation.toggle` (`Cmd/Ctrl+Shift+M` default when available).
 - Actions: `readSettings`, `updateSettings`, `modelStatus`, `installModel`, `transcribeFile`.
 - Test settings, model installed/missing/installing/error, recording/transcribe file, cancellation, microphone unavailable, inserted text.
 
@@ -272,11 +274,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - `/start`, `/help`, `/stop`, `/pause`, `/new`, `/model <model>`, `/rename <title>`.
 - Bot mention variants, unknown command rejection, incomplete command rejection.
 - Conversation attachment and force-new behavior.
-
-### Slack MCP gateway
-
-- `!agent`, `!agent help`, `!agent stop`, `!agent model <model>`, `!agent compact`, `!agent detach`.
-- Unknown command rejection, normal message passthrough, outbound system messages.
 
 ## Cross-cutting release checks
 
@@ -348,6 +345,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 - keybindings: open-thread-palette [mod+p]
 - transcriptRenderers: ask-user-question-tool-block for ask_user_question, terminal-bash-tool-block for bash
 - contextMenus: duplicate-conversation on conversationList, copy-working-directory on conversationList, copy-conversation-id on conversationList, copy-deeplink on conversationList
+- Host commands: `conversation.duplicate`, `conversation.copyWorkingDirectory`, `conversation.copyId`, `conversation.copyDeeplink`.
 - backend actions: conversationTool, duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink
 
 ### system-diffs — Checkpoints
@@ -369,6 +367,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-excalidraw-input — Excalidraw input
 
+- keybindings: excalidraw.createDrawing
 - composerInputTools: excalidraw
 
 ### system-extension-manager — Extension Manager
@@ -404,6 +403,7 @@ Every contributed manifest ID below must appear in a release test plan. This sec
 
 ### system-local-dictation — Local Dictation
 
+- keybindings: dictation.toggle
 - composerButtons: dictation
 - settingsComponent: dictation
 - backend actions: readSettings, updateSettings, modelStatus, installModel, transcribeFile

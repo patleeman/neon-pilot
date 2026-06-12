@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -52,7 +52,7 @@ describe('NotificationCenter', () => {
     expect(html).toContain('Build failed');
   });
 
-  it('copies the notification summary, message, details, source, and repeat count', () => {
+  it('copies the notification summary, message, details, source, and repeat count', async () => {
     mocks.writeClipboardText.mockResolvedValue(undefined);
     mocks.useNotificationStore.mockReturnValue(storeValue);
 
@@ -64,5 +64,24 @@ describe('NotificationCenter', () => {
     expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Repeated: 2x'));
     expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Build failed'));
     expect(mocks.writeClipboardText).toHaveBeenCalledWith(expect.stringContaining('Details:\nReferenceError: boom'));
+    await waitFor(() => expect(screen.getByLabelText('Copy notification').getAttribute('title')).toBe('Copied'));
+  });
+
+  it('closes from button, backdrop, and Escape interactions', () => {
+    mocks.useNotificationStore.mockReturnValue(storeValue);
+    const onClose = vi.fn();
+
+    const { rerender } = render(<NotificationCenter onClose={onClose} />);
+
+    fireEvent.click(screen.getByLabelText('Close notifications'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    rerender(<NotificationCenter onClose={onClose} />);
+    fireEvent.click(screen.getByRole('dialog', { name: 'Notifications' }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+
+    rerender(<NotificationCenter onClose={onClose} />);
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Notifications' }), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(3);
   });
 });

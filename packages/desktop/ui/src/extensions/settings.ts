@@ -79,6 +79,7 @@ export { useApi } from '../hooks/useApi';
 export { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 export { resetStoredConversationUiState, resetStoredLayoutPreferences } from '../local/localSettings';
 export { getModelSelectableServiceTierOptions, groupModelsByProvider, THINKING_LEVEL_OPTIONS } from '../model/modelPreferences';
+export { CORE_KEYBOARD_SHORTCUT_REGISTRATIONS, DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS } from '../../../src/keyboard-shortcuts';
 export {
   createModelEditorDraft,
   createProviderEditorDraft,
@@ -106,7 +107,7 @@ export type {
 } from '../shared/types';
 export type { SecretsState, SecretStatusEntry, UnifiedSettingsEntry } from '../shared/types';
 export { type ColorTheme, type ThemeAccent, type ThemePreference, useTheme } from '../ui-state/theme';
-export { listHostCommands } from './commands';
+export { listHostCommands, normalizeLegacyCommand } from './commands';
 export { EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from './extensionRegistryEvents';
 export { SettingsField } from './SettingsField';
 export { SettingsPanelHost } from './SettingsPanelHost';

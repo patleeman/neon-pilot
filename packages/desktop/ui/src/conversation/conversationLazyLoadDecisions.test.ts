@@ -7,18 +7,9 @@ import {
 } from './conversationLazyLoadDecisions';
 
 describe('conversationLazyLoadDecisions', () => {
-  it('waits for metadata readiness before loading models for idle draft mode', () => {
+  it('loads models for idle draft mode without waiting for non-critical composer metadata', () => {
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
-        metadataReady: false,
-        draft: true,
-        hasPendingInitialPrompt: false,
-        hasPendingInitialPromptInFlight: false,
-      }),
-    ).toBe(false);
-    expect(
-      shouldLoadConversationModelsAfterMetadataReady({
-        metadataReady: true,
         draft: true,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,
@@ -29,7 +20,6 @@ describe('conversationLazyLoadDecisions', () => {
   it('defers draft models while the initial prompt is being created', () => {
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
-        metadataReady: true,
         draft: true,
         hasPendingInitialPrompt: true,
         hasPendingInitialPromptInFlight: false,
@@ -37,7 +27,6 @@ describe('conversationLazyLoadDecisions', () => {
     ).toBe(false);
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
-        metadataReady: true,
         draft: true,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: true,
@@ -45,18 +34,9 @@ describe('conversationLazyLoadDecisions', () => {
     ).toBe(false);
   });
 
-  it('defers models for existing conversations until metadata is ready', () => {
+  it('loads models for existing conversations without waiting for non-critical composer metadata', () => {
     expect(
       shouldLoadConversationModelsAfterMetadataReady({
-        metadataReady: false,
-        draft: false,
-        hasPendingInitialPrompt: false,
-        hasPendingInitialPromptInFlight: false,
-      }),
-    ).toBe(false);
-    expect(
-      shouldLoadConversationModelsAfterMetadataReady({
-        metadataReady: true,
         draft: false,
         hasPendingInitialPrompt: false,
         hasPendingInitialPromptInFlight: false,

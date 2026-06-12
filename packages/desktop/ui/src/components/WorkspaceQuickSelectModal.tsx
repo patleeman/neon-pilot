@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { buildConversationGroupLabels, getConversationGroupLabel } from '../conversation/conversationCwdGroups';
+import { setExtensionCommandContext } from '../extensions/commands';
 import { IconButton, PanelMessage, ResourceListItem, ResourcePickerDialog, ResourcePickerList } from './ui';
+import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
 
 const CLOSE_PATH = 'M6 6l12 12M18 6 6 18';
 const WORKSPACE_ADD_PATH =
@@ -46,6 +48,11 @@ export function WorkspaceQuickSelectModal({
   }, [workspacePaths]);
 
   useEffect(() => {
+    setExtensionCommandContext('workspaceQuickSelect.open', true);
+    return () => setExtensionCommandContext('workspaceQuickSelect.open', null);
+  }, []);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -80,6 +87,15 @@ export function WorkspaceQuickSelectModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cursor, onChooseNewFolder, onClose, onSelectWorkspace, optionCount, workspacePaths]);
+
+  useEffect(() => {
+    function handleCloseCommand() {
+      onClose();
+    }
+
+    window.addEventListener(WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT, handleCloseCommand);
+    return () => window.removeEventListener(WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT, handleCloseCommand);
+  }, [onClose]);
 
   return (
     <ResourcePickerDialog

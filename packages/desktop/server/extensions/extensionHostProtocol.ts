@@ -416,6 +416,7 @@ export interface ExtensionHostSetKeybindingRequest {
   title?: string;
   command?: string;
   args?: unknown;
+  when?: string;
   scope?: 'global' | 'surface';
   packageType?: 'system' | 'user';
   keys?: string[];

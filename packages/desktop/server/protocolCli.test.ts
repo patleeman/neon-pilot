@@ -254,61 +254,61 @@ describe('protocol CLI', () => {
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('"code": "usage_error"'));
   });
 
-  it('validates required subagent start flags before dispatch', async () => {
+  it('validates required task save flags before dispatch', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
         {
-          extensionId: 'system-runs',
-          surfaceId: 'subagents-start',
-          command: 'subagents start',
-          action: 'subagent',
+          extensionId: 'system-automations',
+          surfaceId: 'tasks-save',
+          command: 'tasks save',
+          action: 'scheduledTask',
           argsSchema: { type: 'array', maxItems: 0, items: { type: 'string' } },
           flagsSchema: {
             type: 'object',
             properties: {
               json: { type: 'boolean' },
-              'task-slug': { type: 'string', minLength: 1 },
+              title: { type: 'string', minLength: 1 },
               prompt: { type: 'string', minLength: 1 },
             },
-            required: ['task-slug', 'prompt'],
+            required: ['title', 'prompt'],
             additionalProperties: true,
           },
         },
       ],
     });
 
-    await expect(runProtocolCli(['subagents', 'start', '--prompt', 'hello', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+    await expect(runProtocolCli(['tasks', 'save', '--prompt', 'hello', '--json'])).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
 
     expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
-    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Missing required flag --task-slug'));
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Missing required flag --title'));
   });
 
-  it('rejects positional args for flag-only subagent starts before dispatch', async () => {
+  it('rejects positional args for flag-only task saves before dispatch', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
         {
-          extensionId: 'system-runs',
-          surfaceId: 'subagents-start',
-          command: 'subagents start',
-          action: 'subagent',
+          extensionId: 'system-automations',
+          surfaceId: 'tasks-save',
+          command: 'tasks save',
+          action: 'scheduledTask',
           argsSchema: { type: 'array', maxItems: 0, items: { type: 'string' } },
           flagsSchema: {
             type: 'object',
             properties: {
               json: { type: 'boolean' },
-              'task-slug': { type: 'string', minLength: 1 },
+              title: { type: 'string', minLength: 1 },
               prompt: { type: 'string', minLength: 1 },
             },
-            required: ['task-slug', 'prompt'],
+            required: ['title', 'prompt'],
             additionalProperties: true,
           },
         },
       ],
     });
 
-    await expect(
-      runProtocolCli(['subagents', 'start', 'extra', '--task-slug', 'agent', '--prompt', 'hello', '--json']),
-    ).resolves.toBe(PROTOCOL_CLI_EXIT_CODES.usage);
+    await expect(runProtocolCli(['tasks', 'save', 'extra', '--title', 'Task', '--prompt', 'hello', '--json'])).resolves.toBe(
+      PROTOCOL_CLI_EXIT_CODES.usage,
+    );
 
     expect(extensionHostClient.invokeAction).not.toHaveBeenCalled();
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Expected at most 0 positional arguments'));
@@ -374,25 +374,25 @@ describe('protocol CLI', () => {
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Expected at most 0 positional arguments'));
   });
 
-  it('validates subagent follow-up run id before dispatch', async () => {
+  it('validates background command log run id before dispatch', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
         {
           extensionId: 'system-runs',
-          surfaceId: 'subagents-follow-up',
-          command: 'subagents follow-up',
-          action: 'subagent',
+          surfaceId: 'background-commands-logs',
+          command: 'background-commands logs',
+          action: 'background_bash',
           argsSchema: { type: 'array', minItems: 1, maxItems: 1, items: { type: 'string' } },
           flagsSchema: {
             type: 'object',
-            properties: { json: { type: 'boolean' }, prompt: { type: 'string', minLength: 1 } },
+            properties: { json: { type: 'boolean' }, tail: { type: 'number', minimum: 1, maximum: 1000 } },
             additionalProperties: true,
           },
         },
       ],
     });
 
-    await expect(runProtocolCli(['subagents', 'follow-up', '--prompt', 'continue', '--json'])).resolves.toBe(
+    await expect(runProtocolCli(['background-commands', 'logs', '--tail', '25', '--json'])).resolves.toBe(
       PROTOCOL_CLI_EXIT_CODES.usage,
     );
 
@@ -400,14 +400,14 @@ describe('protocol CLI', () => {
     expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('Expected at least 1 positional argument'));
   });
 
-  it('accepts subagent log tail flags before dispatch', async () => {
+  it('accepts background command log tail flags before dispatch', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
         {
           extensionId: 'system-runs',
-          surfaceId: 'subagents-logs',
-          command: 'subagents logs',
-          action: 'subagent',
+          surfaceId: 'background-commands-logs',
+          command: 'background-commands logs',
+          action: 'background_bash',
           argsSchema: { type: 'array', minItems: 1, items: { type: 'string' } },
           flagsSchema: {
             type: 'object',
@@ -418,16 +418,16 @@ describe('protocol CLI', () => {
       ],
     });
 
-    await expect(runProtocolCli(['subagents', 'logs', 'run-agent', '--tail', '25', '--json'])).resolves.toBe(0);
+    await expect(runProtocolCli(['background-commands', 'logs', 'run-agent', '--tail', '25', '--json'])).resolves.toBe(0);
 
     expect(extensionHostClient.invokeAction).toHaveBeenCalledWith(
       expect.objectContaining({
         extensionId: 'system-runs',
-        actionId: 'subagent',
+        actionId: 'background_bash',
         input: expect.objectContaining({
           action: 'logs',
           cli: expect.objectContaining({
-            command: 'subagents logs',
+            command: 'background-commands logs',
             args: ['run-agent'],
             flags: { tail: '25' },
             json: true,
@@ -437,14 +437,14 @@ describe('protocol CLI', () => {
     );
   });
 
-  it('rejects invalid subagent log tail flags before dispatch', async () => {
+  it('rejects invalid background command log tail flags before dispatch', async () => {
     extensionHostClient.readRegistryPresentation.mockResolvedValueOnce({
       cliCommandRegistrations: [
         {
           extensionId: 'system-runs',
-          surfaceId: 'subagents-logs',
-          command: 'subagents logs',
-          action: 'subagent',
+          surfaceId: 'background-commands-logs',
+          command: 'background-commands logs',
+          action: 'background_bash',
           argsSchema: { type: 'array', minItems: 1, items: { type: 'string' } },
           flagsSchema: {
             type: 'object',
@@ -455,7 +455,7 @@ describe('protocol CLI', () => {
       ],
     });
 
-    await expect(runProtocolCli(['subagents', 'logs', 'run-agent', '--tail', 'many', '--json'])).resolves.toBe(
+    await expect(runProtocolCli(['background-commands', 'logs', 'run-agent', '--tail', 'many', '--json'])).resolves.toBe(
       PROTOCOL_CLI_EXIT_CODES.usage,
     );
 

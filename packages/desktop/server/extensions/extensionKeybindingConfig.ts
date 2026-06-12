@@ -7,6 +7,7 @@ export interface ExtensionKeybindingConfigPatchInput {
   title?: string;
   command?: string;
   args?: unknown;
+  when?: string;
   scope?: 'global' | 'surface';
   packageType?: ExtensionPackageType;
   keys?: string[];
@@ -36,6 +37,7 @@ export function applyExtensionKeybindingConfigPatch(
       title: input.title,
       command: input.command,
       ...(input.args !== undefined ? { args: input.args } : {}),
+      ...(input.when ? { when: input.when } : {}),
       scope: input.scope ?? 'global',
       ...(input.packageType ? { packageType: input.packageType } : {}),
       defaultKeys: [],

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { addItem, clearItems, deleteItem, getState, provideTurnContext, setPlan, todoTool, updateItem } from './backend';
+import { addItem, clearItems, deleteItem, getState, listTodoConnections, provideTurnContext, setPlan, todoTool, updateItem } from './backend';
 
 function createCtx() {
   const store = new Map<string, unknown>();
@@ -99,5 +99,28 @@ describe('system-todo backend', () => {
       text: expect.stringContaining('Set todo plan'),
     });
     await expect(todoTool({ action: 'clear', scope: 'all' }, ctx)).resolves.toMatchObject({ text: expect.stringContaining('0 open') });
+  });
+
+  it('publishes a conversation connection only when todos are meaningful', async () => {
+    const ctx = createCtx();
+
+    await expect(listTodoConnections({}, ctx)).resolves.toEqual({ items: [] });
+
+    await addItem({ text: 'Wire connection shelf', status: 'doing' }, ctx);
+    await expect(listTodoConnections({}, ctx)).resolves.toMatchObject({
+      items: [
+        {
+          id: 'todos',
+          conversationId: 'conv-1',
+          kind: 'state',
+          title: 'Todos',
+          subtitle: expect.stringContaining('1 open'),
+          active: true,
+          visibility: 'system',
+          source: { type: 'conversation-metadata', id: 'system-todo' },
+          surfaces: ['composerShelf', 'cli'],
+        },
+      ],
+    });
   });
 });

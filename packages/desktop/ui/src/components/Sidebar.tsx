@@ -21,6 +21,11 @@ import { useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import {
+  DESKTOP_CONVERSATION_SHORTCUT_EVENT,
+  isSidebarConversationShortcutAction,
+  sidebarConversationShortcutCommandAction,
+} from '../conversation/desktopConversationShortcutActions';
+import {
   buildConversationGroupLabels,
   getConversationGroupLabel,
   groupConversationItemsByCwd,
@@ -117,7 +122,6 @@ function MoreActionsIcon({ size = 12 }: { size?: number }) {
 
 function formatGatewayProviderLabel(provider: string): string {
   if (provider === 'telegram') return 'Telegram';
-  if (provider === 'slack_mcp') return 'Slack MCP';
   return provider
     .replace(/[_:-]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -197,7 +201,6 @@ const THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY = buildSidebarNavSectionStorageKey(
 const LEGACY_THREAD_LIST_ENABLED = false;
 
 const SIDEBAR_BROWSER_NEW_CHAT_HOTKEY = 'Ctrl+Shift+N';
-const DESKTOP_CONVERSATION_SHORTCUT_EVENT = 'neon-pilot-desktop-shortcut';
 const WORKBENCH_CLOSE_ACTIVE_FILE_EVENT = 'pa:workbench-close-active-file';
 const WORKBENCH_DOCUMENT_WITH_OPEN_FILE_SELECTOR = '[data-workbench-document-pane="true"][data-has-open-file="true"]';
 
@@ -249,14 +252,6 @@ function getExtensionNavIcon(icon: string | undefined): string {
       return PATH.grid;
   }
 }
-
-type DesktopConversationShortcutAction =
-  | 'close-conversation'
-  | 'reopen-closed-conversation'
-  | 'previous-conversation'
-  | 'next-conversation'
-  | 'toggle-conversation-pin'
-  | 'toggle-conversation-archive';
 
 type ThreadsOrganizeMode = 'project' | 'chronological';
 type ThreadsFilterMode = 'all' | 'human' | 'automation';
@@ -669,17 +664,6 @@ function getNewConversationHotkeyLabel(): string {
   }
 
   return SIDEBAR_BROWSER_NEW_CHAT_HOTKEY;
-}
-
-function isDesktopConversationShortcutAction(value: unknown): value is DesktopConversationShortcutAction {
-  return (
-    value === 'close-conversation' ||
-    value === 'reopen-closed-conversation' ||
-    value === 'previous-conversation' ||
-    value === 'next-conversation' ||
-    value === 'toggle-conversation-pin' ||
-    value === 'toggle-conversation-archive'
-  );
 }
 
 function TopNavItem({
@@ -3752,8 +3736,11 @@ export function Sidebar() {
         return;
       }
 
-      const action = (event as CustomEvent<{ action?: unknown }>).detail?.action;
-      if (!isDesktopConversationShortcutAction(action)) {
+      const detail = (event as CustomEvent<{ action?: unknown; command?: unknown }>).detail;
+      const action = isSidebarConversationShortcutAction(detail?.action)
+        ? detail.action
+        : sidebarConversationShortcutCommandAction(detail?.command);
+      if (!action) {
         return;
       }
 

@@ -69,6 +69,16 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     tag: 'v0.10.2',
   },
   {
+    id: 'system-knowledge',
+    name: 'Knowledge',
+    description: 'Browse and edit knowledge base files beside the active conversation.',
+    version: '0.1.0',
+    tag: 'v0.11.7',
+    compatibility: {
+      neonPilot: '>=0.10.0',
+    },
+  },
+  {
     id: 'system-local-models',
     name: 'Local Models',
     description: 'Manage local MLX and GGUF model runtimes from one workspace.',

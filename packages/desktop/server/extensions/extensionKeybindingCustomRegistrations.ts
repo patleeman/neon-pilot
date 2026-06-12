@@ -10,6 +10,7 @@ export function buildCustomExtensionKeybindingRegistrations(input: {
       title: string;
       command: string;
       args?: unknown;
+      when?: string;
       scope?: string;
       defaultKeys?: string[];
     }
@@ -31,6 +32,7 @@ export function buildCustomExtensionKeybindingRegistrations(input: {
         keys,
         command: keybinding.command,
         ...(keybinding.args !== undefined ? { args: keybinding.args } : {}),
+        ...(keybinding.when ? { when: keybinding.when } : {}),
         scope: (keybinding.scope === 'surface' ? 'surface' : 'global') as 'surface' | 'global',
         defaultKeys: keybinding.defaultKeys ?? [],
         enabled: !disabledKeybindings.has(registryKey),
