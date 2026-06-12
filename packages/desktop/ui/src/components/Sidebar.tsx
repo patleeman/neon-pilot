@@ -1992,6 +1992,14 @@ export function Sidebar() {
   const [sidebarNotice, setSidebarNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null);
   const [gatewayState, setGatewayState] = useState<GatewayState | null>(null);
   const [addWorkspaceBusy, setAddWorkspaceBusy] = useState(false);
+  const workspaceLoadLifecycleRef = useRef({ latestRequestId: 0, disposed: false });
+
+  useEffect(() => {
+    workspaceLoadLifecycleRef.current.disposed = false;
+    return () => {
+      workspaceLoadLifecycleRef.current.disposed = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -2123,12 +2131,34 @@ export function Sidebar() {
     return normalized;
   }, []);
   const loadSavedWorkspacePaths = useCallback(async () => {
+    const requestId = workspaceLoadLifecycleRef.current.latestRequestId + 1;
+    workspaceLoadLifecycleRef.current.latestRequestId = requestId;
     try {
       const { sessionIds, pinnedSessionIds, workspacePaths } = await api.openConversationTabs();
+      if (
+        workspaceLoadLifecycleRef.current.disposed ||
+        workspaceLoadLifecycleRef.current.latestRequestId !== requestId
+      ) {
+        return false;
+      }
       persistSavedWorkspacePathsState(workspacePaths);
       setWorkspaceBootstrapHasOpenConversations(sessionIds.length > 0 || pinnedSessionIds.length > 0);
+      return true;
+    } catch (error) {
+      if (
+        workspaceLoadLifecycleRef.current.disposed ||
+        workspaceLoadLifecycleRef.current.latestRequestId !== requestId
+      ) {
+        return false;
+      }
+      throw error;
     } finally {
-      setSavedWorkspacePathsLoaded(true);
+      if (
+        !workspaceLoadLifecycleRef.current.disposed &&
+        workspaceLoadLifecycleRef.current.latestRequestId === requestId
+      ) {
+        setSavedWorkspacePathsLoaded(true);
+      }
     }
   }, [persistSavedWorkspacePathsState]);
 

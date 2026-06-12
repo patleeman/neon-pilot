@@ -64,6 +64,16 @@ function createSession(overrides: Partial<SessionMeta> = {}): SessionMeta {
   };
 }
 
+function createDeferredPromise<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 function renderSidebar(sessions: SessionMeta[], pathname = '/conversations/new') {
   // Seed the store so hooks find the sessions
   sessionStore.replaceAll(sessions);
@@ -387,6 +397,80 @@ describe('Sidebar group drag reordering', () => {
     expect(apiMocks.changeConversationCwd).toHaveBeenCalledWith('conv-project', null, expect.any(String), null);
     expect(JSON.parse(localStorage.getItem(OPEN_SESSION_IDS_STORAGE_KEY) ?? '[]')).toEqual(['conv-project-moved', 'conv-chat']);
     expect(container.textContent).toContain('Moved conversation to Chats.');
+  });
+
+  it('does not let an older workspace bootstrap load overwrite a newer picker refresh', async () => {
+    const initialWorkspace = '/tmp/initial-worktree';
+    const newerWorkspace = '/tmp/newer-worktree';
+    const olderWorkspace = '/tmp/older-worktree';
+    const initialLoad = createDeferredPromise<{
+      sessionIds: string[];
+      pinnedSessionIds: string[];
+      archivedSessionIds: string[];
+      workspacePaths: string[];
+    }>();
+    const pickerRefresh = createDeferredPromise<{
+      sessionIds: string[];
+      pinnedSessionIds: string[];
+      archivedSessionIds: string[];
+      workspacePaths: string[];
+    }>();
+
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-123']));
+    localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
+    localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([initialWorkspace]));
+    apiMocks.openConversationTabs
+      .mockResolvedValueOnce({
+        sessionIds: ['conv-123'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        workspacePaths: [initialWorkspace],
+      })
+      .mockReturnValueOnce(initialLoad.promise)
+      .mockReturnValueOnce(pickerRefresh.promise);
+
+    const container = renderSidebar([createSession({ cwd: initialWorkspace, cwdSlug: 'initial-worktree' })]);
+    await flushAsyncWork();
+
+    const addWorkspaceButton = container.querySelector<HTMLButtonElement>('button[aria-label="Add workspace"]');
+    if (!addWorkspaceButton) {
+      throw new Error('Missing add workspace button');
+    }
+
+    await act(async () => {
+      addWorkspaceButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncWork();
+
+    await act(async () => {
+      pickerRefresh.resolve({
+        sessionIds: ['conv-123'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        workspacePaths: [newerWorkspace],
+      });
+      await pickerRefresh.promise;
+    });
+    await flushAsyncWork();
+
+    expect(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).toContain(newerWorkspace);
+    expect(container.textContent).toContain(newerWorkspace);
+
+    await act(async () => {
+      initialLoad.resolve({
+        sessionIds: ['conv-123'],
+        pinnedSessionIds: [],
+        archivedSessionIds: [],
+        workspacePaths: [olderWorkspace],
+      });
+      await initialLoad.promise;
+    });
+    await flushAsyncWork();
+
+    expect(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).toContain(newerWorkspace);
+    expect(localStorage.getItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).not.toContain(olderWorkspace);
+    expect(container.textContent).toContain(newerWorkspace);
+    expect(container.textContent).not.toContain(olderWorkspace);
   });
 
   it('renders child threads as normal flat draggable rows', async () => {
