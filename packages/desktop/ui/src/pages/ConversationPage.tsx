@@ -1446,7 +1446,6 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   }, [draft, id]);
 
   const shouldLoadModels = shouldLoadConversationModelsAfterMetadataReady({
-    metadataReady: nonCriticalComposerMetadataReady,
     draft,
     hasPendingInitialPrompt: Boolean(pendingInitialPrompt),
     hasPendingInitialPromptInFlight,
