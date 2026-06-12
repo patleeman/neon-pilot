@@ -217,6 +217,27 @@ export function ActivityTreePinnedIcon({ pinned }: { pinned: boolean }) {
   );
 }
 
+export function ActivityTreeLockIcon({ locked }: { locked: boolean }) {
+  if (!locked) return null;
+  return (
+    <span className="shrink-0 text-dim" title="Locked thread" aria-label="Locked thread">
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M7.5 10.5V8.25a4.5 4.5 0 0 1 9 0v2.25M6.75 10.5h10.5A1.5 1.5 0 0 1 18.75 12v6A1.5 1.5 0 0 1 17.25 19.5H6.75A1.5 1.5 0 0 1 5.25 18v-6a1.5 1.5 0 0 1 1.5-1.5Z" />
+      </svg>
+    </span>
+  );
+}
+
 export function ConversationStatusSlot({ rowModel }: { rowModel: ActivityTreeRowModel }) {
   return (
     <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">

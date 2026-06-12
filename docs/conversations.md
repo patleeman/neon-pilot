@@ -36,6 +36,8 @@ Conversations are saved automatically. Every message, tool call, and tool result
 | Idle       | Waiting for user input                |
 | Saved      | Persisted to disk, visible in sidebar |
 
+Threads can be locked from the sidebar context menu or command palette. A locked thread stays visible with a lock marker and cannot be closed or archived until it is unlocked.
+
 Live conversations emit explicit `compaction_start` and `compaction_end` stream events. The desktop reducer uses them to show and clear the compaction state, while successful compactions also surface as compaction summary blocks in the transcript.
 
 Long saved conversations open on their latest transcript segment. When earlier history is hidden, the transcript renders an inline cutoff marker with the visible percentage range and a small **Load previous** action; implementation counts such as block totals and windowed chunks stay out of the main UI.

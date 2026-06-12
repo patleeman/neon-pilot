@@ -23,6 +23,7 @@ export const HOST_COMMAND_IDS = [
   'conversation.close',
   'conversation.reopenClosed',
   'conversation.togglePinned',
+  'conversation.toggleLocked',
   'conversation.toggleArchived',
   'conversation.rename',
   'conversation.duplicate',

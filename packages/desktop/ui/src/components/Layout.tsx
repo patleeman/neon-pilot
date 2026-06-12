@@ -236,6 +236,7 @@ const DESKTOP_SHORTCUT_ACTIONS = {
   closeConversation: 'close-conversation',
   reopenClosedConversation: 'reopen-closed-conversation',
   toggleConversationPin: 'toggle-conversation-pin',
+  toggleConversationLock: 'toggle-conversation-lock',
   toggleConversationArchive: 'toggle-conversation-archive',
   renameConversation: 'rename-conversation',
   saveConversationTitle: 'save-conversation-title',
@@ -2131,6 +2132,10 @@ export function Layout() {
       },
       toggleConversationPin() {
         dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationPin);
+        return true;
+      },
+      toggleConversationLock() {
+        dispatchDesktopShortcutAction(DESKTOP_SHORTCUT_ACTIONS.toggleConversationLock);
         return true;
       },
       toggleConversationArchive() {

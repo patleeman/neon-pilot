@@ -57,6 +57,7 @@ export interface ExtensionCommandExecutorOptions {
   closeConversation?(): boolean;
   reopenClosedConversation?(): boolean;
   toggleConversationPin?(): boolean;
+  toggleConversationLock?(): boolean;
   toggleConversationArchive?(): boolean;
   renameConversation?(): boolean;
   duplicateConversation?(): boolean | Promise<boolean>;
@@ -246,6 +247,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'conversation.close', title: 'Close Conversation', category: 'Conversation' },
     { id: 'conversation.reopenClosed', title: 'Reopen Closed Conversation', category: 'Conversation' },
     { id: 'conversation.togglePinned', title: 'Pin or Unpin Conversation', category: 'Conversation' },
+    { id: 'conversation.toggleLocked', title: 'Lock or Unlock Conversation', category: 'Conversation' },
     { id: 'conversation.toggleArchived', title: 'Archive or Restore Conversation', category: 'Conversation' },
     { id: 'conversation.rename', title: 'Rename Conversation', category: 'Conversation' },
     { id: 'conversation.duplicate', title: 'Duplicate Conversation', category: 'Conversation' },
@@ -635,6 +637,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.toggleConversationPin) && hasActiveConversation(options, context);
+      },
+    },
+    {
+      id: 'conversation.toggleLocked',
+      title: 'Lock or Unlock Conversation',
+      category: 'Conversation',
+      execute() {
+        return options.toggleConversationLock?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.toggleConversationLock) && hasActiveConversation(options, context);
       },
     },
     {

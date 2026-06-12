@@ -17,6 +17,7 @@ export type ActivityTreeRowModel = {
   conversationBackgroundWorkKind: ConversationBackgroundWorkKind | null;
   conversationChildCount: number;
   conversationHasPendingRuns: boolean;
+  conversationIsLocked: boolean;
   conversationIsPinned: boolean;
   conversationIsRunning: boolean;
   conversationNeedsAttention: boolean;
@@ -51,13 +52,15 @@ export function buildActivityTreeRowModel({
       ? (item.metadata.backgroundWorkKind as ConversationBackgroundWorkKind)
       : null;
   const conversationIsPinned = item.kind === 'conversation' && item.metadata?.isPinned === true;
+  const conversationIsLocked = item.kind === 'conversation' && item.metadata?.isLocked === true;
 
   return {
-    canArchive: item.kind === 'conversation' && hasArchiveAction && item.metadata?.canArchive !== false,
+    canArchive: item.kind === 'conversation' && hasArchiveAction && item.metadata?.canArchive !== false && !conversationIsLocked,
     canCreateChild: item.kind === 'group' && hasCreateChildAction,
     conversationBackgroundWorkKind,
     conversationChildCount,
     conversationHasPendingRuns,
+    conversationIsLocked,
     conversationIsPinned,
     conversationIsRunning,
     conversationNeedsAttention,

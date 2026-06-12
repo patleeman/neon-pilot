@@ -1515,6 +1515,7 @@ describe('extension commands', () => {
       'conversation.close',
       'conversation.reopenClosed',
       'conversation.togglePinned',
+      'conversation.toggleLocked',
       'conversation.toggleArchived',
       'conversation.rename',
       'conversation.duplicate',
@@ -1641,6 +1642,7 @@ describe('extension commands', () => {
         'conversation.close',
         'conversation.reopenClosed',
         'conversation.togglePinned',
+        'conversation.toggleLocked',
         'conversation.toggleArchived',
         'conversation.rename',
         'conversation.editCwd',
@@ -1650,6 +1652,7 @@ describe('extension commands', () => {
     const closeConversation = vi.fn(() => true);
     const reopenClosedConversation = vi.fn(() => true);
     const toggleConversationPin = vi.fn(() => true);
+    const toggleConversationLock = vi.fn(() => true);
     const toggleConversationArchive = vi.fn(() => true);
     const renameConversation = vi.fn(() => true);
     const editConversationCwd = vi.fn(() => true);
@@ -1663,6 +1666,7 @@ describe('extension commands', () => {
       closeConversation,
       reopenClosedConversation,
       toggleConversationPin,
+      toggleConversationLock,
       toggleConversationArchive,
       renameConversation,
       editConversationCwd,
@@ -1671,6 +1675,7 @@ describe('extension commands', () => {
     await expect(executeExtensionCommand('conversation.close', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.reopenClosed', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('conversation.toggleLocked', undefined, options)).resolves.toBe(true);
     await expect(executeExtensionCommand('conversation.toggleArchived', undefined, options)).resolves.toBe(true);
     await expect(
       executeExtensionCommand('conversation.rename', undefined, {
@@ -1688,6 +1693,7 @@ describe('extension commands', () => {
     expect(closeConversation).toHaveBeenCalledTimes(1);
     expect(reopenClosedConversation).toHaveBeenCalledTimes(1);
     expect(toggleConversationPin).toHaveBeenCalledTimes(1);
+    expect(toggleConversationLock).toHaveBeenCalledTimes(1);
     expect(toggleConversationArchive).toHaveBeenCalledTimes(1);
     expect(renameConversation).toHaveBeenCalledTimes(1);
     expect(editConversationCwd).toHaveBeenCalledTimes(1);
@@ -1727,6 +1733,7 @@ describe('extension commands', () => {
   it('blocks active-conversation commands when no conversation is active', async () => {
     const closeConversation = vi.fn(() => true);
     const toggleConversationPin = vi.fn(() => true);
+    const toggleConversationLock = vi.fn(() => true);
     const editConversationCwd = vi.fn(() => true);
     const pageConversation = vi.fn(() => true);
     const options = {
@@ -1737,17 +1744,20 @@ describe('extension commands', () => {
       activeConversationId: null,
       closeConversation,
       toggleConversationPin,
+      toggleConversationLock,
       editConversationCwd,
       pageConversation,
     };
 
     await expect(executeExtensionCommand('conversation.close', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.togglePinned', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('conversation.toggleLocked', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.editCwd', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.pageUp', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('conversation.pageDown', undefined, options)).resolves.toBe(false);
     expect(closeConversation).not.toHaveBeenCalled();
     expect(toggleConversationPin).not.toHaveBeenCalled();
+    expect(toggleConversationLock).not.toHaveBeenCalled();
     expect(editConversationCwd).not.toHaveBeenCalled();
     expect(pageConversation).not.toHaveBeenCalled();
   });

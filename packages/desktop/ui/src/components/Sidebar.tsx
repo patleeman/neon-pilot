@@ -178,6 +178,8 @@ const PATH = {
   list: 'M8.25 6.75h9m-9 5.25h9m-9 5.25h9M5.25 6.75h.01M5.25 12h.01M5.25 17.25h.01',
   grip: 'M9 6.75h.01M9 12h.01M9 17.25h.01M15 6.75h.01M15 12h.01M15 17.25h.01',
   clock: 'M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  lock:
+    'M7.5 10.5V8.25a4.5 4.5 0 0 1 9 0v2.25M6.75 10.5h10.5A1.5 1.5 0 0 1 18.75 12v6A1.5 1.5 0 0 1 17.25 19.5H6.75A1.5 1.5 0 0 1 5.25 18v-6a1.5 1.5 0 0 1 1.5-1.5Z',
   sparkles:
     'M12 3.75l1.07 3.43a1.5 1.5 0 0 0 .93.94l3.43 1.07-3.43 1.07a1.5 1.5 0 0 0-.93.93L12 15.62l-1.07-3.43a1.5 1.5 0 0 0-.93-.93L6.57 10.19 10 9.12a1.5 1.5 0 0 0 .93-.94L12 3.75Zm6 10.5.54 1.71a.75.75 0 0 0 .47.47l1.71.54-1.71.54a.75.75 0 0 0-.47.47L18 20.69l-.54-1.71a.75.75 0 0 0-.47-.47l-1.71-.54 1.71-.54a.75.75 0 0 0 .47-.47L18 14.25Z',
   chatBubble:
@@ -198,6 +200,7 @@ const THREADS_ORGANIZE_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-o
 const THREADS_FILTER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-filter');
 const THREADS_SORT_BY_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-sort-by');
 const THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-manual-group-order');
+const THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-locked-conversations');
 const LEGACY_THREAD_LIST_ENABLED = false;
 
 const SIDEBAR_BROWSER_NEW_CHAT_HOTKEY = 'Ctrl+Shift+N';
@@ -559,6 +562,33 @@ function writeManualConversationGroupOrder(groupKeys: readonly string[]): void {
     }
 
     localStorage.removeItem(THREADS_MANUAL_GROUP_ORDER_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function readLockedConversationIds(): string[] {
+  try {
+    const raw = localStorage.getItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? normalizeStoredStringList(parsed) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLockedConversationIds(conversationIds: readonly string[]): void {
+  try {
+    if (conversationIds.length > 0) {
+      localStorage.setItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversationIds));
+      return;
+    }
+
+    localStorage.removeItem(THREADS_LOCKED_CONVERSATIONS_STORAGE_KEY);
   } catch {
     // Ignore storage failures.
   }
@@ -1278,8 +1308,10 @@ const OpenConversationRow = memo(function OpenConversationRow({
   canDrag = false,
   isDragging = false,
   dropPosition = null,
+  locked = false,
   onPin,
   onUnpin,
+  onToggleLock,
   onClose,
   onArchive,
   onOpenInNewWindow,
@@ -1301,11 +1333,13 @@ const OpenConversationRow = memo(function OpenConversationRow({
   session: SessionMeta;
   active: boolean;
   pinned?: boolean;
+  locked?: boolean;
   canDrag?: boolean;
   isDragging?: boolean;
   dropPosition?: OpenConversationDropPosition | null;
   onPin?: () => void;
   onUnpin?: () => void;
+  onToggleLock?: () => void;
   onClose?: () => void;
   onArchive?: () => boolean | Promise<boolean>;
   onOpenInNewWindow?: () => boolean | Promise<boolean>;
@@ -1370,9 +1404,12 @@ const OpenConversationRow = memo(function OpenConversationRow({
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [busyExtensionMenuId, setBusyExtensionMenuId] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<ConversationCopyMenuState | null>(null);
-  const hasContextMenuActions = Boolean(onPin || onUnpin || onArchive || onOpenInNewWindow || conversationExtensionMenuItems.length > 0);
+  const hasContextMenuActions = Boolean(
+    onPin || onUnpin || onToggleLock || onArchive || onOpenInNewWindow || conversationExtensionMenuItems.length > 0,
+  );
   const contextMenuItemCount =
     (pinned && onUnpin ? 1 : !pinned && onPin ? 1 : 0) +
+    Number(Boolean(onToggleLock)) +
     Number(Boolean(onArchive)) +
     Number(Boolean(onOpenInNewWindow)) +
     conversationExtensionMenuItems.length;
@@ -1696,6 +1733,11 @@ const OpenConversationRow = memo(function OpenConversationRow({
                 <Ico d={PATH.pin} size={11} />
               </span>
             ) : null}
+            {locked ? (
+              <span className="shrink-0 text-dim" title="Locked thread" aria-label="Locked thread">
+                <Ico d={PATH.lock} size={11} />
+              </span>
+            ) : null}
             {gatewayProviders.map((provider) => (
               <GatewayRailIcon key={provider} provider={provider} />
             ))}
@@ -1783,6 +1825,17 @@ const OpenConversationRow = memo(function OpenConversationRow({
                     Pin
                   </MenuItem>
                 ) : null}
+                {onToggleLock ? (
+                  <MenuItem
+                    onClick={async () => {
+                      onToggleLock();
+                      setMenuOpen(false);
+                    }}
+                    disabled={busyExtensionMenuId !== null}
+                  >
+                    {locked ? 'Unlock' : 'Lock'}
+                  </MenuItem>
+                ) : null}
                 {onArchive ? (
                   <MenuItem
                     onClick={async () => {
@@ -1842,6 +1895,7 @@ const SessionRow = memo(function SessionRow({
   sessionId,
   active,
   pinned,
+  locked,
   canDrag,
   isDragging,
   dropPosition,
@@ -1851,6 +1905,7 @@ const SessionRow = memo(function SessionRow({
   gatewayProviders,
   onPin,
   onUnpin,
+  onToggleLock,
   onClose,
   onArchive,
   onOpenInNewWindow,
@@ -1868,6 +1923,7 @@ const SessionRow = memo(function SessionRow({
   sessionId: string;
   active: boolean;
   pinned?: boolean;
+  locked?: boolean;
   canDrag?: boolean;
   isDragging?: boolean;
   dropPosition?: OpenConversationDropPosition | null;
@@ -1877,6 +1933,7 @@ const SessionRow = memo(function SessionRow({
   gatewayProviders?: string[];
   onPin?: () => void;
   onUnpin?: () => void;
+  onToggleLock?: () => void;
   onClose?: () => void;
   onArchive?: () => boolean | Promise<boolean>;
   onOpenInNewWindow?: () => boolean | Promise<boolean>;
@@ -1907,6 +1964,7 @@ const SessionRow = memo(function SessionRow({
       session={isRunning ? { ...session, isRunning: true } : session}
       active={active}
       pinned={pinned}
+      locked={locked}
       canDrag={canDrag}
       isDragging={isDragging}
       dropPosition={dropPosition}
@@ -1917,6 +1975,7 @@ const SessionRow = memo(function SessionRow({
       gatewayProviders={gatewayProviders}
       onPin={onPin}
       onUnpin={onUnpin}
+      onToggleLock={onToggleLock}
       onClose={onClose}
       onArchive={onArchive}
       onOpenInNewWindow={onOpenInNewWindow}
@@ -1974,6 +2033,7 @@ export function Sidebar() {
   const [manualConversationGroupOrder, setManualConversationGroupOrder] = useState(() => readManualConversationGroupOrder());
   const [collapsedConversationGroupKeys, setCollapsedConversationGroupKeys] = useState(() => readCollapsedConversationGroupKeys());
   const [conversationGroupLabelOverrides, setConversationGroupLabelOverrides] = useState(() => readConversationGroupLabelOverrides());
+  const [lockedConversationIds, setLockedConversationIds] = useState(() => readLockedConversationIds());
   const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
   const [draggingSection, setDraggingSection] = useState<ConversationShelf | null>(null);
   const [draggingGroupKey, setDraggingGroupKey] = useState<string | null>(null);
@@ -2300,6 +2360,7 @@ export function Sidebar() {
     () => new Map(manualConversationGroupOrder.map((groupKey, index) => [groupKey, index] as const)),
     [manualConversationGroupOrder],
   );
+  const lockedConversationIdSet = useMemo(() => new Set(lockedConversationIds), [lockedConversationIds]);
 
   const conversationBootstrapVersionKey = useMemo(
     () =>
@@ -2466,6 +2527,7 @@ export function Sidebar() {
         ...item.metadata,
         ...(conversationItemBySessionId.has(conversationId) ? {} : { canArchive: false }),
         ...(pinnedIdSet.has(conversationId) ? { isPinned: true } : {}),
+        ...(lockedConversationIdSet.has(conversationId) ? { isLocked: true, canArchive: false } : {}),
         ...(runningAutomationConversationIdSet.has(conversationId) ? { isRunning: true, hasPendingRuns: false } : {}),
         ...(pendingExecutionConversationIdSet.has(conversationId) && !runningAutomationConversationIdSet.has(conversationId)
           ? { hasPendingRuns: true, backgroundWorkKind: backgroundWorkKindByConversationId.get(conversationId) }
@@ -2515,6 +2577,7 @@ export function Sidebar() {
     activityTreeSessions,
     backgroundWorkKindByConversationId,
     groupedConversationRows,
+    lockedConversationIdSet,
     pendingExecutionConversationIdSet,
     pinnedIds,
     runningAutomationConversationIdSet,
@@ -2594,6 +2657,53 @@ export function Sidebar() {
       return next;
     });
   }, []);
+
+  const persistLockedConversationIds = useCallback((conversationIds: readonly string[]) => {
+    const normalized = normalizeStoredStringList(conversationIds);
+    writeLockedConversationIds(normalized);
+    setLockedConversationIds(normalized);
+    return normalized;
+  }, []);
+
+  const isConversationLocked = useCallback(
+    (conversationId: string | null | undefined) => {
+      const normalizedConversationId = conversationId?.trim() ?? '';
+      return Boolean(normalizedConversationId && lockedConversationIdSet.has(normalizedConversationId));
+    },
+    [lockedConversationIdSet],
+  );
+
+  const toggleConversationLock = useCallback(
+    (conversationId: string) => {
+      const normalizedConversationId = conversationId.trim();
+      if (!normalizedConversationId || normalizedConversationId === DRAFT_CONVERSATION_ID) {
+        return false;
+      }
+
+      if (lockedConversationIdSet.has(normalizedConversationId)) {
+        persistLockedConversationIds(lockedConversationIds.filter((id) => id !== normalizedConversationId));
+        showSidebarNotice('accent', 'Thread unlocked.');
+        return true;
+      }
+
+      persistLockedConversationIds([...lockedConversationIds, normalizedConversationId]);
+      showSidebarNotice('accent', 'Thread locked.');
+      return true;
+    },
+    [lockedConversationIdSet, lockedConversationIds, persistLockedConversationIds, showSidebarNotice],
+  );
+
+  const guardUnlockedConversationAction = useCallback(
+    (conversationId: string, actionLabel: string) => {
+      if (!isConversationLocked(conversationId)) {
+        return true;
+      }
+
+      showSidebarNotice('danger', `Unlock this thread before ${actionLabel}.`, 4000);
+      return false;
+    },
+    [isConversationLocked, showSidebarNotice],
+  );
 
   const handleThreadsOrganizeModeChange = useCallback((value: ThreadsOrganizeMode) => {
     setThreadsOrganizeMode(value);
@@ -3332,24 +3442,48 @@ export function Sidebar() {
   const archiveConversationGroupSessions = useCallback(
     (sessionIds: readonly string[]) => {
       const normalizedSessionIds = sessionIds.map((value) => value.trim()).filter(Boolean);
+      const lockedCount = normalizedSessionIds.filter((sessionId) => lockedConversationIdSet.has(sessionId)).length;
+      const unlockedSessionIds = normalizedSessionIds.filter((sessionId) => !lockedConversationIdSet.has(sessionId));
       if (normalizedSessionIds.length === 0) {
         return 0;
       }
 
-      const sessionIdSet = new Set(normalizedSessionIds);
+      if (unlockedSessionIds.length === 0) {
+        showSidebarNotice(
+          'danger',
+          lockedCount === 1 ? 'Unlock this thread before archiving it.' : 'Unlock these threads before archiving them.',
+          4000,
+        );
+        return 0;
+      }
+
+      const sessionIdSet = new Set(unlockedSessionIds);
       if (activeConversationSurfaceId && sessionIdSet.has(activeConversationSurfaceId)) {
-        navigate(resolveConversationGroupRedirectPath(normalizedSessionIds));
+        navigate(resolveConversationGroupRedirectPath(unlockedSessionIds));
       }
 
       replaceConversationLayout({
         sessionIds: openIds.filter((id) => !sessionIdSet.has(id)),
         pinnedSessionIds: pinnedIds.filter((id) => !sessionIdSet.has(id)),
-        archivedSessionIds: [...new Set([...archivedConversationIds, ...normalizedSessionIds])],
+        archivedSessionIds: [...new Set([...archivedConversationIds, ...unlockedSessionIds])],
       });
 
-      return normalizedSessionIds.length;
+      if (lockedCount > 0) {
+        showSidebarNotice('danger', lockedCount === 1 ? 'Skipped 1 locked thread.' : `Skipped ${lockedCount} locked threads.`, 4000);
+      }
+
+      return unlockedSessionIds.length;
     },
-    [activeConversationSurfaceId, archivedConversationIds, navigate, openIds, pinnedIds, resolveConversationGroupRedirectPath],
+    [
+      activeConversationSurfaceId,
+      archivedConversationIds,
+      lockedConversationIdSet,
+      navigate,
+      openIds,
+      pinnedIds,
+      resolveConversationGroupRedirectPath,
+      showSidebarNotice,
+    ],
   );
 
   const handleOpenConversationGroupInFinder = useCallback(
@@ -3626,6 +3760,10 @@ export function Sidebar() {
   }
 
   function handleArchiveConversation(sessionId: string) {
+    if (!guardUnlockedConversationAction(sessionId, 'archiving it')) {
+      return;
+    }
+
     const archivingActiveConversation = activeConversationId === sessionId;
     const session =
       workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ??
@@ -3647,6 +3785,10 @@ export function Sidebar() {
   }
 
   function handleCloseConversation(sessionId: string) {
+    if (!guardUnlockedConversationAction(sessionId, 'closing it')) {
+      return;
+    }
+
     const closingActiveConversation = activeConversationId === sessionId;
     const conversationIsOpen = tabs.some((session) => session.id === sessionId);
     const session =
@@ -3677,6 +3819,10 @@ export function Sidebar() {
   }
 
   function handleClosePinnedConversation(sessionId: string) {
+    if (!guardUnlockedConversationAction(sessionId, 'closing it')) {
+      return;
+    }
+
     const closingActiveConversation = activeConversationId === sessionId;
     const session =
       workspaceConversationTabs.find((candidate) => candidate.id === sessionId) ??
@@ -3734,6 +3880,14 @@ export function Sidebar() {
     if (draggingSessionId === activeConversationId) {
       clearDragState();
     }
+  }
+
+  function handleToggleLockedActiveConversation() {
+    if (location.pathname === DRAFT_CONVERSATION_ROUTE || !activeConversationId) {
+      return;
+    }
+
+    toggleConversationLock(activeConversationId);
   }
 
   function handleToggleArchivedActiveConversation() {
@@ -3806,6 +3960,11 @@ export function Sidebar() {
         return;
       }
 
+      if (action === 'toggle-conversation-lock') {
+        handleToggleLockedActiveConversation();
+        return;
+      }
+
       if (action === 'toggle-conversation-archive') {
         handleToggleArchivedActiveConversation();
         return;
@@ -3825,6 +3984,7 @@ export function Sidebar() {
     handleCloseActiveConversation,
     handleReopenClosedConversation,
     handleToggleArchivedActiveConversation,
+    handleToggleLockedActiveConversation,
     handleTogglePinnedActiveConversation,
     navigateConversation,
   ]);
@@ -3859,6 +4019,7 @@ export function Sidebar() {
 
     const isAutomationRunning = runningAutomationConversationIdSet.has(session.id);
     const hasPendingExecutions = pendingExecutionConversationIdSet.has(session.id);
+    const locked = lockedConversationIdSet.has(session.id);
 
     return (
       <SessionRow
@@ -3866,6 +4027,7 @@ export function Sidebar() {
         sessionId={session.id}
         active={isDraftTab ? location.pathname === DRAFT_CONVERSATION_ROUTE : location.pathname === `/conversations/${session.id}`}
         pinned={pinned}
+        locked={locked}
         canDrag={canDrag}
         initialSession={session}
         automationTitle={automationThreadTitleByConversationId.get(session.id)}
@@ -3876,9 +4038,10 @@ export function Sidebar() {
         dropPosition={dropPosition}
         onPin={!pinned && !isDraftTab ? () => handlePinConversation(session.id) : undefined}
         onUnpin={pinned ? () => handleUnpinConversation(session.id) : undefined}
-        onClose={isDraftTab ? handleCloseDraftTab : !pinned ? () => handleCloseConversation(session.id) : undefined}
+        onToggleLock={!isDraftTab ? () => toggleConversationLock(session.id) : undefined}
+        onClose={isDraftTab ? handleCloseDraftTab : !pinned && !locked ? () => handleCloseConversation(session.id) : undefined}
         onArchive={
-          !isDraftTab
+          !isDraftTab && !locked
             ? () => {
                 handleArchiveConversation(session.id);
                 return true;
@@ -4076,6 +4239,7 @@ export function Sidebar() {
                       const conversationItem = conversationId ? conversationItemBySessionId.get(conversationId) : null;
                       const parentConversationId = conversationItem?.session.parentSessionId;
                       const parentConversation = parentConversationId ? conversationItemBySessionId.get(parentConversationId) : null;
+                      const conversationLocked = conversationId ? isConversationLocked(conversationId) : false;
                       const groupKey = typeof item.metadata?.groupKey === 'string' ? item.metadata.groupKey : null;
                       const conversationGroup = groupKey ? conversationGroupByKey.get(groupKey) : null;
                       const isConversation = item.kind === 'conversation' && conversationId && conversationItem;
@@ -4186,15 +4350,25 @@ export function Sidebar() {
                               <MenuItem
                                 onClick={() => {
                                   context.close();
-                                  if (conversationItem.pinned) {
-                                    handleClosePinnedConversation(conversationId);
-                                  } else {
-                                    handleCloseConversation(conversationId);
-                                  }
+                                  toggleConversationLock(conversationId);
                                 }}
                               >
-                                Close Thread
+                                {conversationLocked ? 'Unlock Thread' : 'Lock Thread'}
                               </MenuItem>
+                              {!conversationLocked ? (
+                                <MenuItem
+                                  onClick={() => {
+                                    context.close();
+                                    if (conversationItem.pinned) {
+                                      handleClosePinnedConversation(conversationId);
+                                    } else {
+                                      handleCloseConversation(conversationId);
+                                    }
+                                  }}
+                                >
+                                  Close Thread
+                                </MenuItem>
+                              ) : null}
                               <MenuItem
                                 onClick={() => {
                                   context.close();
@@ -4203,14 +4377,16 @@ export function Sidebar() {
                               >
                                 Duplicate Thread
                               </MenuItem>
-                              <MenuItem
-                                onClick={() => {
-                                  context.close();
-                                  handleArchiveConversation(conversationId);
-                                }}
-                              >
-                                Archive Thread
-                              </MenuItem>
+                              {!conversationLocked ? (
+                                <MenuItem
+                                  onClick={() => {
+                                    context.close();
+                                    handleArchiveConversation(conversationId);
+                                  }}
+                                >
+                                  Archive Thread
+                                </MenuItem>
+                              ) : null}
                               <MenuItem
                                 onClick={() => {
                                   context.close();

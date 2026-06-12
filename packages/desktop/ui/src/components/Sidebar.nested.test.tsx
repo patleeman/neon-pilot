@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppDataContext, LiveTitlesContext, SseConnectionContext } from '../app/contexts.js';
 import {
   ARCHIVED_SESSION_IDS_STORAGE_KEY,
+  buildSidebarNavSectionStorageKey,
   OPEN_SESSION_IDS_STORAGE_KEY,
   PINNED_SESSION_IDS_STORAGE_KEY,
   SAVED_WORKSPACE_PATHS_STORAGE_KEY,
@@ -27,6 +28,7 @@ const apiMocks = vi.hoisted(() => ({
 vi.mock('../client/api', () => ({ api: apiMocks }));
 
 const roots: Root[] = [];
+const LOCKED_CONVERSATION_IDS_STORAGE_KEY = buildSidebarNavSectionStorageKey('threads-locked-conversations');
 
 function createStorage() {
   const map = new Map<string, string>();
@@ -264,5 +266,37 @@ describe('Sidebar branch conversation interactions', () => {
     expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['solo']);
     expect(readJsonList(SAVED_WORKSPACE_PATHS_STORAGE_KEY)).toEqual(['/repo/solo']);
     expect(apiMocks.setSavedWorkspacePaths).toHaveBeenCalledWith(['/repo/solo']);
+  });
+
+  it('blocks closing and archiving a locked conversation until it is unlocked', async () => {
+    localStorage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['locked']));
+    renderSidebar('/conversations/locked', [session({ id: 'locked', title: 'Important thread' })]);
+    await flush();
+
+    dispatchDesktopShortcutCommand('conversation.toggleLocked');
+    await flush();
+
+    expect(readJsonList(LOCKED_CONVERSATION_IDS_STORAGE_KEY)).toEqual(['locked']);
+
+    dispatchDesktopShortcutCommand('conversation.close');
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['locked']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual([]);
+
+    dispatchDesktopShortcutCommand('conversation.toggleArchived');
+    await flush();
+
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual(['locked']);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual([]);
+
+    dispatchDesktopShortcutCommand('conversation.toggleLocked');
+    await flush();
+    dispatchDesktopShortcutCommand('conversation.close');
+    await flush();
+
+    expect(readJsonList(LOCKED_CONVERSATION_IDS_STORAGE_KEY)).toEqual([]);
+    expect(readJsonList(OPEN_SESSION_IDS_STORAGE_KEY)).toEqual([]);
+    expect(readJsonList(ARCHIVED_SESSION_IDS_STORAGE_KEY)).toEqual(['locked']);
   });
 });

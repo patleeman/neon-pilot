@@ -7,6 +7,7 @@ import {
   ActivityTreeDropMarker,
   type ActivityTreeInlineAction,
   ActivityTreeLeadingSlot,
+  ActivityTreeLockIcon,
   ActivityTreePinnedIcon,
   ActivityTreeRowActions,
   ActivityTreeTrailingStatus,
@@ -137,6 +138,7 @@ function ActivityTreeRowComponent({
       />
       {rowModel.showConversationStatus && rowModel.showExpander ? <ConversationStatusSlot rowModel={rowModel} /> : null}
       <ActivityTreePinnedIcon pinned={rowModel.conversationIsPinned} />
+      <ActivityTreeLockIcon locked={rowModel.conversationIsLocked} />
       <span className="min-w-0 flex-1 truncate text-[12px] leading-[1.15] text-primary">{item.title}</span>
       <ActivityTreeTrailingStatus expanded={expanded} item={item} rowModel={rowModel} />
       <ActivityTreeRowActions

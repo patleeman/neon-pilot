@@ -17,6 +17,7 @@ export type SidebarConversationShortcutAction =
   | 'previous-conversation'
   | 'next-conversation'
   | 'toggle-conversation-pin'
+  | 'toggle-conversation-lock'
   | 'toggle-conversation-archive';
 
 const CONVERSATION_EDITOR_SHORTCUT_ACTIONS = new Set<ConversationEditorShortcutAction>([
@@ -35,6 +36,7 @@ const SIDEBAR_CONVERSATION_SHORTCUT_ACTIONS = new Set<SidebarConversationShortcu
   'previous-conversation',
   'next-conversation',
   'toggle-conversation-pin',
+  'toggle-conversation-lock',
   'toggle-conversation-archive',
 ]);
 
@@ -79,6 +81,8 @@ export function sidebarConversationShortcutCommandAction(command: unknown): Side
       return 'next-conversation';
     case 'conversation.togglePinned':
       return 'toggle-conversation-pin';
+    case 'conversation.toggleLocked':
+      return 'toggle-conversation-lock';
     case 'conversation.toggleArchived':
       return 'toggle-conversation-archive';
     default:

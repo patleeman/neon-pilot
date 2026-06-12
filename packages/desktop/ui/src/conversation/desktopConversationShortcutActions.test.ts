@@ -30,6 +30,7 @@ describe('desktop conversation shortcut actions', () => {
     expect(sidebarConversationShortcutCommandAction('conversation.previous')).toBe('previous-conversation');
     expect(sidebarConversationShortcutCommandAction('conversation.next')).toBe('next-conversation');
     expect(sidebarConversationShortcutCommandAction('conversation.togglePinned')).toBe('toggle-conversation-pin');
+    expect(sidebarConversationShortcutCommandAction('conversation.toggleLocked')).toBe('toggle-conversation-lock');
     expect(sidebarConversationShortcutCommandAction('conversation.toggleArchived')).toBe('toggle-conversation-archive');
     expect(sidebarConversationShortcutCommandAction('conversation.rename')).toBeNull();
   });
