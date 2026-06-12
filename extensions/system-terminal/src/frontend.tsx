@@ -97,6 +97,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     let usingPty = false;
     let degradedInputColumns = 0;
     let requestedWorkbenchClose = false;
+    let fallbackActive = false;
 
     const sendTerminalSocketMessage = (message: Record<string, unknown>): boolean => {
       if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN || !realtimeAttached) return false;
@@ -135,6 +136,18 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
 
     const handleTerminalExit = () => {
       closeWorkbenchTab();
+    };
+
+    const startFallbackStream = (id: string, warningMessage?: string) => {
+      if (closed || state.id !== id || fallbackActive) return Promise.resolve();
+      fallbackActive = true;
+      realtimeAttached = false;
+      terminalSocket = null;
+      flushPendingWritesThroughActions(id);
+      if (warningMessage) {
+        xterm.writeln(`\r\n\x1b[93m${warningMessage}\x1b[0m`);
+      }
+      return attachTerminalStream(id);
     };
 
     const attachTerminalRealtime = (id: string, url: string) =>
@@ -196,12 +209,21 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         });
 
         socket.addEventListener('error', () => {
+          if (settled) {
+            void startFallbackStream(id, 'Terminal realtime connection dropped; using fallback stream.');
+            return;
+          }
           fail(new Error('Terminal realtime connection failed.'));
         });
 
         socket.addEventListener('close', () => {
           if (terminalSocket === socket) terminalSocket = null;
-          if (!closed && !settled) fail(new Error('Terminal realtime connection closed.'));
+          if (closed) return;
+          if (settled) {
+            void startFallbackStream(id, 'Terminal realtime connection dropped; using fallback stream.');
+            return;
+          }
+          fail(new Error('Terminal realtime connection closed.'));
         });
       });
 
@@ -250,6 +272,12 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     const writeTerminalData = (data: string) => {
       echoInput(data);
       if (terminalId && !closed) {
+        if (fallbackActive) {
+          pa.extension.invoke('terminalWrite', { id: terminalId, data }).catch(() => {
+            // Ignore write errors if terminal was closed.
+          });
+          return;
+        }
         if (!sendTerminalSocketMessage({ type: 'terminal_input', terminalId, data })) {
           pendingWritesRef.current.push(data);
         }
@@ -277,12 +305,8 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         void attachTerminalRealtime(result.id, realtimeUrl)
           .catch((error) => {
             if (closed || state.id !== result.id) return;
-            terminalSocket = null;
-            realtimeAttached = false;
-            flushPendingWritesThroughActions(result.id);
             const message = error instanceof Error ? error.message : String(error);
-            xterm.writeln(`\r\n\x1b[93mTerminal realtime connection failed; using fallback stream. ${message}\x1b[0m`);
-            return attachTerminalStream(result.id);
+            return startFallbackStream(result.id, `Terminal realtime connection failed; using fallback stream. ${message}`);
           })
           .catch((error) => {
             if (closed || (error instanceof DOMException && error.name === 'AbortError')) return;
