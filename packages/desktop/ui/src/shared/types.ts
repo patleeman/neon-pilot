@@ -1801,6 +1801,8 @@ export interface TraceAgentLoop {
 
 export interface TraceTokenDaily {
   date: string;
+  turns: number;
+  messages: number;
   tokensInput: number;
   tokensOutput: number;
   tokensCached: number;

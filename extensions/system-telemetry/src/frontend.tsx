@@ -34,6 +34,7 @@ import { TracesBraidChart } from './traces/TracesBraidChart';
 import { TracesCacheAndSystemPrompt } from './traces/TracesCacheAndSystemPrompt';
 import { TracesContextPointers } from './traces/TracesContextPointers';
 import { TracesContextPressure } from './traces/TracesContextPressure';
+import { TracesDailyUsage } from './traces/TracesDailyUsage';
 import { TracesHeatmap } from './traces/TracesHeatmap';
 import { TracesModelUsage } from './traces/TracesModelUsage';
 import { TracesSessionIntegrity } from './traces/TracesSessionIntegrity';
@@ -104,6 +105,7 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
         {summary && <PulseRow summary={summary} />}
 
         <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
+          {tokensDaily && <TracesDailyUsage data={tokensDaily} />}
           {tokensDaily && <TracesHeatmap data={tokensDaily} />}
           {modelUsage && summary && (
             <TracesModelUsage

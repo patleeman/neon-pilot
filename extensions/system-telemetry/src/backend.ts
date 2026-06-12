@@ -634,6 +634,8 @@ export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse 
     string,
     {
       date: string;
+      turns: number;
+      messages: number;
       tokensInput: number;
       tokensOutput: number;
       tokensCached: number;
@@ -642,6 +644,17 @@ export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse 
       cost: number;
     }
   >();
+  const emptyBucket = (date: string) => ({
+    date,
+    turns: 0,
+    messages: 0,
+    tokensInput: 0,
+    tokensOutput: 0,
+    tokensCached: 0,
+    tokensCachedWrite: 0,
+    toolErrors: 0,
+    cost: 0,
+  });
   // The contribution-style token chart is meant to show lifetime/retained
   // daily aggregates, not the currently selected dashboard range. Tying this
   // to `24h` turns the chart into two sad squares. Nobody asked for pixel art.
@@ -651,22 +664,17 @@ export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse 
   const sourceEvents = stats.length > 0 ? stats : latestContextBySession(events);
   for (const event of sourceEvents) {
     const date = dayKey(event.ts);
-    const bucket = buckets.get(date) ?? {
-      date,
-      tokensInput: 0,
-      tokensOutput: 0,
-      tokensCached: 0,
-      tokensCachedWrite: 0,
-      toolErrors: 0,
-      cost: 0,
-    };
+    const bucket = buckets.get(date) ?? emptyBucket(date);
     if (stats.length > 0) {
+      bucket.turns += numberValue(event.payload.turnCount) || 1;
+      bucket.messages += numberValue(event.payload.stepCount);
       bucket.tokensInput += numberValue(event.payload.tokensInput);
       bucket.tokensOutput += numberValue(event.payload.tokensOutput);
       bucket.tokensCached += numberValue(event.payload.tokensCachedInput);
       bucket.tokensCachedWrite += numberValue(event.payload.tokensCachedWrite);
       bucket.cost += numberValue(event.payload.cost);
     } else {
+      bucket.turns += 1;
       bucket.tokensInput += numberValue(event.payload.totalTokens);
     }
     buckets.set(date, bucket);
@@ -674,15 +682,7 @@ export function tokensDaily(req: ExtensionRouteRequest): ExtensionRouteResponse 
   for (const event of toolEvents(events)) {
     if (event.payload.status !== 'error') continue;
     const date = dayKey(event.ts);
-    const bucket = buckets.get(date) ?? {
-      date,
-      tokensInput: 0,
-      tokensOutput: 0,
-      tokensCached: 0,
-      tokensCachedWrite: 0,
-      toolErrors: 0,
-      cost: 0,
-    };
+    const bucket = buckets.get(date) ?? emptyBucket(date);
     bucket.toolErrors += 1;
     buckets.set(date, bucket);
   }
