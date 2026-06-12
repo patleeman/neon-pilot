@@ -275,11 +275,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Bot mention variants, unknown command rejection, incomplete command rejection.
 - Conversation attachment and force-new behavior.
 
-### Slack MCP gateway
-
-- `!agent`, `!agent help`, `!agent stop`, `!agent model <model>`, `!agent compact`, `!agent detach`.
-- Unknown command rejection, normal message passthrough, outbound system messages.
-
 ## Cross-cutting release checks
 
 - Extension enable/disable/reload changes nav, tools, skills, transcript renderers, and settings without restart where supported.

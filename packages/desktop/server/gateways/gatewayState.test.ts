@@ -64,7 +64,7 @@ describe('gatewayState', () => {
     attachGatewayConversation({
       stateRoot,
       profile: 'shared',
-      provider: 'slack_mcp',
+      provider: 'discord',
       conversationId: 'conv-a',
       conversationTitle: 'A',
       externalChatId: 'C123',
@@ -73,7 +73,7 @@ describe('gatewayState', () => {
     const state = attachGatewayConversation({
       stateRoot,
       profile: 'shared',
-      provider: 'slack_mcp',
+      provider: 'discord',
       conversationId: 'conv-b',
       conversationTitle: 'B',
       externalChatId: 'C456',
@@ -95,7 +95,7 @@ describe('gatewayState', () => {
     attachGatewayConversation({
       stateRoot,
       profile: 'shared',
-      provider: 'slack_mcp',
+      provider: 'discord',
       conversationId: 'conv-a',
       conversationTitle: 'A',
       externalChatId: 'C123',
@@ -104,7 +104,7 @@ describe('gatewayState', () => {
     const state = attachGatewayConversation({
       stateRoot,
       profile: 'shared',
-      provider: 'slack_mcp',
+      provider: 'discord',
       conversationId: 'conv-b',
       conversationTitle: 'B',
       externalChatId: 'C123',

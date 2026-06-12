@@ -122,7 +122,6 @@ function MoreActionsIcon({ size = 12 }: { size?: number }) {
 
 function formatGatewayProviderLabel(provider: string): string {
   if (provider === 'telegram') return 'Telegram';
-  if (provider === 'slack_mcp') return 'Slack MCP';
   return provider
     .replace(/[_:-]+/g, ' ')
     .replace(/\s+/g, ' ')

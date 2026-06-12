@@ -85,7 +85,6 @@ interface PersistedGatewayState {
 }
 
 const TELEGRAM_PROVIDER: GatewayProviderId = 'telegram';
-const SLACK_MCP_PROVIDER: GatewayProviderId = 'slack_mcp';
 const DEFAULT_GATEWAY_PROVIDERS: GatewayProviderSummary[] = [
   {
     id: TELEGRAM_PROVIDER,
@@ -94,14 +93,6 @@ const DEFAULT_GATEWAY_PROVIDERS: GatewayProviderSummary[] = [
     implemented: true,
     configurationLocation: 'gateways',
     order: 10,
-  },
-  {
-    id: SLACK_MCP_PROVIDER,
-    label: 'Slack MCP',
-    description: 'Route Slack channel messages through the Slack MCP gateway.',
-    implemented: true,
-    configurationLocation: 'gateways',
-    order: 20,
   },
 ];
 
@@ -541,7 +532,7 @@ function appendGatewayEvent(state: PersistedGatewayState, event: Omit<GatewayEve
 }
 
 function providerLabel(provider: GatewayProviderId): string {
-  return provider === 'telegram' ? 'Telegram' : provider === 'slack_mcp' ? 'Slack MCP' : provider;
+  return provider === 'telegram' ? 'Telegram' : provider;
 }
 
 function isGatewayProviderId(value: unknown): value is GatewayProviderId {

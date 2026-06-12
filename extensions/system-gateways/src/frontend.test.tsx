@@ -75,7 +75,6 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
 const initialGatewayState = {
   providers: [
     { id: 'telegram', label: 'Telegram', implemented: true, configurationLocation: 'settings' },
-    { id: 'slack_mcp', label: 'Slack MCP', implemented: true, configurationLocation: 'settings' },
     {
       id: 'discord',
       label: 'Discord',

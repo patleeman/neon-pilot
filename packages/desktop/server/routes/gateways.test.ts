@@ -4,7 +4,6 @@ const gatewayState = vi.hoisted(() => ({
   attachGatewayConversation: vi.fn(),
   defaultGatewayProviders: vi.fn(() => [
     { id: 'telegram', label: 'Telegram', implemented: true, configurationLocation: 'gateways' },
-    { id: 'slack_mcp', label: 'Slack MCP', implemented: true, configurationLocation: 'gateways' },
   ]),
   detachGatewayConversation: vi.fn(),
   ensureGatewayConnection: vi.fn(),
@@ -270,11 +269,11 @@ describe('gateway routes', () => {
       router,
       'delete',
       '/api/gateways/bindings/:conversationId',
-    )({ params: { conversationId: 'conv' }, query: { provider: 'slack_mcp' } }, response());
+    )({ params: { conversationId: 'conv' }, query: { provider: 'discord' } }, response());
     expect(gatewayState.detachGatewayConversation).toHaveBeenCalledWith({
       stateRoot: '/state',
       profile: 'shared',
-      provider: 'slack_mcp',
+      provider: 'discord',
       conversationId: 'conv',
     });
   });

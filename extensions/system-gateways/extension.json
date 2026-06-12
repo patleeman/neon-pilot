@@ -20,15 +20,6 @@
         "setupRoute": "/gateways",
         "docsUrl": "https://core.telegram.org/bots#how-do-i-create-a-bot",
         "order": 10
-      },
-      {
-        "id": "slack_mcp",
-        "label": "Slack MCP",
-        "description": "Route Slack channel messages into Neon Pilot through Slack MCP.",
-        "icon": "graph",
-        "configurationLocation": "gateways",
-        "setupRoute": "/gateways",
-        "order": 20
       }
     ],
     "secrets": {
