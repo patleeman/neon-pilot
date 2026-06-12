@@ -30,14 +30,14 @@ function createMockSpawnHandle(overrides?: {
   };
 }
 
-function routeRequest(id: string): ExtensionRouteRequest {
+function routeRequest(id: string, signal: AbortSignal = new AbortController().signal): ExtensionRouteRequest {
   return {
     method: 'GET',
     path: '/stream',
     query: { id },
     params: {},
     body: null,
-    signal: new AbortController().signal,
+    signal,
   };
 }
 
@@ -191,6 +191,23 @@ describe('terminal sessions', () => {
       value: { data: { type: 'output', data: 'three' } },
       done: false,
     });
+  });
+
+  it('stops the SSE iterator when the request signal aborts before the terminal exits', async () => {
+    const { id } = await mod.createTerminalSession({});
+    const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+    const controller = new AbortController();
+
+    const { events } = await mod.streamTerminalSession(routeRequest(id, controller.signal));
+    const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+
+    const nextEvent = iter.next();
+    controller.abort();
+
+    await expect(nextEvent).resolves.toEqual({ value: undefined, done: true });
+
+    onStdout('late-output');
+    await expect(iter.next()).resolves.toEqual({ value: undefined, done: true });
   });
 
   it('keeps startup output available for the first stream attach', async () => {

@@ -285,11 +285,11 @@ export async function streamTerminalSession(request: ExtensionRouteRequest): Pro
 
   return {
     stream: 'sse',
-    events: createTerminalOutputStream(id),
+    events: createTerminalOutputStream(id, request.signal),
   };
 }
 
-async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionRouteSseEvent> {
+async function* createTerminalOutputStream(id: string, signal?: AbortSignal): AsyncIterable<ExtensionRouteSseEvent> {
   const session = sessions.get(id);
   if (!session) return;
 
@@ -304,6 +304,14 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
 
   let resolveEvent: ((event: IteratorResult<ExtensionRouteSseEvent>) => void) | null = null;
   const pendingEvents: ExtensionRouteSseEvent[] = [];
+  const finishStream = () => {
+    if (!resolveEvent) {
+      return;
+    }
+    const resolve = resolveEvent;
+    resolveEvent = null;
+    resolve({ value: undefined, done: true });
+  };
 
   const listener = (event: ExtensionRouteSseEvent) => {
     if (resolveEvent) {
@@ -315,10 +323,18 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
     }
   };
 
+  const abortListener = () => {
+    finishStream();
+  };
+
+  if (signal?.aborted) {
+    return;
+  }
   session.listeners.add(listener);
+  signal?.addEventListener('abort', abortListener, { once: true });
 
   try {
-    while (!session.closed && !session.exited) {
+    while (!session.closed && !session.exited && !signal?.aborted) {
       if (pendingEvents.length > 0) {
         const event = pendingEvents.shift();
         if (!event) {
@@ -334,6 +350,7 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
       }
     }
   } finally {
+    signal?.removeEventListener('abort', abortListener);
     session.listeners.delete(listener);
   }
 }
