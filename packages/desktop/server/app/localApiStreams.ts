@@ -145,7 +145,7 @@ async function subscribeDesktopExtensionRouteStream(url: URL, onEvent: (event: D
   const match = /^\/api\/extensions\/([^/]+)\/routes\/(.*)$/.exec(url.pathname);
   const extensionId = decodeURIComponent(match?.[1] ?? '');
   const routePath = `/${match?.[2] ?? ''}`;
-  if (!extensionId || routePath === '/') {
+  if (!extensionId || !match) {
     throw new Error('Extension stream route is required.');
   }
 
@@ -519,7 +519,7 @@ export async function subscribeDesktopLocalApiStreamByUrl(
     return subscribeDesktopProviderOAuthStream(url, onEvent);
   }
 
-  if (/^\/api\/extensions\/[^/]+\/routes\/.+$/.test(url.pathname)) {
+  if (/^\/api\/extensions\/[^/]+\/routes\/.*$/.test(url.pathname)) {
     return subscribeDesktopExtensionRouteStream(url, onEvent);
   }
 

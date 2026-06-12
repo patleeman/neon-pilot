@@ -267,4 +267,33 @@ describe('localApiStreams', () => {
     releaseEvent?.();
     expect(events.at(-1)).toEqual({ type: 'close' });
   });
+
+  it('allows root extension SSE routes through the desktop local API bridge', async () => {
+    const events: unknown[] = [];
+    extensionHostClientMock.invokeRoute.mockResolvedValue({
+      stream: 'sse',
+      events: (async function* () {
+        yield { data: { ok: true } };
+      })(),
+    });
+
+    await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/extensions/system-terminal/routes/'), (event) =>
+      events.push(event),
+    );
+    await Promise.resolve();
+
+    expect(extensionHostClientMock.invokeRoute).toHaveBeenCalledWith({
+      extensionId: 'system-terminal',
+      method: 'GET',
+      routePath: '/',
+      request: {
+        method: 'GET',
+        path: '/',
+        query: {},
+        params: {},
+        signal: expect.any(AbortSignal),
+      },
+    });
+    expect(events).toEqual([{ type: 'open' }, { type: 'message', data: JSON.stringify({ ok: true }) }, { type: 'close' }]);
+  });
 });
