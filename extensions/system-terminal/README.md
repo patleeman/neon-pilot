@@ -6,7 +6,7 @@
 
 - `terminalCreate` is a bounded backend action that creates a host-owned terminal session for the active workspace cwd.
 - Terminal I/O normally uses the host realtime WebSocket returned by `terminalCreate`. The panel attaches with `terminal_attach`, sends keystrokes with `terminal_input`, forwards resize with `terminal_resize`, and closes with `terminal_close`.
-- Terminal output falls back to the extension backend SSE route at `/api/extensions/system-terminal/routes/stream?id=<terminal-id>` if the realtime socket is unavailable.
+- Terminal output falls back to the extension backend SSE route at `/api/extensions/system-terminal/routes/stream?id=<terminal-id>` if the realtime socket is unavailable. After a successful realtime attach, the panel suppresses duplicated fallback replay so reconnects do not print the same prompt/output twice.
 - Input, resize, and close fall back to bounded backend actions when realtime attach fails.
 - `terminalDrain` remains a backend capability for compatibility and diagnostics, but the UI must not poll it for normal output.
 

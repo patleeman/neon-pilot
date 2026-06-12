@@ -193,10 +193,15 @@ describe('TerminalPanel', () => {
 
     const socket = FakeWebSocket.instances[0];
     expect(socket?.url).toBe('ws://127.0.0.1:4321/api/realtime');
-    const attachRequest = JSON.parse(socket?.sent[0] ?? '{}') as { id?: string };
-
     await act(async () => {
       socket?.open();
+      await Promise.resolve();
+    });
+
+    const attachRequest = JSON.parse(socket?.sent[0] ?? '{}') as { id?: string };
+    expect(attachRequest.id).toBeTruthy();
+
+    await act(async () => {
       socket?.receive({
         type: 'terminal_attached',
         id: attachRequest.id,
@@ -217,6 +222,7 @@ describe('TerminalPanel', () => {
     });
 
     const terminal = terminalHarness.FakeTerminal.instances[0];
+    expect(terminal?.write).toHaveBeenCalledWith('prompt> ');
     await act(async () => {
       terminal?.emitData('l');
       await Promise.resolve();
@@ -225,12 +231,70 @@ describe('TerminalPanel', () => {
     expect(invoke).toHaveBeenCalledWith('terminalWrite', { id: 'term-1', data: 'l' });
 
     await act(async () => {
+      streamHarness.pushEvent({ type: 'output', data: 'prompt> ' });
       streamHarness.pushEvent({ type: 'output', data: 'fallback-output' });
       await Promise.resolve();
     });
 
-    expect(terminal?.write).toHaveBeenCalledWith('fallback-output');
+    expect(terminal?.write.mock.calls.map(([value]) => value)).toEqual(['prompt> ', 'fallback-output']);
     expect(closeTab).not.toHaveBeenCalled();
+  });
+
+  it('skips split fallback replay chunks that were already rendered over realtime', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'terminalCreate') {
+        return { id: 'term-1', pid: 123, usingPty: true, realtimeUrl: 'ws://127.0.0.1:4321/api/realtime' };
+      }
+      return { ok: true };
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          pa={{
+            extension: { invoke },
+            workbench: { closeTab: vi.fn() },
+          } as never}
+          context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    const terminal = terminalHarness.FakeTerminal.instances[0];
+    await act(async () => {
+      socket?.open();
+      await Promise.resolve();
+    });
+
+    const attachRequest = JSON.parse(socket?.sent[0] ?? '{}') as { id?: string };
+    expect(attachRequest.id).toBeTruthy();
+
+    await act(async () => {
+      socket?.receive({
+        type: 'terminal_attached',
+        id: attachRequest.id,
+        terminalId: 'term-1',
+        replay: 'prompt> ',
+        exited: false,
+        exitCode: null,
+      });
+    });
+
+    expect(terminal?.write).toHaveBeenCalledWith('prompt> ');
+
+    await act(async () => {
+      socket?.close();
+      streamHarness.pushEvent({ type: 'output', data: 'prom' });
+      streamHarness.pushEvent({ type: 'output', data: 'pt> ' });
+      streamHarness.pushEvent({ type: 'output', data: 'echo hi\r\n' });
+      await Promise.resolve();
+    });
+
+    expect(terminal?.write.mock.calls.map(([value]) => value)).toEqual(['prompt> ', 'echo hi\r\n']);
   });
 
   it('ignores stale realtime terminal events after fallback starts from attach failure', async () => {

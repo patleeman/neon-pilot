@@ -12,6 +12,10 @@ interface TerminalState {
   usingPty: boolean;
 }
 
+// Keep this aligned with the backend terminal replay window so fallback can
+// suppress the exact history the realtime attach already rendered.
+const MAX_REMOTE_REPLAY_CHUNKS = 128;
+
 function readRgbVar(element: HTMLElement, name: string): string {
   const value = getComputedStyle(element).getPropertyValue(name).trim();
   return value ? `rgb(${value})` : '';
@@ -31,6 +35,8 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef<TerminalState>({ id: null, xterm: null, fitAddon: null, usingPty: false });
   const pendingWritesRef = useRef<string[]>([]);
+  const remoteOutputReplayRef = useRef<string[]>([]);
+  const pendingFallbackReplayRef = useRef<string | null>(null);
 
   const focusTerminal = (xterm: Terminal) => {
     try {
@@ -99,6 +105,37 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     let requestedWorkbenchClose = false;
     let fallbackActive = false;
 
+    const recordRemoteOutput = (data: string) => {
+      if (data.length === 0) return;
+      const replay = remoteOutputReplayRef.current;
+      replay.push(data);
+      if (replay.length > MAX_REMOTE_REPLAY_CHUNKS) {
+        replay.splice(0, replay.length - MAX_REMOTE_REPLAY_CHUNKS);
+      }
+    };
+
+    const writeRemoteOutput = (data: string) => {
+      if (data.length === 0) return;
+      xterm.write(data);
+      recordRemoteOutput(data);
+    };
+
+    const consumeFallbackReplay = (data: string): string => {
+      const replay = pendingFallbackReplayRef.current;
+      if (!replay || data.length === 0) return data;
+      if (replay.startsWith(data)) {
+        const remaining = replay.slice(data.length);
+        pendingFallbackReplayRef.current = remaining.length > 0 ? remaining : null;
+        return '';
+      }
+      if (data.startsWith(replay)) {
+        pendingFallbackReplayRef.current = null;
+        return data.slice(replay.length);
+      }
+      pendingFallbackReplayRef.current = null;
+      return data;
+    };
+
     const sendTerminalSocketMessage = (message: Record<string, unknown>): boolean => {
       if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN || !realtimeAttached) return false;
       terminalSocket.send(JSON.stringify(message));
@@ -143,6 +180,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       fallbackActive = true;
       realtimeAttached = false;
       terminalSocket = null;
+      pendingFallbackReplayRef.current = remoteOutputReplayRef.current.join('');
       flushPendingWritesThroughActions(id);
       if (warningMessage) {
         xterm.writeln(`\r\n\x1b[93m${warningMessage}\x1b[0m`);
@@ -181,7 +219,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
 
           if (message.type === 'terminal_attached' && message.terminalId === id && message.id === attachId) {
             realtimeAttached = true;
-            xterm.write(message.replay);
+            writeRemoteOutput(message.replay);
             flushPendingWritesThroughSocket(id);
             if (pendingResize) {
               sendTerminalSocketMessage({ type: 'terminal_resize', terminalId: id, cols: pendingResize.cols, rows: pendingResize.rows });
@@ -197,7 +235,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
 
           if (message.type === 'terminal' && message.terminalId === id) {
             if (message.event.type === 'output') {
-              xterm.write(message.event.data);
+              writeRemoteOutput(message.event.data);
               return;
             }
             if (message.event.type === 'exit') handleTerminalExit();
@@ -238,7 +276,8 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       )) {
         if (closed || state.id !== id) return;
         if (event.type === 'output') {
-          xterm.write(event.data);
+          const data = consumeFallbackReplay(event.data);
+          if (data.length > 0) writeRemoteOutput(data);
           continue;
         }
         if (event.type === 'exit') handleTerminalExit();
@@ -365,6 +404,8 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     return () => {
       closed = true;
       pendingWritesRef.current = [];
+      remoteOutputReplayRef.current = [];
+      pendingFallbackReplayRef.current = null;
 
       disposable.dispose();
       ansiRequestModeHandler.dispose();
