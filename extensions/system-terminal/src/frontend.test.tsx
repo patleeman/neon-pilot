@@ -232,4 +232,60 @@ describe('TerminalPanel', () => {
     expect(terminal?.write).toHaveBeenCalledWith('fallback-output');
     expect(closeTab).not.toHaveBeenCalled();
   });
+
+  it('ignores stale realtime terminal events after fallback starts from attach failure', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'terminalCreate') {
+        return { id: 'term-1', pid: 123, usingPty: true, realtimeUrl: 'ws://127.0.0.1:4321/api/realtime' };
+      }
+      return { ok: true };
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          pa={{
+            extension: { invoke },
+            workbench: { closeTab: vi.fn() },
+          } as never}
+          context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    socket?.open();
+    const attachRequest = JSON.parse(socket?.sent[0] ?? '{}') as { id?: string };
+
+    await act(async () => {
+      socket?.receive({
+        type: 'error',
+        id: attachRequest.id,
+        message: 'Terminal not found or already closed.',
+      });
+      await Promise.resolve();
+    });
+
+    expect(streamHarness.streamExtensionRouteSse).toHaveBeenCalledWith('system-terminal', '/stream?id=term-1', {
+      signal: expect.any(AbortSignal),
+    });
+
+    const terminal = terminalHarness.FakeTerminal.instances[0];
+    const writesBeforeStaleMessage = terminal?.write.mock.calls.length ?? 0;
+
+    await act(async () => {
+      socket?.receive({
+        type: 'terminal',
+        terminalId: 'term-1',
+        event: { type: 'output', data: 'stale-output' },
+      });
+      streamHarness.pushEvent({ type: 'output', data: 'fallback-output' });
+      await Promise.resolve();
+    });
+
+    expect(terminal?.write.mock.calls.slice(writesBeforeStaleMessage).map(([value]) => value)).toEqual(['fallback-output']);
+  });
 });

@@ -161,6 +161,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
           if (terminalSocket === socket) terminalSocket = null;
           if (settled) return;
           settled = true;
+          socket.close();
           reject(error);
         };
 
@@ -169,7 +170,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         });
 
         socket.addEventListener('message', (event) => {
-          if (closed || state.id !== id) return;
+          if (closed || state.id !== id || terminalSocket !== socket || fallbackActive) return;
           let message: TerminalSocketMessage;
           try {
             message = JSON.parse(String(event.data)) as TerminalSocketMessage;
