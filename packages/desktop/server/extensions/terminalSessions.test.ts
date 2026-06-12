@@ -127,6 +127,27 @@ describe('terminal sessions', () => {
     await expect(exitPromise).resolves.toMatchObject({ value: { data: { type: 'exit', code: 0 } } });
   });
 
+  it('replays the exit event when the terminal exits before the SSE consumer attaches', async () => {
+    const { id } = await mod.createTerminalSession({});
+    const onStdout = shellSpawn.mock.calls[0][0].onStdout;
+    const onExit = shellSpawn.mock.calls[0][0].onExit;
+
+    onStdout('last-output');
+    onExit({ code: 7, signal: null });
+
+    const { events } = await mod.streamTerminalSession(routeRequest(id));
+    const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+
+    await expect(iter.next()).resolves.toMatchObject({
+      value: { data: { type: 'output', data: 'last-output' } },
+      done: false,
+    });
+    await expect(iter.next()).resolves.toMatchObject({
+      value: { data: { type: 'exit', code: 7 } },
+      done: false,
+    });
+  });
+
   it('keeps startup output available for the first stream attach', async () => {
     shellSpawn.mockImplementation(async (input) => {
       input.onStdout('startup-prompt');

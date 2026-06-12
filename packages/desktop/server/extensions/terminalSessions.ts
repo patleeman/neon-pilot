@@ -295,6 +295,11 @@ async function* createTerminalOutputStream(id: string): AsyncIterable<ExtensionR
     yield { data: { type: 'output', data } };
   }
 
+  if (session.exited) {
+    yield { data: { type: 'exit', code: session.exitCode } };
+    return;
+  }
+
   let resolveEvent: ((event: IteratorResult<ExtensionRouteSseEvent>) => void) | null = null;
   let pendingEvent: ExtensionRouteSseEvent | null = null;
 
