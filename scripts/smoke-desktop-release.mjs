@@ -376,7 +376,7 @@ async function main() {
 
     await waitForLoadedBody(cdp, child, renderLogs, 'initial desktop route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
-    await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/knowledge', 'Knowledge route');
+    await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/extensions', 'Extensions route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);
     await navigateAndAssert(cdp, child, renderLogs, 'neon-pilot://app/', 'conversation route');
     await assertDesktopApiEndpoints(cdp, child, renderLogs);

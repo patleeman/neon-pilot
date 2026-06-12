@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.16 — 2026-06-12
+
+### Highlights
+
+- Makes keyboard-driven work across conversations, workbench, browser, scratchpad, composer, transcript blocks, notifications, and activity details more complete by command-backing the expected controls and shortcut flows.
+- Hardens command palette and shortcut execution so unavailable, parameterized, busy, disabled, or context-missing commands report accurately instead of silently no-oping or firing from the wrong surface.
+- Adds conversation activity, connection, and quick-action plumbing so active runs, linked details, deferred resumes, and workspace context are easier to inspect and control.
+- Moves Knowledge and Scratchpad into extension-first surfaces, including a single-pane Scratchpad tool and installable Knowledge packaging aligned with the extension model.
+- Improves terminal reliability by moving terminal I/O onto realtime websocket/SSE paths, replaying startup output, preserving xterm terminal font rendering, and bridging extension streams in the desktop app.
+- Keeps CLI, shortcut, and command documentation/tests aligned with the expanded command registry and stricter validation behavior.
+
+### Notes
+
+- 158 commits since the previous release.
+
 ## 0.11.15 — 2026-06-11
 
 ### Highlights

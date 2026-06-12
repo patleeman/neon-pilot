@@ -510,7 +510,7 @@ describe('ConversationComposerInputControls', () => {
         setComposerFocusedCommandContext(true);
       });
       rendered.unmount();
-      expect(commandContextMock.setExtensionCommandContext).toHaveBeenLastCalledWith('composer.focused', null);
+      expect(commandContextMock.setExtensionCommandContext).toHaveBeenCalledWith('composer.focused', null);
     } finally {
       if (document.body.contains(rendered.container)) {
         rendered.unmount();

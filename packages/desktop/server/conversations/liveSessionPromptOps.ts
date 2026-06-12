@@ -223,11 +223,12 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
     // detached startup from becoming an unhandled rejection.
   });
   pendingPromptStartupByEntry.set(entry, { key: startupKey, completion });
-  void completion.finally(() => {
+  const clearPendingStartup = () => {
     if (pendingPromptStartupByEntry.get(entry)?.completion === completion) {
       pendingPromptStartupByEntry.delete(entry);
     }
-  });
+  };
+  void completion.then(clearPendingStartup, clearPendingStartup);
 
   return {
     acceptedAs: 'started',

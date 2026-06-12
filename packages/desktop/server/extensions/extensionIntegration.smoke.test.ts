@@ -1025,10 +1025,12 @@ describe('extension manifests - cross-extension conflict detection', () => {
 
   it('quick open surfaces have stable labels and numeric ordering', () => {
     const providers = listExtensionQuickOpenRegistrations();
-    const knowledge = providers.find((provider) => provider.extensionId === 'system-knowledge' && provider.id === 'knowledge-files');
 
-    expect(knowledge).toMatchObject({ title: 'Knowledge files', section: 'files' });
-    expect(typeof knowledge?.order === 'number' || knowledge?.order === undefined).toBe(true);
+    for (const provider of providers) {
+      expect(provider.title, `${provider.extensionId}:${provider.id} should have a title`).toEqual(expect.any(String));
+      expect(provider.section, `${provider.extensionId}:${provider.id} should have a section`).toEqual(expect.any(String));
+      expect(typeof provider.order === 'number' || provider.order === undefined).toBe(true);
+    }
   });
 });
 

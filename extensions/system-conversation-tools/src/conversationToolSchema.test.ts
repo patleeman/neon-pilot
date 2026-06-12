@@ -6,6 +6,8 @@ describe('conversationToolSchema', () => {
   it('declares the supported conversation actions in UI/tool order', () => {
     expect(CONVERSATION_ACTIONS).toEqual([
       'ask',
+      'activity',
+      'connections',
       'inspect',
       'set_title',
       'change_working_directory',

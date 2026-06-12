@@ -13,10 +13,10 @@ describe('useExtensionStyles', () => {
   });
 
   it('does not inject styles for system extensions (Vite handles CSS)', () => {
-    const systemId = 'system-knowledge';
+    const systemId = 'system-scratchpad';
     expect(systemExtensionModules.has(systemId)).toBe(true);
 
-    renderHook(() => useExtensionStyles(systemId, ['src/components/knowledge.css']));
+    renderHook(() => useExtensionStyles(systemId, ['src/frontend.css']));
 
     const links = document.head.querySelectorAll('link[data-extension-style]');
     expect(links.length).toBe(0);

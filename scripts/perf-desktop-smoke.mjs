@@ -1296,28 +1296,28 @@ async function main() {
       surfaceRender: latestSampleDuration(spaRouteSettingsSamples, 'extensionSurface.render'),
       moduleLoaded: latestSampleDuration(spaRouteSettingsSamples, 'extensionModule.loaded'),
     };
-    const spaRouteKnowledge = await measure('knowledge spa route', async () => {
-      await navigateSpa(cdp, '/knowledge');
+    const spaRouteExtensions = await measure('extensions spa route', async () => {
+      await navigateSpa(cdp, '/extensions');
       await waitForExpression(
         cdp,
         child,
-        `location.pathname === '/knowledge' && Boolean(document.querySelector('[data-extension-id="system-knowledge"]'))`,
+        `location.pathname === '/extensions' && Boolean(document.querySelector('[data-extension-id="system-extension-manager"]'))`,
         5_000,
         16,
       );
-      return Math.round((await readSpaNavigationElapsedMs(cdp, '/knowledge')) ?? 0);
+      return Math.round((await readSpaNavigationElapsedMs(cdp, '/extensions')) ?? 0);
     });
-    const spaRouteKnowledgeMs = spaRouteKnowledge.durationMs;
-    const spaRouteKnowledgeReadyMs = spaRouteKnowledge.result || spaRouteKnowledgeMs;
+    const spaRouteExtensionsMs = spaRouteExtensions.durationMs;
+    const spaRouteExtensionsReadyMs = spaRouteExtensions.result || spaRouteExtensionsMs;
     const routeSettingsMs = (
       await measure('settings', async () => {
         await cdp.send('Page.navigate', { url: 'neon-pilot://app/settings' });
         await waitBody(cdp, child);
       })
     ).durationMs;
-    const routeKnowledgeMs = (
-      await measure('knowledge', async () => {
-        await cdp.send('Page.navigate', { url: 'neon-pilot://app/knowledge' });
+    const routeExtensionsMs = (
+      await measure('extensions', async () => {
+        await cdp.send('Page.navigate', { url: 'neon-pilot://app/extensions' });
         await waitBody(cdp, child);
       })
     ).durationMs;
@@ -2074,10 +2074,10 @@ async function main() {
       spaRouteSettingsReadyMs,
       spaRouteSettingsPhaseMs,
       spaRouteSettingsSamples,
-      spaRouteKnowledgeMs,
-      spaRouteKnowledgeReadyMs,
+      spaRouteExtensionsMs,
+      spaRouteExtensionsReadyMs,
       routeSettingsMs,
-      routeKnowledgeMs,
+      routeExtensionsMs,
       conversationSearchMs,
       relatedConversationResultsMs,
       relatedConversationResultTimings: relatedConversationResults.result?.timings ?? null,

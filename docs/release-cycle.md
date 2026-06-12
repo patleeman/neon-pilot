@@ -4,18 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.15** — patch release.
+**v0.11.16** — patch release.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.15
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.16
 
 Highlights in this train:
 
-- Adds the Gateways surface and Telegram setup flow, including route sidebar support, extension-contributed gateway providers, and safer gateway conversation preselection.
-- Makes the unified `neon-pilot` CLI more reliable for agents and humans by tightening positional/required argument validation across runs, subagents, automations, settings, conversations, bootstrap, admin, and extension-management commands.
-- Hardens packaged desktop and extension discovery so child processes preserve their runtime roots and duplicate symlinked extension roots are ignored.
-- Improves Extension Manager by separating required platform surfaces from normal add-ons, clarifying empty filter states, and keeping required system extensions always on.
-- Adds Settings subnav and command-list improvements so first-party extension settings and host commands are easier to find without duplicating controls.
-- Keeps release-facing CLI documentation, generated references, and installable Dynamic Workflows packaging aligned with the current app.
+- Makes keyboard-driven work across conversations, workbench, browser, scratchpad, composer, transcript blocks, notifications, and activity details more complete by command-backing the expected controls and shortcut flows.
+- Hardens command palette and shortcut execution so unavailable, parameterized, busy, disabled, or context-missing commands report accurately instead of silently no-oping or firing from the wrong surface.
+- Adds conversation activity, connection, and quick-action plumbing so active runs, linked details, deferred resumes, and workspace context are easier to inspect and control.
+- Moves Knowledge and Scratchpad into extension-first surfaces, including a single-pane Scratchpad tool and installable Knowledge packaging aligned with the extension model.
+- Improves terminal reliability by moving terminal I/O onto realtime websocket/SSE paths, replaying startup output, preserving xterm terminal font rendering, and bridging extension streams in the desktop app.
+- Keeps CLI, shortcut, and command documentation/tests aligned with the expanded command registry and stricter validation behavior.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

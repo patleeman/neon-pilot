@@ -490,7 +490,7 @@ function requireManualSmokeTestApproval(appPath, reason) {
   console.log('');
   console.log('Release smoke test required before publishing.');
   console.log(`Built app: ${appPath}`);
-  console.log('Suggested check: launch the app, verify it starts, and smoke test one conversation and one knowledge route.');
+  console.log('Suggested check: launch the app, verify it starts, and smoke test one conversation and one bundled extension route.');
   console.log('Press Enter only after the built binary passes the smoke test, or Ctrl-C to abort.');
   run('bash', ['-lc', 'read -r _ < /dev/tty']);
 }
