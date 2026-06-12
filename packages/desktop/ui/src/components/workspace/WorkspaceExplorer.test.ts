@@ -7,6 +7,7 @@ const apiMocks = vi.hoisted(() => ({
   workspaceTree: vi.fn(),
   workspaceFile: vi.fn(),
   workspaceDiff: vi.fn(),
+  writeWorkspaceFile: vi.fn(),
 }));
 
 const commandContextMocks = vi.hoisted(() => ({
@@ -50,8 +51,21 @@ vi.mock('../../ui-state/theme', () => ({
 }));
 
 vi.mock('./WorkspaceCodeEditor', () => ({
-  WorkspaceCodeEditor: ({ value }: { value?: string }) =>
-    React.createElement('textarea', { 'aria-label': 'mock editor', readOnly: true, value: value ?? '' }),
+  WorkspaceCodeEditor: ({
+    value,
+    editable,
+    onChange,
+  }: {
+    value?: string;
+    editable?: boolean;
+    onChange?: (value: string) => void;
+  }) =>
+    React.createElement('textarea', {
+      'aria-label': 'mock editor',
+      readOnly: !editable,
+      value: value ?? '',
+      onChange: (event: Event) => onChange?.((event.target as HTMLTextAreaElement).value),
+    }),
 }));
 
 vi.mock('@pierre/trees/react', () => ({
@@ -111,6 +125,12 @@ async function flush() {
     await Promise.resolve();
     await Promise.resolve();
   });
+}
+
+function setTextAreaValue(textarea: HTMLTextAreaElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 describe('formatWorkspaceEntrySize', () => {
@@ -216,6 +236,98 @@ describe('formatWorkspaceEntrySize', () => {
     await vi.waitFor(() => {
       expect(commandContextMocks.setExtensionCommandContext).toHaveBeenCalledWith('workbench.canToggleDiff', true);
     });
+  });
+
+  it('ignores stale auto-save completions after switching files', async () => {
+    vi.useFakeTimers();
+    const fileA = deferred<ReturnType<typeof file>>();
+    const fileB = deferred<ReturnType<typeof file>>();
+    const saveA = deferred<ReturnType<typeof file>>();
+    const diffB = deferred<{ addedLines: never[]; deletedBlocks: never[] }>();
+
+    apiMocks.workspaceFile.mockImplementation((_cwd: string, path: string) => {
+      if (path === 'a.ts') {
+        return fileA.promise;
+      }
+      if (path === 'b.ts') {
+        return fileB.promise;
+      }
+      throw new Error(`unexpected file ${path}`);
+    });
+    apiMocks.workspaceDiff.mockImplementation((_cwd: string, path: string) => {
+      if (path === 'b.ts') {
+        return diffB.promise;
+      }
+      throw new Error(`unexpected diff ${path}`);
+    });
+    apiMocks.writeWorkspaceFile.mockImplementation((_cwd: string, path: string) => {
+      if (path === 'a.ts') {
+        return saveA.promise;
+      }
+      throw new Error(`unexpected write ${path}`);
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    act(() => {
+      root.render(React.createElement(WorkspaceFileDocument, { cwd: '/repo', path: 'a.ts' }));
+    });
+
+    await act(async () => {
+      fileA.resolve(file('a.ts', 'original a'));
+      await fileA.promise;
+    });
+
+    await vi.waitFor(() => {
+      const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(textarea?.value).toBe('original a');
+      expect(textarea?.readOnly).toBe(false);
+    });
+
+    const textarea = container.querySelector('textarea') as HTMLTextAreaElement;
+    act(() => {
+      setTextAreaValue(textarea, 'edited a');
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    await vi.waitFor(() => {
+      expect(apiMocks.writeWorkspaceFile).toHaveBeenCalledWith('/repo', 'a.ts', 'edited a');
+    });
+
+    act(() => {
+      root.render(React.createElement(WorkspaceFileDocument, { cwd: '/repo', path: 'b.ts' }));
+    });
+
+    await act(async () => {
+      fileB.resolve(file('b.ts', 'current b', { gitStatus: 'modified' }));
+      await fileB.promise;
+    });
+    await act(async () => {
+      diffB.resolve({ addedLines: [], deletedBlocks: [] });
+      await diffB.promise;
+    });
+
+    await vi.waitFor(() => {
+      const current = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(current?.value).toBe('current b');
+    });
+
+    await act(async () => {
+      saveA.resolve(file('a.ts', 'saved stale a'));
+      await saveA.promise;
+    });
+
+    await vi.waitFor(() => {
+      const current = container.querySelector('textarea') as HTMLTextAreaElement | null;
+      expect(current?.value).toBe('current b');
+    });
+    vi.useRealTimers();
   });
 
   it('ignores late workspace watcher callbacks after unmount', async () => {

@@ -1096,6 +1096,7 @@ export function WorkspaceFileDocument({
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const selectionContextMenuRef = useRef<HTMLDivElement | null>(null);
   const loadRequestIdRef = useRef(0);
+  const saveRequestIdRef = useRef(0);
 
   const loadFile = useCallback(
     async (options?: { force?: boolean }) => {
@@ -1147,6 +1148,10 @@ export function WorkspaceFileDocument({
   }, [loadFile]);
 
   useEffect(() => {
+    saveRequestIdRef.current += 1;
+  }, [cwd, path]);
+
+  useEffect(() => {
     function refreshFile() {
       void loadFile({ force: true });
     }
@@ -1181,10 +1186,17 @@ export function WorkspaceFileDocument({
       return;
     }
 
+    const saveRequestId = saveRequestIdRef.current + 1;
+    saveRequestIdRef.current = saveRequestId;
+    const isCurrentSaveRequest = () => saveRequestIdRef.current === saveRequestId;
+
     const timer = window.setTimeout(() => {
       void api
         .writeWorkspaceFile(cwd, selectedFile.path, draftContent)
         .then((saved) => {
+          if (!isCurrentSaveRequest()) {
+            return;
+          }
           setFileState({ status: 'idle', data: saved, error: null });
           setDraftContent(saved.content ?? draftContent);
           setSaveState({ error: null });
@@ -1192,14 +1204,23 @@ export function WorkspaceFileDocument({
             void api
               .workspaceDiff(cwd, saved.path)
               .then((diff) => {
+                if (!isCurrentSaveRequest()) {
+                  return;
+                }
                 setDiffState({ status: 'idle', data: diff, error: null });
               })
               .catch(() => {
+                if (!isCurrentSaveRequest()) {
+                  return;
+                }
                 setDiffState({ status: 'idle', data: null, error: null });
               });
           }
         })
         .catch((error) => {
+          if (!isCurrentSaveRequest()) {
+            return;
+          }
           setSaveState({ error: error instanceof Error ? error.message : String(error) });
         });
     }, 800);
