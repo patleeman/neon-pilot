@@ -165,7 +165,9 @@ function removeSession(id: string): void {
   } catch {
     /* ignore */
   }
-  broadcastExit(session, null);
+  if (!session.exited) {
+    broadcastExit(session, null);
+  }
   session.closed = true;
   sessions.delete(id);
 }

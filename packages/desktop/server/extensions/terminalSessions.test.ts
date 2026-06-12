@@ -109,6 +109,24 @@ describe('terminal sessions', () => {
     expect(mod.writeTerminalSession({ id, data: 'x' })).toEqual({ ok: false });
   });
 
+  it('preserves the recorded exit code when closing an already exited session', async () => {
+    const { id } = await mod.createTerminalSession({});
+    const onExit = shellSpawn.mock.calls[0][0].onExit;
+    const listener = vi.fn();
+
+    onExit({ code: 9, signal: null });
+
+    const subscription = mod.subscribeTerminalSession({ id }, listener);
+    expect(subscription.ok).toBe(true);
+    expect(subscription.exitCode).toBe(9);
+
+    expect(mod.closeTerminalSession({ id })).toEqual({ ok: true });
+    expect(listener).not.toHaveBeenCalledWith({ type: 'exit', code: null });
+
+    const afterClose = mod.subscribeTerminalSession({ id }, vi.fn());
+    expect(afterClose).toEqual({ ok: false });
+  });
+
   it('streams replayed output and live exit events over SSE', async () => {
     const { id } = await mod.createTerminalSession({});
     const onStdout = shellSpawn.mock.calls[0][0].onStdout;
