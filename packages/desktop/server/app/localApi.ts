@@ -130,22 +130,30 @@ import type { ProviderDesktopCapabilityContext } from '../models/providerDesktop
 import { invokeToolByName } from '../tools/toolGateway.js';
 
 // ── Model/provider modules ─────────────────────────────────────────────
-// Keep the provider SDK/model table stack behind a typed loader so the local
-// API module can become ready before model-provider routes are touched.
-type ModelProviderModules = typeof import('../models/modelPreferences.js') &
-  typeof import('../models/modelState.js') &
+// Keep the provider SDK/model table stack behind typed loaders so the local
+// API module and read-only model picker path can become ready before
+// provider-management routes are touched.
+type ModelStateModules = typeof import('../models/modelPreferences.js') & typeof import('../models/modelState.js');
+type ModelProviderModules = ModelStateModules &
   typeof import('../models/providerAuth.js') &
   typeof import('../models/providerDesktopCapability.js');
 
+let modelStateModulesPromise: Promise<ModelStateModules> | null = null;
 let modelProviderModulesPromise: Promise<ModelProviderModules> | null = null;
+
+function modelState(): Promise<ModelStateModules> {
+  modelStateModulesPromise ??= Promise.all([import('../models/modelPreferences.js'), import('../models/modelState.js')]).then(
+    ([prefs, state]) => ({ ...prefs, ...state }),
+  );
+  return modelStateModulesPromise;
+}
 
 function models(): Promise<ModelProviderModules> {
   modelProviderModulesPromise ??= Promise.all([
-    import('../models/modelPreferences.js'),
-    import('../models/modelState.js'),
+    modelState(),
     import('../models/providerAuth.js'),
     import('../models/providerDesktopCapability.js'),
-  ]).then(([prefs, state, auth, caps]) => ({ ...prefs, ...state, ...auth, ...caps }));
+  ]).then(([state, auth, caps]) => ({ ...state, ...auth, ...caps }));
   return modelProviderModulesPromise;
 }
 import type { ServerRouteContext } from '../routes/context.js';
@@ -222,7 +230,7 @@ import { createRuntimeState } from './runtimeState.js';
 
 function prewarmDesktopModelDefinitions(): void {
   const modelDefinitionsPrewarmTimer = setTimeout(() => {
-    void models()
+    void modelState()
       .then((m) => m.prewarmModelDefinitions?.())
       .catch(() => {});
   }, 0);
@@ -1604,13 +1612,13 @@ export async function readDesktopSessionSearchIndex(sessionIds: string[]) {
 
 export async function readDesktopModels() {
   const context = await getLocalServerRouteContext();
-  const m = await models();
+  const m = await modelState();
   return await m.readModelState(context.getSettingsFile());
 }
 
 export async function readDesktopModelPreferences() {
   const context = await getLocalServerRouteContext();
-  const m = await models();
+  const m = await modelState();
   return m.readSavedModelPreferences(context.getSettingsFile());
 }
 
@@ -1623,7 +1631,7 @@ export async function updateDesktopModelPreferences(input: {
   validateDesktopModelPreferenceUpdate(input);
 
   const context = await getLocalServerRouteContext();
-  const m = await models();
+  const m = await modelState();
   const modelData = (await m.readModelState(context.getSettingsFile())).models;
   persistSettingsWrite(
     (settingsFile) => {
