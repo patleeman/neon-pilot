@@ -71,11 +71,13 @@ export function subscribeLiveSession<TEntry extends LiveSessionSubscriptionHost>
     typeof options?.deferInitialReplayMs === 'number' && Number.isFinite(options.deferInitialReplayMs) && options.deferInitialReplayMs > 0
       ? Math.round(options.deferInitialReplayMs)
       : 0;
+  let replayTimer: ReturnType<typeof setTimeout> | null = null;
   if (deferInitialReplayMs > 0) {
-    const replayTimer = setTimeout(() => {
+    replayTimer = setTimeout(() => {
       if (entry.listeners.has(subscription)) {
         replayLiveSessionState(entry, subscription, options, callbacks.resolveTitle);
       }
+      replayTimer = null;
     }, deferInitialReplayMs);
     replayTimer.unref?.();
   } else {
@@ -87,6 +89,10 @@ export function subscribeLiveSession<TEntry extends LiveSessionSubscriptionHost>
   }
 
   return () => {
+    if (replayTimer) {
+      clearTimeout(replayTimer);
+      replayTimer = null;
+    }
     entry.listeners.delete(subscription);
     if (options?.surface && removeLiveSessionSurface(entry, options.surface.surfaceId)) {
       callbacks.broadcastPresenceState(entry);

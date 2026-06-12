@@ -142,6 +142,29 @@ describe('live session subscription', () => {
     expect(callbacks.broadcastPresenceState).toHaveBeenLastCalledWith(e);
   });
 
+  it('cancels deferred initial replay when the subscriber disconnects first', () => {
+    vi.useFakeTimers();
+    try {
+      const e = entry();
+      const send = vi.fn();
+
+      const unsubscribe = subscribeLiveSession(e as never, send, { deferInitialReplayMs: 150 }, {
+        resolveTitle: vi.fn(() => ''),
+        broadcastPresenceState: vi.fn(),
+      });
+
+      expect(send).not.toHaveBeenCalled();
+      unsubscribe();
+      vi.advanceTimersByTime(150);
+
+      expect(send).not.toHaveBeenCalled();
+      expect(e.listeners.size).toBe(0);
+      expect(stale.ensureStaleTurnState).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('sends presence for existing surfaces and agent_start only for active user-visible streaming turns', () => {
     const streaming = entry({ session: { ...entry().session, isStreaming: true }, presenceBySurfaceId: new Map([['mobile', {}]]) });
     const send = vi.fn();
