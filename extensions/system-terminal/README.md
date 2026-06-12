@@ -5,11 +5,12 @@
 ## Runtime Model
 
 - `terminalCreate` is a bounded backend action that creates a host-owned terminal session for the active workspace cwd.
-- Terminal output uses the extension backend SSE route at `/api/extensions/system-terminal/routes/stream?id=<terminal-id>`.
-- Input, resize, and close remain bounded backend actions because they are short control operations.
+- Terminal I/O normally uses the host realtime WebSocket returned by `terminalCreate`. The panel attaches with `terminal_attach`, sends keystrokes with `terminal_input`, forwards resize with `terminal_resize`, and closes with `terminal_close`.
+- Terminal output falls back to the extension backend SSE route at `/api/extensions/system-terminal/routes/stream?id=<terminal-id>` if the realtime socket is unavailable.
+- Input, resize, and close fall back to bounded backend actions when realtime attach fails.
 - `terminalDrain` remains a backend capability for compatibility and diagnostics, but the UI must not poll it for normal output.
 
-The stream route is handled in the extension host process, which is the same process that owns the in-memory terminal sessions. This avoids cross-process session lookups and avoids attempting to open a WebSocket from the `neon-pilot://app` custom protocol.
+The realtime socket uses the local backend loopback URL so keystrokes avoid the higher-latency extension action RPC path. The fallback stream route is bridged through the desktop local API stream layer for the `neon-pilot://app` custom protocol.
 
 ## Validation
 

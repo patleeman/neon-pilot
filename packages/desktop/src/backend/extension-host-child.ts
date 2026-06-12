@@ -3,6 +3,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createServer as createNetServer, type Socket } from 'node:net';
 import { PassThrough, Writable } from 'node:stream';
 
+import { setLocalBackendBaseUrl } from '../../server/app/localBackendBaseUrl.js';
+import { createDesktopRealtimeUpgradeHandler } from '../../server/app/realtime.js';
 import { setDefaultExtensionBackendWorkerUrl } from '../../server/extensions/extensionBackendWorkerClient.js';
 import {
   createInProcessExtensionHostClient,
@@ -315,6 +317,7 @@ async function main(): Promise<void> {
       }
     })();
   });
+  server.on('upgrade', createDesktopRealtimeUpgradeHandler());
 
   await new Promise<void>((resolve) => {
     server.listen(0, '127.0.0.1', () => resolve());
@@ -325,7 +328,9 @@ async function main(): Promise<void> {
     throw new Error('Extension host child did not bind a TCP port.');
   }
 
-  process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = `http://127.0.0.1:${String(address.port)}`;
+  const baseUrl = `http://127.0.0.1:${String(address.port)}`;
+  setLocalBackendBaseUrl(baseUrl);
+  process.env.NEON_PILOT_EXTENSION_HOST_BASE_URL = baseUrl;
   process.env.NEON_PILOT_EXTENSION_HOST_TOKEN = token;
   sendParentMessage({ type: 'ready', port: address.port, token });
 

@@ -1,6 +1,6 @@
 import '@xterm/xterm/css/xterm.css';
 
-import { streamExtensionRouteSse, type ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
+import { buildDesktopWebSocketUrl, streamExtensionRouteSse, type ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { useEffect, useRef } from 'react';
@@ -20,6 +20,12 @@ function readRgbVar(element: HTMLElement, name: string): string {
 type TerminalRealtimeMessage =
   | { type: 'output'; data: string }
   | { type: 'exit'; code: number | null };
+
+type TerminalSocketMessage =
+  | { type: 'connected' }
+  | { type: 'terminal_attached'; id?: string; terminalId: string; replay: string; exited: boolean; exitCode: number | null }
+  | { type: 'terminal'; terminalId: string; event: TerminalRealtimeMessage }
+  | { type: 'error'; id?: string; message: string };
 
 export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -81,7 +87,36 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     state.xterm = xterm;
     state.fitAddon = fitAddon;
 
-    const flushPendingWrites = (id: string) => {
+    // Create terminal session via backend action
+    let terminalId: string | null = null;
+    let streamAbort: AbortController | null = null;
+    let terminalSocket: WebSocket | null = null;
+    let realtimeAttached = false;
+    let pendingResize: { cols: number; rows: number } | null = null;
+    let closed = false;
+    let usingPty = false;
+    let degradedInputColumns = 0;
+    let requestedWorkbenchClose = false;
+
+    const sendTerminalSocketMessage = (message: Record<string, unknown>): boolean => {
+      if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN || !realtimeAttached) return false;
+      terminalSocket.send(JSON.stringify(message));
+      return true;
+    };
+
+    const flushPendingWritesThroughSocket = (id: string) => {
+      const pendingWrites = pendingWritesRef.current;
+      while (pendingWrites.length > 0 && state.id === id) {
+        const data = pendingWrites.shift();
+        if (!data) continue;
+        if (!sendTerminalSocketMessage({ type: 'terminal_input', terminalId: id, data })) {
+          pendingWrites.unshift(data);
+          break;
+        }
+      }
+    };
+
+    const flushPendingWritesThroughActions = (id: string) => {
       const pendingWrites = pendingWritesRef.current;
       while (pendingWrites.length > 0 && state.id === id) {
         const data = pendingWrites.shift();
@@ -92,14 +127,6 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       }
     };
 
-    // Create terminal session via backend action
-    let terminalId: string | null = null;
-    let streamAbort: AbortController | null = null;
-    let closed = false;
-    let usingPty = false;
-    let degradedInputColumns = 0;
-    let requestedWorkbenchClose = false;
-
     const closeWorkbenchTab = () => {
       if (requestedWorkbenchClose) return;
       requestedWorkbenchClose = true;
@@ -109,6 +136,74 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     const handleTerminalExit = () => {
       closeWorkbenchTab();
     };
+
+    const attachTerminalRealtime = (id: string, url: string) =>
+      new Promise<void>((resolve, reject) => {
+        const socket = new WebSocket(url);
+        const attachId = `terminal:${id}:${Date.now().toString(36)}`;
+        let settled = false;
+        terminalSocket = socket;
+
+        const fail = (error: Error) => {
+          if (terminalSocket === socket) terminalSocket = null;
+          if (settled) return;
+          settled = true;
+          reject(error);
+        };
+
+        socket.addEventListener('open', () => {
+          socket.send(JSON.stringify({ type: 'terminal_attach', id: attachId, terminalId: id }));
+        });
+
+        socket.addEventListener('message', (event) => {
+          if (closed || state.id !== id) return;
+          let message: TerminalSocketMessage;
+          try {
+            message = JSON.parse(String(event.data)) as TerminalSocketMessage;
+          } catch {
+            fail(new Error('Terminal realtime message was invalid.'));
+            return;
+          }
+
+          if (message.type === 'terminal_attached' && message.terminalId === id && message.id === attachId) {
+            realtimeAttached = true;
+            xterm.write(message.replay);
+            flushPendingWritesThroughSocket(id);
+            if (pendingResize) {
+              sendTerminalSocketMessage({ type: 'terminal_resize', terminalId: id, cols: pendingResize.cols, rows: pendingResize.rows });
+              pendingResize = null;
+            }
+            if (message.exited) handleTerminalExit();
+            if (!settled) {
+              settled = true;
+              resolve();
+            }
+            return;
+          }
+
+          if (message.type === 'terminal' && message.terminalId === id) {
+            if (message.event.type === 'output') {
+              xterm.write(message.event.data);
+              return;
+            }
+            if (message.event.type === 'exit') handleTerminalExit();
+            return;
+          }
+
+          if (message.type === 'error' && (!message.id || message.id === attachId)) {
+            fail(new Error(message.message));
+          }
+        });
+
+        socket.addEventListener('error', () => {
+          fail(new Error('Terminal realtime connection failed.'));
+        });
+
+        socket.addEventListener('close', () => {
+          if (terminalSocket === socket) terminalSocket = null;
+          if (!closed && !settled) fail(new Error('Terminal realtime connection closed.'));
+        });
+      });
 
     const attachTerminalStream = async (id: string) => {
       const abort = new AbortController();
@@ -155,9 +250,9 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     const writeTerminalData = (data: string) => {
       echoInput(data);
       if (terminalId && !closed) {
-        pa.extension.invoke('terminalWrite', { id: terminalId, data }).catch(() => {
-          // Ignore write errors if terminal was closed.
-        });
+        if (!sendTerminalSocketMessage({ type: 'terminal_input', terminalId, data })) {
+          pendingWritesRef.current.push(data);
+        }
       } else if (!closed) {
         pendingWritesRef.current.push(data);
       }
@@ -174,16 +269,26 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         state.usingPty = result.usingPty;
         usingPty = result.usingPty;
         container.dataset.terminalId = result.id;
-        flushPendingWrites(result.id);
 
         // Write a welcome message
         const modeLabel = result.usingPty ? 'PTY ready' : 'Terminal ready (degraded mode)';
         xterm.writeln(`\x1b[90m${modeLabel} (pid: ${result.pid ?? '?'}). Type 'exit' to close.\x1b[0m\r\n`);
-        void attachTerminalStream(result.id).catch((error) => {
-          if (closed || (error instanceof DOMException && error.name === 'AbortError')) return;
-          const message = error instanceof Error ? error.message : String(error);
-          xterm.writeln(`\r\n\x1b[91mTerminal output stream failed: ${message}\x1b[0m`);
-        });
+        const realtimeUrl = result.realtimeUrl ?? buildDesktopWebSocketUrl('/api/realtime');
+        void attachTerminalRealtime(result.id, realtimeUrl)
+          .catch((error) => {
+            if (closed || state.id !== result.id) return;
+            terminalSocket = null;
+            realtimeAttached = false;
+            flushPendingWritesThroughActions(result.id);
+            const message = error instanceof Error ? error.message : String(error);
+            xterm.writeln(`\r\n\x1b[93mTerminal realtime connection failed; using fallback stream. ${message}\x1b[0m`);
+            return attachTerminalStream(result.id);
+          })
+          .catch((error) => {
+            if (closed || (error instanceof DOMException && error.name === 'AbortError')) return;
+            const message = error instanceof Error ? error.message : String(error);
+            xterm.writeln(`\r\n\x1b[91mTerminal output stream failed: ${message}\x1b[0m`);
+          });
       })
       .catch((error) => {
         if (closed) return;
@@ -206,7 +311,12 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         if (terminalId && !closed) {
           const dims = fitAddon.proposeDimensions();
           if (dims) {
-            pa.extension.invoke('terminalResize', { id: terminalId, cols: dims.cols, rows: dims.rows }).catch(() => {});
+            pendingResize = { cols: dims.cols, rows: dims.rows };
+            if (sendTerminalSocketMessage({ type: 'terminal_resize', terminalId, cols: dims.cols, rows: dims.rows })) {
+              pendingResize = null;
+            } else {
+              pa.extension.invoke('terminalResize', { id: terminalId, cols: dims.cols, rows: dims.rows }).catch(() => {});
+            }
           }
         }
       } catch {
@@ -238,8 +348,11 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       container.removeEventListener('pointerdown', handleFocusTerminal, true);
 
       if (terminalId) {
-        pa.extension.invoke('terminalClose', { id: terminalId }).catch(() => {});
+        if (!sendTerminalSocketMessage({ type: 'terminal_close', terminalId })) {
+          pa.extension.invoke('terminalClose', { id: terminalId }).catch(() => {});
+        }
       }
+      terminalSocket?.close();
       streamAbort?.abort();
 
       xterm.dispose();
