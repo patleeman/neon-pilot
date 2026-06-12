@@ -480,4 +480,24 @@ describe('model routes', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
     expect(res.end).toHaveBeenCalledTimes(1);
   });
+
+  it('cleans up provider OAuth event stream timers when the client disconnects early', () => {
+    vi.useFakeTimers();
+    try {
+      const { getHandler } = createDesktopHarness(allocateFiles());
+      const unsubscribe = vi.fn();
+      subscribeProviderOAuthLoginMock.mockImplementation(() => unsubscribe);
+      const req = createRequest({ params: { loginId: 'login-1' } });
+      const res = createResponse();
+
+      getHandler('/api/provider-auth/oauth/:loginId/events')(req, res);
+      req.emit('close');
+      vi.advanceTimersByTime(10 * 60 * 1000);
+
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+      expect(res.end).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

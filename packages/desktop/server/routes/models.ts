@@ -202,27 +202,51 @@ export function registerModelRoutes(
       res.setHeader('Connection', 'keep-alive');
       res.flushHeaders();
 
-      const unsubscribe = subscribeProviderOAuthLogin(loginId, (login: { status: string }) => {
+      let closed = false;
+      let unsubscribe: (() => void) | null = null;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      const close = () => {
+        if (closed) {
+          return;
+        }
+
+        closed = true;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        const teardown = unsubscribe;
+        unsubscribe = null;
+        teardown?.();
+        res.end();
+      };
+
+      const teardown = subscribeProviderOAuthLogin(loginId, (login: { status: string }) => {
+        if (closed) {
+          return;
+        }
+
         res.write(`data: ${JSON.stringify(login)}\n\n`);
         if (shouldCloseProviderOAuthSubscription(login)) {
-          clearTimeout(timeoutId);
-          unsubscribe();
-          res.end();
+          close();
         }
       });
+      if (closed) {
+        teardown();
+        return;
+      }
+      unsubscribe = teardown;
 
       // Timeout after 10 minutes
-      const timeoutId = setTimeout(
+      timeoutId = setTimeout(
         () => {
-          unsubscribe();
-          res.end();
+          close();
         },
         10 * 60 * 1000,
       );
 
-      req.on('close', () => {
-        unsubscribe();
-      });
+      req.on('close', close);
     } catch (err) {
       logError('request handler error', {
         message: err instanceof Error ? err.message : String(err),
