@@ -134,6 +134,29 @@ describe('createDesktopAwareEventSource', () => {
     expect(JSON.parse(socket?.sent.at(-1) ?? '{}')).toMatchObject({ type: 'unsubscribe', subscriptionId: 'sub-1' });
   });
 
+  it('does not subscribe if the caller closes the realtime EventSource before the socket opens', async () => {
+    const sockets: FakeWebSocket[] = [];
+    vi.stubGlobal(
+      'WebSocket',
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          sockets.push(this);
+        }
+      },
+    );
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: '127.0.0.1:3000' } });
+
+    const { createDesktopAwareEventSource } = await import('./desktopEventSource');
+    const source = createDesktopAwareEventSource('/api/live-sessions/live-1/events');
+    const socket = sockets[0];
+
+    source.close();
+    socket?.open();
+
+    expect(socket?.sent).toEqual([]);
+  });
+
   it('dispatches named SSE events and preserves id and retry metadata over realtime streams', async () => {
     const sockets: FakeWebSocket[] = [];
     vi.stubGlobal(

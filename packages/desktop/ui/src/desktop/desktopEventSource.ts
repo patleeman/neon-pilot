@@ -52,6 +52,7 @@ class DesktopRealtimeEventSource implements EventSourceLike {
 
   constructor(private readonly path: string) {
     this.socket.addEventListener('open', () => {
+      if (this.closed) return;
       this.socket.send(JSON.stringify({ type: 'subscribe', id: this.requestId, path: this.path }));
     });
     this.socket.addEventListener('message', (event) => this.handleMessage(event));
