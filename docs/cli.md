@@ -39,6 +39,129 @@ Errors are human-readable by default and structured under `--json`:
 }
 ```
 
+## Audiences and command shape
+
+The CLI has two overlapping audiences:
+
+- Humans and external agents use `neon-pilot` as a public control plane for common product tasks: ask Neon Pilot to do work, continue conversations, inspect background work, manage extensions, configure settings, and verify runtime health.
+- Internal agents, scripts, and extension authors use the same executable as a machine-readable control plane: discover live command contracts, inspect schemas, verify runtime paths, and reach advanced escape hatches when no first-class command exists.
+
+The default human surface should teach the runtime model, not only enumerate commands. `neon-pilot commands` may show many commands, but it should make command families and intent clear enough that a caller can choose the right entrypoint without guessing from nouns.
+
+Use this decision model for command copy, examples, generated docs, and future command metadata:
+
+```text
+Use `ask` for normal one-off agent work from the CLI.
+Use `conversations run-turn` to send a prompt to an existing conversation.
+Use `background-commands` for detached shell commands with logs/status/cancel/rerun.
+Use subagent commands to inspect or manage delegated background agent work, not for ordinary prompting.
+Use scheduled-task commands, currently `tasks ...`, for scheduled recurring behavior.
+Use `extensions` and `settings` for product administration.
+Use `app-commands` and `protocol` only as advanced escape hatches when no first-class CLI command fits.
+```
+
+The most important ambiguity to avoid is `ask` versus subagents. A one-off shell request like "run an agent to review this repo" should become `neon-pilot ask ...`. Subagent commands are for delegated background agent records created by the runtime/conversation workflow; they are not the default way for an external caller to start normal agent work.
+
+For humans and external agents, organize command help around task families. This is the target shape for `commands`/help output; command names should use the current CLI contract where it differs, such as `tasks ...` for scheduled automation commands.
+
+```text
+Start Here
+  ask                           Ask Neon Pilot to do one task in a new conversation
+  doctor                        Check whether the runtime is ready
+  help <command>                Show focused help for one command
+
+Conversation Work
+  ask                           Create a conversation, run one turn, and print the result
+  conversations list            List conversations
+  conversations search          Search conversations
+  conversations run-turn        Send a turn to an existing conversation
+  conversations get             Inspect one conversation
+
+Background Work
+  background-commands start     Run a shell command in the background
+  background-commands list      List background shell commands
+  background-commands logs      Read background command logs
+  background-commands cancel    Cancel a background command
+
+Delegated Agent Work
+  subagents list                List delegated background agents
+  subagents get                 Inspect a delegated background agent
+  subagents cancel              Cancel a delegated background agent
+
+Automations
+  tasks list                    List user-managed scheduled behaviors
+  tasks get                     Inspect a scheduled behavior
+  tasks run                     Run a scheduled behavior now
+  tasks save                    Create or update a scheduled behavior
+  tasks delete                  Delete a scheduled behavior
+
+Runtime Setup
+  bootstrap doctor              Check external-agent setup
+  bootstrap configure           Configure provider/default runtime setup
+  bootstrap defaults set        Set default provider, model, cwd, and preferences
+  cli status                    Show CLI shell link status
+  cli install                   Install the user-shell CLI link
+  cli uninstall                 Remove the user-shell CLI link
+
+Extensions and Settings
+  extensions list               List installed extensions
+  extensions install            Install an extension
+  extensions enable             Enable an extension
+  extensions disable            Disable an extension
+  extensions update             Update an extension
+  settings list                 List settings
+  settings get                  Read one setting
+  settings set                  Update one non-secret setting
+  settings reset                Reset settings
+```
+
+For internal agents and automation, expose the contract-oriented map:
+
+```text
+Discovery
+  commands --json               List live command contracts from core and extensions
+  schema --json                 Export full machine-readable command schema
+  help <command>                Show human usage for one command
+  paths --json                  Show local runtime paths
+  version --json                Show CLI and runtime version
+  doctor --json                 Check CLI/runtime readiness
+
+Preferred Agent Entry Points
+  ask                           Start a new conversation and run one turn
+  conversations run-turn        Send a turn to an existing conversation
+  conversations list --json     Discover conversation ids
+  conversations get --json      Inspect one conversation
+  background-commands start     Start detached shell work
+  background-commands list      Inspect detached shell work
+  subagents list                Inspect delegated background agents when that surface is available
+  tasks list                    Inspect scheduled behavior
+
+Runtime Administration
+  bootstrap doctor --json       Validate external-agent control setup
+  bootstrap configure --json    Configure external-agent entrypoints
+  bootstrap defaults set        Configure default provider/model/cwd
+  cli status --json             Inspect user-shell CLI symlink state
+  paths --json                  Locate state/config/runtime roots
+
+Extension Administration
+  extensions list --json        List installed extensions
+  extensions inspect --json     Inspect one extension
+  extensions install            Install an extension
+  extensions enable             Enable an extension
+  extensions disable            Disable an extension
+  extensions validate           Validate extension manifest/runtime wiring
+  settings schema --json        Read declared settings contracts
+  settings list --json          Read merged settings
+  settings set                  Mutate declared non-secret settings
+
+Advanced Escape Hatches
+  app-commands list             List command-palette/app commands
+  app-commands run              Run a command-palette/app command by id
+  protocol <protocol-id> ...    Invoke raw extension protocol entrypoint
+```
+
+When command contracts grow beyond the current schema, prefer first-class metadata over prose-only hints. Useful fields include `intent`, `audience`, `stability`, `recommendedFor`, `notFor`, and `preferredOver`. Agents should rank public commands above advanced/internal commands for user-facing tasks, and should use `app-commands` or `protocol` only when the user explicitly asks for those surfaces or no first-class command exists.
+
 ## Availability
 
 Neon Pilot creates a channel-local launcher at:
