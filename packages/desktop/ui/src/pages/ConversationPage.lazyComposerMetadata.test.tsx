@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../app/contexts';
@@ -126,6 +126,51 @@ const regressionBootstrapData = {
   },
 };
 
+function createRegressionBootstrapData(conversationId: string, cwd = `/tmp/${conversationId}`) {
+  return {
+    conversationId,
+    liveSession: {
+      live: false,
+      id: conversationId,
+      cwd,
+      sessionFile: `${cwd}/${conversationId}.jsonl`,
+      title: `Regression ${conversationId}`,
+      isStreaming: false,
+      hasStaleTurnState: false,
+    },
+    sessionDetail: {
+      meta: {
+        id: conversationId,
+        file: `${cwd}/${conversationId}.jsonl`,
+        timestamp: '2026-05-27T12:00:00.000Z',
+        cwd,
+        cwdSlug: conversationId,
+        model: 'openai/gpt-5.4',
+        title: `Regression ${conversationId}`,
+        messageCount: 2,
+        isLive: false,
+      },
+      blocks: [
+        {
+          type: 'user',
+          id: `${conversationId}-user-1`,
+          ts: '2026-05-27T12:00:00.000Z',
+          text: 'hello',
+        },
+        {
+          type: 'text',
+          id: `${conversationId}-assistant-1`,
+          ts: '2026-05-27T12:00:01.000Z',
+          text: 'hi',
+        },
+      ],
+      blockOffset: 0,
+      totalBlocks: 2,
+      contextUsage: null,
+    },
+  };
+}
+
 vi.mock('../client/api', () => ({
   api: apiMock,
 }));
@@ -242,6 +287,93 @@ function renderDraftConversationPage() {
     >
       <MemoryRouter initialEntries={['/conversations/new']}>
         <ConversationPage draft />
+      </MemoryRouter>
+    </AppDataContext.Provider>,
+  );
+}
+
+function ConversationPageNavigationHarness() {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <button type="button" onClick={() => navigate('/conversations/conv-next')}>
+        Go next
+      </button>
+      <Routes>
+        <Route path="/conversations/:id" element={<ConversationPage />} />
+      </Routes>
+    </>
+  );
+}
+
+function renderSwitchableConversationPage() {
+  sessionStore.replaceAll([
+    {
+      id: 'conv-regression',
+      file: '/tmp/conv-regression.jsonl',
+      timestamp: '2026-05-27T12:00:00.000Z',
+      cwd: '/tmp/project',
+      cwdSlug: 'project',
+      model: 'openai/gpt-5.4',
+      title: 'Regression conversation',
+      messageCount: 2,
+      isLive: false,
+    },
+    {
+      id: 'conv-next',
+      file: '/tmp/conv-next.jsonl',
+      timestamp: '2026-05-27T12:05:00.000Z',
+      cwd: '/tmp/next-project',
+      cwdSlug: 'next-project',
+      model: 'openai/gpt-5.4',
+      title: 'Next regression conversation',
+      messageCount: 2,
+      isLive: false,
+    },
+  ]);
+  sessionStore.markReady?.();
+
+  return render(
+    <AppDataContext.Provider
+      value={{
+        projects: null,
+        sessions: [
+          {
+            id: 'conv-regression',
+            file: '/tmp/conv-regression.jsonl',
+            timestamp: '2026-05-27T12:00:00.000Z',
+            cwd: '/tmp/project',
+            cwdSlug: 'project',
+            model: 'openai/gpt-5.4',
+            title: 'Regression conversation',
+            messageCount: 2,
+            isLive: false,
+          },
+          {
+            id: 'conv-next',
+            file: '/tmp/conv-next.jsonl',
+            timestamp: '2026-05-27T12:05:00.000Z',
+            cwd: '/tmp/next-project',
+            cwdSlug: 'next-project',
+            model: 'openai/gpt-5.4',
+            title: 'Next regression conversation',
+            messageCount: 2,
+            isLive: false,
+          },
+        ],
+        tasks: [],
+        runs: null,
+        executions: null,
+        setProjects: vi.fn(),
+        setSessions: vi.fn(),
+        setTasks: vi.fn(),
+        setRuns: vi.fn(),
+        setExecutions: vi.fn(),
+      }}
+    >
+      <MemoryRouter initialEntries={['/conversations/conv-regression']}>
+        <ConversationPageNavigationHarness />
       </MemoryRouter>
     </AppDataContext.Provider>,
   );
@@ -726,5 +858,88 @@ describe('ConversationPage lazy composer metadata', () => {
       expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-regression');
     });
     expect((await screen.findByTestId('drawings-picker-modal')).textContent).toContain('drawing-1');
+  });
+
+  it('ignores stale attachment refreshes after switching saved conversations', async () => {
+    vi.useRealTimers();
+
+    let resolveRegressionAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null = null;
+    let resolveNextAttachments: ((value: { conversationId: string; attachments: Array<Record<string, unknown>> }) => void) | null = null;
+
+    apiMock.conversationAttachments.mockImplementation((conversationId: string) => {
+      if (conversationId === 'conv-regression') {
+        return new Promise((resolve) => {
+          resolveRegressionAttachments = resolve;
+        });
+      }
+
+      if (conversationId === 'conv-next') {
+        return new Promise((resolve) => {
+          resolveNextAttachments = resolve;
+        });
+      }
+
+      throw new Error(`unexpected conversation ${conversationId}`);
+    });
+
+    regressionBootstrap.data = createRegressionBootstrapData('conv-regression', '/tmp/project');
+    renderSwitchableConversationPage();
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(DRAWING_PICKER_OPEN_COMMAND_EVENT));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-regression');
+    });
+
+    regressionBootstrap.data = createRegressionBootstrapData('conv-next', '/tmp/next-project');
+    fireEvent.click(screen.getByRole('button', { name: 'Go next' }));
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(DRAWING_PICKER_OPEN_COMMAND_EVENT));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-next');
+    });
+
+    resolveRegressionAttachments?.({
+      conversationId: 'conv-regression',
+      attachments: [
+        {
+          id: 'drawing-regression',
+          title: 'Regression drawing',
+          kind: 'drawing',
+          currentRevision: 1,
+          updatedAt: '2026-05-27T12:00:00.000Z',
+        },
+      ],
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect((await screen.findByTestId('drawings-picker-modal')).textContent).not.toContain('drawing-regression');
+
+    resolveNextAttachments?.({
+      conversationId: 'conv-next',
+      attachments: [
+        {
+          id: 'drawing-next',
+          title: 'Next drawing',
+          kind: 'drawing',
+          currentRevision: 2,
+          updatedAt: '2026-05-27T12:05:00.000Z',
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('drawings-picker-modal').textContent).toContain('drawing-next');
+    });
   });
 });

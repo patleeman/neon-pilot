@@ -1518,6 +1518,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     disposed: false,
     latestRequestId: 0,
   });
+  const conversationAttachmentsLifecycleRef = useRef({
+    disposed: false,
+    latestRequestId: 0,
+  });
   const savedWorkspacePathsLifecycleRef = useRef({
     disposed: false,
     latestRequestId: 0,
@@ -1576,6 +1580,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   useEffect(() => {
     const lifecycle = liveSessionContextLifecycleRef.current;
+    lifecycle.disposed = false;
+    return () => {
+      lifecycle.disposed = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const lifecycle = conversationAttachmentsLifecycleRef.current;
     lifecycle.disposed = false;
     return () => {
       lifecycle.disposed = true;
@@ -2842,7 +2854,16 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       return [] as ConversationAttachmentSummary[];
     }
 
+    const lifecycle = conversationAttachmentsLifecycleRef.current;
+    const requestId = lifecycle.latestRequestId + 1;
+    lifecycle.latestRequestId = requestId;
+
     const data = await api.conversationAttachments(id);
+    const currentLifecycle = conversationAttachmentsLifecycleRef.current;
+    if (currentLifecycle.disposed || currentLifecycle.latestRequestId !== requestId) {
+      return data.attachments;
+    }
+
     setConversationAttachments(data.attachments);
     return data.attachments;
   }, [id]);
