@@ -314,6 +314,44 @@ describe('runTaskInIsolatedPi', () => {
     expect(runtime.abortConversation).toHaveBeenCalledWith({ conversationId: 'conv-nightly' });
   });
 
+  it('tears down late conversation subscriptions and skips prompt dispatch when cancellation fires before subscribe resolves', async () => {
+    const runsRoot = createTempDir('tasks-runner-runs-');
+    const controller = new AbortController();
+    const unsubscribe = vi.fn();
+    let resolveSubscribe: ((value: () => void) => void) | null = null;
+    const runtime = createRuntime({
+      subscribeConversation: vi.fn().mockImplementation(
+        async () =>
+          new Promise<() => void>((resolve) => {
+            resolveSubscribe = resolve;
+          }),
+      ),
+    });
+    mocks.resolveCompanionRuntime.mockResolvedValue(runtime);
+
+    const promise = runTaskInIsolatedPi({
+      task: createTask(),
+      attempt: 1,
+      runsRoot,
+      signal: controller.signal,
+    });
+
+    await vi.waitFor(() => expect(resolveSubscribe).not.toBeNull());
+    controller.abort();
+    resolveSubscribe?.(unsubscribe);
+
+    const result = await promise;
+    expect(result).toMatchObject({
+      success: false,
+      cancelled: true,
+      timedOut: false,
+      error: 'Task run cancelled',
+    });
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(runtime.promptConversation).not.toHaveBeenCalled();
+    expect(runtime.abortConversation).toHaveBeenCalledWith({ conversationId: 'conv-nightly' });
+  });
+
   it('reports assistant error events as failed task runs', async () => {
     const runsRoot = createTempDir('tasks-runner-runs-');
     let listener: ((event: unknown) => void) | undefined;

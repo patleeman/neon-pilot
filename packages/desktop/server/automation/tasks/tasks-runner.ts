@@ -254,6 +254,7 @@ async function waitForConversationCompletion(input: {
   let unsubscribe: (() => void) | undefined;
   let started = false;
   let promptDispatchStarted = false;
+  let cleanedUp = false;
 
   const finish = (details: { completed?: boolean; error?: string }) => {
     completed = details.completed === true;
@@ -264,8 +265,18 @@ async function waitForConversationCompletion(input: {
   const abortHandler = () => finish({ error: 'Task run cancelled' });
   signal?.addEventListener('abort', abortHandler, { once: true });
 
+  const cleanupSubscription = () => {
+    if (cleanedUp) {
+      return;
+    }
+
+    cleanedUp = true;
+    unsubscribe?.();
+    unsubscribe = undefined;
+  };
+
   try {
-    unsubscribe = await runtime.subscribeConversation(
+    const teardown = await runtime.subscribeConversation(
       {
         conversationId,
         surfaceId: `automation-${task.id}`,
@@ -294,38 +305,44 @@ async function waitForConversationCompletion(input: {
         }
       },
     );
+    if (signal?.aborted || settled) {
+      teardown();
+      finish({ error: 'Task run cancelled' });
+    } else {
+      unsubscribe = teardown;
 
-    promptDispatchStarted = true;
-    await runtime.promptConversation({
-      conversationId,
-      text: task.prompt,
-      behavior: task.conversationBehavior ?? 'followUp',
-      surfaceId: `automation-${task.id}`,
-    });
+      promptDispatchStarted = true;
+      await runtime.promptConversation({
+        conversationId,
+        text: task.prompt,
+        behavior: task.conversationBehavior ?? 'followUp',
+        surfaceId: `automation-${task.id}`,
+      });
 
-    const deadline = Date.now() + task.timeoutSeconds * 1000;
-    while (!settled) {
-      if (signal?.aborted) {
-        finish({ error: 'Task run cancelled' });
-        break;
-      }
+      const deadline = Date.now() + task.timeoutSeconds * 1000;
+      while (!settled) {
+        if (signal?.aborted) {
+          finish({ error: 'Task run cancelled' });
+          break;
+        }
 
-      if (Date.now() >= deadline) {
-        finish({ error: `Task timed out after ${task.timeoutSeconds}s` });
-        break;
-      }
+        if (Date.now() >= deadline) {
+          finish({ error: `Task timed out after ${task.timeoutSeconds}s` });
+          break;
+        }
 
-      await wait(COMPLETION_POLL_INTERVAL_MS, signal);
+        await wait(COMPLETION_POLL_INTERVAL_MS, signal);
 
-      const bootstrap = await runtime.readConversationBootstrap({ conversationId, tailBlocks: 5 }).catch(() => null);
-      const running = extractIsRunning(bootstrap);
-      if (completed && running === false) {
-        finish({ completed: true });
+        const bootstrap = await runtime.readConversationBootstrap({ conversationId, tailBlocks: 5 }).catch(() => null);
+        const running = extractIsRunning(bootstrap);
+        if (completed && running === false) {
+          finish({ completed: true });
+        }
       }
     }
   } finally {
     signal?.removeEventListener('abort', abortHandler);
-    unsubscribe?.();
+    cleanupSubscription();
   }
 
   const timedOut = errorMessage === `Task timed out after ${task.timeoutSeconds}s`;
