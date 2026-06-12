@@ -2,6 +2,7 @@ import { buildApiPath } from '../client/apiBase';
 import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 
 export interface ExtensionRouteSseStreamOptions {
+  eventNames?: string[];
   signal?: AbortSignal;
 }
 
@@ -59,10 +60,11 @@ export async function* streamExtensionRouteSse<T = unknown>(
   if (options.signal?.aborted) abort();
   options.signal?.addEventListener('abort', abort, { once: true });
   source.addEventListener('close', handleClose);
-
-  source.onmessage = (event) => {
+  const eventTypes = new Set(['message', ...(options.eventNames ?? [])]);
+  const handleEvent = (event: Event) => {
+    const messageEvent = event as MessageEvent<string>;
     try {
-      pending.push(parseExtensionRouteSseData<T>(event.data));
+      pending.push(parseExtensionRouteSseData<T>(messageEvent.data));
     } catch (err) {
       failure = err;
       closed = true;
@@ -70,6 +72,9 @@ export async function* streamExtensionRouteSse<T = unknown>(
     }
     flush();
   };
+  for (const eventType of eventTypes) {
+    source.addEventListener(eventType, handleEvent);
+  }
   source.onerror = () => {
     failure = new Error('Extension route stream failed.');
     closed = true;
@@ -93,6 +98,9 @@ export async function* streamExtensionRouteSse<T = unknown>(
   } finally {
     options.signal?.removeEventListener('abort', abort);
     source.removeEventListener('close', handleClose);
+    for (const eventType of eventTypes) {
+      source.removeEventListener(eventType, handleEvent);
+    }
     closed = true;
     source.close();
     flush();

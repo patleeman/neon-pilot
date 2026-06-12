@@ -40,7 +40,7 @@ describe('streamExtensionRouteSse', () => {
     const next = iter.next();
 
     expect(createDesktopAwareEventSource).toHaveBeenCalledWith('/api/extensions/system-terminal/routes/stream?id=terminal-1');
-    sources[0]?.onmessage?.(new MessageEvent('message', { data: JSON.stringify({ type: 'output' }) }));
+    sources[0]?.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'output' }) }));
 
     await expect(next).resolves.toEqual({ value: { type: 'output' }, done: false });
     await iter.return?.();
@@ -64,7 +64,7 @@ describe('streamExtensionRouteSse', () => {
     const iter = streamExtensionRouteSse<string>('system-terminal', '/stream?id=terminal-1')[Symbol.asyncIterator]();
     const next = iter.next();
 
-    sources[0]?.onmessage?.(new MessageEvent('message', { data: 'ready' }));
+    sources[0]?.dispatchEvent(new MessageEvent('message', { data: 'ready' }));
 
     await expect(next).resolves.toEqual({ value: 'ready', done: false });
     await iter.return?.();
@@ -79,6 +79,20 @@ describe('streamExtensionRouteSse', () => {
     sources[0]?.dispatchEvent(new Event('close'));
 
     await expect(next).resolves.toEqual({ value: undefined, done: true });
+    expect(sources[0]?.close).toHaveBeenCalled();
+  });
+
+  it('yields named SSE events when the caller opts into them', async () => {
+    const { streamExtensionRouteSse } = await import('./extensionRouteStream');
+    const iter = streamExtensionRouteSse<{ type: string }>('system-terminal', '/stream?id=terminal-1', {
+      eventNames: ['update'],
+    })[Symbol.asyncIterator]();
+    const next = iter.next();
+
+    sources[0]?.dispatchEvent(new MessageEvent('update', { data: JSON.stringify({ type: 'output' }) }));
+
+    await expect(next).resolves.toEqual({ value: { type: 'output' }, done: false });
+    await iter.return?.();
     expect(sources[0]?.close).toHaveBeenCalled();
   });
 });

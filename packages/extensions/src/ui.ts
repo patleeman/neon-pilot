@@ -266,7 +266,7 @@ export declare function createDesktopAwareEventSource(...args: never[]): unknown
 export declare function streamExtensionRouteSse<T = unknown>(
   extensionId: string,
   routePath: string,
-  options?: { signal?: AbortSignal },
+  options?: { eventNames?: string[]; signal?: AbortSignal },
 ): AsyncIterable<T>;
 export declare function canDropAllPaths(...args: never[]): unknown;
 export declare function collapseExpandedFolderIds(...args: never[]): unknown;
