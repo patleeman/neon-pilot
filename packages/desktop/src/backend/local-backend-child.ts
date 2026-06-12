@@ -9,6 +9,7 @@ import { bindInProcessDaemonClient, NeonPilotDaemon } from '@neon-pilot/daemon';
 import { setLocalBackendBaseUrl } from '../../server/app/localBackendBaseUrl.js';
 import { setExtensionHostClient } from '../../server/extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from '../../server/extensions/extensionHostRpcClient.js';
+import { proxyDesktopLocalApiStream } from './local-backend-stream-proxy.js';
 import { loadRawLocalApiModule, type LocalApiModule } from '../local-api-module.js';
 
 interface BackendReadyMessage {
@@ -312,21 +313,7 @@ async function main(): Promise<void> {
 
         if (request.method === 'GET' && url.pathname === '/stream') {
           const path = url.searchParams.get('path') ?? '';
-          response.writeHead(200, {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            Connection: 'keep-alive',
-          });
-          const unsubscribe = await api.subscribeDesktopLocalApiStream(path, (event) => {
-            response.write(`event: ${event.type}\n`);
-            if ('data' in event && typeof event.data === 'string') {
-              response.write(`data: ${event.data}\n`);
-            } else if ('message' in event && typeof event.message === 'string') {
-              response.write(`data: ${JSON.stringify({ message: event.message })}\n`);
-            }
-            response.write('\n');
-          });
-          request.on('close', () => unsubscribe());
+          await proxyDesktopLocalApiStream(request, response, path, api.subscribeDesktopLocalApiStream.bind(api));
           return;
         }
 
