@@ -151,6 +151,7 @@ class DesktopRealtimeEventSource implements EventSourceLike {
         return;
       case 'close':
         this.readyState = DesktopRealtimeEventSource.CLOSED;
+        this.events.dispatchEvent(new Event('close'));
         this.close();
         return;
     }

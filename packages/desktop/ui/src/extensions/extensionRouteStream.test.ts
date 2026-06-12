@@ -1,22 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-interface FakeSource {
+class FakeSource extends EventTarget {
   onopen: ((event: Event) => void) | null;
   onmessage: ((event: MessageEvent<string>) => void) | null;
   onerror: ((event: Event) => void) | null;
   readyState: number;
   close: ReturnType<typeof vi.fn>;
+  path?: string;
+
+  constructor() {
+    super();
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.readyState = 1;
+    this.close = vi.fn();
+  }
 }
 
 const sources: FakeSource[] = [];
 const createDesktopAwareEventSource = vi.fn((path: string) => {
-  const source: FakeSource = {
-    onopen: null,
-    onmessage: null,
-    onerror: null,
-    readyState: 1,
-    close: vi.fn(),
-  };
+  const source = new FakeSource();
   Object.assign(source, { path });
   sources.push(source);
   return source;
@@ -64,6 +68,17 @@ describe('streamExtensionRouteSse', () => {
 
     await expect(next).resolves.toEqual({ value: 'ready', done: false });
     await iter.return?.();
+    expect(sources[0]?.close).toHaveBeenCalled();
+  });
+
+  it('completes when the desktop-aware EventSource reports a clean close', async () => {
+    const { streamExtensionRouteSse } = await import('./extensionRouteStream');
+    const iter = streamExtensionRouteSse<string>('system-terminal', '/stream?id=terminal-1')[Symbol.asyncIterator]();
+    const next = iter.next();
+
+    sources[0]?.dispatchEvent(new Event('close'));
+
+    await expect(next).resolves.toEqual({ value: undefined, done: true });
     expect(sources[0]?.close).toHaveBeenCalled();
   });
 });

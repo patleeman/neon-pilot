@@ -172,4 +172,39 @@ describe('createDesktopAwareEventSource', () => {
     expect(event.lastEventId).toBe('evt-1');
     expect(event.retry).toBe(1200);
   });
+
+  it('dispatches a close event when the realtime bridge reports clean stream completion', async () => {
+    const sockets: FakeWebSocket[] = [];
+    vi.stubGlobal(
+      'WebSocket',
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          sockets.push(this);
+        }
+      },
+    );
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: '127.0.0.1:3000' } });
+
+    const { createDesktopAwareEventSource } = await import('./desktopEventSource');
+    const source = createDesktopAwareEventSource('/api/extensions/system-terminal/routes/stream');
+    const onclose = vi.fn();
+    source.addEventListener('close', onclose);
+
+    const socket = sockets[0];
+    socket?.open();
+    socket?.receive({
+      type: 'stream',
+      subscriptionId: 'sub-3',
+      event: { type: 'open' },
+    });
+    socket?.receive({
+      type: 'stream',
+      subscriptionId: 'sub-3',
+      event: { type: 'close' },
+    });
+
+    expect(onclose).toHaveBeenCalledTimes(1);
+    expect(source.readyState).toBe(2);
+  });
 });

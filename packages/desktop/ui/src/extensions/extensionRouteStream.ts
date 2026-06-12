@@ -50,9 +50,15 @@ export async function* streamExtensionRouteSse<T = unknown>(
     source.close();
     flush();
   };
+  const handleClose = () => {
+    closed = true;
+    source.close();
+    flush();
+  };
 
   if (options.signal?.aborted) abort();
   options.signal?.addEventListener('abort', abort, { once: true });
+  source.addEventListener('close', handleClose);
 
   source.onmessage = (event) => {
     try {
@@ -86,6 +92,7 @@ export async function* streamExtensionRouteSse<T = unknown>(
     if (failure) throw failure;
   } finally {
     options.signal?.removeEventListener('abort', abort);
+    source.removeEventListener('close', handleClose);
     closed = true;
     source.close();
     flush();
