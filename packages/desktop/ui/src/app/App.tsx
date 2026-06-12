@@ -181,6 +181,10 @@ export function App() {
   const projects = null;
   const [daemon, setDaemonState] = useState<DaemonState | null>(null);
   const openedOnceRef = useRef(false);
+  const snapshotRequestLifecycleRef = useRef({
+    disposed: false,
+    seqByKey: new Map<'sessions' | 'tasks' | 'runs' | 'executions' | 'daemon', number>(),
+  });
   // Session meta requests can resolve out of order during fast run transitions.
   // Track the latest request per session so stale HTTP responses cannot undo the
   // authoritative running state already pushed over the desktop event stream.
@@ -300,6 +304,97 @@ export function App() {
     setDaemonState((previous) => reuseEqualSnapshot(previous, state));
   }, []);
 
+  useEffect(() => {
+    snapshotRequestLifecycleRef.current.disposed = false;
+    return () => {
+      snapshotRequestLifecycleRef.current.disposed = true;
+    };
+  }, []);
+
+  const beginSnapshotRequest = useCallback((key: 'sessions' | 'tasks' | 'runs' | 'executions' | 'daemon') => {
+    const nextSeq = (snapshotRequestLifecycleRef.current.seqByKey.get(key) ?? 0) + 1;
+    snapshotRequestLifecycleRef.current.seqByKey.set(key, nextSeq);
+    return nextSeq;
+  }, []);
+
+  const isLatestSnapshotRequest = useCallback((key: 'sessions' | 'tasks' | 'runs' | 'executions' | 'daemon', seq: number) => {
+    return !snapshotRequestLifecycleRef.current.disposed && snapshotRequestLifecycleRef.current.seqByKey.get(key) === seq;
+  }, []);
+
+  const loadSessionsSnapshot = useCallback(() => {
+    const requestSeq = beginSnapshotRequest('sessions');
+    void fetchSessionsSnapshot()
+      .then((items) => {
+        if (!isLatestSnapshotRequest('sessions', requestSeq)) {
+          return;
+        }
+        setSessions(items);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
+  }, [beginSnapshotRequest, isLatestSnapshotRequest, setSessions]);
+
+  const loadTasksSnapshot = useCallback(() => {
+    const requestSeq = beginSnapshotRequest('tasks');
+    void api
+      .tasks()
+      .then((items) => {
+        if (!isLatestSnapshotRequest('tasks', requestSeq)) {
+          return;
+        }
+        setTasks(items);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
+  }, [beginSnapshotRequest, isLatestSnapshotRequest, setTasks]);
+
+  const loadRunsSnapshot = useCallback(() => {
+    const requestSeq = beginSnapshotRequest('runs');
+    void api
+      .runs()
+      .then((result) => {
+        if (!isLatestSnapshotRequest('runs', requestSeq)) {
+          return;
+        }
+        setRuns(result);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
+  }, [beginSnapshotRequest, isLatestSnapshotRequest, setRuns]);
+
+  const loadExecutionsSnapshot = useCallback(() => {
+    const requestSeq = beginSnapshotRequest('executions');
+    void api
+      .executions()
+      .then((result) => {
+        if (!isLatestSnapshotRequest('executions', requestSeq)) {
+          return;
+        }
+        setExecutions(result);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
+  }, [beginSnapshotRequest, isLatestSnapshotRequest, setExecutions]);
+
+  const loadDaemonSnapshot = useCallback(() => {
+    const requestSeq = beginSnapshotRequest('daemon');
+    void api
+      .daemon()
+      .then((state) => {
+        if (!isLatestSnapshotRequest('daemon', requestSeq)) {
+          return;
+        }
+        setDaemon(state);
+      })
+      .catch(() => {
+        // Keep waiting for SSE or a later retry.
+      });
+  }, [beginSnapshotRequest, isLatestSnapshotRequest, setDaemon]);
+
   const refreshInvalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingInvalidationTopicsRef = useRef(new Set<AppEventTopic>());
 
@@ -319,45 +414,21 @@ export function App() {
         pendingInvalidationTopicsRef.current = new Set<AppEventTopic>();
 
         if (pendingTopics.has('sessions')) {
-          void fetchSessionsSnapshot()
-            .then((items) => {
-              setSessions(items);
-            })
-            .catch(() => undefined);
+          loadSessionsSnapshot();
         }
         if (pendingTopics.has('tasks')) {
-          void api
-            .tasks()
-            .then((items) => {
-              setTasks(items);
-            })
-            .catch(() => undefined);
+          loadTasksSnapshot();
         }
         if (pendingTopics.has('runs') || pendingTopics.has('executions')) {
-          void api
-            .runs()
-            .then((result) => {
-              setRuns(result);
-            })
-            .catch(() => undefined);
-          void api
-            .executions()
-            .then((result) => {
-              setExecutions(result);
-            })
-            .catch(() => undefined);
+          loadRunsSnapshot();
+          loadExecutionsSnapshot();
         }
         if (pendingTopics.has('daemon')) {
-          void api
-            .daemon()
-            .then((state) => {
-              setDaemon(state);
-            })
-            .catch(() => undefined);
+          loadDaemonSnapshot();
         }
       }, 150);
     },
-    [setDaemon, setExecutions, setRuns, setSessions, setTasks],
+    [loadDaemonSnapshot, loadExecutionsSnapshot, loadRunsSnapshot, loadSessionsSnapshot, loadTasksSnapshot],
   );
 
   const handleDesktopAppEvent = useCallback(
@@ -469,52 +540,12 @@ export function App() {
   );
 
   const bootstrapSnapshots = useCallback(() => {
-    void fetchSessionsSnapshot()
-      .then((items) => {
-        setSessions(items);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
-
-    void api
-      .tasks()
-      .then((items) => {
-        setTasks(items);
-        taskStore.replaceAll(items);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
-
-    void api
-      .runs()
-      .then((result) => {
-        setRuns(result);
-        runStore.replaceAll(result.runs ?? []);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
-
-    void api
-      .executions()
-      .then((result) => {
-        setExecutions(result);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
-
-    void api
-      .daemon()
-      .then((state) => {
-        setDaemon(state);
-      })
-      .catch(() => {
-        // Keep waiting for SSE or a later retry.
-      });
-  }, [setDaemon, setExecutions, setRuns, setSessions, setTasks]);
+    loadSessionsSnapshot();
+    loadTasksSnapshot();
+    loadRunsSnapshot();
+    loadExecutionsSnapshot();
+    loadDaemonSnapshot();
+  }, [loadDaemonSnapshot, loadExecutionsSnapshot, loadRunsSnapshot, loadSessionsSnapshot, loadTasksSnapshot]);
 
   // Track the latest subscription so we don't re-subscribe after a fresh mount.
   const subscriptionGenerationRef = useRef(0);

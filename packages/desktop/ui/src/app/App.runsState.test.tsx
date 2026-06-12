@@ -38,7 +38,7 @@ vi.mock('../session/sessionSnapshot', () => ({
 
 vi.mock('../components/Layout', async () => {
   const { useAppEvents } = await import('./contexts');
-  const { useAllSessions, useAllExecutions } = await import('../store');
+  const { useAllSessions, useAllExecutions, useAllTasks } = await import('../store');
   const AppDataOnlyProbe = React.memo(function AppDataOnlyProbe() {
     const sessions = useAllSessions();
     const globalWithProbe = globalThis as typeof globalThis & { __APP_DATA_ONLY_RENDER_COUNT__?: number };
@@ -50,6 +50,7 @@ vi.mock('../components/Layout', async () => {
     Layout: () => {
       const sessions = useAllSessions();
       const executions = useAllExecutions();
+      const tasks = useAllTasks();
       const { versions } = useAppEvents();
       const session = sessions.find((candidate) => candidate.id === 'conv-1');
       return (
@@ -57,6 +58,10 @@ vi.mock('../components/Layout', async () => {
           <span>{session?.isRunning ? 'conversation running' : 'conversation idle'}</span>
           <span>executions version {versions.executions}</span>
           <span>runs version {versions.runs}</span>
+          <span>tasks version {versions.tasks}</span>
+          {(tasks ?? []).map((task) => (
+            <span key={task.id}>{task.title}</span>
+          ))}
           {(executions ?? []).map((execution) => (
             <span key={execution.id}>{execution.title}</span>
           ))}
@@ -112,6 +117,16 @@ async function flushInvalidationRefresh() {
     await Promise.resolve();
     await Promise.resolve();
   });
+}
+
+function createDeferredPromise<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 describe('App execution state integration', () => {
@@ -429,5 +444,50 @@ describe('App execution state integration', () => {
     await emitDesktopEvent({ type: 'invalidate', topics: ['workspace'] });
 
     expect(globalWithProbe.__APP_DATA_ONLY_RENDER_COUNT__).toBe(renderCount);
+  });
+
+  it('does not let a stale bootstrap task snapshot overwrite a newer invalidation refresh', async () => {
+    const bootstrapTasks = createDeferredPromise<Array<{ id: string; title: string; running: boolean; enabled: boolean; prompt: string; scheduleType: 'cron' }>>();
+    const refreshTasks = createDeferredPromise<Array<{ id: string; title: string; running: boolean; enabled: boolean; prompt: string; scheduleType: 'cron' }>>();
+    apiTasksMock.mockReturnValueOnce(bootstrapTasks.promise).mockReturnValueOnce(refreshTasks.promise);
+
+    ({ container, root } = await renderApp());
+
+    await emitDesktopEvent({ type: 'invalidate', topics: ['tasks'] });
+    await flushInvalidationRefresh();
+
+    await act(async () => {
+      refreshTasks.resolve([
+        {
+          id: 'task-new',
+          title: 'Newer task snapshot',
+          running: false,
+          enabled: true,
+          prompt: 'Refresh tasks',
+          scheduleType: 'cron',
+        },
+      ]);
+      await refreshTasks.promise;
+    });
+
+    expect(container.textContent).toContain('tasks version 1');
+    expect(container.textContent).toContain('Newer task snapshot');
+
+    await act(async () => {
+      bootstrapTasks.resolve([
+        {
+          id: 'task-old',
+          title: 'Older bootstrap snapshot',
+          running: false,
+          enabled: true,
+          prompt: 'Bootstrap tasks',
+          scheduleType: 'cron',
+        },
+      ]);
+      await bootstrapTasks.promise;
+    });
+
+    expect(container.textContent).toContain('Newer task snapshot');
+    expect(container.textContent).not.toContain('Older bootstrap snapshot');
   });
 });
