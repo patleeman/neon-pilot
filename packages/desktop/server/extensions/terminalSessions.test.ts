@@ -127,6 +127,24 @@ describe('terminal sessions', () => {
     await expect(exitPromise).resolves.toMatchObject({ value: { data: { type: 'exit', code: 0 } } });
   });
 
+  it('keeps startup output available for the first stream attach', async () => {
+    shellSpawn.mockImplementation(async (input) => {
+      input.onStdout('startup-prompt');
+      return createMockSpawnHandle();
+    });
+
+    const result = await mod.createTerminalSession({});
+    expect(result.initialOutput).toBe('startup-prompt');
+
+    const { events } = await mod.streamTerminalSession(routeRequest(result.id));
+    const iter = (events as AsyncIterable<unknown>)[Symbol.asyncIterator]();
+
+    await expect(iter.next()).resolves.toMatchObject({
+      value: { data: { type: 'output', data: 'startup-prompt' } },
+      done: false,
+    });
+  });
+
   it('returns 404 for unknown terminal streams and false for unknown control actions', async () => {
     await expect(mod.streamTerminalSession(routeRequest('missing'))).resolves.toMatchObject({ status: 404 });
     expect(mod.writeTerminalSession({ id: 'missing', data: 'x' })).toEqual({ ok: false });

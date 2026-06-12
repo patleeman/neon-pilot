@@ -179,7 +179,6 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         // Write a welcome message
         const modeLabel = result.usingPty ? 'PTY ready' : 'Terminal ready (degraded mode)';
         xterm.writeln(`\x1b[90m${modeLabel} (pid: ${result.pid ?? '?'}). Type 'exit' to close.\x1b[0m\r\n`);
-        if (result.initialOutput) xterm.write(result.initialOutput);
         void attachTerminalStream(result.id).catch((error) => {
           if (closed || (error instanceof DOMException && error.name === 'AbortError')) return;
           const message = error instanceof Error ? error.message : String(error);

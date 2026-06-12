@@ -242,7 +242,6 @@ export async function createTerminalSession(input: {
 
   const initialOutput = session.outputBuffer.join('');
   session.outputBuffer.length = 0;
-  session.outputReplay.length = 0;
   const realtimeUrl = resolveRealtimeUrl();
   return { id, pid: child.pid, usingPty, initialOutput, ...(realtimeUrl ? { realtimeUrl } : {}) };
 }
