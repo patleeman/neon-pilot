@@ -104,11 +104,7 @@
         "jsonDefault": true,
         "inputAction": "app_update",
         "usage": "app update [--channel stable|rc] [--app-dir /Applications] [--repo owner/name] [--dry-run] [--json]",
-        "examples": [
-          "neon-pilot app update --json",
-          "neon-pilot app update --channel rc --json",
-          "neon-pilot app update --dry-run --json"
-        ],
+        "examples": ["neon-pilot app update --json", "neon-pilot app update --channel rc --json", "neon-pilot app update --dry-run --json"],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -563,7 +559,10 @@
         "action": "neonPilotAgent",
         "jsonDefault": true,
         "usage": "bootstrap provider save <provider> [--base-url <url>] [--api <api>] [--json]",
-        "examples": ["neon-pilot bootstrap provider save openai --api openai", "neon-pilot bootstrap provider save openai --api openai --json"],
+        "examples": [
+          "neon-pilot bootstrap provider save openai --api openai",
+          "neon-pilot bootstrap provider save openai --api openai --json"
+        ],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -654,13 +653,8 @@
       {
         "id": "neon-pilot-admin-cli",
         "title": "Neon Pilot CLI",
-        "description": "Use the Neon Pilot CLI for self-administration of conversations, workspace/sidebar state, runs, automations, extensions, settings, extension-contributed surfaces, and delegated agent control.",
+        "description": "Use the Neon Pilot CLI/control plane for install/bootstrap, conversations, workspace/sidebar state, runs, automations, extensions, settings, extension-contributed surfaces, and delegated agent control.",
         "path": "skills/neon-pilot-admin-cli/SKILL.md"
-      },
-      {
-        "id": "neon-pilot-control",
-        "path": "skills/neon-pilot-control/SKILL.md",
-        "title": "Neon Pilot Control"
       }
     ],
     "settingsComponent": {
