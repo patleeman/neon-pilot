@@ -73,6 +73,7 @@ export function ExtensionChatRail({
   const currentConversationIdRef = useRef<string | null>(conversationId);
   const pendingTurnRefreshRef = useRef(false);
   const submittedBlockCountRef = useRef(0);
+  const pendingRefreshTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
     currentConversationIdRef.current = conversationId;
@@ -114,11 +115,20 @@ export function ExtensionChatRail({
     await refreshConversationState();
   }, [refreshConversationState]);
 
+  const clearPendingRefreshTimers = useCallback(() => {
+    for (const timer of pendingRefreshTimersRef.current) {
+      window.clearTimeout(timer);
+    }
+    pendingRefreshTimersRef.current = [];
+  }, []);
+
   useEffect(() => {
     if (!pendingTurnRefreshRef.current || isStreaming || !hasTurnResultBlock(messages, submittedBlockCountRef.current)) return;
     pendingTurnRefreshRef.current = false;
     void onTurnComplete?.();
   }, [isStreaming, messages.length, onTurnComplete]);
+
+  useEffect(() => clearPendingRefreshTimers, [clearPendingRefreshTimers, conversationId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,10 +206,10 @@ export function ExtensionChatRail({
         submittedBlockCountRef.current = messages.length;
         await desktopState.send(text, behavior, images, attachmentRefs, contextMessages);
         void refreshExtensionState();
-        window.setTimeout(() => void refreshExtensionState(), 1500);
-        window.setTimeout(() => void refreshExtensionState(), 5000);
-        window.setTimeout(() => void refreshExtensionState(), 15_000);
-        window.setTimeout(() => void refreshExtensionState(), 30_000);
+        clearPendingRefreshTimers();
+        pendingRefreshTimersRef.current = [1500, 5000, 15_000, 30_000].map((delayMs) =>
+          window.setTimeout(() => void refreshExtensionState(), delayMs),
+        );
         desktopState.reconnect();
       } catch (error) {
         pendingTurnRefreshRef.current = false;
@@ -208,7 +218,7 @@ export function ExtensionChatRail({
         throw error;
       }
     },
-    [conversationId, desktopState, getContextMessages, messages.length, onError, refreshExtensionState],
+    [clearPendingRefreshTimers, conversationId, desktopState, getContextMessages, messages.length, onError, refreshExtensionState],
   );
 
   const handleAbort = useCallback(async () => {

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -268,5 +268,29 @@ describe('ExtensionChatRail', () => {
     });
     expect(screen.getByTestId('chat-view').getAttribute('data-layout')).toBe('compact');
     expect(screen.getByTestId('chat-rail-composer').getAttribute('data-layout')).toBe('compact');
+  });
+
+  it('clears delayed refresh timers after unmount', async () => {
+    vi.useFakeTimers();
+    const view = render(<ExtensionChatRail conversationId="conversation-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'send' }));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(sendMock).toHaveBeenCalledWith('Review this draft', 'steer', undefined, undefined, undefined);
+    expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+
+    view.unmount();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(desktopConversationStateMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 });
