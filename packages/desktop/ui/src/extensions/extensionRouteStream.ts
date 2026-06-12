@@ -1,4 +1,5 @@
 import { buildApiPath } from '../client/apiBase';
+import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 
 export interface ExtensionRouteSseStreamOptions {
   signal?: AbortSignal;
@@ -11,48 +12,74 @@ export async function* streamExtensionRouteSse<T = unknown>(
 ): AsyncIterable<T> {
   const normalizedRoute = routePath.startsWith('/') ? routePath : `/${routePath}`;
   const path = buildApiPath(`/extensions/${encodeURIComponent(extensionId)}/routes${normalizedRoute}`);
-  const response = await fetch(path, {
-    method: 'GET',
-    headers: { Accept: 'text/event-stream' },
-    signal: options.signal,
-  });
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(body || `Extension route stream failed with HTTP ${response.status}.`);
-  }
-  if (!response.body) throw new Error('Extension route stream response did not include a body.');
+  const source = createDesktopAwareEventSource(path);
+  const pending: T[] = [];
+  const waiters: Array<{
+    resolve: (value: IteratorResult<T>) => void;
+    reject: (reason?: unknown) => void;
+  }> = [];
+  let closed = false;
+  let failure: unknown = null;
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+  const flush = () => {
+    while (pending.length > 0 && waiters.length > 0) {
+      const waiter = waiters.shift();
+      const value = pending.shift();
+      if (!waiter || value === undefined) continue;
+      waiter.resolve({ value, done: false });
+    }
+    if (failure) {
+      while (waiters.length > 0) waiters.shift()?.reject(failure);
+      return;
+    }
+    if (closed) {
+      while (waiters.length > 0) waiters.shift()?.resolve({ value: undefined as never, done: true });
+    }
+  };
+
+  const abort = () => {
+    closed = true;
+    source.close();
+    flush();
+  };
+
+  if (options.signal?.aborted) abort();
+  options.signal?.addEventListener('abort', abort, { once: true });
+
+  source.onmessage = (event) => {
+    try {
+      pending.push(JSON.parse(event.data) as T);
+    } catch (err) {
+      failure = err;
+      closed = true;
+      source.close();
+    }
+    flush();
+  };
+  source.onerror = () => {
+    failure = new Error('Extension route stream failed.');
+    closed = true;
+    source.close();
+    flush();
+  };
+
+  const next = () =>
+    new Promise<IteratorResult<T>>((resolve, reject) => {
+      waiters.push({ resolve, reject });
+      flush();
+    });
+
   try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let boundary = buffer.indexOf('\n\n');
-      while (boundary !== -1) {
-        const frame = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary + 2);
-        const data = frame
-          .split(/\r?\n/)
-          .filter((line) => line.startsWith('data:'))
-          .map((line) => line.slice(5).trimStart())
-          .join('\n');
-        if (data) yield JSON.parse(data) as T;
-        boundary = buffer.indexOf('\n\n');
-      }
+    while (!closed || pending.length > 0) {
+      const result = await next();
+      if (result.done) break;
+      yield result.value;
     }
-    const tail = `${buffer}${decoder.decode()}`.trim();
-    if (tail) {
-      const data = tail
-        .split(/\r?\n/)
-        .filter((line) => line.startsWith('data:'))
-        .map((line) => line.slice(5).trimStart())
-        .join('\n');
-      if (data) yield JSON.parse(data) as T;
-    }
+    if (failure) throw failure;
   } finally {
-    reader.releaseLock();
+    options.signal?.removeEventListener('abort', abort);
+    closed = true;
+    source.close();
+    flush();
   }
 }

@@ -6,6 +6,7 @@ import { inlineConversationSessionSnapshotAssetsCapability } from '../conversati
 import type { DisplayBlock } from '../conversations/conversationTypes.js';
 import { subscribe as subscribeLiveSession } from '../conversations/liveSessions.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from '../routes/system.js';
 import { subscribeAppEvents } from '../shared/appEvents.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
@@ -22,6 +23,21 @@ export type DesktopLocalApiStreamEvent =
 
 function emitStreamMessage(onEvent: (event: DesktopLocalApiStreamEvent) => void, payload: unknown): void {
   onEvent({ type: 'message', data: JSON.stringify(payload) });
+}
+
+function normalizeStreamQuery(searchParams: URLSearchParams): Record<string, string | string[]> {
+  const query: Record<string, string | string[]> = {};
+  for (const [key, value] of searchParams.entries()) {
+    const existing = query[key];
+    if (typeof existing === 'string') {
+      query[key] = [existing, value];
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      query[key] = value;
+    }
+  }
+  return query;
 }
 
 function initialAppEventSnapshotDelayMs(topics: readonly string[]): number {
@@ -123,6 +139,62 @@ async function subscribeDesktopLiveSessionStream(url: URL, onEvent: (event: Desk
     unsubscribe();
     onEvent({ type: 'close' });
   };
+}
+
+async function subscribeDesktopExtensionRouteStream(url: URL, onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
+  const match = /^\/api\/extensions\/([^/]+)\/routes\/(.*)$/.exec(url.pathname);
+  const extensionId = decodeURIComponent(match?.[1] ?? '');
+  const routePath = `/${match?.[2] ?? ''}`;
+  if (!extensionId || routePath === '/') {
+    throw new Error('Extension stream route is required.');
+  }
+
+  const abort = new AbortController();
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    abort.abort();
+    onEvent({ type: 'close' });
+  };
+
+  const result = await getExtensionHostClient().invokeRoute({
+    extensionId,
+    method: 'GET',
+    routePath,
+    request: {
+      method: 'GET',
+      path: routePath,
+      query: normalizeStreamQuery(url.searchParams),
+      params: {},
+      signal: abort.signal,
+    },
+  });
+
+  if (result.stream !== 'sse' || !result.events) {
+    throw new Error(`Extension route ${extensionId}${routePath} is not an SSE stream.`);
+  }
+  const events = result.events;
+
+  onEvent({ type: 'open' });
+  void (async () => {
+    try {
+      for await (const event of events) {
+        if (closed) return;
+        onEvent({
+          type: 'message',
+          data: typeof event.data === 'string' ? event.data : JSON.stringify(event.data ?? null),
+        });
+      }
+      close();
+    } catch (error) {
+      if (closed) return;
+      closed = true;
+      onEvent({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
+  })();
+
+  return close;
 }
 
 const ACTIVE_RUN_POLL_INTERVAL_MS = 1_000;
@@ -445,6 +517,10 @@ export async function subscribeDesktopLocalApiStreamByUrl(
 
   if (/^\/api\/provider-auth\/oauth\/[^/]+\/events$/.test(url.pathname)) {
     return subscribeDesktopProviderOAuthStream(url, onEvent);
+  }
+
+  if (/^\/api\/extensions\/[^/]+\/routes\/.+$/.test(url.pathname)) {
+    return subscribeDesktopExtensionRouteStream(url, onEvent);
   }
 
   if (url.pathname === '/api/app-events/events') {

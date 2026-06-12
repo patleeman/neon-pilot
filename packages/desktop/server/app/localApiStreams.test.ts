@@ -9,6 +9,7 @@ const {
   subscribeLiveSessionMock,
   subscribeProviderOAuthLoginMock,
   subscribeAppEventsMock,
+  extensionHostClientMock,
   buildSnapshotEventsForTopicMock,
   existsSyncMock,
   watchMock,
@@ -22,6 +23,9 @@ const {
   subscribeLiveSessionMock: vi.fn(),
   subscribeProviderOAuthLoginMock: vi.fn(),
   subscribeAppEventsMock: vi.fn(),
+  extensionHostClientMock: {
+    invokeRoute: vi.fn(),
+  },
   buildSnapshotEventsForTopicMock: vi.fn(),
   watchMock: vi.fn(),
 }));
@@ -49,6 +53,10 @@ vi.mock('../models/providerAuth.js', () => ({
   subscribeProviderOAuthLogin: subscribeProviderOAuthLoginMock,
 }));
 
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => extensionHostClientMock,
+}));
+
 vi.mock('../workspace/workspaceExplorer.js', () => ({
   readWorkspaceRootSnapshot: readWorkspaceRootSnapshotMock,
 }));
@@ -73,6 +81,7 @@ describe('localApiStreams', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     existsSyncMock.mockReturnValue(false);
+    extensionHostClientMock.invokeRoute.mockReset();
     buildSnapshotEventsForTopicMock.mockResolvedValue([]);
     subscribeAppEventsMock.mockReturnValue(vi.fn());
   });
@@ -215,5 +224,47 @@ describe('localApiStreams', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('streams extension backend SSE routes through the desktop local API bridge', async () => {
+    const events: unknown[] = [];
+    let releaseEvent: (() => void) | null = null;
+    async function* routeEvents() {
+      yield { data: { type: 'output', data: 'startup-prompt' } };
+      await new Promise<void>((resolve) => {
+        releaseEvent = resolve;
+      });
+    }
+    extensionHostClientMock.invokeRoute.mockResolvedValue({
+      stream: 'sse',
+      events: routeEvents(),
+    });
+
+    const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(
+      new URL('http://local.test/api/extensions/system-terminal/routes/stream?id=terminal-1&id=terminal-2'),
+      (event) => events.push(event),
+    );
+    await Promise.resolve();
+
+    expect(extensionHostClientMock.invokeRoute).toHaveBeenCalledWith({
+      extensionId: 'system-terminal',
+      method: 'GET',
+      routePath: '/stream',
+      request: {
+        method: 'GET',
+        path: '/stream',
+        query: { id: ['terminal-1', 'terminal-2'] },
+        params: {},
+        signal: expect.any(AbortSignal),
+      },
+    });
+    expect(events).toEqual([
+      { type: 'open' },
+      { type: 'message', data: JSON.stringify({ type: 'output', data: 'startup-prompt' }) },
+    ]);
+
+    unsubscribe();
+    releaseEvent?.();
+    expect(events.at(-1)).toEqual({ type: 'close' });
   });
 });
