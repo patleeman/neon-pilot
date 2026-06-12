@@ -391,4 +391,46 @@ describe('TerminalPanel', () => {
 
     expect(invoke).toHaveBeenCalledWith('terminalClose', { id: 'term-1' });
   });
+
+  it('echoes queued input once degraded mode is known after create resolves', async () => {
+    let resolveCreate: ((value: { id: string; pid: number | null; usingPty: boolean; realtimeUrl: string }) => void) | null = null;
+    const invoke = vi.fn((action: string) => {
+      if (action === 'terminalCreate') {
+        return new Promise((resolve) => {
+          resolveCreate = resolve;
+        });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          pa={{
+            extension: { invoke },
+            workbench: { closeTab: vi.fn() },
+          } as never}
+          context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const terminal = terminalHarness.FakeTerminal.instances[0];
+    await act(async () => {
+      terminal?.emitData('l');
+      await Promise.resolve();
+    });
+
+    expect(terminal?.write).not.toHaveBeenCalledWith('l');
+
+    await act(async () => {
+      resolveCreate?.({ id: 'term-1', pid: 123, usingPty: false, realtimeUrl: 'ws://127.0.0.1:4321/api/realtime' });
+      await Promise.resolve();
+    });
+
+    expect(terminal?.write).toHaveBeenCalledWith('l');
+  });
 });

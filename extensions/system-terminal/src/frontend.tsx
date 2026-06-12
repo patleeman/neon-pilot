@@ -326,6 +326,13 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       }
     };
 
+    const echoPendingDegradedInput = () => {
+      if (usingPty) return;
+      for (const data of pendingWritesRef.current) {
+        echoInput(data);
+      }
+    };
+
     pa.extension
       .invoke<{ id: string; pid: number | null; usingPty: boolean; initialOutput?: string; realtimeUrl?: string }>('terminalCreate', {
         cwd: context.cwd ?? undefined,
@@ -340,6 +347,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
         state.usingPty = result.usingPty;
         usingPty = result.usingPty;
         container.dataset.terminalId = result.id;
+        echoPendingDegradedInput();
 
         // Write a welcome message
         const modeLabel = result.usingPty ? 'PTY ready' : 'Terminal ready (degraded mode)';
