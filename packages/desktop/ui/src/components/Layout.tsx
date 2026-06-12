@@ -76,6 +76,7 @@ import {
 } from './conversation/checkpointCommands';
 import {
   DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
+  DRAWING_PICKER_OPEN_COMMAND_EVENT,
   DRAWING_PICKER_CLOSE_COMMAND_EVENT,
   DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
 } from './conversation/drawingPickerCommands';
@@ -2410,6 +2411,10 @@ export function Layout() {
       },
       cancelMessageEdit() {
         window.dispatchEvent(new CustomEvent<MessageEditCommand>(MESSAGE_EDIT_COMMAND_EVENT, { detail: 'cancel' }));
+        return true;
+      },
+      openDrawingPicker() {
+        window.dispatchEvent(new CustomEvent(DRAWING_PICKER_OPEN_COMMAND_EVENT));
         return true;
       },
       closeDrawingPicker() {

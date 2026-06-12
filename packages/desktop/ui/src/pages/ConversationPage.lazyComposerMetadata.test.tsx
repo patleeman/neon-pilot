@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppDataContext } from '../app/contexts';
+import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
 import { sessionStore } from '../store';
 import { ConversationPage } from './ConversationPage';
 
@@ -136,6 +137,12 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
 vi.mock('../components/chat/ChatView', () => ({
   ChatView: ({ messages }: { messages?: Array<{ text?: string }> }) => (
     <div data-testid="chat-view">{messages?.map((message) => message.text).join('\n')}</div>
+  ),
+}));
+
+vi.mock('../components/ConversationDrawingsPickerModal', () => ({
+  ConversationDrawingsPickerModal: ({ attachments }: { attachments: Array<{ id: string }> }) => (
+    <div data-testid="drawings-picker-modal">attachments:{attachments.map((attachment) => attachment.id).join(',')}</div>
   ),
 }));
 
@@ -691,5 +698,33 @@ describe('ConversationPage lazy composer metadata', () => {
     expect(screen.getByRole('button', { name: '/tmp/new-workspace' }).getAttribute('title')).toBe(
       'Working directory: /tmp/new-workspace',
     );
+  });
+
+  it('opens the saved drawing picker from its conversation command path', async () => {
+    vi.useRealTimers();
+    apiMock.conversationAttachments.mockResolvedValue({
+      conversationId: 'conv-regression',
+      attachments: [
+        {
+          id: 'drawing-1',
+          title: 'Architecture sketch',
+          kind: 'drawing',
+          currentRevision: 3,
+          updatedAt: '2026-05-27T12:00:00.000Z',
+        },
+      ],
+    });
+
+    renderConversationPage();
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(DRAWING_PICKER_OPEN_COMMAND_EVENT));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(apiMock.conversationAttachments).toHaveBeenCalledWith('conv-regression');
+    });
+    expect((await screen.findByTestId('drawings-picker-modal')).textContent).toContain('drawing-1');
   });
 });

@@ -107,6 +107,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['messageAction.forkFirst', 'messageAction.canForkFirst'],
   ['messageEdit.save', 'messageEdit.canSave'],
   ['messageEdit.cancel', 'messageEdit.active'],
+  ['drawingPicker.open', 'drawingPicker.available'],
   ['drawingPicker.close', 'drawingPicker.open'],
   ['drawingPicker.attachFirst', 'drawingPicker.hasVisibleDrawing'],
   ['drawingPicker.toggleFirstHistory', 'drawingPicker.hasVisibleDrawing'],

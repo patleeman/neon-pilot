@@ -118,6 +118,7 @@ export interface ExtensionCommandExecutorOptions {
   forkFirstMessageAction?(): boolean;
   saveMessageEdit?(): boolean;
   cancelMessageEdit?(): boolean;
+  openDrawingPicker?(): boolean;
   closeDrawingPicker?(): boolean;
   attachFirstDrawingFromPicker?(): boolean;
   toggleFirstDrawingHistory?(): boolean;
@@ -323,6 +324,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'messageAction.forkFirst', title: 'Fork First Message', category: 'Message Actions' },
     { id: 'messageEdit.save', title: 'Save Message Edit', category: 'Message Edit' },
     { id: 'messageEdit.cancel', title: 'Cancel Message Edit', category: 'Message Edit' },
+    { id: 'drawingPicker.open', title: 'Open Drawing Picker', category: 'Conversation' },
     { id: 'drawingPicker.close', title: 'Close Drawing Picker', category: 'Conversation' },
     { id: 'drawingPicker.attachFirst', title: 'Attach First Visible Drawing', category: 'Conversation' },
     { id: 'drawingPicker.toggleFirstHistory', title: 'Toggle First Drawing History', category: 'Conversation' },
@@ -1531,6 +1533,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.cancelMessageEdit) && readContextValue(context, 'messageEdit.active') === true;
+      },
+    },
+    {
+      id: 'drawingPicker.open',
+      title: 'Open Drawing Picker',
+      category: 'Conversation',
+      execute() {
+        return options.openDrawingPicker?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.openDrawingPicker) && readContextValue(context, 'drawingPicker.available') === true;
       },
     },
     {

@@ -314,6 +314,7 @@ import {
   fetchRemoteConversationLayout,
   setActiveConversationTab,
 } from '../session/sessionTabs';
+import { DRAWING_PICKER_OPEN_COMMAND_EVENT } from '../components/conversation/drawingPickerCommands';
 import type {
   ConversationAttachmentSummary,
   ConversationContextDocRef,
@@ -1595,6 +1596,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       setDraftCwdError(null);
     }
   }, [draft]);
+
+  useEffect(() => {
+    const drawingPickerAvailable = !draft && Boolean(id);
+    setExtensionCommandContext('drawingPicker.available', drawingPickerAvailable);
+    return () => setExtensionCommandContext('drawingPicker.available', null);
+  }, [draft, id]);
 
   useEffect(() => {
     if (draft) {
@@ -3018,6 +3025,22 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       window.clearTimeout(timer);
     };
   }, [conversationLiveDecision, refetchLiveSessionContext, shouldFetchLiveSessionGitContext]);
+
+  useEffect(() => {
+    if (draft || !id) {
+      return;
+    }
+
+    function handleOpenDrawingPicker() {
+      setDrawingsPickerOpen(true);
+      setDrawingsError(null);
+    }
+
+    window.addEventListener(DRAWING_PICKER_OPEN_COMMAND_EVENT, handleOpenDrawingPicker);
+    return () => {
+      window.removeEventListener(DRAWING_PICKER_OPEN_COMMAND_EVENT, handleOpenDrawingPicker);
+    };
+  }, [draft, id]);
 
   useEffect(() => {
     if (!id) {

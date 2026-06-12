@@ -547,6 +547,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('drawingPicker.open', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.available': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('drawingPicker.open', {
+        activeConversationId: 'conversation-1',
+        context: { 'drawingPicker.available': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('drawingPicker.close', {
         activeConversationId: 'conversation-1',
         context: { 'drawingPicker.open': false },

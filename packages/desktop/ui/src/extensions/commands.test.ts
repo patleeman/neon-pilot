@@ -420,9 +420,10 @@ describe('extension commands', () => {
 
   it('includes drawing picker commands gated by picker state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
-      expect.arrayContaining(['drawingPicker.close', 'drawingPicker.attachFirst', 'drawingPicker.toggleFirstHistory']),
+      expect.arrayContaining(['drawingPicker.open', 'drawingPicker.close', 'drawingPicker.attachFirst', 'drawingPicker.toggleFirstHistory']),
     );
 
+    const openDrawingPicker = vi.fn(() => true);
     const closeDrawingPicker = vi.fn(() => true);
     const attachFirstDrawingFromPicker = vi.fn(() => true);
     const toggleFirstDrawingHistory = vi.fn(() => true);
@@ -431,15 +432,23 @@ describe('extension commands', () => {
       openCommandPalette: vi.fn(),
       openRightRail: vi.fn(),
       setLayout: vi.fn(),
+      openDrawingPicker,
       closeDrawingPicker,
       attachFirstDrawingFromPicker,
       toggleFirstDrawingHistory,
     };
 
+    await expect(executeExtensionCommand('drawingPicker.open', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('drawingPicker.close', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('drawingPicker.attachFirst', undefined, options)).resolves.toBe(false);
     await expect(executeExtensionCommand('drawingPicker.toggleFirstHistory', undefined, options)).resolves.toBe(false);
 
+    await expect(
+      executeExtensionCommand('drawingPicker.open', undefined, {
+        ...options,
+        context: { 'drawingPicker.available': true },
+      }),
+    ).resolves.toBe(true);
     await expect(
       executeExtensionCommand('drawingPicker.close', undefined, {
         ...options,
@@ -459,6 +468,7 @@ describe('extension commands', () => {
       }),
     ).resolves.toBe(true);
 
+    expect(openDrawingPicker).toHaveBeenCalledTimes(1);
     expect(closeDrawingPicker).toHaveBeenCalledTimes(1);
     expect(attachFirstDrawingFromPicker).toHaveBeenCalledTimes(1);
     expect(toggleFirstDrawingHistory).toHaveBeenCalledTimes(1);

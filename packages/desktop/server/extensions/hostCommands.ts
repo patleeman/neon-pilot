@@ -101,6 +101,7 @@ export const HOST_COMMAND_IDS = [
   'messageAction.forkFirst',
   'messageEdit.save',
   'messageEdit.cancel',
+  'drawingPicker.open',
   'drawingPicker.close',
   'drawingPicker.attachFirst',
   'drawingPicker.toggleFirstHistory',
